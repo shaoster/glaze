@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 venv/
 node_modules/
+
+# Auto-generated from OpenAPI schema — run `npm run generate-types` to regenerate
+src/generated-types.ts

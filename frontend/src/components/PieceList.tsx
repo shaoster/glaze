@@ -1,5 +1,5 @@
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
-import type { PieceSummary } from "../types";
+import type { PieceSummary } from "../types"
 
 type PieceListItemProps = {
   piece: PieceSummary
@@ -17,7 +17,7 @@ const PieceListItem = (props: PieceListItemProps) => {
       {piece.name}
     </TableCell>
     <TableCell>
-      {piece.current_state}
+      {piece.current_state.state}
     </TableCell>
     <TableCell>
       {piece.created.toLocaleDateString()}
@@ -29,8 +29,8 @@ const PieceListItem = (props: PieceListItemProps) => {
 };
 
 type PieceListingProps = {
-  pieces: [PieceSummary];
-};
+  pieces: PieceSummary[]
+}
 
 
 const PieceList = (props: PieceListingProps) => {

@@ -2,6 +2,14 @@
     "version": "0.0.1",
     "states": [
         {
+            "id": "designed",
+            "visible": true,
+            "successors": [
+                "wheel_thrown",
+                "handbuilt"
+            ]
+        },
+        {
             "id": "wheel_thrown",
             "visible": true,
             "successors": [

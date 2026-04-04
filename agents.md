@@ -18,8 +18,9 @@ The source of truth for piece states is [`workflow.json`](workflow.json) at the 
 
 | State | Description |
 |---|---|
-| `wheel_thrown` | Piece created on the wheel (entry point) |
-| `handbuilt` | Piece hand-sculpted (entry point) |
+| `designed` | Piece conceived/designed — universal entry point |
+| `wheel_thrown` | Piece created on the wheel |
+| `handbuilt` | Piece hand-sculpted |
 | `trimmed` | Wheel-thrown piece trimmed |
 | `slip_applied` | Decorative slip added |
 | `carved` | Surface carved or decorated |
@@ -34,6 +35,7 @@ The source of truth for piece states is [`workflow.json`](workflow.json) at the 
 | `recycled` | Terminal — piece discarded or clay reclaimed |
 
 **Rules:**
+- `designed` is the single entry point for all new pieces — `POST /api/pieces/` always creates a piece in the `designed` state.
 - Every non-terminal state has `recycled` as a valid successor — a piece can be recycled at any point.
 - `completed` and `recycled` are terminal states (`"terminal": true`) — no transitions out.
 - During initial development, all states have `"visible": true` and should be shown in the UI. As additional features are added, some states may become hidden and only available for analysis purposes, but are not shown in the UI by default.
@@ -43,7 +45,7 @@ The source of truth for piece states is [`workflow.json`](workflow.json) at the 
 
 ## Data Model
 
-These types are defined in [`frontend/src/types.d.ts`](frontend/src/types.d.ts) and mirror what the backend API should produce.
+These types are defined in [`frontend/src/types.ts`](frontend/src/types.ts) and mirror what the backend API should produce.
 
 **`PieceSummary`** — used in list views
 ```ts
@@ -98,7 +100,7 @@ PieceSummary & {
 **Conventions:**
 - All API endpoints live under the `api` app and are registered in `backend/urls.py`.
 - Use DRF serializers for all request/response shaping — no raw `JsonResponse` with hand-built dicts.
-- Serializer output must match the TypeScript types in `types.d.ts` exactly (field names, nesting).
+- Serializer output must match the TypeScript types in `types.ts` exactly (field names, nesting).
 - Validate state transitions server-side against `workflow.json` before persisting a new `PieceState`.
 - `workflow.json` can be read at startup and cached; do not re-read it per request.
 - CORS is installed (`corsheaders`); ensure it is in `MIDDLEWARE` and configured before shipping any cross-origin endpoint.
@@ -107,7 +109,7 @@ PieceSummary & {
 **API shape to implement** (not yet built):
 - `GET /api/pieces/` → list of `PieceSummary`
 - `GET /api/pieces/<id>/` → `PieceDetail`
-- `POST /api/pieces/` → create a new piece
+- `POST /api/pieces/` → create a new piece (always starts in `designed` state; accepts `name` and optional `thumbnail`)
 - `POST /api/pieces/<id>/states/` → record a new state transition
 
 ---
@@ -118,21 +120,30 @@ PieceSummary & {
 
 **Project layout:**
 - [`frontend/src/components/`](frontend/src/components/) — UI components
-- [`frontend/src/types.d.ts`](frontend/src/types.d.ts) — all shared TypeScript types
+- [`frontend/src/types.ts`](frontend/src/types.ts) — all shared TypeScript types
 - [`frontend/src/App.tsx`](frontend/src/App.tsx) — root component
 - [`frontend/src/main.tsx`](frontend/src/main.tsx) — React entry point
 
 **Conventions:**
 - Use MUI components for all UI elements — avoid custom CSS except for layout adjustments MUI can't handle.
-- Import types from `types.d.ts`; do not redeclare them locally.
-- State names and valid transitions come from `workflow.json` via the constants in `types.d.ts` (`STATES`, `SUCCESSORS`) — do not hardcode them in components.
+- Import types from `types.ts`; do not redeclare them locally.
+- State names and valid transitions come from `workflow.json` via the constants in `types.ts` (`STATES`, `SUCCESSORS`) — do not hardcode them in components.
+- All HTTP calls go through [`frontend/src/api.ts`](frontend/src/api.ts). This is the single place where wire types (ISO date strings, etc.) are mapped to domain types as declared in `types.ts`. Components must never perform their own deserialization — they receive fully-typed domain objects and call the functions in `api.ts` to write data.
 - Use Axios for all HTTP requests to the backend.
 - TypeScript strict mode is on; avoid `any`.
 - New component files should be `.tsx`, not `.js`.
 
+**Type generation pipeline:**
+- [`frontend/src/generated-types.ts`](frontend/src/generated-types.ts) is auto-generated — do not edit by hand. It is gitignored.
+- Generation is driven by [`frontend/scripts/generate-types.mjs`](frontend/scripts/generate-types.mjs), which calls the `openapi-typescript` programmatic API with a `transform` that converts `format: date-time` fields to `Date` in the generated output. Run `npm run generate-types` with Django on port 8080.
+- [`frontend/src/types.ts`](frontend/src/types.ts) derives domain types from `generated-types.ts` via intersection (no `Omit<>`). It also holds the `STATES` array and `SUCCESSORS` map from `workflow.json`, which are not in the schema.
+- **When adding a new API field:** update the Django serializer → run `npm run generate-types` → update `types.ts` if semantic narrowing is needed → update mappers in `api.ts`.
+- [`frontend/src/api.ts`](frontend/src/api.ts) uses the `Wire<T>` generic to type raw Axios responses (dates as strings). Mappers convert `Wire<T>` → domain `T` using `new Date()` and state casts. This is the only file that should contain deserialization logic.
+- The OpenAPI schema is at `http://localhost:8080/api/schema/` and Swagger UI at `http://localhost:8080/api/schema/swagger/`.
+
 **Existing components:**
 - [`PieceList.tsx`](frontend/src/components/PieceList.tsx) — MUI table displaying a list of `PieceSummary` objects (columns: Thumbnail, Name, State, Created, Last Modified)
-- [`BaseState.js`](frontend/src/components/BaseState.js) — placeholder, not yet implemented; convert to `.tsx` when building it out
+- [`BaseState.tsx`](frontend/src/components/BaseState.tsx) — placeholder for rendering a single `PieceState`; not yet implemented
 
 ---
 
@@ -144,7 +155,7 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py runserver
+python manage.py runserver 8080
 
 # Frontend
 cd frontend
@@ -160,3 +171,4 @@ npm run dev
 - The `PieceState` history is append-only; past states should not be edited, only new ones added. Only the `current_state` should be modifiable. Once a piece has transitioned to a new state, past states should be considered sealed, and care should be taken in the backend code to prevent inadvertent edits to these sealed states.
 - `PieceDetail.current_state` is the most recent `PieceState` in the history.
 - All dates should be stored and transmitted as ISO 8601 strings; the frontend types declare them as `Date` but Axios/JSON deserialization will deliver them as strings — handle accordingly.
+- **Piece creation flow:** When creating a new piece (`POST /api/pieces/`), the piece is always initialized in the `designed` state. At this stage no physical object exists yet, so the thumbnail cannot be a photograph. Instead the creation UI should allow the user to supply a name and produce a thumbnail via an in-app drawing or design widget. The resulting image is stored as the piece's thumbnail and serves as its primary visual identifier throughout the app.
