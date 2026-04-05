@@ -94,6 +94,43 @@ npm test          # single run (CI)
 npm run test:watch  # watch mode
 ```
 
+## Vibe coding / Contributing
+
+Glaze uses Claude agents to handle issues and PR feedback autonomously. You don't need to clone the repo or write code to contribute.
+
+### Open an issue → get a PR
+
+1. **Open a GitHub issue** describing the feature or bug.
+   - Be specific: what should happen, what currently happens, any relevant state names from `workflow.json`.
+   - Claude will read the issue automatically and either ask clarifying questions (as a comment) or implement the change on a new branch and open a pull request.
+2. **Answer any follow-up questions** Claude posts as issue comments.
+   - Claude re-reads the full thread each time, so just reply naturally — no special trigger phrase needed.
+3. **Review the pull request** Claude opens.
+   - Claude links the PR to the issue and includes "Closes #N" in the body so the issue closes automatically on merge.
+
+### Request changes on a PR → get a new commit
+
+When you submit a **pull request review** with **"Request changes"**:
+- Claude reads your review summary and all inline comments.
+- It implements the requested changes, runs the full test suite, and pushes a new commit to the PR branch.
+- It then posts a comment summarising what was changed and how each piece of feedback was addressed.
+
+### Mention `@claude` in a PR comment
+
+You can also invoke Claude directly in any PR comment:
+
+```
+@claude Can you refactor this to use a DRF serializer instead of a raw dict?
+```
+
+Claude will read the comment, make the change, and push it to the branch.
+
+### Tips
+
+- Claude always runs `pytest` (backend) and `npm test` (frontend) before opening or updating a PR. If tests fail, it will not push.
+- Claude derives all state names and transitions from `workflow.json` — you can reference state names freely in issues and it will use the correct values.
+- For large or ambiguous requests, start with an issue rather than a direct PR comment so Claude can ask questions before writing code.
+
 ## Project structure
 
 ```
