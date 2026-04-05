@@ -106,7 +106,7 @@ PieceSummary & {
 - CORS is installed (`corsheaders`); ensure it is in `MIDDLEWARE` and configured before shipping any cross-origin endpoint.
 - The database is SQLite during development; avoid raw SQL.
 
-**API shape to implement** (not yet built):
+**API endpoints:**
 - `GET /api/pieces/` → list of `PieceSummary`
 - `GET /api/pieces/<id>/` → `PieceDetail`
 - `POST /api/pieces/` → create a new piece (always starts in `designed` state; accepts `name` and optional `thumbnail`)
@@ -162,6 +162,42 @@ cd frontend
 npm install
 npm run dev
 ```
+
+---
+
+## Testing
+
+**All proposed changes must pass the full test suite before being submitted.**
+
+### Backend
+
+```bash
+pip install -r requirements-dev.txt   # includes pytest and pytest-django
+pytest                                 # run from the repo root
+```
+
+Tests live in [`api/tests.py`](api/tests.py). `pytest.ini` points pytest at `backend.settings` automatically — no extra configuration needed.
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm test          # single run (used in CI)
+npm run test:watch  # watch mode for development
+```
+
+Tests live in [`frontend/src/components/__tests__/`](frontend/src/components/__tests__/). The test environment is jsdom; setup file is [`frontend/src/test-setup.ts`](frontend/src/test-setup.ts).
+
+### CI
+
+GitHub Actions runs both suites on every push and pull request — see [`.github/workflows/tests.yml`](.github/workflows/tests.yml). A PR should not be merged if either job is red.
+
+### What to test
+
+- Every new API endpoint or serializer change → add or update a test in `api/tests.py`.
+- Every new or modified React component → add or update a test in `frontend/src/components/__tests__/`.
+- The `piece` fixture in `api/tests.py` creates a piece via the ORM directly; prefer the API client (`client.post(...)`) for tests that exercise request/response behaviour.
 
 ---
 
