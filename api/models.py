@@ -8,7 +8,15 @@ from django.db import models
 _workflow = json.loads((Path(__file__).resolve().parent.parent / 'workflow.json').read_text())
 VALID_STATES: set[str] = {s['id'] for s in _workflow['states']}
 SUCCESSORS: dict[str, list[str]] = {s['id']: s.get('successors', []) for s in _workflow['states']}
+TERMINAL_STATES: set[str] = {s['id'] for s in _workflow['states'] if s.get('terminal', False)}
 ENTRY_STATE = 'designed'
+
+
+class Location(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class Piece(models.Model):
@@ -45,7 +53,9 @@ class PieceState(models.Model):
     notes = models.TextField(blank=True, default='')
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
-    location = models.CharField(max_length=255, blank=True, default='')
+    location = models.ForeignKey(
+        'Location', null=True, blank=True, on_delete=models.SET_NULL, related_name='piece_states'
+    )
     # Stored as a list of {url, caption, created} objects.
     images = models.JSONField(default=list)
 

@@ -107,3 +107,19 @@ export async function addPieceState(pieceId: string, payload: AddStatePayload): 
     const { data } = await client.post<Wire<PieceDetail>>(`pieces/${pieceId}/states/`, payload)
     return mapPieceDetail(data)
 }
+
+export type UpdateStatePayload = {
+    notes?: string
+    location?: string
+    images?: Array<{ url: string; caption: string; created: string }>
+}
+
+export async function updateCurrentState(pieceId: string, payload: UpdateStatePayload): Promise<PieceDetail> {
+    const { data } = await client.patch<Wire<PieceDetail>>(`pieces/${pieceId}/state/`, payload)
+    return mapPieceDetail(data)
+}
+
+export async function fetchLocations(): Promise<string[]> {
+    const { data } = await client.get<Array<{ id: string; name: string }>>('locations/')
+    return data.map((loc) => loc.name)
+}
