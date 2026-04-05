@@ -29,6 +29,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           trigger_phrase: ""
           claude_args: "--dangerously-skip-permissions"
+          show_full_output: "true"
           prompt: |
             You are an autonomous software agent helping resolve GitHub issues for the
             Glaze pottery workflow tracking app (Django backend + React frontend).
@@ -54,11 +55,3 @@ jobs:
               `frontend/src/components/__tests__/`; run with `npm test` inside `frontend/`.
             - See AGENTS.md for full conventions.
 
-      - name: Show Claude execution output
-        if: always()
-        run: |
-          if [ -f /home/runner/work/_temp/claude-execution-output.json ]; then
-            cat /home/runner/work/_temp/claude-execution-output.json | python3 -m json.tool
-          else
-            echo "No execution output file found."
-          fi
