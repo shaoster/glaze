@@ -59,7 +59,7 @@ class PieceState(models.Model):
         Pass allow_sealed_edit=True to bypass this check for exceptional admin
         operations. This should never be done in normal application code paths.
         """
-        if self.pk and not allow_sealed_edit:
+        if not self._state.adding and not allow_sealed_edit:
             current = self.piece.current_state
             if current is None or current.pk != self.pk:
                 raise ValueError(
