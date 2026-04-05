@@ -20,7 +20,7 @@ import { useBlocker } from 'react-router-dom'
 import type { PieceDetail as PieceDetailType } from '../types'
 import { formatState, SUCCESSORS } from '../types'
 import { addPieceState } from '../api'
-import BaseState from './BaseState'
+import WorkflowState from './WorkflowState'
 
 type PieceDetailProps = {
     piece: PieceDetailType
@@ -96,7 +96,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
             <Divider sx={{ mb: 3 }} />
 
             {/* Current state form */}
-            <BaseState
+            <WorkflowState
                 key={currentState.state + currentState.created.toISOString()}
                 pieceState={currentState}
                 pieceId={piece.id}

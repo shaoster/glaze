@@ -200,7 +200,7 @@ PieceSummary & {
 **Existing components:**
 - [`PieceList.tsx`](frontend/src/components/PieceList.tsx) — MUI table displaying a list of `PieceSummary` objects (columns: Thumbnail, Name, State, Created, Last Modified)
 - [`NewPieceDialog.tsx`](frontend/src/components/NewPieceDialog.tsx) — dialog for creating a new piece; accepts a name, optional notes, and a thumbnail selected from the curated gallery
-- [`BaseState.tsx`](frontend/src/components/BaseState.tsx) — placeholder for rendering a single `PieceState`; not yet implemented
+- [`WorkflowState.tsx`](frontend/src/components/WorkflowState.tsx) — placeholder for rendering a single `PieceState`; not yet implemented
 
 ---
 
