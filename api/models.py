@@ -78,6 +78,30 @@ class Location(models.Model):
         return self.name
 
 
+class ClayBody(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    short_description = models.CharField(max_length=1024, blank=True, default='')
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class GlazeType(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    short_description = models.CharField(max_length=1024, blank=True, default='')
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class GlazeMethod(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    short_description = models.CharField(max_length=1024, blank=True, default='')
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Piece(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)

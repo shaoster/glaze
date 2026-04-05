@@ -238,21 +238,35 @@ gz_gentypes() {
     return $exit_code
 }
 
+_GZ_SHORTCUTS=(
+    "gz_help           — show this list of shortcuts"
+    "gz_setup          — first-time setup (venv, deps, migrations, node)"
+    "gz_manage <cmd>   — run any manage.py subcommand"
+    "gz_migrate        — migrate"
+    "gz_makemigrations — makemigrations"
+    "gz_shell          — Django shell"
+    "gz_dbshell        — database shell"
+    "gz_showmigrations — showmigrations"
+    "gz_test           — run all test suites in parallel"
+    "gz_test_common    — run workflow schema/integrity tests (pytest tests/)"
+    "gz_test_backend   — run Django API tests (pytest api/)"
+    "gz_test_frontend  — run the frontend tests only"
+    "gz_gentypes       — regenerate frontend TypeScript types"
+    "gz_start/stop     — start or stop backend + frontend"
+    "gz_status         — show what services are running"
+    "gz_logs [backend|frontend] — stream backend and/or frontend logs"
+)
+
+gz_help() {
+    echo "Glaze helper shortcuts:"
+    for entry in "${_GZ_SHORTCUTS[@]}"; do
+        echo "  $entry"
+    done
+}
+
 # ---------------------------------------------------------------------------
 
 echo "Glaze dev helpers loaded."
-echo "  gz_setup           — first-time setup (venv, deps, migrations, node)"
-echo "  gz_manage <cmd>    — run any manage.py subcommand"
-echo "  gz_migrate         — migrate"
-echo "  gz_makemigrations  — makemigrations"
-echo "  gz_shell           — Django shell"
-echo "  gz_dbshell         — database shell"
-echo "  gz_showmigrations  — showmigrations"
-echo "  gz_test            — run all test suites in parallel"
-echo "  gz_test_common     — run workflow schema/integrity tests (pytest tests/)"
-echo "  gz_test_backend    — run Django API tests (pytest api/)"
-echo "  gz_test_frontend   — run vitest only"
-echo "  gz_gentypes        — regenerate frontend TypeScript types"
-echo "  gz_start/stop      — start or stop backend + frontend"
-echo "  gz_status          — show what is running"
-echo "  gz_logs [backend|frontend]"
+for entry in "${_GZ_SHORTCUTS[@]}"; do
+    echo "  $entry"
+done

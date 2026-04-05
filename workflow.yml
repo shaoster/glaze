@@ -85,6 +85,39 @@ globals:
         type: string
         description: URL of the piece's thumbnail image.
 
+  clay_body:
+    model: ClayBody
+    description: A reference to the clay body used for the piece.
+    fields:
+      name:
+        type: string
+        description: Clay body name or code.
+      short_description:
+        type: string
+        description: Brief notes about the clay body (color, plasticity, etc.).
+
+  glaze_type:
+    model: GlazeType
+    description: A reference to the glaze recipe or formulation applied.
+    fields:
+      name:
+        type: string
+        description: Glaze name or code.
+      short_description:
+        type: string
+        description: Summary of the glaze properties or firing range.
+
+  glaze_method:
+    model: GlazeMethod
+    description: A reference to how the glaze was applied.
+    fields:
+      name:
+        type: string
+        description: Glazing technique name (e.g., dip, brush, spray).
+      short_description:
+        type: string
+        description: Notes on the application method or adjustments.
+
 # Built-in states for standard workflow.
 states:
   - id: designed
