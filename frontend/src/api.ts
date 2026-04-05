@@ -111,7 +111,7 @@ export async function addPieceState(pieceId: string, payload: AddStatePayload): 
 export type UpdateStatePayload = {
     notes?: string
     location?: string
-    images?: Array<{ url: string; caption: string; created: string }>
+    images?: Array<{ url: string; caption: string }>
 }
 
 export async function updateCurrentState(pieceId: string, payload: UpdateStatePayload): Promise<PieceDetail> {
@@ -122,4 +122,9 @@ export async function updateCurrentState(pieceId: string, payload: UpdateStatePa
 export async function fetchLocations(): Promise<string[]> {
     const { data } = await client.get<Array<{ id: string; name: string }>>('locations/')
     return data.map((loc) => loc.name)
+}
+
+export async function createLocation(name: string): Promise<string> {
+    const { data } = await client.post<{ id: string; name: string }>('locations/', { name })
+    return data.name
 }

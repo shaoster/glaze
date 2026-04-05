@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 
 from .models import Location, Piece
 from .serializers import (
+    LocationCreateSerializer,
     LocationSerializer,
     PieceCreateSerializer,
     PieceDetailSerializer,
@@ -82,7 +83,19 @@ def piece_current_state(request: Request, piece_id: str) -> Response:
     methods=['GET'],
     responses={200: LocationSerializer(many=True)},
 )
-@api_view(['GET'])
+@extend_schema(
+    methods=['POST'],
+    request=LocationSerializer,
+    responses={201: LocationSerializer, 200: LocationSerializer},
+)
+@api_view(['GET', 'POST'])
 def locations(request: Request) -> Response:
-    qs = Location.objects.all().order_by('name')
-    return Response(LocationSerializer(qs, many=True).data)
+    if request.method == 'GET':
+        qs = Location.objects.all().order_by('name')
+        return Response(LocationSerializer(qs, many=True).data)
+
+    serializer = LocationCreateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    location, created = Location.objects.get_or_create(name=serializer.validated_data['name'])
+    status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+    return Response(LocationSerializer(location).data, status=status_code)

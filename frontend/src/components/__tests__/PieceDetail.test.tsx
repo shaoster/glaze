@@ -9,6 +9,7 @@ vi.mock('../../api', () => ({
     fetchLocations: vi.fn().mockResolvedValue([]),
     updateCurrentState: vi.fn(),
     addPieceState: vi.fn(),
+    createLocation: vi.fn(),
 }))
 
 function makeState(overrides: Partial<PieceState> = {}): PieceState {
@@ -61,7 +62,7 @@ describe('PieceDetail', () => {
 
     it('renders current state label', () => {
         renderPieceDetail()
-        expect(screen.getAllByText('designed').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Designed').length).toBeGreaterThan(0)
     })
 
     it('renders thumbnail image', () => {
@@ -73,8 +74,8 @@ describe('PieceDetail', () => {
     it('renders successor state buttons for non-terminal state', () => {
         renderPieceDetail()
         // 'designed' has successors: wheel_thrown, handbuilt
-        expect(screen.getByRole('button', { name: 'wheel_thrown' })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'handbuilt' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Wheel Thrown' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Handbuilt' })).toBeInTheDocument()
     })
 
     it('shows terminal state alert for terminal states', () => {
@@ -86,33 +87,33 @@ describe('PieceDetail', () => {
     it('shows no transition buttons for terminal states', () => {
         const piece = makePiece({ current_state: makeState({ state: 'completed' }), history: [makeState({ state: 'completed' })] })
         renderPieceDetail(piece)
-        expect(screen.queryByRole('button', { name: 'wheel_thrown' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Wheel Thrown' })).not.toBeInTheDocument()
     })
 
     it('transition buttons disabled when there are unsaved changes', async () => {
         renderPieceDetail()
         fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'Dirty notes' } })
-        const transitionBtn = screen.getByRole('button', { name: 'wheel_thrown' })
+        const transitionBtn = screen.getByRole('button', { name: 'Wheel Thrown' })
         expect(transitionBtn).toBeDisabled()
     })
 
     it('clicking transition button opens confirmation dialog', () => {
         renderPieceDetail()
-        fireEvent.click(screen.getByRole('button', { name: 'wheel_thrown' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Wheel Thrown' }))
         expect(screen.getByText(/Confirm State Transition/i)).toBeInTheDocument()
     })
 
     it('confirmation dialog shows from/to states', () => {
         renderPieceDetail()
-        fireEvent.click(screen.getByRole('button', { name: 'wheel_thrown' }))
-        // The dialog body contains both state names
-        expect(screen.getAllByText(/designed/).length).toBeGreaterThan(0)
-        expect(screen.getAllByText(/wheel_thrown/).length).toBeGreaterThan(0)
+        fireEvent.click(screen.getByRole('button', { name: 'Wheel Thrown' }))
+        // The dialog body contains both state names (human-readable)
+        expect(screen.getAllByText(/Designed/).length).toBeGreaterThan(0)
+        expect(screen.getAllByText(/Wheel Thrown/).length).toBeGreaterThan(0)
     })
 
     it('cancelling confirmation closes dialog', async () => {
         renderPieceDetail()
-        fireEvent.click(screen.getByRole('button', { name: 'wheel_thrown' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Wheel Thrown' }))
         fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
         await waitFor(() =>
             expect(screen.queryByText(/Confirm State Transition/i)).not.toBeInTheDocument()
@@ -124,7 +125,7 @@ describe('PieceDetail', () => {
         vi.mocked(api.addPieceState).mockResolvedValue(updated)
         const onPieceUpdated = vi.fn()
         renderPieceDetail(makePiece(), onPieceUpdated)
-        fireEvent.click(screen.getByRole('button', { name: 'wheel_thrown' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Wheel Thrown' }))
         fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
         await waitFor(() => expect(api.addPieceState).toHaveBeenCalledWith('piece-id-1', { state: 'wheel_thrown' }))
         await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(updated))
@@ -149,7 +150,7 @@ describe('PieceDetail', () => {
         })
         renderPieceDetail(piece)
         fireEvent.click(screen.getByRole('button', { name: /show history/i }))
-        expect(screen.getByText('designed')).toBeInTheDocument()
+        expect(screen.getByText('Designed')).toBeInTheDocument()
     })
 
     it('no history panel when piece has only one state', () => {

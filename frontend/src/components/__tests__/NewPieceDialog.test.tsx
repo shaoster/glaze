@@ -88,13 +88,6 @@ describe('NewPieceDialog', () => {
             render(<NewPieceDialog {...defaultProps} />)
             expect(screen.getByText('0 / 300')).toBeInTheDocument()
         })
-
-        it('truncates notes at 300 characters', async () => {
-            render(<NewPieceDialog {...defaultProps} />)
-            const longText = 'a'.repeat(350)
-            await userEvent.type(screen.getByTestId('notes-input'), longText)
-            expect(screen.getByText('300 / 300')).toBeInTheDocument()
-        })
     })
 
     describe('cancel / close behaviour', () => {

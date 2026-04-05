@@ -18,7 +18,7 @@ import {
 } from '@mui/material'
 import { useBlocker } from 'react-router-dom'
 import type { PieceDetail as PieceDetailType } from '../types'
-import { SUCCESSORS } from '../types'
+import { formatState, SUCCESSORS } from '../types'
 import { addPieceState } from '../api'
 import BaseState from './BaseState'
 
@@ -30,7 +30,8 @@ type PieceDetailProps = {
 export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps) {
     const [isDirty, setIsDirty] = useState(false)
     const [historyOpen, setHistoryOpen] = useState(false)
-    const [transitionConfirm, setTransitionConfirm] = useState<string | null>(null)
+    const [transitionDialogOpen, setTransitionDialogOpen] = useState(false)
+    const [pendingTransition, setPendingTransition] = useState<string | null>(null)
     const [transitioning, setTransitioning] = useState(false)
     const [transitionError, setTransitionError] = useState<string | null>(null)
 
@@ -53,8 +54,19 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
             setTransitionError('Failed to transition state. Please try again.')
         } finally {
             setTransitioning(false)
-            setTransitionConfirm(null)
+            setTransitionDialogOpen(false)
         }
+    }
+
+    function openTransitionDialog(next: string) {
+        setPendingTransition(next)
+        setTransitionDialogOpen(true)
+    }
+
+    function closeTransitionDialog() {
+        setTransitionDialogOpen(false)
+        // pendingTransition is cleared in TransitionProps.onExited to avoid
+        // content changing during the dialog close animation.
     }
 
     return (
@@ -73,7 +85,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                         {piece.name}
                     </Typography>
                     <Chip
-                        label={currentState.state}
+                        label={formatState(currentState.state)}
                         size="small"
                         sx={{ mt: 0.5 }}
                         color={isTerminal ? 'default' : 'primary'}
@@ -84,9 +96,6 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
             <Divider sx={{ mb: 3 }} />
 
             {/* Current state form */}
-            <Typography variant="h6" gutterBottom>
-                Current State: {currentState.state}
-            </Typography>
             <BaseState
                 key={currentState.state + currentState.created.toISOString()}
                 pieceState={currentState}
@@ -100,7 +109,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
             {/* State transitions */}
             {isTerminal ? (
                 <Alert severity="info" sx={{ mb: 2 }}>
-                    This piece is in a terminal state (<strong>{currentState.state}</strong>). No further transitions are possible.
+                    This piece is in a terminal state (<strong>{formatState(currentState.state)}</strong>). No further transitions are possible.
                 </Alert>
             ) : (
                 <Box sx={{ mb: 2 }}>
@@ -117,11 +126,11 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                             <Button
                                 key={next}
                                 variant="outlined"
-                                onClick={() => setTransitionConfirm(next)}
+                                onClick={() => openTransitionDialog(next)}
                                 disabled={isDirty || transitioning}
                                 color={next === 'recycled' ? 'error' : 'primary'}
                             >
-                                {next}
+                                {formatState(next)}
                             </Button>
                         ))}
                     </Box>
@@ -148,7 +157,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                             {pastHistory.map((ps, i) => (
                                 <ListItem key={i} disableGutters>
                                     <ListItemText
-                                        primary={ps.state}
+                                        primary={formatState(ps.state)}
                                         secondary={`${ps.created.toLocaleString()}${ps.notes ? ' — ' + ps.notes : ''}`}
                                         slotProps={{
                                             primary: { sx: { color: 'text.primary' } },
@@ -163,21 +172,25 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
             )}
 
             {/* Transition confirmation dialog */}
-            <Dialog open={transitionConfirm !== null} onClose={() => setTransitionConfirm(null)}>
+            <Dialog
+                open={transitionDialogOpen}
+                onClose={closeTransitionDialog}
+                TransitionProps={{ onExited: () => setPendingTransition(null) }}
+            >
                 <DialogTitle>Confirm State Transition</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        Transition <strong>{currentState.state}</strong> → <strong>{transitionConfirm}</strong>?
+                        Transition <strong>{formatState(currentState.state)}</strong> → <strong>{pendingTransition ? formatState(pendingTransition) : ''}</strong>?
                         <br /><br />
                         Once transitioned, the current state will be sealed and can no longer be edited.
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setTransitionConfirm(null)}>Cancel</Button>
+                    <Button onClick={closeTransitionDialog}>Cancel</Button>
                     <Button
-                        onClick={() => transitionConfirm && handleTransition(transitionConfirm)}
+                        onClick={() => pendingTransition && handleTransition(pendingTransition)}
                         variant="contained"
-                        color={transitionConfirm === 'recycled' ? 'error' : 'primary'}
+                        color={pendingTransition === 'recycled' ? 'error' : 'primary'}
                         disabled={transitioning}
                     >
                         Confirm

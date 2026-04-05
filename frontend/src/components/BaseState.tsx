@@ -11,8 +11,9 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
+import { createFilterOptions } from '@mui/material/Autocomplete'
 import type { PieceDetail, PieceState } from '../types'
-import { fetchLocations, updateCurrentState } from '../api'
+import { createLocation, fetchLocations, updateCurrentState } from '../api'
 
 type BaseStateProps = {
     pieceState: PieceState
@@ -21,13 +22,14 @@ type BaseStateProps = {
     onDirtyChange?: (dirty: boolean) => void
 }
 
-type ImageEntry = { url: string; caption: string; created: string }
+type ImageEntry = { url: string; caption: string }
+
+const locationFilter = createFilterOptions<string>()
 
 function stateImages(pieceState: PieceState): ImageEntry[] {
     return pieceState.images.map((img) => ({
         url: img.url,
         caption: img.caption,
-        created: img.created instanceof Date ? img.created.toISOString() : (img.created as string),
     }))
 }
 
@@ -83,7 +85,6 @@ export default function BaseState({ pieceState, pieceId, onSaved, onDirtyChange 
             {
                 url: newImageUrl.trim(),
                 caption: newImageCaption.trim(),
-                created: new Date().toISOString(),
             },
         ])
         setNewImageUrl('')
@@ -94,8 +95,25 @@ export default function BaseState({ pieceState, pieceId, onSaved, onDirtyChange 
         setImages((prev) => prev.filter((_, i) => i !== index))
     }
 
+    async function handleLocationChange(val: string | null) {
+        const raw = val ?? ''
+        const createPrefix = 'Create "'
+        if (raw.startsWith(createPrefix) && raw.endsWith('"')) {
+            const newName = raw.slice(createPrefix.length, -1)
+            try {
+                await createLocation(newName)
+                setLocationOptions((prev) => [...prev, newName].sort())
+            } catch {
+                // Silently continue — the name will still be saved with the state
+            }
+            setLocation(newName)
+        } else {
+            setLocation(raw)
+        }
+    }
+
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, textAlign: 'left' }}>
             {/* Notes */}
             <TextField
                 label="Notes"
@@ -113,6 +131,16 @@ export default function BaseState({ pieceState, pieceId, onSaved, onDirtyChange 
                 options={locationOptions}
                 value={location}
                 onInputChange={(_e, val) => setLocation(val)}
+                onChange={(_e, val) => { handleLocationChange(val) }}
+                filterOptions={(options, params) => {
+                    const filtered = locationFilter(options, params)
+                    const { inputValue } = params
+                    const isExisting = options.some((opt) => inputValue === opt)
+                    if (inputValue !== '' && !isExisting) {
+                        filtered.push(`Create "${inputValue}"`)
+                    }
+                    return filtered
+                }}
                 renderInput={(params) => (
                     <TextField {...params} label="Location" fullWidth />
                 )}
@@ -148,10 +176,8 @@ export default function BaseState({ pieceState, pieceId, onSaved, onDirtyChange 
                                     />
                                     <ListItemText
                                         primary={img.caption || '(no caption)'}
-                                        secondary={img.url}
                                         slotProps={{
                                             primary: { sx: { color: 'text.primary' } },
-                                            secondary: { sx: { color: 'text.secondary', wordBreak: 'break-all' } },
                                         }}
                                     />
                                 </Box>

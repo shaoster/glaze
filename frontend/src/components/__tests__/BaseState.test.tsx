@@ -8,6 +8,7 @@ import * as api from '../../api'
 vi.mock('../../api', () => ({
     fetchLocations: vi.fn().mockResolvedValue([]),
     updateCurrentState: vi.fn(),
+    createLocation: vi.fn(),
 }))
 
 function makeState(overrides: Partial<PieceState> = {}): PieceState {
@@ -135,8 +136,9 @@ describe('BaseState', () => {
     it('adds an image entry', () => {
         render(<BaseState {...defaultProps} />)
         fireEvent.change(screen.getByLabelText('Image URL'), { target: { value: 'http://example.com/img.jpg' } })
+        fireEvent.change(screen.getByLabelText('Caption'), { target: { value: 'A test image' } })
         fireEvent.click(screen.getByText('+ Add Image'))
-        expect(screen.getByText('http://example.com/img.jpg')).toBeInTheDocument()
+        expect(screen.getByText('A test image')).toBeInTheDocument()
     })
 
     it('accepts any valid workflow state', () => {

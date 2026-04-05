@@ -1,6 +1,8 @@
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from django.utils import timezone
+
 from .models import ENTRY_STATE, SUCCESSORS, VALID_STATES, Location, Piece, PieceState
 
 
@@ -10,10 +12,15 @@ class LocationSerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 
+class LocationCreateSerializer(serializers.Serializer):
+    """Input-only serializer for POST /locations/ — no unique constraint check."""
+    name = serializers.CharField(max_length=255)
+
+
 class CaptionedImageSerializer(serializers.Serializer):
     url = serializers.CharField()
     caption = serializers.CharField()
-    created = serializers.DateTimeField()
+    created = serializers.DateTimeField(required=False)
 
 
 class PieceStateSerializer(serializers.ModelSerializer):
@@ -130,6 +137,18 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         location_obj = None
         if location_name:
             location_obj, _ = Location.objects.get_or_create(name=location_name)
+        # Ensure all images have a created timestamp set by the backend.
+        images = validated_data.get('images', [])
+        if images:
+            processed: list[dict] = []
+            for img in images:
+                created_val = img.get('created', timezone.now())
+                processed.append({
+                    'url': img['url'],
+                    'caption': img['caption'],
+                    'created': created_val.isoformat() if hasattr(created_val, 'isoformat') else str(created_val),
+                })
+            validated_data['images'] = processed
         return PieceState.objects.create(
             piece=self.context['piece'],
             location=location_obj,
@@ -154,14 +173,14 @@ class PieceStateUpdateSerializer(serializers.Serializer):
             else:
                 instance.location = None
         if 'images' in validated_data:
-            # Convert any datetime objects to ISO strings for JSONField storage.
+            # Convert datetime objects to ISO strings; auto-set created if not provided.
             images_json = []
             for img in validated_data['images']:
-                created = img['created']
+                created_val = img.get('created', timezone.now())
                 images_json.append({
                     'url': img['url'],
                     'caption': img['caption'],
-                    'created': created.isoformat() if hasattr(created, 'isoformat') else created,
+                    'created': created_val.isoformat() if hasattr(created_val, 'isoformat') else str(created_val),
                 })
             instance.images = images_json
         instance.save()
