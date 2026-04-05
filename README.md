@@ -154,6 +154,13 @@ env.sh            Development shell helpers
 
 The workflow state machine and all valid transitions are defined in [`workflow.yml`](workflow.yml). Both the backend and frontend derive state names and transition rules from this file — nothing is hardcoded elsewhere.
 
+`workflow.yml` also contains two optional sections beyond the state list:
+
+- **`globals`** — named domain types backed by Django models (e.g. `location`, `piece`), registered so they can be referenced from `additional_fields` and verified against `api/models.py` by the test suite.
+- **`additional_fields`** (per-state) — state-specific fields declared using an embedded DSL. Fields can be inline (`type`, optional `description`/`required`/`enum`) or refs. Refs are either state refs (`state_id.field_name`, carrying a value forward from a reachable ancestor state) or global refs (`@global_name.field_name`, a foreign-key reference to a field on a global domain type). See [`workflow.yml`](workflow.yml) for examples and [`AGENTS.md`](AGENTS.md) for the full DSL reference.
+
+[`workflow.schema.yml`](workflow.schema.yml) enforces structural rules with JSON Schema (Draft 2020-12); [`tests/test_workflow.py`](tests/test_workflow.py) enforces semantic and referential integrity rules, including verifying that every declared global and its fields match the corresponding Django model in `api/models.py`.
+
 
 # Using the App
 

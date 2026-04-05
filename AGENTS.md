@@ -15,14 +15,49 @@ The app has two parts:
 The source of truth for piece states is [`workflow.yml`](workflow.yml) at the project root. Do not hardcode state names or transitions anywhere — always derive them from this file.
 
 **Schema and validation:** [`workflow.schema.yml`](workflow.schema.yml) is a JSON Schema (Draft 2020-12) document (written in YAML) that defines the allowed structure of `workflow.yml`. It constrains:
-- Top-level required fields: `version` (semver string) and `states` (array, at least 2 items).
+- Top-level required fields: `version` (semver string) and `states` (array, at least 2 items). `globals` is optional.
 - Per-state required fields: `id` (snake_case, `^[a-z][a-z0-9_]*$`) and `visible` (boolean).
-- Optional per-state fields: `terminal` (boolean), `successors` (array of snake_case strings, no duplicates within a state).
+- Optional per-state fields: `terminal` (boolean), `successors` (array of snake_case strings, no duplicates within a state), `additional_fields` (map of field DSL entries).
 - `additionalProperties: false` at both the top level and per-state — unknown keys are rejected.
 
 [`tests/test_workflow.py`](tests/test_workflow.py) is the common test suite that validates `workflow.yml` in full — both structurally and semantically:
 - **Structural** (`TestSchemaValidation`): runs `jsonschema.validate` against `workflow.schema.yml`, and verifies that malformed inputs (missing fields, bad version format, invalid ID patterns, duplicate successors, unknown keys) are correctly rejected.
 - **Semantic** (`TestReferentialIntegrity`): enforces rules JSON Schema cannot express — every successor ID references a real state, terminal states have no successors, non-terminal states have at least one successor, all state IDs are unique, no state lists itself as a successor.
+- **DSL referential integrity** (`TestAdditionalFieldsDSL`): enforces `additional_fields` rules — `enum` only on `type: string` fields; state refs point to known states with declared fields that are reachable ancestors; global refs point to declared globals with declared fields.
+- **Global/model alignment** (`TestGlobals`): verifies every `globals` entry maps to a real Django model in `api/models.py`, and every field declared in that global exists on the model.
+
+**`globals` section:** The optional top-level `globals` map registers named domain types backed by Django models. Each entry declares the model class name (PascalCase, verified against `api/models.py` by tests) and a subset of its fields exposed to the field DSL. `api/models.py` remains the authoritative source of truth — `globals` is a DSL-level view of those models, kept in sync by tests.
+
+**`additional_fields` DSL:** Each state may declare state-specific fields beyond the base `PieceState` fields using two forms:
+
+*Inline field* — declares a new field directly on the state:
+```yaml
+clay_weight_grams:
+  type: number          # string | number | integer | boolean | array | object
+  description: "..."    # optional
+  required: true        # optional, default false
+  enum: [a, b, c]       # optional; only valid when type: string
+```
+
+*Ref field* — two sub-forms, distinguished by the `@` prefix:
+```yaml
+# State ref — carries a field forward from a reachable ancestor state:
+pre_trim_weight_grams:
+  $ref: "wheel_thrown.clay_weight_grams"
+  description: "..."    # optional override
+  required: false       # optional override
+
+# Global ref — foreign-key reference to a field on a globals entry
+# (backed by a Django model). @ marks this as a global ref:
+kiln_location:
+  $ref: "@location.name"
+  description: "..."    # optional override
+  required: true        # optional override
+```
+
+Referential rules enforced by `TestAdditionalFieldsDSL`:
+- **State refs** (`state_id.field_name`): state must exist, field must be declared on it, state must be a reachable ancestor (path through the successor graph from that state to this one).
+- **Global refs** (`@global_name.field_name`): global must be declared in `globals`, field must be declared in that global's `fields`.
 
 **States** (in rough lifecycle order):
 

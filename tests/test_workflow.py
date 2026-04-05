@@ -1,19 +1,31 @@
 """
 Structural and semantic validation of workflow.yml.
 
-Structural constraints (field types, required keys, patterns) are checked by
-jsonschema against workflow.schema.yml.  Referential integrity rules that JSON
-Schema cannot express are enforced as explicit test cases below.
+Three test classes cover different validation layers:
+
+  TestSchemaValidation     — structural: jsonschema against workflow.schema.yml.
+  TestReferentialIntegrity — semantic: state graph rules JSON Schema cannot express.
+  TestAdditionalFieldsDSL  — semantic: field DSL referential integrity.
+  TestGlobals              — semantic: declared globals match api/models.py exactly.
 """
 
 from pathlib import Path
 
+import django
 import jsonschema
 import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# Ensure Django is set up so we can introspect models in TestGlobals.
+django.setup()
+from django.apps import apps  # noqa: E402 — must come after django.setup()
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="module")
 def workflow():
@@ -22,15 +34,76 @@ def workflow():
 
 @pytest.fixture(scope="module")
 def schema():
-    raw = yaml.safe_load((ROOT / "workflow.schema.yml").read_text())
-    # JSON Schema validators expect $schema as a plain string key; YAML parses
-    # it correctly already, but we strip it so jsonschema picks the right draft.
-    return raw
+    return yaml.safe_load((ROOT / "workflow.schema.yml").read_text())
 
 
 @pytest.fixture(scope="module")
 def state_ids(workflow):
     return {s["id"] for s in workflow["states"]}
+
+
+@pytest.fixture(scope="module")
+def globals_section(workflow):
+    return workflow.get("globals", {})
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _successors_map(workflow):
+    return {s["id"]: s.get("successors", []) for s in workflow["states"]}
+
+
+def _ancestors(state_id, successors_map):
+    """All state IDs from which state_id is reachable through the successor graph."""
+    predecessors: dict[str, list[str]] = {s: [] for s in successors_map}
+    for s, succs in successors_map.items():
+        for succ in succs:
+            if succ in predecessors:
+                predecessors[succ].append(s)
+    visited: set[str] = set()
+    queue = [state_id]
+    while queue:
+        curr = queue.pop()
+        for pred in predecessors.get(curr, []):
+            if pred not in visited:
+                visited.add(pred)
+                queue.append(pred)
+    return visited
+
+
+def _parse_ref(ref_str):
+    """Parse a $ref string.
+
+    Returns ('global', global_name, field_name) or ('state', state_id, field_name).
+    """
+    if ref_str.startswith("@"):
+        global_name, field_name = ref_str[1:].split(".", 1)
+        return "global", global_name, field_name
+    else:
+        state_id, field_name = ref_str.split(".", 1)
+        return "state", state_id, field_name
+
+
+def _all_refs(workflow):
+    """Yield (host_state_id, local_field_name, ref_str) for every $ref in additional_fields."""
+    for state in workflow["states"]:
+        for field_name, field_def in state.get("additional_fields", {}).items():
+            if "$ref" in field_def:
+                yield state["id"], field_name, field_def["$ref"]
+
+
+def _all_inline_fields(workflow):
+    """Yield (context, field_name, field_def) for every inline field in states and globals."""
+    for state in workflow["states"]:
+        for field_name, field_def in state.get("additional_fields", {}).items():
+            if "type" in field_def:
+                yield f"state '{state['id']}'", field_name, field_def
+    for global_name, global_def in workflow.get("globals", {}).items():
+        for field_name, field_def in global_def.get("fields", {}).items():
+            if "type" in field_def:
+                yield f"global '{global_name}'", field_name, field_def
 
 
 # ---------------------------------------------------------------------------
@@ -89,6 +162,135 @@ class TestSchemaValidation:
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
 
+    def test_global_ref_accepted(self, schema):
+        """A global ref (@global.field) in additional_fields must pass the schema."""
+        valid = {
+            "version": "1.0.0",
+            "globals": {
+                "location": {
+                    "model": "Location",
+                    "fields": {"name": {"type": "string"}},
+                }
+            },
+            "states": [
+                {
+                    "id": "a",
+                    "visible": True,
+                    "successors": ["b"],
+                    "additional_fields": {
+                        "kiln": {"$ref": "@location.name"},
+                    },
+                },
+                {"id": "b", "visible": True, "terminal": True},
+            ],
+        }
+        jsonschema.validate(instance=valid, schema=schema)
+
+    def test_can_create_accepted_on_global_ref(self, schema):
+        """can_create: true must be accepted on a global ref."""
+        valid = {
+            "version": "1.0.0",
+            "globals": {
+                "location": {
+                    "model": "Location",
+                    "fields": {"name": {"type": "string"}},
+                }
+            },
+            "states": [
+                {
+                    "id": "a",
+                    "visible": True,
+                    "successors": ["b"],
+                    "additional_fields": {
+                        "kiln": {"$ref": "@location.name", "can_create": True},
+                    },
+                },
+                {"id": "b", "visible": True, "terminal": True},
+            ],
+        }
+        jsonschema.validate(instance=valid, schema=schema)
+
+    def test_can_create_rejected_on_state_ref(self, schema):
+        """can_create must not be accepted on a state ref — it is only valid on global refs."""
+        bad = {
+            "version": "1.0.0",
+            "states": [
+                {
+                    "id": "a",
+                    "visible": True,
+                    "successors": ["b"],
+                    "additional_fields": {
+                        "x": {"type": "number"},
+                    },
+                },
+                {
+                    "id": "b",
+                    "visible": True,
+                    "successors": ["c"],
+                    "additional_fields": {
+                        "y": {"$ref": "a.x", "can_create": True},
+                    },
+                },
+                {"id": "c", "visible": True, "terminal": True},
+            ],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
+    def test_can_create_rejected_on_inline_field(self, schema):
+        """can_create must not be accepted on an inline field."""
+        bad = {
+            "version": "1.0.0",
+            "states": [
+                {
+                    "id": "a",
+                    "visible": True,
+                    "successors": ["b"],
+                    "additional_fields": {
+                        "x": {"type": "number", "can_create": True},
+                    },
+                },
+                {"id": "b", "visible": True, "terminal": True},
+            ],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
+    def test_invalid_ref_pattern_fails(self, schema):
+        """A $ref that matches neither form must be rejected by the schema."""
+        bad = {
+            "version": "1.0.0",
+            "states": [
+                {
+                    "id": "a",
+                    "visible": True,
+                    "successors": ["b"],
+                    "additional_fields": {"x": {"$ref": "not-valid"}},
+                },
+                {"id": "b", "visible": True, "terminal": True},
+            ],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
+    def test_global_with_no_model_fails(self, schema):
+        bad = {
+            "version": "1.0.0",
+            "globals": {"location": {"fields": {"name": {"type": "string"}}}},
+            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
+    def test_global_with_no_fields_fails(self, schema):
+        bad = {
+            "version": "1.0.0",
+            "globals": {"location": {"model": "Location", "fields": {}}},
+            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
 
 # ---------------------------------------------------------------------------
 # Referential integrity (things JSON Schema cannot express)
@@ -133,3 +335,106 @@ class TestReferentialIntegrity:
             assert state["id"] not in state.get("successors", []), (
                 f"State '{state['id']}' lists itself as a successor"
             )
+
+
+# ---------------------------------------------------------------------------
+# Additional fields DSL — referential integrity
+# ---------------------------------------------------------------------------
+
+class TestAdditionalFieldsDSL:
+    def test_enum_only_on_string_type(self, workflow):
+        """enum is only meaningful on type: string fields."""
+        for context, field_name, field_def in _all_inline_fields(workflow):
+            if "enum" in field_def:
+                assert field_def.get("type") == "string", (
+                    f"Field '{field_name}' in {context} declares enum but type is "
+                    f"'{field_def.get('type')}' — enum is only valid on type: string"
+                )
+
+    def test_state_ref_state_exists(self, workflow, state_ids):
+        """The state_id in a state ref must be a known state."""
+        for host_state, field_name, ref_str in _all_refs(workflow):
+            kind, name, _ = _parse_ref(ref_str)
+            if kind == "state":
+                assert name in state_ids, (
+                    f"State '{host_state}' field '{field_name}': $ref '{ref_str}' "
+                    f"references unknown state '{name}'"
+                )
+
+    def test_state_ref_field_exists(self, workflow):
+        """The field_name in a state ref must be declared on that state."""
+        fields_by_state = {
+            s["id"]: set(s.get("additional_fields", {}).keys())
+            for s in workflow["states"]
+        }
+        for host_state, field_name, ref_str in _all_refs(workflow):
+            kind, ref_state, ref_field = _parse_ref(ref_str)
+            if kind == "state":
+                assert ref_field in fields_by_state.get(ref_state, set()), (
+                    f"State '{host_state}' field '{field_name}': $ref '{ref_str}' "
+                    f"references field '{ref_field}' which is not declared on state '{ref_state}'"
+                )
+
+    def test_state_ref_is_reachable_ancestor(self, workflow):
+        """The state_id in a state ref must be a reachable ancestor of the host state."""
+        succs = _successors_map(workflow)
+        for host_state, field_name, ref_str in _all_refs(workflow):
+            kind, ref_state, _ = _parse_ref(ref_str)
+            if kind == "state":
+                ancestors = _ancestors(host_state, succs)
+                assert ref_state in ancestors, (
+                    f"State '{host_state}' field '{field_name}': $ref '{ref_str}' "
+                    f"references state '{ref_state}' which is not a reachable ancestor"
+                )
+
+    def test_global_ref_global_exists(self, workflow, globals_section):
+        """The global_name in a global ref must be declared in globals."""
+        for host_state, field_name, ref_str in _all_refs(workflow):
+            kind, global_name, _ = _parse_ref(ref_str)
+            if kind == "global":
+                assert global_name in globals_section, (
+                    f"State '{host_state}' field '{field_name}': $ref '{ref_str}' "
+                    f"references undeclared global '@{global_name}'"
+                )
+
+    def test_global_ref_field_exists(self, workflow, globals_section):
+        """The field_name in a global ref must be declared in that global's fields."""
+        for host_state, field_name, ref_str in _all_refs(workflow):
+            kind, global_name, ref_field = _parse_ref(ref_str)
+            if kind == "global" and global_name in globals_section:
+                declared = set(globals_section[global_name].get("fields", {}).keys())
+                assert ref_field in declared, (
+                    f"State '{host_state}' field '{field_name}': $ref '{ref_str}' "
+                    f"references field '{ref_field}' which is not declared in global '@{global_name}'"
+                )
+
+
+# ---------------------------------------------------------------------------
+# Globals — verify against api/models.py via Django introspection
+# ---------------------------------------------------------------------------
+
+class TestGlobals:
+    def test_all_globals_map_to_real_models(self, globals_section):
+        """Every global's `model` must be a real model in the api app."""
+        for alias, global_def in globals_section.items():
+            model_name = global_def["model"]
+            try:
+                apps.get_model("api", model_name)
+            except LookupError:
+                pytest.fail(
+                    f"Global '@{alias}' declares model '{model_name}' "
+                    f"which does not exist in the api app"
+                )
+
+    def test_all_global_fields_exist_on_model(self, globals_section):
+        """Every field declared in a global must exist on the corresponding Django model."""
+        for alias, global_def in globals_section.items():
+            model = apps.get_model("api", global_def["model"])
+            for field_name in global_def.get("fields", {}):
+                try:
+                    model._meta.get_field(field_name)
+                except Exception:
+                    pytest.fail(
+                        f"Global '@{alias}' declares field '{field_name}' "
+                        f"which does not exist on model '{global_def['model']}'"
+                    )

@@ -1,7 +1,10 @@
 # JSON Schema (Draft 2020-12) for workflow.yml, written in YAML.
+#
 # Structural constraints are enforced here; referential integrity
-# (successor IDs must exist, terminal states must have no successors)
-# is checked in tests/test_workflow.py.
+# (successor IDs must exist, terminal states must have no successors,
+# $ref targets must resolve to real states/fields or declared globals,
+# global models must exist in api/models.py) is checked in
+# tests/test_workflow.py.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
 title: Glaze Workflow
@@ -15,6 +18,18 @@ properties:
     description: Semantic version of this workflow definition.
     pattern: '^\d+\.\d+\.\d+$'
 
+  globals:
+    type: object
+    description: |
+      Named domain types from api/models.py available as foreign-key references
+      in additional_fields via the @<global>.<field> syntax.
+      api/models.py remains the source of truth — tests verify that every declared
+      global and its fields match the corresponding Django model exactly.
+    propertyNames:
+      pattern: '^[a-z][a-z0-9_]*$'
+    additionalProperties:
+      $ref: "#/$defs/global_def"
+
   states:
     type: array
     description: Ordered list of workflow states (lifecycle order).
@@ -23,6 +38,43 @@ properties:
       $ref: "#/$defs/state"
 
 $defs:
+
+  # ---------------------------------------------------------------------------
+  # Globals
+  # Fields within a global may be inline or global refs (not state refs,
+  # since globals have no position in the state graph).
+  # ---------------------------------------------------------------------------
+
+  global_def:
+    type: object
+    required: [model, fields]
+    additionalProperties: false
+    properties:
+      model:
+        type: string
+        description: Django model class name (PascalCase) in api/models.py.
+        pattern: '^[A-Z][a-zA-Z0-9]*$'
+      description:
+        type: string
+        description: Human-readable description of this domain type.
+      fields:
+        type: object
+        description: |
+          Subset of the model's fields exposed to the field DSL.
+          Each key is the model field name (snake_case); each value is an
+          inline field definition or a global ref.
+          State refs are not permitted here — globals have no ancestry.
+          Tests verify that every declared field exists on the Django model.
+        minProperties: 1
+        propertyNames:
+          pattern: '^[a-z][a-z0-9_]*$'
+        additionalProperties:
+          $ref: "#/$defs/global_field_def"
+
+  # ---------------------------------------------------------------------------
+  # State
+  # ---------------------------------------------------------------------------
+
   state:
     type: object
     required: [id, visible]
@@ -45,3 +97,108 @@ $defs:
           type: string
           pattern: '^[a-z][a-z0-9_]*$'
         uniqueItems: true
+      additional_fields:
+        type: object
+        description: |
+          State-specific fields declared using the Glaze field DSL.
+          Each key is the field name (snake_case); each value is an inline
+          field, a state ref, or a global ref.
+        propertyNames:
+          pattern: '^[a-z][a-z0-9_]*$'
+        additionalProperties:
+          $ref: "#/$defs/field_def"
+
+  # ---------------------------------------------------------------------------
+  # Field DSL
+  #
+  # field_def      — used in state additional_fields; all three forms allowed.
+  # global_field_def — used in global fields; inline and global refs only
+  #                    (state refs don't apply outside the state graph).
+  # ---------------------------------------------------------------------------
+
+  field_def:
+    oneOf:
+      - $ref: "#/$defs/inline_field"
+      - $ref: "#/$defs/state_ref_field"
+      - $ref: "#/$defs/global_ref_field"
+
+  global_field_def:
+    oneOf:
+      - $ref: "#/$defs/inline_field"
+      - $ref: "#/$defs/global_ref_field"
+
+  inline_field:
+    type: object
+    required: [type]
+    additionalProperties: false
+    properties:
+      type:
+        type: string
+        description: JSON Schema primitive type for this field.
+        enum: [string, number, integer, boolean, array, object]
+      description:
+        type: string
+        description: Human-readable description of the field.
+      required:
+        type: boolean
+        description: Whether this field must be provided when recording this state.
+        default: false
+      enum:
+        type: array
+        description: |
+          Restricts the field to a fixed set of values.
+          Only valid when type is "string" — enforced in tests/test_workflow.py.
+        minItems: 1
+        items: {}
+        uniqueItems: true
+
+  state_ref_field:
+    type: object
+    required: [$ref]
+    additionalProperties: false
+    description: Carries a field forward from a reachable ancestor state.
+    properties:
+      $ref:
+        type: string
+        description: |
+          Reference to a field declared on another (ancestor) state, in the form:
+            <state_id>.<field_name>
+          Referential validity (state exists, field exists on it, state is a
+          reachable ancestor) is enforced in tests/test_workflow.py.
+        pattern: '^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$'
+      description:
+        type: string
+        description: Optional override of the referenced field's description.
+      required:
+        type: boolean
+        description: Optional override of the referenced field's required flag.
+
+  global_ref_field:
+    type: object
+    required: [$ref]
+    additionalProperties: false
+    description: Foreign-key reference to a field on a global domain type.
+    properties:
+      $ref:
+        type: string
+        description: |
+          Reference to a field declared in the top-level `globals` section, in the form:
+            @<global_name>.<field_name>
+          The @ prefix distinguishes global refs from state refs.
+          Referential validity (global exists, field exists on it, model exists
+          in api/models.py) is enforced in tests/test_workflow.py.
+        pattern: '^@[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$'
+      description:
+        type: string
+        description: Optional override of the referenced field's description.
+      required:
+        type: boolean
+        description: Optional override of the referenced field's required flag.
+      can_create:
+        type: boolean
+        description: |
+          Whether the UI is allowed to create a new instance of the referenced
+          global type when recording this state (e.g. create a new Location
+          inline rather than selecting an existing one).
+          Default: false.
+        default: false
