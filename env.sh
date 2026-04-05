@@ -109,6 +109,31 @@ gz_dbshell()         { gz_manage dbshell "$@"; }
 gz_showmigrations()  { gz_manage showmigrations "$@"; }
 
 # ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+gz_test_backend() {
+    (
+        source "$GLAZE_ROOT/.venv/bin/activate"
+        cd "$GLAZE_ROOT"
+        pytest "$@"
+    )
+}
+
+gz_test_frontend() {
+    (cd "$GLAZE_ROOT/frontend" && npm test "$@")
+}
+
+gz_test() {
+    local backend_exit frontend_exit
+    gz_test_backend & local backend_pid=$!
+    gz_test_frontend & local frontend_pid=$!
+    wait $backend_pid; backend_exit=$?
+    wait $frontend_pid; frontend_exit=$?
+    return $(( backend_exit | frontend_exit ))
+}
+
+# ---------------------------------------------------------------------------
 # Servers
 # ---------------------------------------------------------------------------
 
@@ -213,6 +238,9 @@ echo "  gz_makemigrations  — makemigrations"
 echo "  gz_shell           — Django shell"
 echo "  gz_dbshell         — database shell"
 echo "  gz_showmigrations  — showmigrations"
+echo "  gz_test            — run backend + frontend tests in parallel"
+echo "  gz_test_backend    — run pytest only"
+echo "  gz_test_frontend   — run vitest only"
 echo "  gz_gentypes        — regenerate frontend TypeScript types"
 echo "  gz_start/stop      — start or stop backend + frontend"
 echo "  gz_status          — show what is running"
