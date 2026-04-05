@@ -53,6 +53,7 @@ kiln_location:
   $ref: "@location.name"
   description: "..."    # optional override
   required: true        # optional override
+  can_create: true      # optional; default false — allows inline creation of a new global instance
 ```
 
 Referential rules enforced by `TestAdditionalFieldsDSL`:
