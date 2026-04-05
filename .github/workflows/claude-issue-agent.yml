@@ -1,0 +1,50 @@
+name: Claude Issue Agent
+
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created]
+
+jobs:
+  respond:
+    # Run on issues (not PRs), skip bot comments to prevent loops
+    if: |
+      !endsWith(github.actor, '[bot]') &&
+      (
+        github.event_name == 'issues' ||
+        (github.event_name == 'issue_comment' && !github.event.issue.pull_request)
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            You are an autonomous software agent helping resolve GitHub issues for the
+            Glaze pottery workflow tracking app (Django backend + React frontend).
+
+            Read the issue title, body, and every existing comment before acting.
+
+            IF you still need information to implement the fix:
+            - Post a comment with at most three focused clarifying questions.
+            - Do not repeat questions already asked in earlier comments.
+
+            IF the issue is specific enough to act on (or all clarifying questions have been answered):
+            - Implement the fix on a new branch.
+            - Run `pytest` from the repo root (backend) and `npm test` inside `frontend/`
+              (frontend). The PR must not be opened if either suite fails.
+            - Open a pull request with "Closes #<issue number>" in the body.
+            - Post a comment on the issue linking to the PR.
+
+            Key project facts:
+            - `workflow.json` is the single source of truth for pottery states — never
+              hardcode state names or transitions anywhere in the code.
+            - Backend: Django + DRF in `api/`; tests in `api/tests.py`; run with `pytest`.
+            - Frontend: React 19 + TypeScript + MUI in `frontend/src/`; component tests in
+              `frontend/src/components/__tests__/`; run with `npm test` inside `frontend/`.
+            - See AGENTS.md for full conventions.
