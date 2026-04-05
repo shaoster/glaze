@@ -7,6 +7,8 @@ import type { PieceDetail } from '../../types'
 
 vi.mock('../../api', () => ({
     createPiece: vi.fn(),
+    fetchGlobalEntries: vi.fn().mockResolvedValue([]),
+    createGlobalEntry: vi.fn(),
 }))
 
 function makePieceDetail(): PieceDetail {
@@ -21,7 +23,6 @@ function makePieceDetail(): PieceDetail {
             notes: '',
             created: new Date('2024-01-15T10:00:00Z'),
             last_modified: new Date('2024-01-15T10:00:00Z'),
-            location: '',
             images: [],
             previous_state: null,
             next_state: null,
@@ -38,6 +39,7 @@ const defaultProps = {
 
 beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(api.fetchGlobalEntries).mockResolvedValue([])
 })
 
 describe('NewPieceDialog', () => {
@@ -55,6 +57,29 @@ describe('NewPieceDialog', () => {
         it('renders the notes field', () => {
             render(<NewPieceDialog {...defaultProps} />)
             expect(screen.getByTestId('notes-input')).toBeInTheDocument()
+        })
+
+        it('lets you create a new location option', async () => {
+            vi.mocked(api.createGlobalEntry).mockResolvedValue('Studio K')
+            render(<NewPieceDialog {...defaultProps} />)
+            const locationInput = screen.getByLabelText('Location')
+            await userEvent.type(locationInput, 'Studio K')
+            await waitFor(() => expect(screen.getByRole('option', { name: 'Create "Studio K"' })).toBeInTheDocument())
+            fireEvent.click(screen.getByRole('option', { name: 'Create "Studio K"' }))
+            await waitFor(() =>
+                expect(api.createGlobalEntry).toHaveBeenCalledWith('location', 'name', 'Studio K')
+            )
+            expect(locationInput).toHaveValue('Studio K')
+        })
+
+        it('renders the location field', () => {
+            render(<NewPieceDialog {...defaultProps} />)
+            expect(screen.getByLabelText('Location')).toBeInTheDocument()
+        })
+
+        it('fetches location suggestions', () => {
+            render(<NewPieceDialog {...defaultProps} />)
+            expect(api.fetchGlobalEntries).toHaveBeenCalledWith('location')
         })
 
         it('shows curated thumbnail images by default', () => {
@@ -161,6 +186,19 @@ describe('NewPieceDialog', () => {
             await waitFor(() => {
                 expect(api.createPiece).toHaveBeenCalledWith(
                     expect.objectContaining({ name: 'Trimmed' })
+                )
+            })
+        })
+
+        it('sends location when provided', async () => {
+            vi.mocked(api.createPiece).mockResolvedValue(makePieceDetail())
+            render(<NewPieceDialog {...defaultProps} />)
+            fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Studio 7' } })
+            await userEvent.type(screen.getByTestId('name-input'), 'Bowl')
+            await userEvent.click(screen.getByTestId('save-button'))
+            await waitFor(() => {
+                expect(api.createPiece).toHaveBeenCalledWith(
+                    expect.objectContaining({ current_location: 'Studio 7' })
                 )
             })
         })

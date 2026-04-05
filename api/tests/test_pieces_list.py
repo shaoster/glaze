@@ -25,4 +25,4 @@ class TestPiecesList:
     def test_summary_shape(self, client, piece):
         data = client.get('/api/pieces/').json()
         keys = set(data[0].keys())
-        assert keys == {'id', 'name', 'created', 'last_modified', 'thumbnail', 'current_state'}
+        assert keys == {'id', 'name', 'created', 'current_location', 'last_modified', 'thumbnail', 'current_state'}

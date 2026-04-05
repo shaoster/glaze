@@ -110,6 +110,13 @@ class Piece(models.Model):
     # Use the `last_modified` property externally — it incorporates the current state's timestamp.
     fields_last_modified = models.DateTimeField(auto_now=True)
     thumbnail = models.CharField(max_length=1024, blank=True, default='')
+    current_location = models.ForeignKey(
+        'Location',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pieces',
+    )
     # Workflow version under which this piece was created. All of its states are
     # validated against this version. Hardcoded to the current WORKFLOW_VERSION
     # for now; future work will allow migrating pieces to newer versions.
@@ -140,9 +147,6 @@ class PieceState(models.Model):
     notes = models.TextField(blank=True, default='')
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
-    location = models.ForeignKey(
-        'Location', null=True, blank=True, on_delete=models.SET_NULL, related_name='piece_states'
-    )
     # Stored as a list of {url, caption, created} objects.
     images = models.JSONField(default=list)
     # State-specific data conforming to the additional_fields DSL for this state

@@ -2,6 +2,8 @@ import uuid
 
 import pytest
 
+from api.models import Location
+
 
 # ---------------------------------------------------------------------------
 # GET /api/pieces/{id}/
@@ -24,4 +26,32 @@ class TestPieceDetail:
     def test_current_state_has_full_fields(self, client, piece):
         data = client.get(f'/api/pieces/{piece.id}/').json()
         cs = data['current_state']
-        assert {'state', 'notes', 'created', 'last_modified', 'location', 'images'} <= cs.keys()
+        assert {'state', 'notes', 'created', 'last_modified', 'images', 'additional_fields'} <= cs.keys()
+
+    def test_current_location_exposed(self, client, piece):
+        location = Location.objects.create(name='Studio Q')
+        piece.current_location = location
+        piece.save()
+        data = client.get(f'/api/pieces/{piece.id}/').json()
+        assert data['current_location'] == 'Studio Q'
+
+    def test_patch_updates_current_location(self, client, piece):
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'current_location': 'Shelf Z'},
+            format='json',
+        )
+        assert response.status_code == 200
+        assert response.json()['current_location'] == 'Shelf Z'
+        assert Location.objects.filter(name='Shelf Z').exists()
+
+    def test_create_sets_initial_location(self, client):
+        response = client.post(
+            '/api/pieces/',
+            {'name': 'New Mug', 'current_location': 'Kiln Garden'},
+            format='json',
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data['current_location'] == 'Kiln Garden'
+        assert Location.objects.filter(name='Kiln Garden').exists()

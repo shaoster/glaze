@@ -102,6 +102,7 @@ These types are defined in [`frontend/src/types.ts`](frontend/src/types.ts) and 
   last_modified: Date;
   thumbnail: string;
   current_state: State;   // just the state name
+  current_location?: Location; // reference to the Location global object.
 }
 ```
 
@@ -112,7 +113,6 @@ These types are defined in [`frontend/src/types.ts`](frontend/src/types.ts) and 
   notes: string;
   created: Date;
   last_modified: Date;
-  location: Location;     // string for now
   images: [CaptionedImage];
   previous_state?: State;
   next_state?: State;
