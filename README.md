@@ -2,6 +2,12 @@
 
 A pottery workflow tracking application. Log pieces and record state transitions as work moves through throwing, bisque firing, glazing, and finishing.
 
+While the UI is similar at a surface level to other craft journaling applications, the main differences are under the hood:
+   - Customizable, potentially non-linear workflows. For some pieces you'll carve first, for others you'll slip first. For others, there might be multiple rounds of each.
+   - Opinionated data model with immutable stage data for your piece's unique journey and your growth-minded journey as a potter. You can't change the past, so keep moving forward. (Administrative bulk data cleaning is still allowed!)
+   - Data normalization around every piece's history for richer and more reliable single piece and multi-piece analysis.
+   - Systematically answer questions like "How many pieces do I lose in the firing stage by glaze type?" or "How often do I ruin a piece during trimming?"
+
 ## Quick start
 
 ```bash
@@ -147,3 +153,8 @@ env.sh            Development shell helpers
 ```
 
 The workflow state machine and all valid transitions are defined in [`workflow.json`](workflow.json). Both the backend and frontend derive state names and transition rules from this file — nothing is hardcoded elsewhere.
+
+
+# Using the App
+
+TBD
