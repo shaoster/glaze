@@ -3,18 +3,26 @@ name: Claude PR Agent
 on:
   issue_comment:
     types: [created]
-  pull_request_review_comment:
-    types: [created]
+  pull_request_review:
+    types: [submitted]
 
 jobs:
   respond:
-    # Run only on PR comments that mention @claude; skip bot comments
+    # Run on @claude PR comments, or on reviews that request changes
     if: |
       !endsWith(github.actor, '[bot]') &&
-      contains(github.event.comment.body, '@claude') &&
       (
-        github.event_name == 'pull_request_review_comment' ||
-        (github.event_name == 'issue_comment' && github.event.issue.pull_request)
+        (
+          contains(github.event.comment.body, '@claude') &&
+          (
+            github.event_name == 'pull_request_review_comment' ||
+            (github.event_name == 'issue_comment' && github.event.issue.pull_request)
+          )
+        ) ||
+        (
+          github.event_name == 'pull_request_review' &&
+          github.event.review.state == 'changes_requested'
+        )
       )
     runs-on: ubuntu-latest
     permissions:
@@ -30,12 +38,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           trigger_phrase: "@claude"
           claude_args: "--dangerously-skip-permissions"
-
-      - name: Show Claude execution output
-        if: always()
-        run: |
-          if [ -f /home/runner/work/_temp/claude-execution-output.json ]; then
-            cat /home/runner/work/_temp/claude-execution-output.json | python3 -m json.tool
-          else
-            echo "No execution output file found."
-          fi
+          show_full_output: "true"
