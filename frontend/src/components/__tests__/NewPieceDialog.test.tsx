@@ -5,18 +5,6 @@ import NewPieceDialog, { CURATED_THUMBNAILS } from '../NewPieceDialog'
 import * as api from '../../api'
 import type { PieceDetail } from '../../types'
 
-// Mock react-sketch-canvas so tests don't need a real canvas environment
-vi.mock('react-sketch-canvas', () => ({
-    ReactSketchCanvas: vi.fn(({ onChange }: { onChange?: (s: unknown[]) => void }) => {
-        return (
-            <div
-                data-testid="sketch-canvas"
-                onClick={() => onChange?.([{ id: 'stroke1' }])}
-            />
-        )
-    }),
-}))
-
 vi.mock('../../api', () => ({
     createPiece: vi.fn(),
 }))
@@ -69,12 +57,6 @@ describe('NewPieceDialog', () => {
             expect(screen.getByTestId('notes-input')).toBeInTheDocument()
         })
 
-        it('renders Gallery and Draw tabs', () => {
-            render(<NewPieceDialog {...defaultProps} />)
-            expect(screen.getByRole('tab', { name: 'Gallery' })).toBeInTheDocument()
-            expect(screen.getByRole('tab', { name: 'Draw' })).toBeInTheDocument()
-        })
-
         it('shows curated thumbnail images by default', () => {
             render(<NewPieceDialog {...defaultProps} />)
             const images = screen.getAllByRole('img')
@@ -112,21 +94,6 @@ describe('NewPieceDialog', () => {
             const longText = 'a'.repeat(350)
             await userEvent.type(screen.getByTestId('notes-input'), longText)
             expect(screen.getByText('300 / 300')).toBeInTheDocument()
-        })
-    })
-
-    describe('thumbnail tabs', () => {
-        it('switches to Draw tab and shows canvas', async () => {
-            render(<NewPieceDialog {...defaultProps} />)
-            await userEvent.click(screen.getByRole('tab', { name: 'Draw' }))
-            expect(screen.getByTestId('sketch-canvas')).toBeInTheDocument()
-        })
-
-        it('switching back to Gallery tab hides canvas', async () => {
-            render(<NewPieceDialog {...defaultProps} />)
-            await userEvent.click(screen.getByRole('tab', { name: 'Draw' }))
-            await userEvent.click(screen.getByRole('tab', { name: 'Gallery' }))
-            expect(screen.queryByTestId('sketch-canvas')).not.toBeInTheDocument()
         })
     })
 

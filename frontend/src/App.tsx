@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { Box, Button, CircularProgress, Container, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, Container, CssBaseline, Typography } from '@mui/material'
+import { ThemeProvider, createTheme } from '@mui/material/styles'
+
+const darkTheme = createTheme({ palette: { mode: 'dark' } })
 import { fetchPieces } from './api'
 import NewPieceDialog from './components/NewPieceDialog'
 import PieceList from './components/PieceList'
@@ -55,13 +58,16 @@ function PieceDetailPage() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <BrowserRouter>
+        <Container maxWidth="lg" sx={{ py: 4 }}>
         <Routes>
           <Route path="/" element={<PieceListPage />} />
           <Route path="/pieces/:id" element={<PieceDetailPage />} />
         </Routes>
-      </Container>
-    </BrowserRouter>
+        </Container>
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import {
     Box,
     Button,
@@ -8,17 +8,16 @@ import {
     DialogContentText,
     DialogTitle,
     Grid,
-    Tab,
-    Tabs,
     TextField,
     Typography,
 } from '@mui/material'
-import { ReactSketchCanvas } from 'react-sketch-canvas'
-import type { ReactSketchCanvasRef } from 'react-sketch-canvas'
 import { createPiece } from '../api'
 import type { PieceDetail } from '../types'
 
+export const DEFAULT_THUMBNAIL = '/thumbnails/question-mark.svg'
+
 export const CURATED_THUMBNAILS = [
+    DEFAULT_THUMBNAIL,
     '/thumbnails/bowl.svg',
     '/thumbnails/mug.svg',
     '/thumbnails/vase.svg',
@@ -37,29 +36,19 @@ export interface NewPieceDialogProps {
 export default function NewPieceDialog({ open, onClose, onCreated }: NewPieceDialogProps) {
     const [name, setName] = useState('')
     const [notes, setNotes] = useState('')
-    const [thumbnailTab, setThumbnailTab] = useState(0)
-    const [selectedThumbnail, setSelectedThumbnail] = useState<string | null>(null)
-    const [canvasHasStrokes, setCanvasHasStrokes] = useState(false)
+    const [selectedThumbnail, setSelectedThumbnail] = useState<string>(DEFAULT_THUMBNAIL)
     const [saving, setSaving] = useState(false)
     const [confirmDiscard, setConfirmDiscard] = useState(false)
-    const canvasRef = useRef<ReactSketchCanvasRef>(null)
-
-    const isDirty =
-        name.trim() !== '' ||
-        notes !== '' ||
-        selectedThumbnail !== null ||
-        canvasHasStrokes
 
     function resetState() {
         setName('')
         setNotes('')
-        setThumbnailTab(0)
-        setSelectedThumbnail(null)
-        setCanvasHasStrokes(false)
+        setSelectedThumbnail(DEFAULT_THUMBNAIL)
         setSaving(false)
         setConfirmDiscard(false)
-        canvasRef.current?.clearCanvas()
     }
+
+    const isDirty = name.trim() !== '' || notes !== '' || selectedThumbnail !== DEFAULT_THUMBNAIL
 
     function handleAttemptClose() {
         if (isDirty) {
@@ -79,17 +68,13 @@ export default function NewPieceDialog({ open, onClose, onCreated }: NewPieceDia
         if (!name.trim()) return
         setSaving(true)
         try {
-            let thumbnail = selectedThumbnail ?? ''
-            if (thumbnailTab === 1 && canvasHasStrokes) {
-                const svg = await canvasRef.current?.exportSvg()
-                thumbnail = svg ?? ''
-            }
             const piece = await createPiece({
                 name: name.trim(),
-                thumbnail,
+                thumbnail: selectedThumbnail ?? '',
                 notes: notes || undefined,
             })
             resetState()
+            onClose()
             onCreated(piece)
         } finally {
             setSaving(false)
@@ -112,7 +97,7 @@ export default function NewPieceDialog({ open, onClose, onCreated }: NewPieceDia
                         fullWidth
                         error={nameIsInvalid}
                         helperText={nameIsInvalid ? 'Name cannot be blank' : ''}
-                        inputProps={{ 'data-testid': 'name-input' }}
+                        slotProps={{ htmlInput: { 'data-testid': 'name-input' } }}
                         sx={{ mt: 1, mb: 2 }}
                     />
                     <TextField
@@ -123,79 +108,37 @@ export default function NewPieceDialog({ open, onClose, onCreated }: NewPieceDia
                         rows={3}
                         fullWidth
                         helperText={`${notes.length} / ${MAX_NOTES_LENGTH}`}
-                        inputProps={{ 'data-testid': 'notes-input' }}
+                        slotProps={{ htmlInput: { 'data-testid': 'notes-input' } }}
                         sx={{ mb: 2 }}
                     />
                     <Typography variant="subtitle2" gutterBottom>
                         Thumbnail
                     </Typography>
-                    <Tabs
-                        value={thumbnailTab}
-                        onChange={(_, v: number) => setThumbnailTab(v)}
-                        sx={{ mb: 2 }}
-                    >
-                        <Tab label="Gallery" />
-                        <Tab label="Draw" />
-                    </Tabs>
-                    {thumbnailTab === 0 && (
-                        <Grid container spacing={1}>
-                            {CURATED_THUMBNAILS.map((url) => (
-                                <Grid key={url} size={2.4}>
-                                    <Box
-                                        component="img"
-                                        src={url}
-                                        alt={url.split('/').pop()?.replace('.svg', '') ?? url}
-                                        onClick={() => setSelectedThumbnail(url)}
-                                        sx={{
-                                            width: '100%',
-                                            aspectRatio: '1',
-                                            cursor: 'pointer',
-                                            border: selectedThumbnail === url
-                                                ? '3px solid'
-                                                : '3px solid transparent',
-                                            borderColor: selectedThumbnail === url
-                                                ? 'primary.main'
-                                                : 'transparent',
-                                            borderRadius: 1,
-                                            boxSizing: 'border-box',
-                                        }}
-                                    />
-                                </Grid>
-                            ))}
-                        </Grid>
-                    )}
-                    {thumbnailTab === 1 && (
-                        <Box>
-                            <Box
-                                sx={{
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderRadius: 1,
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                <ReactSketchCanvas
-                                    ref={canvasRef}
-                                    width="100%"
-                                    height="200px"
-                                    strokeColor="#333333"
-                                    strokeWidth={3}
-                                    canvasColor="#ffffff"
-                                    onChange={(strokes) => setCanvasHasStrokes(strokes.length > 0)}
+                    <Grid container spacing={1}>
+                        {CURATED_THUMBNAILS.map((url) => (
+                            <Grid key={url} size={2}>
+                                <Box
+                                    component="img"
+                                    src={url}
+                                    alt={url.split('/').pop()?.replace('.svg', '') ?? url}
+                                    onClick={() => setSelectedThumbnail(url)}
+                                    sx={{
+                                        width: '100%',
+                                        aspectRatio: '1',
+                                        cursor: 'pointer',
+                                        border: selectedThumbnail === url
+                                            ? '3px solid'
+                                            : '3px solid transparent',
+                                        borderColor: selectedThumbnail === url
+                                            ? 'primary.main'
+                                            : 'transparent',
+                                        borderRadius: 1,
+                                        boxSizing: 'border-box',
+                                    }}
                                 />
-                            </Box>
-                            <Button
-                                size="small"
-                                onClick={() => {
-                                    canvasRef.current?.clearCanvas()
-                                    setCanvasHasStrokes(false)
-                                }}
-                                sx={{ mt: 1 }}
-                            >
-                                Clear
-                            </Button>
-                        </Box>
-                    )}
+                            </Grid>
+                        ))}
+                    </Grid>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleAttemptClose}>Cancel</Button>
