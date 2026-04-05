@@ -107,7 +107,7 @@ Glaze uses Claude agents to handle issues and PR feedback autonomously. You don'
 ### Open an issue → get a PR
 
 1. **Open a GitHub issue** describing the feature or bug.
-   - Be specific: what should happen, what currently happens, any relevant state names from `workflow.json`.
+   - Be specific: what should happen, what currently happens, any relevant state names from `workflow.yml`.
    - Claude will read the issue automatically and either ask clarifying questions (as a comment) or implement the change on a new branch and open a pull request.
 2. **Answer any follow-up questions** Claude posts as issue comments.
    - Claude re-reads the full thread each time, so just reply naturally — no special trigger phrase needed.
@@ -134,7 +134,7 @@ Claude will read the comment, make the change, and push it to the branch.
 ### Tips
 
 - Claude always runs `pytest` (backend) and `npm test` (frontend) before opening or updating a PR. If tests fail, it will not push.
-- Claude derives all state names and transitions from `workflow.json` — you can reference state names freely in issues and it will use the correct values.
+- Claude derives all state names and transitions from `workflow.yml` — you can reference state names freely in issues and it will use the correct values.
 - For large or ambiguous requests, start with an issue rather than a direct PR comment so Claude can ask questions before writing code.
 
 ## Project structure
@@ -148,11 +148,11 @@ frontend/
     types.ts      Shared TypeScript types (derived from generated-types.ts)
     api.ts        All HTTP calls; wire-type → domain-type mapping
     App.tsx       Root component with MUI dark theme
-workflow.json     Source of truth for piece states and valid transitions
+workflow.yml     Source of truth for piece states and valid transitions
 env.sh            Development shell helpers
 ```
 
-The workflow state machine and all valid transitions are defined in [`workflow.json`](workflow.json). Both the backend and frontend derive state names and transition rules from this file — nothing is hardcoded elsewhere.
+The workflow state machine and all valid transitions are defined in [`workflow.yml`](workflow.yml). Both the backend and frontend derive state names and transition rules from this file — nothing is hardcoded elsewhere.
 
 
 # Using the App

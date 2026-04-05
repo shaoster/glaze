@@ -48,7 +48,7 @@ jobs:
             - Post a comment on the issue linking to the PR.
 
             Key project facts:
-            - `workflow.json` is the single source of truth for pottery states — never
+            - `workflow.yml` is the single source of truth for pottery states — never
               hardcode state names or transitions anywhere in the code.
             - Backend: Django + DRF in `api/`; tests in `api/tests.py`; run with `pytest`.
             - Frontend: React 19 + TypeScript + MUI in `frontend/src/`; component tests in

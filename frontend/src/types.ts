@@ -1,5 +1,5 @@
 import type { components } from './generated-types'
-import workflow from '../../workflow.json'
+import workflow from '../../workflow.yml'
 
 type WorkflowState = { id: string; visible: boolean; successors?: string[]; terminal?: boolean }
 

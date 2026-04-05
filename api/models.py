@@ -1,11 +1,11 @@
-import json
 import uuid
 from pathlib import Path
 
+import yaml
 from django.db import models
 
 # Load workflow at module import time and cache — do not re-read per request.
-_workflow = json.loads((Path(__file__).resolve().parent.parent / 'workflow.json').read_text())
+_workflow = yaml.safe_load((Path(__file__).resolve().parent.parent / 'workflow.yml').read_text())
 VALID_STATES: set[str] = {s['id'] for s in _workflow['states']}
 SUCCESSORS: dict[str, list[str]] = {s['id']: s.get('successors', []) for s in _workflow['states']}
 TERMINAL_STATES: set[str] = {s['id'] for s in _workflow['states'] if s.get('terminal', False)}
