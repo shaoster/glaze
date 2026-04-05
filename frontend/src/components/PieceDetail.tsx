@@ -70,7 +70,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     }
 
     return (
-        <Box>
+        <Box sx={{ textAlign: 'left' }}>
             {/* Header */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                 {piece.thumbnail && (
@@ -155,7 +155,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                     <Collapse in={historyOpen}>
                         <List dense>
                             {pastHistory.map((ps, i) => (
-                                <ListItem key={i} disableGutters>
+                                <ListItem key={i} disableGutters sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
                                     <ListItemText
                                         primary={formatState(ps.state)}
                                         secondary={`${ps.created.toLocaleString()}${ps.notes ? ' — ' + ps.notes : ''}`}
@@ -164,6 +164,24 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                                             secondary: { sx: { color: 'text.secondary' } },
                                         }}
                                     />
+                                    {ps.images.length > 0 && (
+                                        <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
+                                            {ps.images.map((img, j) => (
+                                                <Box key={j} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: 80 }}>
+                                                    <img
+                                                        src={img.url}
+                                                        alt={img.caption || ''}
+                                                        style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4 }}
+                                                    />
+                                                    {img.caption && (
+                                                        <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center', wordBreak: 'break-word' }}>
+                                                            {img.caption}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                            ))}
+                                        </Box>
+                                    )}
                                 </ListItem>
                             ))}
                         </List>

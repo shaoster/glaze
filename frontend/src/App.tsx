@@ -70,7 +70,7 @@ function PieceDetailPage() {
 
   return (
     <>
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: 2, textAlign: 'left' }}>
         <MuiLink
           component="button"
           variant="body2"
