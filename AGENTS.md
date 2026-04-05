@@ -109,7 +109,7 @@ PieceSummary & {
 **API endpoints:**
 - `GET /api/pieces/` → list of `PieceSummary`
 - `GET /api/pieces/<id>/` → `PieceDetail`
-- `POST /api/pieces/` → create a new piece (always starts in `designed` state; accepts `name` and optional `thumbnail`)
+- `POST /api/pieces/` → create a new piece (always starts in `designed` state; accepts `name`, optional `thumbnail`, and optional `notes`)
 - `POST /api/pieces/<id>/states/` → record a new state transition
 
 ---
@@ -132,6 +132,16 @@ PieceSummary & {
 - Use Axios for all HTTP requests to the backend.
 - TypeScript strict mode is on; avoid `any`.
 - New component files should be `.tsx`, not `.js`.
+- Use `slotProps={{ htmlInput: { ... } }}` on MUI `TextField` — the `inputProps` prop is deprecated in MUI v7.
+
+**Theming:**
+- The app uses a MUI dark theme configured in [`frontend/src/App.tsx`](frontend/src/App.tsx) via `ThemeProvider` + `createTheme({ palette: { mode: 'dark' } })` with `CssBaseline`.
+- Always use MUI theme tokens for color — never hardcode hex/rgb values. For text use `text.primary` (main content) and `text.secondary` (labels, metadata).
+
+**Thumbnails:**
+- Curated SVG thumbnails live in [`frontend/public/thumbnails/`](frontend/public/thumbnails/).
+- All thumbnails share a consistent earth-tone pottery style: fill `#c8956c`, stroke `#7a4f3a`, `viewBox="0 0 100 100"`. New thumbnails must follow this convention.
+- `DEFAULT_THUMBNAIL` (exported from `NewPieceDialog.tsx`) points to `/thumbnails/question-mark.svg` and is the pre-selected thumbnail when the piece creation dialog opens.
 
 **Type generation pipeline:**
 - [`frontend/src/generated-types.ts`](frontend/src/generated-types.ts) is auto-generated — do not edit by hand. It is gitignored.
@@ -143,6 +153,7 @@ PieceSummary & {
 
 **Existing components:**
 - [`PieceList.tsx`](frontend/src/components/PieceList.tsx) — MUI table displaying a list of `PieceSummary` objects (columns: Thumbnail, Name, State, Created, Last Modified)
+- [`NewPieceDialog.tsx`](frontend/src/components/NewPieceDialog.tsx) — dialog for creating a new piece; accepts a name, optional notes, and a thumbnail selected from the curated gallery
 - [`BaseState.tsx`](frontend/src/components/BaseState.tsx) — placeholder for rendering a single `PieceState`; not yet implemented
 
 ---
@@ -207,4 +218,4 @@ GitHub Actions runs both suites on every push and pull request — see [`.github
 - The `PieceState` history is append-only; past states should not be edited, only new ones added. Only the `current_state` should be modifiable. Once a piece has transitioned to a new state, past states should be considered sealed, and care should be taken in the backend code to prevent inadvertent edits to these sealed states.
 - `PieceDetail.current_state` is the most recent `PieceState` in the history.
 - All dates should be stored and transmitted as ISO 8601 strings; the frontend types declare them as `Date` but Axios/JSON deserialization will deliver them as strings — handle accordingly.
-- **Piece creation flow:** When creating a new piece (`POST /api/pieces/`), the piece is always initialized in the `designed` state. At this stage no physical object exists yet, so the thumbnail cannot be a photograph. Instead the creation UI should allow the user to supply a name and produce a thumbnail via an in-app drawing or design widget. The resulting image is stored as the piece's thumbnail and serves as its primary visual identifier throughout the app.
+- **Piece creation flow:** When creating a new piece (`POST /api/pieces/`), the piece is always initialized in the `designed` state. The creation UI (`NewPieceDialog`) lets the user supply a name, optional notes, and pick a thumbnail from the curated gallery in `frontend/public/thumbnails/`. The selected thumbnail URL is stored as the piece's primary visual identifier.

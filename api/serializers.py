@@ -81,13 +81,16 @@ class PieceDetailSerializer(PieceSummarySerializer):
 
 
 class PieceCreateSerializer(serializers.ModelSerializer):
+    notes = serializers.CharField(required=False, default='', allow_blank=True, max_length=300)
+
     class Meta:
         model = Piece
-        fields = ['name', 'thumbnail']
+        fields = ['name', 'thumbnail', 'notes']
 
     def create(self, validated_data: dict) -> Piece:  # type: ignore[override]
+        notes = validated_data.pop('notes', '')
         piece = Piece.objects.create(**validated_data)
-        PieceState.objects.create(piece=piece, state=ENTRY_STATE)
+        PieceState.objects.create(piece=piece, state=ENTRY_STATE, notes=notes)
         return piece
 
 

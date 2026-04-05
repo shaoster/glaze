@@ -9,20 +9,20 @@ const PieceListItem = (props: PieceListItemProps) => {
   const {
     piece
   } = props;
-  return <TableRow key={piece.id}>
+  return <TableRow>
     <TableCell>
       <img src={piece.thumbnail}/>
     </TableCell>
-    <TableCell>
+    <TableCell sx={{ color: 'text.primary' }}>
       {piece.name}
     </TableCell>
-    <TableCell>
+    <TableCell sx={{ color: 'text.primary' }}>
       {piece.current_state.state}
     </TableCell>
-    <TableCell>
+    <TableCell sx={{ color: 'text.secondary' }}>
       {piece.created.toLocaleDateString()}
     </TableCell>
-    <TableCell>
+    <TableCell sx={{ color: 'text.secondary' }}>
       {piece.last_modified.toLocaleDateString()}
     </TableCell>
   </TableRow>
@@ -41,15 +41,15 @@ const PieceList = (props: PieceListingProps) => {
     <Table sx={{ minWidth: 650 }} aria-label="simple table">
       <TableHead>
         <TableRow>
-          <TableCell>Thumbnail</TableCell>
-          <TableCell>Name</TableCell>
-          <TableCell>State</TableCell>
-          <TableCell>Created</TableCell>
-          <TableCell>Last Modified</TableCell>
+          <TableCell sx={{ color: 'text.secondary' }}>Thumbnail</TableCell>
+          <TableCell sx={{ color: 'text.secondary' }}>Name</TableCell>
+          <TableCell sx={{ color: 'text.secondary' }}>State</TableCell>
+          <TableCell sx={{ color: 'text.secondary' }}>Created</TableCell>
+          <TableCell sx={{ color: 'text.secondary' }}>Last Modified</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
-        {pieces.map((piece) => <PieceListItem piece={piece} />)}
+        {pieces.map((piece) => <PieceListItem key={piece.id} piece={piece} />)}
       </TableBody>
     </Table>
   </TableContainer>;

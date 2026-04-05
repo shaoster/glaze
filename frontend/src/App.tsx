@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
-import { Box, Button, CircularProgress, Container, Typography } from '@mui/material'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { Box, Button, CircularProgress, Container, CssBaseline, Typography } from '@mui/material'
+import { ThemeProvider, createTheme } from '@mui/material/styles'
+
+const darkTheme = createTheme({ palette: { mode: 'dark' } })
 import { fetchPieces } from './api'
+import NewPieceDialog from './components/NewPieceDialog'
 import PieceList from './components/PieceList'
-import type { PieceSummary } from './types'
+import type { PieceDetail, PieceSummary } from './types'
 
 function PieceListPage() {
   const [pieces, setPieces] = useState<PieceSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   useEffect(() => {
     fetchPieces()
@@ -17,14 +22,18 @@ function PieceListPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  function handleCreated(piece: PieceDetail) {
+    setPieces((prev) => [piece, ...prev])
+  }
+
   return (
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1">
           Pottery Pieces
         </Typography>
-        <Button variant="contained" component={Link} to="/pieces/new">
-          New Piece
+        <Button variant="contained" onClick={() => setDialogOpen(true)}>
+          + New Piece
         </Button>
       </Box>
       {loading && (
@@ -34,6 +43,11 @@ function PieceListPage() {
       )}
       {error && <Typography color="error">{error}</Typography>}
       {!loading && !error && <PieceList pieces={pieces} />}
+      <NewPieceDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onCreated={handleCreated}
+      />
     </>
   )
 }
@@ -42,20 +56,18 @@ function PieceDetailPage() {
   return <Typography>Piece detail — not yet implemented.</Typography>
 }
 
-function NewPiecePage() {
-  return <Typography>New piece form — not yet implemented.</Typography>
-}
-
 export default function App() {
   return (
-    <BrowserRouter>
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <BrowserRouter>
+        <Container maxWidth="lg" sx={{ py: 4 }}>
         <Routes>
           <Route path="/" element={<PieceListPage />} />
-          <Route path="/pieces/new" element={<NewPiecePage />} />
           <Route path="/pieces/:id" element={<PieceDetailPage />} />
         </Routes>
-      </Container>
-    </BrowserRouter>
+        </Container>
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }
