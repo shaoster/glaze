@@ -87,6 +87,7 @@ export async function fetchPiece(id: string): Promise<PieceDetail> {
 export type CreatePiecePayload = {
     name: string
     thumbnail?: string
+    notes?: string
 }
 
 // New pieces always start in the `designed` state — the backend enforces this.
