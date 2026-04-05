@@ -28,6 +28,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           trigger_phrase: ""
+          claude_args: "--dangerously-skip-permissions"
           prompt: |
             You are an autonomous software agent helping resolve GitHub issues for the
             Glaze pottery workflow tracking app (Django backend + React frontend).
