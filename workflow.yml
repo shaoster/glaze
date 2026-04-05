@@ -19,15 +19,6 @@ version: "0.0.2"
 # Each state may declare `additional_fields` — state-specific fields that
 # supplement the base PieceState fields.
 #
-# TODO: the following built-in PieceState fields are not yet represented in
-# this DSL but should eventually be synchronized with it so that the workflow
-# file is the single source of truth for all per-state data:
-#   notes     (free-text TextField — no natural global analogue)
-#   location  (FK to Location — reconcile with the `location` global below
-#              once the DSL supports declaring a field as a FK to a global
-#              rather than referencing a specific field on one)
-#   images    (JSONField — list of {url, caption, created})
-#
 # Each entry in `additional_fields` maps a snake_case field name to one of
 # two forms:
 #
