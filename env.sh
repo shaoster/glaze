@@ -112,11 +112,19 @@ gz_showmigrations()  { gz_manage showmigrations "$@"; }
 # Tests
 # ---------------------------------------------------------------------------
 
+gz_test_common() {
+    (
+        source "$GLAZE_ROOT/.venv/bin/activate"
+        cd "$GLAZE_ROOT"
+        pytest tests/ "$@"
+    )
+}
+
 gz_test_backend() {
     (
         source "$GLAZE_ROOT/.venv/bin/activate"
         cd "$GLAZE_ROOT"
-        pytest "$@"
+        pytest api/ "$@"
     )
 }
 
@@ -125,12 +133,14 @@ gz_test_frontend() {
 }
 
 gz_test() {
-    local backend_exit frontend_exit
+    local common_exit backend_exit frontend_exit
+    gz_test_common & local common_pid=$!
     gz_test_backend & local backend_pid=$!
     gz_test_frontend & local frontend_pid=$!
-    wait $backend_pid; backend_exit=$?
+    wait $common_pid;   common_exit=$?
+    wait $backend_pid;  backend_exit=$?
     wait $frontend_pid; frontend_exit=$?
-    return $(( backend_exit | frontend_exit ))
+    return $(( common_exit | backend_exit | frontend_exit ))
 }
 
 # ---------------------------------------------------------------------------
@@ -238,8 +248,9 @@ echo "  gz_makemigrations  — makemigrations"
 echo "  gz_shell           — Django shell"
 echo "  gz_dbshell         — database shell"
 echo "  gz_showmigrations  — showmigrations"
-echo "  gz_test            — run backend + frontend tests in parallel"
-echo "  gz_test_backend    — run pytest only"
+echo "  gz_test            — run all test suites in parallel"
+echo "  gz_test_common     — run workflow schema/integrity tests (pytest tests/)"
+echo "  gz_test_backend    — run Django API tests (pytest api/)"
 echo "  gz_test_frontend   — run vitest only"
 echo "  gz_gentypes        — regenerate frontend TypeScript types"
 echo "  gz_start/stop      — start or stop backend + frontend"

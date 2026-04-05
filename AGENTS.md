@@ -14,6 +14,16 @@ The app has two parts:
 
 The source of truth for piece states is [`workflow.yml`](workflow.yml) at the project root. Do not hardcode state names or transitions anywhere — always derive them from this file.
 
+**Schema and validation:** [`workflow.schema.yml`](workflow.schema.yml) is a JSON Schema (Draft 2020-12) document (written in YAML) that defines the allowed structure of `workflow.yml`. It constrains:
+- Top-level required fields: `version` (semver string) and `states` (array, at least 2 items).
+- Per-state required fields: `id` (snake_case, `^[a-z][a-z0-9_]*$`) and `visible` (boolean).
+- Optional per-state fields: `terminal` (boolean), `successors` (array of snake_case strings, no duplicates within a state).
+- `additionalProperties: false` at both the top level and per-state — unknown keys are rejected.
+
+[`tests/test_workflow.py`](tests/test_workflow.py) is the common test suite that validates `workflow.yml` in full — both structurally and semantically:
+- **Structural** (`TestSchemaValidation`): runs `jsonschema.validate` against `workflow.schema.yml`, and verifies that malformed inputs (missing fields, bad version format, invalid ID patterns, duplicate successors, unknown keys) are correctly rejected.
+- **Semantic** (`TestReferentialIntegrity`): enforces rules JSON Schema cannot express — every successor ID references a real state, terminal states have no successors, non-terminal states have at least one successor, all state IDs are unique, no state lists itself as a successor.
+
 **States** (in rough lifecycle order):
 
 | State | Description |
@@ -180,11 +190,20 @@ npm run dev
 
 **All proposed changes must pass the full test suite before being submitted.**
 
+### Common (workflow validation)
+
+```bash
+pip install -r requirements-dev.txt
+pytest tests/                          # run from the repo root
+```
+
+Tests live in [`tests/test_workflow.py`](tests/test_workflow.py). This suite validates `workflow.yml` both structurally (via `jsonschema` against `workflow.schema.yml`) and semantically (referential integrity checks that JSON Schema cannot express). Run this suite whenever `workflow.yml` or `workflow.schema.yml` is modified.
+
 ### Backend
 
 ```bash
 pip install -r requirements-dev.txt   # includes pytest and pytest-django
-pytest                                 # run from the repo root
+pytest api/                            # run from the repo root
 ```
 
 Tests live in [`api/tests.py`](api/tests.py). `pytest.ini` points pytest at `backend.settings` automatically — no extra configuration needed.
@@ -202,10 +221,11 @@ Tests live in [`frontend/src/components/__tests__/`](frontend/src/components/__t
 
 ### CI
 
-GitHub Actions runs both suites on every push and pull request — see [`.github/workflows/tests.yml`](.github/workflows/tests.yml). A PR should not be merged if either job is red.
+GitHub Actions runs all three suites (`common`, `backend`, `frontend`) in parallel on every push and pull request — see [`.github/workflows/tests.yml`](.github/workflows/tests.yml). A PR should not be merged if any job is red.
 
 ### What to test
 
+- Any change to `workflow.yml` or `workflow.schema.yml` → verify `pytest tests/` passes.
 - Every new API endpoint or serializer change → add or update a test in `api/tests.py`.
 - Every new or modified React component → add or update a test in `frontend/src/components/__tests__/`.
 - The `piece` fixture in `api/tests.py` creates a piece via the ORM directly; prefer the API client (`client.post(...)`) for tests that exercise request/response behaviour.
