@@ -21,10 +21,13 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      - uses: actions/checkout@v4
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt: |
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          trigger_phrase: ""
+          prompt: |
             You are an autonomous software agent helping resolve GitHub issues for the
             Glaze pottery workflow tracking app (Django backend + React frontend).
 
