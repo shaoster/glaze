@@ -128,7 +128,7 @@ PieceSummary & {
 - Use MUI components for all UI elements — avoid custom CSS except for layout adjustments MUI can't handle.
 - Import types from `types.ts`; do not redeclare them locally.
 - State names and valid transitions come from `workflow.json` via the constants in `types.ts` (`STATES`, `SUCCESSORS`) — do not hardcode them in components.
-- All HTTP calls go through [`frontend/src/api.ts`](frontend/src/api.ts). This is the single place where wire types (ISO date strings, etc.) are mapped to domain types as declared in `types.ts`. Components must never perform their own deserialization — they receive fully-typed domain objects and call the functions in `api.ts` to write data.
+- All HTTP calls go through [`frontend/src/api.ts`](frontend/src/api.ts). This is the single place where wire types (ISO date strings, etc.) are mapped to domain types as declared in `types.ts`. Components must never perform their own serialization or deserialization — they receive fully-typed domain objects and call the functions in `api.ts` to write data.
 - Use Axios for all HTTP requests to the backend.
 - TypeScript strict mode is on; avoid `any`.
 - New component files should be `.tsx`, not `.js`.
