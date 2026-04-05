@@ -61,6 +61,10 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
+# Glaze dev helpers (env.sh)
+.dev-logs/
+.dev-pids/
+
 # Flask stuff:
 instance/
 .webassets-cache
