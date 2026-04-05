@@ -46,3 +46,9 @@ export type PieceDetail = PieceSummary & {
 }
 
 export type Location = string
+
+// Convert a snake_case state id to a human-readable label.
+// e.g. "wheel_thrown" → "Wheel Thrown", "designed" → "Designed"
+export function formatState(state: string): string {
+    return state.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+}

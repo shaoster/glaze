@@ -7,8 +7,8 @@ on:
     types: [submitted]
 
 jobs:
-  respond:
-    # Run on @claude PR comments, or on reviews that request changes
+  respond-to-comment:
+    # Run when a PR comment mentions @claude
     if: |
       !endsWith(github.actor, '[bot]') &&
       (
@@ -31,11 +31,53 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: anthropics/claude-code-action@v1
-        id: claude
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           trigger_phrase: "@claude"
           claude_args: "--dangerously-skip-permissions"
           show_full_output: "true"
+
+  address-review-changes:
+    # Run when a reviewer requests changes — Claude implements the feedback and pushes a new commit
+    if: |
+      !endsWith(github.actor, '[bot]') &&
+      github.event_name == 'pull_request_review' &&
+      github.event.review.state == 'changes_requested'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: "--dangerously-skip-permissions"
+          show_full_output: "true"
+          prompt: |
+            A reviewer has requested changes on pull request #${{ github.event.pull_request.number }}.
+
+            Reviewer: @${{ github.event.review.user.login }}
+            Review summary:
+            ${{ github.event.review.body }}
+
+            There may also be inline comments attached to the review. Fetch them with:
+              gh pr view ${{ github.event.pull_request.number }} --json reviews,reviewThreads
+
+            Please:
+            1. Fetch all review feedback (summary above + inline comments via the gh CLI).
+            2. Read the current code and understand what each piece of feedback is asking for.
+            3. Make the necessary code changes to address every concern raised.
+            4. Run the full test suite to verify nothing is broken (backend: `pytest`, frontend: `cd frontend && npm test`).
+            5. Commit your changes with a message like "Address review feedback from @${{ github.event.review.user.login }}".
+            6. Push the changes to this PR branch.
+            7. Post a comment on the PR summarising what you changed and how each piece of feedback was addressed.

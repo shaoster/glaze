@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
+import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import PieceList from '../PieceList'
 import type { PieceSummary } from '../../types'
 
@@ -15,10 +16,18 @@ function makePiece(overrides: Partial<PieceSummary> = {}): PieceSummary {
     }
 }
 
+function renderPieceList(pieces: PieceSummary[]) {
+    const router = createMemoryRouter(
+        [{ path: '/', element: <PieceList pieces={pieces} /> }],
+        { initialEntries: ['/'] }
+    )
+    return render(<RouterProvider router={router} />)
+}
+
 describe('PieceList', () => {
     describe('table headers', () => {
         it('renders all column headers', () => {
-            render(<PieceList pieces={[]} />)
+            renderPieceList([])
             expect(screen.getByText('Thumbnail')).toBeInTheDocument()
             expect(screen.getByText('Name')).toBeInTheDocument()
             expect(screen.getByText('State')).toBeInTheDocument()
@@ -29,7 +38,7 @@ describe('PieceList', () => {
 
     describe('with no pieces', () => {
         it('renders an empty table body', () => {
-            render(<PieceList pieces={[]} />)
+            renderPieceList([])
             const tbody = document.querySelector('tbody')!
             expect(tbody).toBeInTheDocument()
             expect(tbody.children).toHaveLength(0)
@@ -38,31 +47,37 @@ describe('PieceList', () => {
 
     describe('with one piece', () => {
         it('renders the piece name', () => {
-            render(<PieceList pieces={[makePiece()]} />)
+            renderPieceList([makePiece()])
             expect(screen.getByText('Clay Bowl')).toBeInTheDocument()
         })
 
         it('renders the current state', () => {
-            render(<PieceList pieces={[makePiece({ current_state: { state: 'bisque_fired' } })]} />)
+            renderPieceList([makePiece({ current_state: { state: 'bisque_fired' } })])
             expect(screen.getByText('bisque_fired')).toBeInTheDocument()
         })
 
         it('renders the thumbnail image with correct src', () => {
-            render(<PieceList pieces={[makePiece()]} />)
+            renderPieceList([makePiece()])
             const img = screen.getByRole('img')
             expect(img).toHaveAttribute('src', 'https://example.com/bowl.jpg')
         })
 
         it('renders formatted created date', () => {
             const piece = makePiece({ created: new Date('2024-01-15T10:00:00Z') })
-            render(<PieceList pieces={[piece]} />)
+            renderPieceList([piece])
             expect(screen.getByText(piece.created.toLocaleDateString())).toBeInTheDocument()
         })
 
         it('renders formatted last_modified date', () => {
             const piece = makePiece({ last_modified: new Date('2024-02-20T12:00:00Z') })
-            render(<PieceList pieces={[piece]} />)
+            renderPieceList([piece])
             expect(screen.getByText(piece.last_modified.toLocaleDateString())).toBeInTheDocument()
+        })
+
+        it('name cell links to piece detail page', () => {
+            renderPieceList([makePiece()])
+            const link = screen.getByRole('link', { name: 'Clay Bowl' })
+            expect(link).toHaveAttribute('href', '/pieces/aaaaaaaa-0000-0000-0000-000000000001')
         })
     })
 
@@ -73,7 +88,7 @@ describe('PieceList', () => {
                 makePiece({ id: 'id-2', name: 'Mug' }),
                 makePiece({ id: 'id-3', name: 'Vase' }),
             ]
-            render(<PieceList pieces={pieces} />)
+            renderPieceList(pieces)
             expect(screen.getByText('Bowl')).toBeInTheDocument()
             expect(screen.getByText('Mug')).toBeInTheDocument()
             expect(screen.getByText('Vase')).toBeInTheDocument()
@@ -84,7 +99,7 @@ describe('PieceList', () => {
                 makePiece({ id: 'id-1', name: 'Bowl', current_state: { state: 'designed' } }),
                 makePiece({ id: 'id-2', name: 'Mug', current_state: { state: 'glazed' } }),
             ]
-            render(<PieceList pieces={pieces} />)
+            renderPieceList(pieces)
             const rows = screen.getAllByRole('row')
             // rows[0] is the header row
             expect(within(rows[1]).getByText('Bowl')).toBeInTheDocument()
