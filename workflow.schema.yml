@@ -1,0 +1,47 @@
+# JSON Schema (Draft 2020-12) for workflow.yml, written in YAML.
+# Structural constraints are enforced here; referential integrity
+# (successor IDs must exist, terminal states must have no successors)
+# is checked in tests/test_workflow.py.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Glaze Workflow
+type: object
+required: [version, states]
+additionalProperties: false
+
+properties:
+  version:
+    type: string
+    description: Semantic version of this workflow definition.
+    pattern: '^\d+\.\d+\.\d+$'
+
+  states:
+    type: array
+    description: Ordered list of workflow states (lifecycle order).
+    minItems: 2
+    items:
+      $ref: "#/$defs/state"
+
+$defs:
+  state:
+    type: object
+    required: [id, visible]
+    additionalProperties: false
+    properties:
+      id:
+        type: string
+        description: Snake-case identifier, unique across all states.
+        pattern: '^[a-z][a-z0-9_]*$'
+      visible:
+        type: boolean
+        description: Whether this state is shown in the default UI.
+      terminal:
+        type: boolean
+        description: If true, no outgoing transitions are allowed.
+      successors:
+        type: array
+        description: State IDs that may follow this state.
+        items:
+          type: string
+          pattern: '^[a-z][a-z0-9_]*$'
+        uniqueItems: true
