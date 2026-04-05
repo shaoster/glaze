@@ -17,31 +17,15 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete'
 import { useBlocker } from 'react-router-dom'
 import type { PieceDetail as PieceDetailType } from '../types'
 import { formatState, SUCCESSORS } from '../types'
-import { addPieceState, fetchGlobalEntries, updatePiece, createGlobalEntry } from '../api'
+import { addPieceState } from '../api'
 import WorkflowState from './WorkflowState'
 
 type PieceDetailProps = {
     piece: PieceDetailType
     onPieceUpdated: (updated: PieceDetailType) => void
-}
-
-const locationFilter = createFilterOptions<string>()
-const CREATE_OPTION_PREFIX = 'Create "'
-const CREATE_OPTION_SUFFIX = '"'
-
-function buildCreateOptionValue(label: string): string {
-    return `${CREATE_OPTION_PREFIX}${label}${CREATE_OPTION_SUFFIX}`
-}
-
-function parseCreateOptionValue(option: string): string | null {
-    if (option.startsWith(CREATE_OPTION_PREFIX) && option.endsWith(CREATE_OPTION_SUFFIX)) {
-        return option.slice(CREATE_OPTION_PREFIX.length, -CREATE_OPTION_SUFFIX.length)
-    }
-    return null
 }
 
 export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps) {
@@ -51,26 +35,10 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     const [pendingTransition, setPendingTransition] = useState<string | null>(null)
     const [transitioning, setTransitioning] = useState(false)
     const [transitionError, setTransitionError] = useState<string | null>(null)
-    const [locationInput, setLocationInput] = useState(piece.current_location ?? '')
-    const [locationOptions, setLocationOptions] = useState<string[]>([])
-    const [locationSaving, setLocationSaving] = useState(false)
-    const [locationCreating, setLocationCreating] = useState(false)
-    const [locationError, setLocationError] = useState<string | null>(null)
-
     const currentState = piece.current_state
     const successors = SUCCESSORS[currentState.state] ?? []
     const isTerminal = successors.length === 0
     const pastHistory = piece.history.slice(0, -1) // all except current (last)
-
-    useEffect(() => {
-        setLocationInput(piece.current_location ?? '')
-    }, [piece.current_location])
-
-    useEffect(() => {
-        fetchGlobalEntries('location')
-            .then(setLocationOptions)
-            .catch(() => {})
-    }, [])
 
     // Block navigation when there are unsaved changes
     const blocker = useBlocker(isDirty)
@@ -101,60 +69,6 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
         // content changing during the dialog close animation.
     }
 
-    async function handleLocationSelection(option: string | null) {
-        if (option === null) {
-            setLocationInput('')
-            void handleLocationSave('')
-            return
-        }
-        const createValue = parseCreateOptionValue(option)
-        if (createValue) {
-            setLocationCreating(true)
-            setLocationError(null)
-            try {
-                const createdName = await createGlobalEntry('location', 'name', createValue)
-                setLocationOptions((prev) => {
-                    const merged = Array.from(new Set([...prev, createdName]))
-                    merged.sort()
-                    return merged
-                })
-                setLocationInput(createdName)
-                await handleLocationSave(createdName)
-            } catch {
-                setLocationError('Failed to save location. Please try again.')
-            } finally {
-                setLocationCreating(false)
-            }
-            return
-        }
-        setLocationInput(option)
-        void handleLocationSave(option)
-    }
-
-    async function handleLocationSave(value: string) {
-        const trimmed = value.trim()
-        setLocationSaving(true)
-        setLocationError(null)
-        try {
-            const updated = await updatePiece(piece.id, {
-                current_location: trimmed,
-            })
-            setLocationOptions((prev) => {
-                if (!trimmed) {
-                    return prev
-                }
-                const merged = Array.from(new Set([...prev, trimmed]))
-                merged.sort()
-                return merged
-            })
-            onPieceUpdated(updated)
-        } catch {
-            setLocationError('Failed to save location. Please try again.')
-        } finally {
-            setLocationSaving(false)
-        }
-    }
-
     return (
         <Box sx={{ textAlign: 'left' }}>
             {/* Header */}
@@ -179,35 +93,6 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
             </Box>
         </Box>
 
-        <Box sx={{ mb: 3 }}>
-            <Autocomplete
-                freeSolo
-                options={locationOptions}
-                inputValue={locationInput}
-                onInputChange={(_e, value) => setLocationInput(value)}
-                onChange={(_e, value) => handleLocationSelection(value ?? null)}
-                filterOptions={(options, params) => {
-                    const filtered = locationFilter(options, params)
-                    const { inputValue } = params
-                    const isExisting = options.some((opt) => inputValue === opt)
-                    if (inputValue !== '' && !isExisting) {
-                        filtered.push(buildCreateOptionValue(inputValue))
-                    }
-                    return filtered
-                }}
-                disabled={locationSaving || locationCreating}
-                renderInput={(params) => (
-                    <TextField
-                        {...params}
-                        label="Current location"
-                        helperText={locationError ?? undefined}
-                        error={Boolean(locationError)}
-                        fullWidth
-                    />
-                )}
-            />
-        </Box>
-
         <Divider sx={{ mb: 3 }} />
 
             {/* Current state form */}
@@ -217,6 +102,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                 pieceId={piece.id}
                 onSaved={onPieceUpdated}
                 onDirtyChange={setIsDirty}
+                currentLocation={piece.current_location ?? ''}
             />
 
             <Divider sx={{ my: 3 }} />

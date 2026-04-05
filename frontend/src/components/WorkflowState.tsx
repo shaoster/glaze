@@ -18,6 +18,7 @@ import {
     createGlobalEntry,
     fetchGlobalEntries,
     updateCurrentState,
+    updatePiece,
 } from '../api'
 import {
     type ResolvedAdditionalField,
@@ -30,6 +31,7 @@ type WorkflowStateProps = {
     pieceId: string
     onSaved: (updated: PieceDetail) => void
     onDirtyChange?: (dirty: boolean) => void
+    currentLocation?: string
 }
 
 type ImageEntry = { url: string; caption: string }
@@ -125,6 +127,7 @@ function normalizeAdditionalFieldPayload(
 }
 
 const globalFilter = createFilterOptions<string>()
+const locationFilter = createFilterOptions<string>()
 
 function stateImages(pieceState: PieceState): ImageEntry[] {
     return pieceState.images.map((img) => ({
@@ -138,6 +141,7 @@ export default function WorkflowState({
     pieceId,
     onSaved,
     onDirtyChange,
+    currentLocation: currentLocationProp = '',
 }: WorkflowStateProps) {
     const [notes, setNotes] = useState(pieceState.notes)
     const [images, setImages] = useState<ImageEntry[]>(stateImages(pieceState))
@@ -148,6 +152,10 @@ export default function WorkflowState({
     const [globalOptions, setGlobalOptions] = useState<Record<string, string[]>>({})
     const [globalCreationError, setGlobalCreationError] = useState<string | null>(null)
     const [creatingGlobalFields, setCreatingGlobalFields] = useState<Record<string, boolean>>({})
+    const [currentLocation, setCurrentLocation] = useState(currentLocationProp)
+    const [locationOptions, setLocationOptions] = useState<string[]>([])
+    const [locationCreating, setLocationCreating] = useState(false)
+    const [locationError, setLocationError] = useState<string | null>(null)
     const additionalFieldDefs = useMemo(() => getAdditionalFieldDefinitions(pieceState.state), [pieceState.state])
     const baseAdditionalFieldInputs = useMemo(
         () => buildAdditionalFieldInputMap(additionalFieldDefs, pieceState.additional_fields ?? {}),
@@ -164,6 +172,7 @@ export default function WorkflowState({
     )
     const additionalFieldsDirty =
         JSON.stringify(normalizedAdditionalFields) !== JSON.stringify(normalizedBaseAdditionalFields)
+    const locationDirty = currentLocation.trim() !== currentLocationProp.trim()
     const createableGlobalNames = useMemo(() => {
         const names = new Set<string>()
         additionalFieldDefs.forEach((def) => {
@@ -179,7 +188,8 @@ export default function WorkflowState({
         setNotes(pieceState.notes)
         setImages(stateImages(pieceState))
         setAdditionalFieldInputs(baseAdditionalFieldInputs)
-    }, [pieceState, baseAdditionalFieldInputs])
+        setCurrentLocation(currentLocationProp)
+    }, [pieceState, baseAdditionalFieldInputs, currentLocationProp])
 
     useEffect(() => {
         setGlobalCreationError(null)
@@ -195,11 +205,18 @@ export default function WorkflowState({
         })
     }, [createableGlobalNames])
 
+    useEffect(() => {
+        fetchGlobalEntries('location')
+            .then(setLocationOptions)
+            .catch(() => {})
+    }, [])
+
     const originalImages = stateImages(pieceState)
     const isDirty =
         notes !== pieceState.notes ||
         JSON.stringify(images) !== JSON.stringify(originalImages) ||
-        additionalFieldsDirty
+        additionalFieldsDirty ||
+        locationDirty
 
     useEffect(() => {
         onDirtyChange?.(isDirty)
@@ -215,7 +232,14 @@ export default function WorkflowState({
                 additional_fields: normalizedAdditionalFields,
             }
             const result = await updateCurrentState(pieceId, payload)
-            onSaved(result)
+            let finalResult = result
+            if (locationDirty) {
+                const updated = await updatePiece(pieceId, {
+                    current_location: currentLocation.trim() || undefined,
+                })
+                finalResult = updated
+            }
+            onSaved(finalResult)
         } catch {
             setSaveError('Failed to save. Please try again.')
         } finally {
@@ -267,6 +291,42 @@ export default function WorkflowState({
         }
     }
 
+    async function handleLocationSelection(option: string | null) {
+        if (option === null) {
+            setCurrentLocation('')
+            return
+        }
+        const createValue = parseCreateOptionValue(option)
+        if (createValue) {
+            setLocationCreating(true)
+            setLocationError(null)
+            try {
+                const createdName = await createGlobalEntry('location', 'name', createValue)
+                setLocationOptions((prev) => {
+                    const merged = Array.from(new Set([...prev, createdName]))
+                    merged.sort()
+                    return merged
+                })
+                setCurrentLocation(createdName)
+            } catch {
+                setLocationError('Failed to create location. Please try again.')
+            } finally {
+                setLocationCreating(false)
+            }
+            return
+        }
+        setLocationError(null)
+        setCurrentLocation(option)
+    }
+
+    function handleLocationInputChange(value: string, reason: 'input' | 'clear') {
+        if (reason === 'clear') {
+            setCurrentLocation('')
+            return
+        }
+        setCurrentLocation(value)
+    }
+
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, textAlign: 'left' }}>
             {/* Notes */}
@@ -278,6 +338,48 @@ export default function WorkflowState({
                 onChange={(e) => setNotes(e.target.value)}
                 slotProps={{ htmlInput: { maxLength: 2000 } }}
                 fullWidth
+            />
+
+            <Autocomplete
+                freeSolo
+                options={locationOptions}
+                value={locationCreating ? '' : currentLocation}
+                disabled={locationCreating}
+                onInputChange={(_e, inputValue, reason) => {
+                    if (reason === 'input') {
+                        handleLocationInputChange(inputValue, 'input')
+                    } else if (reason === 'clear') {
+                        handleLocationInputChange('', 'clear')
+                    }
+                }}
+                onChange={(_e, option) => handleLocationSelection(option ?? null)}
+                filterOptions={(options, params) => {
+                    const filtered = locationFilter(options, params)
+                    const { inputValue } = params
+                    const isExisting = options.some((opt) => inputValue === opt)
+                    if (!locationCreating && inputValue !== '' && !isExisting) {
+                        filtered.push(buildCreateOptionValue(inputValue))
+                    }
+                    return filtered
+                }}
+                renderInput={(params) => (
+                    <TextField
+                        {...params}
+                        label="Current location"
+                        fullWidth
+                        helperText={locationError ?? undefined}
+                        error={Boolean(locationError)}
+                        InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                                <>
+                                    {locationCreating && <CircularProgress size={16} sx={{ mr: 1 }} />}
+                                    {params.InputProps.endAdornment}
+                                </>
+                            ),
+                        }}
+                    />
+                )}
             />
 
             {additionalFieldDefs.length > 0 && (

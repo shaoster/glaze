@@ -82,6 +82,7 @@ describe('PieceDetail', () => {
         const updated = makePiece({ current_location: 'Studio K' })
         vi.mocked(api.fetchGlobalEntries).mockResolvedValue([])
         vi.mocked(api.createGlobalEntry).mockResolvedValue('Studio K')
+        vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
         vi.mocked(api.updatePiece).mockResolvedValue(updated)
         const onPieceUpdated = vi.fn()
         renderPieceDetail(undefined, onPieceUpdated)
@@ -94,6 +95,7 @@ describe('PieceDetail', () => {
         await waitFor(() =>
             expect(api.createGlobalEntry).toHaveBeenCalledWith('location', 'name', 'Studio K')
         )
+        fireEvent.click(screen.getByTestId('save-button'))
         await waitFor(() =>
             expect(api.updatePiece).toHaveBeenCalledWith('piece-id-1', { current_location: 'Studio K' })
         )
@@ -102,13 +104,16 @@ describe('PieceDetail', () => {
 
     it('saves location updates when confirmed', async () => {
         const updated = makePiece({ current_location: 'Studio 7' })
+        vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
         vi.mocked(api.updatePiece).mockResolvedValue(updated)
         const onPieceUpdated = vi.fn()
         renderPieceDetail(undefined, onPieceUpdated)
         const input = screen.getByLabelText('Current location')
         await userEvent.type(input, 'Studio 7')
-        fireEvent.keyDown(input, { key: 'Enter' })
-        await waitFor(() => expect(api.updatePiece).toHaveBeenCalledWith('piece-id-1', { current_location: 'Studio 7' }))
+        fireEvent.click(screen.getByTestId('save-button'))
+        await waitFor(() =>
+            expect(api.updatePiece).toHaveBeenCalledWith('piece-id-1', { current_location: 'Studio 7' })
+        )
         await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(updated))
     })
 

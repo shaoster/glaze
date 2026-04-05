@@ -9,6 +9,7 @@ import * as api from '../../api'
 vi.mock('../../api', () => ({
     fetchGlobalEntries: vi.fn().mockResolvedValue([]),
     updateCurrentState: vi.fn(),
+    updatePiece: vi.fn(),
     createGlobalEntry: vi.fn(),
 }))
 
@@ -134,6 +135,44 @@ describe('WorkflowState', () => {
         await waitFor(() => expect(api.fetchGlobalEntries).toHaveBeenCalledWith('location'))
     })
 
+    it('does not update current_location until save is pressed', async () => {
+        const updated = makePieceDetail({
+            current_state: makeState({ notes: 'new' }),
+            current_location: 'Shelf B',
+        })
+        vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
+        vi.mocked(api.updatePiece).mockResolvedValue(updated)
+        let resolveCreate!: (value: string) => void
+        const createPromise = new Promise<string>((resolve) => {
+            resolveCreate = resolve
+        })
+        vi.mocked(api.createGlobalEntry).mockReturnValue(createPromise)
+        render(
+            <WorkflowState
+                {...defaultProps}
+                onSaved={vi.fn()}
+                pieceState={makeState({ notes: 'Original' })}
+            />
+        )
+        const input = screen.getByLabelText('Current location')
+        await userEvent.type(input, 'New Shelf')
+        await waitFor(() =>
+            expect(screen.getByRole('option', { name: 'Create "New Shelf"' })).toBeInTheDocument()
+        )
+        fireEvent.click(screen.getByRole('option', { name: 'Create "New Shelf"' }))
+        expect(input).not.toHaveValue('New Shelf')
+        await waitFor(() =>
+            expect(api.createGlobalEntry).toHaveBeenCalledWith('location', 'name', 'New Shelf')
+        )
+        await act(async () => resolveCreate('New Shelf'))
+        await waitFor(() => expect(input).toHaveValue('New Shelf'))
+        expect(api.updatePiece).not.toHaveBeenCalled()
+        fireEvent.click(screen.getByTestId('save-button'))
+        await waitFor(() =>
+            expect(api.updatePiece).toHaveBeenCalledWith('test-piece-id', { current_location: 'New Shelf' })
+        )
+    })
+
     it('renders a Save button', () => {
         render(<WorkflowState {...defaultProps} />)
         expect(screen.getByTestId('save-button')).toBeInTheDocument()
@@ -182,6 +221,35 @@ describe('WorkflowState', () => {
         fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'New notes' } })
         fireEvent.click(screen.getByTestId('save-button'))
         await waitFor(() => expect(screen.getByText('Failed to save. Please try again.')).toBeInTheDocument())
+    })
+
+    it('remains dirty when current state API fails during save', async () => {
+        vi.mocked(api.updateCurrentState).mockRejectedValue(new Error('Network error'))
+        render(<WorkflowState {...defaultProps} />)
+        fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'Dirty notes' } })
+        fireEvent.click(screen.getByTestId('save-button'))
+        await waitFor(() => expect(screen.getByText('Failed to save. Please try again.')).toBeInTheDocument())
+        expect(screen.getByTestId('unsaved-indicator')).toBeInTheDocument()
+        expect(screen.getByTestId('save-button')).not.toBeDisabled()
+    })
+
+    it('remains dirty when piece API fails during save', async () => {
+        const updated = makePieceDetail()
+        vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
+        vi.mocked(api.updatePiece).mockRejectedValue(new Error('Network error'))
+        render(
+            <WorkflowState
+                {...defaultProps}
+                currentLocation=""
+            />
+        )
+        const input = screen.getByLabelText('Current location')
+        await userEvent.type(input, 'Shelf Z')
+        fireEvent.click(screen.getByTestId('save-button'))
+        await waitFor(() => expect(screen.getByText('Failed to save. Please try again.')).toBeInTheDocument())
+        expect(screen.getByTestId('unsaved-indicator')).toBeInTheDocument()
+        expect(screen.getByTestId('save-button')).not.toBeDisabled()
+        expect(api.updatePiece).toHaveBeenCalledWith('test-piece-id', { current_location: 'Shelf Z' })
     })
 
     it('calls onDirtyChange with true when dirty', () => {
