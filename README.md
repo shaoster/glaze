@@ -58,15 +58,18 @@ Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`
 
 | Command | Description |
 |---|---|
-| `gz_test` | Run backend and frontend test suites in parallel. Exits non-zero if either fails. |
-| `gz_test_backend` | Run `pytest` only. |
-| `gz_test_frontend` | Run `vitest run` only. |
+| `gz_test` | Run all three test suites (common, backend, frontend) in parallel. Exits non-zero if any fails. |
+| `gz_test_common` | Run workflow schema/integrity tests only (`pytest tests/`). |
+| `gz_test_backend` | Run Django API tests only (`pytest api/`). |
+| `gz_test_frontend` | Run frontend tests only (`npm test`). |
 
 ### Type generation
 
 | Command | Description |
 |---|---|
 | `gz_gentypes` | Regenerate `frontend/src/generated-types.ts` from the live OpenAPI schema. Starts the backend temporarily if it is not already running. |
+
+Run `gz_help` to print the full list of shortcuts at any time.
 
 ## Manual setup (without `env.sh`)
 
@@ -92,7 +95,7 @@ npm run generate-types
 
 ```bash
 # All suites via shell helpers (recommended)
-gz_test               # backend + frontend in parallel
+gz_test               # common + backend + frontend in parallel
 
 # Common (workflow.yml validation)
 pytest tests/         # 28 tests
@@ -117,7 +120,7 @@ npm run test:watch    # watch mode
 | `test_pieces_create.py` | `POST /api/pieces/` creation, location handling |
 | `test_piece_detail.py` | `GET /api/pieces/<id>/` detail endpoint |
 | `test_piece_states.py` | `POST /api/pieces/<id>/states/` transitions, history, additional_fields |
-| `test_patch_current_state.py` | `PATCH /api/pieces/<id>/state/` partial update, sealed-state protection |
+| `test_patch_current_state.py` | `PATCH /api/pieces/<id>/state/` partial update, location, sealed-state protection |
 | `test_sealed_state.py` | ORM-level sealed state enforcement |
 | `test_additional_fields.py` | `PieceState.save()` schema validation for every field type (inline, state ref, global ref) |
 | `test_global_entries.py` | `GET/POST /api/globals/<name>/` list and create |
@@ -190,7 +193,43 @@ The workflow state machine and all valid transitions are defined in [`workflow.y
 `workflow.yml` also contains two optional sections beyond the state list:
 
 - **`globals`** — named domain types backed by Django models (e.g. `location`, `piece`), registered so they can be referenced from `additional_fields` and verified against `api/models.py` by the test suite.
-- **`additional_fields`** (per-state) — state-specific fields declared using an embedded DSL. Fields can be inline (`type`, optional `description`/`required`/`enum`) or refs. Refs are either state refs (`state_id.field_name`, carrying a value forward from a reachable ancestor state) or global refs (`@global_name.field_name`, a foreign-key reference to a field on a global domain type). Global refs may also set `can_create: true` (default false) to allow the UI to create a new global instance inline when the field is required. See [`workflow.yml`](workflow.yml) for examples and full DSL reference.
+- **`additional_fields`** (per-state) — state-specific fields declared using the embedded DSL. See the “Authoring `additional_fields`” section below for the exact syntax and how the frontend renders the inputs.
+
+### Authoring `additional_fields`
+
+When you add an `additional_fields` entry to a state in `workflow.yml`, the frontend automatically renders the inputs for you inside the `WorkflowState` component. Inline JSON primitives, state references, and global references are all interpreted through the helper utilities in `frontend/src/workflow.ts` (`getAdditionalFieldDefinitions`, `formatWorkflowFieldLabel`, etc.) so the DSL does not need to be mentioned elsewhere in the code.
+
+1. **Inline fields** (give the field a `type`, optional `description`, `required`, and/or `enum`). They render as `TextField`s—numbers as numeric inputs, booleans as selects with `True`/`False`, enums as dropdowns—directly below Notes and above the image list.
+2. **State refs** (`$ref: "ancestor_state.field_name"`) carry a value forward from a reachable ancestor state; they render the referenced value while still allowing edits and backend validation just like inline fields.
+3. **Global refs** (`$ref: "@global_name.field_name"`) render as `Autocomplete` pickers populated from `/api/globals/<name>/`. When a `global` entry sets `can_create: true`, the Autocomplete offers a “Create …” option and posts to `/api/globals/<name>/` to create the referenced object before the main Save action persists the new value.
+
+Example snippets from `workflow.yml`:
+
+```yaml
+- id: wheel_thrown
+  additional_fields:
+    clay_weight_grams:
+      type: number
+      description: Weight of clay before throwing.
+```
+(*Inline field: renders as a numeric input.)
+
+```yaml
+  - id: trimmed
+    additional_fields:
+      pre_trim_weight_grams:
+        $ref: "wheel_thrown.clay_weight_grams"
+```
+(*State ref: carries the earlier measurement forward.)
+
+```yaml
+  - id: wheel_thrown
+    additional_fields:
+      clay_body:
+        $ref: "@clay_body.name"
+        can_create: true
+```
+(*Global ref: renders an Autocomplete tied to the `clay_body` global, with inline creation.)
 
 [`workflow.schema.yml`](workflow.schema.yml) enforces structural rules with JSON Schema (Draft 2020-12); [`tests/test_workflow.py`](tests/test_workflow.py) enforces semantic and referential integrity rules, including verifying that every declared global and its fields match the corresponding Django model in `api/models.py`.
 
