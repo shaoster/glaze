@@ -17,6 +17,26 @@ _STATE_MAP: dict[str, dict] = {s['id']: s for s in _workflow['states']}
 _GLOBALS_MAP: dict[str, dict] = _workflow.get('globals', {})
 
 
+def get_state_ref_fields(state_id: str) -> dict[str, tuple[str, str]]:
+    """Return {field_name: (source_state_id, source_field_name)} for all state ref fields.
+
+    State ref fields are `additional_fields` entries whose `$ref` does not start
+    with `@` (which would mark a global ref).  The returned mapping is used by
+    the serializer to auto-populate carried-forward values when a new state is
+    created.
+    """
+    state = _STATE_MAP.get(state_id)
+    if not state:
+        return {}
+    result: dict[str, tuple[str, str]] = {}
+    for field_name, field_def in state.get('additional_fields', {}).items():
+        ref: str = field_def.get('$ref', '')
+        if ref and not ref.startswith('@'):
+            source_state_id, source_field_name = ref.split('.', 1)
+            result[field_name] = (source_state_id, source_field_name)
+    return result
+
+
 def get_global_model_and_field(
     global_name: str,
 ) -> tuple[type[models.Model], dict[str, dict], str]:

@@ -72,9 +72,9 @@ class TestPieceStates:
         )
         assert response.status_code == 400
 
-    def test_new_state_has_empty_additional_fields(self, client, piece):
-        # Transition to a state with additional_fields set, then transition again.
-        # The new state must start with an empty additional_fields dict.
+    def test_new_state_has_empty_additional_fields_when_no_source(self, client, piece):
+        # If the source field for a state ref was never set, the new state's
+        # additional_fields should not include that ref field.
         client.post(
             f'/api/pieces/{piece.id}/states/',
             {'state': 'wheel_thrown', 'additional_fields': {'clay_body': 'Stoneware'}},
@@ -86,7 +86,41 @@ class TestPieceStates:
             format='json',
         )
         assert response.status_code == 201
+        # clay_weight_grams was not recorded in wheel_thrown, so pre_trim_weight_grams
+        # should not be auto-populated.
         assert response.json()['current_state']['additional_fields'] == {}
+
+    def test_state_ref_fields_auto_populated_on_transition(self, client, piece):
+        # When wheel_thrown.clay_weight_grams is recorded, transitioning to trimmed
+        # should carry it forward into pre_trim_weight_grams automatically.
+        client.post(
+            f'/api/pieces/{piece.id}/states/',
+            {'state': 'wheel_thrown', 'additional_fields': {'clay_weight_grams': 1000}},
+            format='json',
+        )
+        response = client.post(
+            f'/api/pieces/{piece.id}/states/',
+            {'state': 'trimmed'},
+            format='json',
+        )
+        assert response.status_code == 201
+        assert response.json()['current_state']['additional_fields']['pre_trim_weight_grams'] == 1000
+
+    def test_state_ref_client_value_not_overridden(self, client, piece):
+        # If the client explicitly supplies a value for a state ref field, the
+        # auto-population should not override it.
+        client.post(
+            f'/api/pieces/{piece.id}/states/',
+            {'state': 'wheel_thrown', 'additional_fields': {'clay_weight_grams': 1000}},
+            format='json',
+        )
+        response = client.post(
+            f'/api/pieces/{piece.id}/states/',
+            {'state': 'trimmed', 'additional_fields': {'pre_trim_weight_grams': 999}},
+            format='json',
+        )
+        assert response.status_code == 201
+        assert response.json()['current_state']['additional_fields']['pre_trim_weight_grams'] == 999
 
     def test_piece_not_found(self, client, db):
         response = client.post(
