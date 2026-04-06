@@ -86,6 +86,24 @@ describe('WorkflowState', () => {
         expect(screen.getByLabelText('Pre Trim Weight Grams')).toHaveValue(1200)
     })
 
+    it('renders state ref fields as disabled (read-only)', () => {
+        const trimmedState = makeState({
+            state: 'trimmed',
+            additional_fields: { pre_trim_weight_grams: 1200 },
+        })
+        render(<WorkflowState {...defaultProps} pieceState={trimmedState} />)
+        expect(screen.getByLabelText('Pre Trim Weight Grams')).toBeDisabled()
+    })
+
+    it('renders inline additional fields as editable', () => {
+        const trimmedState = makeState({
+            state: 'trimmed',
+            additional_fields: { trimmed_weight_grams: 900 },
+        })
+        render(<WorkflowState {...defaultProps} pieceState={trimmedState} />)
+        expect(screen.getByLabelText('Trimmed Weight Grams')).not.toBeDisabled()
+    })
+
     it('lets you choose an existing global reference option', async () => {
         vi.mocked(api.fetchGlobalEntries).mockResolvedValue(['Kiln A'])
         const globalState = makeState({

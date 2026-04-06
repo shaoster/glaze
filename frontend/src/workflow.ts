@@ -69,6 +69,7 @@ export type ResolvedAdditionalField = {
     required: boolean
     enum?: string[]
     isGlobalRef: boolean
+    isStateRef: boolean
     canCreate?: boolean
     globalName?: string
     globalField?: string
@@ -113,9 +114,14 @@ export function formatWorkflowFieldLabel(fieldName: string): string {
         .join(' ')
 }
 
+function isStateRefField(def: FieldDefinition): boolean {
+    return '$ref' in def && !def.$ref.startsWith('@')
+}
+
 function buildResolvedField(name: string, fieldDef: FieldDefinition): ResolvedAdditionalField {
     const inline = resolveInlineField(fieldDef)
     const globalRef = isGlobalRefField(fieldDef)
+    const stateRef = isStateRefField(fieldDef)
     const [globalName, globalField] = globalRef ? parseGlobalRef(fieldDef) : [undefined, undefined]
     return {
         name,
@@ -124,6 +130,7 @@ function buildResolvedField(name: string, fieldDef: FieldDefinition): ResolvedAd
         required: fieldDef.required ?? inline.required ?? false,
         enum: inline.enum,
         isGlobalRef: globalRef,
+        isStateRef: stateRef,
         canCreate: globalRef ? (fieldDef.can_create ?? false) : undefined,
         globalName,
         globalField,

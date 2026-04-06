@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from django.utils import timezone
 
-from .models import ENTRY_STATE, SUCCESSORS, VALID_STATES, Location, Piece, PieceState
+from .models import ENTRY_STATE, SUCCESSORS, VALID_STATES, Location, Piece, PieceState, get_state_ref_fields
 
 
 class CaptionedImageSerializer(serializers.Serializer):
@@ -140,6 +140,22 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
                     'created': created_val.isoformat() if hasattr(created_val, 'isoformat') else str(created_val),
                 })
             validated_data['images'] = processed
+
+        # Auto-populate state ref fields by carrying their values forward from
+        # the most recent matching ancestor state in this piece's history.
+        # Client-supplied values are never overridden.
+        new_state_id: str = validated_data['state']
+        state_refs = get_state_ref_fields(new_state_id)
+        if state_refs:
+            piece: Piece = self.context['piece']
+            additional: dict = dict(validated_data.get('additional_fields', {}))
+            for field_name, (source_state_id, source_field_name) in state_refs.items():
+                if field_name not in additional:
+                    ancestor = piece.states.filter(state=source_state_id).order_by('-created').first()
+                    if ancestor is not None and source_field_name in ancestor.additional_fields:
+                        additional[field_name] = ancestor.additional_fields[source_field_name]
+            validated_data['additional_fields'] = additional
+
         try:
             return PieceState.objects.create(
                 piece=self.context['piece'],

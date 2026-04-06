@@ -250,6 +250,21 @@ export default function WorkflowState({
                             const value = additionalFieldInputs[field.name] ?? ''
                             const helperText = field.description
                             const label = formatWorkflowFieldLabel(field.name)
+                            if (field.isStateRef) {
+                                // State ref fields carry a value forward from an ancestor
+                                // state and must not be edited.
+                                return (
+                                    <TextField
+                                        key={field.name}
+                                        label={label}
+                                        type={field.type === 'number' || field.type === 'integer' ? 'number' : 'text'}
+                                        value={value}
+                                        disabled
+                                        helperText={helperText}
+                                        fullWidth
+                                    />
+                                )
+                            }
                             if (field.isGlobalRef && field.globalName) {
                                 return (
                                     <GlobalFieldPicker

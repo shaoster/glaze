@@ -178,5 +178,24 @@ describe('getAdditionalFieldDefinitions', () => {
             const fields = getAdditionalFieldDefinitions('trimmed')
             expect(fields.find((f) => f.name === 'trimmed_weight_grams')!.isGlobalRef).toBe(false)
         })
+
+        it('is marked as a state ref', () => {
+            const fields = getAdditionalFieldDefinitions('trimmed')
+            expect(fields.find((f) => f.name === 'trimmed_weight_grams')!.isStateRef).toBe(true)
+        })
+    })
+
+    describe('inline fields are not state refs', () => {
+        it('inline field has isStateRef false', () => {
+            const fields = getAdditionalFieldDefinitions('wheel_thrown')
+            expect(fields.find((f) => f.name === 'clay_weight_grams')!.isStateRef).toBe(false)
+        })
+    })
+
+    describe('global ref fields are not state refs', () => {
+        it('global ref field has isStateRef false', () => {
+            const fields = getAdditionalFieldDefinitions('wheel_thrown')
+            expect(fields.find((f) => f.name === 'kiln_ref')!.isStateRef).toBe(false)
+        })
     })
 })
