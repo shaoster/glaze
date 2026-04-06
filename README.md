@@ -2,6 +2,42 @@
 
 A pottery workflow tracking application. Log pieces and record state transitions as work moves through throwing, bisque firing, glazing, and finishing.
 
+## For new developers
+This guide assumes you already know the tools listed below; if any term is unfamiliar, click the linked docs to catch up quickly.
+
+- **Django** is the Python web framework that owns the backend (`backend/`, `api/`). [Separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) keeps unrelated responsibilities apart so each layer stays simpler to reason about—for example, `api/models.py` defines the data schema, `api/serializers.py` translates between ORM objects and JSON payloads, and `api/views.py` wires those serializers into `/api/...` endpoints that enforce workflow rules from [`workflow.yml`](workflow.yml). That split keeps the REST API (powered by Django REST Framework, DRF) resilient even when one layer needs to change, while returning consistent data/validation to all clients.
+- **React** (frontend/src/) renders the SPA (Single Page Application) and consumes `frontend/src/types.ts`, while Axios/`frontend/src/api.ts` maps every HTTP call into those types. React follows a component-based paradigm where functions or classes receive props (inputs) and return HTML that the browser can render.
+- **Vite** (frontend tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our frontend workbench, serves as the underlying runner for `npm test`, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
+- **Material UI** supplies the component library used everywhere in the UI for forms, dialogs, buttons, and layout.
+- **Axios** is the HTTP client library we use in the frontend to talk to REST APIs; it keeps things simple by handling the details of sending and receiving JSON so the UI code does not have to repeat that work. Benefits of Axios over raw `fetch` include centralized configuration of base URLs and headers, automatic JSON parsing/serialization, and built-in hooks for handling errors, cancellations, and retries. In this project that means `WorkflowState.tsx` can rely on helpers like `updateCurrentState`/`updatePiece` instead of duplicating URLs or JSON logic, and we have a single place for surfaces errors before they hit the UI.
+- A **client library** is a reusable set of functions that wraps low-level protocols (like HTTP) so developers can interact with remote services using clean function calls, in their programming language of choice, instead of handling bytes, headers, or parsing manually.
+- **`frontend/src/api.ts`** wraps Axios calls for every backend endpoint, maps the wire format (ISO date strings) into the domain types consumed by the UI, and centralizes serialization and error handling. [Separation of concerns] keeps unrelated responsibilities apart so each layer stays simpler to reason about. By keeping UI components focused on rendering/state and `api.ts` focused on serialization, endpoint URLs, and error handling, the code is easier to maintain—`WorkflowState.tsx` simply calls `updateCurrentState(pieceId, payload)` and receives a deserialized `PieceDetail`, so it never needs to know whether the backend REST API URL is `/pieces/<id>/state/` or `/state/`, or that the raw string timestamps must be parsed into the Date-friendly TypeScript domain types.
+
+Compare that to a contrived manual call:
+
+```ts
+async function manuallySaveState(pieceId: string, payload: {}) {
+    const response = await fetch(`/api/pieces/${pieceId}/state/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    })
+    const json = await response.json()
+    return {
+        ...json,
+        current_state: {
+            ...json.current_state,
+            created: new Date(json.current_state.created),
+            last_modified: new Date(json.current_state.last_modified),
+        },
+    }
+}
+```
+
+The manual version needs to hardcode the endpoint and parse ISO timestamps into `Date`s, whereas `api.ts` wraps that logic so the component can stay focused on user interaction.
+
+## Motivation
+
 While the UI is similar at a surface level to other craft journaling applications, the main differences are under the hood:
    - Customizable, potentially non-linear workflows. For some pieces you'll carve first, for others you'll slip first. For others, there might be multiple rounds of each.
    - Opinionated data model with immutable stage data for your piece's unique journey and your growth-minded journey as a potter. You can't change the past, so keep moving forward. (Administrative bulk data cleaning is still allowed!)
@@ -9,6 +45,7 @@ While the UI is similar at a surface level to other craft journaling application
    - Systematically answer questions like "How many pieces do I lose in the firing stage by glaze type?" or "How often do I ruin a piece during trimming?"
 
 ## Quick start
+This section is for folks who just want to fire up the whole stack quickly and start poking around the app.
 
 ```bash
 source env.sh
@@ -17,6 +54,7 @@ gz_start    # starts backend (port 8080) and frontend (Vite port), press Ctrl+C 
 ```
 
 ## Development helpers (`env.sh`)
+Use these shortcuts once you've sourced `env.sh`; they wrap common CLI sequences so you can focus on implementing features instead of hunting for the right flags. The `env.sh` script sets up Python/Node paths, loads useful aliases (`gz_setup`, `gz_start`, etc.), and keeps environment-specific tweaks (like log rotation and virtualenv activation) centralized, so every developer runs commands against the same configuration without manually sourcing multiple files.
 
 Source the file to load all shortcuts into your shell:
 
@@ -72,6 +110,7 @@ Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`
 Run `gz_help` to print the full list of shortcuts at any time.
 
 ## Manual setup (without `env.sh`)
+If you prefer to install dependencies and run servers yourself, follow these explicit commands instead of relying on the helper script.
 
 ```bash
 # Backend
@@ -92,6 +131,7 @@ npm run generate-types
 ```
 
 ## Testing
+`gz_test` is the local, all-suite helper that runs the common, backend, and frontend tests on your machine (it is recommended to run this before opening a PR); GitHub Actions runs the same set of suites centrally for each push/PR. Each suite groups tests that verify a specific layer of the app—see the detailed list below for what they cover.
 
 ```bash
 # All suites via shell helpers (recommended)
