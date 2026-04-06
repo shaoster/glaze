@@ -151,12 +151,24 @@ PieceSummary & {
 - `workflow.yml` can be read at startup and cached; do not re-read it per request.
 - CORS is installed (`corsheaders`); ensure it is in `MIDDLEWARE` and configured before shipping any cross-origin endpoint.
 - The database is SQLite during development; avoid raw SQL.
+- API auth is session-based (`SessionAuthentication`) with CSRF protection.
+- User data isolation is mandatory: lists must scope to `request.user`, and object lookups must use user-filtered querysets.
+- When a user requests another user's object ID, return `404` (not `403`) so object existence is not leaked.
+- User-owned globals (like `Location`) are isolated per user; keep per-user uniqueness constraints intact.
 
 **API endpoints:**
+- `GET /api/auth/csrf/` → set CSRF cookie
+- `POST /api/auth/login/` → session login via email + password
+- `POST /api/auth/logout/` → clear current session
+- `GET /api/auth/me/` → current authenticated user
+- `POST /api/auth/register/` → register + login (backend remains available)
 - `GET /api/pieces/` → list of `PieceSummary`
 - `GET /api/pieces/<id>/` → `PieceDetail`
 - `POST /api/pieces/` → create a new piece (always starts in `designed` state; accepts `name`, optional `thumbnail`, and optional `notes`)
 - `POST /api/pieces/<id>/states/` → record a new state transition
+- `PATCH /api/pieces/<id>/` → update piece-level editable fields (currently location)
+- `PATCH /api/pieces/<id>/state/` → update current state's editable fields
+- `GET/POST /api/globals/<global_name>/` → list/create user-scoped globals
 
 ---
 
@@ -211,6 +223,12 @@ PieceSummary & {
 - [`PieceList.tsx`](web/src/components/PieceList.tsx) — MUI table displaying a list of `PieceSummary` objects (columns: Thumbnail, Name, State, Created, Last Modified)
 - [`NewPieceDialog.tsx`](web/src/components/NewPieceDialog.tsx) — dialog for creating a new piece; accepts a name, optional notes, and a thumbnail selected from the curated gallery
 - [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx) — placeholder for rendering a single `PieceState`; not yet implemented
+
+**Auth UI flow (`App.tsx`):**
+- On load, the web app calls `fetchCurrentUser()` (`GET /api/auth/me/`).
+- Authenticated users are shown the routed app shell (`RouterProvider` + data router) with current-user chip and logout action.
+- Unauthenticated users are shown the login landing form.
+- `Sign Up` is intentionally disabled in the web UI (`SIGN_UP_ENABLED = false`) so accounts can be created manually in Django admin for now.
 
 ---
 

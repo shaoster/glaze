@@ -16,7 +16,19 @@
 import axios from 'axios'
 import type { CaptionedImage, PieceDetail, PieceSummary, PieceState, State, StateSummary } from './types'
 
+export type AuthUser = {
+    id: number
+    email: string
+    first_name: string
+    last_name: string
+    openid_subject: string
+    profile_image_url: string
+}
+
 const client = axios.create({ baseURL: '/api/' })
+client.defaults.withCredentials = true
+client.defaults.xsrfCookieName = 'csrftoken'
+client.defaults.xsrfHeaderName = 'X-CSRFToken'
 const expoBaseUrl = (globalThis as { process?: { env?: Record<string, string | undefined> } })
     .process?.env?.EXPO_PUBLIC_API_BASE_URL
 if (expoBaseUrl) {
@@ -108,6 +120,44 @@ function mapPieceDetail(raw: Wire<PieceDetail>): PieceDetail {
 export async function fetchPieces(): Promise<PieceSummary[]> {
     const { data } = await client.get<Wire<PieceSummary>[]>('pieces/')
     return data.map(mapPieceSummary)
+}
+
+export async function ensureCsrfCookie(): Promise<void> {
+    await client.get('auth/csrf/')
+}
+
+export async function loginWithEmail(email: string, password: string): Promise<AuthUser> {
+    await ensureCsrfCookie()
+    const { data } = await client.post<AuthUser>('auth/login/', { email, password })
+    return data
+}
+
+export async function registerWithEmail(payload: {
+    email: string
+    password: string
+    first_name?: string
+    last_name?: string
+}): Promise<AuthUser> {
+    await ensureCsrfCookie()
+    const { data } = await client.post<AuthUser>('auth/register/', payload)
+    return data
+}
+
+export async function fetchCurrentUser(): Promise<AuthUser | null> {
+    try {
+        const { data } = await client.get<AuthUser>('auth/me/')
+        return data
+    } catch (error) {
+        if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+            return null
+        }
+        throw error
+    }
+}
+
+export async function logoutUser(): Promise<void> {
+    await ensureCsrfCookie()
+    await client.post('auth/logout/', {})
 }
 
 export async function fetchPiece(id: string): Promise<PieceDetail> {

@@ -20,6 +20,26 @@ While the UI is similar at a surface level to other craft journaling application
    - Data normalization around every piece's history for richer and more reliable single piece and multi-piece analysis.
    - Systematically answer questions like "How many pieces do I lose in the firing stage by glaze type?" or "How often do I ruin a piece during trimming?"
 
+## Authentication and Data Isolation
+
+Glaze now runs as a user-scoped application with session authentication.
+
+- Auth is session/cookie-based (Django + DRF `SessionAuthentication`).
+- The web client fetches a CSRF cookie from `GET /api/auth/csrf/` before login/logout/register writes.
+- Auth endpoints:
+  - `POST /api/auth/login/`
+  - `POST /api/auth/logout/`
+  - `GET /api/auth/me/`
+  - `POST /api/auth/register/` (backend supported; see UI note below)
+- Workflow/data endpoints (`/api/pieces/*`, `/api/globals/*`) require authentication.
+
+Per-user data isolation rules:
+
+- Every user-owned domain object (`Piece`, `PieceState`, `Location`, `ClayBody`, `GlazeType`, `GlazeMethod`) has a `user` foreign key.
+- List endpoints only return objects for `request.user`.
+- Detail/update endpoints fetch objects from a user-filtered queryset. If another user's ID is requested, the API returns `404` (not `403`) to avoid leaking object existence.
+- Global reference entries are user-scoped; names are unique per user (for example, two users can both have a `Location` named "Kiln A" without colliding).
+
 ## Quick start
 This section is for folks who just want to fire up the whole stack quickly and start poking around the app.
 
@@ -287,6 +307,17 @@ Example snippets from `workflow.yml`:
 [`workflow.schema.yml`](workflow.schema.yml) enforces structural rules with JSON Schema (Draft 2020-12); [`tests/test_workflow.py`](tests/test_workflow.py) enforces semantic and referential integrity rules, including verifying that every declared global and its fields match the corresponding Django model in `api/models.py`.
 
 
-# Using the App
+## Using the App
 
-TBD
+Current web auth flow:
+
+1. On app load, the client calls `/api/auth/me/`.
+2. If authenticated, the user is routed into the main app shell.
+3. If not authenticated, the login screen is shown.
+4. After successful login, the app shell appears with a "Current user" chip and Log out button.
+
+Sign-up behavior (temporary):
+
+- The backend registration endpoint (`POST /api/auth/register/`) remains available.
+- The web Sign Up action is intentionally disabled (`SIGN_UP_ENABLED = false` in [`web/src/App.tsx`](web/src/App.tsx)).
+- For now, create users manually in Django admin.

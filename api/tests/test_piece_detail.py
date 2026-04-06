@@ -28,8 +28,8 @@ class TestPieceDetail:
         cs = data['current_state']
         assert {'state', 'notes', 'created', 'last_modified', 'images', 'additional_fields'} <= cs.keys()
 
-    def test_current_location_exposed(self, client, piece):
-        location = Location.objects.create(name='Studio Q')
+    def test_current_location_exposed(self, client, piece, user):
+        location = Location.objects.create(user=user, name='Studio Q')
         piece.current_location = location
         piece.save()
         data = client.get(f'/api/pieces/{piece.id}/').json()
@@ -55,3 +55,11 @@ class TestPieceDetail:
         data = response.json()
         assert data['current_location'] == 'Kiln Garden'
         assert Location.objects.filter(name='Kiln Garden').exists()
+
+    def test_cannot_read_other_users_piece(self, client, other_user):
+        from api.models import ENTRY_STATE, Piece, PieceState
+
+        foreign_piece = Piece.objects.create(user=other_user, name='Other User Piece')
+        PieceState.objects.create(piece=foreign_piece, state=ENTRY_STATE)
+        response = client.get(f'/api/pieces/{foreign_piece.id}/')
+        assert response.status_code == 404

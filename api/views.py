@@ -3,23 +3,33 @@ import os
 import time
 
 from drf_spectacular.utils import extend_schema
+from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.decorators import api_view
+from rest_framework.decorators import permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from django.shortcuts import get_object_or_404
-
 from .models import Piece
-from .workflow import get_global_model_and_field
 from .serializers import (
+    AuthUserSerializer,
+    LoginSerializer,
     PieceCreateSerializer,
     PieceDetailSerializer,
     PieceSummarySerializer,
     PieceStateCreateSerializer,
     PieceStateUpdateSerializer,
     PieceUpdateSerializer,
+    RegisterSerializer,
 )
+from .workflow import get_global_model_and_field
+
+
+def _piece_queryset(request: Request):
+    return Piece.objects.prefetch_related('states').filter(user=request.user)
 
 
 @extend_schema(
@@ -32,12 +42,13 @@ from .serializers import (
     responses={201: PieceDetailSerializer},
 )
 @api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def pieces(request: Request) -> Response:
     if request.method == 'GET':
-        qs = Piece.objects.prefetch_related('states').all()
+        qs = _piece_queryset(request)
         return Response(PieceSummarySerializer(qs, many=True).data)
 
-    serializer = PieceCreateSerializer(data=request.data)
+    serializer = PieceCreateSerializer(data=request.data, context={'request': request})
     serializer.is_valid(raise_exception=True)
     piece = serializer.save()
     return Response(PieceDetailSerializer(piece).data, status=status.HTTP_201_CREATED)
@@ -50,10 +61,11 @@ def pieces(request: Request) -> Response:
     responses={200: PieceDetailSerializer},
 )
 @api_view(['GET', 'PATCH'])
+@permission_classes([IsAuthenticated])
 def piece_detail(request: Request, piece_id: str) -> Response:
-    piece = get_object_or_404(Piece.objects.prefetch_related('states'), pk=piece_id)
+    piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
     if request.method == 'PATCH':
-        serializer = PieceUpdateSerializer(data=request.data)
+        serializer = PieceUpdateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.update(piece, serializer.validated_data)
         piece.refresh_from_db()
@@ -65,8 +77,9 @@ def piece_detail(request: Request, piece_id: str) -> Response:
     responses={201: PieceDetailSerializer},
 )
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def piece_states(request: Request, piece_id: str) -> Response:
-    piece = get_object_or_404(Piece.objects.prefetch_related('states'), pk=piece_id)
+    piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
     serializer = PieceStateCreateSerializer(data=request.data, context={'piece': piece})
     serializer.is_valid(raise_exception=True)
     serializer.save()
@@ -81,8 +94,9 @@ def piece_states(request: Request, piece_id: str) -> Response:
     responses={200: PieceDetailSerializer},
 )
 @api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
 def piece_current_state(request: Request, piece_id: str) -> Response:
-    piece = get_object_or_404(Piece.objects.prefetch_related('states'), pk=piece_id)
+    piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
     current = piece.current_state
     if current is None:
         return Response({'detail': 'Piece has no states.'}, status=status.HTTP_404_NOT_FOUND)
@@ -95,6 +109,7 @@ def piece_current_state(request: Request, piece_id: str) -> Response:
 
 
 @api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def global_entries(request: Request, global_name: str) -> Response:
     # Generic handler for all globals declared in workflow.yml. Works well while
     # all globals share the same shape (list + get-or-create). If a type ever needs
@@ -106,7 +121,7 @@ def global_entries(request: Request, global_name: str) -> Response:
         return Response({'detail': 'Unknown global type.'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        objects = model_cls.objects.only('pk', display_field).order_by(display_field)
+        objects = model_cls.objects.filter(user=request.user).only('pk', display_field).order_by(display_field)
         return Response(
             [{'id': str(obj.pk), 'name': getattr(obj, display_field)} for obj in objects]
         )
@@ -117,7 +132,7 @@ def global_entries(request: Request, global_name: str) -> Response:
         return Response({'detail': 'Invalid field'}, status=status.HTTP_400_BAD_REQUEST)
     if not value:
         return Response({'detail': 'Value is required'}, status=status.HTTP_400_BAD_REQUEST)
-    obj, created = model_cls.objects.get_or_create(**{field: value})
+    obj, created = model_cls.objects.get_or_create(user=request.user, **{field: value})
     status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
     return Response({'id': str(obj.pk), 'name': getattr(obj, display_field)}, status=status_code)
 
@@ -180,3 +195,58 @@ def cloudinary_upload_signature(request: Request) -> Response:
     if upload_preset:
         payload['upload_preset'] = upload_preset
     return Response(payload)
+
+
+@extend_schema(request=None, responses={204: None})
+@ensure_csrf_cookie
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def csrf(request: Request) -> Response:
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(request=LoginSerializer, responses={200: AuthUserSerializer})
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def auth_login(request: Request) -> Response:
+    serializer = LoginSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    email = serializer.validated_data['email']
+    password = serializer.validated_data['password']
+    user_model = get_user_model()
+    matched = user_model.objects.filter(email__iexact=email).first()
+    auth_username = matched.username if matched else email
+    user = authenticate(request=request, username=auth_username, password=password)
+    if user is None:
+        return Response({'detail': 'Invalid email or password.'}, status=status.HTTP_400_BAD_REQUEST)
+    login(request, user)
+    return Response(AuthUserSerializer(user).data)
+
+
+@extend_schema(request=None, responses={204: None})
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def auth_logout(request: Request) -> Response:
+    logout(request)
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(request=None, responses={200: AuthUserSerializer, 401: None})
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def auth_me(request: Request) -> Response:
+    return Response(AuthUserSerializer(request.user).data)
+
+
+@extend_schema(request=RegisterSerializer, responses={201: AuthUserSerializer})
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def auth_register(request: Request) -> Response:
+    serializer = RegisterSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    user_model = get_user_model()
+    if user_model.objects.filter(email__iexact=serializer.validated_data['email']).exists():
+        return Response({'email': ['A user with this email already exists.']}, status=status.HTTP_400_BAD_REQUEST)
+    user = serializer.save()
+    login(request, user)
+    return Response(AuthUserSerializer(user).data, status=status.HTTP_201_CREATED)

@@ -1,6 +1,8 @@
+import uuid
 from unittest.mock import patch
 
 import pytest
+from django.contrib.auth.models import User
 
 import api.workflow as workflow_module
 from api.models import Piece, PieceState
@@ -73,7 +75,11 @@ _MOCK_GLOBALS_MAP = {
 
 def _make_piece_with_state(state_id: str, additional_fields: dict | None = None) -> PieceState:
     """ORM-only helper: create a Piece + PieceState, bypassing view-level validation."""
-    p = Piece.objects.create(name='Test Piece')
+    user = User.objects.create(
+        username=f'user_{state_id}_{uuid.uuid4().hex[:8]}',
+        email=f'user_{state_id}_{uuid.uuid4().hex[:8]}@example.com',
+    )
+    p = Piece.objects.create(user=user, name='Test Piece')
     ps = PieceState(piece=p, state=state_id, additional_fields=additional_fields or {})
     return ps
 

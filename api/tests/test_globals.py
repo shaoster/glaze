@@ -5,9 +5,9 @@ from api.models import ClayBody
 
 @pytest.mark.django_db
 class TestGlobalEntries:
-    def test_fetch_clay_body_entries(self, client):
-        ClayBody.objects.create(name='Stoneware')
-        ClayBody.objects.create(name='Porcelain')
+    def test_fetch_clay_body_entries(self, client, user):
+        ClayBody.objects.create(user=user, name='Stoneware')
+        ClayBody.objects.create(user=user, name='Porcelain')
         response = client.get('/api/globals/clay_body/')
         assert response.status_code == 200
         names = [entry['name'] for entry in response.json()]

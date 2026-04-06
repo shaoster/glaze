@@ -26,3 +26,12 @@ class TestPiecesList:
         data = client.get('/api/pieces/').json()
         keys = set(data[0].keys())
         assert keys == {'id', 'name', 'created', 'current_location', 'last_modified', 'thumbnail', 'current_state'}
+
+    def test_does_not_include_other_users_pieces(self, client, other_user):
+        from api.models import Piece, PieceState
+
+        hidden = Piece.objects.create(user=other_user, name='Hidden Piece')
+        PieceState.objects.create(piece=hidden, state=ENTRY_STATE)
+        response = client.get('/api/pieces/')
+        assert response.status_code == 200
+        assert response.json() == []

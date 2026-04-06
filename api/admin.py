@@ -2,7 +2,13 @@ from django import forms
 from django.contrib import admin
 from django.http import HttpRequest
 
-from .models import Piece, PieceState
+from .models import Piece, PieceState, UserProfile
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'openid_subject')
+    search_fields = ('user__username', 'user__email', 'openid_subject')
 
 
 class PieceStateInline(admin.TabularInline):
@@ -18,7 +24,7 @@ class PieceStateInline(admin.TabularInline):
 
 @admin.register(Piece)
 class PieceAdmin(admin.ModelAdmin):
-    list_display = ('name', 'get_current_state', 'created', 'fields_last_modified')
+    list_display = ('name', 'user', 'get_current_state', 'created', 'fields_last_modified')
     readonly_fields = ('id', 'created', 'fields_last_modified')
     inlines = [PieceStateInline]
 

@@ -5,9 +5,9 @@ from api.models import Location
 
 @pytest.mark.django_db
 class TestGlobalEntries:
-    def test_get_returns_entries(self, client):
-        Location.objects.create(name='Kiln A')
-        Location.objects.create(name='Kiln B')
+    def test_get_returns_entries(self, client, user):
+        Location.objects.create(user=user, name='Kiln A')
+        Location.objects.create(user=user, name='Kiln B')
         response = client.get('/api/globals/location/')
         assert response.status_code == 200
         names = [entry['name'] for entry in response.json()]
@@ -24,8 +24,8 @@ class TestGlobalEntries:
         assert response.json()['name'] == 'New Shelf'
         assert Location.objects.filter(name='New Shelf').exists()
 
-    def test_post_reuses_existing(self, client):
-        Location.objects.create(name='Kiln Room')
+    def test_post_reuses_existing(self, client, user):
+        Location.objects.create(user=user, name='Kiln Room')
         response = client.post(
             '/api/globals/location/',
             {'field': 'name', 'value': 'Kiln Room'},
@@ -53,3 +53,9 @@ class TestGlobalEntries:
             format='json',
         )
         assert response.status_code == 400
+
+    def test_does_not_leak_other_users_entries(self, client, other_user):
+        Location.objects.create(user=other_user, name='Other User Kiln')
+        response = client.get('/api/globals/location/')
+        assert response.status_code == 200
+        assert response.json() == []

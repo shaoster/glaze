@@ -1,6 +1,7 @@
 import uuid
 
 import jsonschema
+from django.conf import settings
 from django.db import models
 
 from .workflow import (
@@ -26,31 +27,61 @@ __all__ = [
 
 
 class Location(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='locations')
+    name = models.CharField(max_length=255)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'name'], name='uniq_location_name_per_user'),
+        ]
 
     def __str__(self) -> str:
         return self.name
 
 
 class ClayBody(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='clay_bodies'
+    )
+    name = models.CharField(max_length=255)
     short_description = models.CharField(max_length=1024, blank=True, default='')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'name'], name='uniq_clay_body_name_per_user'),
+        ]
 
     def __str__(self) -> str:
         return self.name
 
 
 class GlazeType(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='glaze_types'
+    )
+    name = models.CharField(max_length=255)
     short_description = models.CharField(max_length=1024, blank=True, default='')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'name'], name='uniq_glaze_type_name_per_user'),
+        ]
 
     def __str__(self) -> str:
         return self.name
 
 
 class GlazeMethod(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='glaze_methods'
+    )
+    name = models.CharField(max_length=255)
     short_description = models.CharField(max_length=1024, blank=True, default='')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'name'], name='uniq_glaze_method_name_per_user'),
+        ]
 
     def __str__(self) -> str:
         return self.name
@@ -58,6 +89,7 @@ class GlazeMethod(models.Model):
 
 class Piece(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='pieces')
     name = models.CharField(max_length=255)
     created = models.DateTimeField(auto_now_add=True)
     # Tracks changes to owned fields (name, thumbnail) only.
@@ -96,6 +128,9 @@ class Piece(models.Model):
 
 class PieceState(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='piece_states'
+    )
     piece = models.ForeignKey(Piece, on_delete=models.CASCADE, related_name='states')
     state = models.CharField(max_length=64)
     notes = models.TextField(blank=True, default='')
@@ -127,6 +162,9 @@ class PieceState(models.Model):
         Pass allow_sealed_edit=True to bypass the sealed check for exceptional
         admin operations.  This should never be done in normal application code paths.
         """
+        if self.user_id is None and self.piece_id:
+            self.user = self.piece.user
+
         # Validate additional_fields against the DSL schema for this state.
         schema = build_additional_fields_schema(self.state)
         try:
@@ -147,3 +185,12 @@ class PieceState(models.Model):
 
     def __str__(self) -> str:
         return f'{self.piece.name} → {self.state}'
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
+    openid_subject = models.CharField(max_length=255, blank=True, default='')
+    profile_image_url = models.URLField(blank=True, default='')
+
+    def __str__(self) -> str:
+        return f'Profile({self.user})'
