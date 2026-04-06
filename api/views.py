@@ -6,7 +6,8 @@ from rest_framework.response import Response
 
 from django.shortcuts import get_object_or_404
 
-from .models import Piece, get_global_model_and_field
+from .models import Piece
+from .workflow import get_global_model_and_field
 from .serializers import (
     PieceCreateSerializer,
     PieceDetailSerializer,

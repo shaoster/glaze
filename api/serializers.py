@@ -3,7 +3,8 @@ from rest_framework import serializers
 
 from django.utils import timezone
 
-from .models import ENTRY_STATE, SUCCESSORS, VALID_STATES, Location, Piece, PieceState, get_state_ref_fields
+from .models import Location, Piece, PieceState
+from .workflow import ENTRY_STATE, SUCCESSORS, VALID_STATES, get_state_ref_fields
 
 
 class CaptionedImageSerializer(serializers.Serializer):
