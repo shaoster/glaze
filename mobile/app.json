@@ -1,0 +1,9 @@
+{
+  "expo": {
+    "name": "Glaze Mobile",
+    "slug": "glaze-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark"
+  }
+}

@@ -13,7 +13,7 @@ import ts from 'typescript'
 import { writeFileSync } from 'fs'
 
 const SCHEMA_URL = new URL('http://localhost:8080/api/schema/?format=json')
-const OUTPUT_PATH = 'src/generated-types.ts'
+const OUTPUT_PATH = '../frontend_common/src/generated-types.ts'
 
 const HEADER = `\
 /**

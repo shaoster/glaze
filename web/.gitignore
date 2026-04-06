@@ -16,6 +16,8 @@ dist-ssr
 .vscode/*
 !.vscode/extensions.json
 .idea
+.codex
+.codex/
 .DS_Store
 *.suo
 *.ntvs*
@@ -24,6 +26,3 @@ dist-ssr
 *.sw?
 venv/
 node_modules/
-
-# Auto-generated from OpenAPI schema — run `npm run generate-types` to regenerate
-src/generated-types.ts

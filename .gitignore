@@ -64,6 +64,11 @@ db.sqlite3-journal
 # Glaze dev helpers (env.sh)
 .dev-logs/
 .dev-pids/
+.codex
+.codex/
+
+# Auto-generated from OpenAPI schema via `cd web && npm run generate-types`
+frontend_common/src/generated-types.ts
 
 # Flask stuff:
 instance/

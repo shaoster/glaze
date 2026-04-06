@@ -20,7 +20,7 @@ import GlobalFieldPicker from './GlobalFieldPicker'
 export const DEFAULT_THUMBNAIL = '/thumbnails/question-mark.svg'
 
 // Exported so tests can assert on the full set of selectable thumbnails without
-// scraping the DOM. All thumbnails live in frontend/public/thumbnails/.
+// scraping the DOM. All thumbnails live in web/public/thumbnails/.
 export const CURATED_THUMBNAILS = [
     DEFAULT_THUMBNAIL,
     '/thumbnails/bowl.svg',

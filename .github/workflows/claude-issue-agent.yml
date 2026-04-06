@@ -32,7 +32,7 @@ jobs:
           show_full_output: "true"
           prompt: |
             You are an autonomous software agent helping resolve GitHub issues for the
-            Glaze pottery workflow tracking app (Django backend + React frontend).
+            Glaze pottery workflow tracking app (Django backend + React web).
 
             Read the issue title, body, and every existing comment before acting.
 
@@ -42,8 +42,8 @@ jobs:
 
             IF the issue is specific enough to act on (or all clarifying questions have been answered):
             - Implement the fix on a new branch.
-            - Run `pytest` from the repo root (backend) and `npm test` inside `frontend/`
-              (frontend). The PR must not be opened if either suite fails.
+            - Run `pytest` from the repo root (backend) and `npm test` inside `web/`
+              (web). The PR must not be opened if either suite fails.
             - Open a pull request with "Closes #<issue number>" in the body.
             - Post a comment on the issue linking to the PR.
 
@@ -51,7 +51,6 @@ jobs:
             - `workflow.yml` is the single source of truth for pottery states — never
               hardcode state names or transitions anywhere in the code.
             - Backend: Django + DRF in `api/`; tests in `api/tests.py`; run with `pytest`.
-            - Frontend: React 19 + TypeScript + MUI in `frontend/src/`; component tests in
-              `frontend/src/components/__tests__/`; run with `npm test` inside `frontend/`.
+            - Web: React 19 + TypeScript + MUI in `web/src/`; component tests in
+              `web/src/components/__tests__/`; run with `npm test` inside `web/`.
             - See AGENTS.md for full conventions.
-

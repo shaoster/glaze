@@ -5,8 +5,8 @@
 Glaze is a pottery workflow tracking application. Users log each pottery piece and record state transitions as the piece moves through the production lifecycle — from throwing or handbuilding through firing, glazing, and finishing. The history of state transitions is the primary data product; it can be analyzed per-piece or in aggregate.
 
 The app has two parts:
-- **Backend** (`/backend/`, `/api/`): Django + Django REST Framework, serves JSON to the frontend
-- **Frontend** (`/frontend/`): React 19 + TypeScript + Vite + Material UI
+- **Backend** (`/backend/`, `/api/`): Django + Django REST Framework, serves JSON to the web
+- **Web** (`/web/`): React 19 + TypeScript + Vite + Material UI
 
 ---
 
@@ -85,13 +85,13 @@ Referential rules enforced by `TestAdditionalFieldsDSL`:
 - Every non-terminal state has `recycled` as a valid successor — a piece can be recycled at any point.
 - `completed` and `recycled` are terminal states (`"terminal": true`) — no transitions out.
 - During initial development, all states have `"visible": true` and should be shown in the UI. As additional features are added, some states may become hidden and only available for analysis purposes, but are not shown in the UI by default.
-- Valid transitions are defined per-state in `workflow.yml`; validate against them on both the frontend and backend.
+- Valid transitions are defined per-state in `workflow.yml`; validate against them on both the web and backend.
 
 ---
 
 ## Data Model
 
-These types are defined in [`frontend/src/types.ts`](frontend/src/types.ts) and mirror what the backend API should produce.
+These types are defined in [`frontend_common/src/types.ts`](frontend_common/src/types.ts) and mirror what the backend API should produce.
 
 **`PieceSummary`** — used in list views
 ```ts
@@ -146,7 +146,7 @@ PieceSummary & {
 **Conventions:**
 - All API endpoints live under the `api` app and are registered in `backend/urls.py`.
 - Use DRF serializers for all request/response shaping — no raw `JsonResponse` with hand-built dicts.
-- Serializer output must match the TypeScript types in `types.ts` exactly (field names, nesting).
+- Serializer output must match the TypeScript types in `frontend_common/src/types.ts` exactly (field names, nesting).
 - Validate state transitions server-side against `workflow.yml` before persisting a new `PieceState`.
 - `workflow.yml` can be read at startup and cached; do not re-read it per request.
 - CORS is installed (`corsheaders`); ensure it is in `MIDDLEWARE` and configured before shipping any cross-origin endpoint.
@@ -160,54 +160,56 @@ PieceSummary & {
 
 ---
 
-## Frontend
+## Web
 
 **Stack**: React 19, TypeScript (strict), Vite 8, Material UI (MUI) v7, Axios
 
 **Project layout:**
-- [`frontend/src/components/`](frontend/src/components/) — UI components
-- [`frontend/src/types.ts`](frontend/src/types.ts) — all shared TypeScript types
-- [`frontend/src/App.tsx`](frontend/src/App.tsx) — root component
-- [`frontend/src/main.tsx`](frontend/src/main.tsx) — React entry point
+- [`web/src/components/`](web/src/components/) — UI components
+- [`frontend_common/src/types.ts`](frontend_common/src/types.ts) — shared TypeScript types used by web and mobile
+- [`frontend_common/src/api.ts`](frontend_common/src/api.ts) — shared HTTP client + wire/domain mappers
+- [`frontend_common/src/workflow.ts`](frontend_common/src/workflow.ts) — shared workflow helpers derived from `workflow.yml`
+- [`web/src/App.tsx`](web/src/App.tsx) — root component
+- [`web/src/main.tsx`](web/src/main.tsx) — React entry point
 
 **Conventions:**
 - Use MUI components for all UI elements — avoid custom CSS except for layout adjustments MUI can't handle.
-- Import types from `types.ts`; do not redeclare them locally.
-- State names and valid transitions come from `workflow.yml` via the constants in `types.ts` (`STATES`, `SUCCESSORS`) — do not hardcode them in components.
-- All HTTP calls go through [`frontend/src/api.ts`](frontend/src/api.ts). This is the single place where wire types (ISO date strings, etc.) are mapped to domain types as declared in `types.ts`. Components must never perform their own serialization or deserialization — they receive fully-typed domain objects and call the functions in `api.ts` to write data.
-- Use Axios for all HTTP requests to the backend, and all HTTP requests should go through `api.ts`.
+- Import types from `frontend_common/src/types.ts`; do not redeclare them locally.
+- State names and valid transitions come from `workflow.yml` via the constants in `frontend_common/src/types.ts` (`STATES`, `SUCCESSORS`) — do not hardcode them in components.
+- All HTTP calls go through [`frontend_common/src/api.ts`](frontend_common/src/api.ts). This is the single place where wire types (ISO date strings, etc.) are mapped to domain types as declared in `frontend_common/src/types.ts`. Components must never perform their own serialization or deserialization — they receive fully-typed domain objects and call the functions in `api.ts` to write data.
+- Use Axios for all HTTP requests to the backend, and all HTTP requests should go through `frontend_common/src/api.ts`.
 - TypeScript strict mode is on; avoid `any`.
 - New component files should be `.tsx`, not `.js`.
 - Use `slotProps={{ htmlInput: { ... } }}` on MUI `TextField` — the `inputProps` prop is deprecated in MUI v7.
 - Module-level constants should be named in `ALL_CAPS_SNAKE_CASE`. This applies to both exported constants (e.g. `DEFAULT_THUMBNAIL`) and internal ones (e.g. `MAX_NOTES_LENGTH`).
 
 **Theming:**
-- The app uses a MUI dark theme configured in [`frontend/src/App.tsx`](frontend/src/App.tsx) via `ThemeProvider` + `createTheme({ palette: { mode: 'dark' } })` with `CssBaseline`.
+- The app uses a MUI dark theme configured in [`web/src/App.tsx`](web/src/App.tsx) via `ThemeProvider` + `createTheme({ palette: { mode: 'dark' } })` with `CssBaseline`.
 - Always use MUI theme tokens for color — never hardcode hex/rgb values. For text use `text.primary` (main content) and `text.secondary` (labels, metadata).
 
 **Thumbnails:**
-- Curated SVG thumbnails live in [`frontend/public/thumbnails/`](frontend/public/thumbnails/).
+- Curated SVG thumbnails live in [`web/public/thumbnails/`](web/public/thumbnails/).
 - All thumbnails share a consistent earth-tone pottery style: fill `#c8956c`, stroke `#7a4f3a`, `viewBox="0 0 100 100"`. New thumbnails must follow this convention.
 - `DEFAULT_THUMBNAIL` (exported from `NewPieceDialog.tsx`) points to `/thumbnails/question-mark.svg` and is the pre-selected thumbnail when the piece creation dialog opens.
 
 **Workflow config interface (`workflow.ts`):**
-- [`frontend/src/workflow.ts`](frontend/src/workflow.ts) is the frontend counterpart to the backend's `_STATE_MAP` / `_GLOBALS_MAP` in `api/models.py`. It loads `workflow.yml` at build time and exposes typed helpers — do not duplicate state or globals data anywhere else in the frontend.
+- [`frontend_common/src/workflow.ts`](frontend_common/src/workflow.ts) is the shared web/mobile counterpart to the backend's `_STATE_MAP` / `_GLOBALS_MAP` in `api/models.py`. It loads `workflow.yml` at build time and exposes typed helpers — do not duplicate state or globals data elsewhere.
 - `getAdditionalFieldDefinitions(stateId)` — resolves per-state additional field definitions into a form-ready structure; used by `WorkflowState` to render dynamic fields.
 - `getGlobalDisplayField(globalName)` — returns the display field name for a globals entry; used by `GlobalFieldPicker` to determine which field to write on create.
 - `formatWorkflowFieldLabel(fieldName)` — converts snake_case DSL names to Title Case UI labels.
 
 **Type generation pipeline:**
-- [`frontend/src/generated-types.ts`](frontend/src/generated-types.ts) is auto-generated — do not edit by hand. It is gitignored.
-- Generation is driven by [`frontend/scripts/generate-types.mjs`](frontend/scripts/generate-types.mjs), which calls the `openapi-typescript` programmatic API with a `transform` that converts `format: date-time` fields to `Date` in the generated output. Run `npm run generate-types` with Django on port 8080.
-- [`frontend/src/types.ts`](frontend/src/types.ts) derives domain types from `generated-types.ts` via intersection (no `Omit<>`). It also holds the `STATES` array and `SUCCESSORS` map from `workflow.yml`, which are not in the schema.
-- **When adding a new API field:** update the Django serializer → run `npm run generate-types` → update `types.ts` if semantic narrowing is needed → update mappers in `api.ts`.
-- [`frontend/src/api.ts`](frontend/src/api.ts) uses the `Wire<T>` generic to type raw Axios responses (dates as strings). Mappers convert `Wire<T>` → domain `T` using `new Date()` and state casts. This is the only file that should contain deserialization logic.
+- [`frontend_common/src/generated-types.ts`](frontend_common/src/generated-types.ts) is auto-generated — do not edit by hand. It is gitignored.
+- Generation is driven by [`web/scripts/generate-types.mjs`](web/scripts/generate-types.mjs), which calls the `openapi-typescript` programmatic API with a `transform` that converts `format: date-time` fields to `Date` in the generated output. Run `npm run generate-types` with Django on port 8080.
+- [`frontend_common/src/types.ts`](frontend_common/src/types.ts) derives domain types from `generated-types.ts` via intersection (no `Omit<>`). It also holds the `STATES` array and `SUCCESSORS` map from `workflow.yml`, which are not in the schema.
+- **When adding a new API field:** update the Django serializer → run `npm run generate-types` → update `frontend_common/src/types.ts` if semantic narrowing is needed → update mappers in `frontend_common/src/api.ts`.
+- [`frontend_common/src/api.ts`](frontend_common/src/api.ts) uses the `Wire<T>` generic to type raw Axios responses (dates as strings). Mappers convert `Wire<T>` → domain `T` using `new Date()` and state casts. This is the only file that should contain deserialization logic.
 - The OpenAPI schema is at `http://localhost:8080/api/schema/` and Swagger UI at `http://localhost:8080/api/schema/swagger/`.
 
 **Existing components:**
-- [`PieceList.tsx`](frontend/src/components/PieceList.tsx) — MUI table displaying a list of `PieceSummary` objects (columns: Thumbnail, Name, State, Created, Last Modified)
-- [`NewPieceDialog.tsx`](frontend/src/components/NewPieceDialog.tsx) — dialog for creating a new piece; accepts a name, optional notes, and a thumbnail selected from the curated gallery
-- [`WorkflowState.tsx`](frontend/src/components/WorkflowState.tsx) — placeholder for rendering a single `PieceState`; not yet implemented
+- [`PieceList.tsx`](web/src/components/PieceList.tsx) — MUI table displaying a list of `PieceSummary` objects (columns: Thumbnail, Name, State, Created, Last Modified)
+- [`NewPieceDialog.tsx`](web/src/components/NewPieceDialog.tsx) — dialog for creating a new piece; accepts a name, optional notes, and a thumbnail selected from the curated gallery
+- [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx) — placeholder for rendering a single `PieceState`; not yet implemented
 
 ---
 
@@ -221,8 +223,8 @@ pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver 8080
 
-# Frontend
-cd frontend
+# Web
+cd web
 npm install
 npm run dev
 ```
@@ -251,20 +253,20 @@ pytest api/                            # run from the repo root
 
 Tests live in [`api/tests.py`](api/tests.py). `pytest.ini` points pytest at `backend.settings` automatically — no extra configuration needed.
 
-### Frontend
+### Web
 
 ```bash
-cd frontend
+cd web
 npm install
 npm test          # single run (used in CI)
 npm run test:watch  # watch mode for development
 ```
 
 Tests live in two places:
-- [`frontend/src/components/__tests__/`](frontend/src/components/__tests__/) — component tests (jsdom + Testing Library)
-- [`frontend/src/workflow.test.ts`](frontend/src/workflow.test.ts) — unit tests for `workflow.ts` helpers
+- [`web/src/components/__tests__/`](web/src/components/__tests__/) — component tests (jsdom + Testing Library)
+- [`web/src/workflow.test.ts`](web/src/workflow.test.ts) — unit tests for `workflow.ts` helpers
 
-The test environment is jsdom; setup file is [`frontend/src/test-setup.ts`](frontend/src/test-setup.ts).
+The test environment is jsdom; setup file is [`web/src/test-setup.ts`](web/src/test-setup.ts).
 
 **`workflow.ts` tests** use `vi.mock('../../workflow.yml', ...)` with a minimal fixture to decouple them from the real `workflow.yml`. This lets edge cases (globals with no `name` field, unknown states, state refs) be tested in isolation. Never import `workflow.yml` directly in a test — always mock it.
 
@@ -272,22 +274,22 @@ The test environment is jsdom; setup file is [`frontend/src/test-setup.ts`](fron
 
 ### CI
 
-GitHub Actions runs all three suites (`common`, `backend`, `frontend`) in parallel on every push and pull request — see [`.github/workflows/tests.yml`](.github/workflows/tests.yml). A PR should not be merged if any job is red.
+GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on every push and pull request — see [`.github/workflows/tests.yml`](.github/workflows/tests.yml). A PR should not be merged if any job is red.
 
 ### What to test
 
 - Any change to `workflow.yml` or `workflow.schema.yml` → verify `pytest tests/` passes.
 - Every new API endpoint or serializer change → add or update a test in the appropriate file under `api/tests/`.
-- Every new or modified React component → add or update a test in `frontend/src/components/__tests__/`.
-- Every new or modified `workflow.ts` helper → add or update a test in `frontend/src/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture.
+- Every new or modified React component → add or update a test in `web/src/components/__tests__/`.
+- Every new or modified `workflow.ts` helper → add or update a test in `web/src/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture.
 - The `piece` fixture in `api/tests/conftest.py` creates a piece via the ORM directly; prefer the API client (`client.post(...)`) for tests that exercise request/response behaviour.
 
 ---
 
 ## Key Constraints
 
-- `workflow.yml` is the single source of truth for states and transitions. Both backend validation and frontend UI must derive from it — never duplicate the state list.
+- `workflow.yml` is the single source of truth for states and transitions. Both backend validation and web UI must derive from it — never duplicate the state list.
 - The `PieceState` history is append-only; past states should not be edited, only new ones added. Only the `current_state` should be modifiable. Once a piece has transitioned to a new state, past states should be considered sealed, and care should be taken in the backend code to prevent inadvertent edits to these sealed states.
 - `PieceDetail.current_state` is the most recent `PieceState` in the history.
-- All dates should be stored and transmitted as ISO 8601 strings; the frontend types declare them as `Date` but Axios/JSON deserialization will deliver them as strings — handle accordingly.
-- **Piece creation flow:** When creating a new piece (`POST /api/pieces/`), the piece is always initialized in the `designed` state. The creation UI (`NewPieceDialog`) lets the user supply a name, optional notes, and pick a thumbnail from the curated gallery in `frontend/public/thumbnails/`. The selected thumbnail URL is stored as the piece's primary visual identifier.
+- All dates should be stored and transmitted as ISO 8601 strings; the web types declare them as `Date` but Axios/JSON deserialization will deliver them as strings — handle accordingly.
+- **Piece creation flow:** When creating a new piece (`POST /api/pieces/`), the piece is always initialized in the `designed` state. The creation UI (`NewPieceDialog`) lets the user supply a name, optional notes, and pick a thumbnail from the curated gallery in `web/public/thumbnails/`. The selected thumbnail URL is stored as the piece's primary visual identifier.

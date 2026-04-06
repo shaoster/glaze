@@ -77,7 +77,7 @@ jobs:
             1. Fetch all review feedback (summary above + inline comments via the gh CLI).
             2. Read the current code and understand what each piece of feedback is asking for.
             3. Make the necessary code changes to address every concern raised.
-            4. Run the full test suite to verify nothing is broken (backend: `pytest`, frontend: `cd frontend && npm test`).
+            4. Run the full test suite to verify nothing is broken (backend: `pytest`, web: `cd web && npm test`).
             5. Commit your changes with a message like "Address review feedback from @${{ github.event.review.user.login }}".
             6. Push the changes to this PR branch.
             7. Post a comment on the PR summarising what you changed and how each piece of feedback was addressed.

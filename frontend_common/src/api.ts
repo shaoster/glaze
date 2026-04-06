@@ -17,6 +17,11 @@ import axios from 'axios'
 import type { CaptionedImage, PieceDetail, PieceSummary, PieceState, State, StateSummary } from './types'
 
 const client = axios.create({ baseURL: '/api/' })
+const expoBaseUrl = (globalThis as { process?: { env?: Record<string, string | undefined> } })
+    .process?.env?.EXPO_PUBLIC_API_BASE_URL
+if (expoBaseUrl) {
+    client.defaults.baseURL = expoBaseUrl
+}
 
 // ---------------------------------------------------------------------------
 // Wire<T> — converts domain types back to the raw format Axios delivers.

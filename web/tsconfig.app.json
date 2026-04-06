@@ -25,5 +25,5 @@
     "noUncheckedSideEffectImports": true,
     "resolveJsonModule": true
   },
-  "include": ["src"]
+  "include": ["src", "../frontend_common/src"]
 }

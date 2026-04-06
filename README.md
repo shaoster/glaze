@@ -6,12 +6,12 @@ A pottery workflow tracking application. Log pieces and record state transitions
 This guide assumes you already know the tools listed below; if any term is unfamiliar, click the linked docs to catch up quickly.
 
 - **Django** is the Python web framework that owns the backend (`backend/`, `api/`). [Separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) keeps unrelated responsibilities apart so each layer stays simpler to reason about—for example, `api/models.py` defines the data schema, `api/serializers.py` translates between ORM objects and JSON payloads, and `api/views.py` wires those serializers into `/api/...` endpoints that enforce workflow rules from [`workflow.yml`](workflow.yml). That split keeps the REST API (powered by Django REST Framework, DRF) resilient even when one layer needs to change, while returning consistent data/validation to all clients.
-- **React** (frontend/src/) renders the SPA (Single Page Application) and consumes `frontend/src/types.ts`, while Axios/`frontend/src/api.ts` maps every HTTP call into those types. React follows a component-based paradigm where functions or classes receive props (inputs) and return HTML that the browser can render.
-- **Vite** (frontend tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our frontend workbench, serves as the underlying runner for `npm test`, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
+- **React** (web/src/) renders the SPA (Single Page Application) and consumes shared types/API helpers from `frontend_common/src/types.ts` and `frontend_common/src/api.ts`. React follows a component-based paradigm where functions or classes receive props (inputs) and return HTML that the browser can render.
+- **Vite** (web tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our web workbench, serves as the underlying runner for `npm test`, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
 - **Material UI** supplies the component library used everywhere in the UI for forms, dialogs, buttons, and layout.
-- **Axios** is the HTTP client library we use in the frontend to talk to REST APIs; it keeps things simple by handling the details of sending and receiving JSON so the UI code does not have to repeat that work. Benefits of Axios over raw `fetch` include centralized configuration of base URLs and headers, automatic JSON parsing/serialization, and built-in hooks for handling errors, cancellations, and retries. In this project that means `WorkflowState.tsx` can rely on helpers like `updateCurrentState`/`updatePiece` instead of duplicating URLs or JSON logic, and we have a single place for surfaces errors before they hit the UI.
+- **Axios** is the HTTP client library we use in the web to talk to REST APIs; it keeps things simple by handling the details of sending and receiving JSON so the UI code does not have to repeat that work. Benefits of Axios over raw `fetch` include centralized configuration of base URLs and headers, automatic JSON parsing/serialization, and built-in hooks for handling errors, cancellations, and retries. In this project that means `WorkflowState.tsx` can rely on helpers like `updateCurrentState`/`updatePiece` instead of duplicating URLs or JSON logic, and we have a single place for surfaces errors before they hit the UI.
 - A **client library** is a reusable set of functions that wraps low-level protocols (like HTTP) so developers can interact with remote services using clean function calls, in their programming language of choice, instead of handling bytes, headers, or parsing manually.
-- **`frontend/src/api.ts`** wraps Axios calls for every backend endpoint, maps the wire format (ISO date strings) into the domain types consumed by the UI, and centralizes serialization and error handling. [Separation of concerns] keeps unrelated responsibilities apart so each layer stays simpler to reason about. By keeping UI components focused on rendering/state and `api.ts` focused on serialization, endpoint URLs, and error handling, the code is easier to maintain—`WorkflowState.tsx` simply calls `updateCurrentState(pieceId, payload)` and receives a deserialized `PieceDetail`, so it never needs to know whether the backend REST API URL is `/pieces/<id>/state/` or `/state/`, or that the raw string timestamps must be parsed into the Date-friendly TypeScript domain types.
+- **`frontend_common/src/api.ts`** wraps Axios calls for every backend endpoint, maps the wire format (ISO date strings) into the domain types consumed by the UI, and centralizes serialization and error handling. [Separation of concerns] keeps unrelated responsibilities apart so each layer stays simpler to reason about. By keeping UI components focused on rendering/state and `api.ts` focused on serialization, endpoint URLs, and error handling, the code is easier to maintain—`WorkflowState.tsx` simply calls `updateCurrentState(pieceId, payload)` and receives a deserialized `PieceDetail`, so it never needs to know whether the backend REST API URL is `/pieces/<id>/state/` or `/state/`, or that the raw string timestamps must be parsed into the Date-friendly TypeScript domain types.
 
 Compare that to a contrived manual call:
 
@@ -50,7 +50,7 @@ This section is for folks who just want to fire up the whole stack quickly and s
 ```bash
 source env.sh
 gz_setup    # first-time only: creates venv, installs deps, runs migrations, installs Node
-gz_start    # starts backend (port 8080) and frontend (Vite port), press Ctrl+C to stop
+gz_start    # starts backend (port 8080) and web (Vite port), press Ctrl+C to stop
 ```
 
 ## Development helpers (`env.sh`)
@@ -72,12 +72,12 @@ source env.sh
 
 | Command | Description |
 |---|---|
-| `gz_start` | Start backend and frontend, join in the foreground. Ctrl+C stops both. Rotates old logs before starting. |
+| `gz_start` | Start backend and web, join in the foreground. Ctrl+C stops both. Rotates old logs before starting. |
 | `gz_stop` | Stop both servers. |
-| `gz_status` | Show whether backend and frontend are running. |
+| `gz_status` | Show whether backend and web are running. |
 | `gz_backend` | Start the Django backend on port 8080 (backgrounded). |
-| `gz_frontend` | Start the Vite dev server (backgrounded). Prints the local URL once ready. |
-| `gz_logs [backend\|frontend]` | Tail logs. Omit argument to tail both. |
+| `gz_web` | Start the Vite dev server (backgrounded). Prints the local URL once ready. |
+| `gz_logs [backend\|web]` | Tail logs. Omit argument to tail both. |
 
 Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`.
 
@@ -96,16 +96,16 @@ Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`
 
 | Command | Description |
 |---|---|
-| `gz_test` | Run all three test suites (common, backend, frontend) in parallel. Exits non-zero if any fails. |
+| `gz_test` | Run all three test suites (common, backend, web) in parallel. Exits non-zero if any fails. |
 | `gz_test_common` | Run workflow schema/integrity tests only (`pytest tests/`). |
 | `gz_test_backend` | Run Django API tests only (`pytest api/`). |
-| `gz_test_frontend` | Run frontend tests only (`npm test`). |
+| `gz_test_web` | Run web tests only (`npm test`). |
 
 ### Type generation
 
 | Command | Description |
 |---|---|
-| `gz_gentypes` | Regenerate `frontend/src/generated-types.ts` from the live OpenAPI schema. Starts the backend temporarily if it is not already running. |
+| `gz_gentypes` | Regenerate `frontend_common/src/generated-types.ts` from the live OpenAPI schema. Starts the backend temporarily if it is not already running. |
 
 Run `gz_help` to print the full list of shortcuts at any time.
 
@@ -120,22 +120,22 @@ pip install -r requirements-dev.txt
 python manage.py migrate
 python manage.py runserver 8080
 
-# Frontend (separate terminal)
-cd frontend
+# Web (separate terminal)
+cd web
 npm install
 npm run dev
 
 # Type generation (backend must be running on port 8080)
-cd frontend
+cd web
 npm run generate-types
 ```
 
 ## Testing
-`gz_test` is the local, all-suite helper that runs the common, backend, and frontend tests on your machine (it is recommended to run this before opening a PR); GitHub Actions runs the same set of suites centrally for each push/PR. Each suite groups tests that verify a specific layer of the app—see the detailed list below for what they cover.
+`gz_test` is the local, all-suite helper that runs the common, backend, and web tests on your machine (it is recommended to run this before opening a PR); GitHub Actions runs the same set of suites centrally for each push/PR. Each suite groups tests that verify a specific layer of the app—see the detailed list below for what they cover.
 
 ```bash
 # All suites via shell helpers (recommended)
-gz_test               # common + backend + frontend in parallel
+gz_test               # common + backend + web in parallel
 
 # Common (workflow.yml validation)
 pytest tests/         # 28 tests
@@ -143,8 +143,8 @@ pytest tests/         # 28 tests
 # Backend
 pytest api/           # 62 tests across 10 files
 
-# Frontend
-cd frontend
+# Web
+cd web
 npm test              # single run (CI) — 101 tests across 6 files
 npm run test:watch    # watch mode
 ```
@@ -166,7 +166,7 @@ npm run test:watch    # watch mode
 | `test_global_entries.py` | `GET/POST /api/globals/<name>/` list and create |
 | `test_globals.py` | Global/model alignment (every `globals` entry maps to a real Django model) |
 
-**Frontend** (`frontend/src/`):
+**Web** (`web/src/`):
 | File | What it covers |
 |---|---|
 | `workflow.test.ts` | `formatWorkflowFieldLabel`, `getGlobalDisplayField`, `getAdditionalFieldDefinitions` (inline, state ref, global ref) — decoupled from real `workflow.yml` via `vi.mock` |
@@ -209,7 +209,7 @@ Claude will read the comment, make the change, and push it to the branch.
 
 ### Tips
 
-- Claude always runs `pytest` (backend) and `npm test` (frontend) before opening or updating a PR. If tests fail, it will not push.
+- Claude always runs `pytest` (backend) and `npm test` (web) before opening or updating a PR. If tests fail, it will not push.
 - Claude derives all state names and transitions from `workflow.yml` — you can reference state names freely in issues and it will use the correct values.
 - For large or ambiguous requests, start with an issue rather than a direct PR comment so Claude can ask questions before writing code.
 
@@ -218,26 +218,30 @@ Claude will read the comment, make the change, and push it to the branch.
 ```
 backend/          Django project settings, root URL config
 api/              Models, serializers, views, tests
-frontend/
+frontend_common/
   src/
-    components/   React components
-    types.ts      Shared TypeScript types (derived from generated-types.ts)
-    api.ts        All HTTP calls; wire-type → domain-type mapping
-    App.tsx       Root component with MUI dark theme
+    generated-types.ts  Auto-generated OpenAPI types (gitignored)
+    types.ts            Shared domain types/constants for web + mobile
+    api.ts              Shared HTTP calls; wire-type → domain-type mapping
+    workflow.ts         Shared workflow helpers from workflow.yml
+web/
+  src/
+    components/         React components
+    App.tsx             Root component with MUI dark theme
 workflow.yml     Source of truth for piece states and valid transitions
 env.sh            Development shell helpers
 ```
 
-The workflow state machine and all valid transitions are defined in [`workflow.yml`](workflow.yml). Both the backend and frontend derive state names and transition rules from this file — nothing is hardcoded elsewhere.
+The workflow state machine and all valid transitions are defined in [`workflow.yml`](workflow.yml). Both the backend and web derive state names and transition rules from this file — nothing is hardcoded elsewhere.
 
 `workflow.yml` also contains two optional sections beyond the state list:
 
 - **`globals`** — named domain types backed by Django models (e.g. `location`, `piece`), registered so they can be referenced from `additional_fields` and verified against `api/models.py` by the test suite.
-- **`additional_fields`** (per-state) — state-specific fields declared using the embedded DSL. See the “Authoring `additional_fields`” section below for the exact syntax and how the frontend renders the inputs.
+- **`additional_fields`** (per-state) — state-specific fields declared using the embedded DSL. See the “Authoring `additional_fields`” section below for the exact syntax and how the web renders the inputs.
 
 ### Authoring `additional_fields`
 
-When you add an `additional_fields` entry to a state in `workflow.yml`, the frontend automatically renders the inputs for you inside the `WorkflowState` component. Inline JSON primitives, state references, and global references are all interpreted through the helper utilities in `frontend/src/workflow.ts` (`getAdditionalFieldDefinitions`, `formatWorkflowFieldLabel`, etc.) so the DSL does not need to be mentioned elsewhere in the code.
+When you add an `additional_fields` entry to a state in `workflow.yml`, the web automatically renders the inputs for you inside the `WorkflowState` component. Inline JSON primitives, state references, and global references are all interpreted through the helper utilities in `frontend_common/src/workflow.ts` (`getAdditionalFieldDefinitions`, `formatWorkflowFieldLabel`, etc.) so the DSL does not need to be mentioned elsewhere in the code.
 
 1. **Inline fields** (give the field a `type`, optional `description`, `required`, and/or `enum`). They render as `TextField`s—numbers as numeric inputs, booleans as selects with `True`/`False`, enums as dropdowns—directly below Notes and above the image list.
 2. **State refs** (`$ref: "ancestor_state.field_name"`) carry a value forward from a reachable ancestor state; they render the referenced value while still allowing edits and backend validation just like inline fields.

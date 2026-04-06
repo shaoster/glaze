@@ -1,12 +1,12 @@
 /**
- * Frontend interface to the workflow.yml configuration.
+ * Shared web/mobile interface to the workflow.yml configuration.
  *
  * This module loads workflow.yml at build time and exposes typed helpers that
- * the rest of the frontend uses to drive dynamic behaviour — field definitions
+ * the web and mobile apps use to drive dynamic behaviour — field definitions
  * for per-state forms, display labels, and global type metadata. It is the
- * frontend counterpart to the backend's `_STATE_MAP` / `_GLOBALS_MAP` in
+ * shared-app counterpart to the backend's `_STATE_MAP` / `_GLOBALS_MAP` in
  * `api/models.py`. Neither the state list nor the globals map should be
- * duplicated elsewhere in the frontend; derive them from the exports here.
+ * duplicated elsewhere in the apps; derive them from the exports here.
  */
 import workflow from '../../workflow.yml'
 

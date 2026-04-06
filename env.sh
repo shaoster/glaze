@@ -80,10 +80,10 @@ gz_setup() {
     echo "--- Running migrations..."
     python "$GLAZE_ROOT/manage.py" migrate --run-syncdb
 
-    # Node + frontend deps
+    # Node + web deps
     _gz_ensure_node
-    echo "--- Installing frontend dependencies..."
-    (cd "$GLAZE_ROOT/frontend" && npm install --silent)
+    echo "--- Installing web dependencies..."
+    (cd "$GLAZE_ROOT/web" && npm install --silent)
 
     echo "=== Setup complete ==="
     echo "    Run 'gz_gentypes' to regenerate TypeScript types (requires the backend)."
@@ -128,19 +128,19 @@ gz_test_backend() {
     )
 }
 
-gz_test_frontend() {
-    (cd "$GLAZE_ROOT/frontend" && npm test "$@")
+gz_test_web() {
+    (cd "$GLAZE_ROOT/web" && npm test "$@")
 }
 
 gz_test() {
-    local common_exit backend_exit frontend_exit
+    local common_exit backend_exit web_exit
     gz_test_common & local common_pid=$!
     gz_test_backend & local backend_pid=$!
-    gz_test_frontend & local frontend_pid=$!
+    gz_test_web & local web_pid=$!
     wait $common_pid;   common_exit=$?
     wait $backend_pid;  backend_exit=$?
-    wait $frontend_pid; frontend_exit=$?
-    return $(( common_exit | backend_exit | frontend_exit ))
+    wait $web_pid; web_exit=$?
+    return $(( common_exit | backend_exit | web_exit ))
 }
 
 # ---------------------------------------------------------------------------
@@ -152,45 +152,45 @@ gz_backend() {
         bash -c "source '$GLAZE_ROOT/.venv/bin/activate' && cd '$GLAZE_ROOT' && python manage.py runserver 8080"
 }
 
-gz_frontend() {
-    _gz_start frontend "$_GLAZE_LOGS/frontend.log" \
-        bash -c "cd '$GLAZE_ROOT/frontend' && npm run dev"
+gz_web() {
+    _gz_start web "$_GLAZE_LOGS/web.log" \
+        bash -c "cd '$GLAZE_ROOT/web' && npm run dev"
 
     # Wait for Vite to print the chosen port (up to 10 s)
     local i=0
-    until grep -q 'Local:' "$_GLAZE_LOGS/frontend.log" 2>/dev/null; do
+    until grep -q 'Local:' "$_GLAZE_LOGS/web.log" 2>/dev/null; do
         sleep 0.2
         (( i++ ))
         (( i >= 50 )) && break
     done
     local port
-    port=$(grep 'Local:' "$_GLAZE_LOGS/frontend.log" | tail -1 | grep -oE ':[0-9]+/' | tr -d ':/')
-    [[ -n "$port" ]] && echo "frontend: http://localhost:$port"
+    port=$(grep 'Local:' "$_GLAZE_LOGS/web.log" | tail -1 | grep -oE ':[0-9]+/' | tr -d ':/')
+    [[ -n "$port" ]] && echo "web: http://localhost:$port"
 }
 
 gz_start() {
     _gz_rotate_log backend
-    _gz_rotate_log frontend
+    _gz_rotate_log web
     gz_backend
-    gz_frontend
+    gz_web
 
-    local backend_pid frontend_pid
+    local backend_pid web_pid
     backend_pid=$(cat "$_GLAZE_PIDS/backend.pid" 2>/dev/null)
-    frontend_pid=$(cat "$_GLAZE_PIDS/frontend.pid" 2>/dev/null)
+    web_pid=$(cat "$_GLAZE_PIDS/web.pid" 2>/dev/null)
 
-    trap 'echo "Stopping..."; _gz_stop backend; _gz_stop frontend; trap - INT TERM' INT TERM
+    trap 'echo "Stopping..."; _gz_stop backend; _gz_stop web; trap - INT TERM' INT TERM
     echo "Running — press Ctrl+C to stop."
-    wait $backend_pid $frontend_pid 2>/dev/null
+    wait $backend_pid $web_pid 2>/dev/null
     trap - INT TERM
 }
 
 gz_stop() {
     _gz_stop backend
-    _gz_stop frontend
+    _gz_stop web
 }
 
 gz_status() {
-    for name in backend frontend; do
+    for name in backend web; do
         if _gz_is_running "$name"; then
             echo "$name: running (PID $(cat "$_GLAZE_PIDS/$name.pid"))"
         else
@@ -199,11 +199,11 @@ gz_status() {
     done
 }
 
-gz_logs() {    # gz_logs [backend|frontend]  — defaults to both
+gz_logs() {    # gz_logs [backend|web]  — defaults to both
     case "${1:-all}" in
         backend)  tail -f "$_GLAZE_LOGS/backend.log" ;;
-        frontend) tail -f "$_GLAZE_LOGS/frontend.log" ;;
-        *)        tail -f "$_GLAZE_LOGS/backend.log" "$_GLAZE_LOGS/frontend.log" ;;
+        web) tail -f "$_GLAZE_LOGS/web.log" ;;
+        *)        tail -f "$_GLAZE_LOGS/backend.log" "$_GLAZE_LOGS/web.log" ;;
     esac
 }
 
@@ -213,6 +213,7 @@ gz_logs() {    # gz_logs [backend|frontend]  — defaults to both
 
 gz_gentypes() {
     local we_started=false
+    local generated_path="$GLAZE_ROOT/frontend_common/src/generated-types.ts"
 
     if ! _gz_is_running backend; then
         gz_backend
@@ -230,9 +231,14 @@ gz_gentypes() {
         done
     fi
 
-    echo "Regenerating TypeScript types..."
-    (cd "$GLAZE_ROOT/frontend" && npm run generate-types)
+    _gz_ensure_node
+    echo "Regenerating shared TypeScript types..."
+    (cd "$GLAZE_ROOT/web" && npm run generate-types)
     local exit_code=$?
+
+    if (( exit_code == 0 )) && [[ -f "$generated_path" ]]; then
+        echo "Generated: $generated_path"
+    fi
 
     $we_started && _gz_stop backend
     return $exit_code
@@ -250,11 +256,11 @@ _GZ_SHORTCUTS=(
     "gz_test           — run all test suites in parallel"
     "gz_test_common    — run workflow schema/integrity tests (pytest tests/)"
     "gz_test_backend   — run Django API tests (pytest api/)"
-    "gz_test_frontend  — run the frontend tests only"
-    "gz_gentypes       — regenerate frontend TypeScript types"
-    "gz_start/stop     — start or stop backend + frontend"
+    "gz_test_web       — run the web tests only"
+    "gz_gentypes       — regenerate shared TypeScript types"
+    "gz_start/stop     — start or stop backend + web"
     "gz_status         — show what services are running"
-    "gz_logs [backend|frontend] — stream backend and/or frontend logs"
+    "gz_logs [backend|web] — stream backend and/or web logs"
 )
 
 gz_help() {
