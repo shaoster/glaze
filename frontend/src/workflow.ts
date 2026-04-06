@@ -1,3 +1,13 @@
+/**
+ * Frontend interface to the workflow.yml configuration.
+ *
+ * This module loads workflow.yml at build time and exposes typed helpers that
+ * the rest of the frontend uses to drive dynamic behaviour — field definitions
+ * for per-state forms, display labels, and global type metadata. It is the
+ * frontend counterpart to the backend's `_STATE_MAP` / `_GLOBALS_MAP` in
+ * `api/models.py`. Neither the state list nor the globals map should be
+ * duplicated elsewhere in the frontend; derive them from the exports here.
+ */
 import workflow from '../../workflow.yml'
 
 type FieldType = 'string' | 'number' | 'integer' | 'boolean' | 'array' | 'object'
@@ -64,6 +74,24 @@ export type ResolvedAdditionalField = {
     globalField?: string
 }
 
+/**
+ * Returns the display field name for a globals entry — `'name'` if declared,
+ * otherwise the first declared field. Used by `GlobalFieldPicker` to determine
+ * which field to write when creating a new instance via `createGlobalEntry`.
+ * Mirrors the backend's `get_global_model_and_field` logic.
+ */
+export function getGlobalDisplayField(globalName: string): string {
+    const fields = GLOBALS_MAP[globalName]?.fields ?? {}
+    return 'name' in fields ? 'name' : (Object.keys(fields)[0] ?? 'name')
+}
+
+/**
+ * Returns the fully resolved additional field definitions for a given state,
+ * ready for rendering in a form. Each entry has its type, label metadata,
+ * required flag, and — for global refs — the global name and whether inline
+ * creation is permitted. Used by `WorkflowState` to render per-state form
+ * fields without hardcoding any state-specific logic in the component.
+ */
 export function getAdditionalFieldDefinitions(stateId: string): ResolvedAdditionalField[] {
     const state = STATE_MAP.get(stateId)
     if (!state) {
@@ -73,6 +101,11 @@ export function getAdditionalFieldDefinitions(stateId: string): ResolvedAddition
     return Object.entries(fields).map(([name, def]) => buildResolvedField(name, def))
 }
 
+/**
+ * Converts a snake_case DSL field name to a human-readable Title Case label
+ * (e.g. `'clay_weight_grams'` → `'Clay Weight Grams'`). Used wherever
+ * additional field names are shown in the UI.
+ */
 export function formatWorkflowFieldLabel(fieldName: string): string {
     return fieldName
         .split('_')

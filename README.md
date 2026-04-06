@@ -91,14 +91,47 @@ npm run generate-types
 ## Testing
 
 ```bash
+# All suites via shell helpers (recommended)
+gz_test               # backend + frontend in parallel
+
+# Common (workflow.yml validation)
+pytest tests/         # 28 tests
+
 # Backend
-pytest
+pytest api/           # 62 tests across 10 files
 
 # Frontend
 cd frontend
-npm test          # single run (CI)
-npm run test:watch  # watch mode
+npm test              # single run (CI) — 101 tests across 6 files
+npm run test:watch    # watch mode
 ```
+
+### What is tested
+
+**Common** (`tests/test_workflow.py`): structural validation of `workflow.yml` against `workflow.schema.yml`, semantic/referential integrity (successor references, reachability, terminal-state rules), `additional_fields` DSL rules (enum constraints, ref targets), and global/model alignment against `api/models.py`.
+
+**Backend** (`api/tests/`):
+| File | What it covers |
+|---|---|
+| `test_pieces_list.py` | `GET /api/pieces/` list endpoint |
+| `test_pieces_create.py` | `POST /api/pieces/` creation, location handling |
+| `test_piece_detail.py` | `GET /api/pieces/<id>/` detail endpoint |
+| `test_piece_states.py` | `POST /api/pieces/<id>/states/` transitions, history, additional_fields |
+| `test_patch_current_state.py` | `PATCH /api/pieces/<id>/state/` partial update, sealed-state protection |
+| `test_sealed_state.py` | ORM-level sealed state enforcement |
+| `test_additional_fields.py` | `PieceState.save()` schema validation for every field type (inline, state ref, global ref) |
+| `test_global_entries.py` | `GET/POST /api/globals/<name>/` list and create |
+| `test_globals.py` | Global/model alignment (every `globals` entry maps to a real Django model) |
+
+**Frontend** (`frontend/src/`):
+| File | What it covers |
+|---|---|
+| `workflow.test.ts` | `formatWorkflowFieldLabel`, `getGlobalDisplayField`, `getAdditionalFieldDefinitions` (inline, state ref, global ref) — decoupled from real `workflow.yml` via `vi.mock` |
+| `__tests__/GlobalFieldPicker.test.tsx` | Rendering, internal fetch, provided options, create sentinel, inline creation (success/error), selecting existing |
+| `__tests__/PieceList.test.tsx` | Column headers, empty state, per-row data, links |
+| `__tests__/NewPieceDialog.test.tsx` | Rendering, name/notes/location/thumbnail, save/cancel behaviour |
+| `__tests__/WorkflowState.test.tsx` | Notes, additional fields (inline, state ref, global ref), location, save button, unsaved indicator |
+| `__tests__/PieceDetail.test.tsx` | Rendering, state transitions, confirmation dialog, location editing |
 
 ## Vibe coding / Contributing
 

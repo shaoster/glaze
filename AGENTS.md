@@ -179,6 +179,7 @@ PieceSummary & {
 - TypeScript strict mode is on; avoid `any`.
 - New component files should be `.tsx`, not `.js`.
 - Use `slotProps={{ htmlInput: { ... } }}` on MUI `TextField` — the `inputProps` prop is deprecated in MUI v7.
+- Module-level constants should be named in `ALL_CAPS_SNAKE_CASE`. This applies to both exported constants (e.g. `DEFAULT_THUMBNAIL`) and internal ones (e.g. `MAX_NOTES_LENGTH`).
 
 **Theming:**
 - The app uses a MUI dark theme configured in [`frontend/src/App.tsx`](frontend/src/App.tsx) via `ThemeProvider` + `createTheme({ palette: { mode: 'dark' } })` with `CssBaseline`.
@@ -188,6 +189,12 @@ PieceSummary & {
 - Curated SVG thumbnails live in [`frontend/public/thumbnails/`](frontend/public/thumbnails/).
 - All thumbnails share a consistent earth-tone pottery style: fill `#c8956c`, stroke `#7a4f3a`, `viewBox="0 0 100 100"`. New thumbnails must follow this convention.
 - `DEFAULT_THUMBNAIL` (exported from `NewPieceDialog.tsx`) points to `/thumbnails/question-mark.svg` and is the pre-selected thumbnail when the piece creation dialog opens.
+
+**Workflow config interface (`workflow.ts`):**
+- [`frontend/src/workflow.ts`](frontend/src/workflow.ts) is the frontend counterpart to the backend's `_STATE_MAP` / `_GLOBALS_MAP` in `api/models.py`. It loads `workflow.yml` at build time and exposes typed helpers — do not duplicate state or globals data anywhere else in the frontend.
+- `getAdditionalFieldDefinitions(stateId)` — resolves per-state additional field definitions into a form-ready structure; used by `WorkflowState` to render dynamic fields.
+- `getGlobalDisplayField(globalName)` — returns the display field name for a globals entry; used by `GlobalFieldPicker` to determine which field to write on create.
+- `formatWorkflowFieldLabel(fieldName)` — converts snake_case DSL names to Title Case UI labels.
 
 **Type generation pipeline:**
 - [`frontend/src/generated-types.ts`](frontend/src/generated-types.ts) is auto-generated — do not edit by hand. It is gitignored.
@@ -253,7 +260,15 @@ npm test          # single run (used in CI)
 npm run test:watch  # watch mode for development
 ```
 
-Tests live in [`frontend/src/components/__tests__/`](frontend/src/components/__tests__/). The test environment is jsdom; setup file is [`frontend/src/test-setup.ts`](frontend/src/test-setup.ts).
+Tests live in two places:
+- [`frontend/src/components/__tests__/`](frontend/src/components/__tests__/) — component tests (jsdom + Testing Library)
+- [`frontend/src/workflow.test.ts`](frontend/src/workflow.test.ts) — unit tests for `workflow.ts` helpers
+
+The test environment is jsdom; setup file is [`frontend/src/test-setup.ts`](frontend/src/test-setup.ts).
+
+**`workflow.ts` tests** use `vi.mock('../../workflow.yml', ...)` with a minimal fixture to decouple them from the real `workflow.yml`. This lets edge cases (globals with no `name` field, unknown states, state refs) be tested in isolation. Never import `workflow.yml` directly in a test — always mock it.
+
+**Component tests** that involve typing into a controlled MUI Autocomplete must use a stateful wrapper (see `Controlled` in `GlobalFieldPicker.test.tsx`) because `inputValue={value}` means the mock `onChange: vi.fn()` never updates the value, so the component never sees the typed text.
 
 ### CI
 
@@ -262,9 +277,10 @@ GitHub Actions runs all three suites (`common`, `backend`, `frontend`) in parall
 ### What to test
 
 - Any change to `workflow.yml` or `workflow.schema.yml` → verify `pytest tests/` passes.
-- Every new API endpoint or serializer change → add or update a test in `api/tests.py`.
+- Every new API endpoint or serializer change → add or update a test in the appropriate file under `api/tests/`.
 - Every new or modified React component → add or update a test in `frontend/src/components/__tests__/`.
-- The `piece` fixture in `api/tests.py` creates a piece via the ORM directly; prefer the API client (`client.post(...)`) for tests that exercise request/response behaviour.
+- Every new or modified `workflow.ts` helper → add or update a test in `frontend/src/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture.
+- The `piece` fixture in `api/tests/conftest.py` creates a piece via the ORM directly; prefer the API client (`client.post(...)`) for tests that exercise request/response behaviour.
 
 ---
 

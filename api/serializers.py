@@ -65,7 +65,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_current_location(self, obj: Piece) -> str | None:
-        return obj.current_location.name if obj.current_location else ''
+        return obj.current_location.name if obj.current_location else None
 
 
 class PieceDetailSerializer(PieceSummarySerializer):
@@ -89,7 +89,7 @@ class PieceDetailSerializer(PieceSummarySerializer):
 
 class PieceCreateSerializer(serializers.ModelSerializer):
     notes = serializers.CharField(required=False, default='', allow_blank=True, max_length=300)
-    current_location = serializers.CharField(required=False, allow_blank=True, default='')
+    current_location = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
 
     class Meta:
         model = Piece
@@ -97,7 +97,7 @@ class PieceCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: dict) -> Piece:  # type: ignore[override]
         notes = validated_data.pop('notes', '')
-        location_name = validated_data.pop('current_location', '')
+        location_name = validated_data.pop('current_location', None)
         location_obj = None
         if location_name:
             location_obj, _ = Location.objects.get_or_create(name=location_name)
@@ -140,10 +140,13 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
                     'created': created_val.isoformat() if hasattr(created_val, 'isoformat') else str(created_val),
                 })
             validated_data['images'] = processed
-        return PieceState.objects.create(
-            piece=self.context['piece'],
-            **validated_data,
-        )
+        try:
+            return PieceState.objects.create(
+                piece=self.context['piece'],
+                **validated_data,
+            )
+        except ValueError as exc:
+            raise serializers.ValidationError({'additional_fields': str(exc)}) from exc
 
 
 class PieceStateUpdateSerializer(serializers.Serializer):
@@ -168,15 +171,18 @@ class PieceStateUpdateSerializer(serializers.Serializer):
             instance.images = images_json
         if 'additional_fields' in validated_data:
             instance.additional_fields = validated_data['additional_fields']
-        instance.save()
+        try:
+            instance.save()
+        except ValueError as exc:
+            raise serializers.ValidationError({'additional_fields': str(exc)}) from exc
         return instance
 
 
 class PieceUpdateSerializer(serializers.Serializer):
     """Partial update of Piece fields."""
-    current_location = serializers.CharField(required=False, allow_blank=True)
+    current_location = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
 
-    def update(self, instance: Piece, validated_data: dict) -> Piece:  # type: ignore[override]
+    def update(self, instance: Piece, validated_data: dict) -> Piece:  # type: ignore[override] — DRF base is untyped; narrowing instance/return to Piece is intentional
         if 'current_location' in validated_data:
             location_name = validated_data['current_location']
             if location_name:

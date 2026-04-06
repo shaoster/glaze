@@ -1,3 +1,18 @@
+/**
+ * Single point of contact between components and the backend API.
+ *
+ * All HTTP requests must go through the exported functions here — components
+ * must never call Axios directly or construct URLs themselves. This module is
+ * also the only place where wire types (ISO date strings, raw JSON) are
+ * converted to domain types as declared in `types.ts`. Components receive
+ * fully-typed domain objects and pass them back through these functions;
+ * serialization and deserialization happen here and nowhere else.
+ *
+ * The `Wire<T>` generic models the raw Axios response shape: fields declared
+ * as `Date` in domain types arrive as `string` over the wire. Mappers convert
+ * `Wire<T>` → `T` using `new Date()` and state casts before the data leaves
+ * this module.
+ */
 import axios from 'axios'
 import type { CaptionedImage, PieceDetail, PieceSummary, PieceState, State, StateSummary } from './types'
 

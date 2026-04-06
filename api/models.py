@@ -17,6 +17,22 @@ _STATE_MAP: dict[str, dict] = {s['id']: s for s in _workflow['states']}
 _GLOBALS_MAP: dict[str, dict] = _workflow.get('globals', {})
 
 
+def get_global_model_and_field(
+    global_name: str,
+) -> tuple[type[models.Model], dict[str, dict], str]:
+    """Resolve a globals DSL name to (model_cls, fields, display_field).
+
+    Raises KeyError if global_name is not declared in workflow.yml globals or
+    has no fields declared (the latter is a workflow.yml configuration error
+    that the test suite would catch).
+    """
+    config = _GLOBALS_MAP[global_name]
+    fields: dict[str, dict] = config['fields']
+    display_field: str = 'name' if 'name' in fields else next(iter(fields))
+    model_cls: type[models.Model] = globals()[config['model']]
+    return model_cls, fields, display_field
+
+
 def _resolve_field_def(field_def: dict) -> dict:
     """Recursively resolve a DSL field_def to its effective JSON Schema property dict.
 

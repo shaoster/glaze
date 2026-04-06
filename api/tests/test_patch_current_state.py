@@ -70,6 +70,15 @@ class TestPatchCurrentState:
         )
         assert response.status_code == 404
 
+    def test_invalid_additional_fields_returns_400(self, client, piece):
+        # additional_fields must be a JSON object — passing a list should fail validation
+        response = client.patch(
+            f'/api/pieces/{piece.id}/state/',
+            {'additional_fields': ['not', 'an', 'object']},
+            format='json',
+        )
+        assert response.status_code == 400
+
     def test_cannot_patch_past_state_via_endpoint(self, client, piece):
         """Transitioning seals the old state; PATCH endpoint targets the new current state."""
         next_state = SUCCESSORS[ENTRY_STATE][0]

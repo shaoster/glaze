@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-    Autocomplete,
     Box,
     Button,
     CircularProgress,
@@ -12,11 +11,8 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { createFilterOptions } from '@mui/material/Autocomplete'
 import type { PieceDetail, PieceState } from '../types'
 import {
-    createGlobalEntry,
-    fetchGlobalEntries,
     updateCurrentState,
     updatePiece,
 } from '../api'
@@ -25,6 +21,7 @@ import {
     formatWorkflowFieldLabel,
     getAdditionalFieldDefinitions,
 } from '../workflow'
+import GlobalFieldPicker from './GlobalFieldPicker'
 
 type WorkflowStateProps = {
     pieceState: PieceState
@@ -37,21 +34,6 @@ type WorkflowStateProps = {
 type ImageEntry = { url: string; caption: string }
 
 type AdditionalFieldInputMap = Record<string, string>
-
-const CREATE_OPTION_PREFIX = 'Create "'
-const CREATE_OPTION_SUFFIX = '"'
-
-function buildCreateOptionValue(label: string): string {
-    return `${CREATE_OPTION_PREFIX}${label}${CREATE_OPTION_SUFFIX}`
-}
-
-function parseCreateOptionValue(option: string): string | null {
-    if (option.startsWith(CREATE_OPTION_PREFIX) && option.endsWith(CREATE_OPTION_SUFFIX)) {
-        return option.slice(CREATE_OPTION_PREFIX.length, -CREATE_OPTION_SUFFIX.length)
-    }
-    return null
-}
-
 
 function formatAdditionalFieldValue(
     value: unknown,
@@ -126,9 +108,6 @@ function normalizeAdditionalFieldPayload(
     return payload
 }
 
-const globalFilter = createFilterOptions<string>()
-const locationFilter = createFilterOptions<string>()
-
 function stateImages(pieceState: PieceState): ImageEntry[] {
     return pieceState.images.map((img) => ({
         url: img.url,
@@ -149,13 +128,7 @@ export default function WorkflowState({
     const [newImageCaption, setNewImageCaption] = useState('')
     const [saving, setSaving] = useState(false)
     const [saveError, setSaveError] = useState<string | null>(null)
-    const [globalOptions, setGlobalOptions] = useState<Record<string, string[]>>({})
-    const [globalCreationError, setGlobalCreationError] = useState<string | null>(null)
-    const [creatingGlobalFields, setCreatingGlobalFields] = useState<Record<string, boolean>>({})
     const [currentLocation, setCurrentLocation] = useState(currentLocationProp)
-    const [locationOptions, setLocationOptions] = useState<string[]>([])
-    const [locationCreating, setLocationCreating] = useState(false)
-    const [locationError, setLocationError] = useState<string | null>(null)
     const additionalFieldDefs = useMemo(() => getAdditionalFieldDefinitions(pieceState.state), [pieceState.state])
     const baseAdditionalFieldInputs = useMemo(
         () => buildAdditionalFieldInputMap(additionalFieldDefs, pieceState.additional_fields ?? {}),
@@ -173,15 +146,6 @@ export default function WorkflowState({
     const additionalFieldsDirty =
         JSON.stringify(normalizedAdditionalFields) !== JSON.stringify(normalizedBaseAdditionalFields)
     const locationDirty = currentLocation.trim() !== currentLocationProp.trim()
-    const createableGlobalNames = useMemo(() => {
-        const names = new Set<string>()
-        additionalFieldDefs.forEach((def) => {
-            if (def.isGlobalRef && def.canCreate && def.globalName) {
-                names.add(def.globalName)
-            }
-        })
-        return Array.from(names)
-    }, [additionalFieldDefs])
 
     // Reset form when pieceState changes (e.g. after a state transition)
     useEffect(() => {
@@ -190,26 +154,6 @@ export default function WorkflowState({
         setAdditionalFieldInputs(baseAdditionalFieldInputs)
         setCurrentLocation(currentLocationProp)
     }, [pieceState, baseAdditionalFieldInputs, currentLocationProp])
-
-    useEffect(() => {
-        setGlobalCreationError(null)
-    }, [pieceState.state])
-
-    useEffect(() => {
-        createableGlobalNames.forEach((globalName) => {
-            fetchGlobalEntries(globalName)
-                .then((entries) =>
-                    setGlobalOptions((prev) => ({ ...prev, [globalName]: entries }))
-                )
-                .catch(() => {})
-        })
-    }, [createableGlobalNames])
-
-    useEffect(() => {
-        fetchGlobalEntries('location')
-            .then(setLocationOptions)
-            .catch(() => {})
-    }, [])
 
     const originalImages = stateImages(pieceState)
     const isDirty =
@@ -268,64 +212,6 @@ export default function WorkflowState({
         setAdditionalFieldInputs((prev) => ({ ...prev, [name]: value }))
     }
 
-    async function handleCreateGlobalOption(field: ResolvedAdditionalField, value: string) {
-        if (!field.globalName || !field.globalField) return
-        setGlobalCreationError(null)
-        setCreatingGlobalFields((prev) => ({ ...prev, [field.name]: true }))
-        try {
-            const createdName = await createGlobalEntry(field.globalName, field.globalField, value)
-            setGlobalOptions((prev) => {
-                const current = prev[field.globalName!] ?? []
-                const merged = Array.from(new Set([...current, createdName])).sort()
-                return { ...prev, [field.globalName!]: merged }
-            })
-            handleAdditionalFieldChange(field.name, createdName)
-        } catch {
-            setGlobalCreationError(`Failed to create ${formatWorkflowFieldLabel(field.name)}.`)
-        } finally {
-            setCreatingGlobalFields((prev) => {
-                const next = { ...prev }
-                delete next[field.name]
-                return next
-            })
-        }
-    }
-
-    async function handleLocationSelection(option: string | null) {
-        if (option === null) {
-            setCurrentLocation('')
-            return
-        }
-        const createValue = parseCreateOptionValue(option)
-        if (createValue) {
-            setLocationCreating(true)
-            setLocationError(null)
-            try {
-                const createdName = await createGlobalEntry('location', 'name', createValue)
-                setLocationOptions((prev) => {
-                    const merged = Array.from(new Set([...prev, createdName]))
-                    merged.sort()
-                    return merged
-                })
-                setCurrentLocation(createdName)
-            } catch {
-                setLocationError('Failed to create location. Please try again.')
-            } finally {
-                setLocationCreating(false)
-            }
-            return
-        }
-        setLocationError(null)
-        setCurrentLocation(option)
-    }
-
-    function handleLocationInputChange(value: string, reason: 'input' | 'clear') {
-        if (reason === 'clear') {
-            setCurrentLocation('')
-            return
-        }
-        setCurrentLocation(value)
-    }
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, textAlign: 'left' }}>
@@ -340,46 +226,12 @@ export default function WorkflowState({
                 fullWidth
             />
 
-            <Autocomplete
-                freeSolo
-                options={locationOptions}
-                value={locationCreating ? '' : currentLocation}
-                disabled={locationCreating}
-                onInputChange={(_e, inputValue, reason) => {
-                    if (reason === 'input') {
-                        handleLocationInputChange(inputValue, 'input')
-                    } else if (reason === 'clear') {
-                        handleLocationInputChange('', 'clear')
-                    }
-                }}
-                onChange={(_e, option) => handleLocationSelection(option ?? null)}
-                filterOptions={(options, params) => {
-                    const filtered = locationFilter(options, params)
-                    const { inputValue } = params
-                    const isExisting = options.some((opt) => inputValue === opt)
-                    if (!locationCreating && inputValue !== '' && !isExisting) {
-                        filtered.push(buildCreateOptionValue(inputValue))
-                    }
-                    return filtered
-                }}
-                renderInput={(params) => (
-                    <TextField
-                        {...params}
-                        label="Current location"
-                        fullWidth
-                        helperText={locationError ?? undefined}
-                        error={Boolean(locationError)}
-                        InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                                <>
-                                    {locationCreating && <CircularProgress size={16} sx={{ mr: 1 }} />}
-                                    {params.InputProps.endAdornment}
-                                </>
-                            ),
-                        }}
-                    />
-                )}
+            <GlobalFieldPicker
+                globalName="location"
+                label="Current location"
+                value={currentLocation}
+                onChange={setCurrentLocation}
+                canCreate
             />
 
             {additionalFieldDefs.length > 0 && (
@@ -387,11 +239,6 @@ export default function WorkflowState({
                     <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 1 }}>
                         State details
                     </Typography>
-                    {globalCreationError && (
-                        <Typography color="error" variant="body2" sx={{ mb: 1 }}>
-                            {globalCreationError}
-                        </Typography>
-                    )}
                     <Box
                         sx={{
                             display: 'grid',
@@ -404,54 +251,16 @@ export default function WorkflowState({
                             const helperText = field.description
                             const label = formatWorkflowFieldLabel(field.name)
                             if (field.isGlobalRef && field.globalName) {
-                                const options = globalOptions[field.globalName] ?? []
-                                const freeSolo = Boolean(field.canCreate)
-                                const creating = Boolean(creatingGlobalFields[field.name])
-                                const globalValue = creating ? '' : value
                                 return (
-                                    <Autocomplete
+                                    <GlobalFieldPicker
                                         key={field.name}
-                                        freeSolo={freeSolo}
-                                        options={options}
-                                        value={globalValue}
-                                        disabled={creating}
-                                        onInputChange={(_e, inputValue, reason) => {
-                                            if (reason === 'clear') {
-                                                handleAdditionalFieldChange(field.name, '')
-                                            } else if (reason === 'input') {
-                                                handleAdditionalFieldChange(field.name, inputValue)
-                                            }
-                                        }}
-                                        onChange={(_e, option) => {
-                                            if (typeof option === 'string') {
-                                                const createValue = parseCreateOptionValue(option)
-                                                if (createValue !== null && freeSolo) {
-                                                    void handleCreateGlobalOption(field, createValue)
-                                                    return
-                                                }
-                                                handleAdditionalFieldChange(field.name, option)
-                                            } else {
-                                                handleAdditionalFieldChange(field.name, '')
-                                            }
-                                        }}
-                                        filterOptions={(options, params) => {
-                                            const filtered = globalFilter(options, params)
-                                            const { inputValue } = params
-                                            const isExisting = options.some((opt) => inputValue === opt)
-                                            if (freeSolo && inputValue !== '' && !isExisting) {
-                                                filtered.push(buildCreateOptionValue(inputValue))
-                                            }
-                                            return filtered
-                                        }}
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                label={label}
-                                                helperText={helperText}
-                                                required={field.required}
-                                                fullWidth
-                                            />
-                                        )}
+                                        globalName={field.globalName}
+                                        label={label}
+                                        value={value}
+                                        onChange={(val) => handleAdditionalFieldChange(field.name, val)}
+                                        canCreate={Boolean(field.canCreate)}
+                                        helperText={helperText}
+                                        required={field.required}
                                     />
                                 )
                             }

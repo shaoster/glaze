@@ -6,8 +6,7 @@ from rest_framework.response import Response
 
 from django.shortcuts import get_object_or_404
 
-from . import models as models_module
-from .models import Piece, _GLOBALS_MAP
+from .models import Piece, get_global_model_and_field
 from .serializers import (
     PieceCreateSerializer,
     PieceDetailSerializer,
@@ -90,26 +89,19 @@ def piece_current_state(request: Request, piece_id: str) -> Response:
 
 
 
-def _get_global_model_and_field(global_name: str):
-    config = _GLOBALS_MAP.get(global_name)
-    if not config:
-        return None, None, None
-    fields = config.get('fields', {})
-    if not fields:
-        return None, None, None
-    display_field = 'name' if 'name' in fields else next(iter(fields))
-    model_cls = getattr(models_module, config['model'])
-    return model_cls, fields, display_field
-
-
 @api_view(['GET', 'POST'])
 def global_entries(request: Request, global_name: str) -> Response:
-    model_cls, fields, display_field = _get_global_model_and_field(global_name)
-    if not model_cls:
+    # Generic handler for all globals declared in workflow.yml. Works well while
+    # all globals share the same shape (list + get-or-create). If a type ever needs
+    # custom validation, richer responses, or different permissions, split it out
+    # into its own view rather than adding per-type branching here.
+    try:
+        model_cls, fields, display_field = get_global_model_and_field(global_name)
+    except KeyError:
         return Response({'detail': 'Unknown global type.'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        objects = model_cls.objects.all().order_by(display_field)
+        objects = model_cls.objects.only('pk', display_field).order_by(display_field)
         return Response(
             [{'id': str(obj.pk), 'name': getattr(obj, display_field)} for obj in objects]
         )
