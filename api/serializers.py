@@ -6,17 +6,6 @@ from django.utils import timezone
 from .models import ENTRY_STATE, SUCCESSORS, VALID_STATES, Location, Piece, PieceState
 
 
-class LocationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Location
-        fields = ['id', 'name']
-
-
-class LocationCreateSerializer(serializers.Serializer):
-    """Input-only serializer for POST /locations/ — no unique constraint check."""
-    name = serializers.CharField(max_length=255)
-
-
 class CaptionedImageSerializer(serializers.Serializer):
     url = serializers.CharField()
     caption = serializers.CharField()
@@ -27,20 +16,16 @@ class PieceStateSerializer(serializers.ModelSerializer):
     previous_state = serializers.SerializerMethodField()
     next_state = serializers.SerializerMethodField()
     images = CaptionedImageSerializer(many=True)
-    location = serializers.SerializerMethodField()
+    additional_fields = serializers.JSONField(read_only=True)
 
     class Meta:
         model = PieceState
-        fields = ['state', 'notes', 'created', 'last_modified', 'location', 'images',
-                  'previous_state', 'next_state']
+        fields = ['state', 'notes', 'created', 'last_modified', 'images',
+                  'additional_fields', 'previous_state', 'next_state']
         # notes always present in responses (model default='')
         extra_kwargs = {
             'notes': {'required': True},
         }
-
-    @extend_schema_field(serializers.CharField(allow_null=True))
-    def get_location(self, obj: PieceState) -> str:
-        return obj.location.name if obj.location else ''
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_previous_state(self, obj: PieceState) -> str | None:
@@ -60,11 +45,12 @@ class StateSummarySerializer(serializers.Serializer):
 
 class PieceSummarySerializer(serializers.ModelSerializer):
     current_state = serializers.SerializerMethodField()
+    current_location = serializers.SerializerMethodField()
     last_modified = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Piece
-        fields = ['id', 'name', 'created', 'last_modified', 'thumbnail', 'current_state']
+        fields = ['id', 'name', 'created', 'last_modified', 'thumbnail', 'current_state', 'current_location']
         # thumbnail always present in responses (model default='')
         extra_kwargs = {
             'thumbnail': {'required': True},
@@ -76,6 +62,10 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         if cs is None:
             raise ValueError(f'Piece {obj.id} has no states — data integrity error')
         return {'state': cs.state}
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_current_location(self, obj: Piece) -> str | None:
+        return obj.current_location.name if obj.current_location else None
 
 
 class PieceDetailSerializer(PieceSummarySerializer):
@@ -99,14 +89,19 @@ class PieceDetailSerializer(PieceSummarySerializer):
 
 class PieceCreateSerializer(serializers.ModelSerializer):
     notes = serializers.CharField(required=False, default='', allow_blank=True, max_length=300)
+    current_location = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
 
     class Meta:
         model = Piece
-        fields = ['name', 'thumbnail', 'notes']
+        fields = ['name', 'thumbnail', 'notes', 'current_location']
 
     def create(self, validated_data: dict) -> Piece:  # type: ignore[override]
         notes = validated_data.pop('notes', '')
-        piece = Piece.objects.create(**validated_data)
+        location_name = validated_data.pop('current_location', None)
+        location_obj = None
+        if location_name:
+            location_obj, _ = Location.objects.get_or_create(name=location_name)
+        piece = Piece.objects.create(**validated_data, current_location=location_obj)
         PieceState.objects.create(piece=piece, state=ENTRY_STATE, notes=notes)
         return piece
 
@@ -114,11 +109,11 @@ class PieceCreateSerializer(serializers.ModelSerializer):
 class PieceStateCreateSerializer(serializers.ModelSerializer):
     state = serializers.ChoiceField(choices=sorted(VALID_STATES))
     images = CaptionedImageSerializer(many=True, required=False, default=list)
-    location = serializers.CharField(required=False, allow_blank=True, default='')
+    additional_fields = serializers.JSONField(required=False, default=dict)
 
     class Meta:
         model = PieceState
-        fields = ['state', 'notes', 'location', 'images']
+        fields = ['state', 'notes', 'images', 'additional_fields']
 
     def validate_state(self, value: str) -> str:
         piece: Piece = self.context['piece']
@@ -133,10 +128,6 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data: dict) -> PieceState:  # type: ignore[override]
-        location_name = validated_data.pop('location', '')
-        location_obj = None
-        if location_name:
-            location_obj, _ = Location.objects.get_or_create(name=location_name)
         # Ensure all images have a created timestamp set by the backend.
         images = validated_data.get('images', [])
         if images:
@@ -149,29 +140,24 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
                     'created': created_val.isoformat() if hasattr(created_val, 'isoformat') else str(created_val),
                 })
             validated_data['images'] = processed
-        return PieceState.objects.create(
-            piece=self.context['piece'],
-            location=location_obj,
-            **validated_data,
-        )
+        try:
+            return PieceState.objects.create(
+                piece=self.context['piece'],
+                **validated_data,
+            )
+        except ValueError as exc:
+            raise serializers.ValidationError({'additional_fields': str(exc)}) from exc
 
 
 class PieceStateUpdateSerializer(serializers.Serializer):
     """Partial update of the current PieceState's editable fields."""
     notes = serializers.CharField(required=False, allow_blank=True)
-    location = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     images = CaptionedImageSerializer(many=True, required=False)
+    additional_fields = serializers.JSONField(required=False)
 
     def update(self, instance: PieceState, validated_data: dict) -> PieceState:  # type: ignore[override]
         if 'notes' in validated_data:
             instance.notes = validated_data['notes']
-        if 'location' in validated_data:
-            location_name = validated_data['location']
-            if location_name:
-                location_obj, _ = Location.objects.get_or_create(name=location_name)
-                instance.location = location_obj
-            else:
-                instance.location = None
         if 'images' in validated_data:
             # Convert datetime objects to ISO strings; auto-set created if not provided.
             images_json = []
@@ -183,5 +169,26 @@ class PieceStateUpdateSerializer(serializers.Serializer):
                     'created': created_val.isoformat() if hasattr(created_val, 'isoformat') else str(created_val),
                 })
             instance.images = images_json
+        if 'additional_fields' in validated_data:
+            instance.additional_fields = validated_data['additional_fields']
+        try:
+            instance.save()
+        except ValueError as exc:
+            raise serializers.ValidationError({'additional_fields': str(exc)}) from exc
+        return instance
+
+
+class PieceUpdateSerializer(serializers.Serializer):
+    """Partial update of Piece fields."""
+    current_location = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
+
+    def update(self, instance: Piece, validated_data: dict) -> Piece:  # type: ignore[override] — DRF base is untyped; narrowing instance/return to Piece is intentional
+        if 'current_location' in validated_data:
+            location_name = validated_data['current_location']
+            if location_name:
+                location_obj, _ = Location.objects.get_or_create(name=location_name)
+            else:
+                location_obj = None
+            instance.current_location = location_obj
         instance.save()
         return instance

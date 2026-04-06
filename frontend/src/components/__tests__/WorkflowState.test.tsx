@@ -1,14 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import WorkflowState from '../WorkflowState'
 import type { PieceState, PieceDetail } from '../../types'
 import * as api from '../../api'
 
 // Mock the api module
 vi.mock('../../api', () => ({
-    fetchLocations: vi.fn().mockResolvedValue([]),
+    fetchGlobalEntries: vi.fn().mockResolvedValue([]),
     updateCurrentState: vi.fn(),
-    createLocation: vi.fn(),
+    updatePiece: vi.fn(),
+    createGlobalEntry: vi.fn(),
 }))
 
 function makeState(overrides: Partial<PieceState> = {}): PieceState {
@@ -17,10 +19,10 @@ function makeState(overrides: Partial<PieceState> = {}): PieceState {
         notes: '',
         created: new Date('2024-01-15T10:00:00Z'),
         last_modified: new Date('2024-01-15T10:00:00Z'),
-        location: '',
         images: [],
         previous_state: null,
         next_state: null,
+        additional_fields: {},
         ...overrides,
     }
 }
@@ -48,7 +50,7 @@ const defaultProps = {
 
 beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(api.fetchLocations).mockResolvedValue([])
+    vi.mocked(api.fetchGlobalEntries).mockResolvedValue([])
 })
 
 describe('WorkflowState', () => {
@@ -62,9 +64,113 @@ describe('WorkflowState', () => {
         expect(screen.getByLabelText('Notes')).toBeInTheDocument()
     })
 
-    it('renders a Location field', () => {
-        render(<WorkflowState {...defaultProps} />)
-        expect(screen.getByLabelText('Location')).toBeInTheDocument()
+    it('renders state-specific fields when the state defines additional_fields', () => {
+        const bisqueState = makeState({
+            state: 'bisque_fired',
+            additional_fields: { kiln_temperature_c: '1200', cone: '04' },
+        })
+        render(<WorkflowState {...defaultProps} pieceState={bisqueState} />)
+        const tempInput = screen.getByLabelText('Kiln Temperature C')
+        expect(tempInput).toBeInTheDocument()
+        expect(tempInput).toHaveAttribute('type', 'number')
+        expect(screen.getByLabelText('Cone')).toBeInTheDocument()
+    })
+
+    it('renders state-reference additional fields with their values', () => {
+        const trimmedState = makeState({
+            state: 'trimmed',
+            additional_fields: { trimmed_weight_grams: 900, pre_trim_weight_grams: 1200 },
+        })
+        render(<WorkflowState {...defaultProps} pieceState={trimmedState} />)
+        expect(screen.getByLabelText('Trimmed Weight Grams')).toHaveValue(900)
+        expect(screen.getByLabelText('Pre Trim Weight Grams')).toHaveValue(1200)
+    })
+
+    it('lets you choose an existing global reference option', async () => {
+        vi.mocked(api.fetchGlobalEntries).mockResolvedValue(['Kiln A'])
+        const globalState = makeState({
+            state: 'submitted_to_bisque_fire',
+            additional_fields: { kiln_location: '' },
+        })
+        render(<WorkflowState {...defaultProps} pieceState={globalState} />)
+        const input = screen.getByLabelText('Kiln Location')
+        await userEvent.type(input, 'Kiln')
+        await waitFor(() => expect(screen.getByRole('option', { name: 'Kiln A' })).toBeInTheDocument())
+        await userEvent.click(screen.getByRole('option', { name: 'Kiln A' }))
+        expect(input).toHaveValue('Kiln A')
+    })
+
+    it('allows creating a new global reference option', async () => {
+        vi.mocked(api.fetchGlobalEntries).mockResolvedValue([])
+        let resolveCreate!: (value: string) => void
+        const createPromise = new Promise<string>((resolve) => {
+            resolveCreate = resolve
+        })
+        vi.mocked(api.createGlobalEntry).mockReturnValue(createPromise)
+        const globalState = makeState({
+            state: 'submitted_to_bisque_fire',
+            additional_fields: { kiln_location: '' },
+        })
+        render(<WorkflowState {...defaultProps} pieceState={globalState} />)
+        const input = screen.getByLabelText('Kiln Location')
+        await userEvent.type(input, 'New Kiln')
+        await waitFor(() =>
+            expect(screen.getByRole('option', { name: 'Create "New Kiln"' })).toBeInTheDocument()
+        )
+        fireEvent.click(screen.getByRole('option', { name: 'Create "New Kiln"' }))
+        expect(input).not.toHaveValue('New Kiln')
+        await waitFor(() =>
+            expect(api.createGlobalEntry).toHaveBeenCalledWith('location', 'name', 'New Kiln')
+        )
+        await act(async () => resolveCreate('New Kiln'))
+        await waitFor(() => expect(input).toHaveValue('New Kiln'))
+    })
+
+    it('fetches global entries for createable global refs', async () => {
+        const withGlobalRef = makeState({
+            state: 'submitted_to_bisque_fire',
+            additional_fields: { kiln_location: '' },
+        })
+        render(<WorkflowState {...defaultProps} pieceState={withGlobalRef} />)
+        await waitFor(() => expect(api.fetchGlobalEntries).toHaveBeenCalledWith('location'))
+    })
+
+    it('does not update current_location until save is pressed', async () => {
+        const updated = makePieceDetail({
+            current_state: makeState({ notes: 'new' }),
+            current_location: 'Shelf B',
+        })
+        vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
+        vi.mocked(api.updatePiece).mockResolvedValue(updated)
+        let resolveCreate!: (value: string) => void
+        const createPromise = new Promise<string>((resolve) => {
+            resolveCreate = resolve
+        })
+        vi.mocked(api.createGlobalEntry).mockReturnValue(createPromise)
+        render(
+            <WorkflowState
+                {...defaultProps}
+                onSaved={vi.fn()}
+                pieceState={makeState({ notes: 'Original' })}
+            />
+        )
+        const input = screen.getByLabelText('Current location')
+        await userEvent.type(input, 'New Shelf')
+        await waitFor(() =>
+            expect(screen.getByRole('option', { name: 'Create "New Shelf"' })).toBeInTheDocument()
+        )
+        fireEvent.click(screen.getByRole('option', { name: 'Create "New Shelf"' }))
+        expect(input).not.toHaveValue('New Shelf')
+        await waitFor(() =>
+            expect(api.createGlobalEntry).toHaveBeenCalledWith('location', 'name', 'New Shelf')
+        )
+        await act(async () => resolveCreate('New Shelf'))
+        await waitFor(() => expect(input).toHaveValue('New Shelf'))
+        expect(api.updatePiece).not.toHaveBeenCalled()
+        fireEvent.click(screen.getByTestId('save-button'))
+        await waitFor(() =>
+            expect(api.updatePiece).toHaveBeenCalledWith('test-piece-id', { current_location: 'New Shelf' })
+        )
     })
 
     it('renders a Save button', () => {
@@ -115,6 +221,35 @@ describe('WorkflowState', () => {
         fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'New notes' } })
         fireEvent.click(screen.getByTestId('save-button'))
         await waitFor(() => expect(screen.getByText('Failed to save. Please try again.')).toBeInTheDocument())
+    })
+
+    it('remains dirty when current state API fails during save', async () => {
+        vi.mocked(api.updateCurrentState).mockRejectedValue(new Error('Network error'))
+        render(<WorkflowState {...defaultProps} />)
+        fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'Dirty notes' } })
+        fireEvent.click(screen.getByTestId('save-button'))
+        await waitFor(() => expect(screen.getByText('Failed to save. Please try again.')).toBeInTheDocument())
+        expect(screen.getByTestId('unsaved-indicator')).toBeInTheDocument()
+        expect(screen.getByTestId('save-button')).not.toBeDisabled()
+    })
+
+    it('remains dirty when piece API fails during save', async () => {
+        const updated = makePieceDetail()
+        vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
+        vi.mocked(api.updatePiece).mockRejectedValue(new Error('Network error'))
+        render(
+            <WorkflowState
+                {...defaultProps}
+                currentLocation=""
+            />
+        )
+        const input = screen.getByLabelText('Current location')
+        await userEvent.type(input, 'Shelf Z')
+        fireEvent.click(screen.getByTestId('save-button'))
+        await waitFor(() => expect(screen.getByText('Failed to save. Please try again.')).toBeInTheDocument())
+        expect(screen.getByTestId('unsaved-indicator')).toBeInTheDocument()
+        expect(screen.getByTestId('save-button')).not.toBeDisabled()
+        expect(api.updatePiece).toHaveBeenCalledWith('test-piece-id', { current_location: 'Shelf Z' })
     })
 
     it('calls onDirtyChange with true when dirty', () => {

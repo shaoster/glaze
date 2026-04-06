@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from api.models import ENTRY_STATE, SUCCESSORS, Location
+from api.models import ENTRY_STATE, SUCCESSORS
 
 
 # ---------------------------------------------------------------------------
@@ -19,32 +19,6 @@ class TestPatchCurrentState:
         )
         assert response.status_code == 200
         assert response.json()['current_state']['notes'] == 'Updated notes'
-
-    def test_update_location_creates_location(self, client, piece):
-        response = client.patch(
-            f'/api/pieces/{piece.id}/state/',
-            {'location': 'Shelf B'},
-            format='json',
-        )
-        assert response.status_code == 200
-        assert response.json()['current_state']['location'] == 'Shelf B'
-        assert Location.objects.filter(name='Shelf B').exists()
-
-    def test_update_location_reuses_existing(self, client, piece):
-        Location.objects.create(name='Kiln Room')
-        client.patch(f'/api/pieces/{piece.id}/state/', {'location': 'Kiln Room'}, format='json')
-        assert Location.objects.filter(name='Kiln Room').count() == 1
-
-    def test_clear_location(self, client, piece):
-        piece.current_state.location = Location.objects.create(name='Shelf C')
-        piece.current_state.save()
-        response = client.patch(
-            f'/api/pieces/{piece.id}/state/',
-            {'location': ''},
-            format='json',
-        )
-        assert response.status_code == 200
-        assert response.json()['current_state']['location'] == ''
 
     def test_update_images(self, client, piece):
         images = [{'url': 'http://example.com/img.jpg', 'caption': 'Test', 'created': '2024-01-01T00:00:00Z'}]
@@ -76,11 +50,17 @@ class TestPatchCurrentState:
         state = piece.current_state
         state.notes = 'Original notes'
         state.save()
-        # Now patch only location
-        client.patch(f'/api/pieces/{piece.id}/state/', {'location': 'Shelf D'}, format='json')
+        # Now patch only images
+        images = [{'url': 'http://example.com/piece.jpg', 'caption': 'Updated'}]
+        client.patch(
+            f'/api/pieces/{piece.id}/state/',
+            {'images': images},
+            format='json',
+        )
         data = client.get(f'/api/pieces/{piece.id}/').json()
         assert data['current_state']['notes'] == 'Original notes'
-        assert data['current_state']['location'] == 'Shelf D'
+        result_images = data['current_state']['images']
+        assert any(img['url'] == 'http://example.com/piece.jpg' for img in result_images)
 
     def test_piece_not_found(self, client, db):
         response = client.patch(
@@ -89,6 +69,15 @@ class TestPatchCurrentState:
             format='json',
         )
         assert response.status_code == 404
+
+    def test_invalid_additional_fields_returns_400(self, client, piece):
+        # additional_fields must be a JSON object — passing a list should fail validation
+        response = client.patch(
+            f'/api/pieces/{piece.id}/state/',
+            {'additional_fields': ['not', 'an', 'object']},
+            format='json',
+        )
+        assert response.status_code == 400
 
     def test_cannot_patch_past_state_via_endpoint(self, client, piece):
         """Transitioning seals the old state; PATCH endpoint targets the new current state."""

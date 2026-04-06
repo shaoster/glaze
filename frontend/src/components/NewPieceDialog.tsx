@@ -13,9 +13,14 @@ import {
 } from '@mui/material'
 import { createPiece } from '../api'
 import type { PieceDetail } from '../types'
+import GlobalFieldPicker from './GlobalFieldPicker'
 
+// Exported so other components (e.g. PieceList) can reference the default
+// thumbnail path without duplicating the string literal.
 export const DEFAULT_THUMBNAIL = '/thumbnails/question-mark.svg'
 
+// Exported so tests can assert on the full set of selectable thumbnails without
+// scraping the DOM. All thumbnails live in frontend/public/thumbnails/.
 export const CURATED_THUMBNAILS = [
     DEFAULT_THUMBNAIL,
     '/thumbnails/bowl.svg',
@@ -38,12 +43,14 @@ export default function NewPieceDialog({ open, onClose, onCreated }: NewPieceDia
     const [notes, setNotes] = useState('')
     const [selectedThumbnail, setSelectedThumbnail] = useState<string>(DEFAULT_THUMBNAIL)
     const [saving, setSaving] = useState(false)
+    const [location, setLocation] = useState('')
     const [confirmDiscard, setConfirmDiscard] = useState(false)
 
     function resetState() {
         setName('')
         setNotes('')
         setSelectedThumbnail(DEFAULT_THUMBNAIL)
+        setLocation('')
         setSaving(false)
         setConfirmDiscard(false)
     }
@@ -72,6 +79,7 @@ export default function NewPieceDialog({ open, onClose, onCreated }: NewPieceDia
                 name: name.trim(),
                 thumbnail: selectedThumbnail ?? '',
                 notes: notes || undefined,
+                current_location: location.trim() || undefined,
             })
             resetState()
             onClose()
@@ -109,6 +117,14 @@ export default function NewPieceDialog({ open, onClose, onCreated }: NewPieceDia
                         fullWidth
                         helperText={`${notes.length} / ${MAX_NOTES_LENGTH}`}
                         slotProps={{ htmlInput: { 'data-testid': 'notes-input' } }}
+                        sx={{ mb: 2 }}
+                    />
+                    <GlobalFieldPicker
+                        globalName="location"
+                        label="Location"
+                        value={location}
+                        onChange={setLocation}
+                        canCreate
                         sx={{ mb: 2 }}
                     />
                     <Typography variant="subtitle2" gutterBottom>

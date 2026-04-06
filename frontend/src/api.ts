@@ -1,3 +1,18 @@
+/**
+ * Single point of contact between components and the backend API.
+ *
+ * All HTTP requests must go through the exported functions here — components
+ * must never call Axios directly or construct URLs themselves. This module is
+ * also the only place where wire types (ISO date strings, raw JSON) are
+ * converted to domain types as declared in `types.ts`. Components receive
+ * fully-typed domain objects and pass them back through these functions;
+ * serialization and deserialization happen here and nowhere else.
+ *
+ * The `Wire<T>` generic models the raw Axios response shape: fields declared
+ * as `Date` in domain types arrive as `string` over the wire. Mappers convert
+ * `Wire<T>` → `T` using `new Date()` and state casts before the data leaves
+ * this module.
+ */
 import axios from 'axios'
 import type { CaptionedImage, PieceDetail, PieceSummary, PieceState, State, StateSummary } from './types'
 
@@ -44,10 +59,10 @@ function mapPieceState(raw: Wire<PieceState>): PieceState {
         notes: raw.notes,
         created: new Date(raw.created),
         last_modified: new Date(raw.last_modified),
-        location: raw.location,
         images: raw.images.map(mapImage),
         previous_state: raw.previous_state as State | null,
         next_state: raw.next_state as State | null,
+        additional_fields: raw.additional_fields ?? {},
     }
 }
 
@@ -59,6 +74,7 @@ function mapPieceSummary(raw: Wire<PieceSummary>): PieceSummary {
         last_modified: new Date(raw.last_modified),
         thumbnail: raw.thumbnail,
         current_state: mapStateSummary(raw.current_state),
+        current_location: raw.current_location ?? '',
     }
 }
 
@@ -88,6 +104,7 @@ export type CreatePiecePayload = {
     name: string
     thumbnail?: string
     notes?: string
+    current_location?: string
 }
 
 // New pieces always start in the `designed` state — the backend enforces this.
@@ -99,8 +116,8 @@ export async function createPiece(payload: CreatePiecePayload): Promise<PieceDet
 export type AddStatePayload = {
     state: State
     notes?: string
-    location?: string
     images?: Wire<CaptionedImage>[]
+    additional_fields?: Record<string, string | number | boolean>
 }
 
 export async function addPieceState(pieceId: string, payload: AddStatePayload): Promise<PieceDetail> {
@@ -110,8 +127,8 @@ export async function addPieceState(pieceId: string, payload: AddStatePayload): 
 
 export type UpdateStatePayload = {
     notes?: string
-    location?: string
     images?: Array<{ url: string; caption: string }>
+    additional_fields?: Record<string, string | number | boolean>
 }
 
 export async function updateCurrentState(pieceId: string, payload: UpdateStatePayload): Promise<PieceDetail> {
@@ -119,12 +136,24 @@ export async function updateCurrentState(pieceId: string, payload: UpdateStatePa
     return mapPieceDetail(data)
 }
 
-export async function fetchLocations(): Promise<string[]> {
-    const { data } = await client.get<Array<{ id: string; name: string }>>('locations/')
-    return data.map((loc) => loc.name)
+export type UpdatePiecePayload = {
+    current_location?: string
 }
 
-export async function createLocation(name: string): Promise<string> {
-    const { data } = await client.post<{ id: string; name: string }>('locations/', { name })
+export async function updatePiece(pieceId: string, payload: UpdatePiecePayload): Promise<PieceDetail> {
+    const { data } = await client.patch<Wire<PieceDetail>>(`pieces/${pieceId}/`, payload)
+    return mapPieceDetail(data)
+}
+
+export async function fetchGlobalEntries(globalName: string): Promise<string[]> {
+    const { data } = await client.get<Array<{ id: string; name: string }>>(`globals/${globalName}/`)
+    return data.map((entry) => entry.name)
+}
+
+export async function createGlobalEntry(globalName: string, field: string, value: string): Promise<string> {
+    const { data } = await client.post<{ id: string; name: string }>(`globals/${globalName}/`, {
+        field,
+        value,
+    })
     return data.name
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
     Alert,
     Box,
@@ -14,6 +14,7 @@ import {
     List,
     ListItem,
     ListItemText,
+    TextField,
     Typography,
 } from '@mui/material'
 import { useBlocker } from 'react-router-dom'
@@ -34,7 +35,6 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     const [pendingTransition, setPendingTransition] = useState<string | null>(null)
     const [transitioning, setTransitioning] = useState(false)
     const [transitionError, setTransitionError] = useState<string | null>(null)
-
     const currentState = piece.current_state
     const successors = SUCCESSORS[currentState.state] ?? []
     const isTerminal = successors.length === 0
@@ -72,28 +72,28 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     return (
         <Box sx={{ textAlign: 'left' }}>
             {/* Header */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                {piece.thumbnail && (
-                    <img
-                        src={piece.thumbnail}
-                        alt={piece.name}
-                        style={{ height: 64, width: 64, objectFit: 'cover', borderRadius: 4 }}
-                    />
-                )}
-                <Box>
-                    <Typography variant="h5" component="h2">
-                        {piece.name}
-                    </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            {piece.thumbnail && (
+                <img
+                    src={piece.thumbnail}
+                    alt={piece.name}
+                    style={{ height: 64, width: 64, objectFit: 'cover', borderRadius: 4 }}
+                />
+            )}
+            <Box>
+                <Typography variant="h5" component="h2">
+                    {piece.name}
+                </Typography>
                     <Chip
                         label={formatState(currentState.state)}
                         size="small"
                         sx={{ mt: 0.5 }}
                         color={isTerminal ? 'default' : 'primary'}
                     />
-                </Box>
             </Box>
+        </Box>
 
-            <Divider sx={{ mb: 3 }} />
+        <Divider sx={{ mb: 3 }} />
 
             {/* Current state form */}
             <WorkflowState
@@ -102,6 +102,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                 pieceId={piece.id}
                 onSaved={onPieceUpdated}
                 onDirtyChange={setIsDirty}
+                currentLocation={piece.current_location ?? ''}
             />
 
             <Divider sx={{ my: 3 }} />

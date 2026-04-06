@@ -138,6 +138,10 @@ states:
       wall_thickness_mm:
         type: number
         description: Approximate wall thickness after throwing, in millimeters.
+      clay_body:
+        $ref: "@clay_body.name"
+        description: Clay body used for this wheel-thrown piece.
+        can_create: true
 
   - id: trimmed
     visible: true
@@ -161,6 +165,11 @@ states:
       - slip_applied
       - carved
       - submitted_to_bisque_fire
+    additional_fields:
+      clay_body:
+        $ref: "@clay_body.name"
+        description: Clay body used for this handbuilt piece.
+        can_create: true
 
   - id: slip_applied
     visible: true

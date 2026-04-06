@@ -33,7 +33,10 @@ export type StateSummary = components['schemas']['StateSummary'] & { state: Stat
 
 // Full state record returned in detail responses.
 // Intersection narrows state: string → state: State.
-export type PieceState = components['schemas']['PieceState'] & { state: State }
+export type PieceState = components['schemas']['PieceState'] & {
+    state: State
+    additional_fields: Record<string, unknown>
+}
 
 // Piece list entry. Intersection narrows current_state to use our typed StateSummary.
 export type PieceSummary = components['schemas']['PieceSummary'] & { current_state: StateSummary }
@@ -44,8 +47,6 @@ export type PieceDetail = PieceSummary & {
     current_state: PieceState
     history: PieceState[]
 }
-
-export type Location = string
 
 // Convert a snake_case state id to a human-readable label.
 // e.g. "wheel_thrown" → "Wheel Thrown", "designed" → "Designed"

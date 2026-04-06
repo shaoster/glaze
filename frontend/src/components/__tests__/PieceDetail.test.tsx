@@ -1,15 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import PieceDetail from '../PieceDetail'
 import type { PieceDetail as PieceDetailType, PieceState } from '../../types'
 import * as api from '../../api'
 
 vi.mock('../../api', () => ({
-    fetchLocations: vi.fn().mockResolvedValue([]),
+    fetchGlobalEntries: vi.fn().mockResolvedValue([]),
     updateCurrentState: vi.fn(),
     addPieceState: vi.fn(),
-    createLocation: vi.fn(),
+    updatePiece: vi.fn(),
+    createGlobalEntry: vi.fn(),
 }))
 
 function makeState(overrides: Partial<PieceState> = {}): PieceState {
@@ -18,7 +20,6 @@ function makeState(overrides: Partial<PieceState> = {}): PieceState {
         notes: '',
         created: new Date('2024-01-15T10:00:00Z'),
         last_modified: new Date('2024-01-15T10:00:00Z'),
-        location: '',
         images: [],
         previous_state: null,
         next_state: null,
@@ -35,6 +36,7 @@ function makePiece(overrides: Partial<PieceDetailType> = {}): PieceDetailType {
         last_modified: new Date('2024-01-15T10:00:00Z'),
         thumbnail: '/thumbnails/bowl.svg',
         current_state: state,
+        current_location: '',
         history: [state],
         ...overrides,
     }
@@ -51,7 +53,7 @@ function renderPieceDetail(piece = makePiece(), onPieceUpdated = vi.fn()) {
 
 beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(api.fetchLocations).mockResolvedValue([])
+    vi.mocked(api.fetchGlobalEntries).mockResolvedValue([])
 })
 
 describe('PieceDetail', () => {
@@ -69,6 +71,50 @@ describe('PieceDetail', () => {
         renderPieceDetail()
         const imgs = screen.getAllByRole('img')
         expect(imgs.some((img) => img.getAttribute('src') === '/thumbnails/bowl.svg')).toBe(true)
+    })
+
+    it('renders current location input', () => {
+        renderPieceDetail()
+        expect(screen.getByLabelText('Current location')).toBeInTheDocument()
+    })
+
+    it('creates a new current location through the autocomplete', async () => {
+        const updated = makePiece({ current_location: 'Studio K' })
+        vi.mocked(api.fetchGlobalEntries).mockResolvedValue([])
+        vi.mocked(api.createGlobalEntry).mockResolvedValue('Studio K')
+        vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
+        vi.mocked(api.updatePiece).mockResolvedValue(updated)
+        const onPieceUpdated = vi.fn()
+        renderPieceDetail(undefined, onPieceUpdated)
+        const input = screen.getByLabelText('Current location')
+        await userEvent.type(input, 'Studio K')
+        await waitFor(() =>
+            expect(screen.getByRole('option', { name: 'Create "Studio K"' })).toBeInTheDocument()
+        )
+        fireEvent.click(screen.getByRole('option', { name: 'Create "Studio K"' }))
+        await waitFor(() =>
+            expect(api.createGlobalEntry).toHaveBeenCalledWith('location', 'name', 'Studio K')
+        )
+        fireEvent.click(screen.getByTestId('save-button'))
+        await waitFor(() =>
+            expect(api.updatePiece).toHaveBeenCalledWith('piece-id-1', { current_location: 'Studio K' })
+        )
+        await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(updated))
+    })
+
+    it('saves location updates when confirmed', async () => {
+        const updated = makePiece({ current_location: 'Studio 7' })
+        vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
+        vi.mocked(api.updatePiece).mockResolvedValue(updated)
+        const onPieceUpdated = vi.fn()
+        renderPieceDetail(undefined, onPieceUpdated)
+        const input = screen.getByLabelText('Current location')
+        await userEvent.type(input, 'Studio 7')
+        fireEvent.click(screen.getByTestId('save-button'))
+        await waitFor(() =>
+            expect(api.updatePiece).toHaveBeenCalledWith('piece-id-1', { current_location: 'Studio 7' })
+        )
+        await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(updated))
     })
 
     it('renders successor state buttons for non-terminal state', () => {

@@ -8,7 +8,7 @@ from .models import Piece, PieceState
 class PieceStateInline(admin.TabularInline):
     model = PieceState
     extra = 0
-    readonly_fields = ('id', 'state', 'created', 'last_modified', 'location', 'notes', 'images')
+    readonly_fields = ('id', 'state', 'created', 'last_modified', 'notes', 'images', 'additional_fields')
     # Past states are sealed — edits go through PieceStateAdmin with the override checkbox.
     can_delete = False
 
