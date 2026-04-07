@@ -332,6 +332,7 @@ Do not take the following actions autonomously without an explicit instruction i
 - Adding or removing Python dependencies (`requirements*.txt`)
 - Adding or removing npm dependencies (`package.json`)
 - Writing or altering database migrations
+- Modifying deployment configuration ([`backend/settings.py`](backend/settings.py) Render settings, [`build.sh`](build.sh))
 - Destructive git operations (force push, branch deletion)
 
 If an issue seems to require one of these, post a comment asking for confirmation before proceeding.
