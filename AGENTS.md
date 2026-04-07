@@ -294,4 +294,38 @@ GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on
 - The `PieceState` history is append-only; past states should not be edited, only new ones added. Only the `current_state` should be modifiable. Once a piece has transitioned to a new state, past states should be considered sealed, and care should be taken in the backend code to prevent inadvertent edits to these sealed states.
 - `PieceDetail.current_state` is the most recent `PieceState` in the history.
 - All dates should be stored and transmitted as ISO 8601 strings; the web types declare them as `Date` but Axios/JSON deserialization will deliver them as strings — handle accordingly.
+
+---
+
+## Agent conventions
+
+These rules apply to all autonomous agents (issue agent, PR agent) working in this repository.
+
+### Branch naming
+
+Name branches `issue/<N>-short-slug` when opening a branch in response to a GitHub issue (e.g. `issue/42-fix-glazed-transition`). For other work use `<type>/short-slug` (`fix/`, `feat/`, `docs/`, etc.).
+
+### Scope limits — ask before acting
+
+Do not take the following actions autonomously without an explicit instruction in the issue or PR thread:
+
+- Modifying [`workflow.yml`](workflow.yml) (state definitions, transitions, successors)
+- Modifying [`.github/workflows/`](.github/workflows/) (CI/CD configuration)
+- Adding or removing Python dependencies (`requirements*.txt`)
+- Adding or removing npm dependencies (`package.json`)
+- Writing or altering database migrations
+- Destructive git operations (force push, branch deletion)
+
+If an issue seems to require one of these, post a comment asking for confirmation before proceeding.
+
+### Definition of done
+
+Before opening or pushing to a PR, verify every item:
+
+- All three test suites pass: `pytest tests/` (common), `pytest api/` (backend), `cd web && npm test` (web)
+- PR body contains "Closes #<N>" linking to the originating issue
+- PR title is concise (under 70 characters)
+- No debug code, temporary workarounds, or stray `print`/`console.log` statements left in
+- Serializer output matches the TypeScript types in [`frontend_common/src/types.ts`](frontend_common/src/types.ts)
+- State names and transitions are derived from [`workflow.yml`](workflow.yml), not hardcoded
 - **Piece creation flow:** When creating a new piece (`POST /api/pieces/`), the piece is always initialized in the `designed` state. The creation UI (`NewPieceDialog`) lets the user supply a name, optional notes, and pick a thumbnail from the curated gallery in `web/public/thumbnails/`. The selected thumbnail URL is stored as the piece's primary visual identifier.
