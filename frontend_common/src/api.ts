@@ -72,7 +72,7 @@ function mapImage(raw: Wire<CaptionedImage>): CaptionedImage {
     return {
         url: raw.url,
         caption: raw.caption,
-        created: new Date(raw.created),
+        created: new Date(raw.created ?? ''),
     }
 }
 
@@ -84,8 +84,8 @@ function mapPieceState(raw: Wire<PieceState>): PieceState {
     return {
         state: raw.state as State,
         notes: raw.notes,
-        created: new Date(raw.created),
-        last_modified: new Date(raw.last_modified),
+        created: new Date(raw.created ?? ''),
+        last_modified: new Date(raw.last_modified ?? ''),
         images: raw.images.map(mapImage),
         previous_state: raw.previous_state as State | null,
         next_state: raw.next_state as State | null,
@@ -97,8 +97,8 @@ function mapPieceSummary(raw: Wire<PieceSummary>): PieceSummary {
     return {
         id: raw.id,
         name: raw.name,
-        created: new Date(raw.created),
-        last_modified: new Date(raw.last_modified),
+        created: new Date(raw.created ?? ''),
+        last_modified: new Date(raw.last_modified ?? ''),
         thumbnail: raw.thumbnail,
         current_state: mapStateSummary(raw.current_state),
         current_location: raw.current_location ?? '',

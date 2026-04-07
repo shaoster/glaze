@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
-import type { PieceSummary } from "../types"
+import type { PieceSummary } from '@common/types'
 
 type PieceListItemProps = {
   piece: PieceSummary

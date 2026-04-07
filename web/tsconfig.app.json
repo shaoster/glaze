@@ -26,8 +26,15 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
+      "axios": ["./node_modules/axios"],
       "@common/*": ["../frontend_common/src/*"]
     }
   },
-  "include": ["src", "../frontend_common/src"]
+  "include": [
+    "src",
+    "../frontend_common/src/types.ts",
+    "../frontend_common/src/api.ts",
+    "../frontend_common/src/workflow.ts"
+  ],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "node_modules"]
 }

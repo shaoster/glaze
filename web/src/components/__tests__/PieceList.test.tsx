@@ -11,7 +11,8 @@ function makePiece(overrides: Partial<PieceSummary> = {}): PieceSummary {
         created: new Date('2024-01-15T10:00:00Z'),
         last_modified: new Date('2024-02-20T12:00:00Z'),
         thumbnail: 'https://example.com/bowl.jpg',
-        current_state: { state: 'designed' },
+        current_location: null,
+        current_state: { state: 'designed' } as any,
         ...overrides,
     }
 }
