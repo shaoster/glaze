@@ -18,9 +18,9 @@ import {
     Typography,
 } from '@mui/material'
 import { useBlocker } from 'react-router-dom'
-import type { PieceDetail as PieceDetailType } from '../types'
-import { formatState, SUCCESSORS } from '../types'
-import { addPieceState } from '../api'
+import type { PieceDetail as PieceDetailType } from '@common/types'
+import { formatState, SUCCESSORS } from '@common/types'
+import { addPieceState } from '@common/api'
 import WorkflowState from './WorkflowState'
 
 type PieceDetailProps = {

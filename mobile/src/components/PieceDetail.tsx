@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { addPieceState } from '../../../frontend_common/src/api'
-import type { PieceDetail as PieceDetailType } from '../../../frontend_common/src/types'
-import { formatState, SUCCESSORS } from '../../../frontend_common/src/types'
+import { addPieceState } from '@common/api'
+import type { PieceDetail as PieceDetailType } from '@common/types'
+import { formatState, SUCCESSORS } from '@common/types'
 import WorkflowState from './WorkflowState'
 
 type PieceDetailProps = {

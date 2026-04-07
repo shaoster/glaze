@@ -163,13 +163,14 @@ npm run test:watch    # watch mode
 | `test_patch_current_state.py` | `PATCH /api/pieces/<id>/state/` partial update, location, sealed-state protection |
 | `test_sealed_state.py` | ORM-level sealed state enforcement |
 | `test_additional_fields.py` | `PieceState.save()` schema validation for every field type (inline, state ref, global ref) |
+| `test_workflow_helpers.py` | Pure unit tests for `api/workflow.py` helpers (`get_state_ref_fields`, `get_global_model_and_field`, `build_additional_fields_schema`) — decoupled from real `workflow.yml` via `monkeypatch` |
 | `test_global_entries.py` | `GET/POST /api/globals/<name>/` list and create |
 | `test_globals.py` | Global/model alignment (every `globals` entry maps to a real Django model) |
 
-**Web** (`web/src/`):
+**Web** (`web/src/` and `frontend_common/src/`):
 | File | What it covers |
 |---|---|
-| `workflow.test.ts` | `formatWorkflowFieldLabel`, `getGlobalDisplayField`, `getAdditionalFieldDefinitions` (inline, state ref, global ref) — decoupled from real `workflow.yml` via `vi.mock` |
+| `frontend_common/src/workflow.test.ts` | `formatWorkflowFieldLabel`, `getGlobalDisplayField`, `getAdditionalFieldDefinitions` (inline, state ref, global ref) — decoupled from real `workflow.yml` via `vi.mock` |
 | `__tests__/GlobalFieldPicker.test.tsx` | Rendering, internal fetch, provided options, create sentinel, inline creation (success/error), selecting existing |
 | `__tests__/PieceList.test.tsx` | Column headers, empty state, per-row data, links |
 | `__tests__/NewPieceDialog.test.tsx` | Rendering, name/notes/location/thumbnail, save/cancel behaviour |

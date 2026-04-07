@@ -1,6 +1,6 @@
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
-import type { PieceSummary } from '../../../frontend_common/src/types'
-import { formatState } from '../../../frontend_common/src/types'
+import type { PieceSummary } from '@common/types'
+import { formatState } from '@common/types'
 
 type PieceListProps = {
   pieces: PieceSummary[]

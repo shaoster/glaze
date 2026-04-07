@@ -11,16 +11,16 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import type { PieceDetail, PieceState } from '../types'
+import type { PieceDetail, PieceState } from '@common/types'
 import {
     updateCurrentState,
     updatePiece,
-} from '../api'
+} from '@common/api'
 import {
     type ResolvedAdditionalField,
     formatWorkflowFieldLabel,
     getAdditionalFieldDefinitions,
-} from '../workflow'
+} from '@common/workflow'
 import GlobalFieldPicker from './GlobalFieldPicker'
 
 type WorkflowStateProps = {

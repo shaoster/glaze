@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete'
 import { CircularProgress, TextField } from '@mui/material'
 import type { SxProps, Theme } from '@mui/material'
-import { createGlobalEntry, fetchGlobalEntries } from '../api'
-import { getGlobalDisplayField } from '../workflow'
+import { createGlobalEntry, fetchGlobalEntries } from '@common/api'
+import { getGlobalDisplayField } from '@common/workflow'
 
 // Pre-built filter; module-level to avoid reconstruction on every render.
 const FILTER = createFilterOptions<string>()

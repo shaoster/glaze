@@ -4,11 +4,11 @@ import { Box, Button, CircularProgress, Container, CssBaseline, Link as MuiLink,
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 
 const darkTheme = createTheme({ palette: { mode: 'dark' } })
-import { fetchPiece, fetchPieces } from './api'
+import { fetchPiece, fetchPieces } from '@common/api'
 import NewPieceDialog from './components/NewPieceDialog'
 import PieceList from './components/PieceList'
 import PieceDetailComponent from './components/PieceDetail'
-import type { PieceDetail, PieceSummary } from './types'
+import type { PieceDetail, PieceSummary } from '@common/types'
 
 function PieceListPage() {
   const [pieces, setPieces] = useState<PieceSummary[]>([])

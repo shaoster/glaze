@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import PieceList from '../PieceList'
-import type { PieceSummary } from '../../types'
+import type { PieceSummary } from '@common/types'
 
 function makePiece(overrides: Partial<PieceSummary> = {}): PieceSummary {
     return {

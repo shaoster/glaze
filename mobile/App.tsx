@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
-import { fetchPiece, fetchPieces } from '../frontend_common/src/api'
+import { fetchPiece, fetchPieces } from '@common/api'
 import PieceDetail from './src/components/PieceDetail'
 import PieceList from './src/components/PieceList'
 import NewPieceModal from './src/components/NewPieceModal'
-import type { PieceDetail as PieceDetailType, PieceSummary } from '../frontend_common/src/types'
+import type { PieceDetail as PieceDetailType, PieceSummary } from '@common/types'
 
 export default function App() {
   const [pieces, setPieces] = useState<PieceSummary[]>([])

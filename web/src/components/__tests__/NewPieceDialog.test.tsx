@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import NewPieceDialog, { CURATED_THUMBNAILS } from '../NewPieceDialog'
-import * as api from '../../api'
-import type { PieceDetail } from '../../types'
+import * as api from '@common/api'
+import type { PieceDetail } from '@common/types'
 
-vi.mock('../../api', () => ({
+vi.mock('@common/api', () => ({
     createPiece: vi.fn(),
     fetchGlobalEntries: vi.fn().mockResolvedValue([]),
     createGlobalEntry: vi.fn(),

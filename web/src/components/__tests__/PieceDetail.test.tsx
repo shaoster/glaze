@@ -3,10 +3,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import PieceDetail from '../PieceDetail'
-import type { PieceDetail as PieceDetailType, PieceState } from '../../types'
-import * as api from '../../api'
+import type { PieceDetail as PieceDetailType, PieceState } from '@common/types'
+import * as api from '@common/api'
 
-vi.mock('../../api', () => ({
+vi.mock('@common/api', () => ({
     fetchGlobalEntries: vi.fn().mockResolvedValue([]),
     updateCurrentState: vi.fn(),
     addPieceState: vi.fn(),
