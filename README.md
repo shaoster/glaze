@@ -161,10 +161,11 @@ Glaze uses Claude agents to handle issues and PR feedback autonomously. You don'
 
 1. **Open a GitHub issue** describing the feature or bug.
    - Be specific: what should happen, what currently happens, any relevant state names from [`workflow.yml`](workflow.yml).
-   - Claude will read the issue automatically and either ask clarifying questions (as a comment) or implement the change on a new branch and open a pull request.
-2. **Answer any follow-up questions** Claude posts as issue comments.
+2. **Apply the `claude` label** to the issue to invoke the agent.
+   - Claude will read the issue and either ask clarifying questions (as a comment) or implement the change on a new branch and open a pull request.
+3. **Answer any follow-up questions** Claude posts as issue comments.
    - Claude re-reads the full thread each time, so just reply naturally — no special trigger phrase needed.
-3. **Review the pull request** Claude opens.
+4. **Review the pull request** Claude opens.
    - Claude links the PR to the issue and includes "Closes #N" in the body so the issue closes automatically on merge.
 
 ### Request changes on a PR → get a new commit
