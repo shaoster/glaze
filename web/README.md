@@ -1,5 +1,16 @@
 # React + TypeScript + Vite
 
+## Local env config (git-safe)
+
+Use `.env.local` for local-only values. It is gitignored.
+Start from the committed template:
+
+```bash
+cp .env.example .env.local
+```
+
+Cloudinary uploads are signed by Django; set `CLOUDINARY_*` in root `.env.local` so the API secret never appears in browser code.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

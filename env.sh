@@ -60,6 +60,21 @@ _gz_ensure_node() {
     nvm use 20
 }
 
+_gz_load_env_file() {  # _gz_load_env_file <path>
+    local path="$1"
+    [[ -f "$path" ]] || return 0
+    set -a
+    # shellcheck disable=SC1090
+    source "$path"
+    set +a
+}
+
+_gz_load_local_env() {
+    _gz_load_env_file "$GLAZE_ROOT/.env.local"
+    _gz_load_env_file "$GLAZE_ROOT/web/.env.local"
+    _gz_load_env_file "$GLAZE_ROOT/mobile/.env.local"
+}
+
 # ---------------------------------------------------------------------------
 # Setup
 # ---------------------------------------------------------------------------
@@ -149,7 +164,7 @@ gz_test() {
 
 gz_backend() {
     _gz_start backend "$_GLAZE_LOGS/backend.log" \
-        bash -c "source '$GLAZE_ROOT/.venv/bin/activate' && cd '$GLAZE_ROOT' && python manage.py runserver 8080"
+        bash -c "source '$GLAZE_ROOT/.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$GLAZE_ROOT/.env.local' ] && source '$GLAZE_ROOT/.env.local'; set +a && python manage.py runserver 8080"
 }
 
 gz_web() {
@@ -273,6 +288,7 @@ gz_help() {
 # ---------------------------------------------------------------------------
 
 echo "Glaze dev helpers loaded."
+_gz_load_local_env
 for entry in "${_GZ_SHORTCUTS[@]}"; do
     echo "  $entry"
 done

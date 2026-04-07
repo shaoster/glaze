@@ -22,6 +22,10 @@ expo-env.d.ts
 .env.test.local
 .env.production.local
 
+# codex local artifacts
+.codex
+.codex/*
+
 # macOS / editor artifacts
 .DS_Store
 .vscode/

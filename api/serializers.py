@@ -64,7 +64,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
             raise ValueError(f'Piece {obj.id} has no states — data integrity error')
         return {'state': cs.state}
 
-    @extend_schema_field(serializers.CharField(allow_null=True))
+    @extend_schema_field(serializers.CharField(allow_null=True, required=False))
     def get_current_location(self, obj: Piece) -> str | None:
         return obj.current_location.name if obj.current_location else None
 

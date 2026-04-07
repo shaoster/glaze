@@ -146,12 +146,17 @@ celerybeat.pid
 # Environments
 .env
 .envrc
+.env.local
+.env.local.*
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Commit template env files, but never local secrets.
+!**/.env.example
 
 # Spyder project settings
 .spyderproject
