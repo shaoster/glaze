@@ -38,6 +38,22 @@ Source the file to load all shortcuts into your shell:
 source env.sh
 ```
 
+### Local secrets and config (git-safe)
+Keep local-only settings in `.env.local` files; they are gitignored by default:
+
+- `.env.local` (repo-wide defaults)
+- `web/.env.local` (web-only overrides)
+- `mobile/.env.local` (mobile-only overrides)
+
+`source env.sh` automatically loads all three (in that order) so you can inject Cloudinary/API config without committing secrets.
+Use the checked-in templates:
+
+```bash
+cp .env.example .env.local
+cp web/.env.example web/.env.local
+cp mobile/.env.example mobile/.env.local
+```
+
 ### Setup
 
 | Command | Description |
@@ -124,6 +140,21 @@ cd web
 npm test              # single run (CI) — 101 tests across 6 files
 npm run test:watch    # watch mode
 ```
+
+## Cloudinary image uploads (web)
+Recommended: use backend-signed uploads so Cloudinary secrets never ship to the browser.
+Set these in `.env.local` before starting Django:
+
+```bash
+export CLOUDINARY_CLOUD_NAME=<your-cloud-name>
+export CLOUDINARY_API_KEY=<your-api-key>
+export CLOUDINARY_API_SECRET=<your-api-secret>
+export CLOUDINARY_UPLOAD_FOLDER=glaze         # optional
+export CLOUDINARY_UPLOAD_PRESET=<your-upload-preset>  # optional
+```
+
+`WorkflowState` calls `POST /api/uploads/cloudinary/signature/` and uploads with the signed payload.
+`CLOUDINARY_API_SECRET` stays server-only and is never returned to the client.
 
 ### What is tested
 

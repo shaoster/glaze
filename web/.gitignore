@@ -26,3 +26,8 @@ dist-ssr
 *.sw?
 venv/
 node_modules/
+
+# Local env files
+.env.local
+.env.local.*
+!.env.example

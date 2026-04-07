@@ -12,6 +12,8 @@ vi.mock('@common/api', () => ({
     addPieceState: vi.fn(),
     updatePiece: vi.fn(),
     createGlobalEntry: vi.fn(),
+    hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
+    uploadImageToCloudinary: vi.fn(),
 }))
 
 function makeState(overrides: Partial<PieceState> = {}): PieceState {

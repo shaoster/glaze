@@ -1,3 +1,7 @@
+import hashlib
+import os
+import time
+
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -116,3 +120,63 @@ def global_entries(request: Request, global_name: str) -> Response:
     obj, created = model_cls.objects.get_or_create(**{field: value})
     status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
     return Response({'id': str(obj.pk), 'name': getattr(obj, display_field)}, status=status_code)
+
+
+@extend_schema(
+    request=None,
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'cloud_name': {'type': 'string'},
+                'api_key': {'type': 'string'},
+                'timestamp': {'type': 'integer'},
+                'signature': {'type': 'string'},
+                'upload_url': {'type': 'string'},
+                'folder': {'type': 'string'},
+                'upload_preset': {'type': 'string'},
+            },
+            'required': ['cloud_name', 'api_key', 'timestamp', 'signature', 'upload_url'],
+        }
+    },
+)
+@api_view(['POST'])
+def cloudinary_upload_signature(request: Request) -> Response:
+    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
+    api_key = os.environ.get('CLOUDINARY_API_KEY')
+    api_secret = os.environ.get('CLOUDINARY_API_SECRET')
+    folder = os.environ.get('CLOUDINARY_UPLOAD_FOLDER', '').strip()
+    upload_preset = os.environ.get('CLOUDINARY_UPLOAD_PRESET', '').strip()
+
+    if not cloud_name or not api_key or not api_secret:
+        return Response(
+            {'detail': 'Cloudinary is not configured on the server.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    timestamp = int(time.time())
+    params_to_sign: dict[str, str | int] = {'timestamp': timestamp}
+    if folder:
+        params_to_sign['folder'] = folder
+    if upload_preset:
+        params_to_sign['upload_preset'] = upload_preset
+
+    # Cloudinary signature format: sorted key=value params joined by '&',
+    # then append API secret and SHA1 hash the resulting string.
+    signing_string = '&'.join(
+        f'{key}={params_to_sign[key]}' for key in sorted(params_to_sign.keys())
+    )
+    signature = hashlib.sha1(f'{signing_string}{api_secret}'.encode('utf-8')).hexdigest()
+
+    payload = {
+        'cloud_name': cloud_name,
+        'api_key': api_key,
+        'timestamp': timestamp,
+        'signature': signature,
+        'upload_url': f'https://api.cloudinary.com/v1_1/{cloud_name}/image/upload',
+    }
+    if folder:
+        payload['folder'] = folder
+    if upload_preset:
+        payload['upload_preset'] = upload_preset
+    return Response(payload)
