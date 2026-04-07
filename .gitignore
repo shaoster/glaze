@@ -61,6 +61,12 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
+# Django collectstatic output
+staticfiles/
+
+# Vite production build
+web/dist/
+
 # Glaze dev helpers (env.sh)
 .dev-logs/
 .dev-pids/
