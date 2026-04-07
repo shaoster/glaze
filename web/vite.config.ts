@@ -20,6 +20,16 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-mui': ['@mui/material', '@mui/system', '@emotion/react', '@emotion/styled'],
+        },
+      },
+    },
+  },
   server: {
     fs: {
       allow: ['..'],
