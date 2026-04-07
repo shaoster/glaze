@@ -328,4 +328,5 @@ Before opening or pushing to a PR, verify every item:
 - No debug code, temporary workarounds, or stray `print`/`console.log` statements left in
 - Serializer output matches the TypeScript types in [`frontend_common/src/types.ts`](frontend_common/src/types.ts)
 - State names and transitions are derived from [`workflow.yml`](workflow.yml), not hardcoded
+- If `AGENTS.md` was modified, check whether [`README.md`](README.md) needs a corresponding update (the Contributing section and any user-facing descriptions of agent behaviour)
 - **Piece creation flow:** When creating a new piece (`POST /api/pieces/`), the piece is always initialized in the `designed` state. The creation UI (`NewPieceDialog`) lets the user supply a name, optional notes, and pick a thumbnail from the curated gallery in `web/public/thumbnails/`. The selected thumbnail URL is stored as the piece's primary visual identifier.
