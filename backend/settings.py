@@ -174,9 +174,13 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Serve the Vite production build at the URL root when it exists.
+# WHITENOISE_ROOT lets WhiteNoise serve web/dist at / (no /static/ prefix),
+# so asset paths like /thumbnails/... embedded in index.html work unchanged.
+# STATICFILES_DIRS ensures collectstatic copies and compresses these files too.
 _WEB_DIST = BASE_DIR / 'web' / 'dist'
 if _WEB_DIST.is_dir():
     WHITENOISE_ROOT = _WEB_DIST
+    STATICFILES_DIRS = [_WEB_DIST]
 
 STORAGES = {
     'default': {
