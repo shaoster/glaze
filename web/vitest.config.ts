@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config'
 import yaml from '@rollup/plugin-yaml'
 import { fileURLToPath } from 'node:url'
+import path from 'node:path'
 
 export default defineConfig({
   plugins: [yaml()],
@@ -9,6 +10,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      axios: path.resolve(__dirname, 'node_modules/axios'),
       '@common': fileURLToPath(new URL('../frontend_common/src', import.meta.url)),
     },
   },

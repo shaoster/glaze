@@ -1,9 +1,10 @@
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from .models import Location, Piece, PieceState
+from .models import Location, Piece, PieceState, UserProfile
 from .workflow import ENTRY_STATE, SUCCESSORS, VALID_STATES, get_state_ref_fields
 
 
@@ -97,13 +98,14 @@ class PieceCreateSerializer(serializers.ModelSerializer):
         fields = ['name', 'thumbnail', 'notes', 'current_location']
 
     def create(self, validated_data: dict) -> Piece:  # type: ignore[override]
+        user = self.context['request'].user
         notes = validated_data.pop('notes', '')
         location_name = validated_data.pop('current_location', None)
         location_obj = None
         if location_name:
-            location_obj, _ = Location.objects.get_or_create(name=location_name)
-        piece = Piece.objects.create(**validated_data, current_location=location_obj)
-        PieceState.objects.create(piece=piece, state=ENTRY_STATE, notes=notes)
+            location_obj, _ = Location.objects.get_or_create(user=user, name=location_name)
+        piece = Piece.objects.create(user=user, **validated_data, current_location=location_obj)
+        PieceState.objects.create(user=user, piece=piece, state=ENTRY_STATE, notes=notes)
         return piece
 
 
@@ -159,6 +161,7 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
 
         try:
             return PieceState.objects.create(
+                user=self.context['piece'].user,
                 piece=self.context['piece'],
                 **validated_data,
             )
@@ -203,9 +206,53 @@ class PieceUpdateSerializer(serializers.Serializer):
         if 'current_location' in validated_data:
             location_name = validated_data['current_location']
             if location_name:
-                location_obj, _ = Location.objects.get_or_create(name=location_name)
+                user = self.context['request'].user
+                location_obj, _ = Location.objects.get_or_create(user=user, name=location_name)
             else:
                 location_obj = None
             instance.current_location = location_obj
         instance.save()
         return instance
+
+
+class AuthUserSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    email = serializers.EmailField(read_only=True)
+    first_name = serializers.CharField(read_only=True, allow_blank=True)
+    last_name = serializers.CharField(read_only=True, allow_blank=True)
+    openid_subject = serializers.SerializerMethodField()
+    profile_image_url = serializers.SerializerMethodField()
+
+    @extend_schema_field(serializers.CharField(allow_blank=True))
+    def get_openid_subject(self, obj) -> str:
+        profile = getattr(obj, 'profile', None)
+        return profile.openid_subject if profile else ''
+
+    @extend_schema_field(serializers.CharField(allow_blank=True))
+    def get_profile_image_url(self, obj) -> str:
+        profile = getattr(obj, 'profile', None)
+        return profile.profile_image_url if profile else ''
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+
+
+class RegisterSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(min_length=8)
+    first_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
+    last_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
+
+    def create(self, validated_data: dict):  # type: ignore[override]
+        user_model = get_user_model()
+        user = user_model.objects.create_user(
+            username=validated_data['email'],
+            email=validated_data['email'],
+            password=validated_data['password'],
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
+        )
+        UserProfile.objects.create(user=user)
+        return user
