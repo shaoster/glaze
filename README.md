@@ -3,38 +3,14 @@
 A pottery workflow tracking application. Log pieces and record state transitions as work moves through throwing, bisque firing, glazing, and finishing.
 
 ## For new developers
-This guide assumes you already know the tools listed below; if any term is unfamiliar, click the linked docs to catch up quickly.
+This guide assumes you already know the tools listed below and are familiar with [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) and [abstraction](https://en.wikipedia.org/wiki/Abstraction_(computer_science)) as design principles; if any term is unfamiliar, click the linked docs to catch up quickly.
 
-- **Django** is the Python web framework that owns the backend (`backend/`, `api/`). [Separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) keeps unrelated responsibilities apart so each layer stays simpler to reason about—for example, `api/models.py` defines the data schema, `api/serializers.py` translates between ORM objects and JSON payloads, and `api/views.py` wires those serializers into `/api/...` endpoints that enforce workflow rules from [`workflow.yml`](workflow.yml). That split keeps the REST API (powered by Django REST Framework, DRF) resilient even when one layer needs to change, while returning consistent data/validation to all clients.
-- **React** (web/src/) renders the SPA (Single Page Application) and consumes shared types/API helpers from `frontend_common/src/types.ts` and `frontend_common/src/api.ts`. React follows a component-based paradigm where functions or classes receive props (inputs) and return HTML that the browser can render.
-- **Vite** (web tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our web workbench, serves as the underlying runner for `npm test`, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
-- **Material UI** supplies the component library used everywhere in the UI for forms, dialogs, buttons, and layout.
-- **Axios** is the HTTP client library we use in the web to talk to REST APIs; it keeps things simple by handling the details of sending and receiving JSON so the UI code does not have to repeat that work. Benefits of Axios over raw `fetch` include centralized configuration of base URLs and headers, automatic JSON parsing/serialization, and built-in hooks for handling errors, cancellations, and retries. In this project that means `WorkflowState.tsx` can rely on helpers like `updateCurrentState`/`updatePiece` instead of duplicating URLs or JSON logic, and we have a single place for surfaces errors before they hit the UI.
-- A **client library** is a reusable set of functions that wraps low-level protocols (like HTTP) so developers can interact with remote services using clean function calls, in their programming language of choice, instead of handling bytes, headers, or parsing manually.
-- **`frontend_common/src/api.ts`** wraps Axios calls for every backend endpoint, maps the wire format (ISO date strings) into the domain types consumed by the UI, and centralizes serialization and error handling. [Separation of concerns] keeps unrelated responsibilities apart so each layer stays simpler to reason about. By keeping UI components focused on rendering/state and `api.ts` focused on serialization, endpoint URLs, and error handling, the code is easier to maintain—`WorkflowState.tsx` simply calls `updateCurrentState(pieceId, payload)` and receives a deserialized `PieceDetail`, so it never needs to know whether the backend REST API URL is `/pieces/<id>/state/` or `/state/`, or that the raw string timestamps must be parsed into the Date-friendly TypeScript domain types.
-
-Compare that to a contrived manual call:
-
-```ts
-async function manuallySaveState(pieceId: string, payload: {}) {
-    const response = await fetch(`/api/pieces/${pieceId}/state/`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-    })
-    const json = await response.json()
-    return {
-        ...json,
-        current_state: {
-            ...json.current_state,
-            created: new Date(json.current_state.created),
-            last_modified: new Date(json.current_state.last_modified),
-        },
-    }
-}
-```
-
-The manual version needs to hardcode the endpoint and parse ISO timestamps into `Date`s, whereas `api.ts` wraps that logic so the component can stay focused on user interaction.
+- **[Django](https://www.djangoproject.com/)** is the Python web framework that owns the backend (`backend/`, `api/`). [Separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) keeps unrelated responsibilities apart so each layer stays simpler to reason about—for example, [`api/models.py`](api/models.py) defines the data schema, [`api/serializers.py`](api/serializers.py) translates between ORM objects and JSON payloads, and [`api/views.py`](api/views.py) wires those serializers into `/api/...` endpoints that enforce workflow rules from [`workflow.yml`](workflow.yml). That split keeps the REST API (powered by Django REST Framework, DRF) resilient even when one layer needs to change, while returning consistent data/validation to all clients.
+- **[React](https://react.dev/)** (web/src/) renders the SPA (Single Page Application) and consumes shared types/API helpers from [`frontend_common/src/types.ts`](frontend_common/src/types.ts) and [`frontend_common/src/api.ts`](frontend_common/src/api.ts). React follows a component-based paradigm where functions or classes receive props (inputs) and return HTML that the browser can render.
+- **[Vite](https://vitejs.dev/)** (web tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our web workbench, serves as the underlying runner for `npm test`, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
+- **[Material UI](https://mui.com/)** supplies the component library used everywhere in the UI for forms, dialogs, buttons, and layout.
+- **[Axios](https://axios-http.com/)** is the HTTP client library we use in the web to talk to REST APIs; it keeps things simple by handling the details of sending and receiving JSON so the UI code does not have to repeat that work. Benefits of Axios over raw `fetch` include centralized configuration of base URLs and headers, automatic JSON parsing/serialization, and built-in hooks for handling errors, cancellations, and retries. In this project that means [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx) can rely on helpers like `updateCurrentState`/`updatePiece` instead of duplicating URLs or JSON logic, and we have a single place for surfaces errors before they hit the UI.
+- A **[client library](https://en.wikipedia.org/wiki/Library_(computing))** is a reusable set of functions that wraps low-level protocols (like HTTP) so developers can interact with remote services using clean function calls, in their programming language of choice, instead of handling bytes, headers, or parsing manually.
 
 ## Motivation
 
@@ -105,7 +81,7 @@ Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`
 
 | Command | Description |
 |---|---|
-| `gz_gentypes` | Regenerate `frontend_common/src/generated-types.ts` from the live OpenAPI schema. Starts the backend temporarily if it is not already running. |
+| `gz_gentypes` | Regenerate [`frontend_common/src/generated-types.ts`](frontend_common/src/generated-types.ts) from the live OpenAPI schema. Starts the backend temporarily if it is not already running. |
 
 Run `gz_help` to print the full list of shortcuts at any time.
 
@@ -151,31 +127,31 @@ npm run test:watch    # watch mode
 
 ### What is tested
 
-**Common** (`tests/test_workflow.py`): structural validation of `workflow.yml` against `workflow.schema.yml`, semantic/referential integrity (successor references, reachability, terminal-state rules), `additional_fields` DSL rules (enum constraints, ref targets), and global/model alignment against `api/models.py`.
+**Common** ([`tests/test_workflow.py`](tests/test_workflow.py)): structural validation of [`workflow.yml`](workflow.yml) against [`workflow.schema.yml`](workflow.schema.yml), semantic/referential integrity (successor references, reachability, terminal-state rules), `additional_fields` DSL rules (enum constraints, ref targets), and global/model alignment against [`api/models.py`](api/models.py).
 
 **Backend** (`api/tests/`):
 | File | What it covers |
 |---|---|
-| `test_pieces_list.py` | `GET /api/pieces/` list endpoint |
-| `test_pieces_create.py` | `POST /api/pieces/` creation, location handling |
-| `test_piece_detail.py` | `GET /api/pieces/<id>/` detail endpoint |
-| `test_piece_states.py` | `POST /api/pieces/<id>/states/` transitions, history, additional_fields |
-| `test_patch_current_state.py` | `PATCH /api/pieces/<id>/state/` partial update, location, sealed-state protection |
-| `test_sealed_state.py` | ORM-level sealed state enforcement |
-| `test_additional_fields.py` | `PieceState.save()` schema validation for every field type (inline, state ref, global ref) |
-| `test_workflow_helpers.py` | Pure unit tests for `api/workflow.py` helpers (`get_state_ref_fields`, `get_global_model_and_field`, `build_additional_fields_schema`) — decoupled from real `workflow.yml` via `monkeypatch` |
-| `test_global_entries.py` | `GET/POST /api/globals/<name>/` list and create |
-| `test_globals.py` | Global/model alignment (every `globals` entry maps to a real Django model) |
+| [`test_pieces_list.py`](api/tests/test_pieces_list.py) | `GET /api/pieces/` list endpoint |
+| [`test_pieces_create.py`](api/tests/test_pieces_create.py) | `POST /api/pieces/` creation, location handling |
+| [`test_piece_detail.py`](api/tests/test_piece_detail.py) | `GET /api/pieces/<id>/` detail endpoint |
+| [`test_piece_states.py`](api/tests/test_piece_states.py) | `POST /api/pieces/<id>/states/` transitions, history, additional_fields |
+| [`test_patch_current_state.py`](api/tests/test_patch_current_state.py) | `PATCH /api/pieces/<id>/state/` partial update, location, sealed-state protection |
+| [`test_sealed_state.py`](api/tests/test_sealed_state.py) | ORM-level sealed state enforcement |
+| [`test_additional_fields.py`](api/tests/test_additional_fields.py) | `PieceState.save()` schema validation for every field type (inline, state ref, global ref) |
+| [`test_workflow_helpers.py`](api/tests/test_workflow_helpers.py) | Pure unit tests for [`api/workflow.py`](api/workflow.py) helpers (`get_state_ref_fields`, `get_global_model_and_field`, `build_additional_fields_schema`) — decoupled from real `workflow.yml` via `monkeypatch` |
+| [`test_global_entries.py`](api/tests/test_global_entries.py) | `GET/POST /api/globals/<name>/` list and create |
+| [`test_globals.py`](api/tests/test_globals.py) | Global/model alignment (every `globals` entry maps to a real Django model) |
 
 **Web** (`web/src/` and `frontend_common/src/`):
 | File | What it covers |
 |---|---|
-| `frontend_common/src/workflow.test.ts` | `formatWorkflowFieldLabel`, `getGlobalDisplayField`, `getAdditionalFieldDefinitions` (inline, state ref, global ref) — decoupled from real `workflow.yml` via `vi.mock` |
-| `__tests__/GlobalFieldPicker.test.tsx` | Rendering, internal fetch, provided options, create sentinel, inline creation (success/error), selecting existing |
-| `__tests__/PieceList.test.tsx` | Column headers, empty state, per-row data, links |
-| `__tests__/NewPieceDialog.test.tsx` | Rendering, name/notes/location/thumbnail, save/cancel behaviour |
-| `__tests__/WorkflowState.test.tsx` | Notes, additional fields (inline, state ref, global ref), location, save button, unsaved indicator |
-| `__tests__/PieceDetail.test.tsx` | Rendering, state transitions, confirmation dialog, location editing |
+| [`frontend_common/src/workflow.test.ts`](frontend_common/src/workflow.test.ts) | `formatWorkflowFieldLabel`, `getGlobalDisplayField`, `getAdditionalFieldDefinitions` (inline, state ref, global ref) — decoupled from real `workflow.yml` via `vi.mock` |
+| [`__tests__/GlobalFieldPicker.test.tsx`](web/src/components/__tests__/GlobalFieldPicker.test.tsx) | Rendering, internal fetch, provided options, create sentinel, inline creation (success/error), selecting existing |
+| [`__tests__/PieceList.test.tsx`](web/src/components/__tests__/PieceList.test.tsx) | Column headers, empty state, per-row data, links |
+| [`__tests__/NewPieceDialog.test.tsx`](web/src/components/__tests__/NewPieceDialog.test.tsx) | Rendering, name/notes/location/thumbnail, save/cancel behaviour |
+| [`__tests__/WorkflowState.test.tsx`](web/src/components/__tests__/WorkflowState.test.tsx) | Notes, additional fields (inline, state ref, global ref), location, save button, unsaved indicator |
+| [`__tests__/PieceDetail.test.tsx`](web/src/components/__tests__/PieceDetail.test.tsx) | Rendering, state transitions, confirmation dialog, location editing |
 
 ## Vibe coding / Contributing
 
@@ -184,7 +160,7 @@ Glaze uses Claude agents to handle issues and PR feedback autonomously. You don'
 ### Open an issue → get a PR
 
 1. **Open a GitHub issue** describing the feature or bug.
-   - Be specific: what should happen, what currently happens, any relevant state names from `workflow.yml`.
+   - Be specific: what should happen, what currently happens, any relevant state names from [`workflow.yml`](workflow.yml).
    - Claude will read the issue automatically and either ask clarifying questions (as a comment) or implement the change on a new branch and open a pull request.
 2. **Answer any follow-up questions** Claude posts as issue comments.
    - Claude re-reads the full thread each time, so just reply naturally — no special trigger phrase needed.
@@ -211,7 +187,7 @@ Claude will read the comment, make the change, and push it to the branch.
 ### Tips
 
 - Claude always runs `pytest` (backend) and `npm test` (web) before opening or updating a PR. If tests fail, it will not push.
-- Claude derives all state names and transitions from `workflow.yml` — you can reference state names freely in issues and it will use the correct values.
+- Claude derives all state names and transitions from [`workflow.yml`](workflow.yml) — you can reference state names freely in issues and it will use the correct values.
 - For large or ambiguous requests, start with an issue rather than a direct PR comment so Claude can ask questions before writing code.
 
 ## Project structure
@@ -242,7 +218,7 @@ The workflow state machine and all valid transitions are defined in [`workflow.y
 
 ### Authoring `additional_fields`
 
-When you add an `additional_fields` entry to a state in `workflow.yml`, the web automatically renders the inputs for you inside the `WorkflowState` component. Inline JSON primitives, state references, and global references are all interpreted through the helper utilities in `frontend_common/src/workflow.ts` (`getAdditionalFieldDefinitions`, `formatWorkflowFieldLabel`, etc.) so the DSL does not need to be mentioned elsewhere in the code.
+When you add an `additional_fields` entry to a state in `workflow.yml`, the web automatically renders the inputs for you inside the `WorkflowState` component. Inline JSON primitives, state references, and global references are all interpreted through the helper utilities in [`frontend_common/src/workflow.ts`](frontend_common/src/workflow.ts) (`getAdditionalFieldDefinitions`, `formatWorkflowFieldLabel`, etc.) so the DSL does not need to be mentioned elsewhere in the code.
 
 1. **Inline fields** (give the field a `type`, optional `description`, `required`, and/or `enum`). They render as `TextField`s—numbers as numeric inputs, booleans as selects with `True`/`False`, enums as dropdowns—directly below Notes and above the image list.
 2. **State refs** (`$ref: "ancestor_state.field_name"`) carry a value forward from a reachable ancestor state; they render the referenced value while still allowing edits and backend validation just like inline fields.
