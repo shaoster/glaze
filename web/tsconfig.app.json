@@ -23,7 +23,11 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@common/*": ["../frontend_common/src/*"]
+    }
   },
   "include": ["src", "../frontend_common/src"]
 }

@@ -8,13 +8,13 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { updateCurrentState, updatePiece } from '../../../frontend_common/src/api'
-import type { PieceDetail, PieceState } from '../../../frontend_common/src/types'
+import { updateCurrentState, updatePiece } from '@common/api'
+import type { PieceDetail, PieceState } from '@common/types'
 import {
   type ResolvedAdditionalField,
   formatWorkflowFieldLabel,
   getAdditionalFieldDefinitions,
-} from '../../../frontend_common/src/workflow'
+} from '@common/workflow'
 import GlobalFieldPicker from './GlobalFieldPicker'
 
 type WorkflowStateProps = {

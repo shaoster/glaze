@@ -3,9 +3,9 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import GlobalFieldPicker, { type GlobalFieldPickerProps } from '../GlobalFieldPicker'
-import * as api from '../../api'
+import * as api from '@common/api'
 
-vi.mock('../../api', () => ({
+vi.mock('@common/api', () => ({
     fetchGlobalEntries: vi.fn().mockResolvedValue([]),
     createGlobalEntry: vi.fn(),
 }))

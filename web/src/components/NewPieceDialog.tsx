@@ -11,8 +11,8 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { createPiece } from '../api'
-import type { PieceDetail } from '../types'
+import { createPiece } from '@common/api'
+import type { PieceDetail } from '@common/types'
 import GlobalFieldPicker from './GlobalFieldPicker'
 
 // Exported so other components (e.g. PieceList) can reference the default

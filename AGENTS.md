@@ -174,10 +174,11 @@ PieceSummary & {
 
 **Conventions:**
 - Use MUI components for all UI elements — avoid custom CSS except for layout adjustments MUI can't handle.
-- Import types from `frontend_common/src/types.ts`; do not redeclare them locally.
-- State names and valid transitions come from `workflow.yml` via the constants in `frontend_common/src/types.ts` (`STATES`, `SUCCESSORS`) — do not hardcode them in components.
-- All HTTP calls go through [`frontend_common/src/api.ts`](frontend_common/src/api.ts). This is the single place where wire types (ISO date strings, etc.) are mapped to domain types as declared in `frontend_common/src/types.ts`. Components must never perform their own serialization or deserialization — they receive fully-typed domain objects and call the functions in `api.ts` to write data.
-- Use Axios for all HTTP requests to the backend, and all HTTP requests should go through `frontend_common/src/api.ts`.
+- Import shared types, API helpers, and workflow utilities using the `@common` path alias (`@common/types`, `@common/api`, `@common/workflow`) — never use relative `../../../frontend_common/src/...` paths or add per-app forwarding stubs. The alias is configured in each app's tsconfig `paths` and bundler config and resolves to `frontend_common/src/`.
+- Import types from `@common/types`; do not redeclare them locally.
+- State names and valid transitions come from `workflow.yml` via the constants in `@common/types` (`STATES`, `SUCCESSORS`) — do not hardcode them in components.
+- All HTTP calls go through [`frontend_common/src/api.ts`](frontend_common/src/api.ts) (imported as `@common/api`). This is the single place where wire types (ISO date strings, etc.) are mapped to domain types as declared in `@common/types`. Components must never perform their own serialization or deserialization — they receive fully-typed domain objects and call the functions in `api.ts` to write data.
+- Use Axios for all HTTP requests to the backend, and all HTTP requests should go through `@common/api`.
 - TypeScript strict mode is on; avoid `any`.
 - New component files should be `.tsx`, not `.js`.
 - Use `slotProps={{ htmlInput: { ... } }}` on MUI `TextField` — the `inputProps` prop is deprecated in MUI v7.
@@ -251,7 +252,7 @@ pip install -r requirements-dev.txt   # includes pytest and pytest-django
 pytest api/                            # run from the repo root
 ```
 
-Tests live in [`api/tests.py`](api/tests.py). `pytest.ini` points pytest at `backend.settings` automatically — no extra configuration needed.
+Tests live in [`api/tests/`](api/tests/). `pytest.ini` points pytest at `backend.settings` automatically — no extra configuration needed.
 
 ### Web
 
@@ -264,7 +265,7 @@ npm run test:watch  # watch mode for development
 
 Tests live in two places:
 - [`web/src/components/__tests__/`](web/src/components/__tests__/) — component tests (jsdom + Testing Library)
-- [`web/src/workflow.test.ts`](web/src/workflow.test.ts) — unit tests for `workflow.ts` helpers
+- [`frontend_common/src/workflow.test.ts`](frontend_common/src/workflow.test.ts) — unit tests for `workflow.ts` helpers (picked up by the web vitest config via an explicit `include` glob)
 
 The test environment is jsdom; setup file is [`web/src/test-setup.ts`](web/src/test-setup.ts).
 
@@ -281,7 +282,8 @@ GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on
 - Any change to `workflow.yml` or `workflow.schema.yml` → verify `pytest tests/` passes.
 - Every new API endpoint or serializer change → add or update a test in the appropriate file under `api/tests/`.
 - Every new or modified React component → add or update a test in `web/src/components/__tests__/`.
-- Every new or modified `workflow.ts` helper → add or update a test in `web/src/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture.
+- Every new or modified `workflow.ts` helper → add or update a test in `frontend_common/src/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture.
+- Every new or modified `api/workflow.py` helper → add or update a test in `api/tests/test_workflow_helpers.py`, patching `_STATE_MAP` / `_GLOBALS_MAP` via `monkeypatch`.
 - The `piece` fixture in `api/tests/conftest.py` creates a piece via the ORM directly; prefer the API client (`client.post(...)`) for tests that exercise request/response behaviour.
 
 ---

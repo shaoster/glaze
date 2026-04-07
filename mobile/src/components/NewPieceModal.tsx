@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
-import { createPiece } from '../../../frontend_common/src/api'
-import type { PieceDetail } from '../../../frontend_common/src/types'
+import { createPiece } from '@common/api'
+import type { PieceDetail } from '@common/types'
 import GlobalFieldPicker from './GlobalFieldPicker'
 
 export const DEFAULT_THUMBNAIL = '/thumbnails/question-mark.svg'

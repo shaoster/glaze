@@ -8,8 +8,8 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { createGlobalEntry, fetchGlobalEntries } from '../../../frontend_common/src/api'
-import { getGlobalDisplayField } from '../../../frontend_common/src/workflow'
+import { createGlobalEntry, fetchGlobalEntries } from '@common/api'
+import { getGlobalDisplayField } from '@common/workflow'
 
 export type GlobalFieldPickerProps = {
   globalName: string
