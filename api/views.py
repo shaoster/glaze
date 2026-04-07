@@ -2,7 +2,7 @@ import hashlib
 import os
 import time
 
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -108,6 +108,26 @@ def piece_current_state(request: Request, piece_id: str) -> Response:
 
 
 
+GLOBAL_ENTRY_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'id': {'type': 'string'},
+        'name': {'type': 'string'},
+    },
+    'required': ['id', 'name'],
+}
+
+@extend_schema(
+    parameters=[OpenApiParameter('global_name', OpenApiTypes.STR, OpenApiParameter.PATH)],
+    responses={200: {'type': 'array', 'items': GLOBAL_ENTRY_SCHEMA}},
+    methods=['GET'],
+)
+@extend_schema(
+    parameters=[OpenApiParameter('global_name', OpenApiTypes.STR, OpenApiParameter.PATH)],
+    request={'application/json': {'type': 'object', 'properties': {'field': {'type': 'string'}, 'value': {'type': 'string'}}, 'required': ['field', 'value']}},
+    responses={200: GLOBAL_ENTRY_SCHEMA, 201: GLOBAL_ENTRY_SCHEMA},
+    methods=['POST'],
+)
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def global_entries(request: Request, global_name: str) -> Response:
