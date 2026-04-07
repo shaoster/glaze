@@ -176,6 +176,34 @@ export CLOUDINARY_UPLOAD_PRESET=<your-upload-preset>  # optional
 `WorkflowState` calls `POST /api/uploads/cloudinary/signature/` and uploads with the signed payload.
 `CLOUDINARY_API_SECRET` stays server-only and is never returned to the client.
 
+## Deployment
+Glaze is configured to deploy on [Render.com](https://render.com/) with a Django backend and static Vite frontend. The deployment process builds the React production bundle and serves it alongside the Django API as a unified service.
+
+### Environment variables
+On Render, set these environment variables in your web service config:
+
+| Variable | Purpose |
+|---|---|
+| `SECRET_KEY` | Django secret key (required on Render) |
+| `DATABASE_URL` | PostgreSQL connection string (auto-provided by Render) |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name (if using image uploads) |
+| `CLOUDINARY_API_KEY` | Cloudinary API key (if using image uploads) |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret (if using image uploads) |
+
+### Build and deployment
+The [`build.sh`](build.sh) script handles the full deployment pipeline:
+1. Installs Python and Node dependencies
+2. Builds the Vite React production bundle
+3. Collects Django static files
+4. Configures WhiteNoise to serve the Vite output at the root URL
+
+Render automatically runs this script when you push to the configured branch. The Vite-built frontend is served at `/` while Django API endpoints remain available at `/api/`.
+
+### Configuration details
+- **Database:** On Render, PostgreSQL is configured automatically via `DATABASE_URL` and `dj_database_url` in [`backend/settings.py`](backend/settings.py).
+- **Static files:** WhiteNoise is configured to serve the Vite production build (in `web/dist/`) at the URL root so hardcoded asset paths like `/thumbnails/...` work correctly.
+- **For more details:** See [Render's Django deployment guide](https://docs.render.com/deploy-django).
+
 ### What is tested
 
 **Common** ([`tests/test_workflow.py`](tests/test_workflow.py)): structural validation of [`workflow.yml`](workflow.yml) against [`workflow.schema.yml`](workflow.schema.yml), semantic/referential integrity (successor references, reachability, terminal-state rules), `additional_fields` DSL rules (enum constraints, ref targets), and global/model alignment against [`api/models.py`](api/models.py).
