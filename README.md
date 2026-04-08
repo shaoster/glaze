@@ -66,6 +66,16 @@ Per-user data isolation rules:
 - Detail/update endpoints fetch objects from a user-filtered queryset. If another user's ID is requested, the API returns `404` (not `403`) to avoid leaking object existence.
 - Global reference entries are user-scoped; names are unique per user (for example, two users can both have a `Location` named "Kiln A" without colliding).
 
+## React components
+The web UI is organized around a small set of React components in [`web/src/components/`](web/src/components/). Each component owns a distinct slice of product behavior:
+
+- [`NewPieceDialog.tsx`](web/src/components/NewPieceDialog.tsx): Creates a new piece from the list page, including name entry, optional notes, location selection/creation, curated thumbnail picking, save validation, and discard-confirmation when the form is dirty.
+- [`PieceList.tsx`](web/src/components/PieceList.tsx): Renders the main pieces table with thumbnail, name, current state, created date, and last modified date, and supports navigation into a piece detail page from each row.
+- [`PieceDetail.tsx`](web/src/components/PieceDetail.tsx): Displays a single piece header, renders the current editable workflow state, exposes valid next-state transitions from `workflow.yml`, blocks navigation when edits are unsaved, and lets the user expand past state history with image previews.
+- [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx): Handles editing the current state itself, including notes, current location, workflow-driven additional fields, save/error states, image URL entry, optional Cloudinary uploads, caption editing, image removal, and lightbox launch for current-state images.
+- [`GlobalFieldPicker.tsx`](web/src/components/GlobalFieldPicker.tsx): Provides the reusable autocomplete used for workflow globals such as locations, including fetching existing options, selecting an existing entry, and inline creation of new global records when allowed by the field definition.
+- [`ImageLightbox.tsx`](web/src/components/ImageLightbox.tsx): Shows piece images in a full-screen modal with captions plus desktop button navigation and touch swipe navigation for browsing multiple images.
+
 ## Quick start
 This section is for folks who just want to fire up the whole stack quickly and start poking around the app.
 
