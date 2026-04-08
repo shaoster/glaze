@@ -194,6 +194,18 @@ function AuthLanding({
         </Stack>
       </Paper>
     </Container>
+    <Box sx={{ mt: 4, pt: 2, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
+      <Typography variant="body2" color="text.secondary">
+        <a
+          href="/static/privacy-policy.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'inherit', textDecoration: 'underline' }}
+        >
+          Privacy Policy
+        </a>
+      </Typography>
+    </Box>
   )
 }
 
