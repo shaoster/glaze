@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import {
     Box,
     Button,
@@ -9,12 +9,12 @@ import {
     ListItem,
     ListItemText,
     MenuItem,
-    Modal,
     TextField,
     ToggleButton,
     ToggleButtonGroup,
     Typography,
 } from '@mui/material'
+import ImageLightbox from './ImageLightbox'
 import type { PieceDetail, PieceState } from '@common/types'
 import {
     hasCloudinaryUploadConfig,
@@ -166,24 +166,6 @@ export default function WorkflowState({
 
     // Lightbox state
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
-    const touchStartX = useRef<number | null>(null)
-
-    function openLightbox(index: number) { setLightboxIndex(index) }
-    function closeLightbox() { setLightboxIndex(null) }
-    function lightboxPrev() { setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i)) }
-    function lightboxNext() { setLightboxIndex((i) => (i !== null && i < images.length - 1 ? i + 1 : i)) }
-
-    function handleLightboxTouchStart(e: React.TouchEvent) {
-        touchStartX.current = e.touches[0].clientX
-    }
-    function handleLightboxTouchEnd(e: React.TouchEvent) {
-        if (touchStartX.current === null) return
-        const delta = e.changedTouches[0].clientX - touchStartX.current
-        if (delta > 50) lightboxPrev()
-        else if (delta < -50) lightboxNext()
-        touchStartX.current = null
-    }
     const canUploadToCloudinary = hasCloudinaryUploadConfig()
 
     // Reset form when pieceState changes (e.g. after a state transition)
@@ -502,7 +484,7 @@ export default function WorkflowState({
                                     </IconButton>
                                     <Box
                                         component="button"
-                                        onClick={() => openLightbox(i)}
+                                        onClick={() => setLightboxIndex(i)}
                                         aria-label={`View image ${i + 1}`}
                                         sx={{
                                             p: 0, border: 'none', background: 'none', cursor: 'pointer',
@@ -633,68 +615,13 @@ export default function WorkflowState({
               </Box>
             </Box>
             {/* Lightbox */}
-            <Modal
-                open={lightboxIndex !== null}
-                onClose={closeLightbox}
-                slotProps={{ backdrop: { sx: { backgroundColor: 'rgba(0,0,0,0.92)' } } }}
-            >
-                <Box
-                    onClick={closeLightbox}
-                    onTouchStart={handleLightboxTouchStart}
-                    onTouchEnd={handleLightboxTouchEnd}
-                    sx={{
-                        position: 'fixed', inset: 0,
-                        display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', justifyContent: 'center',
-                        gap: 2, outline: 'none',
-                    }}
-                >
-                    {lightboxIndex !== null && (
-                        <>
-                            <img
-                                src={images[lightboxIndex].url}
-                                alt={images[lightboxIndex].caption || 'Pottery image'}
-                                style={{
-                                    maxWidth: '90vw', maxHeight: '80vh',
-                                    objectFit: 'contain', borderRadius: 4,
-                                    userSelect: 'none',
-                                }}
-                            />
-                            {images[lightboxIndex].caption && (
-                                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                                    {images[lightboxIndex].caption}
-                                </Typography>
-                            )}
-                            {!isTouchDevice && images.length > 1 && (
-                                <Box
-                                    onClick={(e) => e.stopPropagation()}
-                                    sx={{ display: 'flex', gap: 2 }}
-                                >
-                                    <IconButton
-                                        onClick={lightboxPrev}
-                                        disabled={lightboxIndex === 0}
-                                        sx={{ color: 'white', fontSize: '1.5rem' }}
-                                        aria-label="previous image"
-                                    >
-                                        ←
-                                    </IconButton>
-                                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', alignSelf: 'center' }}>
-                                        {lightboxIndex + 1} / {images.length}
-                                    </Typography>
-                                    <IconButton
-                                        onClick={lightboxNext}
-                                        disabled={lightboxIndex === images.length - 1}
-                                        sx={{ color: 'white', fontSize: '1.5rem' }}
-                                        aria-label="next image"
-                                    >
-                                        →
-                                    </IconButton>
-                                </Box>
-                            )}
-                        </>
-                    )}
-                </Box>
-            </Modal>
+            {lightboxIndex !== null && (
+                <ImageLightbox
+                    images={images}
+                    initialIndex={lightboxIndex}
+                    onClose={() => setLightboxIndex(null)}
+                />
+            )}
 
         </Box>
     )
