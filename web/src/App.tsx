@@ -95,117 +95,119 @@ function AuthLanding({
   }
 
   return (
-    <Container maxWidth="sm" sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-      <Paper sx={{ width: '100%', p: 4 }}>
-        <Stack spacing={2}>
-          <Typography variant="h4" component="h1">
-            Glaze
-          </Typography>
-          <Typography color="text.secondary">
-            Track every pottery piece through your workflow.
-          </Typography>
-
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant={mode === 'login' ? 'contained' : 'outlined'}
-              onClick={() => setMode('login')}
-              disabled={submitting}
-            >
-              Log In
-            </Button>
-            <Button
-              variant={mode === 'register' ? 'contained' : 'outlined'}
-              onClick={() => setMode('register')}
-              disabled={submitting || !SIGN_UP_ENABLED}
-            >
-              Sign Up
-            </Button>
-          </Box>
-          {!SIGN_UP_ENABLED && (
-            <Typography variant="body2" color="text.secondary">
-              Sign up is temporarily disabled. Ask an admin to create your account.
+    <>
+      <Container maxWidth="sm" sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+        <Paper sx={{ width: '100%', p: 4 }}>
+          <Stack spacing={2}>
+            <Typography variant="h4" component="h1">
+              Glaze
             </Typography>
-          )}
+            <Typography color="text.secondary">
+              Track every pottery piece through your workflow.
+            </Typography>
 
-          <Box component="form" onSubmit={handleSubmit}>
-            <Stack spacing={2}>
-              <TextField
-                label="Email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                fullWidth
-                slotProps={{ htmlInput: { autoComplete: 'email' } }}
-              />
-              <TextField
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                fullWidth
-                slotProps={{ htmlInput: { autoComplete: mode === 'login' ? 'current-password' : 'new-password' } }}
-              />
-              {mode === 'register' && (
-                <>
-                  <TextField
-                    label="First name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    fullWidth
-                  />
-                  <TextField
-                    label="Last name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    fullWidth
-                  />
-                </>
-              )}
-              {error && <Alert severity="error">{error}</Alert>}
-              <Button type="submit" variant="contained" disabled={submitting || !email.trim() || !password}>
-                {mode === 'login' ? 'Log In' : 'Create Account'}
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant={mode === 'login' ? 'contained' : 'outlined'}
+                onClick={() => setMode('login')}
+                disabled={submitting}
+              >
+                Log In
               </Button>
-            </Stack>
-          </Box>
+              <Button
+                variant={mode === 'register' ? 'contained' : 'outlined'}
+                onClick={() => setMode('register')}
+                disabled={submitting || !SIGN_UP_ENABLED}
+              >
+                Sign Up
+              </Button>
+            </Box>
+            {!SIGN_UP_ENABLED && (
+              <Typography variant="body2" color="text.secondary">
+                Sign up is temporarily disabled. Ask an admin to create your account.
+              </Typography>
+            )}
 
-          {GOOGLE_CLIENT_ID && (
-            <>
-              <Divider>or</Divider>
-              <GoogleLogin
-                onSuccess={async ({ credential }) => {
-                  if (!credential) return
-                  setSubmitting(true)
-                  setError(null)
-                  try {
-                    const user = await loginWithGoogle(credential)
-                    onAuthenticated(user)
-                  } catch {
-                    setError('Google sign-in failed. Please try again.')
-                  } finally {
-                    setSubmitting(false)
-                  }
-                }}
-                onError={() => setError('Google sign-in failed. Please try again.')}
-              />
-            </>
-          )}
-        </Stack>
-      </Paper>
-    </Container>
-    <Box sx={{ mt: 4, pt: 2, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
-      <Typography variant="body2" color="text.secondary">
-        <a
-          href="/static/privacy-policy.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: 'inherit', textDecoration: 'underline' }}
-        >
-          Privacy Policy
-        </a>
-      </Typography>
-    </Box>
+            <Box component="form" onSubmit={handleSubmit}>
+              <Stack spacing={2}>
+                <TextField
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  fullWidth
+                  slotProps={{ htmlInput: { autoComplete: 'email' } }}
+                />
+                <TextField
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  fullWidth
+                  slotProps={{ htmlInput: { autoComplete: mode === 'login' ? 'current-password' : 'new-password' } }}
+                />
+                {mode === 'register' && (
+                  <>
+                    <TextField
+                      label="First name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      fullWidth
+                    />
+                    <TextField
+                      label="Last name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      fullWidth
+                    />
+                  </>
+                )}
+                {error && <Alert severity="error">{error}</Alert>}
+                <Button type="submit" variant="contained" disabled={submitting || !email.trim() || !password}>
+                  {mode === 'login' ? 'Log In' : 'Create Account'}
+                </Button>
+              </Stack>
+            </Box>
+
+            {GOOGLE_CLIENT_ID && (
+              <>
+                <Divider>or</Divider>
+                <GoogleLogin
+                  onSuccess={async ({ credential }) => {
+                    if (!credential) return
+                    setSubmitting(true)
+                    setError(null)
+                    try {
+                      const user = await loginWithGoogle(credential)
+                      onAuthenticated(user)
+                    } catch {
+                      setError('Google sign-in failed. Please try again.')
+                    } finally {
+                      setSubmitting(false)
+                    }
+                  }}
+                  onError={() => setError('Google sign-in failed. Please try again.')}
+                />
+              </>
+            )}
+          </Stack>
+        </Paper>
+      </Container>
+      <Box sx={{ mt: 4, pt: 2, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary">
+          <a
+            href="/static/privacy-policy.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'inherit', textDecoration: 'underline' }}
+          >
+            Privacy Policy
+          </a>
+        </Typography>
+      </Box>
+    </>
   )
 }
 
