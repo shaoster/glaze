@@ -19,6 +19,7 @@ import {
   CircularProgress,
   Container,
   CssBaseline,
+  Divider,
   Paper,
   Stack,
   TextField,
@@ -26,7 +27,8 @@ import {
 } from '@mui/material'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 
-import { fetchPiece, fetchPieces, fetchCurrentUser, loginWithEmail, logoutUser, registerWithEmail } from '@common/api'
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
+import { fetchPiece, fetchPieces, fetchCurrentUser, loginWithEmail, loginWithGoogle, logoutUser, registerWithEmail } from '@common/api'
 import NewPieceDialog from './components/NewPieceDialog'
 import PieceList from './components/PieceList'
 import PieceDetailComponent from './components/PieceDetail'
@@ -34,6 +36,7 @@ import type { AuthUser } from '@common/api'
 import type { PieceDetail, PieceSummary } from '@common/types'
 
 const DARK_THEME = createTheme({ palette: { mode: 'dark' } })
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 
 type AuthViewMode = 'login' | 'register'
 const SIGN_UP_ENABLED = false
@@ -153,6 +156,29 @@ function AuthLanding({
               </Button>
             </Stack>
           </Box>
+
+          {GOOGLE_CLIENT_ID && (
+            <>
+              <Divider>or</Divider>
+              <GoogleLogin
+                onSuccess={async ({ credential }) => {
+                  if (!credential) return
+                  setSubmitting(true)
+                  setError(null)
+                  try {
+                    const user = await loginWithGoogle(credential)
+                    onAuthenticated(user)
+                  } catch {
+                    setError('Google sign-in failed. Please try again.')
+                  } finally {
+                    setSubmitting(false)
+                  }
+                }}
+                onError={() => setError('Google sign-in failed. Please try again.')}
+                useOneTap
+              />
+            </>
+          )}
         </Stack>
       </Paper>
     </Container>
@@ -311,17 +337,19 @@ export default function App() {
   }
 
   return (
-    <ThemeProvider theme={DARK_THEME}>
-      <CssBaseline />
-      {loading ? (
-        <Container maxWidth="sm" sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-          <CircularProgress />
-        </Container>
-      ) : currentUser ? (
-        <AuthenticatedApp currentUser={currentUser} onLogout={handleLogout} />
-      ) : (
-        <AuthLanding onAuthenticated={setCurrentUser} />
-      )}
-    </ThemeProvider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID ?? ''}>
+      <ThemeProvider theme={DARK_THEME}>
+        <CssBaseline />
+        {loading ? (
+          <Container maxWidth="sm" sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+            <CircularProgress />
+          </Container>
+        ) : currentUser ? (
+          <AuthenticatedApp currentUser={currentUser} onLogout={handleLogout} />
+        ) : (
+          <AuthLanding onAuthenticated={setCurrentUser} />
+        )}
+      </ThemeProvider>
+    </GoogleOAuthProvider>
   )
 }

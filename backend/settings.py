@@ -199,3 +199,6 @@ STORAGES = {
 # https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Google OAuth — set GOOGLE_OAUTH_CLIENT_ID in the environment to enable Google sign-in.
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID', '')

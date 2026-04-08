@@ -234,6 +234,10 @@ class AuthUserSerializer(serializers.Serializer):
         return profile.profile_image_url if profile else ''
 
 
+class GoogleAuthSerializer(serializers.Serializer):
+    credential = serializers.CharField()
+
+
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
