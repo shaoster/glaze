@@ -174,39 +174,29 @@ function AuthLanding({
             {GOOGLE_CLIENT_ID && (
               <>
                 <Divider>or</Divider>
-                <GoogleLogin
-                  onSuccess={async ({ credential }) => {
-                    if (!credential) return
-                    setSubmitting(true)
-                    setError(null)
-                    try {
-                      const user = await loginWithGoogle(credential)
-                      onAuthenticated(user)
-                    } catch {
-                      setError('Google sign-in failed. Please try again.')
-                    } finally {
-                      setSubmitting(false)
-                    }
-                  }}
-                  onError={() => setError('Google sign-in failed. Please try again.')}
-                />
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                  <GoogleLogin
+                    onSuccess={async ({ credential }) => {
+                      if (!credential) return
+                      setSubmitting(true)
+                      setError(null)
+                      try {
+                        const user = await loginWithGoogle(credential)
+                        onAuthenticated(user)
+                      } catch {
+                        setError('Google sign-in failed. Please try again.')
+                      } finally {
+                        setSubmitting(false)
+                      }
+                    }}
+                    onError={() => setError('Google sign-in failed. Please try again.')}
+                  />
+                </Box>
               </>
             )}
           </Stack>
         </Paper>
       </Container>
-      <Box sx={{ mt: 4, pt: 2, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
-        <Typography variant="body2" color="text.secondary">
-          <a
-            href="/static/privacy-policy.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'inherit', textDecoration: 'underline' }}
-          >
-            Privacy Policy
-          </a>
-        </Typography>
-      </Box>
     </>
   )
 }
