@@ -64,11 +64,13 @@ jobs:
   web-build:
     name: Web (build)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
 
       - uses: actions/setup-node@v4
         with:
@@ -76,8 +78,26 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      - name: Install dependencies
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Node dependencies
+        working-directory: web
         run: npm ci
 
+      - name: Generate TypeScript types
+        run: |
+          python manage.py runserver 8080 &
+          DJANGO_PID=$!
+          echo "Waiting for Django on :8080..."
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/api/schema/ > /dev/null 2>&1 && break
+            sleep 1
+          done
+          cd web && npm run generate-types
+          kill "$DJANGO_PID"
+          wait "$DJANGO_PID" 2>/dev/null || true
+
       - name: Build
+        working-directory: web
         run: npm run build

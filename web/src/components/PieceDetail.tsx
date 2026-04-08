@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
     Alert,
     Box,
@@ -17,9 +17,10 @@ import {
     Typography,
 } from '@mui/material'
 import { useBlocker } from 'react-router-dom'
-import type { PieceDetail as PieceDetailType } from '@common/types'
+import type { CaptionedImage, PieceDetail as PieceDetailType } from '@common/types'
 import { formatState, SUCCESSORS } from '@common/types'
 import { addPieceState } from '@common/api'
+import ImageLightbox from './ImageLightbox'
 import WorkflowState from './WorkflowState'
 
 type PieceDetailProps = {
@@ -30,6 +31,7 @@ type PieceDetailProps = {
 export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps) {
     const [isDirty, setIsDirty] = useState(false)
     const [historyOpen, setHistoryOpen] = useState(false)
+    const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
     const [transitionDialogOpen, setTransitionDialogOpen] = useState(false)
     const [pendingTransition, setPendingTransition] = useState<string | null>(null)
     const [transitioning, setTransitioning] = useState(false)
@@ -38,6 +40,11 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     const successors = SUCCESSORS[currentState.state] ?? []
     const isTerminal = successors.length === 0
     const pastHistory = piece.history.slice(0, -1) // all except current (last)
+    // Flat list of all images across all past states, in history order.
+    const allHistoryImages = useMemo<CaptionedImage[]>(
+        () => pastHistory.flatMap((ps) => ps.images),
+        [pastHistory]
+    )
 
     // Block navigation when there are unsaved changes
     const blocker = useBlocker(isDirty)
@@ -154,38 +161,58 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                     </Button>
                     <Collapse in={historyOpen}>
                         <List dense>
-                            {pastHistory.map((ps, i) => (
-                                <ListItem key={i} disableGutters sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                                    <ListItemText
-                                        primary={formatState(ps.state)}
-                                        secondary={`${ps.created.toLocaleString()}${ps.notes ? ' — ' + ps.notes : ''}`}
-                                        slotProps={{
-                                            primary: { sx: { color: 'text.primary' } },
-                                            secondary: { sx: { color: 'text.secondary' } },
-                                        }}
-                                    />
-                                    {ps.images.length > 0 && (
-                                        <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
-                                            {ps.images.map((img, j) => (
-                                                <Box key={j} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: 80 }}>
-                                                    <img
-                                                        src={img.url}
-                                                        alt={img.caption || ''}
-                                                        style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4 }}
-                                                    />
-                                                    {img.caption && (
-                                                        <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center', wordBreak: 'break-word' }}>
-                                                            {img.caption}
-                                                        </Typography>
-                                                    )}
+                            {pastHistory.reduce<{ offset: number; items: React.ReactNode[] }>(
+                                ({ offset, items }, ps, i) => {
+                                    const stateOffset = offset
+                                    items.push(
+                                        <ListItem key={i} disableGutters sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                                            <ListItemText
+                                                primary={formatState(ps.state)}
+                                                secondary={`${ps.created.toLocaleString()}${ps.notes ? ' — ' + ps.notes : ''}`}
+                                                slotProps={{
+                                                    primary: { sx: { color: 'text.primary' } },
+                                                    secondary: { sx: { color: 'text.secondary' } },
+                                                }}
+                                            />
+                                            {ps.images.length > 0 && (
+                                                <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
+                                                    {ps.images.map((img, j) => (
+                                                        <Box
+                                                            key={j}
+                                                            component="button"
+                                                            onClick={() => setLightboxIndex(stateOffset + j)}
+                                                            aria-label={`View image ${stateOffset + j + 1}`}
+                                                            sx={{ p: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: 80 }}
+                                                        >
+                                                            <img
+                                                                src={img.url}
+                                                                alt={img.caption || ''}
+                                                                style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4 }}
+                                                            />
+                                                            {img.caption && (
+                                                                <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center', wordBreak: 'break-word' }}>
+                                                                    {img.caption}
+                                                                </Typography>
+                                                            )}
+                                                        </Box>
+                                                    ))}
                                                 </Box>
-                                            ))}
-                                        </Box>
-                                    )}
-                                </ListItem>
-                            ))}
+                                            )}
+                                        </ListItem>
+                                    )
+                                    return { offset: offset + ps.images.length, items }
+                                },
+                                { offset: 0, items: [] }
+                            ).items}
                         </List>
                     </Collapse>
+                    {lightboxIndex !== null && (
+                        <ImageLightbox
+                            images={allHistoryImages}
+                            initialIndex={lightboxIndex}
+                            onClose={() => setLightboxIndex(null)}
+                        />
+                    )}
                 </Box>
             )}
 
