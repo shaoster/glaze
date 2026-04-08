@@ -1,4 +1,14 @@
 asgiref==3.11.1
+certifi==2026.2.25
+cffi==2.0.0
+charset-normalizer==3.4.7
+cryptography==46.0.6
+google-auth==2.49.1
+idna==3.11
+pyasn1==0.6.3
+pyasn1-modules==0.4.2
+requests==2.33.1
+urllib3==2.6.3
 dj-database-url==2.3.0
 gunicorn==23.0.0
 uvicorn==0.44.0

@@ -155,6 +155,12 @@ export async function fetchCurrentUser(): Promise<AuthUser | null> {
     }
 }
 
+export async function loginWithGoogle(credential: string): Promise<AuthUser> {
+    await ensureCsrfCookie()
+    const { data } = await client.post<AuthUser>('auth/google/', { credential })
+    return data
+}
+
 export async function logoutUser(): Promise<void> {
     await ensureCsrfCookie()
     await client.post('auth/logout/', {})
