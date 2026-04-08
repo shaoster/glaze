@@ -175,7 +175,6 @@ function AuthLanding({
                   }
                 }}
                 onError={() => setError('Google sign-in failed. Please try again.')}
-                useOneTap
               />
             </>
           )}
