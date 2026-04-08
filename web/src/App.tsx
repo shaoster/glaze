@@ -20,11 +20,16 @@ import {
   Container,
   CssBaseline,
   Divider,
+  ListItemIcon,
+  Menu,
+  MenuItem,
   Paper,
   Stack,
   TextField,
   Typography,
 } from '@mui/material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import LogoutIcon from '@mui/icons-material/Logout'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
@@ -302,6 +307,8 @@ function AppShell({
   currentUser: AuthUser
   onLogout: () => void
 }) {
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
+
   const displayName = useMemo(() => {
     const fullName = `${currentUser.first_name} ${currentUser.last_name}`.trim()
     return fullName || currentUser.email
@@ -313,10 +320,27 @@ function AppShell({
         <Typography variant="h6" component="p" color="text.secondary">
           Glaze Workspace
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <Chip label={`Current user: ${displayName}`} color="primary" variant="outlined" />
-          <Button size="small" onClick={onLogout}>Log out</Button>
-        </Box>
+        <Chip
+          label={displayName}
+          color="primary"
+          variant="outlined"
+          onClick={(e) => setMenuAnchor(e.currentTarget)}
+          onDelete={(e) => setMenuAnchor(e.currentTarget)}
+          deleteIcon={<ExpandMoreIcon />}
+          sx={{ cursor: 'pointer' }}
+        />
+        <Menu
+          anchorEl={menuAnchor}
+          open={Boolean(menuAnchor)}
+          onClose={() => setMenuAnchor(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <MenuItem onClick={() => { setMenuAnchor(null); onLogout() }}>
+            <ListItemIcon><LogoutIcon fontSize="small" /></ListItemIcon>
+            Log out
+          </MenuItem>
+        </Menu>
       </Box>
       <Outlet />
     </Container>

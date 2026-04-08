@@ -103,7 +103,7 @@ describe('App auth flow', () => {
         })
 
         // Verify the authenticated view is shown
-        expect(screen.getByText('Current user: Pat Potter')).toBeInTheDocument()
+        expect(screen.getByText('Pat Potter')).toBeInTheDocument()
         expect(screen.getByText('Piece List Content')).toBeInTheDocument()
     })
 })
