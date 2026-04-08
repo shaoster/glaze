@@ -336,7 +336,15 @@ export default function App() {
   }
 
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID ?? ''}>
+    <GoogleOAuthProvider 
+      clientId={GOOGLE_CLIENT_ID ?? ''}
+      onScriptLoad={() => {
+        // Explicitly disable Google's automatic one-tap prompt
+        if (window.google?.accounts?.id) {
+          window.google.accounts.id.cancel()
+        }
+      }}
+    >
       <ThemeProvider theme={DARK_THEME}>
         <CssBaseline />
         {loading ? (
