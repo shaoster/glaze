@@ -50,6 +50,13 @@ if IS_RENDER:
         render_origin = f'https://{RENDER_EXTERNAL_HOSTNAME}'
         CORS_ALLOWED_ORIGINS.append(render_origin)
         CSRF_TRUSTED_ORIGINS.append(render_origin)
+        print(f'[DEBUG] CORS configured for Render: {render_origin}')
+    else:
+        print('[DEBUG] RENDER_EXTERNAL_HOSTNAME not set!')
+else:
+    print('[DEBUG] Running locally, not on Render')
+
+print(f'[DEBUG] Final CORS_ALLOWED_ORIGINS: {CORS_ALLOWED_ORIGINS}')
 
 
 # Application definition
