@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import PieceList from '../PieceList'
 import type { PieceSummary } from '@common/types'
@@ -107,6 +108,120 @@ describe('PieceList', () => {
             expect(within(rows[1]).getByText('designed')).toBeInTheDocument()
             expect(within(rows[2]).getByText('Mug')).toBeInTheDocument()
             expect(within(rows[2]).getByText('glazed')).toBeInTheDocument()
+        })
+    })
+
+    describe('filter dropdown', () => {
+        it('renders the filter dropdown', () => {
+            renderPieceList([])
+            expect(screen.getByLabelText('Filter')).toBeInTheDocument()
+        })
+
+        it('shows all pieces when no filter is selected', () => {
+            const pieces = [
+                makePiece({ id: 'id-1', name: 'Bowl', current_state: { state: 'designed' } as any }),
+                makePiece({ id: 'id-2', name: 'Mug', current_state: { state: 'completed' } as any }),
+                makePiece({ id: 'id-3', name: 'Vase', current_state: { state: 'recycled' } as any }),
+            ]
+            renderPieceList(pieces)
+            expect(screen.getByText('Bowl')).toBeInTheDocument()
+            expect(screen.getByText('Mug')).toBeInTheDocument()
+            expect(screen.getByText('Vase')).toBeInTheDocument()
+        })
+
+        it('filters to work in progress pieces only', async () => {
+            const user = userEvent.setup()
+            const pieces = [
+                makePiece({ id: 'id-1', name: 'Bowl', current_state: { state: 'designed' } as any }),
+                makePiece({ id: 'id-2', name: 'Mug', current_state: { state: 'completed' } as any }),
+                makePiece({ id: 'id-3', name: 'Vase', current_state: { state: 'recycled' } as any }),
+            ]
+            renderPieceList(pieces)
+
+            await user.click(screen.getByRole('combobox'))
+            await user.click(screen.getByRole('option', { name: 'Work in Progress' }))
+            await user.keyboard('{Escape}')
+
+            expect(screen.getByText('Bowl')).toBeInTheDocument()
+            expect(screen.queryByText('Mug')).not.toBeInTheDocument()
+            expect(screen.queryByText('Vase')).not.toBeInTheDocument()
+        })
+
+        it('filters to completed pieces only', async () => {
+            const user = userEvent.setup()
+            const pieces = [
+                makePiece({ id: 'id-1', name: 'Bowl', current_state: { state: 'designed' } as any }),
+                makePiece({ id: 'id-2', name: 'Mug', current_state: { state: 'completed' } as any }),
+                makePiece({ id: 'id-3', name: 'Vase', current_state: { state: 'recycled' } as any }),
+            ]
+            renderPieceList(pieces)
+
+            await user.click(screen.getByRole('combobox'))
+            await user.click(screen.getByRole('option', { name: 'Completed' }))
+            await user.keyboard('{Escape}')
+
+            expect(screen.queryByText('Bowl')).not.toBeInTheDocument()
+            expect(screen.getByText('Mug')).toBeInTheDocument()
+            expect(screen.queryByText('Vase')).not.toBeInTheDocument()
+        })
+
+        it('filters to discarded pieces only', async () => {
+            const user = userEvent.setup()
+            const pieces = [
+                makePiece({ id: 'id-1', name: 'Bowl', current_state: { state: 'designed' } as any }),
+                makePiece({ id: 'id-2', name: 'Mug', current_state: { state: 'completed' } as any }),
+                makePiece({ id: 'id-3', name: 'Vase', current_state: { state: 'recycled' } as any }),
+            ]
+            renderPieceList(pieces)
+
+            await user.click(screen.getByRole('combobox'))
+            await user.click(screen.getByRole('option', { name: 'Discarded' }))
+            await user.keyboard('{Escape}')
+
+            expect(screen.queryByText('Bowl')).not.toBeInTheDocument()
+            expect(screen.queryByText('Mug')).not.toBeInTheDocument()
+            expect(screen.getByText('Vase')).toBeInTheDocument()
+        })
+
+        it('supports combining multiple filters', async () => {
+            const user = userEvent.setup()
+            const pieces = [
+                makePiece({ id: 'id-1', name: 'Bowl', current_state: { state: 'designed' } as any }),
+                makePiece({ id: 'id-2', name: 'Mug', current_state: { state: 'completed' } as any }),
+                makePiece({ id: 'id-3', name: 'Vase', current_state: { state: 'recycled' } as any }),
+            ]
+            renderPieceList(pieces)
+
+            await user.click(screen.getByRole('combobox'))
+            await user.click(screen.getByRole('option', { name: 'Completed' }))
+            await user.click(screen.getByRole('option', { name: 'Discarded' }))
+            await user.keyboard('{Escape}')
+
+            expect(screen.queryByText('Bowl')).not.toBeInTheDocument()
+            expect(screen.getByText('Mug')).toBeInTheDocument()
+            expect(screen.getByText('Vase')).toBeInTheDocument()
+        })
+
+        it('shows all pieces again when filter is cleared', async () => {
+            const user = userEvent.setup()
+            const pieces = [
+                makePiece({ id: 'id-1', name: 'Bowl', current_state: { state: 'designed' } as any }),
+                makePiece({ id: 'id-2', name: 'Mug', current_state: { state: 'completed' } as any }),
+            ]
+            renderPieceList(pieces)
+
+            // Apply filter
+            await user.click(screen.getByRole('combobox'))
+            await user.click(screen.getByRole('option', { name: 'Completed' }))
+            await user.keyboard('{Escape}')
+            expect(screen.queryByText('Bowl')).not.toBeInTheDocument()
+
+            // Remove filter by clicking the same option again
+            await user.click(screen.getByRole('combobox'))
+            await user.click(screen.getByRole('option', { name: 'Completed' }))
+            await user.keyboard('{Escape}')
+            expect(screen.getByText('Bowl')).toBeInTheDocument()
+            expect(screen.getByText('Mug')).toBeInTheDocument()
         })
     })
 })
