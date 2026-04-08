@@ -67,6 +67,9 @@ staticfiles/
 # Vite production build
 web/dist/
 
+# Vite cache
+web/.vite
+
 # Glaze dev helpers (env.sh)
 .dev-logs/
 .dev-pids/
