@@ -150,6 +150,7 @@ PieceSummary & {
 - Validate state transitions server-side against `workflow.yml` before persisting a new `PieceState`.
 - `workflow.yml` can be read at startup and cached; do not re-read it per request.
 - CORS is installed (`corsheaders`); ensure it is in `MIDDLEWARE` and configured before shipping any cross-origin endpoint.
+- Google OAuth is configured via `GOOGLE_OAUTH_CLIENT_ID` in environment settings; enables `POST /api/auth/google/` endpoint for JWT credential verification.
 - The database is SQLite during development; avoid raw SQL.
 - API auth is session-based (`SessionAuthentication`) with CSRF protection.
 - User data isolation is mandatory: lists must scope to `request.user`, and object lookups must use user-filtered querysets.
@@ -162,6 +163,7 @@ PieceSummary & {
 - `POST /api/auth/logout/` → clear current session
 - `GET /api/auth/me/` → current authenticated user
 - `POST /api/auth/register/` → register + login (backend remains available)
+- `POST /api/auth/google/` → Google OAuth 2.0 login via JWT credential
 - `GET /api/pieces/` → list of `PieceSummary`
 - `GET /api/pieces/<id>/` → `PieceDetail`
 - `POST /api/pieces/` → create a new piece (always starts in `designed` state; accepts `name`, optional `thumbnail`, and optional `notes`)
@@ -191,6 +193,7 @@ PieceSummary & {
 - State names and valid transitions come from `workflow.yml` via the constants in `@common/types` (`STATES`, `SUCCESSORS`) — do not hardcode them in components.
 - All HTTP calls go through [`frontend_common/src/api.ts`](frontend_common/src/api.ts) (imported as `@common/api`). This is the single place where wire types (ISO date strings, etc.) are mapped to domain types as declared in `@common/types`. Components must never perform their own serialization or deserialization — they receive fully-typed domain objects and call the functions in `api.ts` to write data.
 - Use Axios for all HTTP requests to the backend, and all HTTP requests should go through `@common/api`.
+- Google OAuth is configured via `VITE_GOOGLE_CLIENT_ID` in environment settings; enables Google Sign-In button in the login form using `@react-oauth/google`.
 - TypeScript strict mode is on; avoid `any`.
 - New component files should be `.tsx`, not `.js`.
 - Use `slotProps={{ htmlInput: { ... } }}` on MUI `TextField` — the `inputProps` prop is deprecated in MUI v7.
@@ -227,8 +230,20 @@ PieceSummary & {
 **Auth UI flow (`App.tsx`):**
 - On load, the web app calls `fetchCurrentUser()` (`GET /api/auth/me/`).
 - Authenticated users are shown the routed app shell (`RouterProvider` + data router) with current-user chip and logout action.
-- Unauthenticated users are shown the login landing form.
+- Unauthenticated users are shown the login landing form with email/password fields and optional Google Sign-In button.
+- Google Sign-In button appears when `VITE_GOOGLE_CLIENT_ID` is configured; uses `@react-oauth/google` for OAuth flow.
 - `Sign Up` is intentionally disabled in the web UI (`SIGN_UP_ENABLED = false`) so accounts can be created manually in Django admin for now.
+
+**Google OAuth Flow:**
+- **Frontend**: Uses `@react-oauth/google` to display Google Sign-In button when `VITE_GOOGLE_CLIENT_ID` is configured in environment.
+- **Authentication**: User clicks button, Google handles OAuth flow and returns JWT credential to frontend.
+- **Backend Verification**: Frontend sends JWT to `POST /api/auth/google/`, Django verifies token with Google's servers using `google-auth` library.
+- **User Management**: 
+  - Looks up existing user by Google subject ID (`UserProfile.openid_subject`)
+  - Falls back to email matching for graceful migration from email/password accounts
+  - Creates new Google-only account if no match found (unusable password)
+- **Profile Sync**: Updates user profile information (name, picture) from Google on each login.
+- **Session**: Creates Django session and returns authenticated user data.
 
 ---
 
