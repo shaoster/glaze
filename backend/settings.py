@@ -45,6 +45,12 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = ['http://localhost:5173']
 
+if IS_RENDER:
+    if RENDER_EXTERNAL_HOSTNAME:
+        render_origin = f'https://{RENDER_EXTERNAL_HOSTNAME}'
+        CORS_ALLOWED_ORIGINS.append(render_origin)
+        CSRF_TRUSTED_ORIGINS.append(render_origin)
+
 
 # Application definition
 
