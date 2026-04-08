@@ -35,6 +35,19 @@ import PieceDetailComponent from './components/PieceDetail'
 import type { AuthUser } from '@common/api'
 import type { PieceDetail, PieceSummary } from '@common/types'
 
+// Extend window type for Google OAuth
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        id?: {
+          cancel: () => void
+        }
+      }
+    }
+  }
+}
+
 const DARK_THEME = createTheme({ palette: { mode: 'dark' } })
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 
@@ -330,21 +343,24 @@ export default function App() {
       .finally(() => setLoading(false))
   }, [])
 
+  // Disable Google one-tap prompt
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.cancel()
+      }
+    }, 1000) // Wait for Google script to load
+
+    return () => clearTimeout(timer)
+  }, [])
+
   async function handleLogout() {
     await logoutUser()
     setCurrentUser(null)
   }
 
   return (
-    <GoogleOAuthProvider 
-      clientId={GOOGLE_CLIENT_ID ?? ''}
-      onScriptLoad={() => {
-        // Explicitly disable Google's automatic one-tap prompt
-        if (window.google?.accounts?.id) {
-          window.google.accounts.id.cancel()
-        }
-      }}
-    >
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID ?? ''}>
       <ThemeProvider theme={DARK_THEME}>
         <CssBaseline />
         {loading ? (
