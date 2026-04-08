@@ -176,6 +176,7 @@ function AuthLanding({
                 <Divider>or</Divider>
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                   <GoogleLogin
+                    theme="outline"
                     onSuccess={async ({ credential }) => {
                       if (!credential) return
                       setSubmitting(true)
