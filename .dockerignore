@@ -1,0 +1,43 @@
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[codz]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# Django runtime artifacts
+db.sqlite3
+staticfiles/
+
+# Node
+web/node_modules/
+mobile/node_modules/
+web/.vite/
+
+# Frontend build output (rebuilt inside Docker)
+web/dist/
+frontend_common/src/generated-types.ts
+
+# Dev tooling
+.dev-logs/
+.dev-pids/
+.env
+.env.local
+.env.local.*
+
+# Docker files themselves (avoid recursive context issues)
+docker-compose.yml
+.dockerignore
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
