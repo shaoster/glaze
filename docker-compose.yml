@@ -15,11 +15,7 @@ services:
       retries: 10
 
   web:
-    image: glaze:latest
-    build:
-      context: .
-      args:
-        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+    image: ghcr.io/shaoster/glaze:latest
     restart: unless-stopped
     ports:
       - "8000:8000"

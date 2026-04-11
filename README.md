@@ -251,18 +251,34 @@ The repo ships a [`Dockerfile`](Dockerfile) and [`docker-compose.yml`](docker-co
 - `web` — Gunicorn serving Django + the Vite-built frontend via WhiteNoise on port 8000
 - `db` — Postgres 17 with a named volume for persistence
 
+**How it works:**
+
+- Every push to `main` that passes all tests triggers a GitHub Actions `publish` job that builds the Docker image (with `VITE_GOOGLE_CLIENT_ID` baked in from a GitHub Actions secret) and pushes it to `ghcr.io/shaoster/glaze:latest`.
+- The droplet never needs git, Node, or Python build tools — it just pulls the pre-built image.
+- Migrations run automatically inside the container on every start (via [`docker-entrypoint.sh`](docker-entrypoint.sh)).
+- Runtime secrets (`SECRET_KEY`, `DATABASE_URL`, `CLOUDINARY_*`, etc.) live only in `.env` on the droplet and are never part of the image.
+
+**One-time GitHub setup:**
+
+Add `VITE_GOOGLE_CLIENT_ID` to your repo's Actions secrets (**Settings → Secrets and variables → Actions**), set to the same value as your Google OAuth client ID. Leave it empty to build without Google Sign-In.
+
 **First-time setup on the droplet:**
 
 ```bash
 # Install Docker (Ubuntu)
 curl -fsSL https://get.docker.com | sh
 
-# Clone the repo and configure secrets
-git clone <your-repo-url> ~/glaze
-cp ~/glaze/.env.production.example ~/glaze/.env
-# edit ~/glaze/.env — fill in SECRET_KEY, POSTGRES_PASSWORD, ALLOWED_HOST, APP_ORIGIN
+# Copy docker-compose.yml and configure secrets (no need to clone the full repo)
+mkdir ~/glaze
+scp docker-compose.yml user@your-droplet:~/glaze/
+scp .env.production.example user@your-droplet:~/glaze/.env
+# edit ~/glaze/.env — fill in SECRET_KEY, POSTGRES_PASSWORD, ALLOWED_HOST, APP_ORIGIN, etc.
 
-# Start the stack (builds the image on first run)
+# Authenticate with GitHub Container Registry (one-time)
+# Create a classic PAT at github.com/settings/tokens with read:packages scope
+docker login ghcr.io -u shaoster -p <your-PAT>
+
+# Pull and start the stack
 cd ~/glaze
 docker compose up -d
 ```
@@ -273,7 +289,7 @@ docker compose up -d
 ./deploy.sh user@your-droplet
 ```
 
-`deploy.sh` SSHes into the droplet, pulls the latest code, rebuilds the image, runs migrations, and restarts the `web` service.
+`deploy.sh` SSHes into the droplet, pulls the latest image from ghcr.io, and restarts the `web` service. No source code needed on the droplet.
 
 **Environment variables** (set in `.env` on the droplet):
 
@@ -283,10 +299,14 @@ docker compose up -d
 | `POSTGRES_PASSWORD` | Yes | Password for the Postgres `glaze` user |
 | `ALLOWED_HOST` | Yes | Hostname of the droplet, e.g. `myapp.example.com` |
 | `APP_ORIGIN` | Yes | Full origin URL, e.g. `https://myapp.example.com` |
-| `GOOGLE_OAUTH_CLIENT_ID` | No | Enable Google Sign-In |
+| `GOOGLE_OAUTH_CLIENT_ID` | No | Backend runtime verification of Google JWTs |
 | `CLOUDINARY_CLOUD_NAME` | No | Enable Cloudinary image uploads |
 | `CLOUDINARY_API_KEY` | No | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | No | Cloudinary API secret |
+| `CLOUDINARY_UPLOAD_FOLDER` | No | Cloudinary folder for uploaded images |
+| `CLOUDINARY_UPLOAD_PRESET` | No | Cloudinary upload preset |
+
+Note: `VITE_GOOGLE_CLIENT_ID` is **not** set here — it is baked into the JS bundle at CI build time via the GitHub Actions secret.
 
 **Local overrides:** create `docker-compose.override.yml` (gitignored) to customise port bindings or mount volumes during local Docker testing without touching the main compose file.
 
