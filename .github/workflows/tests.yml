@@ -128,3 +128,5 @@ jobs:
           tags: ghcr.io/shaoster/glaze:latest
           build-args: |
             VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
