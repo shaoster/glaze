@@ -16,7 +16,10 @@ services:
 
   web:
     image: glaze:latest
-    build: .
+    build:
+      context: .
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     restart: unless-stopped
     ports:
       - "8000:8000"

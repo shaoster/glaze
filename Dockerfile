@@ -3,6 +3,12 @@
 # and build the Vite frontend before collectstatic can run.
 FROM python:3.14-slim AS builder
 
+# VITE_GOOGLE_CLIENT_ID is baked into the JS bundle at build time.
+# Pass it via: docker compose build --build-arg VITE_GOOGLE_CLIENT_ID=...
+# or set it in the build.args section of docker-compose.yml.
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl ca-certificates && \
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
