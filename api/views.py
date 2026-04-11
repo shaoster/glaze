@@ -281,7 +281,9 @@ def auth_google(request: Request) -> Response:
         idinfo = google_id_token.verify_oauth2_token(
             credential, google_requests.Request(), client_id
         )
-    except ValueError:
+    except ValueError as e:
+        import logging
+        logging.getLogger(__name__).error('Google token verification failed: %s', e)
         return Response({'detail': 'Invalid Google credential.'}, status=status.HTTP_400_BAD_REQUEST)
 
     google_sub = idinfo['sub']
