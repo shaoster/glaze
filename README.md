@@ -310,6 +310,37 @@ Note: `VITE_GOOGLE_CLIENT_ID` is **not** set here — it is baked into the JS bu
 
 **Local overrides:** create `docker-compose.override.yml` (gitignored) to customise port bindings or mount volumes during local Docker testing without touching the main compose file.
 
+**Setting up Nginx + SSL (one-time, after first `docker compose up -d`):**
+
+```bash
+./setup-nginx.sh user@your-droplet myapp.example.com admin@example.com
+```
+
+[`setup-nginx.sh`](setup-nginx.sh) installs Nginx and Certbot on the droplet, copies [`nginx/glaze.conf`](nginx/glaze.conf) with your domain substituted in, opens ports 80/443 in the firewall, and runs `certbot --nginx` to provision a Let's Encrypt cert. Certbot rewrites the Nginx config in-place to add TLS and sets up automatic renewal via a systemd timer.
+
+**Prerequisites:**
+- A domain with a DNS A record pointing at the droplet's IP (must be propagated before running Certbot)
+- `ufw` active on the droplet (`ufw enable`)
+
+**After initial setup**, the Nginx config lives at `/etc/nginx/sites-available/glaze` on the droplet. Do not re-run `setup-nginx.sh` or overwrite that file — you will lose the TLS configuration Certbot added. To make intentional Nginx config changes, edit the file on the droplet directly and run `systemctl reload nginx`.
+
+**Alternative: Tailscale (no public domain required)**
+
+If you don't have a public domain, or want the app private to your devices, use Tailscale instead. The app gets a valid HTTPS cert for its `*.ts.net` MagicDNS hostname and is only reachable from devices on your Tailscale network.
+
+**Before running the script:**
+1. Enable **HTTPS Certificates** and **MagicDNS** in the [Tailscale admin console](https://login.tailscale.com/admin/dns)
+2. Generate an auth key at [Tailscale admin → Keys](https://login.tailscale.com/admin/settings/keys)
+3. Install Tailscale on your local machine/devices so they can reach the droplet
+
+```bash
+./setup-tailscale.sh user@your-droplet tskey-auth-xxxxx
+```
+
+[`setup-tailscale.sh`](setup-tailscale.sh) installs Tailscale and Nginx, authenticates the droplet, issues a TLS cert via `tailscale cert`, configures Nginx with the `*.ts.net` hostname, restricts ports 80/443 to the Tailscale subnet only (port 8000 is also closed), and installs a weekly cron job to renew the cert.
+
+After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` from any device on your Tailscale network. To find the exact URL, run `tailscale status` on the droplet or check the [Tailscale admin console](https://login.tailscale.com/admin/machines).
+
 ---
 
 ### Render (managed)
