@@ -135,6 +135,9 @@ jobs:
     name: Deploy to droplet
     runs-on: ubuntu-latest
     needs: [publish]
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
 
