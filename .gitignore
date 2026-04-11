@@ -157,6 +157,10 @@ celerybeat.pid
 .envrc
 .env.local
 .env.local.*
+.env.production
+
+# Docker local overrides
+docker-compose.override.yml
 .venv
 env/
 venv/
