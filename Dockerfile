@@ -1,7 +1,7 @@
 # ── Stage 1: builder ──────────────────────────────────────────────────────────
 # Needs both Python and Node to generate TS types from the live OpenAPI schema
 # and build the Vite frontend before collectstatic can run.
-FROM python:3.14-slim AS builder
+FROM python:3.12-slim AS builder
 
 # VITE_GOOGLE_CLIENT_ID is baked into the JS bundle at build time.
 # Pass it via: docker compose build --build-arg VITE_GOOGLE_CLIENT_ID=...
@@ -43,7 +43,7 @@ RUN bash -c '\
 
 # ── Stage 2: runtime ──────────────────────────────────────────────────────────
 # Lean Python-only image — no Node, no source maps, no node_modules.
-FROM python:3.14-slim AS runtime
+FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
