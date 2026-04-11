@@ -32,6 +32,30 @@ class TestPatchCurrentState:
         assert len(result_images) == 1
         assert result_images[0]['url'] == 'http://example.com/img.jpg'
 
+    def test_update_images_empty_caption(self, client, piece):
+        images = [{'url': 'http://example.com/img.jpg', 'caption': ''}]
+        response = client.patch(
+            f'/api/pieces/{piece.id}/state/',
+            {'images': images},
+            format='json',
+        )
+        assert response.status_code == 200
+        result_images = response.json()['current_state']['images']
+        assert len(result_images) == 1
+        assert result_images[0]['caption'] == ''
+
+    def test_update_images_missing_caption(self, client, piece):
+        images = [{'url': 'http://example.com/img.jpg'}]
+        response = client.patch(
+            f'/api/pieces/{piece.id}/state/',
+            {'images': images},
+            format='json',
+        )
+        assert response.status_code == 200
+        result_images = response.json()['current_state']['images']
+        assert len(result_images) == 1
+        assert result_images[0]['caption'] == ''
+
     def test_patch_images_without_created(self, client, piece):
         images = [{'url': 'http://example.com/img.jpg', 'caption': 'Test'}]
         response = client.patch(

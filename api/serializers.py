@@ -10,7 +10,7 @@ from .workflow import ENTRY_STATE, SUCCESSORS, VALID_STATES, get_state_ref_field
 
 class CaptionedImageSerializer(serializers.Serializer):
     url = serializers.CharField()
-    caption = serializers.CharField()
+    caption = serializers.CharField(allow_blank=True, default='')
     created = serializers.DateTimeField(required=False)
 
 
