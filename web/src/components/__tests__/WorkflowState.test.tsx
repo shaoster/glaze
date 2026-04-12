@@ -12,7 +12,18 @@ vi.mock('@common/api', () => ({
     updatePiece: vi.fn(),
     createGlobalEntry: vi.fn(),
     hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
-    uploadImageToCloudinary: vi.fn(),
+    fetchCloudinaryWidgetConfig: vi.fn().mockResolvedValue({ cloud_name: 'demo', api_key: '123456' }),
+    signCloudinaryWidgetParams: vi.fn().mockResolvedValue('mock-signature'),
+}))
+
+// Render CloudinaryImage as a plain <img> so tests can assert on src/testid
+vi.mock('../CloudinaryImage', () => ({
+    default: ({ url, 'data-testid': testId, style, onLoad }: {
+        url: string
+        'data-testid'?: string
+        style?: React.CSSProperties
+        onLoad?: React.ReactEventHandler<HTMLImageElement>
+    }) => <img src={url} data-testid={testId} style={style} onLoad={onLoad} />,
 }))
 
 function makeState(overrides: Partial<PieceState> = {}): PieceState {
@@ -51,9 +62,25 @@ const defaultProps = {
     onDirtyChange: vi.fn(),
 }
 
+// Helper to simulate a successful Cloudinary Upload Widget upload.
+// Returns a function that, when called, fires the widget callback with a success result.
+function setupUploadWidget(overrides: { secure_url?: string; public_id?: string } = {}) {
+    const secure_url = overrides.secure_url ?? 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
+    const public_id = overrides.public_id ?? 'sample'
+    const noop = () => {}
+    window.cloudinary = {
+        openUploadWidget: vi.fn((_options, callback) => {
+            callback(null, { event: 'success', info: { secure_url, public_id, resource_type: 'image' } })
+            return { open: noop, close: noop, destroy: noop }
+        }),
+    }
+}
+
 beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(api.fetchGlobalEntries).mockResolvedValue([])
+    // Reset window.cloudinary between tests
+    window.cloudinary = undefined
 })
 
 describe('WorkflowState', () => {
@@ -387,9 +414,9 @@ describe('WorkflowState', () => {
 
     it('switching modes clears the preview', async () => {
         vi.mocked(api.hasCloudinaryUploadConfig).mockReturnValue(true)
-        vi.mocked(api.uploadImageToCloudinary).mockResolvedValue('https://res.cloudinary.com/demo/image/upload/sample.jpg')
+        setupUploadWidget()
         render(<WorkflowState {...defaultProps} />)
-        fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [new File(['img'], 'test.png', { type: 'image/png' })] } })
+        fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
         await waitFor(() => expect(screen.getByTestId('upload-preview')).toBeInTheDocument())
         fireEvent.click(screen.getByRole('button', { name: 'Paste URL' }))
         expect(screen.queryByTestId('upload-preview')).not.toBeInTheDocument()
@@ -398,10 +425,9 @@ describe('WorkflowState', () => {
 
     it('replaces upload button with preview image after successful upload', async () => {
         vi.mocked(api.hasCloudinaryUploadConfig).mockReturnValue(true)
-        vi.mocked(api.uploadImageToCloudinary).mockResolvedValue('https://res.cloudinary.com/demo/image/upload/sample.jpg')
+        setupUploadWidget({ secure_url: 'https://res.cloudinary.com/demo/image/upload/sample.jpg' })
         render(<WorkflowState {...defaultProps} />)
-        fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [new File(['img'], 'test.png', { type: 'image/png' })] } })
-        await waitFor(() => expect(api.uploadImageToCloudinary).toHaveBeenCalled())
+        fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
         await waitFor(() => {
             expect(screen.queryByRole('button', { name: 'Upload Image' })).not.toBeInTheDocument()
             const preview = screen.getByTestId('upload-preview') as HTMLImageElement
@@ -411,9 +437,9 @@ describe('WorkflowState', () => {
 
     it('shows spinner while upload preview image is loading, then hides it on load', async () => {
         vi.mocked(api.hasCloudinaryUploadConfig).mockReturnValue(true)
-        vi.mocked(api.uploadImageToCloudinary).mockResolvedValue('https://res.cloudinary.com/demo/image/upload/sample.jpg')
+        setupUploadWidget()
         render(<WorkflowState {...defaultProps} />)
-        fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [new File(['img'], 'test.png', { type: 'image/png' })] } })
+        fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
         await waitFor(() => expect(screen.getByTestId('upload-preview')).toBeInTheDocument())
 
         const preview = screen.getByTestId('upload-preview')

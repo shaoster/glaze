@@ -21,6 +21,7 @@ import type { CaptionedImage, PieceDetail as PieceDetailType } from '@common/typ
 import { formatState, SUCCESSORS } from '@common/types'
 import { addPieceState } from '@common/api'
 import ImageLightbox from './ImageLightbox'
+import CloudinaryImage from './CloudinaryImage'
 import WorkflowState from './WorkflowState'
 
 type PieceDetailProps = {
@@ -184,9 +185,11 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                                                             aria-label={`View image ${stateOffset + j + 1}`}
                                                             sx={{ p: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: 80 }}
                                                         >
-                                                            <img
-                                                                src={img.url}
+                                                            <CloudinaryImage
+                                                                url={img.url}
+                                                                cloudinary_public_id={img.cloudinary_public_id}
                                                                 alt={img.caption || ''}
+                                                                context="thumbnail"
                                                                 style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4 }}
                                                             />
                                                             {img.caption && (

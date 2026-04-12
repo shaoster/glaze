@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
     Box,
     Button,
@@ -15,10 +15,12 @@ import {
     Typography,
 } from '@mui/material'
 import ImageLightbox from './ImageLightbox'
+import CloudinaryImage from './CloudinaryImage'
 import type { PieceDetail, PieceState } from '@common/types'
 import {
     hasCloudinaryUploadConfig,
-    uploadImageToCloudinary,
+    fetchCloudinaryWidgetConfig,
+    signCloudinaryWidgetParams,
     updateCurrentState,
     updatePiece,
 } from '@common/api'
@@ -37,7 +39,7 @@ type WorkflowStateProps = {
     currentLocation?: string
 }
 
-type ImageEntry = { url: string; caption: string }
+type ImageEntry = { url: string; caption: string; cloudinary_public_id?: string | null }
 
 type AdditionalFieldInputMap = Record<string, string>
 
@@ -118,6 +120,7 @@ function stateImages(pieceState: PieceState): ImageEntry[] {
     return pieceState.images.map((img) => ({
         url: img.url,
         caption: img.caption,
+        cloudinary_public_id: img.cloudinary_public_id ?? null,
     }))
 }
 
@@ -132,7 +135,7 @@ export default function WorkflowState({
     const [images, setImages] = useState<ImageEntry[]>(stateImages(pieceState))
     const [newImageUrl, setNewImageUrl] = useState('')
     const [newImageCaption, setNewImageCaption] = useState('')
-    const [uploadingImage, setUploadingImage] = useState(false)
+    const [newImagePublicId, setNewImagePublicId] = useState<string | null>(null)
     const [uploadError, setUploadError] = useState<string | null>(null)
     const [imageInputMode, setImageInputMode] = useState<'url' | 'upload'>(
         () => hasCloudinaryUploadConfig() ? 'upload' : 'url'
@@ -215,7 +218,10 @@ export default function WorkflowState({
 
     async function addImage() {
         if (!newImageUrl.trim()) return
-        const updatedImages = [...images, { url: newImageUrl.trim(), caption: newImageCaption.trim() }]
+        const updatedImages = [
+            ...images,
+            { url: newImageUrl.trim(), caption: newImageCaption.trim(), cloudinary_public_id: newImagePublicId },
+        ]
         setSavingImage(true)
         setImageError(null)
         try {
@@ -227,6 +233,7 @@ export default function WorkflowState({
             onSaved(result)
             setNewImageUrl('')
             setNewImageCaption('')
+            setNewImagePublicId(null)
         } catch {
             setImageError('Failed to save image. Please try again.')
         } finally {
@@ -279,22 +286,40 @@ export default function WorkflowState({
         }
     }
 
-    async function handleCloudinaryUpload(event: ChangeEvent<HTMLInputElement>) {
-        const file = event.target.files?.[0]
-        if (!file) {
+    async function handleUploadWidgetClick() {
+        setUploadError(null)
+        let config
+        try {
+            config = await fetchCloudinaryWidgetConfig()
+        } catch {
+            setUploadError('Failed to load upload configuration. Please try again.')
             return
         }
-        setUploadingImage(true)
-        setUploadError(null)
-        try {
-            const uploadedUrl = await uploadImageToCloudinary(file)
-            setNewImageUrl(uploadedUrl)
-        } catch {
-            setUploadError('Failed to upload image. Check Cloudinary config and try again.')
-        } finally {
-            setUploadingImage(false)
-            event.target.value = ''
-        }
+        window.cloudinary?.openUploadWidget(
+            {
+                cloudName: config.cloud_name,
+                apiKey: config.api_key,
+                uploadSignature: (callback, paramsToSign) => {
+                    signCloudinaryWidgetParams(paramsToSign as Record<string, unknown>)
+                        .then(callback)
+                        .catch(() => setUploadError('Failed to sign upload. Please try again.'))
+                },
+                ...(config.folder ? { folder: config.folder } : {}),
+                sources: ['local', 'camera'],
+                multiple: false,
+                resourceType: 'image',
+            },
+            (error, result) => {
+                if (error) {
+                    setUploadError('Upload failed. Please try again.')
+                    return
+                }
+                if (result?.event === 'success') {
+                    setNewImageUrl(result.info.secure_url)
+                    setNewImagePublicId(result.info.public_id)
+                }
+            }
+        )
     }
 
     function handleAdditionalFieldChange(name: string, value: string) {
@@ -491,9 +516,11 @@ export default function WorkflowState({
                                             borderRadius: 0.5, display: 'block', flexShrink: 0,
                                         }}
                                     >
-                                        <img
-                                            src={img.url}
+                                        <CloudinaryImage
+                                            url={img.url}
+                                            cloudinary_public_id={img.cloudinary_public_id}
                                             alt={img.caption || 'Pottery image'}
+                                            context="thumbnail"
                                             style={{ height: 64, width: 64, objectFit: 'cover', borderRadius: 4, display: 'block' }}
                                         />
                                     </Box>
@@ -538,7 +565,7 @@ export default function WorkflowState({
                       <ToggleButtonGroup
                           value={imageInputMode}
                           exclusive
-                          onChange={(_, val) => { if (val) { setImageInputMode(val); setNewImageUrl('') } }}
+                          onChange={(_, val) => { if (val) { setImageInputMode(val); setNewImageUrl(''); setNewImagePublicId(null) } }}
                           size="small"
                           sx={{ mb: 1 }}
                       >
@@ -551,9 +578,11 @@ export default function WorkflowState({
                           newImageUrl ? (
                               <>
                                   {!uploadPreviewLoaded && <CircularProgress size={40} />}
-                                  <img
-                                      src={newImageUrl}
+                                  <CloudinaryImage
+                                      url={newImageUrl}
+                                      cloudinary_public_id={newImagePublicId}
                                       alt="Uploaded preview"
+                                      context="preview"
                                       data-testid="upload-preview"
                                       style={{ height: 64, width: 64, objectFit: 'cover', borderRadius: 4, flexShrink: 0, display: uploadPreviewLoaded ? 'block' : 'none' }}
                                       onLoad={() => setUploadPreviewLoaded(true)}
@@ -561,18 +590,11 @@ export default function WorkflowState({
                               </>
                           ) : (
                               <Button
-                                  component="label"
                                   variant="outlined"
                                   size="small"
-                                  disabled={uploadingImage}
+                                  onClick={handleUploadWidgetClick}
                               >
-                                  {uploadingImage ? 'Uploading...' : 'Upload Image'}
-                                  <input
-                                      hidden
-                                      type="file"
-                                      accept="image/*"
-                                      onChange={handleCloudinaryUpload}
-                                  />
+                                  Upload Image
                               </Button>
                           )
                       ) : (

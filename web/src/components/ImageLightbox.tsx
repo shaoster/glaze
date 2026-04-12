@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Box, IconButton, Modal, Typography } from '@mui/material'
 import type { CaptionedImage } from '@common/types'
+import CloudinaryImage from './CloudinaryImage'
 
 type ImageLightboxProps = {
     images: CaptionedImage[]
@@ -46,9 +47,11 @@ export default function ImageLightbox({ images, initialIndex, onClose }: ImageLi
                     gap: 2, outline: 'none',
                 }}
             >
-                <img
-                    src={image.url}
+                <CloudinaryImage
+                    url={image.url}
+                    cloudinary_public_id={image.cloudinary_public_id}
                     alt={image.caption || 'Pottery image'}
+                    context="lightbox"
                     style={{
                         maxWidth: '90vw', maxHeight: '80vh',
                         objectFit: 'contain', borderRadius: 4,
