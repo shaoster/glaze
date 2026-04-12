@@ -164,7 +164,7 @@ gz_test() {
 
 gz_backend() {
     _gz_start backend "$_GLAZE_LOGS/backend.log" \
-        bash -c "source '$GLAZE_ROOT/.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$GLAZE_ROOT/.env.local' ] && source '$GLAZE_ROOT/.env.local'; set +a && python manage.py runserver 8080"
+        bash -c "source '$GLAZE_ROOT/.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$GLAZE_ROOT/.env.local' ] && source '$GLAZE_ROOT/.env.local'; set +a && python manage.py load_public_library --skip-if-missing && python manage.py runserver 8080"
 }
 
 gz_web() {
