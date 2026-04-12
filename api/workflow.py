@@ -65,6 +65,16 @@ def get_global_model_and_field(
     return model_cls, fields, display_field
 
 
+def is_public_global(global_name: str) -> bool:
+    """Return True if this global type supports a shared public library.
+
+    Public globals (public: true in workflow.yml) have entries with null user
+    managed by admins and visible to all authenticated users.
+    """
+    config = _GLOBALS_MAP.get(global_name, {})
+    return bool(config.get('public', False))
+
+
 def _resolve_field_def(field_def: dict) -> dict:
     """Recursively resolve a DSL field_def to its effective JSON Schema property dict.
 

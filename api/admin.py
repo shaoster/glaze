@@ -2,13 +2,48 @@ from django import forms
 from django.contrib import admin
 from django.http import HttpRequest
 
-from .models import Piece, PieceState, UserProfile
+from .models import ClayBody, GlazeType, Piece, PieceState, UserProfile
 
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'openid_subject')
     search_fields = ('user__username', 'user__email', 'openid_subject')
+
+
+class PublicLibraryAdmin(admin.ModelAdmin):
+    """Base admin for global types that support a shared public library.
+
+    The list view is filtered to show only public objects (user IS NULL) so
+    that the admin has a clean interface for managing the public library without
+    seeing individual users' private records.  Private objects remain accessible
+    via the regular ORM / shell.
+    """
+
+    list_display = ('name', 'is_public_entry')
+    search_fields = ('name',)
+
+    @admin.display(boolean=True, description='Public')
+    def is_public_entry(self, obj) -> bool:
+        return obj.user_id is None
+
+    def get_queryset(self, request: HttpRequest):
+        return super().get_queryset(request).filter(user__isnull=True)
+
+    def save_model(self, request: HttpRequest, obj, form, change: bool) -> None:
+        # Public library objects are always unowned.
+        obj.user = None
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(ClayBody)
+class ClayBodyAdmin(PublicLibraryAdmin):
+    list_display = ('name', 'short_description', 'is_public_entry')
+
+
+@admin.register(GlazeType)
+class GlazeTypeAdmin(PublicLibraryAdmin):
+    list_display = ('name', 'short_description', 'is_public_entry')
 
 
 class PieceStateInline(admin.TabularInline):

@@ -3,6 +3,7 @@ import uuid
 import jsonschema
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 
 from .workflow import (
     ENTRY_STATE,
@@ -40,15 +41,32 @@ class Location(models.Model):
 
 
 class ClayBody(models.Model):
+    # Public clay bodies (public library managed by admins) have user=None.
+    # Private clay bodies are owned by a specific user.
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='clay_bodies'
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='clay_bodies',
     )
     name = models.CharField(max_length=255)
     short_description = models.CharField(max_length=1024, blank=True, default='')
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['user', 'name'], name='uniq_clay_body_name_per_user'),
+            # Per-user uniqueness for private objects.
+            models.UniqueConstraint(
+                fields=['user', 'name'],
+                condition=Q(user__isnull=False),
+                name='uniq_clay_body_name_per_user',
+            ),
+            # Global uniqueness for public objects (user IS NULL).
+            models.UniqueConstraint(
+                fields=['name'],
+                condition=Q(user__isnull=True),
+                name='uniq_clay_body_name_public',
+            ),
         ]
 
     def __str__(self) -> str:
@@ -56,8 +74,14 @@ class ClayBody(models.Model):
 
 
 class GlazeType(models.Model):
+    # Public glaze types (public library managed by admins) have user=None.
+    # Private glaze types are owned by a specific user.
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='glaze_types'
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='glaze_types',
     )
     name = models.CharField(max_length=255)
     short_description = models.CharField(max_length=1024, blank=True, default='')
@@ -70,7 +94,18 @@ class GlazeType(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['user', 'name'], name='uniq_glaze_type_name_per_user'),
+            # Per-user uniqueness for private objects.
+            models.UniqueConstraint(
+                fields=['user', 'name'],
+                condition=Q(user__isnull=False),
+                name='uniq_glaze_type_name_per_user',
+            ),
+            # Global uniqueness for public objects (user IS NULL).
+            models.UniqueConstraint(
+                fields=['name'],
+                condition=Q(user__isnull=True),
+                name='uniq_glaze_type_name_public',
+            ),
         ]
 
     def __str__(self) -> str:

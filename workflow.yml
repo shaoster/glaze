@@ -69,6 +69,8 @@ globals:
   location:
     model: Location
     description: A named physical location where pottery is stored or fired.
+    public: false
+    private: true
     fields:
       name:
         type: string
@@ -77,6 +79,8 @@ globals:
   piece:
     model: Piece
     description: A pottery piece being tracked through the workflow.
+    public: false
+    private: true
     fields:
       name:
         type: string
@@ -88,6 +92,8 @@ globals:
   clay_body:
     model: ClayBody
     description: A reference to the clay body used for the piece.
+    public: true
+    private: true
     fields:
       name:
         type: string
@@ -99,6 +105,8 @@ globals:
   glaze_type:
     model: GlazeType
     description: A reference to the glaze recipe or formulation applied.
+    public: true
+    private: true
     fields:
       name:
         type: string
@@ -128,6 +136,8 @@ globals:
   glaze_method:
     model: GlazeMethod
     description: A reference to how the glaze was applied.
+    public: false
+    private: true
     fields:
       name:
         type: string

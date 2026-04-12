@@ -15,6 +15,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from django.db.models import Q
+
 from .models import Piece, UserProfile
 from .serializers import (
     AuthUserSerializer,
@@ -28,7 +30,7 @@ from .serializers import (
     PieceUpdateSerializer,
     RegisterSerializer,
 )
-from .workflow import get_global_model_and_field
+from .workflow import get_global_model_and_field, is_public_global
 
 
 def _piece_queryset(request: Request):
@@ -143,8 +145,16 @@ def global_entries(request: Request, global_name: str) -> Response:
     except KeyError:
         return Response({'detail': 'Unknown global type.'}, status=status.HTTP_404_NOT_FOUND)
 
+    has_public_library = is_public_global(global_name)
+
     if request.method == 'GET':
-        objects = model_cls.objects.filter(user=request.user).only('pk', display_field).order_by(display_field)
+        if has_public_library:
+            # Return both the user's private objects and all public objects (user IS NULL).
+            objects = model_cls.objects.filter(
+                Q(user=request.user) | Q(user__isnull=True)
+            ).only('pk', display_field).order_by(display_field)
+        else:
+            objects = model_cls.objects.filter(user=request.user).only('pk', display_field).order_by(display_field)
         return Response(
             [{'id': str(obj.pk), 'name': getattr(obj, display_field)} for obj in objects]
         )
@@ -155,6 +165,19 @@ def global_entries(request: Request, global_name: str) -> Response:
         return Response({'detail': 'Invalid field'}, status=status.HTTP_400_BAD_REQUEST)
     if not value:
         return Response({'detail': 'Value is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if field == display_field and has_public_library:
+        # If a public object with this name exists, return it rather than
+        # creating a duplicate private one.
+        public_obj = model_cls.objects.filter(user__isnull=True, **{field: value}).first()
+        if public_obj is not None:
+            return Response({'id': str(public_obj.pk), 'name': getattr(public_obj, display_field)})
+
+        # No public object — but check that the name doesn't collide with one
+        # when creating a new private entry.  (The DB constraint handles
+        # per-user uniqueness; this guards the cross-scope uniqueness rule.)
+        # At this point there is no public object, so we fall through to get_or_create.
+
     obj, created = model_cls.objects.get_or_create(user=request.user, **{field: value})
     status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
     return Response({'id': str(obj.pk), 'name': getattr(obj, display_field)}, status=status_code)

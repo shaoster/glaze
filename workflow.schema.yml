@@ -57,6 +57,19 @@ $defs:
       description:
         type: string
         description: Human-readable description of this domain type.
+      public:
+        type: boolean
+        description: |
+          Whether this global type supports a shared public library managed by admins.
+          Public objects are visible to all users and have no owner (null user).
+          Models for globals with public: true must allow a nullable user field.
+        default: false
+      private:
+        type: boolean
+        description: |
+          Whether this global type supports user-private instances.
+          Private objects are owned by a specific user and invisible to others.
+        default: true
       fields:
         type: object
         description: |
