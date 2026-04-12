@@ -246,7 +246,7 @@ Glaze supports Google Sign-In using OAuth 2.0 with OpenID Connect. To enable the
 
 ## Deployment
 
-Glaze supports two deployment paths: Render (managed PaaS) and Docker Compose (self-hosted on any VPS/droplet).
+Glaze supports Docker Compose (self-hosted on any VPS/droplet).
 
 ### Docker Compose (self-hosted)
 
@@ -347,28 +347,6 @@ If you don't have a public domain, or want the app private to your devices, use 
 After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` from any device on your Tailscale network. To find the exact URL, run `tailscale status` on the droplet or check the [Tailscale admin console](https://login.tailscale.com/admin/machines).
 
 ---
-
-### Render (managed)
-
-Glaze is also configured to deploy on [Render.com](https://render.com/) using [Render Blueprints](https://render.com/docs/infrastructure-as-code) via [`render.yaml`](render.yaml).
-
-**Configuration:**
-- **Database:** Render PostgreSQL (free plan) named `glaze-prod`
-- **Web service:** Python runtime, Gunicorn serving `backend.wsgi:application`
-- **Build command:** [`build.sh`](build.sh) — installs deps, generates TS types, builds Vite bundle, runs `collectstatic`
-- **Start command:** `python -m gunicorn backend.wsgi:application`
-
-**Deploy steps:**
-1. Commit and push `render.yaml` to your repository
-2. Go to [Render Dashboard → Blueprints](https://dashboard.render.com/blueprints)
-3. Click "New Blueprint Instance", select your repo, click "Apply"
-
-Render provisions the database and web service automatically. `DATABASE_URL` and `SECRET_KEY` are injected by Render; add `GOOGLE_OAUTH_CLIENT_ID` and Cloudinary vars via the Render Dashboard.
-
-**Configuration details:**
-- `DATABASE_URL` / `SECRET_KEY` are picked up automatically; `DEBUG` is `False` when `RENDER=true`.
-- WhiteNoise serves the Vite production build (`web/dist/`) at `/` so asset paths like `/thumbnails/...` work unchanged.
-- See [Render's Django deployment guide](https://docs.render.com/deploy-django) for more detail.
 
 ### What is tested
 
