@@ -148,7 +148,7 @@ $defs:
       type:
         type: string
         description: JSON Schema primitive type for this field.
-        enum: [string, number, integer, boolean, array, object]
+        enum: [string, number, integer, boolean, array, object, image]
       description:
         type: string
         description: Human-readable description of the field.

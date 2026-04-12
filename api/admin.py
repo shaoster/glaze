@@ -1,9 +1,58 @@
+import os
+
 from django import forms
 from django.contrib import admin
+from django.forms import widgets
 from django.http import HttpRequest
+from django.utils.html import format_html
 
 from .models import Piece, PieceState, UserProfile
-from .workflow import get_public_global_models
+from .workflow import get_image_fields_for_global_model, get_public_global_models
+
+
+class GlazeAdminSite(admin.AdminSite):
+    """Custom admin site that surfaces a dedicated 'Public Libraries' section
+    on the homepage for every model registered via PublicLibraryAdmin.
+
+    The reorganisation only affects the main index (app_label=None); per-app
+    sub-pages are left unchanged so model change-list URLs continue to work.
+    """
+
+    def get_app_list(self, request, app_label=None):
+        app_list = super().get_app_list(request, app_label=app_label)
+        if app_label is not None:
+            # Leave app sub-pages (e.g. /admin/api/) intact.
+            return app_list
+
+        public_model_names = {m.__name__ for m in get_public_global_models()}
+        public_models: list[dict] = []
+
+        for app in app_list:
+            if app['app_label'] == 'api':
+                remaining = [m for m in app['models'] if m['object_name'] not in public_model_names]
+                public_models.extend(m for m in app['models'] if m['object_name'] in public_model_names)
+                app['models'] = remaining
+
+        # Drop any app section that has become empty after the extraction.
+        app_list = [app for app in app_list if app['models']]
+
+        if public_models:
+            public_models.sort(key=lambda m: m['name'])
+            app_list.append({
+                'name': 'Public Libraries',
+                'app_label': 'public_libraries',
+                'app_url': '',
+                'has_module_perms': True,
+                'models': public_models,
+            })
+
+        return app_list
+
+
+# Swap the default admin site's class so all existing @admin.register and
+# admin.site.register() calls automatically use the custom get_app_list
+# without any changes to registration code or urls.py.
+admin.site.__class__ = GlazeAdminSite
 
 
 @admin.register(UserProfile)
@@ -51,6 +100,57 @@ def _make_public_library_form(model_cls):
     )
 
 
+class CloudinaryImageWidget(widgets.TextInput):
+    """Text input that adds a Cloudinary Upload Widget button when configured.
+
+    Renders a standard URL text input alongside an 'Upload Image' button and a
+    live thumbnail preview.  The button opens the Cloudinary Upload Widget; on
+    success the secure_url is written back into the text input and the preview
+    is updated.
+
+    If CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY are not set the button is
+    omitted and only the plain text input is shown.
+    """
+
+    class Media:
+        js = (
+            'https://upload-widget.cloudinary.com/global/all.js',
+            'admin/js/cloudinary_image_widget.js',
+        )
+
+    def render(self, name, value, attrs=None, renderer=None):
+        cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
+        api_key = os.environ.get('CLOUDINARY_API_KEY', '')
+
+        final_attrs = dict(attrs or {})
+        if cloud_name and api_key:
+            final_attrs['data-cloudinary-cloud-name'] = cloud_name
+            final_attrs['data-cloudinary-api-key'] = api_key
+
+        text_html = super().render(name, value, final_attrs, renderer)
+
+        if not cloud_name or not api_key:
+            return text_html
+
+        input_id = final_attrs.get('id', f'id_{name}')
+        preview_id = f'preview-{input_id}'
+
+        return format_html(
+            '{}'
+            '<br>'
+            '<img id="{}" src="{}" style="display:{};max-height:80px;margin:4px 0;" alt="preview">'
+            '<button type="button" class="cloudinary-upload-btn"'
+            ' data-input-id="{}" data-preview-id="{}"'
+            ' style="margin-top:4px;">Upload Image</button>',
+            text_html,
+            preview_id,
+            value or '',
+            'block' if value else 'none',
+            input_id,
+            preview_id,
+        )
+
+
 class PublicLibraryAdmin(admin.ModelAdmin):
     """Base admin for global types that support a shared public library.
 
@@ -61,10 +161,15 @@ class PublicLibraryAdmin(admin.ModelAdmin):
 
     On save, rejects names that already exist as private objects for any user,
     listing the conflicting owners so the admin can coordinate a resolution.
+
+    The `user` field is excluded from forms — public objects are always unowned
+    and there is no meaningful value to show or edit.  Fields with type: image
+    in workflow.yml automatically use CloudinaryImageWidget.
     """
 
     list_display = ('name', 'is_public_entry')
     search_fields = ('name',)
+    exclude = ('user',)
 
     @admin.display(boolean=True, description='Public')
     def is_public_entry(self, obj) -> bool:
@@ -75,7 +180,11 @@ class PublicLibraryAdmin(admin.ModelAdmin):
 
     def get_form(self, request: HttpRequest, obj=None, change: bool = False, **kwargs):
         kwargs.setdefault('form', _make_public_library_form(self.model))
-        return super().get_form(request, obj, change=change, **kwargs)
+        form_class = super().get_form(request, obj, change=change, **kwargs)
+        for field_name in get_image_fields_for_global_model(self.model):
+            if field_name in form_class.base_fields:
+                form_class.base_fields[field_name].widget = CloudinaryImageWidget()
+        return form_class
 
     def save_model(self, request: HttpRequest, obj, form, change: bool) -> None:
         # Public library objects are always unowned.

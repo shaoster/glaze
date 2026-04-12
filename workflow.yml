@@ -115,7 +115,7 @@ globals:
         type: string
         description: Summary of the glaze properties or firing range.
       test_tile_image:
-        type: string
+        type: image
         description: URL of the glaze test tile image.
       is_food_safe:
         type: boolean
