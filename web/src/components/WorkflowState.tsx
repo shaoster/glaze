@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTheme } from '@mui/material'
 import {
     Box,
     Button,
@@ -10,15 +11,12 @@ import {
     ListItemText,
     MenuItem,
     TextField,
-    ToggleButton,
-    ToggleButtonGroup,
     Typography,
 } from '@mui/material'
 import ImageLightbox from './ImageLightbox'
 import CloudinaryImage from './CloudinaryImage'
 import type { PieceDetail, PieceState } from '@common/types'
 import {
-    hasCloudinaryUploadConfig,
     fetchCloudinaryWidgetConfig,
     signCloudinaryWidgetParams,
     updateCurrentState,
@@ -133,13 +131,7 @@ export default function WorkflowState({
 }: WorkflowStateProps) {
     const [notes, setNotes] = useState(pieceState.notes)
     const [images, setImages] = useState<ImageEntry[]>(stateImages(pieceState))
-    const [newImageUrl, setNewImageUrl] = useState('')
-    const [newImageCaption, setNewImageCaption] = useState('')
-    const [newImagePublicId, setNewImagePublicId] = useState<string | null>(null)
     const [uploadError, setUploadError] = useState<string | null>(null)
-    const [imageInputMode, setImageInputMode] = useState<'url' | 'upload'>(
-        () => hasCloudinaryUploadConfig() ? 'upload' : 'url'
-    )
     const [editingCaptionIndex, setEditingCaptionIndex] = useState<number | null>(null)
     const [editingCaptionValue, setEditingCaptionValue] = useState('')
     const [saving, setSaving] = useState(false)
@@ -163,13 +155,10 @@ export default function WorkflowState({
         JSON.stringify(normalizedAdditionalFields) !== JSON.stringify(normalizedBaseAdditionalFields)
     const locationDirty = currentLocation.trim() !== currentLocationProp.trim()
 
-    // Upload preview load state
-    const [uploadPreviewLoaded, setUploadPreviewLoaded] = useState(false)
-    useEffect(() => { setUploadPreviewLoaded(false) }, [newImageUrl])
+    const theme = useTheme()
 
     // Lightbox state
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
-    const canUploadToCloudinary = hasCloudinaryUploadConfig()
 
     // Reset form when pieceState changes (e.g. after a state transition)
     useEffect(() => {
@@ -213,31 +202,6 @@ export default function WorkflowState({
             setSaveError('Failed to save. Please try again.')
         } finally {
             setSaving(false)
-        }
-    }
-
-    async function addImage() {
-        if (!newImageUrl.trim()) return
-        const updatedImages = [
-            ...images,
-            { url: newImageUrl.trim(), caption: newImageCaption.trim(), cloudinary_public_id: newImagePublicId },
-        ]
-        setSavingImage(true)
-        setImageError(null)
-        try {
-            const result = await updateCurrentState(pieceId, {
-                notes,
-                images: updatedImages,
-                additional_fields: normalizedAdditionalFields,
-            })
-            onSaved(result)
-            setNewImageUrl('')
-            setNewImageCaption('')
-            setNewImagePublicId(null)
-        } catch {
-            setImageError('Failed to save image. Please try again.')
-        } finally {
-            setSavingImage(false)
         }
     }
 
@@ -309,6 +273,23 @@ export default function WorkflowState({
                 sources: ['local', 'camera'],
                 multiple: false,
                 resourceType: 'image',
+                styles: {
+                    palette: {
+                        window: theme.palette.background.paper,
+                        windowBorder: theme.palette.divider,
+                        tabIcon: theme.palette.primary.main,
+                        menuIcons: theme.palette.text.secondary,
+                        textDark: theme.palette.text.primary,
+                        textLight: theme.palette.text.secondary,
+                        link: theme.palette.primary.main,
+                        action: theme.palette.primary.dark,
+                        inactiveTabIcon: theme.palette.text.disabled,
+                        error: theme.palette.error.main,
+                        inProgress: theme.palette.primary.main,
+                        complete: theme.palette.success.main,
+                        sourceBg: theme.palette.background.default,
+                    },
+                },
             },
             (error, result) => {
                 if (error) {
@@ -316,8 +297,21 @@ export default function WorkflowState({
                     return
                 }
                 if (result?.event === 'success') {
-                    setNewImageUrl(result.info.secure_url)
-                    setNewImagePublicId(result.info.public_id)
+                    const newImage = {
+                        url: result.info.secure_url,
+                        caption: '',
+                        cloudinary_public_id: result.info.public_id,
+                    }
+                    setSavingImage(true)
+                    setImageError(null)
+                    updateCurrentState(pieceId, {
+                        notes,
+                        images: [...images, newImage],
+                        additional_fields: normalizedAdditionalFields,
+                    })
+                        .then(onSaved)
+                        .catch(() => setImageError('Failed to save image. Please try again.'))
+                        .finally(() => setSavingImage(false))
                 }
             }
         )
@@ -490,10 +484,10 @@ export default function WorkflowState({
                     </Typography>
                 )}
             </Box>
-
+            <Divider sx={{ my: 0 }} />
             {/* Images */}
             <Box>
-                <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 1 }}>
+                <Typography variant="subtitle1" sx={{ color: 'text.secondary', my: 0, mb: 1 }}>
                     Images
                 </Typography>
                 {images.length > 0 && (
@@ -560,82 +554,22 @@ export default function WorkflowState({
                         ))}
                     </List>
                 )}
-                <Divider sx={{ my: 1 }} />
                 <Box>
-                  {canUploadToCloudinary && (
-                      <ToggleButtonGroup
-                          value={imageInputMode}
-                          exclusive
-                          onChange={(_, val) => { if (val) { setImageInputMode(val); setNewImageUrl(''); setNewImagePublicId(null) } }}
-                          size="small"
-                          sx={{ mb: 1 }}
-                      >
-                          <ToggleButton value="url">Paste URL</ToggleButton>
-                          <ToggleButton value="upload">Upload</ToggleButton>
-                      </ToggleButtonGroup>
-                  )}
-                  <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-                      {imageInputMode === 'upload' ? (
-                          newImageUrl ? (
-                              <>
-                                  {!uploadPreviewLoaded && <CircularProgress size={40} />}
-                                  <CloudinaryImage
-                                      url={newImageUrl}
-                                      cloudinary_public_id={newImagePublicId}
-                                      alt="Uploaded preview"
-                                      context="preview"
-                                      data-testid="upload-preview"
-                                      style={{ height: 64, width: 64, objectFit: 'cover', borderRadius: 4, flexShrink: 0, display: uploadPreviewLoaded ? 'block' : 'none' }}
-                                      onLoad={() => setUploadPreviewLoaded(true)}
-                                  />
-                              </>
-                          ) : (
-                              <Button
-                                  variant="outlined"
-                                  size="small"
-                                  onClick={handleUploadWidgetClick}
-                              >
-                                  Upload Image
-                              </Button>
-                          )
-                      ) : (
-                          <TextField
-                              label="Image URL"
-                              value={newImageUrl}
-                              onChange={(e) => setNewImageUrl(e.target.value)}
-                              size="small"
-                              sx={{ flex: 2, minWidth: 200 }}
-                              onKeyDown={(e) => {
-                                  if (e.key === 'Enter') { e.preventDefault(); addImage() }
-                              }}
-                          />
-                      )}
-                      <TextField
-                          label="Caption"
-                          value={newImageCaption}
-                          onChange={(e) => setNewImageCaption(e.target.value)}
-                          size="small"
-                          sx={{ flex: 1, minWidth: 120 }}
-                          onKeyDown={(e) => {
-                              if (e.key === 'Enter') { e.preventDefault(); addImage() }
-                          }}
-                      />
-                      <Button
-                          variant="outlined"
-                          onClick={addImage}
-                          disabled={!newImageUrl.trim() || savingImage}
-                          size="small"
-                          startIcon={savingImage ? <CircularProgress size={14} color="inherit" /> : undefined}
-                      >
-                          + Add Image
-                      </Button>
-                  </Box>
-                  {(uploadError || imageError) && (
-                      <Typography color="error" variant="body2" sx={{ mt: 1 }}>
-                          {uploadError ?? imageError}
-                      </Typography>
-                  )}
-              </Box>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={handleUploadWidgetClick}
+                        disabled={savingImage}
+                        startIcon={savingImage ? <CircularProgress size={14} color="inherit" /> : undefined}
+                    >
+                        {savingImage ? 'Saving…' : 'Upload Image'}
+                    </Button>
+                    {(uploadError || imageError) && (
+                        <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+                            {uploadError ?? imageError}
+                        </Typography>
+                    )}
+                </Box>
             </Box>
             {/* Lightbox */}
             {lightboxIndex !== null && (

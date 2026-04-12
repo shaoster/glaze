@@ -29,6 +29,10 @@ interface CloudinaryUploadWidgetOptions {
     sources?: string[]
     multiple?: boolean
     resourceType?: string
+    styles?: {
+        palette?: Record<string, string>
+        fonts?: Record<string, string>
+    }
     [key: string]: unknown
 }
 

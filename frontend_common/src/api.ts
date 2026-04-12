@@ -227,12 +227,6 @@ export async function createGlobalEntry(globalName: string, field: string, value
     return data.name
 }
 
-export function hasCloudinaryUploadConfig(): boolean {
-    // Config lives on the backend; keep the UI control visible and let the
-    // widget-config endpoint decide availability at open time.
-    return true
-}
-
 export async function fetchCloudinaryWidgetConfig(): Promise<CloudinaryWidgetConfig> {
     const { data } = await client.get<CloudinaryWidgetConfig>('uploads/cloudinary/widget-config/')
     return data

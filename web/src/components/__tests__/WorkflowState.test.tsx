@@ -11,7 +11,6 @@ vi.mock('@common/api', () => ({
     updateCurrentState: vi.fn(),
     updatePiece: vi.fn(),
     createGlobalEntry: vi.fn(),
-    hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
     fetchCloudinaryWidgetConfig: vi.fn().mockResolvedValue({ cloud_name: 'demo', api_key: '123456' }),
     signCloudinaryWidgetParams: vi.fn().mockResolvedValue('mock-signature'),
 }))
@@ -316,14 +315,46 @@ describe('WorkflowState', () => {
         expect(onDirtyChange).toHaveBeenLastCalledWith(false)
     })
 
-    it('adds an image entry', async () => {
-        const updated = makePieceDetail({ current_state: makeState({ images: [{ url: 'http://example.com/img.jpg', caption: 'A test image', created: new Date() }] }) })
-        vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
+    it('upload button is always visible', () => {
         render(<WorkflowState {...defaultProps} />)
-        fireEvent.change(screen.getByLabelText('Image URL'), { target: { value: 'http://example.com/img.jpg' } })
-        fireEvent.change(screen.getByLabelText('Caption'), { target: { value: 'A test image' } })
-        fireEvent.click(screen.getByText('+ Add Image'))
-        await waitFor(() => expect(api.updateCurrentState).toHaveBeenCalled())
+        expect(screen.getByRole('button', { name: 'Upload Image' })).toBeInTheDocument()
+    })
+
+    it('successful widget upload immediately saves the image to state', async () => {
+        const updated = makePieceDetail()
+        vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
+        setupUploadWidget({ secure_url: 'https://res.cloudinary.com/demo/image/upload/sample.jpg', public_id: 'sample' })
+        render(<WorkflowState {...defaultProps} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
+        await waitFor(() => expect(api.updateCurrentState).toHaveBeenCalledWith(
+            'test-piece-id',
+            expect.objectContaining({
+                images: expect.arrayContaining([
+                    expect.objectContaining({ url: 'https://res.cloudinary.com/demo/image/upload/sample.jpg', cloudinary_public_id: 'sample' }),
+                ]),
+            })
+        ))
+    })
+
+    it('widget upload error shows error message', async () => {
+        const noop = () => {}
+        window.cloudinary = {
+            openUploadWidget: vi.fn((_options, callback) => {
+                callback(new Error('Upload failed'), { event: 'error', info: { secure_url: '', public_id: '', resource_type: 'image' } })
+                return { open: noop, close: noop, destroy: noop }
+            }),
+        }
+        vi.mocked(api.fetchCloudinaryWidgetConfig).mockResolvedValue({ cloud_name: 'demo', api_key: '123456' })
+        render(<WorkflowState {...defaultProps} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
+        await waitFor(() => expect(screen.getByText('Upload failed. Please try again.')).toBeInTheDocument())
+    })
+
+    it('widget config fetch failure shows error message', async () => {
+        vi.mocked(api.fetchCloudinaryWidgetConfig).mockRejectedValue(new Error('Network error'))
+        render(<WorkflowState {...defaultProps} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
+        await waitFor(() => expect(screen.getByText('Failed to load upload configuration. Please try again.')).toBeInTheDocument())
     })
 
     it('prompts for confirmation before removing an image and removes on confirm', async () => {
@@ -383,73 +414,6 @@ describe('WorkflowState', () => {
         expect(screen.getByText('Keep me')).toBeInTheDocument()
     })
 
-    it('shows mode toggle when Cloudinary is configured', () => {
-        vi.mocked(api.hasCloudinaryUploadConfig).mockReturnValue(true)
-        render(<WorkflowState {...defaultProps} />)
-        expect(screen.getByRole('button', { name: 'Paste URL' })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Upload' })).toBeInTheDocument()
-    })
-
-    it('does not show mode toggle when Cloudinary is not configured', () => {
-        vi.mocked(api.hasCloudinaryUploadConfig).mockReturnValue(false)
-        render(<WorkflowState {...defaultProps} />)
-        expect(screen.queryByRole('button', { name: 'Paste URL' })).not.toBeInTheDocument()
-        expect(screen.queryByRole('button', { name: 'Upload' })).not.toBeInTheDocument()
-    })
-
-    it('defaults to upload mode: hides URL field and shows upload button', () => {
-        vi.mocked(api.hasCloudinaryUploadConfig).mockReturnValue(true)
-        render(<WorkflowState {...defaultProps} />)
-        expect(screen.queryByLabelText('Image URL')).not.toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Upload Image' })).toBeInTheDocument()
-    })
-
-    it('switching to URL mode shows URL field and hides upload button', () => {
-        vi.mocked(api.hasCloudinaryUploadConfig).mockReturnValue(true)
-        render(<WorkflowState {...defaultProps} />)
-        fireEvent.click(screen.getByRole('button', { name: 'Paste URL' }))
-        expect(screen.getByLabelText('Image URL')).toBeInTheDocument()
-        expect(screen.queryByRole('button', { name: 'Upload Image' })).not.toBeInTheDocument()
-    })
-
-    it('switching modes clears the preview', async () => {
-        vi.mocked(api.hasCloudinaryUploadConfig).mockReturnValue(true)
-        setupUploadWidget()
-        render(<WorkflowState {...defaultProps} />)
-        fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
-        await waitFor(() => expect(screen.getByTestId('upload-preview')).toBeInTheDocument())
-        fireEvent.click(screen.getByRole('button', { name: 'Paste URL' }))
-        expect(screen.queryByTestId('upload-preview')).not.toBeInTheDocument()
-        expect(screen.getByLabelText('Image URL')).toHaveValue('')
-    })
-
-    it('replaces upload button with preview image after successful upload', async () => {
-        vi.mocked(api.hasCloudinaryUploadConfig).mockReturnValue(true)
-        setupUploadWidget({ secure_url: 'https://res.cloudinary.com/demo/image/upload/sample.jpg' })
-        render(<WorkflowState {...defaultProps} />)
-        fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
-        await waitFor(() => {
-            expect(screen.queryByRole('button', { name: 'Upload Image' })).not.toBeInTheDocument()
-            const preview = screen.getByTestId('upload-preview') as HTMLImageElement
-            expect(preview.src).toBe('https://res.cloudinary.com/demo/image/upload/sample.jpg')
-        })
-    })
-
-    it('shows spinner while upload preview image is loading, then hides it on load', async () => {
-        vi.mocked(api.hasCloudinaryUploadConfig).mockReturnValue(true)
-        setupUploadWidget()
-        render(<WorkflowState {...defaultProps} />)
-        fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
-        await waitFor(() => expect(screen.getByTestId('upload-preview')).toBeInTheDocument())
-
-        const preview = screen.getByTestId('upload-preview')
-        expect(screen.getByRole('progressbar')).toBeInTheDocument()
-        expect(preview).toHaveStyle({ display: 'none' })
-
-        fireEvent.load(preview)
-        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
-        expect(preview).toHaveStyle({ display: 'block' })
-    })
 
     it('accepts any valid workflow state', () => {
         const states: PieceState['state'][] = ['designed', 'glazed', 'completed', 'recycled']
