@@ -32,7 +32,7 @@ Each global definition also carries two optional boolean flags:
 - `public` (default `false`): when `true`, this global type has an admin-managed shared library of public objects (stored with `user=NULL`) visible to all authenticated users. The corresponding Django model's `user` field must be nullable.
 - `private` (default `true`): when `true`, users can create their own private instances of this type.
 
-Currently `clay_body` and `glaze_type` have `public: true`; `location` and `glaze_method` are private-only. Models for public globals (`ClayBody`, `GlazeType`) allow `user=NULL`; public and private objects each have their own DB-level `UniqueConstraint` (conditional on `user IS NULL` / `user IS NOT NULL`). Three helpers in `api/workflow.py` expose this information to the rest of the backend without leaking the private `_GLOBALS_MAP`:
+Currently `clay_body` and `glaze_type` have `public: true`; `location` and `glaze_method` are private-only. Models for public globals (`ClayBody`, `GlazeType`) allow `user=NULL`; public and private objects each have their own DB-level `UniqueConstraint` (conditional on `user IS NULL` / `user IS NOT NULL`). A private entry may share its name with a public entry — the two scopes are independent. Three helpers in `api/workflow.py` expose this information to the rest of the backend without leaking the private `_GLOBALS_MAP`:
 - `is_public_global(name) -> bool` — returns `True` if the named global has `public: true`
 - `get_public_global_models() -> list[type[Model]]` — returns the Django model class for every `public: true` global; used by admin for dynamic registration
 - `get_image_fields_for_global_model(model_cls) -> list[str]` — returns field names declared as `type: image` for the given model class; used by admin to apply the Cloudinary upload widget
@@ -170,8 +170,8 @@ PieceSummary & {
 - When a user requests another user's object ID, return `404` (not `403`) so object existence is not leaked.
 - Globals come in two visibility tiers:
   - **Private-only** (`Location`, `GlazeMethod`): owned by a single user; the `user` FK is NOT NULL; list endpoints filter to `request.user` only.
-  - **Public + private** (`ClayBody`, `GlazeType`): these support an admin-managed shared library (records with `user=NULL`) as well as user-private records. List endpoints return both the requesting user's private objects and all public objects. POST returns 409 Conflict when the name matches an existing public object (with a message directing the user to select it from the list); otherwise creates a new private record. Do not create private records that duplicate a public name.
-- Name uniqueness for public globals is enforced with two conditional DB constraints (one for private, one for public), plus application-level logic preventing private objects from duplicating public names.
+  - **Public + private** (`ClayBody`, `GlazeType`): these support an admin-managed shared library (records with `user=NULL`) as well as user-private records. List endpoints return both the requesting user's private objects and all public objects. POST always creates a new private record (or returns the existing one for the requesting user); private entries may share a name with a public entry. The GET response includes an `is_public` boolean on each item so the frontend can disambiguate.
+- Name uniqueness for public globals is enforced with two conditional DB constraints (one for private, one for public). Private and public scopes are independent — a user may have a private entry with the same name as a public entry.
 
 **Django admin (`api/admin.py`):**
 
@@ -196,8 +196,8 @@ The admin is customized to support public library management:
 - `POST /api/pieces/<id>/states/` → record a new state transition
 - `PATCH /api/pieces/<id>/` → update piece-level editable fields (currently location)
 - `PATCH /api/pieces/<id>/state/` → update current state's editable fields
-- `GET /api/globals/<global_name>/` → list globals visible to the requesting user: for private-only globals, returns only the user's private objects; for public globals (`clay_body`, `glaze_type`), returns the user's private objects union all public objects (user=NULL), sorted by display field
-- `POST /api/globals/<global_name>/` → for private-only globals, get-or-create a private record owned by the requesting user; for public globals, returns 409 Conflict if the name already exists in the public library (prompting the user to select it from the list), otherwise creates a new private record for the user
+- `GET /api/globals/<global_name>/` → list globals visible to the requesting user: for private-only globals, returns only the user's private objects; for public globals (`clay_body`, `glaze_type`), returns the user's private objects union all public objects (user=NULL), sorted by display field. Each item includes `is_public: bool`.
+- `POST /api/globals/<global_name>/` → get-or-create a private record owned by the requesting user. For public globals, a private entry with the same name as a public entry is permitted — the two scopes are independent.
 - `GET /api/uploads/cloudinary/widget-config/` → returns `{cloud_name, api_key, folder?}`; 503 if Cloudinary not configured
 - `POST /api/uploads/cloudinary/widget-signature/` → accepts `{params_to_sign: {}}`, returns `{signature}`; used by the Upload Widget for signed uploads
 
