@@ -155,7 +155,7 @@ PieceSummary & {
 - API auth is session-based (`SessionAuthentication`) with CSRF protection.
 - User data isolation is mandatory: lists must scope to `request.user`, and object lookups must use user-filtered querysets.
 - When a user requests another user's object ID, return `404` (not `403`) so object existence is not leaked.
-- User-owned globals (like `Location`) are isolated per user; keep per-user uniqueness constraints intact.
+- User-owned globals (`Location`, `ClayBody`, `GlazeType`, `GlazeMethod`) are isolated per user; keep per-user uniqueness constraints intact.
 
 **API endpoints:**
 - `GET /api/auth/csrf/` → set CSRF cookie
@@ -308,7 +308,7 @@ The test environment is jsdom; setup file is [`web/src/test-setup.ts`](web/src/t
 
 ### CI
 
-GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on every push and pull request — see [`.github/workflows/tests.yml`](.github/workflows/tests.yml). A PR should not be merged if any job is red.
+GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on every push and pull request — see [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml). A PR should not be merged if any job is red.
 
 ### What to test
 

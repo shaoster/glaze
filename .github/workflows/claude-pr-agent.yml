@@ -8,7 +8,7 @@ on:
 
 jobs:
   respond-to-comment:
-    # Run when a PR comment mentions @claude
+    # Run when a PR comment mentions @claude AND the PR was created by Claude
     if: |
       !endsWith(github.actor, '[bot]') &&
       (
@@ -17,11 +17,13 @@ jobs:
           (
             github.event_name == 'pull_request_review_comment' ||
             (github.event_name == 'issue_comment' && github.event.issue.pull_request)
-          )
+          ) &&
+          endsWith(github.event.issue.user.login, '[bot]')
         ) ||
         (
           github.event_name == 'pull_request_review' &&
-          github.event.review.state == 'changes_requested'
+          github.event.review.state == 'changes_requested' &&
+          endsWith(github.event.pull_request.user.login, '[bot]')
         )
       )
     runs-on: ubuntu-latest
@@ -41,12 +43,50 @@ jobs:
           claude_args: "--dangerously-skip-permissions"
           show_full_output: "true"
 
+  decline-non-claude-pr:
+    # When @claude is mentioned on a PR Claude did NOT create, respond to the comment
+    # without making code changes — Claude can answer questions but must not modify files.
+    if: |
+      !endsWith(github.actor, '[bot]') &&
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request != null &&
+      contains(github.event.comment.body, '@claude') &&
+      !endsWith(github.event.issue.user.login, '[bot]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: "--dangerously-skip-permissions"
+          show_full_output: "true"
+          prompt: |
+            A user has mentioned @claude in a comment on pull request #${{ github.event.issue.number }},
+            but this PR was not opened by you — it was opened by @${{ github.event.issue.user.login }}.
+
+            The comment was:
+            ${{ github.event.comment.body }}
+
+            You may read the code and PR context to give a helpful response, but you MUST NOT modify,
+            create, or delete any files. Post a comment addressing the user's question or request,
+            and explain that you can only make code changes on pull requests you opened yourself.
+            If their request requires code changes, suggest they ask the PR author or open a new
+            issue (labelled `claude`) for you to handle.
+
   address-review-changes:
-    # Run when a reviewer requests changes — Claude implements the feedback and pushes a new commit
+    # Run when a reviewer requests changes on a PR Claude created
     if: |
       !endsWith(github.actor, '[bot]') &&
       github.event_name == 'pull_request_review' &&
-      github.event.review.state == 'changes_requested'
+      github.event.review.state == 'changes_requested' &&
+      endsWith(github.event.pull_request.user.login, '[bot]')
     runs-on: ubuntu-latest
     permissions:
       contents: write

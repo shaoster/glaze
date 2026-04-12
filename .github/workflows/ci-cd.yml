@@ -1,8 +1,19 @@
-name: Tests
+name: CI/CD
 
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - '.gitignore'
+      - '.gitattributes'
+      - '.gitmodules'
+      - '.mailmap'
+      - '.editorconfig'
+      - '.vscode/**'
+      - '.idea/**'
+      - 'LICENSE'
+      - 'LICENSE.*'
   pull_request:
 
 jobs:
