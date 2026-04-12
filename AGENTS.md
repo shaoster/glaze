@@ -24,9 +24,17 @@ The source of truth for piece states is [`workflow.yml`](workflow.yml) at the pr
 - **Structural** (`TestSchemaValidation`): runs `jsonschema.validate` against `workflow.schema.yml`, and verifies that malformed inputs (missing fields, bad version format, invalid ID patterns, duplicate successors, unknown keys) are correctly rejected.
 - **Semantic** (`TestReferentialIntegrity`): enforces rules JSON Schema cannot express — every successor ID references a real state, terminal states have no successors, non-terminal states have at least one successor, all state IDs are unique, no state lists itself as a successor.
 - **DSL referential integrity** (`TestAdditionalFieldsDSL`): enforces `additional_fields` rules — `enum` only on `type: string` fields; state refs point to known states with declared fields that are reachable ancestors; global refs point to declared globals with declared fields.
-- **Global/model alignment** (`TestGlobals`): verifies every `globals` entry maps to a real Django model in `api/models.py`, and every field declared in that global exists on the model.
+- **Global/model alignment** (`TestGlobals`): verifies every `globals` entry maps to a real Django model in `api/models.py`, every field declared in that global exists on the model, and every global with `public: true` has a nullable `user` field on its model.
 
 **`globals` section:** The optional top-level `globals` map registers named domain types backed by Django models. Each entry declares the model class name (PascalCase, verified against `api/models.py` by tests) and a subset of its fields exposed to the field DSL. `api/models.py` remains the authoritative source of truth — `globals` is a DSL-level view of those models, kept in sync by tests.
+
+Each global definition also carries two optional boolean flags:
+- `public` (default `false`): when `true`, this global type has an admin-managed shared library of public objects (stored with `user=NULL`) visible to all authenticated users. The corresponding Django model's `user` field must be nullable.
+- `private` (default `true`): when `true`, users can create their own private instances of this type.
+
+Currently `clay_body` and `glaze_type` have `public: true`; `location` and `glaze_method` are private-only. Models for public globals (`ClayBody`, `GlazeType`) allow `user=NULL`; public and private objects each have their own DB-level `UniqueConstraint` (conditional on `user IS NULL` / `user IS NOT NULL`). The `is_public_global(name)` helper in `api/workflow.py` exposes this flag to the rest of the backend.
+
+`TestGlobals` verifies — in addition to model/field alignment — that every `public: true` global has a nullable `user` field on its Django model.
 
 **`additional_fields` DSL:** Each state may declare state-specific fields beyond the base `PieceState` fields using two forms:
 
@@ -155,7 +163,10 @@ PieceSummary & {
 - API auth is session-based (`SessionAuthentication`) with CSRF protection.
 - User data isolation is mandatory: lists must scope to `request.user`, and object lookups must use user-filtered querysets.
 - When a user requests another user's object ID, return `404` (not `403`) so object existence is not leaked.
-- User-owned globals (`Location`, `ClayBody`, `GlazeType`, `GlazeMethod`) are isolated per user; keep per-user uniqueness constraints intact.
+- Globals come in two visibility tiers:
+  - **Private-only** (`Location`, `GlazeMethod`): owned by a single user; the `user` FK is NOT NULL; list endpoints filter to `request.user` only.
+  - **Public + private** (`ClayBody`, `GlazeType`): these support an admin-managed shared library (records with `user=NULL`) as well as user-private records. List endpoints return both the requesting user's private objects and all public objects. POST returns a matching public object directly when the name collides, rather than creating a private duplicate. Do not create private records that duplicate a public name.
+- Name uniqueness for public globals is enforced with two conditional DB constraints (one for private, one for public), plus application-level logic preventing private objects from duplicating public names.
 
 **API endpoints:**
 - `GET /api/auth/csrf/` → set CSRF cookie
@@ -170,7 +181,8 @@ PieceSummary & {
 - `POST /api/pieces/<id>/states/` → record a new state transition
 - `PATCH /api/pieces/<id>/` → update piece-level editable fields (currently location)
 - `PATCH /api/pieces/<id>/state/` → update current state's editable fields
-- `GET/POST /api/globals/<global_name>/` → list/create user-scoped globals
+- `GET /api/globals/<global_name>/` → list globals visible to the requesting user: for private-only globals, returns only the user's private objects; for public globals (`clay_body`, `glaze_type`), returns the user's private objects union all public objects (user=NULL), sorted by display field
+- `POST /api/globals/<global_name>/` → for private-only globals, get-or-create a private record owned by the requesting user; for public globals, returns the matching public object if the name already exists in the public library, otherwise creates a new private record for the user
 - `GET /api/uploads/cloudinary/widget-config/` → returns `{cloud_name, api_key, folder?}`; 503 if Cloudinary not configured
 - `POST /api/uploads/cloudinary/widget-signature/` → accepts `{params_to_sign: {}}`, returns `{signature}`; used by the Upload Widget for signed uploads
 
@@ -339,6 +351,7 @@ GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on
 - `PieceDetail.current_state` is the most recent `PieceState` in the history.
 - All dates should be stored and transmitted as ISO 8601 strings; the web types declare them as `Date` but Axios/JSON deserialization will deliver them as strings — handle accordingly.
 - **Piece creation flow:** When creating a new piece (`POST /api/pieces/`), the piece is always initialized in the `designed` state. The creation UI (`NewPieceDialog`) lets the user supply a name, optional notes, and pick a thumbnail from the curated gallery in `web/public/thumbnails/`. The selected thumbnail URL is stored as the piece's primary visual identifier.
+- **Public library ownership:** Public global objects (`user=NULL` on `ClayBody`, `GlazeType`) are owned by no user and managed exclusively via Django admin. Regular API users can read public objects but cannot create, edit, or delete them. The `public: true` flag in `workflow.yml` is the single source of truth for which globals support a public library — do not hardcode this distinction in application code; use `is_public_global()` from `api/workflow.py`.
 
 ---
 
