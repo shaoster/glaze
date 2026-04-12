@@ -8,24 +8,14 @@ on:
 
 jobs:
   respond-to-comment:
-    # Run when a PR comment mentions @claude AND the PR was created by Claude
+    # Run when @claude is mentioned in a comment on a PR that has the 'claude' label.
+    # The 'claude' label is applied by Claude when it creates or takes ownership of a PR.
     if: |
       !endsWith(github.actor, '[bot]') &&
-      (
-        (
-          contains(github.event.comment.body, '@claude') &&
-          (
-            github.event_name == 'pull_request_review_comment' ||
-            (github.event_name == 'issue_comment' && github.event.issue.pull_request)
-          ) &&
-          endsWith(github.event.issue.user.login, '[bot]')
-        ) ||
-        (
-          github.event_name == 'pull_request_review' &&
-          github.event.review.state == 'changes_requested' &&
-          endsWith(github.event.pull_request.user.login, '[bot]')
-        )
-      )
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request != null &&
+      contains(github.event.comment.body, '@claude') &&
+      contains(github.event.issue.labels.*.name, 'claude')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -44,14 +34,15 @@ jobs:
           show_full_output: "true"
 
   decline-non-claude-pr:
-    # When @claude is mentioned on a PR Claude did NOT create, respond to the comment
-    # without making code changes — Claude can answer questions but must not modify files.
+    # When @claude is mentioned on a PR without the 'claude' label, respond to the
+    # comment without making code changes — Claude can answer questions but must not
+    # modify files.
     if: |
       !endsWith(github.actor, '[bot]') &&
       github.event_name == 'issue_comment' &&
       github.event.issue.pull_request != null &&
       contains(github.event.comment.body, '@claude') &&
-      !endsWith(github.event.issue.user.login, '[bot]')
+      !contains(github.event.issue.labels.*.name, 'claude')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -68,25 +59,25 @@ jobs:
           claude_args: "--dangerously-skip-permissions"
           show_full_output: "true"
           prompt: |
-            A user has mentioned @claude in a comment on pull request #${{ github.event.issue.number }},
-            but this PR was not opened by you — it was opened by @${{ github.event.issue.user.login }}.
+            A user has mentioned @claude in a comment on pull request #${{ github.event.issue.number }}.
 
             The comment was:
             ${{ github.event.comment.body }}
 
-            You may read the code and PR context to give a helpful response, but you MUST NOT modify,
-            create, or delete any files. Post a comment addressing the user's question or request,
-            and explain that you can only make code changes on pull requests you opened yourself.
-            If their request requires code changes, suggest they ask the PR author or open a new
-            issue (labelled `claude`) for you to handle.
+            Read the PR, the code, and any relevant context, then post a helpful comment
+            responding to the user's question or request. You MUST NOT modify, create, or
+            delete any files — this PR does not have the 'claude' label. If their request
+            requires code changes, let them know they can add the 'claude' label to this
+            PR to give you edit access, or open a new issue labelled 'claude' for you to
+            handle in a fresh PR.
 
   address-review-changes:
-    # Run when a reviewer requests changes on a PR Claude created
+    # Run when a reviewer requests changes on a PR with the 'claude' label.
     if: |
       !endsWith(github.actor, '[bot]') &&
       github.event_name == 'pull_request_review' &&
       github.event.review.state == 'changes_requested' &&
-      endsWith(github.event.pull_request.user.login, '[bot]')
+      contains(github.event.pull_request.labels.*.name, 'claude')
     runs-on: ubuntu-latest
     permissions:
       contents: write

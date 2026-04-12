@@ -352,6 +352,21 @@ Do not take the following actions autonomously without an explicit instruction i
 
 If an issue seems to require one of these, post a comment asking for confirmation before proceeding.
 
+### PR ownership label
+
+When you open a pull request, apply the `claude` label immediately after creation:
+
+```bash
+gh pr create --title "..." --body "..."
+gh pr edit <number> --add-label claude
+```
+
+The `claude` label tells the Claude PR Agent workflow that this PR is under your stewardship, which enables:
+- Responding to `@claude` mentions with code changes (not just comments)
+- `address-review-changes` to fire when a reviewer requests changes
+
+If the label doesn't exist in the repo yet, create it first: `gh label create claude --color 5319e7`.
+
 ### Definition of done
 
 Before opening or pushing to a PR, verify every item:
