@@ -18,9 +18,8 @@ import dj_database_url
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-IS_RENDER = bool(os.environ.get('RENDER', ''))
 # IS_PRODUCTION covers both Render and self-hosted Docker deployments.
-IS_PRODUCTION = IS_RENDER or bool(os.environ.get('PRODUCTION', ''))
+IS_PRODUCTION = bool(os.environ.get('PRODUCTION', ''))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 if IS_PRODUCTION:
@@ -35,25 +34,20 @@ else:
 DEBUG = not IS_PRODUCTION
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-if IS_RENDER:
-    RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-    if RENDER_EXTERNAL_HOSTNAME:
-        ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 # ALLOWED_HOST: single hostname for self-hosted deployments (e.g. myapp.example.com)
 _ALLOWED_HOST = os.environ.get('ALLOWED_HOST', '')
 if _ALLOWED_HOST:
     ALLOWED_HOSTS.append(_ALLOWED_HOST)
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-]
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = ['http://localhost:5173']
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    # match localhost with any port
+    r"^http:\/\/localhost:*([0-9]+)?$",
+    r"^https:\/\/localhost:*([0-9]+)?$",
+]
+CSRF_TRUSTED_ORIGINS = ['http://localhost:*']
 
-if IS_RENDER and RENDER_EXTERNAL_HOSTNAME:
-    render_origin = f'https://{RENDER_EXTERNAL_HOSTNAME}'
-    CORS_ALLOWED_ORIGINS.append(render_origin)
-    CSRF_TRUSTED_ORIGINS.append(render_origin)
+CORS_ALLOWED_ORIGINS = []
 # APP_ORIGIN: full origin URL for self-hosted deployments (e.g. https://myapp.example.com)
 _APP_ORIGIN = os.environ.get('APP_ORIGIN', '')
 if _APP_ORIGIN:
@@ -62,8 +56,6 @@ if _APP_ORIGIN:
 
 
 # Application definition
-
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

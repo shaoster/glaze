@@ -42,6 +42,11 @@ export default defineConfig({
       '/api': 'http://localhost:8080',
       '/admin': 'http://localhost:8080',
       '/static': 'http://localhost:8080',
+      // Rewrite any request for /favicon.ico to /favicon.svg
+      '/favicon.ico': {
+        target: 'http://localhost:5173', // Your dev server address
+        rewrite: (path) => path.replace('/favicon.ico', '/favicon.svg'),
+      },
     },
   },
 })
