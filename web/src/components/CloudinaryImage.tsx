@@ -30,6 +30,17 @@ const CLOUDINARY_HOSTNAME = 'res.cloudinary.com'
  * Transforms look like key_value (e.g. f_auto, w_100, c_fill). We skip
  * contiguous leading path segments that match that pattern and treat the
  * remainder as the public_id (without file extension).
+ *
+ * TODO: This parsing exists for backwards compatibility with images that
+ * predate explicit cloudinary_public_id storage. For new uploads the
+ * public_id is stored directly, so the URL is only parsed as a fallback.
+ * If this heuristic ever becomes a problem (custom domains, CDN prefixes,
+ * etc.), two cleaner alternatives are:
+ *   1. Frontend config — read cloud_name from VITE_CLOUDINARY_CLOUD_NAME
+ *      at module load time; zero schema changes, works for a single cloud.
+ *   2. Per-image storage — add cloudinary_cloud_name to CaptionedImage
+ *      alongside cloudinary_public_id; fully self-contained records but
+ *      redundant data across all rows.
  */
 function parseCloudinaryUrl(url: string): { cloudName: string; publicId: string } | null {
     let parsed: URL

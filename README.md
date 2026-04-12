@@ -198,19 +198,24 @@ npm run test:watch    # watch mode
 ```
 
 ## Cloudinary image uploads (web)
-Recommended: use backend-signed uploads so Cloudinary secrets never ship to the browser.
+Images attached to piece states are uploaded via the [Cloudinary Upload Widget](https://cloudinary.com/documentation/upload_widget) using backend-signed uploads — `CLOUDINARY_API_SECRET` never reaches the browser.
+
 Set these in `.env.local` before starting Django:
 
 ```bash
 export CLOUDINARY_CLOUD_NAME=<your-cloud-name>
 export CLOUDINARY_API_KEY=<your-api-key>
 export CLOUDINARY_API_SECRET=<your-api-secret>
-export CLOUDINARY_UPLOAD_FOLDER=glaze         # optional
-export CLOUDINARY_UPLOAD_PRESET=<your-upload-preset>  # optional
+export CLOUDINARY_UPLOAD_FOLDER=glaze   # optional; images are placed in this folder
 ```
 
-`WorkflowState` calls `POST /api/uploads/cloudinary/signature/` and uploads with the signed payload.
-`CLOUDINARY_API_SECRET` stays server-only and is never returned to the client.
+**How it works:**
+1. `WorkflowState` calls `GET /api/uploads/cloudinary/widget-config/` to retrieve the cloud name, API key, and optional folder.
+2. The Cloudinary Upload Widget opens in the browser. For each upload, the widget calls `POST /api/uploads/cloudinary/widget-signature/` to get a server-signed signature.
+3. On success, the widget returns a `secure_url` and `public_id`. These are stored alongside the image in the `CaptionedImage` record.
+4. Images are rendered via `CloudinaryImage`, which uses `public_id` to request viewport-appropriate renditions (auto format, auto quality, size-matched to context).
+
+Cloudinary is optional — if the env vars are not set, the config endpoint returns 503 and the UI falls back to URL-paste mode.
 
 ## Google OAuth (web)
 Glaze supports Google Sign-In using OAuth 2.0 with OpenID Connect. To enable the Google sign-in button in the web UI:
@@ -304,7 +309,6 @@ docker compose up -d
 | `CLOUDINARY_API_KEY` | No | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | No | Cloudinary API secret |
 | `CLOUDINARY_UPLOAD_FOLDER` | No | Cloudinary folder for uploaded images |
-| `CLOUDINARY_UPLOAD_PRESET` | No | Cloudinary upload preset |
 
 Note: `VITE_GOOGLE_CLIENT_ID` is **not** set here — it is baked into the JS bundle at CI build time via the GitHub Actions secret.
 
