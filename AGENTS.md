@@ -338,12 +338,13 @@ GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on
 - The `PieceState` history is append-only; past states should not be edited, only new ones added. Only the `current_state` should be modifiable. Once a piece has transitioned to a new state, past states should be considered sealed, and care should be taken in the backend code to prevent inadvertent edits to these sealed states.
 - `PieceDetail.current_state` is the most recent `PieceState` in the history.
 - All dates should be stored and transmitted as ISO 8601 strings; the web types declare them as `Date` but Axios/JSON deserialization will deliver them as strings — handle accordingly.
+- **Piece creation flow:** When creating a new piece (`POST /api/pieces/`), the piece is always initialized in the `designed` state. The creation UI (`NewPieceDialog`) lets the user supply a name, optional notes, and pick a thumbnail from the curated gallery in `web/public/thumbnails/`. The selected thumbnail URL is stored as the piece's primary visual identifier.
 
 ---
 
 ## Agent conventions
 
-These rules apply to all autonomous agents (issue agent, PR agent) working in this repository.
+These rules apply to all autonomous agents (issue agent, PR agent) working in this repository, as well as interactive sessions that are prompted to "create a commit" or "create a PR" by the user.
 
 ### Branch naming
 
@@ -365,14 +366,14 @@ If an issue seems to require one of these, post a comment asking for confirmatio
 
 ### PR ownership label
 
-When you open a pull request, apply the `claude` label immediately after creation:
+When you open a pull request, apply the `claude` label immediately after creation if you are `claude` and `codex` if you are `codex`, etc...:
 
 ```bash
 gh pr create --title "..." --body "..."
 gh pr edit <number> --add-label claude
 ```
 
-The `claude` label tells the Claude PR Agent workflow that this PR is under your stewardship, which enables:
+The agent label (e.g. `claude`) tells the corresponding agent workflow (e.g. Claude PR Agent) that this PR is under its respective stewardship, which enables:
 - Responding to `@claude` mentions with code changes (not just comments)
 - `address-review-changes` to fire when a reviewer requests changes
 
@@ -382,11 +383,16 @@ If the label doesn't exist in the repo yet, create it first: `gh label create cl
 
 Before opening or pushing to a PR, verify every item:
 
-- All three test suites pass: `pytest tests/` (common), `pytest api/` (backend), `cd web && npm test` (web)
+- Ask yourself if there are obvious cases of redundant or copy-pasted code. For example, at every new or modified call site for a function, confirm whether the information provided at the call site is still necessary, or if it is already known by the callee and can be removed.
+- Authored commits should have the appropriate `Co-authored-by:` tag. If you are codex, use `Co-authored-by: Codex <codex@openai.com>` if you are Claude, use `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`, etc...Include the model version if possible.
+- Every commit should have a short descriptive title with detailed bullets in the commit body explaining what was done and why.
+- If a PR is to be opened with requested functional changes that require refactoring to existing frontend or backend components, please indicate this in the commit and PR description with clear descriptions of what was changed in addition to the requested functional changes.
+- All three test suites pass: `pytest tests/` (common), `pytest api/` (backend), `cd web && npm test` (web).
+- The production build should succeed: `./build.sh`
 - PR body contains "Closes #<N>" linking to the originating issue
 - PR title is concise (under 70 characters)
 - No debug code, temporary workarounds, or stray `print`/`console.log` statements left in
 - Serializer output matches the TypeScript types in [`frontend_common/src/types.ts`](frontend_common/src/types.ts)
 - State names and transitions are derived from [`workflow.yml`](workflow.yml), not hardcoded
 - If `AGENTS.md` was modified, check whether [`README.md`](README.md) needs a corresponding update (the Contributing section and any user-facing descriptions of agent behaviour)
-- **Piece creation flow:** When creating a new piece (`POST /api/pieces/`), the piece is always initialized in the `designed` state. The creation UI (`NewPieceDialog`) lets the user supply a name, optional notes, and pick a thumbnail from the curated gallery in `web/public/thumbnails/`. The selected thumbnail URL is stored as the piece's primary visual identifier.
+- If during the process of creating the content commits for a PR, you notice implied changes to conventions or constraints that should be respected going forward, please automatically append an additional change to AGENTS.md and/or README.md in a follow-up commit with appropriate descriptions and justifications in the commit.

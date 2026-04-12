@@ -1,16 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+trap 'kill $(jobs -p) 2>/dev/null' EXIT
+
 # Install Python dependencies
 pip install -r requirements.txt
 
 # Generate TypeScript types from the live OpenAPI schema.
 # Start Django in the background, wait for it to become ready, then stop it.
-python manage.py runserver 8080 &
+PORT=$(
+  ss -tln | 
+  awk 'NR > 1{gsub(/.*:/,"",$4); print $4}' |
+  sort -un |
+  awk -v n=8080 '$0 < n {next}; $0 == n {n++; next}; {exit}; END {print n}'
+)
+python manage.py runserver $PORT &
 DJANGO_PID=$!
-echo "Waiting for Django on :8080..."
+echo "Waiting for Django on :$PORT..."
 for i in $(seq 1 30); do
-    curl -sf http://localhost:8080/api/schema/ > /dev/null 2>&1 && break
+    curl -sf http://localhost:$PORT/api/schema/ > /dev/null 2>&1 && break
     sleep 1
 done
 cd web
@@ -30,8 +38,3 @@ python manage.py collectstatic --no-input
 
 # Apply database migrations
 python manage.py migrate
-
-# Create superuser non-interactively
-if [[ $CREATE_SUPERUSER ]]; then
-  python manage.py createsuperuser --no-input
-fi
