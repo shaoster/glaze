@@ -1,6 +1,5 @@
 import hashlib
 import os
-import time
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from django.conf import settings
@@ -169,56 +168,71 @@ def global_entries(request: Request, global_name: str) -> Response:
             'properties': {
                 'cloud_name': {'type': 'string'},
                 'api_key': {'type': 'string'},
-                'timestamp': {'type': 'integer'},
-                'signature': {'type': 'string'},
-                'upload_url': {'type': 'string'},
                 'folder': {'type': 'string'},
-                'upload_preset': {'type': 'string'},
             },
-            'required': ['cloud_name', 'api_key', 'timestamp', 'signature', 'upload_url'],
+            'required': ['cloud_name', 'api_key'],
         }
     },
 )
-@api_view(['POST'])
-def cloudinary_upload_signature(request: Request) -> Response:
+@api_view(['GET'])
+def cloudinary_widget_config(request: Request) -> Response:
+    """Return Cloudinary config needed to initialise the Upload Widget."""
     cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
     api_key = os.environ.get('CLOUDINARY_API_KEY')
-    api_secret = os.environ.get('CLOUDINARY_API_SECRET')
     folder = os.environ.get('CLOUDINARY_UPLOAD_FOLDER', '').strip()
-    upload_preset = os.environ.get('CLOUDINARY_UPLOAD_PRESET', '').strip()
 
-    if not cloud_name or not api_key or not api_secret:
+    if not cloud_name or not api_key:
         return Response(
             {'detail': 'Cloudinary is not configured on the server.'},
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    timestamp = int(time.time())
-    params_to_sign: dict[str, str | int] = {'timestamp': timestamp}
+    payload: dict[str, str] = {'cloud_name': cloud_name, 'api_key': api_key}
     if folder:
-        params_to_sign['folder'] = folder
-    if upload_preset:
-        params_to_sign['upload_preset'] = upload_preset
+        payload['folder'] = folder
+    preset = os.environ.get('CLOUDINARY_UPLOAD_PRESET', '').strip()
+    if preset:
+        payload['upload_preset'] = preset
+    return Response(payload)
 
-    # Cloudinary signature format: sorted key=value params joined by '&',
-    # then append API secret and SHA1 hash the resulting string.
+
+@extend_schema(
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {'params_to_sign': {'type': 'object'}},
+            'required': ['params_to_sign'],
+        }
+    },
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {'signature': {'type': 'string'}},
+            'required': ['signature'],
+        }
+    },
+)
+@api_view(['POST'])
+def cloudinary_widget_sign(request: Request) -> Response:
+    """Sign the params_to_sign dict provided by the Cloudinary Upload Widget."""
+    api_secret = os.environ.get('CLOUDINARY_API_SECRET')
+    if not api_secret:
+        return Response(
+            {'detail': 'Cloudinary is not configured on the server.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    params_to_sign = request.data.get('params_to_sign', {})
+    if not isinstance(params_to_sign, dict):
+        return Response({'detail': 'params_to_sign must be an object.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Cloudinary signature format: sorted key=value pairs joined by '&',
+    # then append the API secret and SHA1-hash the result.
     signing_string = '&'.join(
         f'{key}={params_to_sign[key]}' for key in sorted(params_to_sign.keys())
     )
     signature = hashlib.sha1(f'{signing_string}{api_secret}'.encode('utf-8')).hexdigest()
-
-    payload = {
-        'cloud_name': cloud_name,
-        'api_key': api_key,
-        'timestamp': timestamp,
-        'signature': signature,
-        'upload_url': f'https://api.cloudinary.com/v1_1/{cloud_name}/image/upload',
-    }
-    if folder:
-        payload['folder'] = folder
-    if upload_preset:
-        payload['upload_preset'] = upload_preset
-    return Response(payload)
+    return Response({'signature': signature})
 
 
 @extend_schema(request=None, responses={204: None})

@@ -12,6 +12,7 @@ class CaptionedImageSerializer(serializers.Serializer):
     url = serializers.CharField()
     caption = serializers.CharField(allow_blank=True, default='')
     created = serializers.DateTimeField(required=False)
+    cloudinary_public_id = serializers.CharField(allow_blank=True, required=False, default=None, allow_null=True)
 
 
 class PieceStateSerializer(serializers.ModelSerializer):

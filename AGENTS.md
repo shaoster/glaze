@@ -129,7 +129,7 @@ PieceSummary & {
 
 **`CaptionedImage`**
 ```ts
-{ url: string; caption: string; created: Date; }
+{ url: string; caption: string; created: Date; cloudinary_public_id: string | null; }
 ```
 
 ---
@@ -171,6 +171,8 @@ PieceSummary & {
 - `PATCH /api/pieces/<id>/` → update piece-level editable fields (currently location)
 - `PATCH /api/pieces/<id>/state/` → update current state's editable fields
 - `GET/POST /api/globals/<global_name>/` → list/create user-scoped globals
+- `GET /api/uploads/cloudinary/widget-config/` → returns `{cloud_name, api_key, folder?}`; 503 if Cloudinary not configured
+- `POST /api/uploads/cloudinary/widget-signature/` → accepts `{params_to_sign: {}}`, returns `{signature}`; used by the Upload Widget for signed uploads
 
 ---
 
@@ -225,7 +227,9 @@ PieceSummary & {
 **Existing components:**
 - [`PieceList.tsx`](web/src/components/PieceList.tsx) — MUI table displaying a list of `PieceSummary` objects (columns: Thumbnail, Name, State, Created, Last Modified)
 - [`NewPieceDialog.tsx`](web/src/components/NewPieceDialog.tsx) — dialog for creating a new piece; accepts a name, optional notes, and a thumbnail selected from the curated gallery
-- [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx) — placeholder for rendering a single `PieceState`; not yet implemented
+- [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx) — edits the current `PieceState`: notes, location, workflow-specific additional fields, images (upload or URL), caption editing, and lightbox launch
+- [`CloudinaryImage.tsx`](web/src/components/CloudinaryImage.tsx) — renders a `CaptionedImage` using `@cloudinary/url-gen` + `@cloudinary/react` when a Cloudinary identity is available; falls back to a plain `<img>`. Context prop controls sizing: `thumbnail` (64×64 fill), `preview` (64×64 fill), `lightbox` (90vw×80vh fit). Cloud name is parsed from the delivery URL for backwards compatibility with images that predate `cloudinary_public_id` storage.
+- [`ImageLightbox.tsx`](web/src/components/ImageLightbox.tsx) — full-screen modal image viewer with caption, keyboard/touch navigation, and `CloudinaryImage` for optimized delivery
 
 **Auth UI flow (`App.tsx`):**
 - On load, the web app calls `fetchCurrentUser()` (`GET /api/auth/me/`).
@@ -233,6 +237,13 @@ PieceSummary & {
 - Unauthenticated users are shown the login landing form with email/password fields and optional Google Sign-In button.
 - Google Sign-In button appears when `VITE_GOOGLE_CLIENT_ID` is configured; uses `@react-oauth/google` for OAuth flow.
 - `Sign Up` is intentionally disabled in the web UI (`SIGN_UP_ENABLED = false`) so accounts can be created manually in Django admin for now.
+
+**Cloudinary image upload flow:**
+- Images are attached to `PieceState` records and stored as a JSON array of `CaptionedImage` objects (url, caption, created, cloudinary_public_id).
+- The upload UI in `WorkflowState` uses the [Cloudinary Upload Widget](https://cloudinary.com/documentation/upload_widget) loaded from CDN (`web/index.html`). Uploads are signed server-side so `CLOUDINARY_API_SECRET` never reaches the browser.
+- Flow: `WorkflowState` calls `GET /api/uploads/cloudinary/widget-config/` → opens the widget → widget calls `POST /api/uploads/cloudinary/widget-signature/` for each signing request → on success, stores `secure_url` and `public_id` locally → user clicks "+ Add Image" → `PATCH /api/pieces/<id>/state/` persists the image array.
+- `CloudinaryImage` uses `cloudinary_public_id` (when present) to construct optimized delivery URLs via `@cloudinary/url-gen`. If `cloudinary_public_id` is null (images uploaded before this field existed), the cloud name is parsed from the delivery URL as a fallback.
+- Cloudinary is optional: if `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` are not set, the widget-config endpoint returns 503 and the UI falls back to URL-paste mode only.
 
 **Google OAuth Flow:**
 - **Frontend**: Uses `@react-oauth/google` to display Google Sign-In button when `VITE_GOOGLE_CLIENT_ID` is configured in environment.
@@ -351,6 +362,21 @@ Do not take the following actions autonomously without an explicit instruction i
 - Destructive git operations (force push, branch deletion)
 
 If an issue seems to require one of these, post a comment asking for confirmation before proceeding.
+
+### PR ownership label
+
+When you open a pull request, apply the `claude` label immediately after creation:
+
+```bash
+gh pr create --title "..." --body "..."
+gh pr edit <number> --add-label claude
+```
+
+The `claude` label tells the Claude PR Agent workflow that this PR is under your stewardship, which enables:
+- Responding to `@claude` mentions with code changes (not just comments)
+- `address-review-changes` to fire when a reviewer requests changes
+
+If the label doesn't exist in the repo yet, create it first: `gh label create claude --color 5319e7`.
 
 ### Definition of done
 

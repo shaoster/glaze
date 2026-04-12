@@ -15,8 +15,13 @@ urlpatterns = [
     path('pieces/<uuid:piece_id>/state/', views.piece_current_state, name='piece-current-state'),
     path('globals/<str:global_name>/', views.global_entries, name='global-entries'),
     path(
-        'uploads/cloudinary/signature/',
-        views.cloudinary_upload_signature,
-        name='cloudinary-upload-signature',
+        'uploads/cloudinary/widget-config/',
+        views.cloudinary_widget_config,
+        name='cloudinary-widget-config',
+    ),
+    path(
+        'uploads/cloudinary/widget-signature/',
+        views.cloudinary_widget_sign,
+        name='cloudinary-widget-sign',
     ),
 ]

@@ -35,12 +35,9 @@ if (expoBaseUrl) {
     client.defaults.baseURL = expoBaseUrl
 }
 
-type CloudinarySignedUploadPayload = {
+export type CloudinaryWidgetConfig = {
     cloud_name: string
     api_key: string
-    timestamp: number
-    signature: string
-    upload_url: string
     folder?: string
     upload_preset?: string
 }
@@ -73,6 +70,7 @@ function mapImage(raw: Wire<CaptionedImage>): CaptionedImage {
         url: raw.url,
         caption: raw.caption,
         created: new Date(raw.created ?? ''),
+        cloudinary_public_id: raw.cloudinary_public_id ?? null,
     }
 }
 
@@ -198,7 +196,7 @@ export async function addPieceState(pieceId: string, payload: AddStatePayload): 
 
 export type UpdateStatePayload = {
     notes?: string
-    images?: Array<{ url: string; caption: string }>
+    images?: Array<{ url: string; caption: string; cloudinary_public_id?: string | null }>
     additional_fields?: Record<string, string | number | boolean>
 }
 
@@ -229,34 +227,14 @@ export async function createGlobalEntry(globalName: string, field: string, value
     return data.name
 }
 
-export function hasCloudinaryUploadConfig(): boolean {
-    // Signed uploads are configured on the backend, so keep the UI control
-    // visible and let the signature endpoint decide availability.
-    return true
+export async function fetchCloudinaryWidgetConfig(): Promise<CloudinaryWidgetConfig> {
+    const { data } = await client.get<CloudinaryWidgetConfig>('uploads/cloudinary/widget-config/')
+    return data
 }
 
-export async function uploadImageToCloudinary(file: Blob): Promise<string> {
-    const { data } = await client.post<CloudinarySignedUploadPayload>('uploads/cloudinary/signature/', {})
-    const signedData = new FormData()
-    signedData.append('file', file)
-    signedData.append('api_key', data.api_key)
-    signedData.append('timestamp', String(data.timestamp))
-    signedData.append('signature', data.signature)
-    if (data.folder) {
-        signedData.append('folder', data.folder)
-    }
-    if (data.upload_preset) {
-        signedData.append('upload_preset', data.upload_preset)
-    }
-    const uploadResponse = await axios.post<{ secure_url?: string; url?: string }>(
-        data.upload_url,
-        signedData
-    )
-    const uploadedUrl = uploadResponse.data.secure_url ?? uploadResponse.data.url
-    if (!uploadedUrl) {
-        throw new Error('Cloudinary upload did not return a URL')
-    }
-    // Insert f_auto so Cloudinary converts HEIC and other formats to the best
-    // type for each client (WebP/JPEG) at delivery time.
-    return uploadedUrl.replace('/image/upload/', '/image/upload/f_auto/')
+export async function signCloudinaryWidgetParams(paramsToSign: Record<string, unknown>): Promise<string> {
+    const { data } = await client.post<{ signature: string }>('uploads/cloudinary/widget-signature/', {
+        params_to_sign: paramsToSign,
+    })
+    return data.signature
 }

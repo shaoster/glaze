@@ -46,5 +46,9 @@ jobs:
             - Implement the fix on a new branch named `issue/<N>-short-slug`.
             - Run `pytest` from the repo root (common + backend) and `cd web && npm test`
               (web). Do not open a PR if either suite fails.
-            - Open a pull request with "Closes #<issue number>" in the body.
+            - Open a pull request with "Closes #<issue number>" in the body,
+              then immediately apply the 'claude' label so the PR agent can
+              respond to comments and review requests on it:
+              `gh pr edit <number> --add-label claude`
+              (If the label doesn't exist: `gh label create claude --color 5319e7 --force`)
             - Post a comment on the issue linking to the PR.
