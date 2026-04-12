@@ -122,15 +122,33 @@ class CloudinaryImageWidget(widgets.TextInput):
         cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
         api_key = os.environ.get('CLOUDINARY_API_KEY', '')
 
+        folder = os.environ.get('CLOUDINARY_PUBLIC_UPLOAD_FOLDER', '').strip()
+
         final_attrs = dict(attrs or {})
         if cloud_name and api_key:
             final_attrs['data-cloudinary-cloud-name'] = cloud_name
             final_attrs['data-cloudinary-api-key'] = api_key
+            if folder:
+                final_attrs['data-cloudinary-folder'] = folder
 
         text_html = super().render(name, value, final_attrs, renderer)
 
         if not cloud_name or not api_key:
             return text_html
+
+        if not folder:
+            return format_html(
+                '{}'
+                '<br>'
+                '<button type="button" disabled'
+                ' title="Set CLOUDINARY_PUBLIC_UPLOAD_FOLDER to enable uploads"'
+                ' style="margin-top:4px;cursor:not-allowed;">Upload Image</button>'
+                '<span style="display:inline-flex;align-items:center;margin-left:8px;">'
+                '<span style="background:#ba1a1a;color:#fff;font-size:0.8em;padding:2px 8px;border-radius:3px;">'
+                'CLOUDINARY_PUBLIC_UPLOAD_FOLDER must be set to upload public library images from Django Admin'
+                '</span></span>',
+                text_html,
+            )
 
         input_id = final_attrs.get('id', f'id_{name}')
         preview_id = f'preview-{input_id}'
