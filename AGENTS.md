@@ -32,7 +32,10 @@ Each global definition also carries two optional boolean flags:
 - `public` (default `false`): when `true`, this global type has an admin-managed shared library of public objects (stored with `user=NULL`) visible to all authenticated users. The corresponding Django model's `user` field must be nullable.
 - `private` (default `true`): when `true`, users can create their own private instances of this type.
 
-Currently `clay_body` and `glaze_type` have `public: true`; `location` and `glaze_method` are private-only. Models for public globals (`ClayBody`, `GlazeType`) allow `user=NULL`; public and private objects each have their own DB-level `UniqueConstraint` (conditional on `user IS NULL` / `user IS NOT NULL`). The `is_public_global(name)` helper in `api/workflow.py` exposes this flag to the rest of the backend.
+Currently `clay_body` and `glaze_type` have `public: true`; `location` and `glaze_method` are private-only. Models for public globals (`ClayBody`, `GlazeType`) allow `user=NULL`; public and private objects each have their own DB-level `UniqueConstraint` (conditional on `user IS NULL` / `user IS NOT NULL`). Three helpers in `api/workflow.py` expose this information to the rest of the backend without leaking the private `_GLOBALS_MAP`:
+- `is_public_global(name) -> bool` — returns `True` if the named global has `public: true`
+- `get_public_global_models() -> list[type[Model]]` — returns the Django model class for every `public: true` global; used by admin for dynamic registration
+- `get_image_fields_for_global_model(model_cls) -> list[str]` — returns field names declared as `type: image` for the given model class; used by admin to apply the Cloudinary upload widget
 
 `TestGlobals` verifies — in addition to model/field alignment — that every `public: true` global has a nullable `user` field on its Django model.
 
@@ -41,11 +44,13 @@ Currently `clay_body` and `glaze_type` have `public: true`; `location` and `glaz
 *Inline field* — declares a new field directly on the state:
 ```yaml
 clay_weight_grams:
-  type: number          # string | number | integer | boolean | array | object
+  type: number          # string | number | integer | boolean | array | object | image
   description: "..."    # optional
   required: true        # optional, default false
   enum: [a, b, c]       # optional; only valid when type: string
 ```
+
+The `image` type is a DSL-level annotation: it stores and validates the value as a URL string in JSON Schema (resolved to `type: string` by `_resolve_field_def`), but signals the Django admin to render a Cloudinary upload widget instead of a plain text input. Use `image` for any field that holds a Cloudinary-hosted image URL.
 
 *Ref field* — two sub-forms, distinguished by the `@` prefix:
 ```yaml
@@ -165,8 +170,18 @@ PieceSummary & {
 - When a user requests another user's object ID, return `404` (not `403`) so object existence is not leaked.
 - Globals come in two visibility tiers:
   - **Private-only** (`Location`, `GlazeMethod`): owned by a single user; the `user` FK is NOT NULL; list endpoints filter to `request.user` only.
-  - **Public + private** (`ClayBody`, `GlazeType`): these support an admin-managed shared library (records with `user=NULL`) as well as user-private records. List endpoints return both the requesting user's private objects and all public objects. POST returns a matching public object directly when the name collides, rather than creating a private duplicate. Do not create private records that duplicate a public name.
+  - **Public + private** (`ClayBody`, `GlazeType`): these support an admin-managed shared library (records with `user=NULL`) as well as user-private records. List endpoints return both the requesting user's private objects and all public objects. POST returns 409 Conflict when the name matches an existing public object (with a message directing the user to select it from the list); otherwise creates a new private record. Do not create private records that duplicate a public name.
 - Name uniqueness for public globals is enforced with two conditional DB constraints (one for private, one for public), plus application-level logic preventing private objects from duplicating public names.
+
+**Django admin (`api/admin.py`):**
+
+The admin is customized to support public library management:
+
+- **`GlazeAdminSite`** — subclass of `admin.AdminSite` that overrides `get_app_list` to move public library models out of the "Api" section into a separate "Public Libraries" section on the admin homepage. Applied via `admin.site.__class__ = GlazeAdminSite` so all existing `@admin.register` calls remain unchanged. Only the homepage (`app_label=None`) is reorganized; app sub-pages (e.g. `/admin/api/`) are left intact.
+- **`PublicLibraryAdmin`** — base `ModelAdmin` for globals with `public: true`. Filters the list view to public objects only (`user__isnull=True`); excludes the `user` field from forms (always null for public objects); forces `obj.user = None` on save; applies `_make_public_library_form` which rejects names that collide with existing private objects and lists the conflicting users.
+- **`CloudinaryImageWidget`** — `TextInput` subclass that renders a text input, live thumbnail preview, and an "Upload Image" button when `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` are configured. Button is omitted when Cloudinary is not configured. Configuration is passed via `data-cloudinary-*` attributes read by the JS layer. The `Media` class loads the Cloudinary CDN script plus `api/static/admin/js/cloudinary_image_widget.js`.
+- **`api/static/admin/js/cloudinary_image_widget.js`** — wires `.cloudinary-upload-btn` buttons to the Cloudinary Upload Widget on `DOMContentLoaded`. Reads `cloud_name`/`api_key` from `data-cloudinary-*` attributes; calls `/api/uploads/cloudinary/widget-signature/` (session + CSRF) for signing; writes `secure_url` to the text input and updates the preview on success.
+- **Dynamic registration** — instead of a hardcoded list, `PublicLibraryAdmin` is registered for every model returned by `get_public_global_models()`. Adding `public: true` to a new global in `workflow.yml` is sufficient — no manual `admin.py` change required.
 
 **API endpoints:**
 - `GET /api/auth/csrf/` → set CSRF cookie
@@ -182,7 +197,7 @@ PieceSummary & {
 - `PATCH /api/pieces/<id>/` → update piece-level editable fields (currently location)
 - `PATCH /api/pieces/<id>/state/` → update current state's editable fields
 - `GET /api/globals/<global_name>/` → list globals visible to the requesting user: for private-only globals, returns only the user's private objects; for public globals (`clay_body`, `glaze_type`), returns the user's private objects union all public objects (user=NULL), sorted by display field
-- `POST /api/globals/<global_name>/` → for private-only globals, get-or-create a private record owned by the requesting user; for public globals, returns the matching public object if the name already exists in the public library, otherwise creates a new private record for the user
+- `POST /api/globals/<global_name>/` → for private-only globals, get-or-create a private record owned by the requesting user; for public globals, returns 409 Conflict if the name already exists in the public library (prompting the user to select it from the list), otherwise creates a new private record for the user
 - `GET /api/uploads/cloudinary/widget-config/` → returns `{cloud_name, api_key, folder?}`; 503 if Cloudinary not configured
 - `POST /api/uploads/cloudinary/widget-signature/` → accepts `{params_to_sign: {}}`, returns `{signature}`; used by the Upload Widget for signed uploads
 
