@@ -528,7 +528,7 @@ On the admin homepage, public library models appear in a dedicated **Public Libr
 ### Name conflict rules
 
 - **Public name must be unique** — you cannot save a public entry with the same name as another existing public entry.
-- **Cannot shadow existing private objects** — if any user already has a private object with the same name, the admin form will reject the save and list the conflicting usernames. Ask those users to rename or delete their private copies before creating the public entry with that name.
+- **Private entries may share a public name** — users can have their own private entry with the same name as a public entry. When both exist, the picker displays the public entry with a `(public)` suffix to distinguish the two.
 
 ### Enabling Cloudinary in the admin
 

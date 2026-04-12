@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import GlobalFieldPicker, { type GlobalFieldPickerProps } from '../GlobalFieldPicker'
+import GlobalFieldPicker, { type GlobalFieldPickerProps, stripPublicSuffix } from '../GlobalFieldPicker'
 import * as api from '@common/api'
+import type { GlobalEntry } from '@common/api'
 
 vi.mock('@common/api', () => ({
     fetchGlobalEntries: vi.fn().mockResolvedValue([]),
@@ -15,6 +16,10 @@ const defaultProps = {
     label: 'Location',
     value: '',
     onChange: vi.fn(),
+}
+
+function entry(name: string, isPublic = false): GlobalEntry {
+    return { name, isPublic }
 }
 
 // Stateful wrapper so controlled `value` actually updates when the user types.
@@ -59,7 +64,7 @@ describe('GlobalFieldPicker', () => {
         })
 
         it('shows fetched options in the dropdown', async () => {
-            vi.mocked(api.fetchGlobalEntries).mockResolvedValue(['Studio A', 'Studio B'])
+            vi.mocked(api.fetchGlobalEntries).mockResolvedValue([entry('Studio A'), entry('Studio B')])
             render(<GlobalFieldPicker {...defaultProps} />)
             await userEvent.click(screen.getByLabelText('Location'))
             await waitFor(() => {
@@ -69,7 +74,7 @@ describe('GlobalFieldPicker', () => {
         })
 
         it('shows provided options in the dropdown', async () => {
-            render(<GlobalFieldPicker {...defaultProps} options={['Shelf 1', 'Shelf 2']} />)
+            render(<GlobalFieldPicker {...defaultProps} options={[entry('Shelf 1'), entry('Shelf 2')]} />)
             await userEvent.click(screen.getByLabelText('Location'))
             expect(screen.getByRole('option', { name: 'Shelf 1' })).toBeInTheDocument()
             expect(screen.getByRole('option', { name: 'Shelf 2' })).toBeInTheDocument()
@@ -94,7 +99,7 @@ describe('GlobalFieldPicker', () => {
         })
 
         it('does not show "Create" option when typed value matches an existing option', async () => {
-            render(<Controlled canCreate options={['Studio A']} />)
+            render(<Controlled canCreate options={[entry('Studio A')]} />)
             await userEvent.type(screen.getByLabelText('Location'), 'Studio A')
             await waitFor(() =>
                 expect(screen.queryByRole('option', { name: /Create/ })).not.toBeInTheDocument()
@@ -160,10 +165,63 @@ describe('GlobalFieldPicker', () => {
     describe('selecting an existing entry', () => {
         it('calls onChange with the selected value', async () => {
             const onChange = vi.fn()
-            render(<GlobalFieldPicker {...defaultProps} options={['Studio A']} onChange={onChange} />)
+            render(<GlobalFieldPicker {...defaultProps} options={[entry('Studio A')]} onChange={onChange} />)
             await userEvent.click(screen.getByLabelText('Location'))
             fireEvent.click(screen.getByRole('option', { name: 'Studio A' }))
             expect(onChange).toHaveBeenCalledWith('Studio A')
+        })
+    })
+
+    describe('public/private disambiguation', () => {
+        it('appends (public) suffix to a public entry that shares a name with a private entry', async () => {
+            render(
+                <GlobalFieldPicker
+                    {...defaultProps}
+                    options={[entry('Stoneware', false), entry('Stoneware', true)]}
+                />
+            )
+            await userEvent.click(screen.getByLabelText('Location'))
+            expect(screen.getByRole('option', { name: 'Stoneware' })).toBeInTheDocument()
+            expect(screen.getByRole('option', { name: 'Stoneware (public)' })).toBeInTheDocument()
+        })
+
+        it('does not append (public) suffix when there is no name conflict', async () => {
+            render(
+                <GlobalFieldPicker
+                    {...defaultProps}
+                    options={[entry('Porcelain', false), entry('Stoneware', true)]}
+                />
+            )
+            await userEvent.click(screen.getByLabelText('Location'))
+            expect(screen.getByRole('option', { name: 'Stoneware' })).toBeInTheDocument()
+            expect(screen.queryByRole('option', { name: 'Stoneware (public)' })).not.toBeInTheDocument()
+        })
+
+        it('emits the raw name (without suffix) when a (public) option is selected', async () => {
+            const onChange = vi.fn()
+            render(
+                <GlobalFieldPicker
+                    {...defaultProps}
+                    options={[entry('Stoneware', false), entry('Stoneware', true)]}
+                    onChange={onChange}
+                />
+            )
+            await userEvent.click(screen.getByLabelText('Location'))
+            fireEvent.click(screen.getByRole('option', { name: 'Stoneware (public)' }))
+            expect(onChange).toHaveBeenCalledWith('Stoneware')
+        })
+
+        it('stripPublicSuffix removes the suffix', () => {
+            expect(stripPublicSuffix('Stoneware (public)')).toBe('Stoneware')
+            expect(stripPublicSuffix('Stoneware')).toBe('Stoneware')
+        })
+
+        it('does not show Create option when typed name matches a public entry with same name as private', async () => {
+            render(<Controlled canCreate options={[entry('Stoneware', false), entry('Stoneware', true)]} />)
+            await userEvent.type(screen.getByLabelText('Location'), 'Stoneware')
+            await waitFor(() =>
+                expect(screen.queryByRole('option', { name: /Create/ })).not.toBeInTheDocument()
+            )
         })
     })
 })

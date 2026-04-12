@@ -134,7 +134,7 @@ describe('WorkflowState', () => {
     })
 
     it('lets you choose an existing global reference option', async () => {
-        vi.mocked(api.fetchGlobalEntries).mockResolvedValue(['Kiln A'])
+        vi.mocked(api.fetchGlobalEntries).mockResolvedValue([{ name: 'Kiln A', isPublic: false }])
         const globalState = makeState({
             state: 'submitted_to_bisque_fire',
             additional_fields: { kiln_location: '' },

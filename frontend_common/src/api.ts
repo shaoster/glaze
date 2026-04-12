@@ -214,9 +214,16 @@ export async function updatePiece(pieceId: string, payload: UpdatePiecePayload):
     return mapPieceDetail(data)
 }
 
-export async function fetchGlobalEntries(globalName: string): Promise<string[]> {
-    const { data } = await client.get<Array<{ id: string; name: string }>>(`globals/${globalName}/`)
-    return data.map((entry) => entry.name)
+export interface GlobalEntry {
+    name: string
+    isPublic: boolean
+}
+
+export async function fetchGlobalEntries(globalName: string): Promise<GlobalEntry[]> {
+    const { data } = await client.get<Array<{ id: string; name: string; is_public: boolean }>>(
+        `globals/${globalName}/`
+    )
+    return data.map((entry) => ({ name: entry.name, isPublic: entry.is_public }))
 }
 
 export async function createGlobalEntry(globalName: string, field: string, value: string): Promise<string> {

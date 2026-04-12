@@ -62,41 +62,11 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 
 def _make_public_library_form(model_cls):
-    """Return a ModelForm subclass for a public library model.
-
-    Adds clean_name validation that rejects names already taken by any user's
-    private objects, providing a descriptive error to the admin.  The admin can
-    see all scopes, so listing conflicting users here is not a privacy concern.
-    """
-
-    def clean_name(form_self):
-        name = form_self.cleaned_data.get('name')
-        if not name:
-            return name
-        conflicts = (
-            model_cls.objects
-            .filter(user__isnull=False, name=name)
-            .select_related('user')
-        )
-        if conflicts.exists():
-            user_list = ', '.join(str(c.user) for c in conflicts[:5])
-            extra = f' and {conflicts.count() - 5} more' if conflicts.count() > 5 else ''
-            raise forms.ValidationError(
-                f"Cannot save public {model_cls.__name__} named \"{name}\": "
-                f"the following user(s) already have a private entry with this name: "
-                f"{user_list}{extra}. "
-                f"Ask those users to remove their private copies first, or choose a "
-                f"different name for the public entry."
-            )
-        return name
-
+    """Return a ModelForm subclass for a public library model."""
     return type(
         f'{model_cls.__name__}PublicLibraryForm',
         (forms.ModelForm,),
-        {
-            'Meta': type('Meta', (), {'model': model_cls, 'fields': '__all__'}),
-            'clean_name': clean_name,
-        },
+        {'Meta': type('Meta', (), {'model': model_cls, 'fields': '__all__'})},
     )
 
 
