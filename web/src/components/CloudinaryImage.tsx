@@ -18,8 +18,13 @@ import { auto as autoFormat } from '@cloudinary/url-gen/qualifiers/format'
 import { auto as autoQuality } from '@cloudinary/url-gen/qualifiers/quality'
 import { autoGravity } from '@cloudinary/url-gen/qualifiers/gravity'
 import { AdvancedImage } from '@cloudinary/react'
+import { Box, CircularProgress } from '@mui/material'
+import { useEffect, useState } from 'react'
 
 const CLOUDINARY_HOSTNAME = 'res.cloudinary.com'
+const THUMBNAIL_SIZE = 64
+const LIGHTBOX_MAX_WIDTH = '90vw'
+const LIGHTBOX_MAX_HEIGHT = '80vh'
 
 /**
  * Parse cloud_name and public_id from a Cloudinary delivery URL.
@@ -105,6 +110,55 @@ export default function CloudinaryImage({
     onLoad,
     'data-testid': testId,
 }: CloudinaryImageProps) {
+    const [isLoading, setIsLoading] = useState(true)
+
+    useEffect(() => {
+        setIsLoading(true)
+    }, [url, cloudinary_public_id, context])
+
+    function handleLoad(event: React.SyntheticEvent<HTMLImageElement>) {
+        setIsLoading(false)
+        onLoad?.(event)
+    }
+
+    function handleError() {
+        setIsLoading(false)
+    }
+
+    const wrapperStyle: React.CSSProperties = context === 'lightbox'
+        ? {
+            position: 'relative',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: LIGHTBOX_MAX_WIDTH,
+            height: LIGHTBOX_MAX_HEIGHT,
+            maxWidth: LIGHTBOX_MAX_WIDTH,
+            maxHeight: LIGHTBOX_MAX_HEIGHT,
+        }
+        : {
+            position: 'relative',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: THUMBNAIL_SIZE,
+            height: THUMBNAIL_SIZE,
+            flexShrink: 0,
+        }
+    const spinnerStyle: React.CSSProperties = {
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        pointerEvents: 'none',
+    }
+
+    const imageStyle: React.CSSProperties = {
+        ...style,
+        opacity: isLoading ? 0 : 1,
+    }
+
     // Resolve cloud_name + publicId. Prefer the stored prop; fall back to URL parse.
     const parsed = parseCloudinaryUrl(url)
     const cloudName = parsed?.cloudName ?? null
@@ -120,33 +174,49 @@ export default function CloudinaryImage({
             img.resize(fit().width(vw).height(vh))
         } else {
             // thumbnail or preview — 64×64 fill with auto gravity
-            img.resize(fill().width(64).height(64).gravity(autoGravity()))
+            img.resize(fill().width(THUMBNAIL_SIZE).height(THUMBNAIL_SIZE).gravity(autoGravity()))
         }
 
         img.delivery(format(autoFormat()))
         img.delivery(quality(autoQuality()))
 
         return (
-            <AdvancedImage
-                cldImg={img}
-                alt={alt}
-                style={style}
-                className={className}
-                onLoad={onLoad}
-                data-testid={testId}
-            />
+            <Box style={wrapperStyle}>
+                {isLoading && (
+                    <Box style={spinnerStyle}>
+                        <CircularProgress size={24} />
+                    </Box>
+                )}
+                <AdvancedImage
+                    cldImg={img}
+                    alt={alt}
+                    style={imageStyle}
+                    className={className}
+                    onLoad={handleLoad}
+                    onError={handleError}
+                    data-testid={testId}
+                />
+            </Box>
         )
     }
 
     // No Cloudinary identity available — plain img fallback.
     return (
-        <img
-            src={url}
-            alt={alt}
-            style={style}
-            className={className}
-            onLoad={onLoad}
-            data-testid={testId}
-        />
+        <Box style={wrapperStyle}>
+            {isLoading && (
+                <Box style={spinnerStyle}>
+                    <CircularProgress size={24} />
+                </Box>
+            )}
+            <img
+                src={url}
+                alt={alt}
+                style={imageStyle}
+                className={className}
+                onLoad={handleLoad}
+                onError={handleError}
+                data-testid={testId}
+            />
+        </Box>
     )
 }

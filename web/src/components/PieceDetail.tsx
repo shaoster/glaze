@@ -81,10 +81,11 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
             {/* Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
             {piece.thumbnail && (
-                <img
-                    src={piece.thumbnail}
+                <CloudinaryImage
+                    url={piece.thumbnail}
                     alt={piece.name}
-                    style={{ height: 64, width: 64, objectFit: 'cover', borderRadius: 4 }}
+                    context="thumbnail"
+                    style={{ objectFit: 'cover', borderRadius: 4 }}
                 />
             )}
             <Box>
@@ -190,7 +191,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                                                                 cloudinary_public_id={img.cloudinary_public_id}
                                                                 alt={img.caption || ''}
                                                                 context="thumbnail"
-                                                                style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4 }}
+                                                                style={{ objectFit: 'cover', borderRadius: 4 }}
                                                             />
                                                             {img.caption && (
                                                                 <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center', wordBreak: 'break-word' }}>
