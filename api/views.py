@@ -156,7 +156,10 @@ def global_entries(request: Request, global_name: str) -> Response:
         else:
             objects = model_cls.objects.filter(user=request.user).only('pk', display_field).order_by(display_field)
         return Response(
-            [{'id': str(obj.pk), 'name': getattr(obj, display_field)} for obj in objects]
+            [
+                {'id': str(obj.pk), 'name': getattr(obj, display_field), 'is_public': obj.user_id is None}
+                for obj in objects
+            ]
         )
 
     field = request.data.get('field')
@@ -165,17 +168,6 @@ def global_entries(request: Request, global_name: str) -> Response:
         return Response({'detail': 'Invalid field'}, status=status.HTTP_400_BAD_REQUEST)
     if not value:
         return Response({'detail': 'Value is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-    # For public globals, reject any name that already exists in the public library.
-    # Uniqueness is scoped to each user's private objects union the public objects,
-    # so a private entry must not duplicate a public name.  (Cross-user private
-    # collisions are intentionally not checked — doing so would leak existence of
-    # other users' data.)
-    if has_public_library and model_cls.objects.filter(user__isnull=True, **{field: value}).exists():
-        return Response(
-            {'detail': f"A public {global_name.replace('_', ' ')} named '{value}' already exists in the shared library. Select it from the list instead of creating a private copy."},
-            status=status.HTTP_409_CONFLICT,
-        )
 
     obj, created = model_cls.objects.get_or_create(user=request.user, **{field: value})
     status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK

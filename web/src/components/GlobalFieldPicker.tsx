@@ -1,12 +1,31 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete'
 import { CircularProgress, TextField } from '@mui/material'
 import type { SxProps, Theme } from '@mui/material'
-import { createGlobalEntry, fetchGlobalEntries } from '@common/api'
+import { createGlobalEntry, fetchGlobalEntries, type GlobalEntry } from '@common/api'
 import { getGlobalDisplayField } from '@common/workflow'
 
 // Pre-built filter; module-level to avoid reconstruction on every render.
 const FILTER = createFilterOptions<string>()
+
+const PUBLIC_SUFFIX = ' (public)'
+
+/**
+ * Returns the display label for a global entry. When a public entry shares its
+ * name with a private entry in the same list, the public entry is labelled with
+ * a "(public)" suffix so users can distinguish the two.
+ */
+function buildDisplayOptions(entries: GlobalEntry[]): string[] {
+    const privateNames = new Set(entries.filter((e) => !e.isPublic).map((e) => e.name))
+    return entries.map((e) => (e.isPublic && privateNames.has(e.name) ? e.name + PUBLIC_SUFFIX : e.name))
+}
+
+/** Strips the "(public)" suffix added for display disambiguation, returning the raw name. */
+export function stripPublicSuffix(displayName: string): string {
+    return displayName.endsWith(PUBLIC_SUFFIX)
+        ? displayName.slice(0, -PUBLIC_SUFFIX.length)
+        : displayName
+}
 
 // Sentinel prefix/suffix injected into the Autocomplete option list to signal
 // "create this as a new entry" vs selecting an existing one.
@@ -54,7 +73,7 @@ export interface GlobalFieldPickerProps {
      * optimistic insertion after a successful create. When provided, the caller
      * owns the list and is responsible for refreshing it after a create.
      */
-    options?: string[]
+    options?: GlobalEntry[]
     sx?: SxProps<Theme>
 }
 
@@ -81,25 +100,29 @@ export default function GlobalFieldPicker({
     sx,
 }: GlobalFieldPickerProps) {
     const fieldName = getGlobalDisplayField(globalName)
-    const [internalOptions, setInternalOptions] = useState<string[]>([])
+    const [internalEntries, setInternalEntries] = useState<GlobalEntry[]>([])
     const [creating, setCreating] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    const options = optionsProp ?? internalOptions
+    const entries = optionsProp ?? internalEntries
+
+    // Display strings: public entries whose name also appears as a private entry
+    // get a "(public)" suffix so users can distinguish the two.
+    const displayOptions = useMemo(() => buildDisplayOptions(entries), [entries])
 
     useEffect(() => {
         if (optionsProp !== undefined) return
         fetchGlobalEntries(globalName)
-            .then(setInternalOptions)
+            .then(setInternalEntries)
             .catch(() => {})
     }, [globalName, optionsProp])
 
-    async function handleChange(option: string | null) {
-        if (!option) {
+    async function handleChange(displayOption: string | null) {
+        if (!displayOption) {
             onChange('')
             return
         }
-        const createValue = parseCreateOption(option)
+        const createValue = parseCreateOption(displayOption)
         if (createValue) {
             setCreating(true)
             setError(null)
@@ -108,9 +131,9 @@ export default function GlobalFieldPicker({
                 if (optionsProp === undefined) {
                     // Caller owns the list when optionsProp is provided; only
                     // update internal state when managing the list ourselves.
-                    setInternalOptions((prev) => {
-                        const merged = Array.from(new Set([...prev, createdName]))
-                        merged.sort()
+                    setInternalEntries((prev) => {
+                        const merged = [...prev, { name: createdName, isPublic: false }]
+                        merged.sort((a, b) => a.name.localeCompare(b.name))
                         return merged
                     })
                 }
@@ -122,20 +145,23 @@ export default function GlobalFieldPicker({
             }
             return
         }
-        onChange(option)
+        // Strip display suffix before emitting the raw name.
+        onChange(stripPublicSuffix(displayOption))
     }
 
     return (
         <Autocomplete
             freeSolo={canCreate}
-            options={options}
+            options={displayOptions}
             inputValue={value}
             onInputChange={(_e, val) => onChange(val)}
             onChange={(_e, val) => handleChange(val ?? null)}
             filterOptions={(opts, params) => {
                 const filtered = FILTER(opts, params)
                 const { inputValue } = params
-                const isExisting = opts.some((opt) => inputValue === opt)
+                // Check against raw names (strip suffix) so typing "Stoneware"
+                // is treated as an existing entry even when displayed as "Stoneware (public)".
+                const isExisting = entries.some((e) => inputValue === e.name)
                 if (canCreate && inputValue !== '' && !isExisting) {
                     filtered.push(buildCreateOption(inputValue))
                 }

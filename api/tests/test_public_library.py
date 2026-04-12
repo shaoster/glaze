@@ -3,8 +3,8 @@
 Covers:
 - Public globals (clay_body, glaze_type) expose public objects to all users.
 - Non-public globals (location, glaze_method) only expose private objects.
-- POST on a public global with a name matching a public object returns the
-  public object rather than creating a private duplicate.
+- GET response includes is_public flag on each entry.
+- POST on a public global allows a private object with the same name as a public one.
 - POST on a public global with a new name creates a private object.
 - Public objects do not expose other users' private objects.
 """
@@ -67,10 +67,27 @@ class TestPublicLibraryGet:
         names = [e['name'] for e in response.json()]
         assert names == sorted(names)
 
+    def test_get_response_includes_is_public_flag(self, client, user):
+        ClayBody.objects.create(user=None, name='Public Clay')
+        ClayBody.objects.create(user=user, name='Private Clay')
+
+        response = client.get('/api/globals/clay_body/')
+        assert response.status_code == 200
+        entries = {e['name']: e for e in response.json()}
+        assert entries['Public Clay']['is_public'] is True
+        assert entries['Private Clay']['is_public'] is False
+
+    def test_private_global_is_public_always_false(self, client, user):
+        Location.objects.create(user=user, name='My Shelf')
+
+        response = client.get('/api/globals/location/')
+        assert response.status_code == 200
+        assert response.json()[0]['is_public'] is False
+
 
 @pytest.mark.django_db
 class TestPublicLibraryPost:
-    def test_post_rejects_name_matching_public_object(self, client):
+    def test_post_allows_private_object_with_same_name_as_public(self, client, user):
         ClayBody.objects.create(user=None, name='Stoneware')
 
         response = client.post(
@@ -78,11 +95,10 @@ class TestPublicLibraryPost:
             {'field': 'name', 'value': 'Stoneware'},
             format='json',
         )
-        assert response.status_code == 409
-        assert 'Stoneware' in response.json()['detail']
-        assert 'shared library' in response.json()['detail']
-        # No private duplicate should be created.
-        assert ClayBody.objects.filter(user__isnull=False, name='Stoneware').count() == 0
+        assert response.status_code == 201
+        assert response.json()['name'] == 'Stoneware'
+        # Private duplicate is now allowed.
+        assert ClayBody.objects.filter(user=user, name='Stoneware').count() == 1
 
     def test_post_creates_private_object_when_no_public_match(self, client, user):
         response = client.post(
