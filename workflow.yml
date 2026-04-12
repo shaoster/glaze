@@ -106,6 +106,24 @@ globals:
       short_description:
         type: string
         description: Summary of the glaze properties or firing range.
+      test_tile_image:
+        type: string
+        description: URL of the glaze test tile image.
+      is_food_safe:
+        type: boolean
+        description: Whether this glaze is food safe.
+      runs:
+        type: boolean
+        description: Whether this glaze runs during firing.
+      highlights_grooves:
+        type: boolean
+        description: Whether this glaze highlights surface grooves and texture.
+      is_different_on_white_and_brown_clay:
+        type: boolean
+        description: Whether this glaze appears different on white versus brown clay.
+      apply_thin:
+        type: boolean
+        description: Whether this glaze should be applied thinly.
 
   glaze_method:
     model: GlazeMethod

@@ -61,6 +61,12 @@ class GlazeType(models.Model):
     )
     name = models.CharField(max_length=255)
     short_description = models.CharField(max_length=1024, blank=True, default='')
+    test_tile_image = models.CharField(max_length=1024, blank=True, default='')
+    is_food_safe = models.BooleanField(null=True, blank=True)
+    runs = models.BooleanField(null=True, blank=True)
+    highlights_grooves = models.BooleanField(null=True, blank=True)
+    is_different_on_white_and_brown_clay = models.BooleanField(null=True, blank=True)
+    apply_thin = models.BooleanField(null=True, blank=True)
 
     class Meta:
         constraints = [
