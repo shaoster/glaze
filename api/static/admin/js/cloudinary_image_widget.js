@@ -5,7 +5,7 @@
  * CloudinaryImageWidget.  On successful upload the secure_url is written
  * into the associated text input and a live preview image is updated.
  *
- * Configuration (cloud_name, api_key) is read from data-attributes set by
+ * Configuration (cloud_name, api_key, folder) is read from data-attributes set by
  * the Python widget at render time.  Signatures are obtained via the
  * existing /api/uploads/cloudinary/widget-signature/ endpoint using the
  * current session cookie + CSRF token, so no additional authentication is
@@ -30,13 +30,13 @@
 
     var cloudName = inp.dataset.cloudinaryCloudName;
     var apiKey    = inp.dataset.cloudinaryApiKey;
+    var folder    = inp.dataset.cloudinaryFolder || '';
 
     if (!cloudName || !apiKey) { return; }
 
-    var widget = cloudinary.createUploadWidget(
-      {
-        cloudName: cloudName,
-        apiKey: apiKey,
+    var widgetOptions = {
+      cloudName: cloudName,
+      apiKey: apiKey,
         uploadSignature: function (callback, paramsToSign) {
           fetch('/api/uploads/cloudinary/widget-signature/', {
             method: 'POST',
@@ -52,7 +52,11 @@
         },
         sources: ['local', 'url', 'camera'],
         multiple: false,
-      },
+    };
+    if (folder) { widgetOptions.folder = folder; }
+
+    var widget = cloudinary.createUploadWidget(
+      widgetOptions,
       function (error, result) {
         if (!error && result && result.event === 'success') {
           var url = result.info.secure_url;

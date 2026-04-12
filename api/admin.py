@@ -122,10 +122,14 @@ class CloudinaryImageWidget(widgets.TextInput):
         cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
         api_key = os.environ.get('CLOUDINARY_API_KEY', '')
 
+        folder = os.environ.get('CLOUDINARY_PUBLIC_UPLOAD_FOLDER', '').strip()
+
         final_attrs = dict(attrs or {})
         if cloud_name and api_key:
             final_attrs['data-cloudinary-cloud-name'] = cloud_name
             final_attrs['data-cloudinary-api-key'] = api_key
+            if folder:
+                final_attrs['data-cloudinary-folder'] = folder
 
         text_html = super().render(name, value, final_attrs, renderer)
 
