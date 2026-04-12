@@ -70,19 +70,19 @@ class TestPublicLibraryGet:
 
 @pytest.mark.django_db
 class TestPublicLibraryPost:
-    def test_post_returns_public_object_when_name_matches(self, client):
-        public = ClayBody.objects.create(user=None, name='Stoneware')
+    def test_post_rejects_name_matching_public_object(self, client):
+        ClayBody.objects.create(user=None, name='Stoneware')
 
         response = client.post(
             '/api/globals/clay_body/',
             {'field': 'name', 'value': 'Stoneware'},
             format='json',
         )
-        assert response.status_code == 200
-        assert response.json()['id'] == str(public.pk)
-        assert response.json()['name'] == 'Stoneware'
+        assert response.status_code == 409
+        assert 'Stoneware' in response.json()['detail']
+        assert 'shared library' in response.json()['detail']
         # No private duplicate should be created.
-        assert ClayBody.objects.filter(name='Stoneware').count() == 1
+        assert ClayBody.objects.filter(user__isnull=False, name='Stoneware').count() == 0
 
     def test_post_creates_private_object_when_no_public_match(self, client, user):
         response = client.post(

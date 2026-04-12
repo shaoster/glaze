@@ -75,6 +75,19 @@ def is_public_global(global_name: str) -> bool:
     return bool(config.get('public', False))
 
 
+def get_public_global_models() -> list[type[django_models.Model]]:
+    """Return the Django model class for every global declared public: true.
+
+    Use this to iterate over models that need public library treatment
+    (e.g. admin registration) without importing the private _GLOBALS_MAP.
+    """
+    return [
+        apps.get_model('api', config['model'])
+        for config in _GLOBALS_MAP.values()
+        if config.get('public', False)
+    ]
+
+
 def _resolve_field_def(field_def: dict) -> dict:
     """Recursively resolve a DSL field_def to its effective JSON Schema property dict.
 

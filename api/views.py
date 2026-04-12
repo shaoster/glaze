@@ -166,17 +166,16 @@ def global_entries(request: Request, global_name: str) -> Response:
     if not value:
         return Response({'detail': 'Value is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if field == display_field and has_public_library:
-        # If a public object with this name exists, return it rather than
-        # creating a duplicate private one.
-        public_obj = model_cls.objects.filter(user__isnull=True, **{field: value}).first()
-        if public_obj is not None:
-            return Response({'id': str(public_obj.pk), 'name': getattr(public_obj, display_field)})
-
-        # No public object — but check that the name doesn't collide with one
-        # when creating a new private entry.  (The DB constraint handles
-        # per-user uniqueness; this guards the cross-scope uniqueness rule.)
-        # At this point there is no public object, so we fall through to get_or_create.
+    # For public globals, reject any name that already exists in the public library.
+    # Uniqueness is scoped to each user's private objects union the public objects,
+    # so a private entry must not duplicate a public name.  (Cross-user private
+    # collisions are intentionally not checked — doing so would leak existence of
+    # other users' data.)
+    if has_public_library and model_cls.objects.filter(user__isnull=True, **{field: value}).exists():
+        return Response(
+            {'detail': f"A public {global_name.replace('_', ' ')} named '{value}' already exists in the shared library. Select it from the list instead of creating a private copy."},
+            status=status.HTTP_409_CONFLICT,
+        )
 
     obj, created = model_cls.objects.get_or_create(user=request.user, **{field: value})
     status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
