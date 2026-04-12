@@ -516,7 +516,7 @@ export default function WorkflowState({
                                             cloudinary_public_id={img.cloudinary_public_id}
                                             alt={img.caption || 'Pottery image'}
                                             context="thumbnail"
-                                            style={{ height: 64, width: 64, objectFit: 'cover', borderRadius: 4, display: 'block' }}
+                                            style={{ objectFit: 'cover', borderRadius: 4, display: 'block' }}
                                         />
                                     </Box>
                                     {editingCaptionIndex === i ? (
