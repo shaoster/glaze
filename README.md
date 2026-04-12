@@ -461,7 +461,7 @@ The workflow state machine and all valid transitions are defined in [`workflow.y
 
 `workflow.yml` also contains two optional sections beyond the state list:
 
-- **`globals`** — named domain types backed by Django models (e.g. `location`, `piece`), registered so they can be referenced from `additional_fields` and verified against `api/models.py` by the test suite.
+- **`globals`** — named domain types backed by Django models (`location`, `piece`, `clay_body`, `glaze_type`, `glaze_method`), registered so they can be referenced from `additional_fields` and verified against `api/models.py` by the test suite.
 - **`additional_fields`** (per-state) — state-specific fields declared using the embedded DSL. See the “Authoring `additional_fields`” section below for the exact syntax and how the web renders the inputs.
 
 ### Authoring `additional_fields`
