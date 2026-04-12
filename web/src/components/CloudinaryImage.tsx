@@ -174,7 +174,7 @@ export default function CloudinaryImage({
             img.resize(fit().width(vw).height(vh))
         } else {
             // thumbnail or preview — 64×64 fill with auto gravity
-            img.resize(fill().width(64).height(64).gravity(autoGravity()))
+            img.resize(fill().width(THUMBNAIL_SIZE).height(THUMBNAIL_SIZE).gravity(autoGravity()))
         }
 
         img.delivery(format(autoFormat()))

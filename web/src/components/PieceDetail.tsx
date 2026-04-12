@@ -24,8 +24,6 @@ import ImageLightbox from './ImageLightbox'
 import CloudinaryImage from './CloudinaryImage'
 import WorkflowState from './WorkflowState'
 
-const PIECE_THUMBNAIL_SIZE = 64
-
 type PieceDetailProps = {
     piece: PieceDetailType
     onPieceUpdated: (updated: PieceDetailType) => void
@@ -83,10 +81,11 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
             {/* Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
             {piece.thumbnail && (
-                <img
-                    src={piece.thumbnail}
+                <CloudinaryImage
+                    url={piece.thumbnail}
                     alt={piece.name}
-                    style={{ height: PIECE_THUMBNAIL_SIZE, width: PIECE_THUMBNAIL_SIZE, objectFit: 'cover', borderRadius: 4 }}
+                    context="thumbnail"
+                    style={{ objectFit: 'cover', borderRadius: 4 }}
                 />
             )}
             <Box>
