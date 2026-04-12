@@ -39,6 +39,7 @@ export type CloudinaryWidgetConfig = {
     cloud_name: string
     api_key: string
     folder?: string
+    upload_preset?: string
 }
 
 // ---------------------------------------------------------------------------

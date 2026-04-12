@@ -28,11 +28,23 @@ class TestCloudinaryWidgetConfig:
         monkeypatch.setenv('CLOUDINARY_CLOUD_NAME', 'demo-cloud')
         monkeypatch.setenv('CLOUDINARY_API_KEY', 'public-api-key')
         monkeypatch.setenv('CLOUDINARY_UPLOAD_FOLDER', 'glaze')
+        monkeypatch.delenv('CLOUDINARY_UPLOAD_PRESET', raising=False)
 
         response = client.get('/api/uploads/cloudinary/widget-config/')
 
         assert response.status_code == 200
         assert response.json() == {'cloud_name': 'demo-cloud', 'api_key': 'public-api-key', 'folder': 'glaze'}
+
+    def test_returns_config_with_preset(self, client, monkeypatch):
+        monkeypatch.setenv('CLOUDINARY_CLOUD_NAME', 'demo-cloud')
+        monkeypatch.setenv('CLOUDINARY_API_KEY', 'public-api-key')
+        monkeypatch.delenv('CLOUDINARY_UPLOAD_FOLDER', raising=False)
+        monkeypatch.setenv('CLOUDINARY_UPLOAD_PRESET', 'glaze_signed')
+
+        response = client.get('/api/uploads/cloudinary/widget-config/')
+
+        assert response.status_code == 200
+        assert response.json() == {'cloud_name': 'demo-cloud', 'api_key': 'public-api-key', 'upload_preset': 'glaze_signed'}
 
 
 @pytest.mark.django_db

@@ -309,6 +309,7 @@ docker compose up -d
 | `CLOUDINARY_API_KEY` | No | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | No | Cloudinary API secret |
 | `CLOUDINARY_UPLOAD_FOLDER` | No | Cloudinary folder for uploaded images |
+| `CLOUDINARY_UPLOAD_PRESET` | No | Cloudinary upload preset (passed to the Upload Widget as `uploadPreset`) |
 
 Note: `VITE_GOOGLE_CLIENT_ID` is **not** set here — it is baked into the JS bundle at CI build time via the GitHub Actions secret.
 

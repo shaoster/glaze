@@ -25,6 +25,7 @@ interface CloudinaryUploadWidgetOptions {
         paramsToSign: Record<string, unknown>
     ) => void
     folder?: string
+    uploadPreset?: string
     sources?: string[]
     multiple?: boolean
     resourceType?: string

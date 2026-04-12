@@ -305,6 +305,7 @@ export default function WorkflowState({
                         .catch(() => setUploadError('Failed to sign upload. Please try again.'))
                 },
                 ...(config.folder ? { folder: config.folder } : {}),
+                ...(config.upload_preset ? { uploadPreset: config.upload_preset } : {}),
                 sources: ['local', 'camera'],
                 multiple: false,
                 resourceType: 'image',

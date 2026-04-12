@@ -190,6 +190,9 @@ def cloudinary_widget_config(request: Request) -> Response:
     payload: dict[str, str] = {'cloud_name': cloud_name, 'api_key': api_key}
     if folder:
         payload['folder'] = folder
+    preset = os.environ.get('CLOUDINARY_UPLOAD_PRESET', '').strip()
+    if preset:
+        payload['upload_preset'] = preset
     return Response(payload)
 
 
