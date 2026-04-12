@@ -21,8 +21,10 @@ import type { CaptionedImage, PieceDetail as PieceDetailType } from '@common/typ
 import { formatState, SUCCESSORS } from '@common/types'
 import { addPieceState } from '@common/api'
 import ImageLightbox from './ImageLightbox'
-import CloudinaryImage, { THUMBNAIL_SIZE } from './CloudinaryImage'
+import CloudinaryImage from './CloudinaryImage'
 import WorkflowState from './WorkflowState'
+
+const PIECE_THUMBNAIL_SIZE = 64
 
 type PieceDetailProps = {
     piece: PieceDetailType
@@ -84,7 +86,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                 <img
                     src={piece.thumbnail}
                     alt={piece.name}
-                    style={{ height: THUMBNAIL_SIZE, width: THUMBNAIL_SIZE, objectFit: 'cover', borderRadius: 4 }}
+                    style={{ height: PIECE_THUMBNAIL_SIZE, width: PIECE_THUMBNAIL_SIZE, objectFit: 'cover', borderRadius: 4 }}
                 />
             )}
             <Box>
