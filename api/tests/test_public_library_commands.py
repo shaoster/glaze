@@ -1,0 +1,198 @@
+"""Tests for the dump_public_library and load_public_library management commands."""
+import json
+import tempfile
+from io import StringIO
+from pathlib import Path
+
+import pytest
+from django.core.management import call_command
+from django.core.management.base import CommandError
+
+from api.models import ClayBody, GlazeType
+
+
+@pytest.mark.django_db
+class TestDumpPublicLibrary:
+    def test_exports_public_clay_bodies(self, tmp_path):
+        ClayBody.objects.create(user=None, name='Stoneware', short_description='A stoneware body')
+        ClayBody.objects.create(user=None, name='Porcelain')
+        output = tmp_path / 'out.json'
+
+        call_command('dump_public_library', output=str(output))
+
+        records = json.loads(output.read_text())
+        clay_records = [r for r in records if r['model'] == 'api.claybody']
+        names = [r['fields']['name'] for r in clay_records]
+        assert 'Stoneware' in names
+        assert 'Porcelain' in names
+
+    def test_exports_public_glaze_types(self, tmp_path):
+        GlazeType.objects.create(user=None, name='Celadon', is_food_safe=True)
+        output = tmp_path / 'out.json'
+
+        call_command('dump_public_library', output=str(output))
+
+        records = json.loads(output.read_text())
+        glaze_records = [r for r in records if r['model'] == 'api.glazetype']
+        assert len(glaze_records) == 1
+        assert glaze_records[0]['fields']['name'] == 'Celadon'
+        assert glaze_records[0]['fields']['is_food_safe'] is True
+
+    def test_excludes_private_objects(self, tmp_path, django_user_model):
+        user = django_user_model.objects.create(username='user@example.com')
+        ClayBody.objects.create(user=user, name='My Private Clay')
+        ClayBody.objects.create(user=None, name='Public Clay')
+        output = tmp_path / 'out.json'
+
+        call_command('dump_public_library', output=str(output))
+
+        records = json.loads(output.read_text())
+        names = [r['fields']['name'] for r in records]
+        assert 'Public Clay' in names
+        assert 'My Private Clay' not in names
+
+    def test_no_pk_or_user_in_output(self, tmp_path):
+        ClayBody.objects.create(user=None, name='Stoneware')
+        output = tmp_path / 'out.json'
+
+        call_command('dump_public_library', output=str(output))
+
+        records = json.loads(output.read_text())
+        assert len(records) == 1
+        fields = records[0]['fields']
+        assert 'pk' not in records[0]
+        assert 'id' not in fields
+        assert 'user' not in fields
+
+    def test_records_sorted_by_name(self, tmp_path):
+        ClayBody.objects.create(user=None, name='Stoneware')
+        ClayBody.objects.create(user=None, name='Earthenware')
+        ClayBody.objects.create(user=None, name='Porcelain')
+        output = tmp_path / 'out.json'
+
+        call_command('dump_public_library', output=str(output))
+
+        records = json.loads(output.read_text())
+        names = [r['fields']['name'] for r in records]
+        assert names == sorted(names)
+
+    def test_stdout_output(self):
+        ClayBody.objects.create(user=None, name='Stoneware')
+        out = StringIO()
+
+        call_command('dump_public_library', output='-', stdout=out)
+
+        records = json.loads(out.getvalue())
+        assert any(r['fields']['name'] == 'Stoneware' for r in records)
+
+    def test_empty_library_produces_empty_array(self, tmp_path):
+        output = tmp_path / 'out.json'
+
+        call_command('dump_public_library', output=str(output))
+
+        records = json.loads(output.read_text())
+        assert records == []
+
+    def test_creates_parent_directories(self, tmp_path):
+        nested = tmp_path / 'a' / 'b' / 'c' / 'library.json'
+
+        call_command('dump_public_library', output=str(nested))
+
+        assert nested.exists()
+
+
+@pytest.mark.django_db
+class TestLoadPublicLibrary:
+    def _write_fixture(self, tmp_path, records):
+        fixture = tmp_path / 'library.json'
+        fixture.write_text(json.dumps(records))
+        return fixture
+
+    def test_creates_new_records(self, tmp_path):
+        fixture = self._write_fixture(tmp_path, [
+            {'model': 'api.claybody', 'fields': {'name': 'Stoneware', 'short_description': 'A body'}},
+            {'model': 'api.glazetype', 'fields': {'name': 'Celadon', 'short_description': '', 'test_tile_image': '', 'is_food_safe': True, 'runs': None, 'highlights_grooves': None, 'is_different_on_white_and_brown_clay': None, 'apply_thin': None}},
+        ])
+
+        call_command('load_public_library', fixture=str(fixture))
+
+        assert ClayBody.objects.filter(user=None, name='Stoneware').exists()
+        assert GlazeType.objects.filter(user=None, name='Celadon').exists()
+
+    def test_updates_existing_records(self, tmp_path):
+        ClayBody.objects.create(user=None, name='Stoneware', short_description='Old')
+        fixture = self._write_fixture(tmp_path, [
+            {'model': 'api.claybody', 'fields': {'name': 'Stoneware', 'short_description': 'Updated'}},
+        ])
+
+        call_command('load_public_library', fixture=str(fixture))
+
+        obj = ClayBody.objects.get(user=None, name='Stoneware')
+        assert obj.short_description == 'Updated'
+        assert ClayBody.objects.filter(user=None, name='Stoneware').count() == 1
+
+    def test_idempotent_on_repeated_runs(self, tmp_path):
+        fixture = self._write_fixture(tmp_path, [
+            {'model': 'api.claybody', 'fields': {'name': 'Porcelain', 'short_description': 'Fine'}},
+        ])
+
+        call_command('load_public_library', fixture=str(fixture))
+        call_command('load_public_library', fixture=str(fixture))
+
+        assert ClayBody.objects.filter(user=None, name='Porcelain').count() == 1
+
+    def test_does_not_touch_private_objects(self, tmp_path, django_user_model):
+        user = django_user_model.objects.create(username='owner@example.com')
+        private = ClayBody.objects.create(user=user, name='My Clay', short_description='Private')
+        fixture = self._write_fixture(tmp_path, [
+            {'model': 'api.claybody', 'fields': {'name': 'My Clay', 'short_description': 'Public version'}},
+        ])
+
+        call_command('load_public_library', fixture=str(fixture))
+
+        private.refresh_from_db()
+        assert private.short_description == 'Private'
+        # A separate public record should have been created.
+        assert ClayBody.objects.filter(user=None, name='My Clay').exists()
+
+    def test_raises_for_missing_fixture(self, tmp_path):
+        with pytest.raises(CommandError, match='not found'):
+            call_command('load_public_library', fixture=str(tmp_path / 'missing.json'))
+
+    def test_raises_for_invalid_json(self, tmp_path):
+        bad = tmp_path / 'bad.json'
+        bad.write_text('not valid json {{{')
+
+        with pytest.raises(CommandError, match='Invalid JSON'):
+            call_command('load_public_library', fixture=str(bad))
+
+    def test_raises_for_unknown_model(self, tmp_path):
+        fixture = self._write_fixture(tmp_path, [
+            {'model': 'api.doesnotexist', 'fields': {'name': 'X'}},
+        ])
+
+        with pytest.raises(CommandError, match='Unknown model'):
+            call_command('load_public_library', fixture=str(fixture))
+
+    def test_roundtrip_dump_then_load(self, tmp_path, django_user_model):
+        """dump_public_library output can be fed directly to load_public_library."""
+        ClayBody.objects.create(user=None, name='Stoneware', short_description='A body')
+        GlazeType.objects.create(
+            user=None, name='Celadon', is_food_safe=True, runs=False,
+        )
+        output = tmp_path / 'library.json'
+
+        call_command('dump_public_library', output=str(output))
+
+        # Clear the database and reload from the fixture.
+        ClayBody.objects.all().delete()
+        GlazeType.objects.all().delete()
+
+        call_command('load_public_library', fixture=str(output))
+
+        clay = ClayBody.objects.get(user=None, name='Stoneware')
+        assert clay.short_description == 'A body'
+
+        glaze = GlazeType.objects.get(user=None, name='Celadon')
+        assert glaze.is_food_safe is True
+        assert glaze.runs is False
