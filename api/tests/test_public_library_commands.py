@@ -159,6 +159,17 @@ class TestLoadPublicLibrary:
         with pytest.raises(CommandError, match='not found'):
             call_command('load_public_library', fixture=str(tmp_path / 'missing.json'))
 
+    def test_skip_if_missing_exits_cleanly(self, tmp_path):
+        out = StringIO()
+        # Should not raise; should print a warning instead.
+        call_command(
+            'load_public_library',
+            fixture=str(tmp_path / 'missing.json'),
+            skip_if_missing=True,
+            stdout=out,
+        )
+        assert 'skipping' in out.getvalue().lower()
+
     def test_raises_for_invalid_json(self, tmp_path):
         bad = tmp_path / 'bad.json'
         bad.write_text('not valid json {{{')

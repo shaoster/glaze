@@ -31,11 +31,28 @@ class Command(BaseCommand):
                 f'(default: {_DEFAULT_FIXTURE}).'
             ),
         )
+        parser.add_argument(
+            '--skip-if-missing',
+            action='store_true',
+            default=False,
+            help=(
+                'If the fixture file does not exist, print a warning and exit '
+                'successfully instead of raising an error.  Useful in deployment '
+                'contexts where no fixture has been committed yet.'
+            ),
+        )
 
     def handle(self, *args, **options):
         fixture_path = Path(options['fixture'])
 
         if not fixture_path.exists():
+            if options['skip_if_missing']:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f'No fixture file found at {fixture_path} — skipping public library load.'
+                    )
+                )
+                return
             raise CommandError(f'Fixture file not found: {fixture_path}')
 
         try:
