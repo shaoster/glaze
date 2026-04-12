@@ -438,3 +438,31 @@ class TestGlobals:
                         f"Global '@{alias}' declares field '{field_name}' "
                         f"which does not exist on model '{global_def['model']}'"
                     )
+
+    def test_public_globals_have_nullable_user_field(self, globals_section):
+        """Models for globals declared public: true must allow a null user (for public entries)."""
+        for alias, global_def in globals_section.items():
+            if not global_def.get("public", False):
+                continue
+            model = apps.get_model("api", global_def["model"])
+            try:
+                user_field = model._meta.get_field("user")
+            except Exception:
+                pytest.fail(
+                    f"Global '@{alias}' is declared public: true but its model "
+                    f"'{global_def['model']}' has no 'user' field"
+                )
+            assert user_field.null, (
+                f"Global '@{alias}' is declared public: true but '{global_def['model']}.user' "
+                f"does not allow null — public objects need a null user"
+            )
+
+    def test_public_and_private_flags_are_booleans(self, globals_section):
+        """public and private flags in global defs must be booleans when present."""
+        for alias, global_def in globals_section.items():
+            for flag in ("public", "private"):
+                value = global_def.get(flag)
+                if value is not None:
+                    assert isinstance(value, bool), (
+                        f"Global '@{alias}' flag '{flag}' must be a boolean, got {type(value).__name__}"
+                    )

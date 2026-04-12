@@ -15,6 +15,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from django.db.models import Q
+
 from .models import Piece, UserProfile
 from .serializers import (
     AuthUserSerializer,
@@ -28,7 +30,7 @@ from .serializers import (
     PieceUpdateSerializer,
     RegisterSerializer,
 )
-from .workflow import get_global_model_and_field
+from .workflow import get_global_model_and_field, is_public_global
 
 
 def _piece_queryset(request: Request):
@@ -143,8 +145,16 @@ def global_entries(request: Request, global_name: str) -> Response:
     except KeyError:
         return Response({'detail': 'Unknown global type.'}, status=status.HTTP_404_NOT_FOUND)
 
+    has_public_library = is_public_global(global_name)
+
     if request.method == 'GET':
-        objects = model_cls.objects.filter(user=request.user).only('pk', display_field).order_by(display_field)
+        if has_public_library:
+            # Return both the user's private objects and all public objects (user IS NULL).
+            objects = model_cls.objects.filter(
+                Q(user=request.user) | Q(user__isnull=True)
+            ).only('pk', display_field).order_by(display_field)
+        else:
+            objects = model_cls.objects.filter(user=request.user).only('pk', display_field).order_by(display_field)
         return Response(
             [{'id': str(obj.pk), 'name': getattr(obj, display_field)} for obj in objects]
         )
@@ -155,6 +165,18 @@ def global_entries(request: Request, global_name: str) -> Response:
         return Response({'detail': 'Invalid field'}, status=status.HTTP_400_BAD_REQUEST)
     if not value:
         return Response({'detail': 'Value is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # For public globals, reject any name that already exists in the public library.
+    # Uniqueness is scoped to each user's private objects union the public objects,
+    # so a private entry must not duplicate a public name.  (Cross-user private
+    # collisions are intentionally not checked — doing so would leak existence of
+    # other users' data.)
+    if has_public_library and model_cls.objects.filter(user__isnull=True, **{field: value}).exists():
+        return Response(
+            {'detail': f"A public {global_name.replace('_', ' ')} named '{value}' already exists in the shared library. Select it from the list instead of creating a private copy."},
+            status=status.HTTP_409_CONFLICT,
+        )
+
     obj, created = model_cls.objects.get_or_create(user=request.user, **{field: value})
     status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
     return Response({'id': str(obj.pk), 'name': getattr(obj, display_field)}, status=status_code)

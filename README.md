@@ -522,3 +522,44 @@ Sign-up behavior (temporary):
 - The backend registration endpoint (`POST /api/auth/register/`) remains available.
 - The web Sign Up action is intentionally disabled (`SIGN_UP_ENABLED = false` in [`web/src/App.tsx`](web/src/App.tsx)).
 - For now, create users manually in Django admin.
+
+## Managing Public Libraries (Django Admin)
+
+Some global types (currently **Clay Bodies** and **Glaze Types**) support a shared public library managed by site administrators. Public entries are visible to all authenticated users as read-only reference data; each user can also have their own private copies with unique names.
+
+### Getting to the admin
+
+1. Start the backend (`gz_backend` or `python manage.py runserver 8080`).
+2. Go to `http://localhost:8080/admin/` and sign in with a Django superuser account.
+   - To create a superuser: `gz_manage createsuperuser` (or `python manage.py createsuperuser`).
+
+### The "Public Libraries" section
+
+On the admin homepage, public library models appear in a dedicated **Public Libraries** section, separate from the general **Api** section. This section lists only public objects (those with no owner). Users' private copies are not shown here and remain accessible only via the shell/ORM.
+
+### Adding or editing a public entry
+
+1. Click a model name (e.g. "Clay Bodies") in the **Public Libraries** section.
+2. Click **"Add Clay Body"** (or click an existing row to edit it).
+3. Fill in the fields. The `User` field is hidden — public objects are always unowned.
+4. For fields marked as an image in [`workflow.yml`](workflow.yml) (e.g. the clay body or glaze type tile image):
+   - If Cloudinary is configured, an **Upload Image** button appears next to the URL field. Clicking it opens the Cloudinary Upload Widget in a modal. On success, the image URL is written back into the field and a thumbnail preview is shown.
+   - If Cloudinary is not configured, you can paste a URL directly into the text field.
+5. Click **Save**.
+
+### Name conflict rules
+
+- **Public name must be unique** — you cannot save a public entry with the same name as another existing public entry.
+- **Cannot shadow existing private objects** — if any user already has a private object with the same name, the admin form will reject the save and list the conflicting usernames. Ask those users to rename or delete their private copies before creating the public entry with that name.
+
+### Enabling Cloudinary in the admin
+
+Cloudinary uploads in the admin use the same backend-signed widget as the regular user UI. Set these env vars before starting Django:
+
+```bash
+export CLOUDINARY_CLOUD_NAME=<your-cloud-name>
+export CLOUDINARY_API_KEY=<your-api-key>
+export CLOUDINARY_API_SECRET=<your-api-secret>
+```
+
+The upload button is automatically hidden when these are not set; the plain URL field is always available as a fallback.
