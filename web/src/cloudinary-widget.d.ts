@@ -43,6 +43,10 @@ declare global {
                 options: CloudinaryUploadWidgetOptions,
                 callback: (error: unknown, result: CloudinaryUploadWidgetResult) => void
             ) => CloudinaryUploadWidget
+            createUploadWidget: (
+                options: CloudinaryUploadWidgetOptions,
+                callback: (error: unknown, result: CloudinaryUploadWidgetResult) => void
+            ) => CloudinaryUploadWidget
         }
     }
 }

@@ -132,6 +132,7 @@ export default function WorkflowState({
     const [notes, setNotes] = useState(pieceState.notes)
     const [images, setImages] = useState<ImageEntry[]>(stateImages(pieceState))
     const [uploadError, setUploadError] = useState<string | null>(null)
+    const [widgetLoading, setWidgetLoading] = useState(false)
     const [editingCaptionIndex, setEditingCaptionIndex] = useState<number | null>(null)
     const [editingCaptionValue, setEditingCaptionValue] = useState('')
     const [saving, setSaving] = useState(false)
@@ -252,6 +253,7 @@ export default function WorkflowState({
 
     async function handleUploadWidgetClick() {
         setUploadError(null)
+        setWidgetLoading(true)
         let config
         try {
             config = await fetchCloudinaryWidgetConfig()
@@ -259,7 +261,11 @@ export default function WorkflowState({
             setUploadError('Failed to load upload configuration. Please try again.')
             return
         }
-        window.cloudinary?.openUploadWidget(
+        const hideStyle = document.createElement('style')
+        hideStyle.textContent = 'iframe[title="Upload Widget"] { opacity: 0; }'
+        document.head.appendChild(hideStyle)
+
+        const uploadWidget = window.cloudinary?.createUploadWidget(
             {
                 cloudName: config.cloud_name,
                 apiKey: config.api_key,
@@ -289,10 +295,27 @@ export default function WorkflowState({
                         complete: theme.palette.success.main,
                         sourceBg: theme.palette.background.default,
                     },
-                },
+                    frame: { background: '#00000000' },
+                } as { palette: Record<string, string> },
             },
             (error, result) => {
+                if (result?.event === 'display-changed') {
+                    const state = typeof result.info === 'string'
+                        ? result.info
+                        : (result.info as Record<string, unknown>)?.state
+                    if (state === 'shown') {
+                        setWidgetLoading(false)
+                        hideStyle.remove()
+                        const iframe = document.querySelector('iframe[title="Upload Widget"]')
+                        if (iframe instanceof HTMLElement) {
+                            iframe.style.transition = 'opacity 0.15s ease-in'
+                            iframe.style.opacity = '1'
+                        }
+                    }
+                }
                 if (error) {
+                    setWidgetLoading(false)
+                    hideStyle.remove()
                     setUploadError('Upload failed. Please try again.')
                     return
                 }
@@ -315,6 +338,7 @@ export default function WorkflowState({
                 }
             }
         )
+        uploadWidget?.open()
     }
 
     function handleAdditionalFieldChange(name: string, value: string) {
@@ -559,10 +583,16 @@ export default function WorkflowState({
                         variant="outlined"
                         size="small"
                         onClick={handleUploadWidgetClick}
-                        disabled={savingImage}
+                        disabled={savingImage || widgetLoading}
                         startIcon={savingImage ? <CircularProgress size={14} color="inherit" /> : undefined}
+                        sx={{ position: 'relative' }}
                     >
-                        {savingImage ? 'Saving…' : 'Upload Image'}
+                        <Box sx={{ opacity: widgetLoading ? 0 : 1 }}>
+                            {savingImage ? 'Saving…' : 'Upload Image'}
+                        </Box>
+                        {widgetLoading && (
+                            <CircularProgress aria-hidden size={14} color="inherit" sx={{ position: 'absolute' }} />
+                        )}
                     </Button>
                     {(uploadError || imageError) && (
                         <Typography color="error" variant="body2" sx={{ mt: 1 }}>

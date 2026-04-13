@@ -61,17 +61,42 @@ const defaultProps = {
     onDirtyChange: vi.fn(),
 }
 
+const noop = () => {}
+
 // Helper to simulate a successful Cloudinary Upload Widget upload.
-// Returns a function that, when called, fires the widget callback with a success result.
+// The widget fires display-changed (shown) then success when open() is called.
 function setupUploadWidget(overrides: { secure_url?: string; public_id?: string } = {}) {
     const secure_url = overrides.secure_url ?? 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
     const public_id = overrides.public_id ?? 'sample'
-    const noop = () => {}
     window.cloudinary = {
-        openUploadWidget: vi.fn((_options, callback) => {
-            callback(null, { event: 'success', info: { secure_url, public_id, resource_type: 'image' } })
-            return { open: noop, close: noop, destroy: noop }
+        createUploadWidget: vi.fn((_options, callback) => ({
+            open: vi.fn(() => {
+                callback(null, { event: 'display-changed', info: { state: 'shown' } })
+                callback(null, { event: 'success', info: { secure_url, public_id, resource_type: 'image' } })
+            }),
+            close: noop,
+            destroy: noop,
+        })),
+        openUploadWidget: vi.fn(),
+    }
+}
+
+// Helper that sets up a controllable widget — events are fired manually via the
+// returned triggerEvent function, allowing assertions mid-flight.
+function setupControllableWidget() {
+    let savedCallback: ((error: unknown, result: unknown) => void) = noop
+    window.cloudinary = {
+        createUploadWidget: vi.fn((_options, callback) => {
+            savedCallback = callback
+            return { open: vi.fn(), close: noop, destroy: noop }
         }),
+        openUploadWidget: vi.fn(),
+    }
+    return {
+        triggerEvent: (event: string, info: unknown) =>
+            savedCallback(null, { event, info }),
+        triggerError: (err: Error) =>
+            savedCallback(err, { event: 'error', info: { secure_url: '', public_id: '', resource_type: 'image' } }),
     }
 }
 
@@ -337,17 +362,42 @@ describe('WorkflowState', () => {
     })
 
     it('widget upload error shows error message', async () => {
-        const noop = () => {}
-        window.cloudinary = {
-            openUploadWidget: vi.fn((_options, callback) => {
-                callback(new Error('Upload failed'), { event: 'error', info: { secure_url: '', public_id: '', resource_type: 'image' } })
-                return { open: noop, close: noop, destroy: noop }
-            }),
-        }
-        vi.mocked(api.fetchCloudinaryWidgetConfig).mockResolvedValue({ cloud_name: 'demo', api_key: '123456' })
+        const { triggerError } = setupControllableWidget()
         render(<WorkflowState {...defaultProps} />)
         fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
+        // Wait for createUploadWidget to have been called (config fetch has resolved)
+        await waitFor(() => expect(window.cloudinary!.createUploadWidget).toHaveBeenCalled())
+        await act(async () => triggerError(new Error('Upload failed')))
         await waitFor(() => expect(screen.getByText('Upload failed. Please try again.')).toBeInTheDocument())
+    })
+
+    it('upload button shows spinner and is disabled while widget is loading', async () => {
+        setupControllableWidget()
+        render(<WorkflowState {...defaultProps} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
+        // widgetLoading is set synchronously on click, before the async config fetch
+        expect(screen.getByRole('button', { name: 'Upload Image' })).toBeDisabled()
+        expect(screen.getByRole('progressbar', { hidden: true })).toBeInTheDocument()
+    })
+
+    it('upload button re-enables after display-changed shown', async () => {
+        const { triggerEvent } = setupControllableWidget()
+        render(<WorkflowState {...defaultProps} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
+        await waitFor(() => expect(window.cloudinary!.createUploadWidget).toHaveBeenCalled())
+        await act(async () => triggerEvent('display-changed', { state: 'shown' }))
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Upload Image' })).not.toBeDisabled())
+        expect(screen.queryByRole('progressbar', { hidden: true })).not.toBeInTheDocument()
+    })
+
+    it('upload button re-enables after widget error', async () => {
+        const { triggerError } = setupControllableWidget()
+        render(<WorkflowState {...defaultProps} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
+        await waitFor(() => expect(window.cloudinary!.createUploadWidget).toHaveBeenCalled())
+        await act(async () => triggerError(new Error('Upload failed')))
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Upload Image' })).not.toBeDisabled())
+        expect(screen.queryByRole('progressbar', { hidden: true })).not.toBeInTheDocument()
     })
 
     it('widget config fetch failure shows error message', async () => {
