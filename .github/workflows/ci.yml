@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI
 
 on:
   push:
@@ -119,7 +119,7 @@ jobs:
     needs: [common, backend, web, web-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - uses: actions/checkout@v5
@@ -136,28 +136,19 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/shaoster/glaze:latest
+          tags: |
+            ghcr.io/shaoster/glaze:latest
+            ghcr.io/shaoster/glaze:${{ github.sha }}
           build-args: |
             VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
 
-  deploy:
-    name: Deploy to droplet
-    runs-on: ubuntu-latest
-    needs: [publish]
-    concurrency:
-      group: deploy-production
-      cancel-in-progress: true
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up SSH
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H $(echo "${{ secrets.DEPLOY_HOST }}" | cut -d@ -f2) >> ~/.ssh/known_hosts
-
-      - name: Deploy
-        run: ./deploy.sh "${{ secrets.DEPLOY_HOST }}"
+          gh release create "release-${{ github.sha }}" \
+            --title "Build ${{ github.sha }}" \
+            --notes "Docker image published: \`ghcr.io/shaoster/glaze:${{ github.sha }}\`" \
+            --latest
