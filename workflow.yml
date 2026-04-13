@@ -152,6 +152,9 @@ globals:
     public: true
     private: false
     fields:
+      name:
+        type: string
+        description: Computed combination name (first_layer!second_layer). Auto-populated on save.
       first_layer_glaze_type:
         $ref: "@glaze_type.name"
         description: The first (bottom) layer glaze type.

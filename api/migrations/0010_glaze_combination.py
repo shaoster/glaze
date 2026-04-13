@@ -30,6 +30,6 @@ class Migration(migrations.Migration):
             options={
                 'constraints': [models.UniqueConstraint(condition=models.Q(('user__isnull', True)), fields=('first_layer_glaze_type', 'second_layer_glaze_type'), name='uniq_glaze_combination_public'), models.UniqueConstraint(condition=models.Q(('user__isnull', False)), fields=('user', 'first_layer_glaze_type', 'second_layer_glaze_type'), name='uniq_glaze_combination_per_user')],
             },
-            bases=(api.models.ImmutableUserMixin, models.Model),
+            bases=(api.models.GlobalModel,),
         ),
     ]

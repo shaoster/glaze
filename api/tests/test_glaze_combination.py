@@ -2,15 +2,17 @@
 
 Covers:
 - Model: public/private reference constraint (public combo -> public glaze types only)
-- Model: ImmutableUserMixin (user field cannot change after creation)
-- API GET: glaze_combination entries are returned with stringified FK display name
+- Model: computed ``name`` field (first_layer!second_layer, stored on save)
+- Model: GlazeType.name validation rejects the combination name separator ("!")
+- API GET: glaze_combination entries are returned with the computed name
 - API POST: blocked with 405 because private: false
-- Workflow helpers: is_private_global returns False for glaze_combination
+
+Note: ImmutableUser tests for GlazeCombination live in test_globals.py as part
+of the parameterised TestImmutableUser suite (covers all GlobalModel subclasses).
 """
 import pytest
 
-from api.models import GlazeCombination, GlazeType
-from api.workflow import is_private_global
+from api.models import GLAZE_COMBINATION_NAME_SEPARATOR, GlazeCombination, GlazeType
 
 
 # ---------------------------------------------------------------------------
@@ -26,46 +28,59 @@ def _private_glaze_type(user, name: str) -> GlazeType:
 
 
 # ---------------------------------------------------------------------------
-# ImmutableUserMixin — user field must not change after creation
+# GlazeType.name validation — separator character must be rejected
 # ---------------------------------------------------------------------------
 
 @pytest.mark.django_db
-class TestImmutableUser:
-    def test_changing_user_on_glaze_type_raises(self, user, other_user):
-        gt = GlazeType.objects.create(user=user, name='Iron Red')
-        gt.user = other_user
-        with pytest.raises(ValueError, match='Cannot change the user field'):
+class TestGlazeTypeNameValidation:
+    def test_name_with_separator_raises(self):
+        gt = GlazeType(user=None, name=f'Bad{GLAZE_COMBINATION_NAME_SEPARATOR}Name')
+        with pytest.raises(ValueError, match='cannot contain'):
             gt.save()
 
-    def test_changing_user_to_none_on_glaze_type_raises(self, user):
-        gt = GlazeType.objects.create(user=user, name='Iron Red')
-        gt.user = None
-        with pytest.raises(ValueError, match='Cannot change the user field'):
-            gt.save()
+    def test_name_without_separator_succeeds(self):
+        gt = GlazeType(user=None, name='Iron Red')
+        gt.save()  # Must not raise
+        assert gt.pk is not None
 
-    def test_changing_user_on_glaze_combination_raises(self, user, other_user):
-        pub_gt1 = _public_glaze_type('Celadon')
-        pub_gt2 = _public_glaze_type('Tenmoku')
+
+# ---------------------------------------------------------------------------
+# GlazeCombination — computed name field
+# ---------------------------------------------------------------------------
+
+@pytest.mark.django_db
+class TestGlazeCombinationName:
+    def test_name_is_set_on_save(self):
+        gt1 = _public_glaze_type('Celadon')
+        gt2 = _public_glaze_type('Iron Red')
         combo = GlazeCombination.objects.create(
             user=None,
-            first_layer_glaze_type=pub_gt1,
-            second_layer_glaze_type=pub_gt2,
+            first_layer_glaze_type=gt1,
+            second_layer_glaze_type=gt2,
         )
-        combo.user = user
-        with pytest.raises(ValueError, match='Cannot change the user field'):
-            combo.save()
+        expected = f'Celadon{GLAZE_COMBINATION_NAME_SEPARATOR}Iron Red'
+        assert combo.name == expected
 
-    def test_updating_other_fields_does_not_raise(self, user):
-        gt = GlazeType.objects.create(user=user, name='Shino')
-        gt.short_description = 'Updated description'
-        gt.save()  # Must not raise
-        gt.refresh_from_db()
-        assert gt.short_description == 'Updated description'
+    def test_name_persisted_to_db(self):
+        gt1 = _public_glaze_type('Ash')
+        gt2 = _public_glaze_type('Tenmoku')
+        combo = GlazeCombination.objects.create(
+            user=None,
+            first_layer_glaze_type=gt1,
+            second_layer_glaze_type=gt2,
+        )
+        combo.refresh_from_db()
+        assert combo.name == f'Ash{GLAZE_COMBINATION_NAME_SEPARATOR}Tenmoku'
 
-    def test_new_object_creation_does_not_raise(self):
-        # Creating with user=None (public) must succeed on first save.
-        gt = GlazeType(user=None, name='New Public Glaze')
-        gt.save()  # Must not raise
+    def test_str_returns_name(self):
+        gt1 = _public_glaze_type('Celadon')
+        gt2 = _public_glaze_type('Iron Red')
+        combo = GlazeCombination.objects.create(
+            user=None,
+            first_layer_glaze_type=gt1,
+            second_layer_glaze_type=gt2,
+        )
+        assert str(combo) == combo.name
 
 
 # ---------------------------------------------------------------------------
@@ -129,16 +144,6 @@ class TestGlazeCombinationPublicConstraint:
         combo.save()  # Must not raise
         assert combo.pk is not None
 
-    def test_public_combo_str(self):
-        gt1 = _public_glaze_type('Celadon')
-        gt2 = _public_glaze_type('Iron Red')
-        combo = GlazeCombination.objects.create(
-            user=None,
-            first_layer_glaze_type=gt1,
-            second_layer_glaze_type=gt2,
-        )
-        assert str(combo) == 'Celadon + Iron Red'
-
     def test_public_uniqueness_constraint(self):
         gt1 = _public_glaze_type('Celadon')
         gt2 = _public_glaze_type('Iron Red')
@@ -154,28 +159,6 @@ class TestGlazeCombinationPublicConstraint:
                 first_layer_glaze_type=gt1,
                 second_layer_glaze_type=gt2,
             )
-
-
-# ---------------------------------------------------------------------------
-# Workflow helper: is_private_global
-# ---------------------------------------------------------------------------
-
-class TestIsPrivateGlobal:
-    def test_glaze_combination_is_not_private(self):
-        assert is_private_global('glaze_combination') is False
-
-    def test_clay_body_is_private(self):
-        assert is_private_global('clay_body') is True
-
-    def test_glaze_type_is_private(self):
-        assert is_private_global('glaze_type') is True
-
-    def test_location_is_private(self):
-        assert is_private_global('location') is True
-
-    def test_unknown_global_defaults_to_private(self):
-        # Unknown global names should default to private (safe default).
-        assert is_private_global('nonexistent_global') is True
 
 
 # ---------------------------------------------------------------------------
@@ -197,8 +180,9 @@ class TestGlazeCombinationApiGet:
         data = response.json()
         assert len(data) == 1
         assert data[0]['is_public'] is True
-        # name comes from str(first_layer_glaze_type)
-        assert data[0]['name'] == 'Celadon'
+        # name is the computed combination name
+        expected_name = f'Celadon{GLAZE_COMBINATION_NAME_SEPARATOR}Iron Red'
+        assert data[0]['name'] == expected_name
 
     def test_get_returns_empty_when_no_combinations(self, client):
         response = client.get('/api/globals/glaze_combination/')

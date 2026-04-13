@@ -1,4 +1,5 @@
 import uuid
+from typing import ClassVar
 
 import jsonschema
 from django.conf import settings
@@ -18,6 +19,8 @@ from .workflow import (
 
 __all__ = [
     'ENTRY_STATE',
+    'GLAZE_COMBINATION_NAME_SEPARATOR',
+    'GlobalModel',
     'SUCCESSORS',
     'TERMINAL_STATES',
     'VALID_STATES',
@@ -26,14 +29,39 @@ __all__ = [
     'get_state_ref_fields',
 ]
 
+# Separator used in GlazeCombination.name to join the two glaze type names.
+# Must not appear in GlazeType.name (enforced by GlazeType.save()).
+GLAZE_COMBINATION_NAME_SEPARATOR = '!'
 
-class ImmutableUserMixin:
-    """Prevents the user field from changing after a global object is created.
 
-    Applied to all global models. Changing user after creation could silently
-    break public/private reference invariants (e.g. a GlazeCombination that
-    expected both referenced GlazeTypes to be public).
+class GlobalModel(models.Model):
+    """Abstract base class for all global domain types in the Glaze workflow.
+
+    Enforces:
+    - User immutability: the ``user`` field cannot change after creation.
+      Changing user after creation could silently break public/private
+      reference invariants (e.g. a GlazeCombination whose referenced
+      GlazeTypes must all be public).
+    - Name field convention: every concrete subclass must declare a ``name``
+      attribute (CharField or computed property) so that generic views and
+      management commands can sort/display objects uniformly.
+
+    Maintains ``GlobalModel._registry`` — a list of every concrete subclass —
+    for use in parameterised tests that must cover all registered globals.
     """
+
+    _registry: ClassVar[list[type['GlobalModel']]] = []
+
+    class Meta:
+        abstract = True
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Append every direct or indirect concrete subclass to the registry.
+        # Concrete vs. abstract is checked at test time via cls._meta.abstract;
+        # here we eagerly append so registration is automatic and order matches
+        # source declaration order.
+        GlobalModel._registry.append(cls)
 
     def save(self, *args, **kwargs):
         if self.pk is not None:
@@ -51,7 +79,7 @@ class ImmutableUserMixin:
         super().save(*args, **kwargs)
 
 
-class Location(ImmutableUserMixin, models.Model):
+class Location(GlobalModel):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='locations')
     name = models.CharField(max_length=255)
 
@@ -64,7 +92,7 @@ class Location(ImmutableUserMixin, models.Model):
         return self.name
 
 
-class ClayBody(ImmutableUserMixin, models.Model):
+class ClayBody(GlobalModel):
     # Public clay bodies (public library managed by admins) have user=None.
     # Private clay bodies are owned by a specific user.
     user = models.ForeignKey(
@@ -97,7 +125,7 @@ class ClayBody(ImmutableUserMixin, models.Model):
         return self.name
 
 
-class GlazeType(ImmutableUserMixin, models.Model):
+class GlazeType(GlobalModel):
     # Public glaze types (public library managed by admins) have user=None.
     # Private glaze types are owned by a specific user.
     user = models.ForeignKey(
@@ -132,11 +160,20 @@ class GlazeType(ImmutableUserMixin, models.Model):
             ),
         ]
 
+    def save(self, *args, **kwargs):
+        if self.name and GLAZE_COMBINATION_NAME_SEPARATOR in self.name:
+            raise ValueError(
+                f'Glaze type names cannot contain '
+                f'"{GLAZE_COMBINATION_NAME_SEPARATOR}" '
+                f'(it is reserved as the glaze combination name separator).'
+            )
+        super().save(*args, **kwargs)
+
     def __str__(self) -> str:
         return self.name
 
 
-class GlazeMethod(ImmutableUserMixin, models.Model):
+class GlazeMethod(GlobalModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='glaze_methods'
     )
@@ -152,7 +189,7 @@ class GlazeMethod(ImmutableUserMixin, models.Model):
         return self.name
 
 
-class GlazeCombination(ImmutableUserMixin, models.Model):
+class GlazeCombination(GlobalModel):
     """A combination of two glaze layers with shared application properties.
 
     Public combinations (user=NULL) are managed via Django admin and are
@@ -161,6 +198,11 @@ class GlazeCombination(ImmutableUserMixin, models.Model):
 
     Invariant: a public combination may only reference public GlazeTypes.
     This is enforced in save() so it holds for both ORM and admin usage.
+
+    ``name`` is a stored computed field (populated in save()) formed by joining
+    the two glaze type names with ``GLAZE_COMBINATION_NAME_SEPARATOR``.  It is
+    stored in the DB so that generic list views and the dump command can sort
+    and filter by name without loading related objects.
     """
 
     user = models.ForeignKey(
@@ -170,6 +212,8 @@ class GlazeCombination(ImmutableUserMixin, models.Model):
         blank=True,
         related_name='glaze_combinations',
     )
+    # Stored computed field: populated from first/second layer glaze type names in save().
+    name = models.CharField(max_length=511, editable=False, blank=True, default='')
     first_layer_glaze_type = models.ForeignKey(
         GlazeType,
         on_delete=models.PROTECT,
@@ -203,6 +247,12 @@ class GlazeCombination(ImmutableUserMixin, models.Model):
         ]
 
     def save(self, *args, **kwargs):
+        # Compute name from the two layer glaze type names before saving.
+        self.name = (
+            f'{self.first_layer_glaze_type}'
+            f'{GLAZE_COMBINATION_NAME_SEPARATOR}'
+            f'{self.second_layer_glaze_type}'
+        )
         # Public combinations may only reference public (user=NULL) GlazeTypes.
         if self.user_id is None:
             for fk_id_attr in ('first_layer_glaze_type_id', 'second_layer_glaze_type_id'):
@@ -223,7 +273,7 @@ class GlazeCombination(ImmutableUserMixin, models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
-        return f'{self.first_layer_glaze_type} + {self.second_layer_glaze_type}'
+        return self.name
 
 
 class Piece(models.Model):

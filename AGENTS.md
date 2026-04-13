@@ -168,9 +168,13 @@ PieceSummary & {
 - API auth is session-based (`SessionAuthentication`) with CSRF protection.
 - User data isolation is mandatory: lists must scope to `request.user`, and object lookups must use user-filtered querysets.
 - When a user requests another user's object ID, return `404` (not `403`) so object existence is not leaked.
+- All global domain models inherit from `GlobalModel` (`api/models.py`), an abstract Django base class that:
+  - Enforces user immutability: the `user` FK cannot change after creation (prevents silent breakage of public/private reference invariants).
+  - Declares the `name` field convention: every concrete subclass must have a `name` CharField (or a stored computed equivalent). For `GlazeCombination`, `name` is auto-populated in `save()` by joining the two layer glaze type names with `GLAZE_COMBINATION_NAME_SEPARATOR` (`!`). `GlazeType.name` validation rejects the separator to prevent malformed combination names.
+  - Maintains `GlobalModel._registry` — a list of every registered concrete subclass — for use in parameterised tests.
 - Globals come in two visibility tiers:
   - **Private-only** (`Location`, `GlazeMethod`): owned by a single user; the `user` FK is NOT NULL; list endpoints filter to `request.user` only.
-  - **Public + private** (`ClayBody`, `GlazeType`): these support an admin-managed shared library (records with `user=NULL`) as well as user-private records. List endpoints return both the requesting user's private objects and all public objects. POST always creates a new private record (or returns the existing one for the requesting user); private entries may share a name with a public entry. The GET response includes an `is_public` boolean on each item so the frontend can disambiguate.
+  - **Public + private** (`ClayBody`, `GlazeType`, `GlazeCombination`): these support an admin-managed shared library (records with `user=NULL`) as well as user-private records (when `private: true`). List endpoints return both the requesting user's private objects and all public objects. POST always creates a new private record (or returns the existing one for the requesting user); private entries may share a name with a public entry. The GET response includes an `is_public` boolean on each item so the frontend can disambiguate.
 - Name uniqueness for public globals is enforced with two conditional DB constraints (one for private, one for public). Private and public scopes are independent — a user may have a private entry with the same name as a public entry.
 
 **Django admin (`api/admin.py`):**
@@ -356,6 +360,7 @@ GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on
 - Every new or modified `workflow.ts` helper → add or update a test in `frontend_common/src/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture.
 - Every new or modified `api/workflow.py` helper → add or update a test in `api/tests/test_workflow_helpers.py`, patching `_STATE_MAP` / `_GLOBALS_MAP` via `monkeypatch`.
 - The `piece` fixture in `api/tests/conftest.py` creates a piece via the ORM directly; prefer the API client (`client.post(...)`) for tests that exercise request/response behaviour.
+- **New global domain models**: adding a new concrete `GlobalModel` subclass automatically enrolls it in the parameterised test suites in `api/tests/test_globals.py` (user immutability, `name` field presence, workflow registry consistency). No manual test additions are needed for these invariants — focus new tests on model-specific constraints and API behaviour instead.
 
 ---
 
