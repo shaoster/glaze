@@ -123,6 +123,14 @@ gz_shell()           { gz_manage shell "$@"; }
 gz_dbshell()         { gz_manage dbshell "$@"; }
 gz_showmigrations()  { gz_manage showmigrations "$@"; }
 
+gz_prod() {          # gz_prod <manage.py subcommand> [args…]
+    local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
+    ssh "$host" "cd ~/glaze && docker compose exec web python manage.py $*"
+}
+
+gz_prod_shell()      { gz_prod shell "$@"; }
+gz_prod_dbshell()    { gz_prod dbshell "$@"; }
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -269,6 +277,9 @@ _GZ_SHORTCUTS=(
     "gz_shell          — Django shell"
     "gz_dbshell        — database shell"
     "gz_showmigrations — showmigrations"
+    "gz_prod <cmd>     — run any manage.py subcommand on production (requires GLAZE_PROD_HOST in .env.local)"
+    "gz_prod_shell     — Django shell on production"
+    "gz_prod_dbshell   — database shell on production"
     "gz_test           — run all test suites in parallel"
     "gz_test_common    — run workflow schema/integrity tests (pytest tests/)"
     "gz_test_backend   — run Django API tests (pytest api/)"
