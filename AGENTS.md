@@ -379,6 +379,10 @@ GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on
 
 These rules apply to all autonomous agents (issue agent, PR agent) working in this repository, as well as interactive sessions that are prompted to "create a commit" or "create a PR" by the user.
 
+### Linking to PRs and issues
+
+Always refer to PRs and issues as Markdown links using the full URL, e.g. `[shaoster/glaze#55](https://github.com/shaoster/glaze/pull/55)` for PRs and `[shaoster/glaze#42](https://github.com/shaoster/glaze/issues/42)` for issues. Never use bold text (e.g. **shaoster/glaze#55**) as a substitute for a link.
+
 ### Branch naming
 
 Name branches `issue/<N>-short-slug` when opening a branch in response to a GitHub issue (e.g. `issue/42-fix-glazed-transition`). For other work use `<type>/short-slug` (`fix/`, `feat/`, `docs/`, etc.).
