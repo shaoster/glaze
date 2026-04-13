@@ -40,7 +40,14 @@ class Command(BaseCommand):
         for model_cls in get_public_global_models():
             app_label = model_cls._meta.app_label
             model_name = model_cls._meta.model_name
-            public_qs = model_cls.objects.filter(user__isnull=True).order_by('name')
+            # Use 'name' for ordering when available; fall back to 'pk' for
+            # FK-keyed models (e.g. GlazeCombination) that have no name field.
+            try:
+                model_cls._meta.get_field('name')
+                order_field = 'name'
+            except Exception:
+                order_field = 'pk'
+            public_qs = model_cls.objects.filter(user__isnull=True).order_by(order_field)
 
             for obj in public_qs:
                 fields: dict = {}

@@ -27,7 +27,31 @@ __all__ = [
 ]
 
 
-class Location(models.Model):
+class ImmutableUserMixin:
+    """Prevents the user field from changing after a global object is created.
+
+    Applied to all global models. Changing user after creation could silently
+    break public/private reference invariants (e.g. a GlazeCombination that
+    expected both referenced GlazeTypes to be public).
+    """
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            old_user_id = (
+                type(self).objects
+                .filter(pk=self.pk)
+                .values_list('user_id', flat=True)
+                .first()
+            )
+            if old_user_id != self.user_id:
+                raise ValueError(
+                    f'Cannot change the user field on {type(self).__name__} '
+                    f'(pk={self.pk}) after creation.'
+                )
+        super().save(*args, **kwargs)
+
+
+class Location(ImmutableUserMixin, models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='locations')
     name = models.CharField(max_length=255)
 
@@ -40,7 +64,7 @@ class Location(models.Model):
         return self.name
 
 
-class ClayBody(models.Model):
+class ClayBody(ImmutableUserMixin, models.Model):
     # Public clay bodies (public library managed by admins) have user=None.
     # Private clay bodies are owned by a specific user.
     user = models.ForeignKey(
@@ -73,7 +97,7 @@ class ClayBody(models.Model):
         return self.name
 
 
-class GlazeType(models.Model):
+class GlazeType(ImmutableUserMixin, models.Model):
     # Public glaze types (public library managed by admins) have user=None.
     # Private glaze types are owned by a specific user.
     user = models.ForeignKey(
@@ -112,7 +136,7 @@ class GlazeType(models.Model):
         return self.name
 
 
-class GlazeMethod(models.Model):
+class GlazeMethod(ImmutableUserMixin, models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='glaze_methods'
     )
@@ -126,6 +150,80 @@ class GlazeMethod(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class GlazeCombination(ImmutableUserMixin, models.Model):
+    """A combination of two glaze layers with shared application properties.
+
+    Public combinations (user=NULL) are managed via Django admin and are
+    visible to all users. Private combinations (user IS NOT NULL) are
+    user-owned — currently disabled (private: false in workflow.yml).
+
+    Invariant: a public combination may only reference public GlazeTypes.
+    This is enforced in save() so it holds for both ORM and admin usage.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='glaze_combinations',
+    )
+    first_layer_glaze_type = models.ForeignKey(
+        GlazeType,
+        on_delete=models.PROTECT,
+        related_name='first_layer_combinations',
+    )
+    second_layer_glaze_type = models.ForeignKey(
+        GlazeType,
+        on_delete=models.PROTECT,
+        related_name='second_layer_combinations',
+    )
+    test_tile_image = models.CharField(max_length=1024, blank=True, default='')
+    is_food_safe = models.BooleanField(null=True, blank=True)
+    runs = models.BooleanField(null=True, blank=True)
+    highlights_grooves = models.BooleanField(null=True, blank=True)
+    is_different_on_white_and_brown_clay = models.BooleanField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            # Global uniqueness for public combinations (user IS NULL).
+            models.UniqueConstraint(
+                fields=['first_layer_glaze_type', 'second_layer_glaze_type'],
+                condition=Q(user__isnull=True),
+                name='uniq_glaze_combination_public',
+            ),
+            # Per-user uniqueness for private combinations.
+            models.UniqueConstraint(
+                fields=['user', 'first_layer_glaze_type', 'second_layer_glaze_type'],
+                condition=Q(user__isnull=False),
+                name='uniq_glaze_combination_per_user',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        # Public combinations may only reference public (user=NULL) GlazeTypes.
+        if self.user_id is None:
+            for fk_id_attr in ('first_layer_glaze_type_id', 'second_layer_glaze_type_id'):
+                fk_id = getattr(self, fk_id_attr)
+                if fk_id is not None:
+                    gt_user_id = (
+                        GlazeType.objects
+                        .filter(pk=fk_id)
+                        .values_list('user_id', flat=True)
+                        .first()
+                    )
+                    if gt_user_id is not None:
+                        field_label = fk_id_attr.replace('_id', '').replace('_', ' ')
+                        raise ValueError(
+                            f'Public glaze combinations can only reference public glaze types. '
+                            f'The {field_label} (id={fk_id}) is a private glaze type.'
+                        )
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f'{self.first_layer_glaze_type} + {self.second_layer_glaze_type}'
 
 
 class Piece(models.Model):

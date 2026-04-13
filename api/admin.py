@@ -6,7 +6,7 @@ from django.forms import widgets
 from django.http import HttpRequest
 from django.utils.html import format_html
 
-from .models import Piece, PieceState, UserProfile
+from .models import GlazeCombination, GlazeType, Piece, PieceState, UserProfile
 from .workflow import get_image_fields_for_global_model, get_public_global_models
 
 
@@ -180,11 +180,53 @@ class PublicLibraryAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
+class GlazeCombinationAdmin(PublicLibraryAdmin):
+    """Admin for the public GlazeCombination library.
+
+    Extends PublicLibraryAdmin with glaze-combination-specific list display,
+    filters, and search.  FK dropdowns are restricted to public GlazeTypes so
+    the public-only-references invariant is enforced in the form layer as well.
+    """
+
+    list_display = (
+        '__str__',
+        'is_food_safe',
+        'runs',
+        'highlights_grooves',
+        'is_different_on_white_and_brown_clay',
+        'is_public_entry',
+    )
+    list_filter = (
+        'is_food_safe',
+        'runs',
+        'highlights_grooves',
+        'is_different_on_white_and_brown_clay',
+        'first_layer_glaze_type',
+        'second_layer_glaze_type',
+    )
+    search_fields = ('first_layer_glaze_type__name', 'second_layer_glaze_type__name')
+    list_select_related = ('first_layer_glaze_type', 'second_layer_glaze_type')
+
+    def get_form(self, request: HttpRequest, obj=None, change: bool = False, **kwargs):
+        form = super().get_form(request, obj, change=change, **kwargs)
+        # Restrict FK dropdowns to public GlazeTypes only so a public combination
+        # cannot accidentally reference a private glaze type via the admin UI.
+        for fk_field in ('first_layer_glaze_type', 'second_layer_glaze_type'):
+            if fk_field in form.base_fields:
+                form.base_fields[fk_field].queryset = (
+                    GlazeType.objects.filter(user__isnull=True).order_by('name')
+                )
+        return form
+
+
+admin.site.register(GlazeCombination, GlazeCombinationAdmin)
+
 # Dynamically register PublicLibraryAdmin for every global declared public: true
-# in workflow.yml.  This means adding public: true to a new global in workflow.yml
-# is sufficient — no manual admin.py change required.
+# in workflow.yml.  Models that already have a custom admin class registered above
+# are skipped so they keep their specialised configuration.
 for _model_cls in get_public_global_models():
-    admin.site.register(_model_cls, PublicLibraryAdmin)
+    if not admin.site.is_registered(_model_cls):
+        admin.site.register(_model_cls, PublicLibraryAdmin)
 
 
 class PieceStateInline(admin.TabularInline):

@@ -111,6 +111,14 @@ _MOCK_GLOBALS_MAP = {
             'max_temp_c': {'type': 'integer'},
         },
     },
+    'admin_only_type': {
+        'model': 'AdminOnly',
+        'public': True,
+        'private': False,
+        'fields': {
+            'name': {'type': 'string'},
+        },
+    },
 }
 
 
@@ -183,17 +191,40 @@ def test_is_public_global_returns_false_for_unknown_global(monkeypatch):
     assert workflow_module.is_public_global('does_not_exist') is False
 
 
+def test_is_private_global_returns_false_when_flag_false(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.is_private_global('admin_only_type') is False
+
+
+def test_is_private_global_returns_true_when_flag_true(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.is_private_global('clay_body') is True
+
+
+def test_is_private_global_defaults_to_true_when_flag_absent(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    # firing_profile has no 'private' key — should default to True
+    assert workflow_module.is_private_global('firing_profile') is True
+
+
+def test_is_private_global_defaults_to_true_for_unknown_global(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.is_private_global('does_not_exist') is True
+
+
 def test_get_public_global_models_returns_models_for_public_globals(monkeypatch):
     clay_model = Mock(name='ClayBodyModel')
-    get_model = Mock(return_value=clay_model)
+    admin_only_model = Mock(name='AdminOnlyModel')
+    get_model = Mock(side_effect=lambda app, name: clay_model if name == 'ClayBody' else admin_only_model)
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
     monkeypatch.setattr(workflow_module.apps, 'get_model', get_model)
 
     result = workflow_module.get_public_global_models()
 
-    # Only clay_body has public: true in _MOCK_GLOBALS_MAP.
-    assert result == [clay_model]
-    get_model.assert_called_once_with('api', 'ClayBody')
+    # clay_body and admin_only_type both have public: true in _MOCK_GLOBALS_MAP.
+    assert clay_model in result
+    assert admin_only_model in result
+    assert len(result) == 2
 
 
 def test_get_image_fields_for_global_model_returns_image_fields(monkeypatch):

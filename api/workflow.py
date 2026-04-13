@@ -75,6 +75,17 @@ def is_public_global(global_name: str) -> bool:
     return bool(config.get('public', False))
 
 
+def is_private_global(global_name: str) -> bool:
+    """Return True if this global type supports user-private instances.
+
+    Private globals (private: true in workflow.yml, which is the default) allow
+    each user to create their own owned instances via the API.  When private: false,
+    user-owned instances are not supported — only admin-managed public objects exist.
+    """
+    config = _GLOBALS_MAP.get(global_name, {})
+    return bool(config.get('private', True))  # default True
+
+
 def get_public_global_models() -> list[type[django_models.Model]]:
     """Return the Django model class for every global declared public: true.
 
