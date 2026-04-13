@@ -11,6 +11,7 @@ jobs:
     # Run when the 'claude' label is present; skip bot comments to prevent loops
     if: |
       !endsWith(github.actor, '[bot]') &&
+      github.event.issue.state != 'closed' &&
       contains(github.event.issue.labels.*.name, 'claude') &&
       (
         github.event_name == 'issues' ||
