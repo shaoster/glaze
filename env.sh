@@ -181,13 +181,14 @@ gz_web() {
     local port
     port=$(grep 'Local:' "$_GLAZE_LOGS/web.log" | tail -1 | grep -oE ':[0-9]+/' | tr -d ':/')
     [[ -n "$port" ]] && echo "web: http://localhost:$port"
+    export APP_ORIGIN="http://localhost:$port"
 }
 
 gz_start() {
-    _gz_rotate_log backend
     _gz_rotate_log web
-    gz_backend
     gz_web
+    _gz_rotate_log backend
+    gz_backend
 
     local backend_pid web_pid
     backend_pid=$(cat "$_GLAZE_PIDS/backend.pid" 2>/dev/null)
