@@ -36,6 +36,12 @@ echo "--- restarting services ---"
 # Migrations run automatically in docker-entrypoint.sh on container start.
 docker compose up -d
 
+echo "--- pruning stopped containers and unused images ---"
+# Remove stopped containers (old versions) so their images become reclaimable.
+docker container prune -f
+# Remove dangling images (old pulled layers no longer tagged or referenced).
+docker image prune -f
+
 echo "--- deploy complete ---"
 docker compose ps
 REMOTE
