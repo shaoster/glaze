@@ -30,7 +30,7 @@ from .serializers import (
     PieceUpdateSerializer,
     RegisterSerializer,
 )
-from .workflow import get_global_model_and_field, is_public_global
+from .workflow import get_global_model_and_field, is_private_global, is_public_global
 
 
 def _piece_queryset(request: Request):
@@ -150,16 +150,38 @@ def global_entries(request: Request, global_name: str) -> Response:
     if request.method == 'GET':
         if has_public_library:
             # Return both the user's private objects and all public objects (user IS NULL).
-            objects = model_cls.objects.filter(
-                Q(user=request.user) | Q(user__isnull=True)
-            ).only('pk', display_field).order_by(display_field)
+            base_qs = model_cls.objects.filter(Q(user=request.user) | Q(user__isnull=True))
         else:
-            objects = model_cls.objects.filter(user=request.user).only('pk', display_field).order_by(display_field)
+            base_qs = model_cls.objects.filter(user=request.user)
+
+        # If the display field is a relation (FK), use select_related for efficient
+        # loading and stringify the value; otherwise use only() for efficiency.
+        try:
+            display_field_meta = model_cls._meta.get_field(display_field)
+            display_is_relation = getattr(display_field_meta, 'is_relation', False)
+        except Exception:
+            display_is_relation = False
+
+        if display_is_relation:
+            objects = base_qs.select_related(display_field).order_by(display_field)
+        else:
+            objects = base_qs.only('pk', display_field).order_by(display_field)
+
         return Response(
             [
-                {'id': str(obj.pk), 'name': getattr(obj, display_field), 'is_public': obj.user_id is None}
+                {
+                    'id': str(obj.pk),
+                    'name': str(getattr(obj, display_field)),
+                    'is_public': obj.user_id is None,
+                }
                 for obj in objects
             ]
+        )
+
+    if not is_private_global(global_name):
+        return Response(
+            {'detail': 'Private instances of this type are not supported.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
     field = request.data.get('field')

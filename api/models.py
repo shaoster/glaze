@@ -1,4 +1,5 @@
 import uuid
+from typing import ClassVar
 
 import jsonschema
 from django.conf import settings
@@ -18,6 +19,8 @@ from .workflow import (
 
 __all__ = [
     'ENTRY_STATE',
+    'GLAZE_COMBINATION_NAME_SEPARATOR',
+    'GlobalModel',
     'SUCCESSORS',
     'TERMINAL_STATES',
     'VALID_STATES',
@@ -26,8 +29,57 @@ __all__ = [
     'get_state_ref_fields',
 ]
 
+# Separator used in GlazeCombination.name to join the two glaze type names.
+# Must not appear in GlazeType.name (enforced by GlazeType.save()).
+GLAZE_COMBINATION_NAME_SEPARATOR = '!'
 
-class Location(models.Model):
+
+class GlobalModel(models.Model):
+    """Abstract base class for all global domain types in the Glaze workflow.
+
+    Enforces:
+    - User immutability: the ``user`` field cannot change after creation.
+      Changing user after creation could silently break public/private
+      reference invariants (e.g. a GlazeCombination whose referenced
+      GlazeTypes must all be public).
+    - Name field convention: every concrete subclass must declare a ``name``
+      attribute (CharField or computed property) so that generic views and
+      management commands can sort/display objects uniformly.
+
+    Maintains ``GlobalModel._registry`` — a list of every concrete subclass —
+    for use in parameterised tests that must cover all registered globals.
+    """
+
+    _registry: ClassVar[list[type['GlobalModel']]] = []
+
+    class Meta:
+        abstract = True
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Append every direct or indirect concrete subclass to the registry.
+        # Concrete vs. abstract is checked at test time via cls._meta.abstract;
+        # here we eagerly append so registration is automatic and order matches
+        # source declaration order.
+        GlobalModel._registry.append(cls)
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            old_user_id = (
+                type(self).objects
+                .filter(pk=self.pk)
+                .values_list('user_id', flat=True)
+                .first()
+            )
+            if old_user_id != self.user_id:
+                raise ValueError(
+                    f'Cannot change the user field on {type(self).__name__} '
+                    f'(pk={self.pk}) after creation.'
+                )
+        super().save(*args, **kwargs)
+
+
+class Location(GlobalModel):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='locations')
     name = models.CharField(max_length=255)
 
@@ -40,7 +92,7 @@ class Location(models.Model):
         return self.name
 
 
-class ClayBody(models.Model):
+class ClayBody(GlobalModel):
     # Public clay bodies (public library managed by admins) have user=None.
     # Private clay bodies are owned by a specific user.
     user = models.ForeignKey(
@@ -73,7 +125,7 @@ class ClayBody(models.Model):
         return self.name
 
 
-class GlazeType(models.Model):
+class GlazeType(GlobalModel):
     # Public glaze types (public library managed by admins) have user=None.
     # Private glaze types are owned by a specific user.
     user = models.ForeignKey(
@@ -108,11 +160,20 @@ class GlazeType(models.Model):
             ),
         ]
 
+    def save(self, *args, **kwargs):
+        if self.name and GLAZE_COMBINATION_NAME_SEPARATOR in self.name:
+            raise ValueError(
+                f'Glaze type names cannot contain '
+                f'"{GLAZE_COMBINATION_NAME_SEPARATOR}" '
+                f'(it is reserved as the glaze combination name separator).'
+            )
+        super().save(*args, **kwargs)
+
     def __str__(self) -> str:
         return self.name
 
 
-class GlazeMethod(models.Model):
+class GlazeMethod(GlobalModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='glaze_methods'
     )
@@ -123,6 +184,93 @@ class GlazeMethod(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['user', 'name'], name='uniq_glaze_method_name_per_user'),
         ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class GlazeCombination(GlobalModel):
+    """A combination of two glaze layers with shared application properties.
+
+    Public combinations (user=NULL) are managed via Django admin and are
+    visible to all users. Private combinations (user IS NOT NULL) are
+    user-owned — currently disabled (private: false in workflow.yml).
+
+    Invariant: a public combination may only reference public GlazeTypes.
+    This is enforced in save() so it holds for both ORM and admin usage.
+
+    ``name`` is a stored computed field (populated in save()) formed by joining
+    the two glaze type names with ``GLAZE_COMBINATION_NAME_SEPARATOR``.  It is
+    stored in the DB so that generic list views and the dump command can sort
+    and filter by name without loading related objects.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='glaze_combinations',
+    )
+    # Stored computed field: populated from first/second layer glaze type names in save().
+    name = models.CharField(max_length=511, editable=False, blank=True, default='')
+    first_layer_glaze_type = models.ForeignKey(
+        GlazeType,
+        on_delete=models.PROTECT,
+        related_name='first_layer_combinations',
+    )
+    second_layer_glaze_type = models.ForeignKey(
+        GlazeType,
+        on_delete=models.PROTECT,
+        related_name='second_layer_combinations',
+    )
+    test_tile_image = models.CharField(max_length=1024, blank=True, default='')
+    is_food_safe = models.BooleanField(null=True, blank=True)
+    runs = models.BooleanField(null=True, blank=True)
+    highlights_grooves = models.BooleanField(null=True, blank=True)
+    is_different_on_white_and_brown_clay = models.BooleanField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            # Global uniqueness for public combinations (user IS NULL).
+            models.UniqueConstraint(
+                fields=['first_layer_glaze_type', 'second_layer_glaze_type'],
+                condition=Q(user__isnull=True),
+                name='uniq_glaze_combination_public',
+            ),
+            # Per-user uniqueness for private combinations.
+            models.UniqueConstraint(
+                fields=['user', 'first_layer_glaze_type', 'second_layer_glaze_type'],
+                condition=Q(user__isnull=False),
+                name='uniq_glaze_combination_per_user',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        # Compute name from the two layer glaze type names before saving.
+        self.name = (
+            f'{self.first_layer_glaze_type}'
+            f'{GLAZE_COMBINATION_NAME_SEPARATOR}'
+            f'{self.second_layer_glaze_type}'
+        )
+        # Public combinations may only reference public (user=NULL) GlazeTypes.
+        if self.user_id is None:
+            for fk_id_attr in ('first_layer_glaze_type_id', 'second_layer_glaze_type_id'):
+                fk_id = getattr(self, fk_id_attr)
+                if fk_id is not None:
+                    gt_user_id = (
+                        GlazeType.objects
+                        .filter(pk=fk_id)
+                        .values_list('user_id', flat=True)
+                        .first()
+                    )
+                    if gt_user_id is not None:
+                        field_label = fk_id_attr.replace('_id', '').replace('_', ' ')
+                        raise ValueError(
+                            f'Public glaze combinations can only reference public glaze types. '
+                            f'The {field_label} (id={fk_id}) is a private glaze type.'
+                        )
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return self.name

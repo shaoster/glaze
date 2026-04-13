@@ -363,8 +363,8 @@ After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` fr
 | [`test_sealed_state.py`](api/tests/test_sealed_state.py) | ORM-level sealed state enforcement |
 | [`test_additional_fields.py`](api/tests/test_additional_fields.py) | `PieceState.save()` schema validation for every field type (inline, state ref, global ref) |
 | [`test_workflow_helpers.py`](api/tests/test_workflow_helpers.py) | Pure unit tests for [`api/workflow.py`](api/workflow.py) helpers (`get_state_ref_fields`, `get_global_model_and_field`, `build_additional_fields_schema`) — decoupled from real `workflow.yml` via `monkeypatch` |
-| [`test_global_entries.py`](api/tests/test_global_entries.py) | `GET/POST /api/globals/<name>/` list and create |
-| [`test_globals.py`](api/tests/test_globals.py) | Global/model alignment (every `globals` entry maps to a real Django model) |
+| [`test_globals.py`](api/tests/test_globals.py) | `GlobalModel` registry invariants (parameterised over all registered models): `name` field presence, user immutability, workflow consistency; `GET/POST /api/globals/<name>/` list and create |
+| [`test_glaze_combination.py`](api/tests/test_glaze_combination.py) | `GlazeCombination` computed `name` field, public/private FK constraint, `GlazeType.name` separator validation, API GET/POST |
 
 **Web** (`web/src/` and `frontend_common/src/`):
 | File | What it covers |
