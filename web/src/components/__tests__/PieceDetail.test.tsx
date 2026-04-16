@@ -98,6 +98,7 @@ describe('PieceDetail', () => {
         await waitFor(() =>
             expect(api.createGlobalEntry).toHaveBeenCalledWith('location', 'name', 'Studio K')
         )
+        await waitFor(() => expect(input).toHaveValue('Studio K'))
         fireEvent.click(screen.getByTestId('save-button'))
         await waitFor(() =>
             expect(api.updatePiece).toHaveBeenCalledWith('piece-id-1', { current_location: 'Studio K' })
@@ -113,7 +114,7 @@ describe('PieceDetail', () => {
         renderPieceDetail(undefined, onPieceUpdated)
         const input = screen.getByLabelText('Current location')
         await userEvent.type(input, 'Studio 7')
-        fireEvent.click(screen.getByTestId('save-button'))
+        await userEvent.click(screen.getByTestId('save-button'))
         await waitFor(() =>
             expect(api.updatePiece).toHaveBeenCalledWith('piece-id-1', { current_location: 'Studio 7' })
         )
@@ -175,6 +176,7 @@ describe('PieceDetail', () => {
         const onPieceUpdated = vi.fn()
         renderPieceDetail(makePiece(), onPieceUpdated)
         fireEvent.click(screen.getByRole('button', { name: 'Wheel Thrown' }))
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument())
         fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
         await waitFor(() => expect(api.addPieceState).toHaveBeenCalledWith('piece-id-1', { state: 'wheel_thrown' }))
         await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(updated))

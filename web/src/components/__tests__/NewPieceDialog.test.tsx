@@ -71,7 +71,7 @@ describe('NewPieceDialog', () => {
             await waitFor(() =>
                 expect(api.createGlobalEntry).toHaveBeenCalledWith('location', 'name', 'Studio K')
             )
-            expect(locationInput).toHaveValue('Studio K')
+            await waitFor(() => expect(locationInput).toHaveValue('Studio K'))
         })
 
         it('renders the location field', () => {
