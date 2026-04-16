@@ -1,5 +1,30 @@
 # TypeScript + React + Vite Guide
 
+## Scaffolding a new project
+
+```bash
+# Create Vite + React + TypeScript project
+npm create vite@latest web -- --template react-ts
+cd web
+npm install
+
+# Add MUI (with Emotion peer deps)
+npm install @mui/material @emotion/react @emotion/styled
+
+# Add Axios and React Router
+npm install axios react-router-dom
+
+# Start dev server
+npm run dev
+```
+
+Enable stricter TypeScript flags in `tsconfig.json` (`compilerOptions`):
+```json
+"noUnusedLocals": true,
+"noUnusedParameters": true,
+"noFallthroughCasesInSwitch": true
+```
+
 ## Stack
 
 React, TypeScript (strict), Vite, Material UI (MUI), Axios

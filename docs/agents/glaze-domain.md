@@ -151,6 +151,19 @@ PieceSummary & {
 
 These supplement the generic Django/DRF conventions.
 
+**Production environment variables** — `settings.py` gates dev/prod behaviour on `IS_PRODUCTION = bool(os.environ.get('PRODUCTION', ''))`. The full env var reference:
+
+| Setting | Env var | Dev behaviour | Prod behaviour |
+|---|---|---|---|
+| `SECRET_KEY` | `SECRET_KEY` | Falls back to an insecure hardcoded default | **Required** — raises `KeyError` if absent |
+| `DEBUG` | *(derived from `PRODUCTION`)* | `True` | `False` |
+| `DATABASES` | `DATABASE_URL` | SQLite at `db.sqlite3` | Postgres via `dj_database_url.config()` |
+| `ALLOWED_HOSTS` | `ALLOWED_HOST` | `localhost`, `127.0.0.1` | Appends the single production hostname (e.g. `myapp.example.com`) |
+| `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS` | `APP_ORIGIN` | Localhost origins only | Appends the full origin URL (e.g. `https://myapp.example.com`) |
+| `GOOGLE_OAUTH_CLIENT_ID` | `GOOGLE_OAUTH_CLIENT_ID` | Empty string — Google sign-in disabled | Set to enable Google OAuth JWT verification |
+| `CLOUDINARY_CLOUD_NAME` / `API_KEY` / `API_SECRET` | *(same names)* | Empty — widget-config returns 503 | Set to enable Cloudinary uploads |
+| `CLOUDINARY_UPLOAD_FOLDER` | `CLOUDINARY_UPLOAD_FOLDER` | Not set | Optional subfolder for uploaded images |
+
 **`GlobalModel` abstract base class** (`api/models.py`): all global domain models inherit from it.
 - Enforces user immutability: the `user` FK cannot change after creation (prevents silent breakage of public/private reference invariants).
 - Declares the `name` field convention: every concrete subclass must have a `name` CharField (or a stored computed equivalent). For `GlazeCombination`, `name` is auto-populated in `save()` by joining the two layer glaze type names with `GLAZE_COMBINATION_NAME_SEPARATOR` (`!`). `GlazeType.name` validation rejects the separator to prevent malformed combination names.
