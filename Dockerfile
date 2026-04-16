@@ -56,6 +56,7 @@ COPY --from=builder /app/api ./api
 COPY --from=builder /app/manage.py .
 COPY --from=builder /app/workflow.yml .
 COPY --from=builder /app/workflow.schema.yml .
+COPY --from=builder /app/fixtures ./fixtures
 
 # Built frontend and collected static files
 COPY --from=builder /app/web/dist ./web/dist
