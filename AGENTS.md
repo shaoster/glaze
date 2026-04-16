@@ -392,7 +392,22 @@ GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on
 
 These rules apply to all autonomous agents (issue agent, PR agent) working in this repository, as well as interactive sessions that are prompted to "create a commit" or "create a PR" by the user.
 
-### Linking to PRs and issues
+### Writing issue and PR bodies
+
+Always write issue and PR bodies to a temporary file and pass them via `--body-file` rather than inline with `--body`. Passing Markdown body text inline through the shell causes backticks to be escaped as `\``, which breaks fenced code blocks and inline code in the rendered GitHub UI.
+
+```bash
+cat > /tmp/issue_body.md << 'EOF'
+Body with `inline code` and
+
+```python
+fenced code blocks
+```
+
+that render correctly.
+EOF
+gh issue create --title "..." --body-file /tmp/issue_body.md
+```
 
 Always refer to PRs and issues as Markdown links using the full URL, e.g. `[shaoster/glaze#55](https://github.com/shaoster/glaze/pull/55)` for PRs and `[shaoster/glaze#42](https://github.com/shaoster/glaze/issues/42)` for issues. Never use bold text (e.g. **shaoster/glaze#55**) as a substitute for a link.
 
