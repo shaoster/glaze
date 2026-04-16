@@ -79,6 +79,14 @@ Tests live in two places:
 
 The test environment is jsdom; setup file is [`web/src/test-setup.ts`](../../web/src/test-setup.ts).
 
+### Production build
+
+```bash
+./build.sh
+```
+
+`build.sh` runs the full production pipeline: installs Python deps, starts Django temporarily to generate TypeScript types from the live OpenAPI schema, builds the React frontend (`npm run build`), runs `collectstatic`, and applies migrations. It must pass before a PR is merged.
+
 ### CI
 
 GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on every push and pull request — see [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). A PR should not be merged if any job is red.
