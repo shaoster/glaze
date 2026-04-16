@@ -317,7 +317,7 @@ describe('WorkflowState', () => {
         )
         const input = screen.getByLabelText('Current location')
         await userEvent.type(input, 'Shelf Z')
-        fireEvent.click(screen.getByTestId('save-button'))
+        await userEvent.click(screen.getByTestId('save-button'))
         await waitFor(() => expect(screen.getByText('Failed to save. Please try again.')).toBeInTheDocument())
         expect(screen.getByTestId('unsaved-indicator')).toBeInTheDocument()
         expect(screen.getByTestId('save-button')).not.toBeDisabled()

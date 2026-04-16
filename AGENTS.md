@@ -348,6 +348,19 @@ The test environment is jsdom; setup file is [`web/src/test-setup.ts`](web/src/t
 
 **Component tests** that involve typing into a controlled MUI Autocomplete must use a stateful wrapper (see `Controlled` in `GlobalFieldPicker.test.tsx`) because `inputValue={value}` means the mock `onChange: vi.fn()` never updates the value, so the component never sees the typed text.
 
+**Avoiding flaky async assertions:** Never make a bare assertion immediately after a `waitFor` block — state updates triggered by async events may not have propagated yet. Wrap the follow-on assertion in its own `waitFor` call. Similarly, prefer `await userEvent.click(...)` over `fireEvent.click(...)` when the click handler triggers state updates, because `userEvent` dispatches the full browser event sequence and awaits its completion. The pattern to follow:
+```ts
+// ✅ correct
+await waitFor(() => expect(api.someCall).toHaveBeenCalled())
+await waitFor(() => expect(element).toHaveValue('expected'))
+await userEvent.click(screen.getByTestId('save-button'))
+
+// ❌ flaky — bare assertion after async work
+await waitFor(() => expect(api.someCall).toHaveBeenCalled())
+expect(element).toHaveValue('expected')             // may run before state update
+fireEvent.click(screen.getByTestId('save-button'))  // may miss queued microtasks
+```
+
 ### CI
 
 GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on every push and pull request — see [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml). A PR should not be merged if any job is red.
