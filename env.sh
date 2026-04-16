@@ -29,7 +29,12 @@ _gz_start() {        # _gz_start <name> <logfile> <cmd...>
 _gz_stop() {         # _gz_stop <name>
     local pidfile="$_GLAZE_PIDS/$1.pid"
     if _gz_is_running "$1"; then
-        kill "$(cat "$pidfile")" && echo "$1: stopped"
+        local pid
+        pid=$(cat "$pidfile")
+        # Kill the entire process group so child processes don't get orphaned when
+        # the bash wrapper shell exits (e.g. on Ctrl+C from gz_start)
+        kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null
+        echo "$1: stopped"
     else
         echo "$1: not running"
     fi
@@ -198,13 +203,11 @@ gz_start() {
     _gz_rotate_log backend
     gz_backend
 
-    local backend_pid web_pid
-    backend_pid=$(cat "$_GLAZE_PIDS/backend.pid" 2>/dev/null)
-    web_pid=$(cat "$_GLAZE_PIDS/web.pid" 2>/dev/null)
-
-    trap 'echo "Stopping..."; _gz_stop backend; _gz_stop web; trap - INT TERM' INT TERM
+    trap 'echo "Stopping..."; gz_stop; trap - INT TERM' INT TERM
     echo "Running — press Ctrl+C to stop."
-    wait $backend_pid $web_pid 2>/dev/null
+    while _gz_is_running backend || _gz_is_running web; do
+        sleep 1
+    done
     trap - INT TERM
 }
 
