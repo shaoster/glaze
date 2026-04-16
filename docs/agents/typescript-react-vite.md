@@ -8,15 +8,76 @@ React, TypeScript (strict), Vite, Material UI (MUI), Axios
 
 This is a Single Page Application (SPA). Routing is handled client-side via React Router (`RouterProvider` with a data router) mounted in the top-level `App` component. There is no server-side rendering.
 
+## TypeScript
+
+- Strict mode is on. Beyond `strict: true`, also enforce `noUnusedLocals`, `noUnusedParameters`, and `noFallthroughCasesInSwitch` — remove unused variables and parameters rather than suppressing errors.
+- Avoid `any`. Use `unknown` when a type is genuinely unknown and narrow it before use.
+- Run `npx tsc --noEmit` as a standalone type-check step separate from the test suite.
+- Use `import.meta.env.VITE_*` to access environment variables in frontend code; plain `process.env` does not work in Vite.
+
+## Component patterns
+
+- Keep components small and focused on a single responsibility. Extract sub-concerns into child components or custom hooks.
+- Always define a typed props interface; prefer explicit interfaces over inline object types for reusability and readability:
+  ```tsx
+  interface ButtonProps {
+    children: ReactNode
+    disabled?: boolean
+    onClick?: () => void
+  }
+  export const Button: FC<ButtonProps> = ({ children, disabled = false, onClick }) => { ... }
+  ```
+- Use generic components when a component's logic is type-independent:
+  ```tsx
+  function List<T>({ items, renderItem, keyExtractor }: {
+    items: T[]
+    renderItem: (item: T) => ReactNode
+    keyExtractor: (item: T) => string | number
+  }) { ... }
+  ```
+- Use `memo` to prevent unnecessary re-renders of pure components that receive stable props. Pair with `useMemo` for expensive derived values and `useCallback` for stable callback references — but don't memoize indiscriminately; profile first.
+
+## Custom hooks
+
+Extract reusable logic into custom hooks rather than duplicating it across components. A `useAsync` hook is the idiomatic Axios-native pattern for managing loading/error/data state without a server-state library:
+
+```ts
+function useAsync<T>(asyncFunction: () => Promise<T>, immediate = true) {
+  const [state, setState] = useState<{ data: T | null; loading: boolean; error: Error | null }>({
+    data: null, loading: immediate, error: null,
+  })
+
+  const execute = useCallback(async () => {
+    setState({ data: null, loading: true, error: null })
+    try {
+      const data = await asyncFunction()
+      setState({ data, loading: false, error: null })
+    } catch (error) {
+      setState({ data: null, loading: false, error: error as Error })
+    }
+  }, [asyncFunction])
+
+  useEffect(() => { if (immediate) execute() }, [execute, immediate])
+
+  return { ...state, execute }
+}
+```
+
 ## Conventions
 
 - Use MUI components for all UI elements — avoid custom CSS except for layout adjustments MUI can't handle.
-- TypeScript strict mode is on; avoid `any`.
 - New component files should be `.tsx`, not `.js`.
 - Use `slotProps={{ htmlInput: { ... } }}` on MUI `TextField` — the `inputProps` prop is deprecated in MUI v7.
 - Module-level constants should be named in `ALL_CAPS_SNAKE_CASE`. This applies to both exported constants and internal ones.
 - All HTTP calls should go through a shared API module. This is the single place where wire types (ISO date strings, etc.) are mapped to domain types. Components must never perform their own serialization or deserialization — they receive fully-typed domain objects and call API functions to write data.
-- Use Axios for all HTTP requests to the backend.
+- Configure Axios with `axios.create({ baseURL: import.meta.env.VITE_API_URL })` rather than constructing URLs ad hoc. Use interceptors for cross-cutting concerns (auth headers, error normalisation) rather than repeating that logic at each call site.
+- Use `lazy` + `Suspense` for route-level code splitting to keep the initial bundle small:
+  ```tsx
+  const Dashboard = lazy(() => import('./pages/Dashboard'))
+  // wrap routes in <Suspense fallback={<Loading />}>
+  ```
+- Implement React error boundaries around major subtrees so an uncaught render error shows a recoverable UI rather than a blank screen.
+- Use semantic HTML elements (`<button>`, `<nav>`, `<main>`, `<section>`, etc.) and ARIA attributes where MUI components do not already supply them.
 
 ## Theming
 
