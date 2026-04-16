@@ -1,21 +1,26 @@
 name: CD
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
 
 jobs:
   deploy:
     name: Deploy to droplet
     runs-on: ubuntu-latest
     environment: glaze-tailscale
+    if: github.event.workflow_run.conclusion == 'success'
     concurrency:
       group: deploy-production
-      cancel-in-progress: true
+      cancel-in-progress: false
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.release.target_commitish }}
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set up SSH
         run: |
@@ -26,3 +31,12 @@ jobs:
 
       - name: Deploy
         run: ./deploy.sh "${{ vars.DEPLOY_HOST }}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "release-${{ github.event.workflow_run.head_sha }}" \
+            --title "Build ${{ github.event.workflow_run.head_sha }}" \
+            --notes "Docker image: \`ghcr.io/shaoster/glaze:${{ github.event.workflow_run.head_sha }}\`" \
+            --latest
