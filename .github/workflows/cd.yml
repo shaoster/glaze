@@ -5,13 +5,53 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Commit SHA to build and deploy (defaults to the selected branch HEAD)'
+        required: false
+        default: ''
+
+env:
+  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || inputs.sha || github.sha }}
 
 jobs:
+  publish:
+    name: Publish Docker image
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/shaoster/glaze:latest
+            ghcr.io/shaoster/glaze:${{ env.DEPLOY_SHA }}
+          build-args: |
+            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          labels: |
+            org.opencontainers.image.revision=${{ env.DEPLOY_SHA }}
+
   deploy:
     name: Deploy to droplet
     runs-on: ubuntu-latest
+    needs: [publish]
     environment: glaze-tailscale
-    if: github.event.workflow_run.conclusion == 'success'
     concurrency:
       group: deploy-production
       cancel-in-progress: false
@@ -20,7 +60,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ env.DEPLOY_SHA }}
 
       - name: Set up SSH
         run: |
@@ -36,7 +76,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "release-${{ github.event.workflow_run.head_sha }}" \
-            --title "Build ${{ github.event.workflow_run.head_sha }}" \
-            --notes "Docker image: \`ghcr.io/shaoster/glaze:${{ github.event.workflow_run.head_sha }}\`" \
+          gh release create "release-${{ env.DEPLOY_SHA }}" \
+            --title "Build ${{ env.DEPLOY_SHA }}" \
+            --notes "Docker image: \`ghcr.io/shaoster/glaze:${{ env.DEPLOY_SHA }}\`" \
             --latest
