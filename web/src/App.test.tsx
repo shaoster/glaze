@@ -97,13 +97,11 @@ describe('App auth flow', () => {
             await userEvent.click(submitButton)
         }
 
-        // Wait for the authenticated view to appear
+        // Wait for the authenticated view to fully appear
         await waitFor(() => {
             expect(screen.getByText('Pottery Pieces')).toBeInTheDocument()
+            expect(screen.getByText('Pat Potter')).toBeInTheDocument()
+            expect(screen.getByText('Piece List Content')).toBeInTheDocument()
         })
-
-        // Verify the authenticated view is shown
-        expect(screen.getByText('Pat Potter')).toBeInTheDocument()
-        expect(screen.getByText('Piece List Content')).toBeInTheDocument()
     })
 })

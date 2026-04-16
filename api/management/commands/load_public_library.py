@@ -81,7 +81,18 @@ class Command(BaseCommand):
                     f'Record for model {model_label} is missing a "name" field: {record}'
                 )
 
-            defaults = {k: v for k, v in fields.items() if k != 'name'}
+            defaults = {}
+            for k, v in fields.items():
+                if k == 'name':
+                    continue
+                # Resolve FK integer values to model instances.
+                try:
+                    field_obj = model_cls._meta.get_field(k)
+                    if field_obj.is_relation and isinstance(v, int):
+                        v = field_obj.related_model.objects.get(pk=v)
+                except Exception:
+                    pass
+                defaults[k] = v
             _, was_created = model_cls.objects.update_or_create(
                 user=None,
                 name=name,
