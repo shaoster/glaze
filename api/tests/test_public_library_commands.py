@@ -8,7 +8,7 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from api.models import ClayBody, GlazeType
+from api.models import ClayBody, GlazeCombination, GlazeType
 
 
 @pytest.mark.django_db
@@ -207,3 +207,30 @@ class TestLoadPublicLibrary:
         glaze = GlazeType.objects.get(user=None, name='Celadon')
         assert glaze.is_food_safe is True
         assert glaze.runs is False
+
+    def test_loads_glaze_combination_with_fk_integer_ids(self, tmp_path):
+        """FK fields stored as integer PKs in the fixture must be resolved to
+        model instances — not passed as raw ints — otherwise update_or_create
+        raises a ValueError."""
+        celadon = GlazeType.objects.create(user=None, name='Celadon', is_food_safe=True)
+        tenmoku = GlazeType.objects.create(user=None, name='Tenmoku', is_food_safe=False)
+        fixture = self._write_fixture(tmp_path, [
+            {
+                'model': 'api.glazecombination',
+                'fields': {
+                    'name': f'Celadon!Tenmoku',
+                    'first_layer_glaze_type': celadon.pk,
+                    'second_layer_glaze_type': tenmoku.pk,
+                    'is_food_safe': False,
+                    'runs': False,
+                    'highlights_grooves': None,
+                    'is_different_on_white_and_brown_clay': None,
+                },
+            },
+        ])
+
+        call_command('load_public_library', fixture=str(fixture))
+
+        combo = GlazeCombination.objects.get(user=None)
+        assert combo.first_layer_glaze_type == celadon
+        assert combo.second_layer_glaze_type == tenmoku
