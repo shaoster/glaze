@@ -89,7 +89,7 @@ The test environment is jsdom; setup file is [`web/src/test-setup.ts`](../../web
 
 ### CI
 
-GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on every push and pull request — see [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). A PR should not be merged if any job is red.
+GitHub Actions runs all three test suites (`common`, `backend`, `web`) plus a `web-build` job (type generation + `npm run build`) in parallel on every push and pull request — see [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). A PR should not be merged if any job is red.
 
 ### What to test
 
