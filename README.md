@@ -258,7 +258,7 @@ The repo ships a [`Dockerfile`](Dockerfile) and [`docker-compose.yml`](docker-co
 
 **How it works:**
 
-- Every push to `main` that passes all tests triggers a GitHub Actions `publish` job that builds the Docker image (with `VITE_GOOGLE_CLIENT_ID` baked in from a GitHub Actions secret) and pushes it to `ghcr.io/shaoster/glaze:latest`.
+- Every push to `main` that passes all tests triggers a GitHub Actions `publish` job ([`ci.yml`](.github/workflows/ci.yml)) that builds the Docker image (with `VITE_GOOGLE_CLIENT_ID` baked in from a GitHub Actions secret) and pushes it to `ghcr.io/shaoster/glaze:latest`. On success, [`cd.yml`](.github/workflows/cd.yml) automatically deploys the new image to the droplet and creates a GitHub release marking the deployed SHA.
 - The droplet never needs git, Node, or Python build tools — it just pulls the pre-built image.
 - Migrations run automatically inside the container on every start (via [`docker-entrypoint.sh`](docker-entrypoint.sh)).
 - Runtime secrets (`SECRET_KEY`, `DATABASE_URL`, `CLOUDINARY_*`, etc.) live only in `.env` on the droplet and are never part of the image.

@@ -363,7 +363,7 @@ fireEvent.click(screen.getByTestId('save-button'))  // may miss queued microtask
 
 ### CI
 
-GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on every push and pull request — see [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml). A PR should not be merged if any job is red.
+GitHub Actions runs all three suites (`common`, `backend`, `web`) in parallel on every push and pull request — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml). A PR should not be merged if any job is red.
 
 ### What to test
 
