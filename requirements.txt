@@ -2,6 +2,7 @@ asgiref==3.11.1
 attrs==26.1.0
 brotli==1.2.0
 certifi==2026.2.25
+cloudinary==1.44.2
 cffi==2.0.0
 charset-normalizer==3.4.7
 click==8.3.2
