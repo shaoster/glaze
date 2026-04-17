@@ -1,7 +1,69 @@
 import pytest
-from django.test import RequestFactory
 
-from api.admin import CloudinaryImageWidget
+from api.admin import (
+    CloudinaryImageWidget,
+    _cloudinary_lightbox_url,
+    _cloudinary_preview_url,
+    _cloudinary_public_id,
+)
+
+HEIC_URL = (
+    'https://res.cloudinary.com/demo-cloud/image/upload'
+    '/v1776304349/glaze_public/eyy9whpmb5wajybtfk3p.heic'
+)
+
+
+class TestCloudinaryPublicId:
+    def test_extracts_public_id_with_version(self):
+        assert _cloudinary_public_id(HEIC_URL) == 'glaze_public/eyy9whpmb5wajybtfk3p'
+
+    def test_extracts_public_id_without_version(self):
+        url = 'https://res.cloudinary.com/demo/image/upload/glaze_public/img.jpg'
+        assert _cloudinary_public_id(url) == 'glaze_public/img'
+
+    def test_returns_none_for_non_cloudinary_url(self):
+        assert _cloudinary_public_id('https://example.com/img.jpg') is None
+
+    def test_returns_none_for_empty_string(self):
+        assert _cloudinary_public_id('') is None
+
+
+class TestCloudinaryPreviewUrl:
+    def test_returns_jpg_thumbnail_url(self, monkeypatch):
+        monkeypatch.setenv('CLOUDINARY_CLOUD_NAME', 'demo-cloud')
+        result = _cloudinary_preview_url(HEIC_URL)
+        # SDK expresses format via extension, not f_jpg param
+        assert result.endswith('.jpg')
+        assert 'w_200' in result
+        assert 'h_200' in result
+        assert 'c_fill' in result
+        assert result.startswith('https://')
+
+    def test_returns_original_when_no_cloud_name(self, monkeypatch):
+        monkeypatch.delenv('CLOUDINARY_CLOUD_NAME', raising=False)
+        assert _cloudinary_preview_url(HEIC_URL) == HEIC_URL
+
+    def test_returns_original_for_empty_url(self, monkeypatch):
+        monkeypatch.setenv('CLOUDINARY_CLOUD_NAME', 'demo-cloud')
+        assert _cloudinary_preview_url('') == ''
+
+    def test_returns_original_for_non_cloudinary_url(self, monkeypatch):
+        monkeypatch.setenv('CLOUDINARY_CLOUD_NAME', 'demo-cloud')
+        url = 'https://example.com/img.jpg'
+        assert _cloudinary_preview_url(url) == url
+
+
+class TestCloudinaryLightboxUrl:
+    def test_returns_jpg_url_without_size_constraint(self, monkeypatch):
+        monkeypatch.setenv('CLOUDINARY_CLOUD_NAME', 'demo-cloud')
+        result = _cloudinary_lightbox_url(HEIC_URL)
+        assert result.endswith('.jpg')
+        assert 'w_200' not in result
+        assert result.startswith('https://')
+
+    def test_returns_original_when_no_cloud_name(self, monkeypatch):
+        monkeypatch.delenv('CLOUDINARY_CLOUD_NAME', raising=False)
+        assert _cloudinary_lightbox_url(HEIC_URL) == HEIC_URL
 
 
 class TestCloudinaryImageWidgetRender:
@@ -56,3 +118,38 @@ class TestCloudinaryImageWidgetRender:
 
         assert 'disabled' in html
         assert 'CLOUDINARY_PUBLIC_UPLOAD_FOLDER must be set' in html
+
+    def test_existing_heic_value_renders_jpg_preview(self, monkeypatch):
+        monkeypatch.setenv('CLOUDINARY_CLOUD_NAME', 'demo-cloud')
+        monkeypatch.setenv('CLOUDINARY_API_KEY', 'api-key')
+        monkeypatch.setenv('CLOUDINARY_PUBLIC_UPLOAD_FOLDER', 'glaze-public')
+
+        html = CloudinaryImageWidget().render(
+            'test_tile_image', HEIC_URL, attrs={'id': 'id_test_tile_image'}
+        )
+
+        assert 'cloudinary-preview' in html
+        # SDK renders format as .jpg extension; preview src must not be the raw .heic URL
+        assert 'w_200' in html
+        assert 'data-full-url' in html
+        assert '.heic' not in html.split('src=')[1].split('"')[1]  # preview img src is jpg
+
+    def test_preview_hidden_when_no_value(self, monkeypatch):
+        monkeypatch.setenv('CLOUDINARY_CLOUD_NAME', 'demo-cloud')
+        monkeypatch.setenv('CLOUDINARY_API_KEY', 'api-key')
+        monkeypatch.setenv('CLOUDINARY_PUBLIC_UPLOAD_FOLDER', 'glaze-public')
+
+        html = CloudinaryImageWidget().render('test_tile_image', '', attrs={'id': 'id_test_tile_image'})
+
+        assert 'display:none' in html
+
+    def test_preview_shown_when_value_present(self, monkeypatch):
+        monkeypatch.setenv('CLOUDINARY_CLOUD_NAME', 'demo-cloud')
+        monkeypatch.setenv('CLOUDINARY_API_KEY', 'api-key')
+        monkeypatch.setenv('CLOUDINARY_PUBLIC_UPLOAD_FOLDER', 'glaze-public')
+
+        html = CloudinaryImageWidget().render(
+            'test_tile_image', HEIC_URL, attrs={'id': 'id_test_tile_image'}
+        )
+
+        assert 'display:block' in html

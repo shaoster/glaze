@@ -1,5 +1,8 @@
 import os
+import re
 
+import cloudinary
+from cloudinary import CloudinaryImage
 from adminsortable2.admin import SortableAdminBase, SortableInlineAdminMixin
 from django import forms
 from django.contrib import admin
@@ -71,6 +74,47 @@ def _make_public_library_form(model_cls):
     )
 
 
+def _cloudinary_public_id(url: str) -> str | None:
+    """Extract the Cloudinary public_id from a delivery URL.
+
+    Handles URLs with or without a version segment (v1234567890/).
+    Returns None for non-Cloudinary or malformed URLs.
+    """
+    match = re.search(r'/image/upload/(?:v\d+/)?(.+?)(?:\.[^./]+)?$', url)
+    return match.group(1) if match else None
+
+
+def _cloudinary_preview_url(url: str) -> str:
+    """Return a JPG thumbnail URL (200×200 fill) for a Cloudinary delivery URL.
+
+    Uses the Cloudinary SDK so that format conversion is expressed as a
+    first-class transformation rather than a raw URL string splice — important
+    for .heic and other formats that browsers cannot render natively.
+    """
+    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
+    if not url or not cloud_name:
+        return url
+    public_id = _cloudinary_public_id(url)
+    if not public_id:
+        return url
+    cloudinary.config(cloud_name=cloud_name)
+    return CloudinaryImage(public_id).build_url(
+        width=200, height=200, crop='fill', format='jpg', secure=True
+    )
+
+
+def _cloudinary_lightbox_url(url: str) -> str:
+    """Return a full-size JPG URL suitable for a lightbox modal."""
+    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
+    if not url or not cloud_name:
+        return url
+    public_id = _cloudinary_public_id(url)
+    if not public_id:
+        return url
+    cloudinary.config(cloud_name=cloud_name)
+    return CloudinaryImage(public_id).build_url(format='jpg', secure=True)
+
+
 class CloudinaryImageWidget(widgets.TextInput):
     """Text input that adds a Cloudinary Upload Widget button when configured.
 
@@ -124,16 +168,22 @@ class CloudinaryImageWidget(widgets.TextInput):
         input_id = final_attrs.get('id', f'id_{name}')
         preview_id = f'preview-{input_id}'
 
+        preview_src = _cloudinary_preview_url(value) if value else ''
+        lightbox_src = _cloudinary_lightbox_url(value) if value else ''
+
         return format_html(
             '{}'
             '<br>'
-            '<img id="{}" src="{}" style="display:{};max-height:80px;margin:4px 0;" alt="preview">'
+            '<img id="{}" src="{}" data-full-url="{}"'
+            ' class="cloudinary-preview"'
+            ' style="display:{};max-height:80px;margin:4px 0;cursor:pointer;border-radius:4px;" alt="preview">'
             '<button type="button" class="cloudinary-upload-btn"'
             ' data-input-id="{}" data-preview-id="{}"'
             ' style="margin-top:4px;">Upload Image</button>',
             text_html,
             preview_id,
-            value or '',
+            preview_src,
+            lightbox_src,
             'block' if value else 'none',
             input_id,
             preview_id,
