@@ -151,6 +151,9 @@ globals:
     description: An ordered combination of one or more glaze layers with shared application properties.
     public: true
     private: true
+    compose_from:
+      glaze_types:
+        global: glaze_type
     fields:
       name:
         type: string

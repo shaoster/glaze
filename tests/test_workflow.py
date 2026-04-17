@@ -291,6 +291,63 @@ class TestSchemaValidation:
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
 
+    def test_compose_from_accepted(self, schema):
+        """A valid compose_from object on a global must pass the schema."""
+        valid = {
+            "version": "1.0.0",
+            "globals": {
+                "glaze_type": {
+                    "model": "GlazeType",
+                    "fields": {"name": {"type": "string"}},
+                },
+                "glaze_combination": {
+                    "model": "GlazeCombination",
+                    "fields": {"name": {"type": "string"}},
+                    "compose_from": {
+                        "glaze_types": {"global": "glaze_type"},
+                    },
+                },
+            },
+            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+        }
+        jsonschema.validate(instance=valid, schema=schema)
+
+    def test_compose_from_missing_global_fails(self, schema):
+        """A compose_from entry without a 'global' key must be rejected."""
+        bad = {
+            "version": "1.0.0",
+            "globals": {
+                "glaze_combination": {
+                    "model": "GlazeCombination",
+                    "fields": {"name": {"type": "string"}},
+                    "compose_from": {
+                        "glaze_types": {},
+                    },
+                },
+            },
+            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
+    def test_compose_from_extra_key_fails(self, schema):
+        """A compose_from entry with an unknown key must be rejected (additionalProperties: false)."""
+        bad = {
+            "version": "1.0.0",
+            "globals": {
+                "glaze_combination": {
+                    "model": "GlazeCombination",
+                    "fields": {"name": {"type": "string"}},
+                    "compose_from": {
+                        "glaze_types": {"global": "glaze_type", "unknown_key": True},
+                    },
+                },
+            },
+            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
 
 # ---------------------------------------------------------------------------
 # Referential integrity (things JSON Schema cannot express)
@@ -465,4 +522,33 @@ class TestGlobals:
                 if value is not None:
                     assert isinstance(value, bool), (
                         f"Global '@{alias}' flag '{flag}' must be a boolean, got {type(value).__name__}"
+                    )
+
+
+# ---------------------------------------------------------------------------
+# compose_from — ordered M2M composition relationships
+# ---------------------------------------------------------------------------
+
+class TestComposeFrom:
+    def test_compose_from_referenced_global_exists(self, globals_section):
+        """Each compose_from entry's 'global' must reference a declared global."""
+        for global_name, global_def in globals_section.items():
+            for field_name, entry in global_def.get("compose_from", {}).items():
+                referenced = entry["global"]
+                assert referenced in globals_section, (
+                    f"Global '@{global_name}' compose_from '{field_name}' "
+                    f"references undeclared global '@{referenced}'"
+                )
+
+    def test_compose_from_field_exists_on_model(self, globals_section):
+        """Each compose_from key must be a field that exists on the Django model."""
+        for global_name, global_def in globals_section.items():
+            model = apps.get_model("api", global_def["model"])
+            for field_name in global_def.get("compose_from", {}).keys():
+                try:
+                    model._meta.get_field(field_name)
+                except Exception:
+                    pytest.fail(
+                        f"Global '@{global_name}' compose_from declares field '{field_name}' "
+                        f"which does not exist on model '{global_def['model']}'"
                     )
