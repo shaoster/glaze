@@ -8,5 +8,8 @@
   "jestrunner.enableTestExplorer": true,
   "jestrunner.projectPath": "./frontend",
   "jestrunner.useNearestConfig": true,
-  "jestrunner.vitestCommand": ""
+  "jestrunner.vitestCommand": "",
+  "vim.handleKeys": {
+    "<C-p>": false
+  }
 }
