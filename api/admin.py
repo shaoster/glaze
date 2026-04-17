@@ -172,14 +172,19 @@ class CloudinaryImageWidget(widgets.TextInput):
         lightbox_src = _cloudinary_lightbox_url(value) if value else ''
 
         return format_html(
+            '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">'
             '{}'
-            '<br>'
             '<img id="{}" src="{}" data-full-url="{}"'
             ' class="cloudinary-preview"'
-            ' style="display:{};max-height:80px;margin:4px 0;cursor:pointer;border-radius:4px;" alt="preview">'
+            ' style="display:{};max-height:80px;cursor:pointer;border-radius:4px;" alt="preview">'
+            '<div style="display:flex;gap:4px;">'
             '<button type="button" class="cloudinary-upload-btn"'
+            ' data-input-id="{}" data-preview-id="{}">Upload Image</button>'
+            '<button type="button" class="cloudinary-clear-btn"'
             ' data-input-id="{}" data-preview-id="{}"'
-            ' style="margin-top:4px;">Upload Image</button>',
+            ' style="display:{};">Remove Image</button>'
+            '</div>'
+            '</div>',
             text_html,
             preview_id,
             preview_src,
@@ -187,6 +192,9 @@ class CloudinaryImageWidget(widgets.TextInput):
             'block' if value else 'none',
             input_id,
             preview_id,
+            input_id,
+            preview_id,
+            'inline-block' if value else 'none',
         )
 
 

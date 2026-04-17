@@ -118,6 +118,17 @@
     btn.addEventListener('click', function () { widget.open(); });
   }
 
+  function initClearBtn(btn) {
+    btn.addEventListener('click', function () {
+      if (!confirm('Are you sure you want to remove the attached image?')) { return; }
+      var inp = document.getElementById(btn.dataset.inputId);
+      var preview = document.getElementById(btn.dataset.previewId);
+      if (inp) { inp.value = ''; }
+      if (preview) { preview.style.display = 'none'; }
+      btn.style.display = 'none';
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.cloudinary-preview').forEach(function (img) {
       img.addEventListener('click', function () {
@@ -127,5 +138,6 @@
     });
 
     document.querySelectorAll('.cloudinary-upload-btn').forEach(initWidget);
+    document.querySelectorAll('.cloudinary-clear-btn').forEach(initClearBtn);
   });
 })();
