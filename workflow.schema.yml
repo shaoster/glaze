@@ -70,6 +70,27 @@ $defs:
           Whether this global type supports user-private instances.
           Private objects are owned by a specific user and invisible to others.
         default: true
+      compose_from:
+        type: object
+        description: |
+          Declares ordered M2M composition relationships for this global type.
+          Each key is an M2M field name on the model; each value identifies the
+          global type that each element in the M2M relation references.
+          Used by the frontend to render an ordered composition picker (e.g. for
+          GlazeCombination, which composes an ordered list of GlazeTypes).
+          Referential integrity (field exists on model, global exists in globals)
+          is enforced in tests/test_workflow.py.
+        propertyNames:
+          pattern: '^[a-z][a-z0-9_]*$'
+        additionalProperties:
+          type: object
+          required: [global]
+          additionalProperties: false
+          properties:
+            global:
+              type: string
+              pattern: '^[a-z][a-z0-9_]*$'
+              description: The global type name that each element in this M2M field references.
       fields:
         type: object
         description: |

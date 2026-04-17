@@ -184,6 +184,24 @@ def global_entries(request: Request, global_name: str) -> Response:
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
+    # Models with ordered M2M relations declare get_or_create_from_ordered_pks.
+    if hasattr(model_cls, 'get_or_create_from_ordered_pks'):
+        pks = request.data.get('layers')
+        if not pks or not isinstance(pks, list):
+            return Response(
+                {'detail': 'layers must be a non-empty list of PKs.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            obj, created = model_cls.get_or_create_from_ordered_pks(user=request.user, pks=pks)
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(
+            {'id': str(obj.pk), 'name': obj.name, 'is_public': obj.user_id is None},
+            status=status_code,
+        )
+
     field = request.data.get('field')
     value = request.data.get('value')
     if not field or field not in fields:
@@ -194,6 +212,7 @@ def global_entries(request: Request, global_name: str) -> Response:
     obj, created = model_cls.objects.get_or_create(user=request.user, **{field: value})
     status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
     return Response({'id': str(obj.pk), 'name': getattr(obj, display_field)}, status=status_code)
+
 
 
 @extend_schema(

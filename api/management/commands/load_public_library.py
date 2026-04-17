@@ -93,11 +93,13 @@ class Command(BaseCommand):
                 except Exception:
                     pass
                 defaults[k] = v
-            _, was_created = model_cls.objects.update_or_create(
+            obj, was_created = model_cls.objects.update_or_create(
                 user=None,
                 name=name,
                 defaults=defaults,
             )
+            if hasattr(model_cls, 'post_fixture_load'):
+                model_cls.post_fixture_load(obj, was_created)
             if was_created:
                 created_count += 1
             else:

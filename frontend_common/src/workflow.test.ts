@@ -26,6 +26,21 @@ vi.mock('../../workflow.yml', () => ({
                     code: { type: 'string' },
                 },
             },
+            glaze_type: {
+                model: 'GlazeType',
+                fields: {
+                    name: { type: 'string' },
+                },
+            },
+            glaze_combination: {
+                model: 'GlazeCombination',
+                compose_from: {
+                    glaze_types: { global: 'glaze_type' },
+                },
+                fields: {
+                    name: { type: 'string' },
+                },
+            },
         },
         states: [
             {
@@ -112,6 +127,7 @@ vi.mock('../../workflow.yml', () => ({
 import {
     formatWorkflowFieldLabel,
     getAdditionalFieldDefinitions,
+    getGlobalComposeFrom,
     getGlobalDisplayField,
 } from './workflow'
 
@@ -136,6 +152,22 @@ describe('getGlobalDisplayField', () => {
 
     it("falls back to 'name' for an unknown global", () => {
         expect(getGlobalDisplayField('nonexistent')).toBe('name')
+    })
+})
+
+describe('getGlobalComposeFrom', () => {
+    it('returns the compose_from map for a global that declares it', () => {
+        expect(getGlobalComposeFrom('glaze_combination')).toEqual({
+            glaze_types: { global: 'glaze_type' },
+        })
+    })
+
+    it('returns undefined for a global without compose_from', () => {
+        expect(getGlobalComposeFrom('location')).toBeUndefined()
+    })
+
+    it('returns undefined for an unknown global', () => {
+        expect(getGlobalComposeFrom('nonexistent')).toBeUndefined()
     })
 })
 

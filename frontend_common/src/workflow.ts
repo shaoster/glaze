@@ -42,9 +42,14 @@ interface WorkflowStateDefinition {
     additional_fields?: Record<string, FieldDefinition>
 }
 
+export interface ComposeFromEntry {
+    global: string
+}
+
 interface WorkflowGlobalDefinition {
     model: string
     description?: string
+    compose_from?: Record<string, ComposeFromEntry>
     fields: Record<string, InlineFieldDef | GlobalRefFieldDef>
 }
 
@@ -73,6 +78,17 @@ export type ResolvedAdditionalField = {
     canCreate?: boolean
     globalName?: string
     globalField?: string
+}
+
+/**
+ * Returns the compose_from map for the given global, if declared. Each entry
+ * maps an M2M field name on the model to the global type it references.
+ * Used by the frontend to identify globals that support ordered composition
+ * (e.g. GlazeCombination, composed from an ordered list of GlazeTypes) and to
+ * dispatch to the appropriate composition picker UI instead of a plain FK selector.
+ */
+export function getGlobalComposeFrom(globalName: string): Record<string, ComposeFromEntry> | undefined {
+    return GLOBALS_MAP[globalName]?.compose_from
 }
 
 /**

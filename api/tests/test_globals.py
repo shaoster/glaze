@@ -80,14 +80,10 @@ def _make_global_instance(model_cls, user, other_user):
     from api.models import GlazeCombination, GlazeType
 
     if model_cls is GlazeCombination:
-        # GlazeCombination requires two GlazeType FKs.
-        gt1 = GlazeType.objects.create(user=None, name='_IU_TestGlaze1')
-        gt2 = GlazeType.objects.create(user=None, name='_IU_TestGlaze2')
-        return model_cls.objects.create(
-            user=None,
-            first_layer_glaze_type=gt1,
-            second_layer_glaze_type=gt2,
-        )
+        # GlazeCombination is created via get_or_create_with_layers.
+        gt = GlazeType.objects.create(user=None, name='_IU_TestGlaze1')
+        combo, _ = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt])
+        return combo
     elif hasattr(model_cls, 'user') and model_cls._meta.get_field('user').null:
         # Public global (user nullable): create with user=None.
         return model_cls.objects.create(user=None, name='_IU_TestPublic')
@@ -101,7 +97,6 @@ class TestImmutableUser:
     @pytest.mark.parametrize('model_cls', _concrete_globals())
     def test_changing_user_raises(self, model_cls, user, other_user):
         """Cannot change user on any GlobalModel subclass after creation."""
-        from api.models import GlazeCombination
         instance = _make_global_instance(model_cls, user, other_user)
         # Change to a different user (or non-null if currently null).
         instance.user = other_user
@@ -114,7 +109,6 @@ class TestImmutableUser:
         from api.models import GlazeCombination
         instance = _make_global_instance(model_cls, user, other_user)
         if model_cls is GlazeCombination:
-            # GlazeCombination has no simple text field to update; just re-save.
             instance.is_food_safe = True
         else:
             instance.name = instance.name + '_updated'

@@ -148,21 +148,16 @@ globals:
 
   glaze_combination:
     model: GlazeCombination
-    description: A combination of two glaze layers with shared application properties.
+    description: An ordered combination of one or more glaze layers with shared application properties.
     public: true
-    private: false
+    private: true
+    compose_from:
+      glaze_types:
+        global: glaze_type
     fields:
       name:
         type: string
-        description: Computed combination name (first_layer!second_layer). Auto-populated on save.
-      first_layer_glaze_type:
-        $ref: "@glaze_type.name"
-        description: The first (bottom) layer glaze type.
-        required: true
-      second_layer_glaze_type:
-        $ref: "@glaze_type.name"
-        description: The second (top) layer glaze type.
-        required: true
+        description: Computed combination name (layer1!layer2!...). Auto-populated from ordered layers on save.
       test_tile_image:
         type: image
         description: Image of the glaze combination test tile.
@@ -284,12 +279,10 @@ states:
       - recycled
       - submitted_to_glaze_fire
     additional_fields:
-      glaze_name:
-        type: string
-        description: Name or code of the glaze applied.
-      glaze_layers:
-        type: integer
-        description: Number of glaze coats applied.
+      glaze_combination:
+        $ref: "@glaze_combination.name"
+        description: The glaze combination applied (one or more layers).
+        can_create: true
 
   - id: submitted_to_glaze_fire
     visible: true
@@ -315,9 +308,9 @@ states:
       cone:
         $ref: "bisque_fired.cone"
         description: Orton cone rating used for this glaze firing.
-      glaze_name:
-        $ref: "glazed.glaze_name"
-        description: Glaze name carried forward from the glazing stage.
+      glaze_combination:
+        $ref: "glazed.glaze_combination"
+        description: Glaze combination carried forward from the glazing stage.
 
   - id: sanded
     visible: true
