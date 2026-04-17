@@ -205,20 +205,10 @@ class GlazeCombinationLayerInline(SortableInlineAdminMixin, admin.TabularInline)
 
     def formfield_for_foreignkey(self, db_field, request: HttpRequest, **kwargs):
         if db_field.name == 'glaze_type':
-            # Detect whether the parent combination is public from the URL.
-            # Fall back to public-only to be safe when context is unavailable.
-            obj_id = request.resolver_match.kwargs.get('object_id')
-            is_public = True
-            if obj_id:
-                try:
-                    combo = GlazeCombination.objects.get(pk=obj_id)
-                    is_public = combo.user_id is None
-                except GlazeCombination.DoesNotExist:
-                    pass
-            if is_public:
-                kwargs['queryset'] = GlazeType.objects.filter(user__isnull=True).order_by('name')
-            else:
-                kwargs['queryset'] = GlazeType.objects.order_by('name')
+            # GlazeCombinationAdmin extends PublicLibraryAdmin, whose get_queryset
+            # filters to user__isnull=True. Private combinations are 404 before
+            # the form is built, so layers may only reference public glaze types.
+            kwargs['queryset'] = GlazeType.objects.filter(user__isnull=True).order_by('name')
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def formfield_for_dbfield(self, db_field, request: HttpRequest, **kwargs):
