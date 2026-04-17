@@ -56,8 +56,7 @@
     "model": "api.glazecombination",
     "fields": {
       "name": "Wild Hare Fur!Celadon",
-      "first_layer_glaze_type": 1,
-      "second_layer_glaze_type": 2,
+      "layers": ["Wild Hare Fur", "Celadon"],
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304417/glaze_public/j3gz35q5fecp48ncy2qp.heic",
       "is_food_safe": true,
       "runs": false,

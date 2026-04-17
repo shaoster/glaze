@@ -1,0 +1,4 @@
+/* adminsortable2 drag handle: replace tiling grip image with a simple cursor indicator */
+fieldset.sortable table tr.form-row.has_original td.original p {
+    background-image: none;
+}

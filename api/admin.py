@@ -1,12 +1,13 @@
 import os
 
+from adminsortable2.admin import SortableAdminBase, SortableInlineAdminMixin
 from django import forms
 from django.contrib import admin
 from django.forms import widgets
 from django.http import HttpRequest
 from django.utils.html import format_html
 
-from .models import GlazeCombination, GlazeType, Piece, PieceState, UserProfile
+from .models import GlazeCombination, GlazeCombinationLayer, GlazeType, Piece, PieceState, UserProfile
 from .workflow import get_image_fields_for_global_model, get_public_global_models
 
 
@@ -180,12 +181,62 @@ class PublicLibraryAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-class GlazeCombinationAdmin(PublicLibraryAdmin):
+class GlazeCombinationLayerInline(SortableInlineAdminMixin, admin.TabularInline):
+    """Inline editor for the ordered layers of a GlazeCombination.
+
+    Rows can be dragged to reorder; the ``order`` field is managed automatically
+    by adminsortable2 and is not shown as an editable column.
+
+    The GlazeType queryset is restricted to public types when the parent
+    combination is public (user=NULL), enforcing the public-only-references
+    invariant at the form level as well as in model save().
+    """
+
+    model = GlazeCombinationLayer
+    extra = 0
+    fields = ('glaze_type',)
+
+    class Media:
+        css = {'all': ('admin/css/sortable_inline.css',)}
+        js = ('admin/js/sortable_inline_notice.js',)
+
+    def get_queryset(self, request: HttpRequest):
+        return super().get_queryset(request).select_related('glaze_type')
+
+    def formfield_for_foreignkey(self, db_field, request: HttpRequest, **kwargs):
+        if db_field.name == 'glaze_type':
+            # Detect whether the parent combination is public from the URL.
+            # Fall back to public-only to be safe when context is unavailable.
+            obj_id = request.resolver_match.kwargs.get('object_id')
+            is_public = True
+            if obj_id:
+                try:
+                    combo = GlazeCombination.objects.get(pk=obj_id)
+                    is_public = combo.user_id is None
+                except GlazeCombination.DoesNotExist:
+                    pass
+            if is_public:
+                kwargs['queryset'] = GlazeType.objects.filter(user__isnull=True).order_by('name')
+            else:
+                kwargs['queryset'] = GlazeType.objects.order_by('name')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def formfield_for_dbfield(self, db_field, request: HttpRequest, **kwargs):
+        field = super().formfield_for_dbfield(db_field, request, **kwargs)
+        # RelatedFieldWidgetWrapper is applied by formfield_for_dbfield after
+        # formfield_for_foreignkey returns, so can_delete_related must be
+        # suppressed here rather than in formfield_for_foreignkey.
+        if db_field.name == 'glaze_type' and hasattr(field, 'widget'):
+            field.widget.can_delete_related = False
+        return field
+
+
+class GlazeCombinationAdmin(SortableAdminBase, PublicLibraryAdmin):
     """Admin for the public GlazeCombination library.
 
-    Extends PublicLibraryAdmin with glaze-combination-specific list display,
-    filters, and search.  FK dropdowns are restricted to public GlazeTypes so
-    the public-only-references invariant is enforced in the form layer as well.
+    Layers are managed via the inline.  The computed ``name`` field is excluded
+    from the edit form (it is stale until save and would be confusing); it is
+    still visible in the list view via ``__str__``.
     """
 
     list_display = (
@@ -201,22 +252,25 @@ class GlazeCombinationAdmin(PublicLibraryAdmin):
         'runs',
         'highlights_grooves',
         'is_different_on_white_and_brown_clay',
-        'first_layer_glaze_type',
-        'second_layer_glaze_type',
     )
-    search_fields = ('first_layer_glaze_type__name', 'second_layer_glaze_type__name')
-    list_select_related = ('first_layer_glaze_type', 'second_layer_glaze_type')
+    search_fields = ('name',)
+    exclude = ('user', 'name')
+    inlines = [GlazeCombinationLayerInline]
 
-    def get_form(self, request: HttpRequest, obj=None, change: bool = False, **kwargs):
-        form = super().get_form(request, obj, change=change, **kwargs)
-        # Restrict FK dropdowns to public GlazeTypes only so a public combination
-        # cannot accidentally reference a private glaze type via the admin UI.
-        for fk_field in ('first_layer_glaze_type', 'second_layer_glaze_type'):
-            if fk_field in form.base_fields:
-                form.base_fields[fk_field].queryset = (
-                    GlazeType.objects.filter(user__isnull=True).order_by('name')
-                )
-        return form
+    def save_model(self, request: HttpRequest, obj, form, change: bool) -> None:
+        """Save the combination; name will be recomputed in save_related."""
+        super().save_model(request, obj, form, change)
+
+    def save_related(self, request: HttpRequest, form, formsets, change: bool) -> None:
+        """After all inlines are saved, refresh the computed name from the current layers."""
+        super().save_related(request, form, formsets, change)
+        obj = form.instance
+        layer_names = list(
+            obj.layers.order_by('order').values_list('glaze_type__name', flat=True)
+        )
+        from .models import GLAZE_COMBINATION_NAME_SEPARATOR
+        obj.name = GLAZE_COMBINATION_NAME_SEPARATOR.join(layer_names)
+        obj.save(update_fields=['name'])
 
 
 admin.site.register(GlazeCombination, GlazeCombinationAdmin)

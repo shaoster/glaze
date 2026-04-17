@@ -20,6 +20,7 @@ from .workflow import (
 __all__ = [
     'ENTRY_STATE',
     'GLAZE_COMBINATION_NAME_SEPARATOR',
+    'GlazeCombinationLayer',
     'GlobalModel',
     'SUCCESSORS',
     'TERMINAL_STATES',
@@ -190,19 +191,20 @@ class GlazeMethod(GlobalModel):
 
 
 class GlazeCombination(GlobalModel):
-    """A combination of two glaze layers with shared application properties.
+    """An ordered combination of one or more glaze layers with shared application properties.
 
-    Public combinations (user=NULL) are managed via Django admin and are
-    visible to all users. Private combinations (user IS NOT NULL) are
-    user-owned — currently disabled (private: false in workflow.yml).
+    Public combinations (user=NULL) are managed via Django admin and visible to
+    all users. Private combinations (user IS NOT NULL) are user-owned.
 
-    Invariant: a public combination may only reference public GlazeTypes.
-    This is enforced in save() so it holds for both ORM and admin usage.
+    ``name`` is a stored computed field built by joining ordered layer glaze type
+    names with ``GLAZE_COMBINATION_NAME_SEPARATOR``. It is stored in the DB so
+    generic list views can sort/filter by name without loading related objects.
+    The name must be set (via ``compute_name_from_layers`` or a factory method)
+    before calling save(); it is not recomputed in save() because M2M layers may
+    not yet exist when the row is first inserted.
 
-    ``name`` is a stored computed field (populated in save()) formed by joining
-    the two glaze type names with ``GLAZE_COMBINATION_NAME_SEPARATOR``.  It is
-    stored in the DB so that generic list views and the dump command can sort
-    and filter by name without loading related objects.
+    Uniqueness is enforced on ``name`` (which encodes the full ordered layer
+    sequence) rather than on individual FK columns.
     """
 
     user = models.ForeignKey(
@@ -212,17 +214,12 @@ class GlazeCombination(GlobalModel):
         blank=True,
         related_name='glaze_combinations',
     )
-    # Stored computed field: populated from first/second layer glaze type names in save().
-    name = models.CharField(max_length=511, editable=False, blank=True, default='')
-    first_layer_glaze_type = models.ForeignKey(
+    # Stored computed field: set from ordered GlazeCombinationLayer rows.
+    name = models.CharField(max_length=2047, blank=True, default='')
+    glaze_types = models.ManyToManyField(
         GlazeType,
-        on_delete=models.PROTECT,
-        related_name='first_layer_combinations',
-    )
-    second_layer_glaze_type = models.ForeignKey(
-        GlazeType,
-        on_delete=models.PROTECT,
-        related_name='second_layer_combinations',
+        through='GlazeCombinationLayer',
+        related_name='combinations',
     )
     test_tile_image = models.CharField(max_length=1024, blank=True, default='')
     is_food_safe = models.BooleanField(null=True, blank=True)
@@ -234,46 +231,85 @@ class GlazeCombination(GlobalModel):
         constraints = [
             # Global uniqueness for public combinations (user IS NULL).
             models.UniqueConstraint(
-                fields=['first_layer_glaze_type', 'second_layer_glaze_type'],
+                fields=['name'],
                 condition=Q(user__isnull=True),
-                name='uniq_glaze_combination_public',
+                name='uniq_glaze_combination_name_public',
             ),
             # Per-user uniqueness for private combinations.
             models.UniqueConstraint(
-                fields=['user', 'first_layer_glaze_type', 'second_layer_glaze_type'],
+                fields=['user', 'name'],
                 condition=Q(user__isnull=False),
-                name='uniq_glaze_combination_per_user',
+                name='uniq_glaze_combination_name_per_user',
             ),
         ]
 
-    def save(self, *args, **kwargs):
-        # Compute name from the two layer glaze type names before saving.
-        self.name = (
-            f'{self.first_layer_glaze_type}'
-            f'{GLAZE_COMBINATION_NAME_SEPARATOR}'
-            f'{self.second_layer_glaze_type}'
-        )
-        # Public combinations may only reference public (user=NULL) GlazeTypes.
-        if self.user_id is None:
-            for fk_id_attr in ('first_layer_glaze_type_id', 'second_layer_glaze_type_id'):
-                fk_id = getattr(self, fk_id_attr)
-                if fk_id is not None:
-                    gt_user_id = (
-                        GlazeType.objects
-                        .filter(pk=fk_id)
-                        .values_list('user_id', flat=True)
-                        .first()
-                    )
-                    if gt_user_id is not None:
-                        field_label = fk_id_attr.replace('_id', '').replace('_', ' ')
-                        raise ValueError(
-                            f'Public glaze combinations can only reference public glaze types. '
-                            f'The {field_label} (id={fk_id}) is a private glaze type.'
-                        )
-        super().save(*args, **kwargs)
+    @staticmethod
+    def compute_name(glaze_type_names: list[str]) -> str:
+        """Build a combination name from an ordered list of glaze type name strings."""
+        return GLAZE_COMBINATION_NAME_SEPARATOR.join(glaze_type_names)
+
+    @classmethod
+    def get_or_create_with_layers(
+        cls,
+        user,
+        glaze_types: list['GlazeType'],
+    ) -> tuple['GlazeCombination', bool]:
+        """Find or create a combination with the given ordered GlazeType list.
+
+        Returns (instance, created). Creates a private combination owned by
+        ``user``. Raises ValueError if any layer violates the public reference
+        constraint (public combinations may only reference public GlazeTypes).
+        """
+        if not glaze_types:
+            raise ValueError('A glaze combination must have at least one layer.')
+        name = cls.compute_name([str(gt) for gt in glaze_types])
+        existing = cls.objects.filter(user=user, name=name).first()
+        if existing:
+            return existing, False
+        combo = cls(user=user, name=name)
+        combo.save()
+        for order, gt in enumerate(glaze_types):
+            GlazeCombinationLayer.objects.create(combination=combo, glaze_type=gt, order=order)
+        return combo, True
 
     def __str__(self) -> str:
         return self.name
+
+
+class GlazeCombinationLayer(models.Model):
+    """Through table for the ordered glaze layers of a GlazeCombination.
+
+    Invariant: if the parent combination is public (user=NULL), the referenced
+    GlazeType must also be public (user=NULL). Enforced in save() so it applies
+    to both ORM and admin usage.
+    """
+
+    combination = models.ForeignKey(
+        GlazeCombination,
+        on_delete=models.CASCADE,
+        related_name='layers',
+    )
+    glaze_type = models.ForeignKey(
+        GlazeType,
+        on_delete=models.PROTECT,
+        related_name='combination_layers',
+    )
+    order = models.PositiveSmallIntegerField()
+
+    class Meta:
+        ordering = ['order']
+
+    def save(self, *args, **kwargs):
+        # Public combinations may only reference public (user=NULL) GlazeTypes.
+        if self.combination.user_id is None and self.glaze_type.user_id is not None:
+            raise ValueError(
+                f'Public glaze combinations can only reference public glaze types. '
+                f'GlazeType "{self.glaze_type}" (id={self.glaze_type_id}) is private.'
+            )
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f'{self.glaze_type} (drag to reorder)'
 
 
 class Piece(models.Model):

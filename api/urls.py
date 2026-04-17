@@ -13,6 +13,7 @@ urlpatterns = [
     path('pieces/<uuid:piece_id>/', views.piece_detail, name='piece-detail'),
     path('pieces/<uuid:piece_id>/states/', views.piece_states, name='piece-states'),
     path('pieces/<uuid:piece_id>/state/', views.piece_current_state, name='piece-current-state'),
+    path('globals/glaze_combination/', views.glaze_combination_entries, name='glaze-combination-entries'),
     path('globals/<str:global_name>/', views.global_entries, name='global-entries'),
     path(
         'uploads/cloudinary/widget-config/',

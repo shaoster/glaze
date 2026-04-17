@@ -49,6 +49,14 @@ class Command(BaseCommand):
                         continue
                     fields[field.name] = getattr(obj, field.attname)
 
+                # For GlazeCombination: replace the computed name field with an
+                # explicit ordered layers list so the fixture is self-describing
+                # and does not depend on the separator convention.
+                if model_name == 'glazecombination':
+                    fields['layers'] = list(
+                        obj.layers.order_by('order').values_list('glaze_type__name', flat=True)
+                    )
+
                 records.append({
                     'model': f'{app_label}.{model_name}',
                     'fields': fields,
