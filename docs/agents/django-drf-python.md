@@ -93,6 +93,55 @@ def formfield_for_dbfield(self, db_field, request, **kwargs):
     return field
 ```
 
+### Debugging admin issues
+
+When an admin customisation doesn't behave as expected, the fastest path is to render the actual change page through the test client and inspect the HTML, rather than reasoning from code alone:
+
+```python
+from django.test import Client
+from django.contrib.auth import get_user_model
+
+client = Client()
+client.force_login(get_user_model().objects.get(is_superuser=True))
+response = client.get('/admin/api/mymodel/1/change/')
+html = response.content.decode()
+
+# Check whether a JS file was included
+print('JS loaded:', 'my_script.js' in html)
+# Check whether a widget feature rendered
+print('Delete button present:', 'delete-related' in html)
+# Find the actual inline group id
+import re
+print(re.findall(r'id="[^"]*-group"', html))
+```
+
+**Check the extension's documentation first** — before scanning source code or guessing at behaviour, look up the relevant section in the library's docs. Many non-obvious constraints are documented explicitly. For example, adminsortable2 documents that unique constraints on ordering fields cause swap failures on SQLite and MySQL, and Django's admin docs explain the `formfield_for_dbfield` / `formfield_for_foreignkey` call order. Reading the docs first avoids a long debugging loop that the author has already solved.
+
+**Tracing a `formfield_for_*` method** — if you're not sure whether your override is being called, or what widget type it's actually receiving, monkey-patch it before making the request:
+
+```python
+import api.admin as api_admin
+
+orig = api_admin.MyInline.formfield_for_foreignkey
+def traced(self, db_field, request, **kwargs):
+    field = orig(self, db_field, request, **kwargs)
+    print(db_field.name, type(field.widget).__name__,
+          getattr(field.widget, 'can_delete_related', '—'))
+    return field
+api_admin.MyInline.formfield_for_foreignkey = traced
+
+client.get('/admin/api/mymodel/1/change/')
+```
+
+Note that outside a real request context (e.g. constructing an inline instance directly in a shell), `request.resolver_match` is `None`, which will crash any admin code that reads URL kwargs. Use the test client to get a fully wired request.
+
+**Checking static file discoverability** — before suspecting a serving or caching issue, confirm Django can find the file at all:
+
+```python
+from django.contrib.staticfiles import finders
+print(finders.find('admin/js/my_script.js'))  # None → file not on the path
+```
+
 ## Testing
 
 ```bash
