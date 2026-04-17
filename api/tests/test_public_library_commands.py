@@ -208,8 +208,8 @@ class TestLoadPublicLibrary:
         assert glaze.is_food_safe is True
         assert glaze.runs is False
 
-    def test_loads_glaze_combination_from_layers_list(self, tmp_path):
-        """GlazeCombination fixtures use a 'layers' list of GlazeType names."""
+    def test_loads_glaze_combination_from_computed_name(self, tmp_path):
+        """GlazeCombination fixtures use the computed name; layers are reconstructed on load."""
         GlazeType.objects.create(user=None, name='Celadon', is_food_safe=True)
         GlazeType.objects.create(user=None, name='Tenmoku', is_food_safe=False)
         fixture = self._write_fixture(tmp_path, [
@@ -217,7 +217,7 @@ class TestLoadPublicLibrary:
                 'model': 'api.glazecombination',
                 'fields': {
                     'name': 'Celadon!Tenmoku',
-                    'layers': ['Celadon', 'Tenmoku'],
+                    'test_tile_image': '',
                     'is_food_safe': False,
                     'runs': False,
                     'highlights_grooves': None,
@@ -234,3 +234,28 @@ class TestLoadPublicLibrary:
         layer_names = list(combo.layers.order_by('order').values_list('glaze_type__name', flat=True))
         assert layer_names == ['Celadon', 'Tenmoku']
         assert combo.is_food_safe is False
+
+    def test_glaze_combination_load_is_idempotent(self, tmp_path):
+        """Loading a GlazeCombination fixture twice does not duplicate layers."""
+        GlazeType.objects.create(user=None, name='Celadon')
+        GlazeType.objects.create(user=None, name='Tenmoku')
+        fixture = self._write_fixture(tmp_path, [
+            {
+                'model': 'api.glazecombination',
+                'fields': {
+                    'name': 'Celadon!Tenmoku',
+                    'test_tile_image': '',
+                    'is_food_safe': None,
+                    'runs': None,
+                    'highlights_grooves': None,
+                    'is_different_on_white_and_brown_clay': None,
+                },
+            },
+        ])
+
+        call_command('load_public_library', fixture=str(fixture))
+        call_command('load_public_library', fixture=str(fixture))
+
+        assert GlazeCombination.objects.filter(user=None).count() == 1
+        combo = GlazeCombination.objects.get(user=None)
+        assert combo.layers.count() == 2

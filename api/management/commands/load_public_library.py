@@ -81,54 +81,25 @@ class Command(BaseCommand):
                     f'Record for model {model_label} is missing a "name" field: {record}'
                 )
 
-            # GlazeCombination is handled specially: layers are stored as an
-            # ordered list of GlazeType names and must be loaded via
-            # get_or_create_with_layers rather than update_or_create.
-            if model_cls._meta.model_name == 'glazecombination':
-                from api.models import GlazeCombination, GlazeType
-                layer_names = fields.get('layers', [])
-                if not layer_names:
-                    raise CommandError(
-                        f'GlazeCombination record missing "layers" list: {record}'
-                    )
-                glaze_types = []
-                for gt_name in layer_names:
-                    try:
-                        glaze_types.append(GlazeType.objects.get(user=None, name=gt_name))
-                    except GlazeType.DoesNotExist:
-                        raise CommandError(
-                            f'GlazeType with name "{gt_name}" not found in public library.'
-                        )
-                combo, was_created = GlazeCombination.get_or_create_with_layers(
-                    user=None, glaze_types=glaze_types
-                )
-                # Update non-layer fields on existing combos.
-                update_fields = {
-                    k: v for k, v in fields.items()
-                    if k not in ('name', 'layers')
-                }
-                if update_fields:
-                    for attr, val in update_fields.items():
-                        setattr(combo, attr, val)
-                    combo.save(update_fields=list(update_fields.keys()))
-            else:
-                defaults = {}
-                for k, v in fields.items():
-                    if k == 'name':
-                        continue
-                    # Resolve FK integer values to model instances.
-                    try:
-                        field_obj = model_cls._meta.get_field(k)
-                        if field_obj.is_relation and isinstance(v, int):
-                            v = field_obj.related_model.objects.get(pk=v)
-                    except Exception:
-                        pass
-                    defaults[k] = v
-                _, was_created = model_cls.objects.update_or_create(
-                    user=None,
-                    name=name,
-                    defaults=defaults,
-                )
+            defaults = {}
+            for k, v in fields.items():
+                if k == 'name':
+                    continue
+                # Resolve FK integer values to model instances.
+                try:
+                    field_obj = model_cls._meta.get_field(k)
+                    if field_obj.is_relation and isinstance(v, int):
+                        v = field_obj.related_model.objects.get(pk=v)
+                except Exception:
+                    pass
+                defaults[k] = v
+            obj, was_created = model_cls.objects.update_or_create(
+                user=None,
+                name=name,
+                defaults=defaults,
+            )
+            if hasattr(model_cls, 'post_fixture_load'):
+                model_cls.post_fixture_load(obj, was_created)
             if was_created:
                 created_count += 1
             else:

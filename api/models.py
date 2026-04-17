@@ -263,14 +263,45 @@ class GlazeCombination(GlobalModel):
         if not glaze_types:
             raise ValueError('A glaze combination must have at least one layer.')
         name = cls.compute_name([str(gt) for gt in glaze_types])
-        existing = cls.objects.filter(user=user, name=name).first()
-        if existing:
-            return existing, False
-        combo = cls(user=user, name=name)
-        combo.save()
-        for order, gt in enumerate(glaze_types):
-            GlazeCombinationLayer.objects.create(combination=combo, glaze_type=gt, order=order)
-        return combo, True
+        combo, created = cls.objects.get_or_create(user=user, name=name)
+        if created:
+            for order, gt in enumerate(glaze_types):
+                GlazeCombinationLayer.objects.create(combination=combo, glaze_type=gt, order=order)
+        return combo, created
+
+    @classmethod
+    def get_or_create_from_ordered_pks(
+        cls,
+        user,
+        pks: list,
+    ) -> tuple['GlazeCombination', bool]:
+        """Find or create a combination from an ordered list of GlazeType PKs.
+
+        Raises ValueError for unknown PKs or an empty list. Used by the generic
+        global_entries view for models with ordered M2M relations.
+        """
+        glaze_types = []
+        for pk in pks:
+            try:
+                glaze_types.append(GlazeType.objects.get(pk=pk))
+            except (GlazeType.DoesNotExist, ValueError):
+                raise ValueError(f'GlazeType with id {pk!r} not found.')
+        return cls.get_or_create_with_layers(user=user, glaze_types=glaze_types)
+
+    @classmethod
+    def post_fixture_load(cls, obj: 'GlazeCombination', created: bool) -> None:
+        """Reconstruct ordered M2M layers from the stored name after fixture load.
+
+        Called by load_public_library for any model that declares this hook.
+        Only runs on newly created records; existing records already have layers.
+        Expects all referenced GlazeType names (public, user=None) to exist.
+        """
+        if not created:
+            return
+        layer_names = obj.name.split(GLAZE_COMBINATION_NAME_SEPARATOR)
+        for order, gt_name in enumerate(layer_names):
+            gt = GlazeType.objects.get(user=None, name=gt_name)
+            GlazeCombinationLayer.objects.create(combination=obj, glaze_type=gt, order=order)
 
     def __str__(self) -> str:
         return self.name

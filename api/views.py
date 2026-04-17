@@ -17,7 +17,7 @@ from rest_framework.response import Response
 
 from django.db.models import Q
 
-from .models import GlazeCombination, GlazeType, Piece, UserProfile
+from .models import Piece, UserProfile
 from .serializers import (
     AuthUserSerializer,
     GoogleAuthSerializer,
@@ -184,6 +184,24 @@ def global_entries(request: Request, global_name: str) -> Response:
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
+    # Models with ordered M2M relations declare get_or_create_from_ordered_pks.
+    if hasattr(model_cls, 'get_or_create_from_ordered_pks'):
+        pks = request.data.get('layers')
+        if not pks or not isinstance(pks, list):
+            return Response(
+                {'detail': 'layers must be a non-empty list of PKs.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            obj, created = model_cls.get_or_create_from_ordered_pks(user=request.user, pks=pks)
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(
+            {'id': str(obj.pk), 'name': obj.name, 'is_public': obj.user_id is None},
+            status=status_code,
+        )
+
     field = request.data.get('field')
     value = request.data.get('value')
     if not field or field not in fields:
@@ -195,93 +213,6 @@ def global_entries(request: Request, global_name: str) -> Response:
     status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
     return Response({'id': str(obj.pk), 'name': getattr(obj, display_field)}, status=status_code)
 
-
-_GLAZE_COMBO_ENTRY_SCHEMA = {
-    'type': 'object',
-    'properties': {
-        'id': {'type': 'string'},
-        'name': {'type': 'string'},
-        'is_public': {'type': 'boolean'},
-    },
-}
-
-
-@extend_schema(
-    responses={200: {'type': 'array', 'items': _GLAZE_COMBO_ENTRY_SCHEMA}},
-    methods=['GET'],
-)
-@extend_schema(
-    request={
-        'application/json': {
-            'type': 'object',
-            'properties': {
-                'layers': {
-                    'type': 'array',
-                    'items': {'type': 'string'},
-                    'description': 'Ordered list of GlazeType PKs (UUIDs or ints).',
-                    'minItems': 1,
-                },
-            },
-            'required': ['layers'],
-        }
-    },
-    responses={200: _GLAZE_COMBO_ENTRY_SCHEMA, 201: _GLAZE_COMBO_ENTRY_SCHEMA},
-    methods=['POST'],
-)
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
-def glaze_combination_entries(request: Request) -> Response:
-    """List or create glaze combinations.
-
-    GET  — returns the authenticated user's private combinations plus all
-           public combinations, sorted by name.
-    POST — find-or-create a private combination for the authenticated user
-           from an ordered list of GlazeType PKs.  Returns 200 if the
-           combination already exists or 201 if it was created.
-    """
-    if request.method == 'GET':
-        combos = GlazeCombination.objects.filter(
-            Q(user=request.user) | Q(user__isnull=True)
-        ).order_by('name')
-        return Response([
-            {'id': str(c.pk), 'name': c.name, 'is_public': c.user_id is None}
-            for c in combos
-        ])
-
-    # POST — create from ordered layer IDs.
-    layer_ids = request.data.get('layers')
-    if not layer_ids or not isinstance(layer_ids, list):
-        return Response(
-            {'detail': 'layers must be a non-empty list of GlazeType PKs.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    glaze_types = []
-    for pk in layer_ids:
-        try:
-            gt = GlazeType.objects.get(
-                pk=pk,
-            )
-        except (GlazeType.DoesNotExist, ValueError):
-            return Response(
-                {'detail': f'GlazeType with id {pk!r} not found.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        glaze_types.append(gt)
-
-    try:
-        combo, created = GlazeCombination.get_or_create_with_layers(
-            user=request.user,
-            glaze_types=glaze_types,
-        )
-    except ValueError as exc:
-        return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-
-    status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
-    return Response(
-        {'id': str(combo.pk), 'name': combo.name, 'is_public': combo.user_id is None},
-        status=status_code,
-    )
 
 
 @extend_schema(

@@ -6,11 +6,10 @@ Covers:
 - GlazeCombination.get_or_create_with_layers(): find-or-create semantics
 - GlazeType.name validation: separator character is rejected
 - Name-based uniqueness constraints (public and per-user)
-- API GET /api/globals/glaze_combination/: returns public + user-private combos
-- API POST /api/globals/glaze_combination/: creates private combo from layer IDs
+- API GET /api/globals/glaze_combination/: returns public + user-private combos (via global_entries)
+- API POST /api/globals/glaze_combination/: creates private combo from layer IDs (via global_entries)
 - API POST: returns 200 if combo already exists, 201 if created
 - API POST: returns 400 for unknown GlazeType IDs or empty layer list
-- Old generic POST path returns 405 (glaze_combination URL no longer routed there)
 """
 import pytest
 
