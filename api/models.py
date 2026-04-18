@@ -273,6 +273,7 @@ class GlazeCombination(GlobalModel):
     runs = models.BooleanField(null=True, blank=True)
     highlights_grooves = models.BooleanField(null=True, blank=True)
     is_different_on_white_and_brown_clay = models.BooleanField(null=True, blank=True)
+    apply_thin = models.BooleanField(null=True, blank=True)
 
     class Meta:
         constraints = [

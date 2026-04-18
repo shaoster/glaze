@@ -211,6 +211,11 @@ globals:
         description: Whether the combination appears different on white versus brown clay.
         filterable: true
         label: "Different on white/brown clay"
+      apply_thin:
+        type: boolean
+        description: Whether this glaze combination should be applied thinly.
+        filterable: true
+        label: "Apply thin"
 
 # Built-in states for standard workflow.
 states:
