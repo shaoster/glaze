@@ -18,6 +18,7 @@ interface InlineFieldDef {
     required?: boolean
     enum?: string[]
     filterable?: boolean
+    label?: string
 }
 
 interface StateRefFieldDef {
@@ -93,17 +94,26 @@ export function getGlobalComposeFrom(globalName: string): Record<string, Compose
     return GLOBALS_MAP[globalName]?.compose_from
 }
 
+export interface FilterableFieldDef {
+    name: string
+    type: FieldType
+    label: string
+}
+
 /**
- * Returns the field names declared as filterable: true for a given global.
+ * Returns metadata for fields declared as filterable: true for a given global.
  * Used by pickers (e.g. GlazeCombinationPicker) to discover which fields to
- * expose as filter controls without hardcoding them in the component.
+ * expose as filter controls without hardcoding labels or field names in the component.
  * Mirrors the backend's `get_filterable_fields` helper.
  */
-export function getFilterableFields(globalName: string): string[] {
+export function getFilterableFields(globalName: string): FilterableFieldDef[] {
     const fields = GLOBALS_MAP[globalName]?.fields ?? {}
     return Object.entries(fields)
         .filter(([, def]) => 'filterable' in def && (def as InlineFieldDef).filterable)
-        .map(([name]) => name)
+        .map(([name, def]) => {
+            const inline = def as InlineFieldDef
+            return { name, type: inline.type, label: inline.label ?? formatWorkflowFieldLabel(name) }
+        })
 }
 
 /**

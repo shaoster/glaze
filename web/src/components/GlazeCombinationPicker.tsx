@@ -26,7 +26,10 @@ import {
     type GlazeCombinationFilters,
     type GlazeTypeRef,
 } from '@common/api'
+import { getFilterableFields } from '@common/workflow'
 import CloudinaryImage from './CloudinaryImage'
+
+const BOOL_FILTERABLE_FIELDS = getFilterableFields('glaze_combination')
 
 export interface GlazeCombinationPickerProps {
     open: boolean
@@ -40,54 +43,40 @@ interface FiringTemperatureOption {
     name: string
 }
 
+// TODO(#83): make this component generic (GlobalEntryPicker) accepting a globalName prop.
+// The filter UI, API calls, and favorites support should all be derived from workflow
+// metadata and generic API functions rather than being hardcoded to glaze_combination.
+// Depends on #82 (generic favorite toggle). https://github.com/shaoster/glaze/issues/83
+
 interface FilterState {
     glazeTypes: GlazeTypeRef[]
     firingTemperature: FiringTemperatureOption | null
-    isFoodSafe: boolean | null
-    runs: boolean | null
-    highlightsGrooves: boolean | null
-    isDifferentOnWhiteAndBrownClay: boolean | null
+    // Boolean filters keyed by snake_case field name from workflow.yml.
+    boolFilters: Record<string, boolean | null>
     onlyFavorites: boolean
 }
 
 const EMPTY_FILTERS: FilterState = {
     glazeTypes: [],
     firingTemperature: null,
-    isFoodSafe: null,
-    runs: null,
-    highlightsGrooves: null,
-    isDifferentOnWhiteAndBrownClay: null,
+    boolFilters: Object.fromEntries(BOOL_FILTERABLE_FIELDS.map((f) => [f.name, null])),
     onlyFavorites: false,
 }
 
-// TODO(#83): make this component generic (GlobalEntryPicker) accepting a globalName prop.
-// The filter UI, API calls, and favorites support should all be derived from workflow
-// metadata and generic API functions rather than being hardcoded to glaze_combination.
-// Depends on #81 (filterable fields in workflow.yml) and #82 (generic favorite toggle).
-// https://github.com/shaoster/glaze/issues/83
-//
-// TODO(#81): replace NullableBoolField and BOOL_FILTER_LABELS with filterable field
-// metadata imported from getFilterableFields('glaze_combination') in workflow.ts once
-// filter metadata is declared in workflow.yml.
-// https://github.com/shaoster/glaze/issues/81
-type NullableBoolField = 'isFoodSafe' | 'runs' | 'highlightsGrooves' | 'isDifferentOnWhiteAndBrownClay'
-
-const BOOL_FILTER_LABELS: Record<NullableBoolField, string> = {
-    isFoodSafe: 'Food safe',
-    runs: 'Runs',
-    highlightsGrooves: 'Highlights grooves',
-    isDifferentOnWhiteAndBrownClay: 'Different on white/brown clay',
+function snakeToCamel(s: string): string {
+    return s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())
 }
 
 function filtersToApi(f: FilterState): GlazeCombinationFilters {
     const out: GlazeCombinationFilters = {}
     if (f.glazeTypes.length) out.glazeTypeIds = f.glazeTypes.map((gt) => gt.id)
     if (f.firingTemperature !== null) out.firingTemperatureId = f.firingTemperature.id
-    if (f.isFoodSafe !== null) out.isFoodSafe = f.isFoodSafe
-    if (f.runs !== null) out.runs = f.runs
-    if (f.highlightsGrooves !== null) out.highlightsGrooves = f.highlightsGrooves
-    if (f.isDifferentOnWhiteAndBrownClay !== null)
-        out.isDifferentOnWhiteAndBrownClay = f.isDifferentOnWhiteAndBrownClay
+    for (const [field, value] of Object.entries(f.boolFilters)) {
+        if (value !== null) {
+            // GlazeCombinationFilters uses camelCase keys matching the snake_case field names.
+            (out as Record<string, unknown>)[snakeToCamel(field)] = value
+        }
+    }
     return out
 }
 
@@ -124,10 +113,13 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
         loadCombinations(filters)
     }, [open, filters, loadCombinations])
 
-    function handleBoolFilter(field: NullableBoolField, checked: boolean, value: boolean) {
+    function handleBoolFilter(field: string, checked: boolean, value: boolean) {
         setFilters((prev) => ({
             ...prev,
-            [field]: checked ? value : prev[field] === value ? null : prev[field],
+            boolFilters: {
+                ...prev.boolFilters,
+                [field]: checked ? value : prev.boolFilters[field] === value ? null : prev.boolFilters[field],
+            },
         }))
     }
 
@@ -187,39 +179,37 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
                         size="small"
                     />
 
-                    {/* Boolean property filters — each field has its own labelled group */}
+                    {/* Boolean property filters — derived from workflow.yml filterable fields */}
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                        {(Object.entries(BOOL_FILTER_LABELS) as [NullableBoolField, string][]).map(
-                            ([field, label]) => (
-                                <Box key={field}>
-                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.25 }}>
-                                        {label}
-                                    </Typography>
-                                    <FormGroup row>
-                                        <FormControlLabel
-                                            label="Yes"
-                                            control={
-                                                <Checkbox
-                                                    size="small"
-                                                    checked={filters[field] === true}
-                                                    onChange={(e) => handleBoolFilter(field, e.target.checked, true)}
-                                                />
-                                            }
-                                        />
-                                        <FormControlLabel
-                                            label="No"
-                                            control={
-                                                <Checkbox
-                                                    size="small"
-                                                    checked={filters[field] === false}
-                                                    onChange={(e) => handleBoolFilter(field, e.target.checked, false)}
-                                                />
-                                            }
-                                        />
-                                    </FormGroup>
-                                </Box>
-                            )
-                        )}
+                        {BOOL_FILTERABLE_FIELDS.map(({ name, label }) => (
+                            <Box key={name}>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.25 }}>
+                                    {label}
+                                </Typography>
+                                <FormGroup row>
+                                    <FormControlLabel
+                                        label="Yes"
+                                        control={
+                                            <Checkbox
+                                                size="small"
+                                                checked={filters.boolFilters[name] === true}
+                                                onChange={(e) => handleBoolFilter(name, e.target.checked, true)}
+                                            />
+                                        }
+                                    />
+                                    <FormControlLabel
+                                        label="No"
+                                        control={
+                                            <Checkbox
+                                                size="small"
+                                                checked={filters.boolFilters[name] === false}
+                                                onChange={(e) => handleBoolFilter(name, e.target.checked, false)}
+                                            />
+                                        }
+                                    />
+                                </FormGroup>
+                            </Box>
+                        ))}
                     </Box>
 
                     {/* Only favorites toggle */}

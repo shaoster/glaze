@@ -40,8 +40,8 @@ vi.mock('../../workflow.yml', () => ({
                 },
                 fields: {
                     name: { type: 'string' },
-                    is_food_safe: { type: 'boolean', filterable: true },
-                    runs: { type: 'boolean', filterable: true },
+                    is_food_safe: { type: 'boolean', filterable: true, label: 'Food safe' },
+                    runs: { type: 'boolean', filterable: true, label: 'Runs' },
                     test_tile_image: { type: 'image' },
                 },
             },
@@ -268,16 +268,24 @@ describe('getAdditionalFieldDefinitions', () => {
 })
 
 describe('getFilterableFields', () => {
-    it('returns names of fields with filterable: true', () => {
-        expect(getFilterableFields('glaze_combination')).toEqual(
-            expect.arrayContaining(['is_food_safe', 'runs'])
-        )
+    it('returns metadata for fields with filterable: true', () => {
+        const fields = getFilterableFields('glaze_combination')
+        const names = fields.map((f) => f.name)
+        expect(names).toEqual(expect.arrayContaining(['is_food_safe', 'runs']))
+    })
+
+    it('includes type and label for each filterable field', () => {
+        const fields = getFilterableFields('glaze_combination')
+        const foodSafe = fields.find((f) => f.name === 'is_food_safe')!
+        expect(foodSafe.type).toBe('boolean')
+        expect(foodSafe.label).toBe('Food safe')
     })
 
     it('does not include non-filterable fields', () => {
         const fields = getFilterableFields('glaze_combination')
-        expect(fields).not.toContain('name')
-        expect(fields).not.toContain('test_tile_image')
+        const names = fields.map((f) => f.name)
+        expect(names).not.toContain('name')
+        expect(names).not.toContain('test_tile_image')
     })
 
     it('returns an empty array when no fields are filterable', () => {

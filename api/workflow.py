@@ -117,19 +117,25 @@ def get_image_fields_for_global_model(model_cls: type[django_models.Model]) -> l
     return []
 
 
-def get_filterable_fields(global_name: str) -> list[str]:
-    """Return field names declared as filterable: true for a given global.
+def get_filterable_fields(global_name: str) -> dict[str, dict]:
+    """Return filterable field metadata for a given global.
 
-    Used by the generic filter view logic to discover which fields to accept
-    as query-param filter criteria for a global type's list endpoint.
-    Returns an empty list for unknown globals or globals with no filterable fields.
+    Returns a dict mapping field_name -> {type, label} for every field
+    declared with filterable: true in workflow.yml. Used by:
+    - the generic filter view logic (discover which query-params to accept)
+    - model classes (derive filterable_fields without hardcoding)
+
+    Returns an empty dict for unknown globals or globals with no filterable fields.
     """
     config = _GLOBALS_MAP.get(global_name, {})
-    return [
-        field_name
+    return {
+        field_name: {
+            k: v for k, v in field_def.items()
+            if k in ('type', 'label')
+        }
         for field_name, field_def in config.get('fields', {}).items()
         if field_def.get('filterable', False)
-    ]
+    }
 
 
 def is_favoritable_global(global_name: str) -> bool:

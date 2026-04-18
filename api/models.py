@@ -13,6 +13,7 @@ from .workflow import (
     VALID_STATES,
     WORKFLOW_VERSION,
     build_additional_fields_schema,
+    get_filterable_fields,
     get_global_model_and_field,
     get_state_ref_fields,
 )
@@ -350,14 +351,13 @@ class GlazeCombination(GlobalModel):
             GlazeCombinationLayer.objects.create(combination=obj, glaze_type=gt, order=order)
 
     # Declares which fields are exposed as query-param filters in the global_entries view.
-    # - boolean fields: filtered by ?field=true or ?field=false
-    # - m2m_id fields: filtered by ?param=id1,id2,... (combination must contain ALL listed IDs)
-    # TODO: derive this from workflow.yml field metadata (https://github.com/shaoster/glaze/issues/81)
+    # Boolean fields are derived from workflow.yml (filterable: true entries).
+    # Relational filters (m2m_id, fk_id) use ORM lookups not expressible in workflow.yml
+    # and are declared explicitly here.
     filterable_fields: dict[str, dict] = {
-        'is_food_safe': {'type': 'boolean'},
-        'runs': {'type': 'boolean'},
-        'highlights_grooves': {'type': 'boolean'},
-        'is_different_on_white_and_brown_clay': {'type': 'boolean'},
+        # Derived from workflow.yml — boolean property filters.
+        **{k: {'type': 'boolean'} for k in get_filterable_fields('glaze_combination')},
+        # Relational filters that require custom ORM lookups and param names.
         'layers__glaze_type_id': {'type': 'm2m_id', 'param': 'glaze_type_ids'},
         'firing_temperature_id': {'type': 'fk_id', 'param': 'firing_temperature_id'},
     }
