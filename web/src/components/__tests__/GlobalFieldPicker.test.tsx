@@ -59,7 +59,7 @@ describe('GlobalFieldPicker', () => {
         })
 
         it('does not fetch when options prop is provided', () => {
-            render(<GlobalFieldPicker {...defaultProps} options={['Studio A']} />)
+            render(<GlobalFieldPicker {...defaultProps} options={[{ name: 'Studio A', isPublic: false }]} />)
             expect(api.fetchGlobalEntries).not.toHaveBeenCalled()
         })
 

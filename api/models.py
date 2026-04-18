@@ -19,6 +19,7 @@ from .workflow import (
 
 __all__ = [
     'ENTRY_STATE',
+    'FavoriteGlazeCombination',
     'GLAZE_COMBINATION_NAME_SEPARATOR',
     'GlazeCombinationLayer',
     'GlobalModel',
@@ -303,6 +304,18 @@ class GlazeCombination(GlobalModel):
             gt = GlazeType.objects.get(user=None, name=gt_name)
             GlazeCombinationLayer.objects.create(combination=obj, glaze_type=gt, order=order)
 
+    # Declares which fields are exposed as query-param filters in the global_entries view.
+    # - boolean fields: filtered by ?field=true or ?field=false
+    # - m2m_id fields: filtered by ?param=id1,id2,... (combination must contain ALL listed IDs)
+    # TODO: derive this from workflow.yml field metadata (https://github.com/shaoster/glaze/issues/81)
+    filterable_fields: dict[str, dict] = {
+        'is_food_safe': {'type': 'boolean'},
+        'runs': {'type': 'boolean'},
+        'highlights_grooves': {'type': 'boolean'},
+        'is_different_on_white_and_brown_clay': {'type': 'boolean'},
+        'layers__glaze_type_id': {'type': 'm2m_id', 'param': 'glaze_type_ids'},
+    }
+
     def __str__(self) -> str:
         return self.name
 
@@ -341,6 +354,39 @@ class GlazeCombinationLayer(models.Model):
 
     def __str__(self) -> str:
         return f'{self.glaze_type} (drag to reorder)'
+
+
+class FavoriteGlazeCombination(models.Model):
+    """Records a user's favorited glaze combinations."""
+
+    # Name of the FK field pointing to the favorited global object. Used by
+    # get_favorite_ids_for() so the generic view code does not need to know
+    # the concrete FK name on each Favorite* subclass.
+    global_fk_field = 'glaze_combination'
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='favorite_glaze_combinations',
+    )
+    glaze_combination = models.ForeignKey(
+        GlazeCombination,
+        on_delete=models.CASCADE,
+        related_name='favorited_by',
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'glaze_combination'],
+                name='uniq_favorite_glaze_combination_per_user',
+            )
+        ]
+
+    @classmethod
+    def get_favorite_ids_for(cls, user) -> set:
+        """Return the set of favorited global-object PKs for the given user."""
+        return set(cls.objects.filter(user=user).values_list(f'{cls.global_fk_field}_id', flat=True))
 
 
 class Piece(models.Model):

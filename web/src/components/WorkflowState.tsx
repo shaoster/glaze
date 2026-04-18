@@ -28,6 +28,7 @@ import {
     getAdditionalFieldDefinitions,
 } from '@common/workflow'
 import GlobalFieldPicker from './GlobalFieldPicker'
+import GlazeCombinationPicker from './GlazeCombinationPicker'
 
 type WorkflowStateProps = {
     pieceState: PieceState
@@ -171,6 +172,7 @@ export default function WorkflowState({
 
     const [savingImage, setSavingImage] = useState(false)
     const [imageError, setImageError] = useState<string | null>(null)
+    const [glazePickerOpen, setGlazePickerOpen] = useState(false)
 
     const isDirty =
         notes !== pieceState.notes ||
@@ -399,17 +401,37 @@ export default function WorkflowState({
                                 )
                             }
                             if (field.isGlobalRef && field.globalName) {
+                                // TODO(#84): replace the inline isGlazeCombination flag with a
+                                // registration pattern — a module-level registry mapping globalName
+                                // to a custom field component. WorkflowState should look up the
+                                // registry rather than accumulating per-type branches here.
+                                // Connections: #81 (filterable fields in workflow.yml could drive
+                                // the registry), #83 (generic GlobalEntryPicker could be the
+                                // registered component for any filterable global type).
+                                // https://github.com/shaoster/glaze/issues/84
+                                const isGlazeCombination = field.globalName === 'glaze_combination'
                                 return (
-                                    <GlobalFieldPicker
-                                        key={field.name}
-                                        globalName={field.globalName}
-                                        label={label}
-                                        value={value}
-                                        onChange={(val) => handleAdditionalFieldChange(field.name, val)}
-                                        canCreate={Boolean(field.canCreate)}
-                                        helperText={helperText}
-                                        required={field.required}
-                                    />
+                                    <Box key={field.name} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                                        <GlobalFieldPicker
+                                            globalName={field.globalName}
+                                            label={label}
+                                            value={value}
+                                            onChange={(val) => handleAdditionalFieldChange(field.name, val)}
+                                            canCreate={Boolean(field.canCreate)}
+                                            helperText={helperText}
+                                            required={field.required}
+                                            sx={{ flex: 1 }}
+                                        />
+                                        {isGlazeCombination && (
+                                            <Button
+                                                variant="outlined"
+                                                onClick={() => setGlazePickerOpen(true)}
+                                                sx={{ mt: '1px', whiteSpace: 'nowrap', flexShrink: 0 }}
+                                            >
+                                                Browse
+                                            </Button>
+                                        )}
+                                    </Box>
                                 )
                             }
                             if (field.enum?.length) {
@@ -610,6 +632,15 @@ export default function WorkflowState({
                 />
             )}
 
+            {/* Glaze combination picker */}
+            <GlazeCombinationPicker
+                open={glazePickerOpen}
+                onClose={() => setGlazePickerOpen(false)}
+                onSelect={(name) => {
+                    const glazeField = additionalFieldDefs.find((f) => f.globalName === 'glaze_combination')
+                    if (glazeField) handleAdditionalFieldChange(glazeField.name, name)
+                }}
+            />
         </Box>
     )
 }

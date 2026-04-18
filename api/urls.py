@@ -14,6 +14,7 @@ urlpatterns = [
     path('pieces/<uuid:piece_id>/states/', views.piece_states, name='piece-states'),
     path('pieces/<uuid:piece_id>/state/', views.piece_current_state, name='piece-current-state'),
     path('globals/<str:global_name>/', views.global_entries, name='global-entries'),
+    path('globals/<str:global_name>/<str:pk>/favorite/', views.global_entry_favorite, name='global-entry-favorite'),
     path(
         'uploads/cloudinary/widget-config/',
         views.cloudinary_widget_config,

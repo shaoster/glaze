@@ -1,11 +1,95 @@
+"""
+Serializers for the Glaze API.
+
+At a glance this file can look like mechanical field declarations, but each
+serializer encodes real decisions about what the API contract is. The non-obvious
+choices worth knowing about:
+
+**What belongs here (not in views or models)**
+
+- *Field inclusion/exclusion* — which model fields are exposed, renamed, or
+  omitted in a given response. ``PieceSummarySerializer`` deliberately omits the
+  full state history; ``PieceDetailSerializer`` adds it.
+- *Shape transformations* — nesting, flattening, and renaming. ``PieceSummarySerializer``
+  exposes ``current_state`` as a nested ``{state}`` object (not a bare string) so
+  the frontend type is consistent between list and detail views.
+- *Write validation* — ``PieceStateCreateSerializer.validate_state`` enforces the
+  workflow transition graph; ``RegisterSerializer`` enforces password length. This
+  is business logic that must live here rather than in the model (which has no
+  request context) or the view (which should stay thin).
+- *Computed / synthesised fields* — ``PieceStateSerializer`` computes
+  ``previous_state`` and ``next_state`` by querying sibling states; the model has
+  no stored fields for these. ``PieceSummarySerializer`` surfaces ``last_modified``
+  as a property that merges piece-level and state-level timestamps.
+- *Write side-effects scoped to a request* — ``PieceCreateSerializer.create``
+  initialises the first ``PieceState`` in a single transaction; the model's
+  ``save()`` cannot do this because it has no knowledge of the initial notes or
+  the workflow entry state.
+- *State-ref auto-population* — ``PieceStateCreateSerializer.create`` carries
+  forward values from ancestor states for ``$ref`` fields declared in
+  ``workflow.yml``. This is request-time logic (needs the piece's history) and
+  belongs here rather than in the model.
+
+**What does NOT belong here**
+
+- Query filtering or permission checks — those live in views.
+- Business rules that can be enforced at the DB level — use model constraints or
+  ``Model.save()`` overrides instead.
+- Serialization of wire dates — all ``DateTimeField`` instances are handled
+  automatically by DRF; the ``Wire<T>`` mapping is a frontend concern only.
+"""
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from .models import Location, Piece, PieceState, UserProfile
+from .models import FavoriteGlazeCombination, GlazeCombination, Location, Piece, PieceState, UserProfile
 from .workflow import ENTRY_STATE, SUCCESSORS, VALID_STATES, get_state_ref_fields
+
+
+class GlazeTypeRefSerializer(serializers.Serializer):
+    """Minimal glaze type representation embedded in GlazeCombinationEntrySerializer."""
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+
+
+class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
+    """Richer list entry for GlazeCombination: includes properties, glaze types, and favorite flag.
+
+    Requires ``favorite_ids`` (a ``set`` of PKs) in serializer context.
+    """
+    id = serializers.SerializerMethodField()
+    is_public = serializers.SerializerMethodField()
+    is_favorite = serializers.SerializerMethodField()
+    glaze_types = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GlazeCombination
+        fields = [
+            'id', 'name', 'test_tile_image',
+            'is_food_safe', 'runs', 'highlights_grooves', 'is_different_on_white_and_brown_clay',
+            'is_public', 'is_favorite', 'glaze_types',
+        ]
+
+    @extend_schema_field(serializers.CharField())
+    def get_id(self, obj: GlazeCombination) -> str:
+        return str(obj.pk)
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_public(self, obj: GlazeCombination) -> bool:
+        return obj.user_id is None
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_favorite(self, obj: GlazeCombination) -> bool:
+        return obj.pk in self.context.get('favorite_ids', set())
+
+    @extend_schema_field(GlazeTypeRefSerializer(many=True))
+    def get_glaze_types(self, obj: GlazeCombination) -> list:
+        return [
+            {'id': str(layer.glaze_type_id), 'name': layer.glaze_type.name}
+            for layer in obj.layers.select_related('glaze_type').all()
+        ]
 
 
 class CaptionedImageSerializer(serializers.Serializer):
