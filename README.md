@@ -317,7 +317,7 @@ docker compose up -d
 
 Note: `VITE_GOOGLE_CLIENT_ID` is **not** set here — it is baked into the JS bundle at CI build time via the GitHub Actions secret.
 
-**Local overrides:** create `docker-compose.override.yml` (gitignored) to customise port bindings or mount volumes during local Docker testing without touching the main compose file.
+**Local overrides:** create `docker-compose.override.yml` (gitignored) to customize port bindings or mount volumes during local Docker testing without touching the main compose file.
 
 **Setting up Nginx + SSL (one-time, after first `docker compose up -d`):**
 

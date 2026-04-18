@@ -2,7 +2,7 @@
 
 ## Language
 
-Use American English spelling throughout — in code, comments, documentation, and UI strings. For example: "behavior" not "behavior", "initialize" not "initialise", "labeled" not "labelled", "analyze" not "analyse".
+Use American English spelling throughout — in code, comments, documentation, and UI strings. For example: "behavior" not "behaviour", "initialize" not "initialise", "labeled" not "labelled", "analyze" not "analyse".
 
 ## Project Overview
 
