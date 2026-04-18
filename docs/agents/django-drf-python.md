@@ -35,6 +35,7 @@ Django, Django REST Framework, SQLite (dev), django-cors-headers
 - API auth is session-based (`SessionAuthentication`) with CSRF protection.
 - User data isolation is mandatory: list endpoints must scope to `request.user`, and object lookups must use user-filtered querysets.
 - When a user requests another user's object ID, return `404` (not `403`) so object existence is not leaked.
+- Generic functions (views, helpers, base classes) must not reference concrete subclasses or sibling implementations by name — an application of the Law of Demeter. A generic view that handles all `GlobalModel` subclasses should depend only on the `GlobalModel` interface; knowledge of specific subclasses belongs in registries or on the concrete class itself. Use explicit registries (dicts mapping model class → collaborator) or protocol attributes (`filterable_fields`, `get_favorite_ids_for`) to keep generic code decoupled from concrete implementations.
 
 ## Production environment variables and settings
 

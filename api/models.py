@@ -304,28 +304,17 @@ class GlazeCombination(GlobalModel):
             gt = GlazeType.objects.get(user=None, name=gt_name)
             GlazeCombinationLayer.objects.create(combination=obj, glaze_type=gt, order=order)
 
-    @classmethod
-    def filter_queryset(cls, qs, request):
-        """Apply request query params to filter the combination queryset.
-
-        Supports:
-        - ``glaze_type_ids``: comma-separated PKs; combination must contain ALL listed types.
-        - ``is_food_safe``, ``runs``, ``highlights_grooves``, ``is_different_on_white_and_brown_clay``:
-          ``true``/``false`` boolean filters.
-        """
-        glaze_type_ids_param = request.query_params.get('glaze_type_ids', '').strip()
-        if glaze_type_ids_param:
-            for gt_id in (s.strip() for s in glaze_type_ids_param.split(',') if s.strip()):
-                qs = qs.filter(layers__glaze_type_id=gt_id)
-
-        for field in ('is_food_safe', 'runs', 'highlights_grooves', 'is_different_on_white_and_brown_clay'):
-            raw = request.query_params.get(field, '').strip().lower()
-            if raw == 'true':
-                qs = qs.filter(**{field: True})
-            elif raw == 'false':
-                qs = qs.filter(**{field: False})
-
-        return qs
+    # Declares which fields are exposed as query-param filters in the global_entries view.
+    # - boolean fields: filtered by ?field=true or ?field=false
+    # - m2m_id fields: filtered by ?param=id1,id2,... (combination must contain ALL listed IDs)
+    # TODO: derive this from workflow.yml field metadata (https://github.com/shaoster/glaze/issues/81)
+    filterable_fields: dict[str, dict] = {
+        'is_food_safe': {'type': 'boolean'},
+        'runs': {'type': 'boolean'},
+        'highlights_grooves': {'type': 'boolean'},
+        'is_different_on_white_and_brown_clay': {'type': 'boolean'},
+        'layers__glaze_type_id': {'type': 'm2m_id', 'param': 'glaze_type_ids'},
+    }
 
     def __str__(self) -> str:
         return self.name
@@ -370,6 +359,11 @@ class GlazeCombinationLayer(models.Model):
 class FavoriteGlazeCombination(models.Model):
     """Records a user's favorited glaze combinations."""
 
+    # Name of the FK field pointing to the favorited global object. Used by
+    # get_favorite_ids_for() so the generic view code does not need to know
+    # the concrete FK name on each Favorite* subclass.
+    global_fk_field = 'glaze_combination'
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -388,6 +382,11 @@ class FavoriteGlazeCombination(models.Model):
                 name='uniq_favorite_glaze_combination_per_user',
             )
         ]
+
+    @classmethod
+    def get_favorite_ids_for(cls, user) -> set:
+        """Return the set of favorited global-object PKs for the given user."""
+        return set(cls.objects.filter(user=user).values_list(f'{cls.global_fk_field}_id', flat=True))
 
 
 class Piece(models.Model):

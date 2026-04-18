@@ -53,6 +53,10 @@ const EMPTY_FILTERS: FilterState = {
     onlyFavorites: false,
 }
 
+// TODO(#81): replace NullableBoolField and BOOL_FILTER_LABELS with filterable field
+// metadata imported from getFilterableFields('glaze_combination') in workflow.ts once
+// filter metadata is declared in workflow.yml.
+// https://github.com/shaoster/glaze/issues/81
 type NullableBoolField = 'isFoodSafe' | 'runs' | 'highlightsGrooves' | 'isDifferentOnWhiteAndBrownClay'
 
 const BOOL_FILTER_LABELS: Record<NullableBoolField, string> = {

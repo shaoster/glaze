@@ -226,6 +226,11 @@ export async function fetchGlobalEntries(globalName: string): Promise<GlobalEntr
     return data.map((entry) => ({ name: entry.name, isPublic: entry.is_public }))
 }
 
+// TODO(#80): derive GlazeCombinationEntry, GlazeTypeRef, and GlazeCombinationFilters
+// from generated-types.ts once the OpenAPI schema annotation on global_entries reflects
+// the richer GlazeCombinationEntrySerializer shape.
+// https://github.com/shaoster/glaze/issues/80
+
 export interface GlazeTypeRef {
     id: string
     name: string
