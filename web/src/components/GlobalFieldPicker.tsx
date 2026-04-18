@@ -12,7 +12,7 @@ const PUBLIC_SUFFIX = ' (public)'
 
 /**
  * Returns the display label for a global entry. When a public entry shares its
- * name with a private entry in the same list, the public entry is labelled with
+ * name with a private entry in the same list, the public entry is labeled with
  * a "(public)" suffix so users can distinguish the two.
  */
 function buildDisplayOptions(entries: GlobalEntry[]): string[] {

@@ -39,7 +39,7 @@ Django, Django REST Framework, SQLite (dev), django-cors-headers
 
 ## Production environment variables and settings
 
-Gate dev/prod behaviour on a single `IS_PRODUCTION` flag derived from one env var, rather than scattering `os.environ` checks throughout `settings.py`:
+Gate dev/prod behavior on a single `IS_PRODUCTION` flag derived from one env var, rather than scattering `os.environ` checks throughout `settings.py`:
 
 ```python
 IS_PRODUCTION = bool(os.environ.get('PRODUCTION', ''))
@@ -54,7 +54,7 @@ IS_PRODUCTION = bool(os.environ.get('PRODUCTION', ''))
 - Never add a new setting that requires a value in production without either gating it on `IS_PRODUCTION` or providing a safe, non-functional dev default (e.g. an empty string that disables the feature).
 - Optional integrations (OAuth, third-party APIs) should read from `os.environ.get('VAR', '')` and degrade gracefully when absent, so the dev environment works without credentials.
 
-See the project domain guide for the specific env vars and their per-environment behaviours in this codebase.
+See the project domain guide for the specific env vars and their per-environment behaviors in this codebase.
 
 ## Django admin customisation
 
@@ -116,7 +116,7 @@ import re
 print(re.findall(r'id="[^"]*-group"', html))
 ```
 
-**Check the extension's documentation first** — before scanning source code or guessing at behaviour, look up the relevant section in the library's docs. Many non-obvious constraints are documented explicitly. For example, adminsortable2 documents that unique constraints on ordering fields cause swap failures on SQLite and MySQL, and Django's admin docs explain the `formfield_for_dbfield` / `formfield_for_foreignkey` call order. Reading the docs first avoids a long debugging loop that the author has already solved.
+**Check the extension's documentation first** — before scanning source code or guessing at behavior, look up the relevant section in the library's docs. Many non-obvious constraints are documented explicitly. For example, adminsortable2 documents that unique constraints on ordering fields cause swap failures on SQLite and MySQL, and Django's admin docs explain the `formfield_for_dbfield` / `formfield_for_foreignkey` call order. Reading the docs first avoids a long debugging loop that the author has already solved.
 
 **Tracing a `formfield_for_*` method** — if you're not sure whether your override is being called, or what widget type it's actually receiving, monkey-patch it before making the request:
 
@@ -156,4 +156,4 @@ pytest api/
 
 - Every new API endpoint or serializer change → add or update tests.
 - Pure helper functions → unit test with `monkeypatch` to decouple from real data files or configuration.
-- Prefer the API client (`client.post(...)`) for tests that exercise request/response behaviour over creating objects directly via the ORM.
+- Prefer the API client (`client.post(...)`) for tests that exercise request/response behavior over creating objects directly via the ORM.

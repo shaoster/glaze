@@ -292,7 +292,7 @@ def global_entries(request: Request, global_name: str) -> Response:
 )
 @api_view(['GET'])
 def cloudinary_widget_config(request: Request) -> Response:
-    """Return Cloudinary config needed to initialise the Upload Widget."""
+    """Return Cloudinary config needed to initialize the Upload Widget."""
     cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
     api_key = os.environ.get('CLOUDINARY_API_KEY')
     folder = os.environ.get('CLOUDINARY_UPLOAD_FOLDER', '').strip()

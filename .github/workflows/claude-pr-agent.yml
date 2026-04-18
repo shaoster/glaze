@@ -69,7 +69,7 @@ jobs:
             responding to the user's question or request. You MUST NOT modify, create, or
             delete any files — this PR does not have the 'claude' label. If their request
             requires code changes, let them know they can add the 'claude' label to this
-            PR to give you edit access, or open a new issue labelled 'claude' for you to
+            PR to give you edit access, or open a new issue labeled 'claude' for you to
             handle in a fresh PR.
 
   address-review-changes:

@@ -117,7 +117,7 @@ describe('NewPieceDialog', () => {
         })
     })
 
-    describe('cancel / close behaviour', () => {
+    describe('cancel / close behavior', () => {
         it('calls onClose immediately when no changes have been made', async () => {
             render(<NewPieceDialog {...defaultProps} />)
             await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))

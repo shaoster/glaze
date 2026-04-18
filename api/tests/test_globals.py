@@ -198,7 +198,7 @@ class TestGlobalEntriesClayBody:
 
 
 # ---------------------------------------------------------------------------
-# Generic /api/globals/ endpoint — shared behaviour
+# Generic /api/globals/ endpoint — shared behavior
 # ---------------------------------------------------------------------------
 
 @pytest.mark.django_db

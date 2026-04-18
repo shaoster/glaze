@@ -125,7 +125,7 @@ describe('ImageLightbox', () => {
         })
     })
 
-    describe('close behaviour', () => {
+    describe('close behavior', () => {
         it('calls onClose when backdrop is clicked', () => {
             const { onClose } = renderLightbox(THREE_IMAGES, 0)
             // The outer Box has onClick={onClose}; click parent of the <img>
