@@ -317,7 +317,7 @@ docker compose up -d
 
 Note: `VITE_GOOGLE_CLIENT_ID` is **not** set here — it is baked into the JS bundle at CI build time via the GitHub Actions secret.
 
-**Local overrides:** create `docker-compose.override.yml` (gitignored) to customise port bindings or mount volumes during local Docker testing without touching the main compose file.
+**Local overrides:** create `docker-compose.override.yml` (gitignored) to customize port bindings or mount volumes during local Docker testing without touching the main compose file.
 
 **Setting up Nginx + SSL (one-time, after first `docker compose up -d`):**
 
@@ -376,7 +376,7 @@ After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` fr
 | [`frontend_common/src/workflow.test.ts`](frontend_common/src/workflow.test.ts) | `formatWorkflowFieldLabel`, `getGlobalDisplayField`, `getAdditionalFieldDefinitions` (inline, state ref, global ref) — decoupled from real `workflow.yml` via `vi.mock` |
 | [`__tests__/GlobalFieldPicker.test.tsx`](web/src/components/__tests__/GlobalFieldPicker.test.tsx) | Rendering, internal fetch, provided options, create sentinel, inline creation (success/error), selecting existing |
 | [`__tests__/PieceList.test.tsx`](web/src/components/__tests__/PieceList.test.tsx) | Column headers, empty state, per-row data, links |
-| [`__tests__/NewPieceDialog.test.tsx`](web/src/components/__tests__/NewPieceDialog.test.tsx) | Rendering, name/notes/location/thumbnail, save/cancel behaviour |
+| [`__tests__/NewPieceDialog.test.tsx`](web/src/components/__tests__/NewPieceDialog.test.tsx) | Rendering, name/notes/location/thumbnail, save/cancel behavior |
 | [`__tests__/WorkflowState.test.tsx`](web/src/components/__tests__/WorkflowState.test.tsx) | Notes, additional fields (inline, state ref, global ref), location, save button, unsaved indicator |
 | [`__tests__/PieceDetail.test.tsx`](web/src/components/__tests__/PieceDetail.test.tsx) | Rendering, state transitions, confirmation dialog, location editing |
 

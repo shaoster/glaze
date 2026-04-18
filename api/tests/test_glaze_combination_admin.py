@@ -1,8 +1,8 @@
-"""Tests for GlazeCombinationLayerInline admin behaviour.
+"""Tests for GlazeCombinationLayerInline admin behavior.
 
 Covers order assignment for new layers and reordering of existing layers via the
 adminsortable2-backed inline.  Tests use CustomInlineFormSet (the real formset
-class used by SortableInlineAdminMixin) to match runtime behaviour exactly.
+class used by SortableInlineAdminMixin) to match runtime behavior exactly.
 """
 import pytest
 from django.forms.models import inlineformset_factory

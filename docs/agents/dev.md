@@ -26,7 +26,7 @@ All vars are optional. The app runs without any of them; each missing group degr
 
 **`.env.local`** (loaded by `source env.sh`, read by Django):
 
-| Variable | Absent behaviour |
+| Variable | Absent behavior |
 |---|---|
 | `CLOUDINARY_CLOUD_NAME` | `/api/uploads/cloudinary/widget-config/` returns 503; UI falls back to URL-paste mode |
 | `CLOUDINARY_API_KEY` | same as above |
@@ -36,7 +36,7 @@ All vars are optional. The app runs without any of them; each missing group degr
 
 **`web/.env.local`** (read by Vite, injected into the frontend bundle):
 
-| Variable | Absent behaviour |
+| Variable | Absent behavior |
 |---|---|
 | `VITE_GOOGLE_CLIENT_ID` | Google Sign-In button is not rendered; must match `GOOGLE_OAUTH_CLIENT_ID` |
 

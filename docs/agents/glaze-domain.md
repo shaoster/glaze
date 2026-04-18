@@ -1,5 +1,9 @@
 # Glaze — Domain Logic
 
+## Language
+
+Use American English spelling throughout — in code, comments, documentation, and UI strings. For example: "behavior" not "behaviour", "initialize" not "initialise", "labeled" not "labelled", "analyze" not "analyse".
+
 ## Project Overview
 
 Glaze is a pottery workflow tracking application. Users log each pottery piece and record state transitions as the piece moves through the production lifecycle — from throwing or handbuilding through firing, glazing, and finishing. The history of state transitions is the primary data product; it can be analyzed per-piece or in aggregate.
@@ -158,9 +162,9 @@ These supplement the generic Django/DRF conventions.
 
 All API endpoints are registered in `backend/urls.py`.
 
-**Production environment variables** — `settings.py` gates dev/prod behaviour on `IS_PRODUCTION = bool(os.environ.get('PRODUCTION', ''))`. The full env var reference:
+**Production environment variables** — `settings.py` gates dev/prod behavior on `IS_PRODUCTION = bool(os.environ.get('PRODUCTION', ''))`. The full env var reference:
 
-| Setting | Env var | Dev behaviour | Prod behaviour |
+| Setting | Env var | Dev behavior | Prod behavior |
 |---|---|---|---|
 | `SECRET_KEY` | `SECRET_KEY` | Falls back to an insecure hardcoded default | **Required** — raises `KeyError` if absent |
 | `DEBUG` | *(derived from `PRODUCTION`)* | `True` | `False` |
@@ -216,10 +220,10 @@ Name uniqueness for public globals is enforced with two conditional DB constrain
 - Updates user profile (name, picture) from Google on each login and creates a Django session.
 
 **Backend testing — Glaze-specific guidance:**
-- The `piece` fixture in `api/tests/conftest.py` creates a piece via the ORM directly; prefer the API client (`client.post(...)`) for tests that exercise request/response behaviour.
+- The `piece` fixture in `api/tests/conftest.py` creates a piece via the ORM directly; prefer the API client (`client.post(...)`) for tests that exercise request/response behavior.
 - Every new API endpoint or serializer change → add or update a test under `api/tests/`.
 - Every new or modified `api/workflow.py` helper → add or update a test in `api/tests/test_workflow_helpers.py`, patching `_STATE_MAP` / `_GLOBALS_MAP` via `monkeypatch`.
-- **New global domain models**: adding a new concrete `GlobalModel` subclass automatically enrolls it in the parameterised test suites in `api/tests/test_globals.py`. No manual test additions needed for registry invariants — focus new tests on model-specific constraints and API behaviour instead.
+- **New global domain models**: adding a new concrete `GlobalModel` subclass automatically enrolls it in the parameterised test suites in `api/tests/test_globals.py`. No manual test additions needed for registry invariants — focus new tests on model-specific constraints and API behavior instead.
 
 ---
 
