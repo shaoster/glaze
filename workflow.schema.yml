@@ -221,10 +221,10 @@ $defs:
       label:
         type: string
         description: |
-          Human-readable label for the field in filter UIs. Used by pickers to
-          render filter controls without hardcoding labels in components.
-          Most useful when filterable: true.
-
+          Human-readable label for the field in UIs. Used to render human
+          readable controls without hardcoding labels in components.
+          If not provided, the field name is converted to title case and used as a label.
+          E.g. "firing_temperature" → "Firing Temperature".
   state_ref_field:
     type: object
     required: [$ref]
