@@ -19,6 +19,7 @@ from .workflow import (
 
 __all__ = [
     'ENTRY_STATE',
+    'FavoriteGlazeCombination',
     'GLAZE_COMBINATION_NAME_SEPARATOR',
     'GlazeCombinationLayer',
     'GlobalModel',
@@ -303,6 +304,29 @@ class GlazeCombination(GlobalModel):
             gt = GlazeType.objects.get(user=None, name=gt_name)
             GlazeCombinationLayer.objects.create(combination=obj, glaze_type=gt, order=order)
 
+    @classmethod
+    def filter_queryset(cls, qs, request):
+        """Apply request query params to filter the combination queryset.
+
+        Supports:
+        - ``glaze_type_ids``: comma-separated PKs; combination must contain ALL listed types.
+        - ``is_food_safe``, ``runs``, ``highlights_grooves``, ``is_different_on_white_and_brown_clay``:
+          ``true``/``false`` boolean filters.
+        """
+        glaze_type_ids_param = request.query_params.get('glaze_type_ids', '').strip()
+        if glaze_type_ids_param:
+            for gt_id in (s.strip() for s in glaze_type_ids_param.split(',') if s.strip()):
+                qs = qs.filter(layers__glaze_type_id=gt_id)
+
+        for field in ('is_food_safe', 'runs', 'highlights_grooves', 'is_different_on_white_and_brown_clay'):
+            raw = request.query_params.get(field, '').strip().lower()
+            if raw == 'true':
+                qs = qs.filter(**{field: True})
+            elif raw == 'false':
+                qs = qs.filter(**{field: False})
+
+        return qs
+
     def __str__(self) -> str:
         return self.name
 
@@ -341,6 +365,29 @@ class GlazeCombinationLayer(models.Model):
 
     def __str__(self) -> str:
         return f'{self.glaze_type} (drag to reorder)'
+
+
+class FavoriteGlazeCombination(models.Model):
+    """Records a user's favorited glaze combinations."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='favorite_glaze_combinations',
+    )
+    glaze_combination = models.ForeignKey(
+        GlazeCombination,
+        on_delete=models.CASCADE,
+        related_name='favorited_by',
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'glaze_combination'],
+                name='uniq_favorite_glaze_combination_per_user',
+            )
+        ]
 
 
 class Piece(models.Model):

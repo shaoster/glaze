@@ -17,9 +17,10 @@ from rest_framework.response import Response
 
 from django.db.models import Q
 
-from .models import Piece, UserProfile
+from .models import FavoriteGlazeCombination, GlazeCombination, Piece, UserProfile
 from .serializers import (
     AuthUserSerializer,
+    GlazeCombinationEntrySerializer,
     GoogleAuthSerializer,
     LoginSerializer,
     PieceCreateSerializer,
@@ -31,6 +32,12 @@ from .serializers import (
     RegisterSerializer,
 )
 from .workflow import get_global_model_and_field, is_private_global, is_public_global
+
+# Map from model class → richer serializer class for global_entries GET responses.
+# Add an entry here when a global type needs more than {id, name, is_public}.
+_GLOBAL_ENTRY_SERIALIZERS = {
+    GlazeCombination: GlazeCombinationEntrySerializer,
+}
 
 
 def _piece_queryset(request: Request):
@@ -154,6 +161,27 @@ def global_entries(request: Request, global_name: str) -> Response:
         else:
             base_qs = model_cls.objects.filter(user=request.user)
 
+        # Models may declare a filter_queryset classmethod to support query-param filtering.
+        if hasattr(model_cls, 'filter_queryset'):
+            base_qs = model_cls.filter_queryset(base_qs, request)
+
+        # Use a richer serializer if one is registered for this model.
+        entry_serializer_cls = _GLOBAL_ENTRY_SERIALIZERS.get(model_cls)
+        if entry_serializer_cls is not None:
+            favorite_ids = set(
+                FavoriteGlazeCombination.objects.filter(user=request.user)
+                .values_list('glaze_combination_id', flat=True)
+            ) if model_cls is GlazeCombination else set()
+            objects = list(base_qs.prefetch_related('layers__glaze_type').order_by('name'))
+            return Response(
+                entry_serializer_cls(
+                    objects,
+                    many=True,
+                    context={'request': request, 'favorite_ids': favorite_ids},
+                ).data
+            )
+
+        # Default: lightweight {id, name, is_public} response.
         # If the display field is a relation (FK), use select_related for efficient
         # loading and stringify the value; otherwise use only() for efficiency.
         try:
@@ -410,3 +438,40 @@ def auth_register(request: Request) -> Response:
     user = serializer.save()
     login(request, user)
     return Response(AuthUserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(
+    methods=['POST'],
+    request=None,
+    responses={204: None, 404: None},
+)
+@extend_schema(
+    methods=['DELETE'],
+    request=None,
+    responses={204: None, 404: None},
+)
+@api_view(['POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def global_entry_favorite(request: Request, global_name: str, pk: str) -> Response:
+    """Add (POST) or remove (DELETE) a global entry from the user's favorites.
+
+    Currently only ``glaze_combination`` supports favorites; other global types
+    return 405.
+    """
+    if global_name != 'glaze_combination':
+        return Response(
+            {'detail': f'Favorites are not supported for {global_name!r}.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
+    combo = get_object_or_404(GlazeCombination, pk=pk)
+    # Users may only favorite combinations visible to them (public or their own).
+    if combo.user_id is not None and combo.user_id != request.user.pk:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'POST':
+        FavoriteGlazeCombination.objects.get_or_create(user=request.user, glaze_combination=combo)
+    else:
+        FavoriteGlazeCombination.objects.filter(user=request.user, glaze_combination=combo).delete()
+
+    return Response(status=status.HTTP_204_NO_CONTENT)

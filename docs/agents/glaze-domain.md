@@ -202,8 +202,11 @@ Name uniqueness for public globals is enforced with two conditional DB constrain
 - `POST /api/pieces/<id>/states/` → record a new state transition
 - `PATCH /api/pieces/<id>/` → update piece-level editable fields (currently location)
 - `PATCH /api/pieces/<id>/state/` → update current state's editable fields
-- `GET /api/globals/<global_name>/` → for private-only globals returns only the user's private objects; for public globals returns the user's private objects union all public objects (`user=NULL`), sorted by display field. Each item includes `is_public: bool`.
+- `GET /api/globals/<global_name>/` → for private-only globals returns only the user's private objects; for public globals returns the user's private objects union all public objects (`user=NULL`), sorted by display field. Each item includes `is_public: bool`. **`global_entries` is the canonical list endpoint for all global types — do not add a separate `/api/<global-name>/` list route.**
+  - Models may opt in to richer GET responses by declaring a `filter_queryset(qs, request)` classmethod (for query-param filtering) and registering a serializer in `_GLOBAL_ENTRY_SERIALIZERS` in `api/views.py`. `GlazeCombination` uses both: it supports `?glaze_type_ids=`, `?is_food_safe=`, `?runs=`, `?highlights_grooves=`, `?is_different_on_white_and_brown_clay=` query params and returns additional fields (`test_tile_image`, filter booleans, `glaze_types` list, `is_favorite`).
 - `POST /api/globals/<global_name>/` → get-or-create a private record owned by the requesting user. For public globals, a private entry with the same name as a public entry is permitted — the two scopes are independent.
+- `POST /api/globals/<global_name>/<pk>/favorite/` → add the entry to the requesting user's favorites (currently only `glaze_combination` supports favorites; other types return 405).
+- `DELETE /api/globals/<global_name>/<pk>/favorite/` → remove the entry from the requesting user's favorites.
 - `GET /api/uploads/cloudinary/widget-config/` → returns `{cloud_name, api_key, folder?}`; 503 if Cloudinary not configured
 - `POST /api/uploads/cloudinary/widget-signature/` → accepts `{params_to_sign: {}}`, returns `{signature}`
 

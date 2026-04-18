@@ -226,6 +226,82 @@ export async function fetchGlobalEntries(globalName: string): Promise<GlobalEntr
     return data.map((entry) => ({ name: entry.name, isPublic: entry.is_public }))
 }
 
+export interface GlazeTypeRef {
+    id: string
+    name: string
+}
+
+export interface GlazeCombinationEntry {
+    id: string
+    name: string
+    testTileImage: string
+    isFoodSafe: boolean | null
+    runs: boolean | null
+    highlightsGrooves: boolean | null
+    isDifferentOnWhiteAndBrownClay: boolean | null
+    isPublic: boolean
+    isFavorite: boolean
+    glazeTypes: GlazeTypeRef[]
+}
+
+export interface GlazeCombinationFilters {
+    glazeTypeIds?: string[]
+    isFoodSafe?: boolean
+    runs?: boolean
+    highlightsGrooves?: boolean
+    isDifferentOnWhiteAndBrownClay?: boolean
+}
+
+type WireGlazeCombinationEntry = {
+    id: string
+    name: string
+    test_tile_image: string
+    is_food_safe: boolean | null
+    runs: boolean | null
+    highlights_grooves: boolean | null
+    is_different_on_white_and_brown_clay: boolean | null
+    is_public: boolean
+    is_favorite: boolean
+    glaze_types: GlazeTypeRef[]
+}
+
+function mapGlazeCombinationEntry(raw: WireGlazeCombinationEntry): GlazeCombinationEntry {
+    return {
+        id: raw.id,
+        name: raw.name,
+        testTileImage: raw.test_tile_image,
+        isFoodSafe: raw.is_food_safe,
+        runs: raw.runs,
+        highlightsGrooves: raw.highlights_grooves,
+        isDifferentOnWhiteAndBrownClay: raw.is_different_on_white_and_brown_clay,
+        isPublic: raw.is_public,
+        isFavorite: raw.is_favorite,
+        glazeTypes: raw.glaze_types,
+    }
+}
+
+export async function fetchGlazeCombinations(
+    filters: GlazeCombinationFilters = {}
+): Promise<GlazeCombinationEntry[]> {
+    const params: Record<string, string> = {}
+    if (filters.glazeTypeIds?.length) params.glaze_type_ids = filters.glazeTypeIds.join(',')
+    if (filters.isFoodSafe !== undefined) params.is_food_safe = String(filters.isFoodSafe)
+    if (filters.runs !== undefined) params.runs = String(filters.runs)
+    if (filters.highlightsGrooves !== undefined) params.highlights_grooves = String(filters.highlightsGrooves)
+    if (filters.isDifferentOnWhiteAndBrownClay !== undefined)
+        params.is_different_on_white_and_brown_clay = String(filters.isDifferentOnWhiteAndBrownClay)
+    const { data } = await client.get<WireGlazeCombinationEntry[]>('globals/glaze_combination/', { params })
+    return data.map(mapGlazeCombinationEntry)
+}
+
+export async function toggleFavoriteGlazeCombination(id: string, favorite: boolean): Promise<void> {
+    if (favorite) {
+        await client.post(`globals/glaze_combination/${id}/favorite/`)
+    } else {
+        await client.delete(`globals/glaze_combination/${id}/favorite/`)
+    }
+}
+
 export async function createGlobalEntry(globalName: string, field: string, value: string): Promise<string> {
     const { data } = await client.post<{ id: string; name: string }>(`globals/${globalName}/`, {
         field,
