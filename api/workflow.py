@@ -117,6 +117,43 @@ def get_image_fields_for_global_model(model_cls: type[django_models.Model]) -> l
     return []
 
 
+def get_filterable_fields(global_name: str) -> list[str]:
+    """Return field names declared as filterable: true for a given global.
+
+    Used by the generic filter view logic to discover which fields to accept
+    as query-param filter criteria for a global type's list endpoint.
+    Returns an empty list for unknown globals or globals with no filterable fields.
+    """
+    config = _GLOBALS_MAP.get(global_name, {})
+    return [
+        field_name
+        for field_name, field_def in config.get('fields', {}).items()
+        if field_def.get('filterable', False)
+    ]
+
+
+def is_favoritable_global(global_name: str) -> bool:
+    """Return True if the global declares favoritable: true.
+
+    Favoritable globals support per-user favorites via
+    POST/DELETE /api/globals/<global_name>/<pk>/favorite/.
+    """
+    config = _GLOBALS_MAP.get(global_name, {})
+    return bool(config.get('favoritable', False))
+
+
+def get_compose_from(global_name: str) -> dict | None:
+    """Return the compose_from declaration for a global, or None.
+
+    compose_from declares ordered M2M composition relationships — e.g.
+    GlazeCombination is composed from an ordered list of GlazeTypes.
+    Used by model/admin generation and frontend composition pickers.
+    Returns None if the global is unknown or has no compose_from key.
+    """
+    config = _GLOBALS_MAP.get(global_name, {})
+    return config.get('compose_from') or None
+
+
 def _resolve_field_def(field_def: dict) -> dict:
     """Recursively resolve a DSL field_def to its effective JSON Schema property dict.
 

@@ -119,6 +119,32 @@ _MOCK_GLOBALS_MAP = {
             'name': {'type': 'string'},
         },
     },
+    'glaze_combination': {
+        'model': 'GlazeCombination',
+        'public': True,
+        'private': True,
+        'favoritable': True,
+        'compose_from': {
+            'glaze_types': {
+                'global': 'glaze_type',
+                'ordered': True,
+            },
+        },
+        'fields': {
+            'name': {'type': 'string'},
+            'is_food_safe': {'type': 'boolean', 'filterable': True},
+            'runs': {'type': 'boolean', 'filterable': True},
+            'test_tile_image': {'type': 'image'},
+        },
+    },
+    'glaze_type': {
+        'model': 'GlazeType',
+        'public': True,
+        'private': True,
+        'fields': {
+            'name': {'type': 'string'},
+        },
+    },
 }
 
 
@@ -214,17 +240,28 @@ def test_is_private_global_defaults_to_true_for_unknown_global(monkeypatch):
 
 def test_get_public_global_models_returns_models_for_public_globals(monkeypatch):
     clay_model = Mock(name='ClayBodyModel')
+    glaze_combination_model = Mock(name='GlazeCombinationModel')
+    glaze_type_model = Mock(name='GlazeTypeModel')
     admin_only_model = Mock(name='AdminOnlyModel')
-    get_model = Mock(side_effect=lambda app, name: clay_model if name == 'ClayBody' else admin_only_model)
+
+    def _get_model(app, name):
+        return {
+            'ClayBody': clay_model,
+            'GlazeCombination': glaze_combination_model,
+            'GlazeType': glaze_type_model,
+        }.get(name, admin_only_model)
+
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
-    monkeypatch.setattr(workflow_module.apps, 'get_model', get_model)
+    monkeypatch.setattr(workflow_module.apps, 'get_model', _get_model)
 
     result = workflow_module.get_public_global_models()
 
-    # clay_body and admin_only_type both have public: true in _MOCK_GLOBALS_MAP.
+    # clay_body, admin_only_type, glaze_combination, and glaze_type all have public: true.
     assert clay_model in result
+    assert glaze_combination_model in result
+    assert glaze_type_model in result
     assert admin_only_model in result
-    assert len(result) == 2
+    assert len(result) == 4
 
 
 def test_get_image_fields_for_global_model_returns_image_fields(monkeypatch):
@@ -301,3 +338,67 @@ def test_build_additional_fields_schema_resolves_state_refs_recursively(monkeypa
         },
         'additionalProperties': False,
     }
+
+
+# ---------------------------------------------------------------------------
+# get_filterable_fields
+# ---------------------------------------------------------------------------
+
+def test_get_filterable_fields_returns_filterable_fields(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    result = workflow_module.get_filterable_fields('glaze_combination')
+    assert set(result) == {'is_food_safe', 'runs'}
+
+
+def test_get_filterable_fields_returns_empty_when_no_filterable_fields(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.get_filterable_fields('location') == []
+
+
+def test_get_filterable_fields_returns_empty_for_unknown_global(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.get_filterable_fields('does_not_exist') == []
+
+
+# ---------------------------------------------------------------------------
+# is_favoritable_global
+# ---------------------------------------------------------------------------
+
+def test_is_favoritable_global_returns_true_when_flag_set(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.is_favoritable_global('glaze_combination') is True
+
+
+def test_is_favoritable_global_returns_false_when_flag_absent(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.is_favoritable_global('location') is False
+
+
+def test_is_favoritable_global_returns_false_for_unknown_global(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.is_favoritable_global('does_not_exist') is False
+
+
+# ---------------------------------------------------------------------------
+# get_compose_from
+# ---------------------------------------------------------------------------
+
+def test_get_compose_from_returns_declaration_when_present(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    result = workflow_module.get_compose_from('glaze_combination')
+    assert result == {
+        'glaze_types': {
+            'global': 'glaze_type',
+            'ordered': True,
+        },
+    }
+
+
+def test_get_compose_from_returns_none_when_absent(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.get_compose_from('location') is None
+
+
+def test_get_compose_from_returns_none_for_unknown_global(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.get_compose_from('does_not_exist') is None

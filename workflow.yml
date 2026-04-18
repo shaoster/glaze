@@ -171,6 +171,7 @@ globals:
     description: An ordered combination of one or more glaze layers with shared application properties.
     public: true
     private: true
+    favoritable: true
     compose_from:
       glaze_types:
         global: glaze_type
@@ -193,15 +194,19 @@ globals:
       is_food_safe:
         type: boolean
         description: Whether this glaze combination is food safe.
+        filterable: true
       runs:
         type: boolean
         description: Whether this combination runs during firing.
+        filterable: true
       highlights_grooves:
         type: boolean
         description: Whether this combination highlights surface grooves and texture.
+        filterable: true
       is_different_on_white_and_brown_clay:
         type: boolean
         description: Whether the combination appears different on white versus brown clay.
+        filterable: true
 
 # Built-in states for standard workflow.
 states:

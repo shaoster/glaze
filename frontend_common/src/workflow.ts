@@ -17,6 +17,7 @@ interface InlineFieldDef {
     description?: string
     required?: boolean
     enum?: string[]
+    filterable?: boolean
 }
 
 interface StateRefFieldDef {
@@ -49,6 +50,7 @@ export interface ComposeFromEntry {
 interface WorkflowGlobalDefinition {
     model: string
     description?: string
+    favoritable?: boolean
     compose_from?: Record<string, ComposeFromEntry>
     fields: Record<string, InlineFieldDef | GlobalRefFieldDef>
 }
@@ -89,6 +91,28 @@ export type ResolvedAdditionalField = {
  */
 export function getGlobalComposeFrom(globalName: string): Record<string, ComposeFromEntry> | undefined {
     return GLOBALS_MAP[globalName]?.compose_from
+}
+
+/**
+ * Returns the field names declared as filterable: true for a given global.
+ * Used by pickers (e.g. GlazeCombinationPicker) to discover which fields to
+ * expose as filter controls without hardcoding them in the component.
+ * Mirrors the backend's `get_filterable_fields` helper.
+ */
+export function getFilterableFields(globalName: string): string[] {
+    const fields = GLOBALS_MAP[globalName]?.fields ?? {}
+    return Object.entries(fields)
+        .filter(([, def]) => 'filterable' in def && (def as InlineFieldDef).filterable)
+        .map(([name]) => name)
+}
+
+/**
+ * Returns true if the global declares favoritable: true — i.e. it supports
+ * per-user favorites via POST/DELETE /api/globals/<name>/<pk>/favorite/.
+ * Mirrors the backend's `is_favoritable_global` helper.
+ */
+export function isFavoritableGlobal(globalName: string): boolean {
+    return !!(GLOBALS_MAP[globalName] as WorkflowGlobalDefinition | undefined)?.favoritable
 }
 
 /**
