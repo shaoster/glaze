@@ -295,6 +295,7 @@ These extend the generic GitHub interactions guide with Glaze-specific protected
 - Modifying deployment configuration, [`backend/settings.py`](../../backend/settings.py) or build settings [`build.sh`](../../build.sh)
 
 **Additional definition-of-done checks:**
+- Run `./build.sh` locally and confirm it succeeds before opening a PR or pushing follow-up commits to an existing one.
 - Serializer output matches the TypeScript types in [`frontend_common/src/types.ts`](../../frontend_common/src/types.ts)
 - State names and transitions are derived from [`workflow.yml`](../../workflow.yml), not hardcoded
 - If `AGENTS.md` was modified, check whether [`README.md`](../../README.md) needs a corresponding update
