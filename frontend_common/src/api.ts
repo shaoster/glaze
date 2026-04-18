@@ -14,7 +14,7 @@
  * this module.
  */
 import axios from 'axios'
-import type { CaptionedImage, PieceDetail, PieceSummary, PieceState, State, StateSummary } from './types'
+import type { CaptionedImage, FiringTemperatureRef, GlazeCombinationEntry, GlazeTypeRef, PieceDetail, PieceSummary, PieceState, State, StateSummary } from './types'
 
 export type AuthUser = {
     id: number
@@ -227,37 +227,7 @@ export async function fetchGlobalEntries(globalName: string): Promise<GlobalEntr
     return data.map((entry) => ({ id: entry.id, name: entry.name, isPublic: entry.is_public }))
 }
 
-// TODO(#80): derive GlazeCombinationEntry, GlazeTypeRef, and GlazeCombinationFilters
-// from generated-types.ts once the OpenAPI schema annotation on global_entries reflects
-// the richer GlazeCombinationEntrySerializer shape.
-// https://github.com/shaoster/glaze/issues/80
-
-export interface GlazeTypeRef {
-    id: string
-    name: string
-}
-
-export interface FiringTemperatureRef {
-    id: string
-    name: string
-    cone: string
-    temperature_c: number | null
-    atmosphere: string
-}
-
-export interface GlazeCombinationEntry {
-    id: string
-    name: string
-    testTileImage: string
-    isFoodSafe: boolean | null
-    runs: boolean | null
-    highlightsGrooves: boolean | null
-    isDifferentOnWhiteAndBrownClay: boolean | null
-    firingTemperature: FiringTemperatureRef | null
-    isPublic: boolean
-    isFavorite: boolean
-    glazeTypes: GlazeTypeRef[]
-}
+export type { GlazeTypeRef, FiringTemperatureRef, GlazeCombinationEntry }
 
 export interface GlazeCombinationFilters {
     glazeTypeIds?: string[]
@@ -266,36 +236,6 @@ export interface GlazeCombinationFilters {
     highlightsGrooves?: boolean
     isDifferentOnWhiteAndBrownClay?: boolean
     firingTemperatureId?: string
-}
-
-type WireGlazeCombinationEntry = {
-    id: string
-    name: string
-    test_tile_image: string
-    is_food_safe: boolean | null
-    runs: boolean | null
-    highlights_grooves: boolean | null
-    is_different_on_white_and_brown_clay: boolean | null
-    firing_temperature: FiringTemperatureRef | null
-    is_public: boolean
-    is_favorite: boolean
-    glaze_types: GlazeTypeRef[]
-}
-
-function mapGlazeCombinationEntry(raw: WireGlazeCombinationEntry): GlazeCombinationEntry {
-    return {
-        id: raw.id,
-        name: raw.name,
-        testTileImage: raw.test_tile_image,
-        isFoodSafe: raw.is_food_safe,
-        runs: raw.runs,
-        highlightsGrooves: raw.highlights_grooves,
-        isDifferentOnWhiteAndBrownClay: raw.is_different_on_white_and_brown_clay,
-        firingTemperature: raw.firing_temperature,
-        isPublic: raw.is_public,
-        isFavorite: raw.is_favorite,
-        glazeTypes: raw.glaze_types,
-    }
 }
 
 export async function fetchGlazeCombinations(
@@ -310,8 +250,8 @@ export async function fetchGlazeCombinations(
         params.is_different_on_white_and_brown_clay = String(filters.isDifferentOnWhiteAndBrownClay)
     if (filters.firingTemperatureId !== undefined)
         params.firing_temperature_id = filters.firingTemperatureId
-    const { data } = await client.get<WireGlazeCombinationEntry[]>('globals/glaze_combination/', { params })
-    return data.map(mapGlazeCombinationEntry)
+    const { data } = await client.get<GlazeCombinationEntry[]>('globals/glaze_combination/', { params })
+    return data
 }
 
 // TODO(#82): replace with a generic toggleGlobalEntryFavorite(globalName, id, favorite)

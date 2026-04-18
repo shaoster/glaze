@@ -219,9 +219,12 @@ class TestFavoriteAdd:
 
         assert response.status_code == 404
 
-    def test_returns_405_for_unsupported_global_type(self, client):
+    def test_returns_404_for_unsupported_global_type(self, client):
+        # Non-favoritable globals have no favorite route registered, so the
+        # correct response is 404 (no route) rather than 405 (route exists but
+        # method not allowed).
         response = client.post('/api/globals/location/some-id/favorite/')
-        assert response.status_code == 405
+        assert response.status_code == 404
 
 
 # ---------------------------------------------------------------------------

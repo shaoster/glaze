@@ -45,6 +45,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from .models import FavoriteGlazeCombination, FiringTemperature, GlazeCombination, Location, Piece, PieceState, UserProfile
+from .registry import global_entry_serializer
 from .workflow import ENTRY_STATE, SUCCESSORS, VALID_STATES, get_state_ref_fields
 
 
@@ -63,6 +64,7 @@ class FiringTemperatureRefSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'cone', 'temperature_c', 'atmosphere']
 
 
+@global_entry_serializer(GlazeCombination)
 class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
     """Richer list entry for GlazeCombination: includes properties, glaze types, and favorite flag.
 
@@ -72,7 +74,7 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
     is_public = serializers.SerializerMethodField()
     is_favorite = serializers.SerializerMethodField()
     glaze_types = serializers.SerializerMethodField()
-    firing_temperature = FiringTemperatureRefSerializer(read_only=True)
+    firing_temperature = FiringTemperatureRefSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = GlazeCombination
