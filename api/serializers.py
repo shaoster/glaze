@@ -74,7 +74,7 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
     is_public = serializers.SerializerMethodField()
     is_favorite = serializers.SerializerMethodField()
     glaze_types = serializers.SerializerMethodField()
-    firing_temperature = FiringTemperatureRefSerializer(read_only=True)
+    firing_temperature = FiringTemperatureRefSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = GlazeCombination

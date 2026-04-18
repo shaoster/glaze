@@ -227,7 +227,7 @@ export async function fetchGlobalEntries(globalName: string): Promise<GlobalEntr
     return data.map((entry) => ({ id: entry.id, name: entry.name, isPublic: entry.is_public }))
 }
 
-export { GlazeTypeRef, FiringTemperatureRef, GlazeCombinationEntry }
+export type { GlazeTypeRef, FiringTemperatureRef, GlazeCombinationEntry }
 
 export interface GlazeCombinationFilters {
     glazeTypeIds?: string[]

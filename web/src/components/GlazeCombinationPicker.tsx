@@ -253,7 +253,7 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
                                 <Box
                                     key={combo.id}
                                     onClick={() => {
-                                        onSelect(combo.name)
+                                        onSelect(combo.name ?? '')
                                         handleClose()
                                     }}
                                     sx={{
