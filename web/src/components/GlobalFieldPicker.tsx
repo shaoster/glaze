@@ -132,7 +132,7 @@ export default function GlobalFieldPicker({
                     // Caller owns the list when optionsProp is provided; only
                     // update internal state when managing the list ourselves.
                     setInternalEntries((prev) => {
-                        const merged = [...prev, { name: createdName, isPublic: false }]
+                        const merged = [...prev, { id: '', name: createdName, isPublic: false }]
                         merged.sort((a, b) => a.name.localeCompare(b.name))
                         return merged
                     })
