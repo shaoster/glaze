@@ -53,6 +53,12 @@ const EMPTY_FILTERS: FilterState = {
     onlyFavorites: false,
 }
 
+// TODO(#83): make this component generic (GlobalEntryPicker) accepting a globalName prop.
+// The filter UI, API calls, and favorites support should all be derived from workflow
+// metadata and generic API functions rather than being hardcoded to glaze_combination.
+// Depends on #81 (filterable fields in workflow.yml) and #82 (generic favorite toggle).
+// https://github.com/shaoster/glaze/issues/83
+//
 // TODO(#81): replace NullableBoolField and BOOL_FILTER_LABELS with filterable field
 // metadata imported from getFilterableFields('glaze_combination') in workflow.ts once
 // filter metadata is declared in workflow.yml.
