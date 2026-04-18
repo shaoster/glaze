@@ -18,9 +18,9 @@ from rest_framework.response import Response
 from django.db.models import Q
 
 from .models import FavoriteGlazeCombination, GlazeCombination, Piece, UserProfile
+from .registry import _GLOBAL_ENTRY_SERIALIZERS  # populated by @global_entry_serializer decorators in serializers.py
 from .serializers import (
     AuthUserSerializer,
-    GlazeCombinationEntrySerializer,
     GoogleAuthSerializer,
     LoginSerializer,
     PieceCreateSerializer,
@@ -65,12 +65,6 @@ def _apply_global_filters(qs, model_cls, request):
             qs = qs.filter(**{lookup: raw})
     return qs
 
-
-# Map from model class → richer serializer class for global_entries GET responses.
-# Add an entry here when a global type needs more than {id, name, is_public}.
-_GLOBAL_ENTRY_SERIALIZERS = {
-    GlazeCombination: GlazeCombinationEntrySerializer,
-}
 
 # Map from global model class → its corresponding Favorite* model class.
 # The Favorite* model must declare global_fk_field and get_favorite_ids_for().
