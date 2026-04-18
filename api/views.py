@@ -38,12 +38,13 @@ def _apply_global_filters(qs, model_cls, request):
 
     Each entry in ``filterable_fields`` has the form::
 
-        'field_lookup': {'type': 'boolean' | 'm2m_id', 'param': 'query_param_name'}
+        'field_lookup': {'type': 'boolean' | 'm2m_id' | 'fk_id', 'param': 'query_param_name'}
 
     ``param`` defaults to the field lookup key when omitted.
 
     - ``boolean``: ?param=true|false → filter(**{lookup: True|False})
     - ``m2m_id``: ?param=id1,id2,... → successive filters so ALL ids must match
+    - ``fk_id``: ?param=<pk> → exact FK match (filter(**{lookup: pk}))
     """
     filterable = getattr(model_cls, 'filterable_fields', {})
     for lookup, meta in filterable.items():
@@ -60,6 +61,8 @@ def _apply_global_filters(qs, model_cls, request):
         elif filter_type == 'm2m_id':
             for pk in (s.strip() for s in raw.split(',') if s.strip()):
                 qs = qs.filter(**{lookup: pk})
+        elif filter_type == 'fk_id':
+            qs = qs.filter(**{lookup: raw})
     return qs
 
 

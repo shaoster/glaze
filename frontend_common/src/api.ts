@@ -215,6 +215,7 @@ export async function updatePiece(pieceId: string, payload: UpdatePiecePayload):
 }
 
 export interface GlobalEntry {
+    id: string
     name: string
     isPublic: boolean
 }
@@ -223,7 +224,7 @@ export async function fetchGlobalEntries(globalName: string): Promise<GlobalEntr
     const { data } = await client.get<Array<{ id: string; name: string; is_public: boolean }>>(
         `globals/${globalName}/`
     )
-    return data.map((entry) => ({ name: entry.name, isPublic: entry.is_public }))
+    return data.map((entry) => ({ id: entry.id, name: entry.name, isPublic: entry.is_public }))
 }
 
 // TODO(#80): derive GlazeCombinationEntry, GlazeTypeRef, and GlazeCombinationFilters
@@ -236,6 +237,14 @@ export interface GlazeTypeRef {
     name: string
 }
 
+export interface FiringTemperatureRef {
+    id: string
+    name: string
+    cone: string
+    temperature_c: number | null
+    atmosphere: string
+}
+
 export interface GlazeCombinationEntry {
     id: string
     name: string
@@ -244,6 +253,7 @@ export interface GlazeCombinationEntry {
     runs: boolean | null
     highlightsGrooves: boolean | null
     isDifferentOnWhiteAndBrownClay: boolean | null
+    firingTemperature: FiringTemperatureRef | null
     isPublic: boolean
     isFavorite: boolean
     glazeTypes: GlazeTypeRef[]
@@ -255,6 +265,7 @@ export interface GlazeCombinationFilters {
     runs?: boolean
     highlightsGrooves?: boolean
     isDifferentOnWhiteAndBrownClay?: boolean
+    firingTemperatureId?: string
 }
 
 type WireGlazeCombinationEntry = {
@@ -265,6 +276,7 @@ type WireGlazeCombinationEntry = {
     runs: boolean | null
     highlights_grooves: boolean | null
     is_different_on_white_and_brown_clay: boolean | null
+    firing_temperature: FiringTemperatureRef | null
     is_public: boolean
     is_favorite: boolean
     glaze_types: GlazeTypeRef[]
@@ -279,6 +291,7 @@ function mapGlazeCombinationEntry(raw: WireGlazeCombinationEntry): GlazeCombinat
         runs: raw.runs,
         highlightsGrooves: raw.highlights_grooves,
         isDifferentOnWhiteAndBrownClay: raw.is_different_on_white_and_brown_clay,
+        firingTemperature: raw.firing_temperature,
         isPublic: raw.is_public,
         isFavorite: raw.is_favorite,
         glazeTypes: raw.glaze_types,
@@ -295,6 +308,8 @@ export async function fetchGlazeCombinations(
     if (filters.highlightsGrooves !== undefined) params.highlights_grooves = String(filters.highlightsGrooves)
     if (filters.isDifferentOnWhiteAndBrownClay !== undefined)
         params.is_different_on_white_and_brown_clay = String(filters.isDifferentOnWhiteAndBrownClay)
+    if (filters.firingTemperatureId !== undefined)
+        params.firing_temperature_id = filters.firingTemperatureId
     const { data } = await client.get<WireGlazeCombinationEntry[]>('globals/glaze_combination/', { params })
     return data.map(mapGlazeCombinationEntry)
 }

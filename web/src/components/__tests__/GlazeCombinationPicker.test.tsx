@@ -26,6 +26,7 @@ function makeCombo(overrides: Partial<GlazeCombinationEntry> = {}): GlazeCombina
         runs: false,
         highlightsGrooves: null,
         isDifferentOnWhiteAndBrownClay: null,
+        firingTemperature: null,
         isPublic: true,
         isFavorite: false,
         glazeTypes: [
@@ -45,10 +46,15 @@ const defaultProps = {
 beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(api.fetchGlazeCombinations).mockResolvedValue([makeCombo()])
-    vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
-        { name: 'Iron Red', isPublic: true },
-        { name: 'Clear', isPublic: true },
-    ])
+    vi.mocked(api.fetchGlobalEntries).mockImplementation((globalName) => {
+        if (globalName === 'glaze_type') {
+            return Promise.resolve([
+                { id: 'gt1', name: 'Iron Red', isPublic: true },
+                { id: 'gt2', name: 'Clear', isPublic: true },
+            ])
+        }
+        return Promise.resolve([])
+    })
     vi.mocked(api.toggleFavoriteGlazeCombination).mockResolvedValue(undefined)
 })
 

@@ -19,7 +19,7 @@ const defaultProps = {
 }
 
 function entry(name: string, isPublic = false): GlobalEntry {
-    return { name, isPublic }
+    return { id: crypto.randomUUID(), name, isPublic }
 }
 
 // Stateful wrapper so controlled `value` actually updates when the user types.
@@ -59,7 +59,7 @@ describe('GlobalFieldPicker', () => {
         })
 
         it('does not fetch when options prop is provided', () => {
-            render(<GlobalFieldPicker {...defaultProps} options={[{ name: 'Studio A', isPublic: false }]} />)
+            render(<GlobalFieldPicker {...defaultProps} options={[{ id: '', name: 'Studio A', isPublic: false }]} />)
             expect(api.fetchGlobalEntries).not.toHaveBeenCalled()
         })
 

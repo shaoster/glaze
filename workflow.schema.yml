@@ -91,6 +91,25 @@ $defs:
               type: string
               pattern: '^[a-z][a-z0-9_]*$'
               description: The global type name that each element in this M2M field references.
+            ordered:
+              type: boolean
+              description: |
+                Whether the elements of this M2M relationship have a forced sort order
+                enforced by the through model (e.g. via an `order` field and drag-to-reorder
+                in the admin). When true, the UI and admin must preserve insertion order
+                and the combination identity depends on element ordering. Default: false.
+            through_fields:
+              type: object
+              description: |
+                Fields declared on the through (join) model for this M2M relationship.
+                Each key is a field name on the through model; each value is an inline
+                field definition or a global ref, using the same DSL as additional_fields.
+                Referential integrity (through field exists on model, global refs valid)
+                is enforced in tests/test_workflow.py.
+              propertyNames:
+                pattern: '^[a-z][a-z0-9_]*$'
+              additionalProperties:
+                $ref: "#/$defs/global_field_def"
       fields:
         type: object
         description: |

@@ -44,7 +44,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from .models import FavoriteGlazeCombination, GlazeCombination, Location, Piece, PieceState, UserProfile
+from .models import FavoriteGlazeCombination, FiringTemperature, GlazeCombination, Location, Piece, PieceState, UserProfile
 from .workflow import ENTRY_STATE, SUCCESSORS, VALID_STATES, get_state_ref_fields
 
 
@@ -52,6 +52,15 @@ class GlazeTypeRefSerializer(serializers.Serializer):
     """Minimal glaze type representation embedded in GlazeCombinationEntrySerializer."""
     id = serializers.UUIDField()
     name = serializers.CharField()
+
+
+class FiringTemperatureRefSerializer(serializers.ModelSerializer):
+    """Minimal firing temperature representation embedded in GlazeCombinationEntrySerializer."""
+    id = serializers.UUIDField()
+
+    class Meta:
+        model = FiringTemperature
+        fields = ['id', 'name', 'cone', 'temperature_c', 'atmosphere']
 
 
 class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
@@ -63,12 +72,14 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
     is_public = serializers.SerializerMethodField()
     is_favorite = serializers.SerializerMethodField()
     glaze_types = serializers.SerializerMethodField()
+    firing_temperature = FiringTemperatureRefSerializer(read_only=True)
 
     class Meta:
         model = GlazeCombination
         fields = [
             'id', 'name', 'test_tile_image',
             'is_food_safe', 'runs', 'highlights_grooves', 'is_different_on_white_and_brown_clay',
+            'firing_temperature',
             'is_public', 'is_favorite', 'glaze_types',
         ]
 
