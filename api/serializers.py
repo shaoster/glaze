@@ -1,3 +1,43 @@
+"""
+Serializers for the Glaze API.
+
+At a glance this file can look like mechanical field declarations, but each
+serializer encodes real decisions about what the API contract is. The non-obvious
+choices worth knowing about:
+
+**What belongs here (not in views or models)**
+
+- *Field inclusion/exclusion* — which model fields are exposed, renamed, or
+  omitted in a given response. ``PieceSummarySerializer`` deliberately omits the
+  full state history; ``PieceDetailSerializer`` adds it.
+- *Shape transformations* — nesting, flattening, and renaming. ``PieceSummarySerializer``
+  exposes ``current_state`` as a nested ``{state}`` object (not a bare string) so
+  the frontend type is consistent between list and detail views.
+- *Write validation* — ``PieceStateCreateSerializer.validate_state`` enforces the
+  workflow transition graph; ``RegisterSerializer`` enforces password length. This
+  is business logic that must live here rather than in the model (which has no
+  request context) or the view (which should stay thin).
+- *Computed / synthesised fields* — ``PieceStateSerializer`` computes
+  ``previous_state`` and ``next_state`` by querying sibling states; the model has
+  no stored fields for these. ``PieceSummarySerializer`` surfaces ``last_modified``
+  as a property that merges piece-level and state-level timestamps.
+- *Write side-effects scoped to a request* — ``PieceCreateSerializer.create``
+  initialises the first ``PieceState`` in a single transaction; the model's
+  ``save()`` cannot do this because it has no knowledge of the initial notes or
+  the workflow entry state.
+- *State-ref auto-population* — ``PieceStateCreateSerializer.create`` carries
+  forward values from ancestor states for ``$ref`` fields declared in
+  ``workflow.yml``. This is request-time logic (needs the piece's history) and
+  belongs here rather than in the model.
+
+**What does NOT belong here**
+
+- Query filtering or permission checks — those live in views.
+- Business rules that can be enforced at the DB level — use model constraints or
+  ``Model.save()`` overrides instead.
+- Serialization of wire dates — all ``DateTimeField`` instances are handled
+  automatically by DRF; the ``Wire<T>`` mapping is a frontend concern only.
+"""
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
