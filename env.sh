@@ -84,6 +84,31 @@ _gz_load_local_env() {
 # Setup
 # ---------------------------------------------------------------------------
 
+gz_install_mcp_tools() {
+    echo "=== Installing MCP tool dependencies ==="
+    local tools=(jq curl git gh)
+    local missing=()
+    for tool in "${tools[@]}"; do
+        command -v "$tool" &>/dev/null || missing+=("$tool")
+    done
+    if [[ ${#missing[@]} -eq 0 ]]; then
+        echo "All MCP tools already installed: ${tools[*]}"
+        return 0
+    fi
+    echo "Missing: ${missing[*]}"
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get update -q && sudo apt-get install -y "${missing[@]}"
+    elif command -v brew &>/dev/null; then
+        brew install "${missing[@]}"
+    elif command -v dnf &>/dev/null; then
+        sudo dnf install -y "${missing[@]}"
+    else
+        echo "No supported package manager found (apt-get, brew, dnf). Install manually: ${missing[*]}"
+        return 1
+    fi
+    echo "=== MCP tools installed ==="
+}
+
 gz_setup() {
     echo "=== Glaze: setting up development environment ==="
 
@@ -273,6 +298,7 @@ gz_gentypes() {
 
 _GZ_SHORTCUTS=(
     "gz_help           — show this list of shortcuts"
+    "gz_install_mcp_tools — install MCP tool dependencies (jq, curl, git, gh)"
     "gz_setup          — first-time setup (venv, deps, migrations, node)"
     "gz_manage <cmd>   — run any manage.py subcommand"
     "gz_migrate        — migrate"
