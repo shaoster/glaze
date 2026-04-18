@@ -111,6 +111,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                 onSaved={onPieceUpdated}
                 onDirtyChange={setIsDirty}
                 currentLocation={piece.current_location ?? ''}
+                currentThumbnailUrl={piece.thumbnail ?? undefined}
             />
 
             <Divider sx={{ my: 3 }} />
