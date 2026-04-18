@@ -55,12 +55,49 @@
   {
     "model": "api.glazecombination",
     "fields": {
+      "name": "Celadon",
+      "test_tile_image": "",
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Volcanic Ash",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304349/glaze_public/eyy9whpmb5wajybtfk3p.heic",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Wild Hare Fur",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304189/glaze_public/jvrmpfxkjjhniqpqzqrs.heic",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
       "name": "Wild Hare Fur!Celadon",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304417/glaze_public/j3gz35q5fecp48ncy2qp.heic",
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": false,
-      "is_different_on_white_and_brown_clay": false
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": null
     }
   }
 ]

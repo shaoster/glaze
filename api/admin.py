@@ -239,6 +239,72 @@ class PublicLibraryAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
+class GlazeTypeAdmin(PublicLibraryAdmin):
+    """Admin for the public GlazeType library.
+
+    In addition to the standard PublicLibraryAdmin behaviour, creating or
+    updating a public GlazeType automatically keeps a matching single-layer
+    public GlazeCombination in sync:
+
+    - **Create**: a new GlazeCombination (user=None, name=glaze_type.name) with
+      one GlazeCombinationLayer pointing at the new type is created, with all
+      shared property fields copied over.
+    - **Update**: the corresponding single-layer combination's properties are
+      updated to match.  If the GlazeType name changed, the combination is
+      renamed as well.
+    """
+
+    _SHARED_FIELDS = (
+        'test_tile_image',
+        'is_food_safe',
+        'runs',
+        'highlights_grooves',
+        'is_different_on_white_and_brown_clay',
+        'apply_thin',
+    )
+
+    def save_model(self, request: HttpRequest, obj: GlazeType, form, change: bool) -> None:
+        # Capture the old name before super() persists any changes.
+        old_name: str | None = None
+        if change and obj.pk:
+            old_name = GlazeType.objects.filter(pk=obj.pk).values_list('name', flat=True).first()
+
+        super().save_model(request, obj, form, change)
+        self._sync_single_layer_combination(obj, old_name)
+
+    def _sync_single_layer_combination(self, glaze_type: GlazeType, old_name: str | None) -> None:
+        combo_props = {field: getattr(glaze_type, field) for field in self._SHARED_FIELDS}
+
+        combo: GlazeCombination | None = None
+
+        if old_name and old_name != glaze_type.name:
+            # Name changed — rename the existing single-layer combination.
+            combo = GlazeCombination.objects.filter(user=None, name=old_name).first()
+            if combo:
+                combo.name = glaze_type.name
+                for field, value in combo_props.items():
+                    setattr(combo, field, value)
+                combo.save(update_fields=['name', *self._SHARED_FIELDS])
+
+        if combo is None:
+            combo, created = GlazeCombination.objects.get_or_create(
+                user=None,
+                name=glaze_type.name,
+                defaults=combo_props,
+            )
+            if created:
+                GlazeCombinationLayer.objects.create(
+                    combination=combo, glaze_type=glaze_type, order=0
+                )
+            else:
+                for field, value in combo_props.items():
+                    setattr(combo, field, value)
+                combo.save(update_fields=list(self._SHARED_FIELDS))
+
+
+admin.site.register(GlazeType, GlazeTypeAdmin)
+
+
 class GlazeCombinationLayerInline(SortableInlineAdminMixin, admin.TabularInline):
     """Inline editor for the ordered layers of a GlazeCombination.
 
