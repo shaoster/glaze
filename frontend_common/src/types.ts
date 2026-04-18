@@ -41,12 +41,18 @@ export type PieceState = components['schemas']['PieceState'] & {
 // Piece list entry. Intersection narrows current_state to use our typed StateSummary.
 export type PieceSummary = components['schemas']['PieceSummary'] & { current_state: StateSummary }
 
+
 // Piece detail. Intersection narrows current_state to PieceState (subtype of StateSummary)
 // and adds the history array. No Omit needed — PieceState satisfies StateSummary structurally.
 export type PieceDetail = PieceSummary & {
     current_state: PieceState
     history: PieceState[]
 }
+
+// GlazeCombination entry and related types — derived from generated OpenAPI types.
+export type GlazeTypeRef = components['schemas']['GlazeTypeRef']
+export type FiringTemperatureRef = components['schemas']['FiringTemperatureRef']
+export type GlazeCombinationEntry = components['schemas']['GlazeCombinationEntry']
 
 // Convert a snake_case state id to a human-readable label.
 // e.g. "wheel_thrown" → "Wheel Thrown", "designed" → "Designed"

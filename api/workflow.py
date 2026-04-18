@@ -142,6 +142,11 @@ def is_favoritable_global(global_name: str) -> bool:
     return bool(config.get('favoritable', False))
 
 
+def get_global_names() -> list[str]:
+    """Return all global names registered in workflow.yml, in declaration order."""
+    return list(_GLOBALS_MAP.keys())
+
+
 def get_compose_from(global_name: str) -> dict | None:
     """Return the compose_from declaration for a global, or None.
 

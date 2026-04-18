@@ -21,15 +21,15 @@ function makeCombo(overrides: Partial<GlazeCombinationEntry> = {}): GlazeCombina
     return {
         id: '1',
         name: 'Iron Red!Clear',
-        testTileImage: '',
-        isFoodSafe: true,
+        test_tile_image: '',
+        is_food_safe: true,
         runs: false,
-        highlightsGrooves: null,
-        isDifferentOnWhiteAndBrownClay: null,
-        firingTemperature: null,
-        isPublic: true,
-        isFavorite: false,
-        glazeTypes: [
+        highlights_grooves: null,
+        is_different_on_white_and_brown_clay: null,
+        firing_temperature: null,
+        is_public: true,
+        is_favorite: false,
+        glaze_types: [
             { id: 'gt1', name: 'Iron Red' },
             { id: 'gt2', name: 'Clear' },
         ],
@@ -121,7 +121,7 @@ describe('GlazeCombinationPicker', () => {
         })
 
         it('renders filled star for favorites', async () => {
-            vi.mocked(api.fetchGlazeCombinations).mockResolvedValue([makeCombo({ isFavorite: true })])
+            vi.mocked(api.fetchGlazeCombinations).mockResolvedValue([makeCombo({ is_favorite: true })])
             render(<GlazeCombinationPicker {...defaultProps} />)
             await waitFor(() => expect(screen.getByLabelText('Remove from favorites')).toBeInTheDocument())
         })
@@ -136,7 +136,7 @@ describe('GlazeCombinationPicker', () => {
         })
 
         it('calls toggleFavoriteGlazeCombination with false when unfavoriting', async () => {
-            vi.mocked(api.fetchGlazeCombinations).mockResolvedValue([makeCombo({ isFavorite: true })])
+            vi.mocked(api.fetchGlazeCombinations).mockResolvedValue([makeCombo({ is_favorite: true })])
             render(<GlazeCombinationPicker {...defaultProps} />)
             await waitFor(() => expect(screen.getByLabelText('Remove from favorites')).toBeInTheDocument())
             await userEvent.click(screen.getByLabelText('Remove from favorites'))
@@ -155,8 +155,8 @@ describe('GlazeCombinationPicker', () => {
 
     describe('Only Favorites toggle', () => {
         it('shows only favorites when toggle is on', async () => {
-            const fav = makeCombo({ id: '1', name: 'Fav Combo', isFavorite: true })
-            const notFav = makeCombo({ id: '2', name: 'Other Combo', isFavorite: false })
+            const fav = makeCombo({ id: '1', name: 'Fav Combo', is_favorite: true })
+            const notFav = makeCombo({ id: '2', name: 'Other Combo', is_favorite: false })
             vi.mocked(api.fetchGlazeCombinations).mockResolvedValue([fav, notFav])
 
             render(<GlazeCombinationPicker {...defaultProps} />)

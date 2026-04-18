@@ -134,9 +134,9 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
     async function handleToggleFavorite(combo: GlazeCombinationEntry) {
         setTogglingId(combo.id)
         try {
-            await toggleFavoriteGlazeCombination(combo.id, !combo.isFavorite)
+            await toggleFavoriteGlazeCombination(combo.id, !combo.is_favorite)
             setCombinations((prev) =>
-                prev.map((c) => (c.id === combo.id ? { ...c, isFavorite: !c.isFavorite } : c))
+                prev.map((c) => (c.id === combo.id ? { ...c, is_favorite: !c.is_favorite } : c))
             )
         } finally {
             setTogglingId(null)
@@ -148,7 +148,7 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
         onClose()
     }
 
-    const visible = filters.onlyFavorites ? combinations.filter((c) => c.isFavorite) : combinations
+    const visible = filters.onlyFavorites ? combinations.filter((c) => c.is_favorite) : combinations
 
     return (
         <Dialog
@@ -269,9 +269,9 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
                                     }}
                                 >
                                     {/* Test tile thumbnail */}
-                                    {combo.testTileImage ? (
+                                    {combo.test_tile_image ? (
                                         <CloudinaryImage
-                                            url={combo.testTileImage}
+                                            url={combo.test_tile_image}
                                             alt={combo.name}
                                             context="thumbnail"
                                         />
@@ -293,18 +293,18 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
                                             {combo.name}
                                         </Typography>
                                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                                            {combo.glazeTypes.map((gt) => (
+                                            {combo.glaze_types.map((gt) => (
                                                 <Chip key={gt.id} label={gt.name} size="small" />
                                             ))}
-                                            {combo.firingTemperature && (
+                                            {combo.firing_temperature && (
                                                 <Chip
-                                                    label={combo.firingTemperature.name}
+                                                    label={combo.firing_temperature.name}
                                                     size="small"
                                                     variant="outlined"
                                                     color="secondary"
                                                 />
                                             )}
-                                            {combo.isPublic && (
+                                            {combo.is_public && (
                                                 <Chip label="public" size="small" variant="outlined" />
                                             )}
                                         </Box>
@@ -318,9 +318,9 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
                                         }}
                                         disabled={togglingId === combo.id}
                                         size="small"
-                                        aria-label={combo.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                                        aria-label={combo.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
                                     >
-                                        {combo.isFavorite ? (
+                                        {combo.is_favorite ? (
                                             <StarIcon fontSize="small" color="warning" />
                                         ) : (
                                             <StarBorderIcon fontSize="small" />
