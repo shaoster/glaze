@@ -70,6 +70,13 @@ $defs:
           Whether this global type supports user-private instances.
           Private objects are owned by a specific user and invisible to others.
         default: true
+      favoritable:
+        type: boolean
+        description: |
+          Whether this global type supports per-user favorites. When true,
+          authenticated users can mark individual entries as favorites via
+          POST/DELETE /api/globals/<global_name>/<pk>/favorite/.
+        default: false
       compose_from:
         type: object
         description: |
@@ -204,6 +211,13 @@ $defs:
         minItems: 1
         items: {}
         uniqueItems: true
+      filterable:
+        type: boolean
+        description: |
+          Whether this field can be used as a filter criterion in list views.
+          Intended for boolean fields; consumers use get_filterable_fields() /
+          getFilterableFields() to discover which fields to expose as filter controls.
+        default: false
 
   state_ref_field:
     type: object

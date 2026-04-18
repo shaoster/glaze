@@ -34,11 +34,15 @@ vi.mock('../../workflow.yml', () => ({
             },
             glaze_combination: {
                 model: 'GlazeCombination',
+                favoritable: true,
                 compose_from: {
                     glaze_types: { global: 'glaze_type' },
                 },
                 fields: {
                     name: { type: 'string' },
+                    is_food_safe: { type: 'boolean', filterable: true },
+                    runs: { type: 'boolean', filterable: true },
+                    test_tile_image: { type: 'image' },
                 },
             },
         },
@@ -127,8 +131,10 @@ vi.mock('../../workflow.yml', () => ({
 import {
     formatWorkflowFieldLabel,
     getAdditionalFieldDefinitions,
+    getFilterableFields,
     getGlobalComposeFrom,
     getGlobalDisplayField,
+    isFavoritableGlobal,
 } from './workflow'
 
 describe('formatWorkflowFieldLabel', () => {
@@ -258,5 +264,41 @@ describe('getAdditionalFieldDefinitions', () => {
             const fields = getAdditionalFieldDefinitions('submitted_to_bisque_fire')
             expect(fields.find((f) => f.name === 'kiln_location')!.isStateRef).toBe(false)
         })
+    })
+})
+
+describe('getFilterableFields', () => {
+    it('returns names of fields with filterable: true', () => {
+        expect(getFilterableFields('glaze_combination')).toEqual(
+            expect.arrayContaining(['is_food_safe', 'runs'])
+        )
+    })
+
+    it('does not include non-filterable fields', () => {
+        const fields = getFilterableFields('glaze_combination')
+        expect(fields).not.toContain('name')
+        expect(fields).not.toContain('test_tile_image')
+    })
+
+    it('returns an empty array when no fields are filterable', () => {
+        expect(getFilterableFields('location')).toEqual([])
+    })
+
+    it('returns an empty array for an unknown global', () => {
+        expect(getFilterableFields('nonexistent')).toEqual([])
+    })
+})
+
+describe('isFavoritableGlobal', () => {
+    it('returns true for a global with favoritable: true', () => {
+        expect(isFavoritableGlobal('glaze_combination')).toBe(true)
+    })
+
+    it('returns false for a global without the favoritable flag', () => {
+        expect(isFavoritableGlobal('location')).toBe(false)
+    })
+
+    it('returns false for an unknown global', () => {
+        expect(isFavoritableGlobal('nonexistent')).toBe(false)
     })
 })
