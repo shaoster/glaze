@@ -132,8 +132,8 @@ _MOCK_GLOBALS_MAP = {
         },
         'fields': {
             'name': {'type': 'string'},
-            'is_food_safe': {'type': 'boolean', 'filterable': True},
-            'runs': {'type': 'boolean', 'filterable': True},
+            'is_food_safe': {'type': 'boolean', 'filterable': True, 'label': 'Food safe'},
+            'runs': {'type': 'boolean', 'filterable': True, 'label': 'Runs'},
             'test_tile_image': {'type': 'image'},
         },
     },
@@ -347,17 +347,19 @@ def test_build_additional_fields_schema_resolves_state_refs_recursively(monkeypa
 def test_get_filterable_fields_returns_filterable_fields(monkeypatch):
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
     result = workflow_module.get_filterable_fields('glaze_combination')
-    assert set(result) == {'is_food_safe', 'runs'}
+    assert set(result.keys()) == {'is_food_safe', 'runs'}
+    assert result['is_food_safe'] == {'type': 'boolean', 'label': 'Food safe'}
+    assert result['runs'] == {'type': 'boolean', 'label': 'Runs'}
 
 
 def test_get_filterable_fields_returns_empty_when_no_filterable_fields(monkeypatch):
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
-    assert workflow_module.get_filterable_fields('location') == []
+    assert workflow_module.get_filterable_fields('location') == {}
 
 
 def test_get_filterable_fields_returns_empty_for_unknown_global(monkeypatch):
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
-    assert workflow_module.get_filterable_fields('does_not_exist') == []
+    assert workflow_module.get_filterable_fields('does_not_exist') == {}
 
 
 # ---------------------------------------------------------------------------

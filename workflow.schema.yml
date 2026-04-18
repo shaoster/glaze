@@ -218,7 +218,13 @@ $defs:
           Intended for boolean fields; consumers use get_filterable_fields() /
           getFilterableFields() to discover which fields to expose as filter controls.
         default: false
-
+      label:
+        type: string
+        description: |
+          Human-readable label for the field in UIs. Used to render human
+          readable controls without hardcoding labels in components.
+          If not provided, the field name is converted to title case and used as a label.
+          E.g. "firing_temperature" → "Firing Temperature".
   state_ref_field:
     type: object
     required: [$ref]
