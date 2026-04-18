@@ -222,13 +222,9 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
                                     {/* Test tile thumbnail */}
                                     {combo.testTileImage ? (
                                         <CloudinaryImage
-                                            image={{
-                                                url: combo.testTileImage,
-                                                caption: combo.name,
-                                                created: new Date(),
-                                                cloudinary_public_id: null,
-                                            }}
-                                            sizing="thumbnail"
+                                            url={combo.testTileImage}
+                                            alt={combo.name}
+                                            context="thumbnail"
                                         />
                                     ) : (
                                         <Box
