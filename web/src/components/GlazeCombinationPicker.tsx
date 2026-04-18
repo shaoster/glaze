@@ -103,7 +103,7 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
     useEffect(() => {
         if (!open) return
         fetchGlobalEntries('glaze_type')
-            .then((entries) => setAllGlazeTypes(entries.map((e) => ({ id: e.name, name: e.name }))))
+            .then((entries) => setAllGlazeTypes(entries.map((e) => ({ id: e.id, name: e.name }))))
             .catch(() => {})
         fetchGlobalEntries('firing_temperature')
             .then((entries) => setAllFiringTemperatures(entries.map((e) => ({ id: e.id, name: e.name }))))
@@ -151,9 +151,16 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
     const visible = filters.onlyFavorites ? combinations.filter((c) => c.isFavorite) : combinations
 
     return (
-        <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+        <Dialog
+            open={open}
+            onClose={handleClose}
+            maxWidth="md"
+            fullWidth
+            PaperProps={{ sx: { height: '85vh', display: 'flex', flexDirection: 'column' } }}
+        >
             <DialogTitle>Browse Glaze Combinations</DialogTitle>
-            <DialogContent>
+            {/* Filters — sticky, never scroll away */}
+            <Box sx={{ px: 3, pt: 1, pb: 2, flexShrink: 0, borderBottom: 1, borderColor: 'divider' }}>
                 <Stack spacing={2}>
                     {/* Glaze type filter */}
                     <Autocomplete
@@ -180,35 +187,40 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
                         size="small"
                     />
 
-                    {/* Boolean property filters */}
-                    <FormGroup row sx={{ gap: 1 }}>
+                    {/* Boolean property filters — each field has its own labelled group */}
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                         {(Object.entries(BOOL_FILTER_LABELS) as [NullableBoolField, string][]).map(
                             ([field, label]) => (
-                                <Box key={field} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                    <FormControlLabel
-                                        label={`${label}: yes`}
-                                        control={
-                                            <Checkbox
-                                                size="small"
-                                                checked={filters[field] === true}
-                                                onChange={(e) => handleBoolFilter(field, e.target.checked, true)}
-                                            />
-                                        }
-                                    />
-                                    <FormControlLabel
-                                        label="no"
-                                        control={
-                                            <Checkbox
-                                                size="small"
-                                                checked={filters[field] === false}
-                                                onChange={(e) => handleBoolFilter(field, e.target.checked, false)}
-                                            />
-                                        }
-                                    />
+                                <Box key={field}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.25 }}>
+                                        {label}
+                                    </Typography>
+                                    <FormGroup row>
+                                        <FormControlLabel
+                                            label="Yes"
+                                            control={
+                                                <Checkbox
+                                                    size="small"
+                                                    checked={filters[field] === true}
+                                                    onChange={(e) => handleBoolFilter(field, e.target.checked, true)}
+                                                />
+                                            }
+                                        />
+                                        <FormControlLabel
+                                            label="No"
+                                            control={
+                                                <Checkbox
+                                                    size="small"
+                                                    checked={filters[field] === false}
+                                                    onChange={(e) => handleBoolFilter(field, e.target.checked, false)}
+                                                />
+                                            }
+                                        />
+                                    </FormGroup>
                                 </Box>
                             )
                         )}
-                    </FormGroup>
+                    </Box>
 
                     {/* Only favorites toggle */}
                     <FormControlLabel
@@ -222,19 +234,22 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
                         }
                         label="Only favorites"
                     />
+                </Stack>
+            </Box>
 
-                    {/* Results */}
-                    {loading ? (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                            <CircularProgress />
-                        </Box>
-                    ) : visible.length === 0 ? (
-                        <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-                            No combinations match the current filters.
-                        </Typography>
-                    ) : (
-                        <Stack spacing={1}>
-                            {visible.map((combo) => (
+            {/* Scrollable results */}
+            <DialogContent sx={{ flex: 1, overflowY: 'auto', pt: 2 }}>
+                {loading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                        <CircularProgress />
+                    </Box>
+                ) : visible.length === 0 ? (
+                    <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                        No combinations match the current filters.
+                    </Typography>
+                ) : (
+                    <Stack spacing={1}>
+                        {visible.map((combo) => (
                                 <Box
                                     key={combo.id}
                                     onClick={() => {
@@ -315,7 +330,6 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
                             ))}
                         </Stack>
                     )}
-                </Stack>
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleClose}>Cancel</Button>

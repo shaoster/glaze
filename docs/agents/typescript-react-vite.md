@@ -95,6 +95,8 @@ function useAsync<T>(asyncFunction: () => Promise<T>, immediate = true) {
 - Use `slotProps={{ htmlInput: { ... } }}` on MUI `TextField` — the `inputProps` prop is deprecated in MUI v7.
 - Module-level constants should be named in `ALL_CAPS_SNAKE_CASE`. This applies to both exported constants and internal ones.
 - All HTTP calls should go through a shared API module. This is the single place where wire types (ISO date strings, etc.) are mapped to domain types. Components must never perform their own serialization or deserialization — they receive fully-typed domain objects and call API functions to write data.
+- When passing references to backend API calls, always use the object's `id`/`pk` rather than a human-readable name field. Names are not stable identifiers and can collide across scopes (e.g. public vs. private objects). Reserve names only for display.
+- MUI `Dialog` components should have a fixed size derived from the viewport (e.g. `PaperProps={{ sx: { height: '80vh' } }}`), not a size that expands and contracts with dynamic content. Fix the height and let the scrollable content region (`DialogContent` with `overflowY: 'auto'`) adapt. Exception: lightbox-style dialogs where the container is inherently sized to a static image or caption.
 - Configure Axios with `axios.create({ baseURL: import.meta.env.VITE_API_URL })` rather than constructing URLs ad hoc. Use interceptors for cross-cutting concerns (auth headers, error normalisation) rather than repeating that logic at each call site.
 - Use `lazy` + `Suspense` for route-level code splitting to keep the initial bundle small:
   ```tsx
