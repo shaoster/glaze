@@ -191,6 +191,44 @@ class GlazeMethod(GlobalModel):
         return self.name
 
 
+class FiringTemperature(GlobalModel):
+    """A named firing profile (cone, peak temperature, atmosphere).
+
+    Public-only (user=NULL, managed via Django admin). There are no private
+    FiringTemperature records; users reference the shared public library.
+    """
+
+    CONE_CHOICES = [
+        ('04', '04'), ('03', '03'), ('02', '02'), ('01', '01'),
+        ('1', '1'), ('2', '2'), ('3', '3'), ('4', '4'), ('5', '5'),
+        ('6', '6'), ('7', '7'), ('8', '8'), ('9', '9'), ('10', '10'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='firing_temperatures',
+    )
+    name = models.CharField(max_length=255)
+    cone = models.CharField(max_length=16, blank=True, default='', choices=CONE_CHOICES)
+    temperature_c = models.IntegerField(null=True, blank=True)
+    atmosphere = models.CharField(max_length=255, blank=True, default='')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name'],
+                condition=Q(user__isnull=True),
+                name='uniq_firing_temperature_name_public',
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class GlazeCombination(GlobalModel):
     """An ordered combination of one or more glaze layers with shared application properties.
 
@@ -220,6 +258,13 @@ class GlazeCombination(GlobalModel):
     glaze_types = models.ManyToManyField(
         GlazeType,
         through='GlazeCombinationLayer',
+        related_name='combinations',
+    )
+    firing_temperature = models.ForeignKey(
+        FiringTemperature,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='combinations',
     )
     test_tile_image = models.CharField(max_length=1024, blank=True, default='')
@@ -314,6 +359,7 @@ class GlazeCombination(GlobalModel):
         'highlights_grooves': {'type': 'boolean'},
         'is_different_on_white_and_brown_clay': {'type': 'boolean'},
         'layers__glaze_type_id': {'type': 'm2m_id', 'param': 'glaze_type_ids'},
+        'firing_temperature_id': {'type': 'fk_id', 'param': 'firing_temperature_id'},
     }
 
     def __str__(self) -> str:
@@ -338,6 +384,13 @@ class GlazeCombinationLayer(models.Model):
         on_delete=models.PROTECT,
         related_name='combination_layers',
     )
+    glaze_method = models.ForeignKey(
+        GlazeMethod,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='combination_layers',
+    )
     order = models.PositiveSmallIntegerField()
 
     class Meta:
@@ -349,6 +402,12 @@ class GlazeCombinationLayer(models.Model):
             raise ValueError(
                 f'Public glaze combinations can only reference public glaze types. '
                 f'GlazeType "{self.glaze_type}" (id={self.glaze_type_id}) is private.'
+            )
+        # Public combinations cannot reference private GlazeMethods (no public GlazeMethods exist).
+        if self.combination.user_id is None and self.glaze_method_id is not None:
+            raise ValueError(
+                f'Public glaze combinations cannot reference private glaze methods. '
+                f'GlazeMethod id={self.glaze_method_id} is private.'
             )
         super().save(*args, **kwargs)
 

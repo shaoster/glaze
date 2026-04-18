@@ -35,8 +35,14 @@ export interface GlazeCombinationPickerProps {
     onSelect: (name: string) => void
 }
 
+interface FiringTemperatureOption {
+    id: string
+    name: string
+}
+
 interface FilterState {
     glazeTypes: GlazeTypeRef[]
+    firingTemperature: FiringTemperatureOption | null
     isFoodSafe: boolean | null
     runs: boolean | null
     highlightsGrooves: boolean | null
@@ -46,6 +52,7 @@ interface FilterState {
 
 const EMPTY_FILTERS: FilterState = {
     glazeTypes: [],
+    firingTemperature: null,
     isFoodSafe: null,
     runs: null,
     highlightsGrooves: null,
@@ -75,6 +82,7 @@ const BOOL_FILTER_LABELS: Record<NullableBoolField, string> = {
 function filtersToApi(f: FilterState): GlazeCombinationFilters {
     const out: GlazeCombinationFilters = {}
     if (f.glazeTypes.length) out.glazeTypeIds = f.glazeTypes.map((gt) => gt.id)
+    if (f.firingTemperature !== null) out.firingTemperatureId = f.firingTemperature.id
     if (f.isFoodSafe !== null) out.isFoodSafe = f.isFoodSafe
     if (f.runs !== null) out.runs = f.runs
     if (f.highlightsGrooves !== null) out.highlightsGrooves = f.highlightsGrooves
@@ -86,15 +94,19 @@ function filtersToApi(f: FilterState): GlazeCombinationFilters {
 export default function GlazeCombinationPicker({ open, onClose, onSelect }: GlazeCombinationPickerProps) {
     const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
     const [allGlazeTypes, setAllGlazeTypes] = useState<GlazeTypeRef[]>([])
+    const [allFiringTemperatures, setAllFiringTemperatures] = useState<FiringTemperatureOption[]>([])
     const [combinations, setCombinations] = useState<GlazeCombinationEntry[]>([])
     const [loading, setLoading] = useState(false)
     const [togglingId, setTogglingId] = useState<string | null>(null)
 
-    // Load all available glaze types for the type filter autocomplete.
+    // Load all available glaze types and firing temperatures for filter autocompletes.
     useEffect(() => {
         if (!open) return
         fetchGlobalEntries('glaze_type')
             .then((entries) => setAllGlazeTypes(entries.map((e) => ({ id: e.name, name: e.name }))))
+            .catch(() => {})
+        fetchGlobalEntries('firing_temperature')
+            .then((entries) => setAllFiringTemperatures(entries.map((e) => ({ id: e.id, name: e.name }))))
             .catch(() => {})
     }, [open])
 
@@ -152,6 +164,18 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
                         onChange={(_e, val) => setFilters((prev) => ({ ...prev, glazeTypes: val }))}
                         renderInput={(params) => (
                             <TextField {...params} label="Contains glaze types (all must match)" size="small" />
+                        )}
+                        size="small"
+                    />
+
+                    {/* Firing temperature filter */}
+                    <Autocomplete
+                        options={allFiringTemperatures}
+                        getOptionLabel={(o) => o.name}
+                        value={filters.firingTemperature}
+                        onChange={(_e, val) => setFilters((prev) => ({ ...prev, firingTemperature: val }))}
+                        renderInput={(params) => (
+                            <TextField {...params} label="Firing temperature" size="small" />
                         )}
                         size="small"
                     />
@@ -257,6 +281,14 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
                                             {combo.glazeTypes.map((gt) => (
                                                 <Chip key={gt.id} label={gt.name} size="small" />
                                             ))}
+                                            {combo.firingTemperature && (
+                                                <Chip
+                                                    label={combo.firingTemperature.name}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="secondary"
+                                                />
+                                            )}
                                             {combo.isPublic && (
                                                 <Chip label="public" size="small" variant="outlined" />
                                             )}

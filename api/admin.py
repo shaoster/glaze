@@ -10,7 +10,7 @@ from django.forms import widgets
 from django.http import HttpRequest
 from django.utils.html import format_html
 
-from .models import GlazeCombination, GlazeCombinationLayer, GlazeType, Piece, PieceState, UserProfile
+from .models import FiringTemperature, GlazeCombination, GlazeCombinationLayer, GlazeMethod, GlazeType, Piece, PieceState, UserProfile
 from .workflow import get_image_fields_for_global_model, get_public_global_models
 
 
@@ -252,14 +252,14 @@ class GlazeCombinationLayerInline(SortableInlineAdminMixin, admin.TabularInline)
 
     model = GlazeCombinationLayer
     extra = 0
-    fields = ('glaze_type',)
+    fields = ('glaze_type', 'glaze_method')
 
     class Media:
         css = {'all': ('admin/css/sortable_inline.css',)}
         js = ('admin/js/sortable_inline_notice.js',)
 
     def get_queryset(self, request: HttpRequest):
-        return super().get_queryset(request).select_related('glaze_type')
+        return super().get_queryset(request).select_related('glaze_type', 'glaze_method')
 
     def formfield_for_foreignkey(self, db_field, request: HttpRequest, **kwargs):
         if db_field.name == 'glaze_type':
@@ -267,6 +267,11 @@ class GlazeCombinationLayerInline(SortableInlineAdminMixin, admin.TabularInline)
             # filters to user__isnull=True. Private combinations are 404 before
             # the form is built, so layers may only reference public glaze types.
             kwargs['queryset'] = GlazeType.objects.filter(user__isnull=True).order_by('name')
+        elif db_field.name == 'glaze_method':
+            # GlazeMethod is private-only; public combination layers must leave it
+            # null. Show all methods for informational purposes but the model save()
+            # will reject a non-null method on a public combination.
+            kwargs['queryset'] = GlazeMethod.objects.order_by('name')
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def formfield_for_dbfield(self, db_field, request: HttpRequest, **kwargs):
@@ -274,7 +279,7 @@ class GlazeCombinationLayerInline(SortableInlineAdminMixin, admin.TabularInline)
         # RelatedFieldWidgetWrapper is applied by formfield_for_dbfield after
         # formfield_for_foreignkey returns, so can_delete_related must be
         # suppressed here rather than in formfield_for_foreignkey.
-        if db_field.name == 'glaze_type' and hasattr(field, 'widget'):
+        if db_field.name in ('glaze_type', 'glaze_method') and hasattr(field, 'widget'):
             field.widget.can_delete_related = False
         return field
 
@@ -289,6 +294,7 @@ class GlazeCombinationAdmin(SortableAdminBase, PublicLibraryAdmin):
 
     list_display = (
         '__str__',
+        'firing_temperature',
         'is_food_safe',
         'runs',
         'highlights_grooves',
@@ -296,6 +302,7 @@ class GlazeCombinationAdmin(SortableAdminBase, PublicLibraryAdmin):
         'is_public_entry',
     )
     list_filter = (
+        'firing_temperature',
         'is_food_safe',
         'runs',
         'highlights_grooves',
@@ -304,6 +311,11 @@ class GlazeCombinationAdmin(SortableAdminBase, PublicLibraryAdmin):
     search_fields = ('name',)
     exclude = ('user', 'name')
     inlines = [GlazeCombinationLayerInline]
+
+    def formfield_for_foreignkey(self, db_field, request: HttpRequest, **kwargs):
+        if db_field.name == 'firing_temperature':
+            kwargs['queryset'] = FiringTemperature.objects.filter(user__isnull=True).order_by('name')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def save_model(self, request: HttpRequest, obj, form, change: bool) -> None:
         """Save the combination; name will be recomputed in save_related."""

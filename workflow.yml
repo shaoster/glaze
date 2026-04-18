@@ -146,6 +146,26 @@ globals:
         type: string
         description: Notes on the application method or adjustments.
 
+  firing_temperature:
+    model: FiringTemperature
+    description: A named firing profile (cone, peak temperature, atmosphere).
+    public: true
+    private: false
+    fields:
+      name:
+        type: string
+        description: Human-readable profile name (e.g. "Cone 6 Electric").
+      cone:
+        type: string
+        description: Orton cone designation.
+        enum: ["04", "03", "02", "01", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+      temperature_c:
+        type: integer
+        description: Peak temperature in degrees Celsius.
+      atmosphere:
+        type: string
+        description: Kiln atmosphere (e.g. oxidation, reduction, soda).
+
   glaze_combination:
     model: GlazeCombination
     description: An ordered combination of one or more glaze layers with shared application properties.
@@ -154,10 +174,19 @@ globals:
     compose_from:
       glaze_types:
         global: glaze_type
+        ordered: true
+        through_fields:
+          glaze_method:
+            $ref: "@glaze_method.name"
+            description: Application method for this layer (e.g. dip, brush, spray).
+            required: false
     fields:
       name:
         type: string
         description: Computed combination name (layer1!layer2!...). Auto-populated from ordered layers on save.
+      firing_temperature:
+        $ref: "@firing_temperature.name"
+        description: Firing profile this combination is designed for.
       test_tile_image:
         type: image
         description: Image of the glaze combination test tile.

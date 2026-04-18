@@ -19,7 +19,7 @@ const defaultProps = {
 }
 
 function entry(name: string, isPublic = false): GlobalEntry {
-    return { name, isPublic }
+    return { id: crypto.randomUUID(), name, isPublic }
 }
 
 // Stateful wrapper so controlled `value` actually updates when the user types.

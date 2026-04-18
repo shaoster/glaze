@@ -348,6 +348,81 @@ class TestSchemaValidation:
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
 
+    def test_compose_from_with_through_fields_accepted(self, schema):
+        """A compose_from entry with valid through_fields and ordered must pass the schema."""
+        valid = {
+            "version": "1.0.0",
+            "globals": {
+                "glaze_method": {
+                    "model": "GlazeMethod",
+                    "fields": {"name": {"type": "string"}},
+                },
+                "glaze_type": {
+                    "model": "GlazeType",
+                    "fields": {"name": {"type": "string"}},
+                },
+                "glaze_combination": {
+                    "model": "GlazeCombination",
+                    "fields": {"name": {"type": "string"}},
+                    "compose_from": {
+                        "glaze_types": {
+                            "global": "glaze_type",
+                            "ordered": True,
+                            "through_fields": {
+                                "glaze_method": {
+                                    "$ref": "@glaze_method.name",
+                                    "required": False,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+        }
+        jsonschema.validate(instance=valid, schema=schema)
+
+    def test_compose_from_ordered_non_boolean_fails(self, schema):
+        """A compose_from entry with ordered set to a non-boolean must be rejected."""
+        bad = {
+            "version": "1.0.0",
+            "globals": {
+                "glaze_combination": {
+                    "model": "GlazeCombination",
+                    "fields": {"name": {"type": "string"}},
+                    "compose_from": {
+                        "glaze_types": {"global": "glaze_type", "ordered": "yes"},
+                    },
+                },
+            },
+            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
+    def test_compose_from_through_fields_bad_type_fails(self, schema):
+        """A through_fields entry with an invalid type must be rejected."""
+        bad = {
+            "version": "1.0.0",
+            "globals": {
+                "glaze_combination": {
+                    "model": "GlazeCombination",
+                    "fields": {"name": {"type": "string"}},
+                    "compose_from": {
+                        "glaze_types": {
+                            "global": "glaze_type",
+                            "through_fields": {
+                                "glaze_method": {"type": "not_a_valid_type"},
+                            },
+                        },
+                    },
+                },
+            },
+            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
 
 # ---------------------------------------------------------------------------
 # Referential integrity (things JSON Schema cannot express)
@@ -552,3 +627,53 @@ class TestComposeFrom:
                         f"Global '@{global_name}' compose_from declares field '{field_name}' "
                         f"which does not exist on model '{global_def['model']}'"
                     )
+
+    def test_through_fields_global_refs_valid(self, globals_section):
+        """Each through_fields global ref must point to a declared global with a declared field."""
+        for global_name, global_def in globals_section.items():
+            for m2m_field, entry in global_def.get("compose_from", {}).items():
+                for tf_name, tf_def in entry.get("through_fields", {}).items():
+                    ref = tf_def.get("$ref", "")
+                    if not ref.startswith("@"):
+                        continue
+                    # Parse "@global_name.field_name"
+                    parts = ref[1:].split(".", 1)
+                    assert len(parts) == 2, (
+                        f"Global '@{global_name}' compose_from '{m2m_field}' through_fields "
+                        f"'{tf_name}' has malformed $ref '{ref}' (expected @global.field)"
+                    )
+                    ref_global, ref_field = parts
+                    assert ref_global in globals_section, (
+                        f"Global '@{global_name}' compose_from '{m2m_field}' through_fields "
+                        f"'{tf_name}' refs undeclared global '@{ref_global}'"
+                    )
+                    assert ref_field in globals_section[ref_global].get("fields", {}), (
+                        f"Global '@{global_name}' compose_from '{m2m_field}' through_fields "
+                        f"'{tf_name}' refs undeclared field '{ref_field}' on '@{ref_global}'"
+                    )
+
+    def test_through_fields_exist_on_through_model(self, globals_section):
+        """Each through_fields key must exist as a field on the M2M through model."""
+        for global_name, global_def in globals_section.items():
+            parent_model = apps.get_model("api", global_def["model"])
+            for m2m_field_name, entry in global_def.get("compose_from", {}).items():
+                through_fields = entry.get("through_fields", {})
+                if not through_fields:
+                    continue
+                try:
+                    m2m_field = parent_model._meta.get_field(m2m_field_name)
+                    through_model = m2m_field.remote_field.through
+                except Exception:
+                    pytest.fail(
+                        f"Global '@{global_name}' compose_from '{m2m_field_name}' "
+                        f"could not resolve through model"
+                    )
+                for tf_name in through_fields:
+                    try:
+                        through_model._meta.get_field(tf_name)
+                    except Exception:
+                        pytest.fail(
+                            f"Global '@{global_name}' compose_from '{m2m_field_name}' "
+                            f"through_fields declares '{tf_name}' which does not exist on "
+                            f"through model '{through_model.__name__}'"
+                        )
