@@ -105,6 +105,12 @@ $defs:
                 enforced by the through model (e.g. via an `order` field and drag-to-reorder
                 in the admin). When true, the UI and admin must preserve insertion order
                 and the combination identity depends on element ordering. Default: false.
+            filter_label:
+              type: string
+              description: |
+                Human-readable label used in pickers that expose this compose_from
+                relationship as a multi-select filter. If omitted, the field name is
+                converted to title case (e.g. "glaze_types" → "Glaze Types").
             through_fields:
               type: object
               description: |
@@ -281,4 +287,12 @@ $defs:
           global type when recording this state (e.g. create a new Location
           inline rather than selecting an existing one).
           Default: false.
+        default: false
+      filterable:
+        type: boolean
+        description: |
+          Whether this FK field should be exposed as a single-select filter in
+          pickers for the global that declares it. The referenced global's entries
+          are fetched as autocomplete options; the selected id is passed as a query
+          param named <field_name>_id. Default: false.
         default: false

@@ -23,7 +23,7 @@ import {
     fetchGlobalEntriesWithFilters,
     toggleGlobalEntryFavorite,
 } from '@common/api'
-import { formatWorkflowFieldLabel, getFilterableFields, getGlobalThumbnailField, isFavoritableGlobal } from '@common/workflow'
+import { formatWorkflowFieldLabel, getFilterableFields, getGlobalPickerFilters, getGlobalThumbnailField, isFavoritableGlobal, type GlobalPickerFilter } from '@common/workflow'
 import CloudinaryImage from './CloudinaryImage'
 
 export interface GlobalEntryPickerProps {
@@ -34,53 +34,9 @@ export interface GlobalEntryPickerProps {
     onSelect: (name: string) => void
 }
 
-// ---------------------------------------------------------------------------
-// Registry: per-global configuration that cannot be derived from workflow.yml
-// metadata alone. Each entry declares extra autocomplete filters (for related
-// global objects) and which fields to render as chips in the result list.
-// Add an entry here when a new global type needs non-boolean filter controls.
-// ---------------------------------------------------------------------------
 interface NamedRef {
     id: string
     name: string
-}
-
-interface RelatedFilter {
-    /** globalName to fetch options from */
-    optionsGlobalName: string
-    /** UI label for the autocomplete */
-    label: string
-    /** Allow selecting multiple values */
-    multiple: boolean
-    /** Query-param key sent to the backend (e.g. 'glaze_type_ids') */
-    paramKey: string
-    /** Key on the entry object whose value(s) to render as chips in results */
-    entryKey: string
-}
-
-interface GlobalPickerConfig {
-    relatedFilters?: RelatedFilter[]
-}
-
-const GLOBAL_PICKER_CONFIG: Record<string, GlobalPickerConfig> = {
-    glaze_combination: {
-        relatedFilters: [
-            {
-                optionsGlobalName: 'glaze_type',
-                label: 'Contains glaze types (all must match)',
-                multiple: true,
-                paramKey: 'glaze_type_ids',
-                entryKey: 'glaze_types',
-            },
-            {
-                optionsGlobalName: 'firing_temperature',
-                label: 'Firing temperature',
-                multiple: false,
-                paramKey: 'firing_temperature_id',
-                entryKey: 'firing_temperature',
-            },
-        ],
-    },
 }
 
 // ---------------------------------------------------------------------------
@@ -98,13 +54,13 @@ interface GenericGlobalEntry {
 interface FilterState {
     boolFilters: Record<string, boolean | null>
     onlyFavorites: boolean
-    /** Keyed by RelatedFilter.paramKey; value is NamedRef[] (multi) or NamedRef|null (single). */
+    /** Keyed by GlobalPickerFilter.paramKey; value is NamedRef[] (multi) or NamedRef|null (single). */
     relatedFilters: Record<string, NamedRef[] | NamedRef | null>
 }
 
 function makeEmptyFilters(
     boolFieldNames: string[],
-    relatedFilters: RelatedFilter[]
+    relatedFilters: GlobalPickerFilter[]
 ): FilterState {
     return {
         boolFilters: Object.fromEntries(boolFieldNames.map((name) => [name, null])),
@@ -118,7 +74,7 @@ function makeEmptyFilters(
 function buildParams(
     f: FilterState,
     boolFieldNames: string[],
-    relatedFilters: RelatedFilter[]
+    relatedFilters: GlobalPickerFilter[]
 ): Record<string, string> {
     const params: Record<string, string> = {}
     for (const name of boolFieldNames) {
@@ -144,8 +100,7 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
     const boolFieldNames = boolFilterableFields.map((f) => f.name)
     const favoritable = isFavoritableGlobal(globalName)
     const thumbnailField = getGlobalThumbnailField(globalName)
-    const pickerConfig = GLOBAL_PICKER_CONFIG[globalName] ?? {}
-    const relatedFilterDefs = pickerConfig.relatedFilters ?? []
+    const relatedFilterDefs = getGlobalPickerFilters(globalName)
 
     const [filters, setFilters] = useState<FilterState>(() =>
         makeEmptyFilters(boolFieldNames, relatedFilterDefs)
@@ -199,7 +154,7 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
         }))
     }
 
-    function handleRelatedFilter(paramKey: string, val: NamedRef[] | NamedRef | null) {
+    function handleGlobalPickerFilter(paramKey: string, val: NamedRef[] | NamedRef | null) {
         setFilters((prev) => ({
             ...prev,
             relatedFilters: { ...prev.relatedFilters, [paramKey]: val },
@@ -248,7 +203,7 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
                                 options={relatedOptions[rf.paramKey] ?? []}
                                 getOptionLabel={(o) => o.name}
                                 value={(filters.relatedFilters[rf.paramKey] as NamedRef[]) ?? []}
-                                onChange={(_e, val) => handleRelatedFilter(rf.paramKey, val)}
+                                onChange={(_e, val) => handleGlobalPickerFilter(rf.paramKey, val)}
                                 renderInput={(params) => (
                                     <TextField {...params} label={rf.label} size="small" />
                                 )}
@@ -260,7 +215,7 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
                                 options={relatedOptions[rf.paramKey] ?? []}
                                 getOptionLabel={(o) => o.name}
                                 value={(filters.relatedFilters[rf.paramKey] as NamedRef | null) ?? null}
-                                onChange={(_e, val) => handleRelatedFilter(rf.paramKey, val)}
+                                onChange={(_e, val) => handleGlobalPickerFilter(rf.paramKey, val)}
                                 renderInput={(params) => (
                                     <TextField {...params} label={rf.label} size="small" />
                                 )}

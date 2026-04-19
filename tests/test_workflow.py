@@ -624,6 +624,22 @@ class TestGlobals:
                     f"but type is '{field_type}' — only image fields may be used as thumbnails"
                 )
 
+    def test_filterable_global_ref_fields_reference_declared_globals(self, globals_section):
+        """A global ref field with filterable: true must point to a declared global."""
+        for alias, global_def in globals_section.items():
+            for field_name, field_def in global_def.get("fields", {}).items():
+                if not isinstance(field_def, dict):
+                    continue
+                ref = field_def.get("$ref", "")
+                # Only validate global refs (@ prefix) that carry filterable: true.
+                if not (ref.startswith("@") and field_def.get("filterable")):
+                    continue
+                ref_global = ref[1:].split(".", 1)[0]
+                assert ref_global in globals_section, (
+                    f"Global '@{alias}' field '{field_name}' has filterable: true "
+                    f"and $ref '@{ref_global}.*' but '@{ref_global}' is not a declared global"
+                )
+
 
 # ---------------------------------------------------------------------------
 # compose_from — ordered M2M composition relationships
