@@ -167,6 +167,7 @@ def _make_simple_global_model(global_name: str) -> type:
     is_public: bool = bool(config.get('public', False))
     is_private: bool = bool(config.get('private', True))
     dsl_fields: dict = config.get('fields', {})
+    plural: str = config.get('plural', _pluralize_snake(global_name))
 
     attrs: dict = {
         '__module__': 'api.models',
@@ -177,7 +178,7 @@ def _make_simple_global_model(global_name: str) -> type:
     user_kwargs: dict = {
         'to': settings.AUTH_USER_MODEL,
         'on_delete': models.CASCADE,
-        'related_name': _pluralize_snake(global_name),
+        'related_name': plural,
     }
     if is_public:
         user_kwargs.update({'null': True, 'blank': True})
@@ -259,6 +260,7 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
     is_public: bool = bool(config.get('public', False))
     is_private: bool = bool(config.get('private', True))
     dsl_fields: dict = config.get('fields', {})
+    plural: str = config.get('plural', _pluralize_snake(global_name))
     layer_model_name = f'{model_name}Layer'
 
     # compose_from has exactly one key (the M2M relationship name, e.g. 'glaze_types').
@@ -326,7 +328,7 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
     user_kwargs: dict = {
         'to': settings.AUTH_USER_MODEL,
         'on_delete': models.CASCADE,
-        'related_name': _pluralize_snake(global_name),
+        'related_name': plural,
     }
     if is_public:
         user_kwargs.update({'null': True, 'blank': True})
@@ -346,7 +348,7 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
                     on_delete=models.SET_NULL,
                     null=True,
                     blank=True,
-                    related_name=_pluralize_snake(global_name),
+                    related_name=plural,
                 )
         else:
             composite_attrs[field_name] = _dsl_field_to_django_field(field_name, field_def)

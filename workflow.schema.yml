@@ -77,6 +77,16 @@ $defs:
           authenticated users can mark individual entries as favorites via
           POST/DELETE /api/globals/<global_name>/<pk>/favorite/.
         default: false
+      plural:
+        type: string
+        description: |
+          Explicit plural form of the global name, used for FK related_name
+          attributes (e.g. "glaze_types" for "glaze_type").
+          When omitted, the plural is derived automatically by _pluralize_snake:
+          names ending in 'y' become 'ies'; all others get an 's' suffix.
+          Override this key when the automatic rule produces the wrong result
+          (e.g. compound words, irregular plurals, or names ending in a silent 'e').
+        pattern: '^[a-z][a-z0-9_]*$'
       compose_from:
         type: object
         description: |

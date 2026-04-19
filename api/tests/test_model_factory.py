@@ -200,6 +200,24 @@ class TestMakeSimpleGlobalModel:
         instance.name = 'My Widget'
         assert str(instance) == 'My Widget'
 
+    def test_related_name_uses_plural_key_when_present(self, monkeypatch):
+        """When the global config carries a 'plural' key the factory must use it
+        for the user FK related_name instead of auto-pluralizing the global name."""
+        import api.workflow as wf
+        import api.models as m
+        monkeypatch.setattr(wf, '_GLOBALS_MAP', {
+            'entity': {
+                'model': 'Entity',
+                'plural': 'entities',
+                'public': False,
+                'private': True,
+                'fields': {'name': {'type': 'string'}},
+            },
+        })
+        Entity = m._make_simple_global_model('entity')
+        user_field = Entity._meta.get_field('user')
+        assert user_field.remote_field.get_accessor_name() == 'entities'
+
     def test_unknown_global_raises(self, make):
         with pytest.raises(ValueError, match='Unknown global'):
             make('nonexistent')

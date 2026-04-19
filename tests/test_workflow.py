@@ -200,6 +200,24 @@ class TestSchemaValidation:
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
 
+    def test_plural_accepted_on_global_def(self, schema):
+        """plural: string must be accepted on a global definition."""
+        valid = {
+            "version": "1.0.0",
+            "globals": {
+                "entity": {
+                    "model": "Entity",
+                    "plural": "entities",
+                    "fields": {"name": {"type": "string"}},
+                }
+            },
+            "states": [
+                {"id": "a", "visible": True, "successors": ["b"]},
+                {"id": "b", "visible": True, "terminal": True},
+            ],
+        }
+        jsonschema.validate(instance=valid, schema=schema)
+
     def test_global_ref_accepted(self, schema):
         """A global ref (@global.field) in additional_fields must pass the schema."""
         valid = {
