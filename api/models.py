@@ -19,6 +19,7 @@ from .workflow import (
     get_global_config,
     get_global_model_and_field,
     get_state_ref_fields,
+    is_public_global,
 )
 
 __all__ = [
@@ -308,6 +309,42 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
     if is_ordered:
         layer_meta_kwargs['ordering'] = ['order']
     layer_attrs['Meta'] = type('Meta', (), layer_meta_kwargs)
+
+    # Public-reference invariant: if the parent composite is public (user=NULL),
+    # its component and all through-field references must also be public.
+    # Computed once at factory time; captured in the save() closure.
+    #
+    # - The component global is always checked: a public composite can only
+    #   reference public components.
+    # - Through fields referencing non-public globals must be NULL on public
+    #   composites (no public instances of those globals exist to reference).
+    _private_through_fks: list[tuple[str, str]] = [
+        (tf_name, ref[1:].split('.')[0])
+        for tf_name, tf_def in through_fields.items()
+        if (ref := tf_def.get('$ref', '')) and ref.startswith('@')
+        and not is_public_global(ref[1:].split('.')[0])
+    ]
+    _cg = component_global  # captured name for closure
+
+    def _layer_save(self, *args, **kwargs):
+        if self.combination.user_id is None:
+            component = getattr(self, _cg)
+            if component.user_id is not None:
+                component_cls_name = type(component).__name__
+                raise ValueError(
+                    f'Public {model_name} can only reference public '
+                    f'{component_cls_name} instances. '
+                    f'{component_cls_name} "{component}" (id={component.pk}) is private.'
+                )
+            for tf_name, tf_global in _private_through_fks:
+                if getattr(self, f'{tf_name}_id') is not None:
+                    raise ValueError(
+                        f'Public {model_name} cannot reference private '
+                        f'{tf_global} instances (id={getattr(self, f"{tf_name}_id")}).'
+                    )
+        super(type(self), self).save(*args, **kwargs)
+
+    layer_attrs['save'] = _layer_save
     layer_model = type(layer_model_name, (models.Model,), layer_attrs)
 
     # --- Composite model ---
@@ -507,31 +544,6 @@ def _glaze_combination_post_fixture_load(cls, obj, created: bool) -> None:
 
 GlazeCombination.post_fixture_load = _glaze_combination_post_fixture_load
 
-# --- GlazeCombinationLayer bespoke additions ---
-
-
-def _glaze_combination_layer_save(self, *args, **kwargs):
-    """Enforce public-library reference invariants before saving a layer.
-
-    If the parent combination is public (user=NULL):
-    - The referenced GlazeType must also be public.
-    - The referenced GlazeMethod (if any) must not be private (no public
-      GlazeMethods exist, so any non-NULL glaze_method_id is private).
-    """
-    if self.combination.user_id is None and self.glaze_type.user_id is not None:
-        raise ValueError(
-            f'Public glaze combinations can only reference public glaze types. '
-            f'GlazeType "{self.glaze_type}" (id={self.glaze_type_id}) is private.'
-        )
-    if self.combination.user_id is None and self.glaze_method_id is not None:
-        raise ValueError(
-            f'Public glaze combinations cannot reference private glaze methods. '
-            f'GlazeMethod id={self.glaze_method_id} is private.'
-        )
-    super(GlazeCombinationLayer, self).save(*args, **kwargs)
-
-
-GlazeCombinationLayer.save = _glaze_combination_layer_save
 GlazeCombinationLayer.__str__ = lambda self: f'{self.glaze_type} (drag to reorder)'
 
 

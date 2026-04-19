@@ -90,7 +90,7 @@ class TestLayerPublicConstraint:
         priv_gt = _priv_gt(user, 'Private Glaze')
         combo = GlazeCombination.objects.create(user=None, name='placeholder')
         layer = GlazeCombinationLayer(combination=combo, glaze_type=priv_gt, order=0)
-        with pytest.raises(ValueError, match='Public glaze combinations can only reference public glaze types'):
+        with pytest.raises(ValueError, match='Public GlazeCombination can only reference public GlazeType instances'):
             layer.save()
 
     def test_private_combo_can_reference_private_layer(self, user):

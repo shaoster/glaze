@@ -331,6 +331,11 @@ class TestMakeComposeGlobalModels:
         names = {c.name for c in CompositeModel._meta.constraints}
         assert names == {'uniq_composite_name_public', 'uniq_composite_name_per_user'}
 
+    def test_layer_save_is_present(self, make):
+        """The factory must attach a save() method to the layer model."""
+        _, LayerModel = make('composite')
+        assert 'save' in LayerModel.__dict__
+
     def test_get_or_create_with_layers_accepts_compose_key_kwarg(self, make):
         """get_or_create_with_layers must accept the compose_key name as a keyword."""
         CompositeModel, _ = make('composite')
