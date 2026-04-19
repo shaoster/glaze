@@ -393,19 +393,33 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
     composite_attrs['compute_name'] = compute_name
 
     # get_or_create_with_layers — finds or creates a composite from a list of component instances.
+    # The second positional/keyword parameter is named after the compose_key so callers can
+    # use the domain-specific keyword name (e.g. glaze_types=[...] for glaze_combination).
     _component_model_name = component_model_name
     _layer_model_ref: list = []  # filled after layer_model is created (avoids closure mutation)
+    _compose_key = compose_key  # capture for closure
 
-    @classmethod  # type: ignore[misc]
-    def get_or_create_with_layers(cls, user, components: list) -> tuple:
-        name = cls.compute_name([str(c) for c in components])
-        composite, created = cls.objects.get_or_create(user=user, name=name)
-        if created:
-            lm = _layer_model_ref[0]
-            for order, component in enumerate(components):
-                lm.objects.create(combination=composite, **{component_global: component}, order=order)
-        return composite, created
+    def _make_get_or_create(ck, cg, lmr):
+        @classmethod  # type: ignore[misc]
+        def get_or_create_with_layers(cls, user, **kwargs) -> tuple:
+            components = kwargs[ck] if ck in kwargs else kwargs.get('components')
+            if components is None:
+                raise TypeError(
+                    f'get_or_create_with_layers() requires keyword argument '
+                    f'{ck!r} (or generic alias "components")'
+                )
+            if not components:
+                raise ValueError(f'A {cls.__name__} must have at least one layer.')
+            name = cls.compute_name([str(c) for c in components])
+            composite, created = cls.objects.get_or_create(user=user, name=name)
+            if created:
+                lm = lmr[0]
+                for order, component in enumerate(components):
+                    lm.objects.create(combination=composite, **{cg: component}, order=order)
+            return composite, created
+        return get_or_create_with_layers
 
+    get_or_create_with_layers = _make_get_or_create(_compose_key, component_global, _layer_model_ref)
     composite_attrs['get_or_create_with_layers'] = get_or_create_with_layers
 
     # get_or_create_from_ordered_pks — resolves PKs to component instances, then delegates.
@@ -421,7 +435,7 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
                 raise ValueError(f'Unknown {_component_model_name} pk: {pk!r}') from exc
         if not components:
             raise ValueError(f'A {model_name} must have at least one layer.')
-        return cls.get_or_create_with_layers(user, components)
+        return cls.get_or_create_with_layers(user=user, components=components)
 
     composite_attrs['get_or_create_from_ordered_pks'] = get_or_create_from_ordered_pks
 
@@ -454,194 +468,72 @@ GlazeMethod = _make_simple_global_model('glaze_method')
 FiringTemperature = _make_simple_global_model('firing_temperature')
 
 
-class GlazeCombination(GlobalModel):
-    """An ordered combination of one or more glaze layers with shared application properties.
+# ---------------------------------------------------------------------------
+# Compose-from globals — generated from workflow.yml
+# ---------------------------------------------------------------------------
 
-    Public combinations (user=NULL) are managed via Django admin and visible to
-    all users. Private combinations (user IS NOT NULL) are user-owned.
+#: Ordered combination of glaze layers — generated base from workflow.yml.
+GlazeCombination, GlazeCombinationLayer = _make_compose_global_models('glaze_combination')
 
-    ``name`` is a stored computed field built by joining ordered layer glaze type
-    names with ``COMPOSITE_NAME_SEPARATOR``. It is stored in the DB so
-    generic list views can sort/filter by name without loading related objects.
-    The name must be set (via ``compute_name_from_layers`` or a factory method)
-    before calling save(); it is not recomputed in save() because M2M layers may
-    not yet exist when the row is first inserted.
+# --- GlazeCombination bespoke additions ---
 
-    Uniqueness is enforced on ``name`` (which encodes the full ordered layer
-    sequence) rather than on individual FK columns.
+# Declares which fields are exposed as query-param filters in the global_entries view.
+# Boolean fields are derived from workflow.yml (filterable: true entries).
+# Relational filters (m2m_id, fk_id) use ORM lookups not expressible in workflow.yml
+# and are declared explicitly here.
+GlazeCombination.filterable_fields = {
+    # Derived from workflow.yml — boolean property filters.
+    **{k: {'type': 'boolean'} for k in get_filterable_fields('glaze_combination')},
+    # Relational filters that require custom ORM lookups and param names.
+    'layers__glaze_type_id': {'type': 'm2m_id', 'param': 'glaze_type_ids'},
+    'firing_temperature_id': {'type': 'fk_id', 'param': 'firing_temperature_id'},
+}
+
+
+@classmethod  # type: ignore[misc]
+def _glaze_combination_post_fixture_load(cls, obj, created: bool) -> None:
+    """Reconstruct ordered M2M layers from the stored name after fixture load.
+
+    Called by load_public_library for any model that declares this hook.
+    Only runs on newly created records; existing records already have layers.
+    Expects all referenced GlazeType names (public, user=None) to exist.
     """
-
-    # The name field intentionally contains COMPOSITE_NAME_SEPARATOR — opt out
-    # of the GlobalModel separator guard.
-    _computed_name = True
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='glaze_combinations',
-    )
-    # Stored computed field: set from ordered GlazeCombinationLayer rows.
-    name = models.CharField(max_length=2047, blank=True, default='')
-    glaze_types = models.ManyToManyField(
-        GlazeType,
-        through='GlazeCombinationLayer',
-        related_name='combinations',
-    )
-    firing_temperature = models.ForeignKey(
-        FiringTemperature,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='combinations',
-    )
-    test_tile_image = models.CharField(max_length=1024, blank=True, default='')
-    is_food_safe = models.BooleanField(null=True, blank=True)
-    runs = models.BooleanField(null=True, blank=True)
-    highlights_grooves = models.BooleanField(null=True, blank=True)
-    is_different_on_white_and_brown_clay = models.BooleanField(null=True, blank=True)
-    apply_thin = models.BooleanField(null=True, blank=True)
-
-    class Meta:
-        constraints = [
-            # Global uniqueness for public combinations (user IS NULL).
-            models.UniqueConstraint(
-                fields=['name'],
-                condition=Q(user__isnull=True),
-                name='uniq_glaze_combination_name_public',
-            ),
-            # Per-user uniqueness for private combinations.
-            models.UniqueConstraint(
-                fields=['user', 'name'],
-                condition=Q(user__isnull=False),
-                name='uniq_glaze_combination_name_per_user',
-            ),
-        ]
-
-    @staticmethod
-    def compute_name(glaze_type_names: list[str]) -> str:
-        """Build a combination name from an ordered list of glaze type name strings."""
-        return COMPOSITE_NAME_SEPARATOR.join(glaze_type_names)
-
-    @classmethod
-    def get_or_create_with_layers(
-        cls,
-        user,
-        glaze_types: list['GlazeType'],
-    ) -> tuple['GlazeCombination', bool]:
-        """Find or create a combination with the given ordered GlazeType list.
-
-        Returns (instance, created). Creates a private combination owned by
-        ``user``. Raises ValueError if any layer violates the public reference
-        constraint (public combinations may only reference public GlazeTypes).
-        """
-        if not glaze_types:
-            raise ValueError('A glaze combination must have at least one layer.')
-        name = cls.compute_name([str(gt) for gt in glaze_types])
-        combo, created = cls.objects.get_or_create(user=user, name=name)
-        if created:
-            for order, gt in enumerate(glaze_types):
-                GlazeCombinationLayer.objects.create(combination=combo, glaze_type=gt, order=order)
-        return combo, created
-
-    @classmethod
-    def get_or_create_from_ordered_pks(
-        cls,
-        user,
-        pks: list,
-    ) -> tuple['GlazeCombination', bool]:
-        """Find or create a combination from an ordered list of GlazeType PKs.
-
-        Raises ValueError for unknown PKs or an empty list. Used by the generic
-        global_entries view for models with ordered M2M relations.
-        """
-        glaze_types = []
-        for pk in pks:
-            try:
-                glaze_types.append(GlazeType.objects.get(pk=pk))
-            except (GlazeType.DoesNotExist, ValueError):
-                raise ValueError(f'GlazeType with id {pk!r} not found.')
-        return cls.get_or_create_with_layers(user=user, glaze_types=glaze_types)
-
-    @classmethod
-    def post_fixture_load(cls, obj: 'GlazeCombination', created: bool) -> None:
-        """Reconstruct ordered M2M layers from the stored name after fixture load.
-
-        Called by load_public_library for any model that declares this hook.
-        Only runs on newly created records; existing records already have layers.
-        Expects all referenced GlazeType names (public, user=None) to exist.
-        """
-        if not created:
-            return
-        layer_names = obj.name.split(COMPOSITE_NAME_SEPARATOR)
-        for order, gt_name in enumerate(layer_names):
-            gt = GlazeType.objects.get(user=None, name=gt_name)
-            GlazeCombinationLayer.objects.create(combination=obj, glaze_type=gt, order=order)
-
-    # Declares which fields are exposed as query-param filters in the global_entries view.
-    # Boolean fields are derived from workflow.yml (filterable: true entries).
-    # Relational filters (m2m_id, fk_id) use ORM lookups not expressible in workflow.yml
-    # and are declared explicitly here.
-    filterable_fields: dict[str, dict] = {
-        # Derived from workflow.yml — boolean property filters.
-        **{k: {'type': 'boolean'} for k in get_filterable_fields('glaze_combination')},
-        # Relational filters that require custom ORM lookups and param names.
-        'layers__glaze_type_id': {'type': 'm2m_id', 'param': 'glaze_type_ids'},
-        'firing_temperature_id': {'type': 'fk_id', 'param': 'firing_temperature_id'},
-    }
-
-    def __str__(self) -> str:
-        return self.name
+    if not created:
+        return
+    layer_names = obj.name.split(COMPOSITE_NAME_SEPARATOR)
+    for order, gt_name in enumerate(layer_names):
+        gt = GlazeType.objects.get(user=None, name=gt_name)
+        GlazeCombinationLayer.objects.create(combination=obj, glaze_type=gt, order=order)
 
 
-class GlazeCombinationLayer(models.Model):
-    """Through table for the ordered glaze layers of a GlazeCombination.
+GlazeCombination.post_fixture_load = _glaze_combination_post_fixture_load
 
-    Invariant: if the parent combination is public (user=NULL), the referenced
-    GlazeType must also be public (user=NULL). Enforced in save() so it applies
-    to both ORM and admin usage.
+# --- GlazeCombinationLayer bespoke additions ---
+
+
+def _glaze_combination_layer_save(self, *args, **kwargs):
+    """Enforce public-library reference invariants before saving a layer.
+
+    If the parent combination is public (user=NULL):
+    - The referenced GlazeType must also be public.
+    - The referenced GlazeMethod (if any) must not be private (no public
+      GlazeMethods exist, so any non-NULL glaze_method_id is private).
     """
+    if self.combination.user_id is None and self.glaze_type.user_id is not None:
+        raise ValueError(
+            f'Public glaze combinations can only reference public glaze types. '
+            f'GlazeType "{self.glaze_type}" (id={self.glaze_type_id}) is private.'
+        )
+    if self.combination.user_id is None and self.glaze_method_id is not None:
+        raise ValueError(
+            f'Public glaze combinations cannot reference private glaze methods. '
+            f'GlazeMethod id={self.glaze_method_id} is private.'
+        )
+    super(GlazeCombinationLayer, self).save(*args, **kwargs)
 
-    combination = models.ForeignKey(
-        GlazeCombination,
-        on_delete=models.CASCADE,
-        related_name='layers',
-    )
-    glaze_type = models.ForeignKey(
-        GlazeType,
-        on_delete=models.PROTECT,
-        related_name='combination_layers',
-    )
-    glaze_method = models.ForeignKey(
-        GlazeMethod,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='combination_layers',
-    )
-    order = models.PositiveSmallIntegerField()
 
-    class Meta:
-        ordering = ['order']
-
-    def save(self, *args, **kwargs):
-        # Public combinations may only reference public (user=NULL) GlazeTypes.
-        if self.combination.user_id is None and self.glaze_type.user_id is not None:
-            raise ValueError(
-                f'Public glaze combinations can only reference public glaze types. '
-                f'GlazeType "{self.glaze_type}" (id={self.glaze_type_id}) is private.'
-            )
-        # Public combinations cannot reference private GlazeMethods (no public GlazeMethods exist).
-        if self.combination.user_id is None and self.glaze_method_id is not None:
-            raise ValueError(
-                f'Public glaze combinations cannot reference private glaze methods. '
-                f'GlazeMethod id={self.glaze_method_id} is private.'
-            )
-        super().save(*args, **kwargs)
-
-    def __str__(self) -> str:
-        return f'{self.glaze_type} (drag to reorder)'
+GlazeCombinationLayer.save = _glaze_combination_layer_save
+GlazeCombinationLayer.__str__ = lambda self: f'{self.glaze_type} (drag to reorder)'
 
 
 class FavoriteModel(models.Model):

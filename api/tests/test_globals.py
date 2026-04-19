@@ -82,7 +82,7 @@ def _make_global_instance(model_cls, user, other_user):
     if model_cls is GlazeCombination:
         # GlazeCombination is created via get_or_create_with_layers.
         gt = GlazeType.objects.create(user=None, name='_IU_TestGlaze1')
-        combo, _ = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt])
+        combo, _ = GlazeCombination.get_or_create_with_layers(user=None, components=[gt])
         return combo
     elif hasattr(model_cls, 'user') and model_cls._meta.get_field('user').null:
         # Public global (user nullable): create with user=None.

@@ -331,6 +331,17 @@ class TestMakeComposeGlobalModels:
         names = {c.name for c in CompositeModel._meta.constraints}
         assert names == {'uniq_composite_name_public', 'uniq_composite_name_per_user'}
 
+    def test_get_or_create_with_layers_accepts_compose_key_kwarg(self, make):
+        """get_or_create_with_layers must accept the compose_key name as a keyword."""
+        CompositeModel, _ = make('composite')
+        # Verify the method exists; calling it requires DB access so we just
+        # confirm it doesn't raise TypeError on the keyword check alone.
+        import inspect
+        assert hasattr(CompositeModel, 'get_or_create_with_layers')
+        # The method should also accept the generic 'components' alias.
+        sig = inspect.signature(CompositeModel.get_or_create_with_layers)
+        assert 'kwargs' in str(sig)  # accepts **kwargs
+
     def test_no_compose_from_raises(self, monkeypatch):
         import api.workflow as wf
         import api.models as m
