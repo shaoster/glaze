@@ -642,12 +642,79 @@ class GlazeCombinationLayer(models.Model):
         return f'{self.glaze_type} (drag to reorder)'
 
 
-class FavoriteGlazeCombination(models.Model):
-    """Records a user's favorited glaze combinations."""
+class FavoriteModel(models.Model):
+    """Abstract base class for per-user favorites junction tables.
 
-    # Name of the FK field pointing to the favorited global object. Used by
-    # get_favorite_ids_for() so the generic view code does not need to know
-    # the concrete FK name on each Favorite* subclass.
+    Subclasses add one FK field pointing to the favorited global object and
+    declare ``global_fk_field`` as a class variable naming that FK.  All other
+    favorites logic — the user FK, the uniqueness constraint naming convention,
+    and ``get_favorite_ids_for`` — is generic and lives here.
+
+    To add favorites support for a new global type, subclass FavoriteModel,
+    add a FK to the target model, set ``global_fk_field``, declare a
+    UniqueConstraint, and register the subclass in ``_FAVORITE_MODEL_REGISTRY``
+    in views.py.  With a ``_make_favorite_model`` factory (see below), this
+    reduces to a single ``makemigrations`` run once the global carries
+    ``favoritable: true`` in workflow.yml.
+    """
+
+    # Name of the FK field pointing to the favorited global object.  Subclasses
+    # must override this.  Used by get_favorite_ids_for() and by views that
+    # must add/remove favorites without knowing the concrete FK name.
+    global_fk_field: ClassVar[str]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='+',  # no reverse accessor needed; subclasses may override
+    )
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def get_favorite_ids_for(cls, user) -> set:
+        """Return the set of favorited global-object PKs for the given user."""
+        return set(cls.objects.filter(user=user).values_list(f'{cls.global_fk_field}_id', flat=True))
+
+
+class FavoriteGlazeCombination(FavoriteModel):
+    """Records a user's favorited glaze combinations.
+
+    GlazeCombination-specific aspects:
+    - The ``glaze_combination`` FK and its ``related_name='favorited_by'`` accessor.
+    - The constraint name ``uniq_favorite_glaze_combination_per_user``.
+    - The ``user`` related_name ``favorite_glaze_combinations`` (for reverse lookups).
+
+    Everything else — user FK, get_favorite_ids_for(), global_fk_field — is
+    inherited from FavoriteModel.
+
+    Design note — factory path
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Adding a ``_make_favorite_model(global_name)`` factory to models.py would
+    generate a FavoriteModel subclass from a ``favoritable: true`` declaration
+    in workflow.yml.  The factory would:
+
+      1. Read ``_GLOBALS_MAP[global_name]['model']`` → target model class name.
+      2. Create a ForeignKey(f'api.{model_name}', on_delete=CASCADE,
+         related_name='favorited_by') on the subclass.
+      3. Set ``global_fk_field = global_name``.
+      4. Set ``user.related_name = f'favorite_{pluralize(global_name)}'``
+         (or leave it as '+' for an access-via-manager-only pattern).
+      5. Add UniqueConstraint(fields=['user', global_name],
+         name=f'uniq_favorite_{global_name}_per_user').
+
+    The only thing ``favoritable: true`` cannot express today is whether the
+    FK should use on_delete=CASCADE (safe default) or SET_NULL.  That could be
+    added as an optional ``on_delete`` DSL key if needed.
+
+    The factory-generated subclass would also need to be registered in
+    ``_FAVORITE_MODEL_REGISTRY`` in views.py so the generic favorite endpoint
+    can discover it.  That registry could itself be derived at startup from
+    all FavoriteModel subclasses, or driven by a ``get_favorite_model(global_name)``
+    helper in workflow.py.
+    """
+
     global_fk_field = 'glaze_combination'
 
     user = models.ForeignKey(
@@ -668,11 +735,6 @@ class FavoriteGlazeCombination(models.Model):
                 name='uniq_favorite_glaze_combination_per_user',
             )
         ]
-
-    @classmethod
-    def get_favorite_ids_for(cls, user) -> set:
-        """Return the set of favorited global-object PKs for the given user."""
-        return set(cls.objects.filter(user=user).values_list(f'{cls.global_fk_field}_id', flat=True))
 
 
 class Piece(models.Model):
