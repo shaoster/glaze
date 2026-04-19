@@ -14,7 +14,7 @@ Covers:
 import pytest
 
 from api.models import (
-    GLAZE_COMBINATION_NAME_SEPARATOR,
+    COMPOSITE_NAME_SEPARATOR,
     GlazeCombination,
     GlazeCombinationLayer,
     GlazeType,
@@ -45,7 +45,7 @@ def _pub_combo(*glaze_types) -> GlazeCombination:
 @pytest.mark.django_db
 class TestGlazeTypeNameValidation:
     def test_name_with_separator_raises(self):
-        gt = GlazeType(user=None, name=f'Bad{GLAZE_COMBINATION_NAME_SEPARATOR}Name')
+        gt = GlazeType(user=None, name=f'Bad{COMPOSITE_NAME_SEPARATOR}Name')
         with pytest.raises(ValueError, match='cannot contain'):
             gt.save()
 
@@ -64,11 +64,11 @@ class TestComputeName:
         assert GlazeCombination.compute_name(['Celadon']) == 'Celadon'
 
     def test_two_layers(self):
-        sep = GLAZE_COMBINATION_NAME_SEPARATOR
+        sep = COMPOSITE_NAME_SEPARATOR
         assert GlazeCombination.compute_name(['Celadon', 'Iron Red']) == f'Celadon{sep}Iron Red'
 
     def test_three_layers(self):
-        sep = GLAZE_COMBINATION_NAME_SEPARATOR
+        sep = COMPOSITE_NAME_SEPARATOR
         result = GlazeCombination.compute_name(['A', 'B', 'C'])
         assert result == f'A{sep}B{sep}C'
 
@@ -121,7 +121,7 @@ class TestGetOrCreateWithLayers:
         assert combo.name == 'Celadon'
 
     def test_two_layer_name(self):
-        sep = GLAZE_COMBINATION_NAME_SEPARATOR
+        sep = COMPOSITE_NAME_SEPARATOR
         gt1 = _pub_gt('Celadon')
         gt2 = _pub_gt('Iron Red')
         combo, created = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt1, gt2])
@@ -129,7 +129,7 @@ class TestGetOrCreateWithLayers:
         assert combo.name == f'Celadon{sep}Iron Red'
 
     def test_three_layer_name(self):
-        sep = GLAZE_COMBINATION_NAME_SEPARATOR
+        sep = COMPOSITE_NAME_SEPARATOR
         gt1 = _pub_gt('A')
         gt2 = _pub_gt('B')
         gt3 = _pub_gt('C')
@@ -137,7 +137,7 @@ class TestGetOrCreateWithLayers:
         assert combo.name == f'A{sep}B{sep}C'
 
     def test_same_glaze_twice(self):
-        sep = GLAZE_COMBINATION_NAME_SEPARATOR
+        sep = COMPOSITE_NAME_SEPARATOR
         gt = _pub_gt('Shino')
         combo, created = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt, gt])
         assert created
@@ -291,7 +291,7 @@ class TestGlazeCombinationApiPost:
         assert data['is_public'] is False
 
     def test_creates_two_layer_combination(self, client):
-        sep = GLAZE_COMBINATION_NAME_SEPARATOR
+        sep = COMPOSITE_NAME_SEPARATOR
         gt1 = _pub_gt('Celadon')
         gt2 = _pub_gt('Iron Red')
         response = client.post(
@@ -348,7 +348,7 @@ class TestGlazeCombinationApiPost:
         assert response.status_code == 400
 
     def test_same_glaze_twice_creates_double_layer(self, client):
-        sep = GLAZE_COMBINATION_NAME_SEPARATOR
+        sep = COMPOSITE_NAME_SEPARATOR
         gt = _pub_gt('Shino')
         response = client.post(
             '/api/globals/glaze_combination/',

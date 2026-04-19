@@ -20,9 +20,9 @@ from .workflow import (
 )
 
 __all__ = [
+    'COMPOSITE_NAME_SEPARATOR',
     'ENTRY_STATE',
     'FavoriteGlazeCombination',
-    'GLAZE_COMBINATION_NAME_SEPARATOR',
     'GlazeCombinationLayer',
     'GlobalModel',
     'SUCCESSORS',
@@ -33,9 +33,10 @@ __all__ = [
     'get_state_ref_fields',
 ]
 
-# Separator used in GlazeCombination.name to join the two glaze type names.
-# Must not appear in GlazeType.name (enforced by GlazeType.save()).
-GLAZE_COMBINATION_NAME_SEPARATOR = '!'
+# Separator used in compose_from globals to join ordered component names into a
+# stored computed name (e.g. GlazeCombination.name = "LayerA!LayerB").
+# Must not appear in the names of simple globals (enforced in GlobalModel.save()).
+COMPOSITE_NAME_SEPARATOR = '!'
 
 
 class GlobalModel(models.Model):
@@ -55,6 +56,12 @@ class GlobalModel(models.Model):
     """
 
     _registry: ClassVar[list[type['GlobalModel']]] = []
+
+    # Set to True on compose_from globals whose ``name`` is a separator-joined
+    # string of component names (e.g. GlazeCombination).  When False, save()
+    # rejects any name that contains COMPOSITE_NAME_SEPARATOR so that component
+    # names remain safe to embed in a composite name.
+    _computed_name: ClassVar[bool] = False
 
     class Meta:
         abstract = True
@@ -80,6 +87,12 @@ class GlobalModel(models.Model):
                     f'Cannot change the user field on {type(self).__name__} '
                     f'(pk={self.pk}) after creation.'
                 )
+        if not self._computed_name and self.name and COMPOSITE_NAME_SEPARATOR in self.name:
+            raise ValueError(
+                f'{type(self).__name__} names cannot contain '
+                f'"{COMPOSITE_NAME_SEPARATOR}" '
+                f'(it is reserved as the composite name separator).'
+            )
         super().save(*args, **kwargs)
 
 
@@ -222,7 +235,7 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
 
     - **CompositeModel** — a GlobalModel subclass with an ordered M2M field,
       a stored computed ``name`` (component names joined by
-      ``GLAZE_COMBINATION_NAME_SEPARATOR``), inline DSL fields, FK fields for
+      ``COMPOSITE_NAME_SEPARATOR``), inline DSL fields, FK fields for
       global $ref entries, standard public/private UniqueConstraints, and
       ``compute_name()`` / ``get_or_create_with_layers()`` helpers.
     - **LayerModel** — the through table with FKs to the composite and the
@@ -295,6 +308,8 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
     # --- Composite model ---
     composite_attrs: dict = {
         '__module__': 'api.models',
+        # The name field intentionally contains COMPOSITE_NAME_SEPARATOR.
+        '_computed_name': True,
         # Stored computed name — set via compute_name() before save().
         'name': models.CharField(max_length=2047, blank=True, default=''),
         # Ordered M2M to the component type via the through table.
@@ -370,7 +385,7 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
     # compute_name — joins component display names with the standard separator.
     @staticmethod  # type: ignore[misc]
     def compute_name(component_names: list[str]) -> str:
-        return GLAZE_COMBINATION_NAME_SEPARATOR.join(component_names)
+        return COMPOSITE_NAME_SEPARATOR.join(component_names)
 
     composite_attrs['compute_name'] = compute_name
 
@@ -424,52 +439,8 @@ Location = _make_simple_global_model('location')
 ClayBody = _make_simple_global_model('clay_body')
 
 
-class GlazeType(GlobalModel):
-    # Public glaze types (public library managed by admins) have user=None.
-    # Private glaze types are owned by a specific user.
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='glaze_types',
-    )
-    name = models.CharField(max_length=255)
-    short_description = models.CharField(max_length=1024, blank=True, default='')
-    test_tile_image = models.CharField(max_length=1024, blank=True, default='')
-    is_food_safe = models.BooleanField(null=True, blank=True)
-    runs = models.BooleanField(null=True, blank=True)
-    highlights_grooves = models.BooleanField(null=True, blank=True)
-    is_different_on_white_and_brown_clay = models.BooleanField(null=True, blank=True)
-    apply_thin = models.BooleanField(null=True, blank=True)
-
-    class Meta:
-        constraints = [
-            # Per-user uniqueness for private objects.
-            models.UniqueConstraint(
-                fields=['user', 'name'],
-                condition=Q(user__isnull=False),
-                name='uniq_glaze_type_name_per_user',
-            ),
-            # Global uniqueness for public objects (user IS NULL).
-            models.UniqueConstraint(
-                fields=['name'],
-                condition=Q(user__isnull=True),
-                name='uniq_glaze_type_name_public',
-            ),
-        ]
-
-    def save(self, *args, **kwargs):
-        if self.name and GLAZE_COMBINATION_NAME_SEPARATOR in self.name:
-            raise ValueError(
-                f'Glaze type names cannot contain '
-                f'"{GLAZE_COMBINATION_NAME_SEPARATOR}" '
-                f'(it is reserved as the glaze combination name separator).'
-            )
-        super().save(*args, **kwargs)
-
-    def __str__(self) -> str:
-        return self.name
+#: Public + private glaze type. Fields: name, short_description, test_tile_image, five boolean filters.
+GlazeType = _make_simple_global_model('glaze_type')
 
 
 #: Private-only glaze application method. Fields: name, short_description.
@@ -521,7 +492,7 @@ class GlazeCombination(GlobalModel):
     all users. Private combinations (user IS NOT NULL) are user-owned.
 
     ``name`` is a stored computed field built by joining ordered layer glaze type
-    names with ``GLAZE_COMBINATION_NAME_SEPARATOR``. It is stored in the DB so
+    names with ``COMPOSITE_NAME_SEPARATOR``. It is stored in the DB so
     generic list views can sort/filter by name without loading related objects.
     The name must be set (via ``compute_name_from_layers`` or a factory method)
     before calling save(); it is not recomputed in save() because M2M layers may
@@ -530,6 +501,10 @@ class GlazeCombination(GlobalModel):
     Uniqueness is enforced on ``name`` (which encodes the full ordered layer
     sequence) rather than on individual FK columns.
     """
+
+    # The name field intentionally contains COMPOSITE_NAME_SEPARATOR — opt out
+    # of the GlobalModel separator guard.
+    _computed_name = True
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -578,7 +553,7 @@ class GlazeCombination(GlobalModel):
     @staticmethod
     def compute_name(glaze_type_names: list[str]) -> str:
         """Build a combination name from an ordered list of glaze type name strings."""
-        return GLAZE_COMBINATION_NAME_SEPARATOR.join(glaze_type_names)
+        return COMPOSITE_NAME_SEPARATOR.join(glaze_type_names)
 
     @classmethod
     def get_or_create_with_layers(
@@ -630,7 +605,7 @@ class GlazeCombination(GlobalModel):
         """
         if not created:
             return
-        layer_names = obj.name.split(GLAZE_COMBINATION_NAME_SEPARATOR)
+        layer_names = obj.name.split(COMPOSITE_NAME_SEPARATOR)
         for order, gt_name in enumerate(layer_names):
             gt = GlazeType.objects.get(user=None, name=gt_name)
             GlazeCombinationLayer.objects.create(combination=obj, glaze_type=gt, order=order)

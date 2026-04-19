@@ -299,7 +299,7 @@ class TestMakeComposeGlobalModels:
         assert list(LayerModel._meta.ordering) == ['order']
 
     def test_composite_compute_name_joins_with_separator(self, make):
-        from api.models import GLAZE_COMBINATION_NAME_SEPARATOR as SEP
+        from api.models import COMPOSITE_NAME_SEPARATOR as SEP
         CompositeModel, _ = make('composite')
         assert CompositeModel.compute_name(['A', 'B', 'C']) == f'A{SEP}B{SEP}C'
 
