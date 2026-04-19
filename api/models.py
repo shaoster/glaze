@@ -286,7 +286,7 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
             f'api.{component_model_name}',
             on_delete=models.PROTECT,
         ),
-        '__str__': lambda self: str(self.pk),
+        '__str__': (lambda cg: lambda self: str(getattr(self, cg)))(component_global),
     }
     if is_ordered:
         layer_attrs['order'] = models.PositiveSmallIntegerField()
@@ -491,6 +491,26 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
         **get_filterable_compose_fields(global_name),
     }
 
+    # post_fixture_load — reconstructs ordered M2M layers from the stored computed
+    # name after a public-library fixture is loaded.  Called by load_public_library
+    # for any model that declares this hook; only runs on newly created records.
+    #
+    # Splits obj.name on COMPOSITE_NAME_SEPARATOR to recover component names, then
+    # looks up each public (user=None) component instance by name and creates a
+    # layer row.  Generic for any ordered compose_from global whose components have
+    # a unique public name.
+    def post_fixture_load(obj, created: bool) -> None:
+        if not created:
+            return
+        from django.apps import apps as _apps
+        component_model = _apps.get_model('api', _component_model_name)
+        lm = _layer_model_ref[0]
+        for order, component_name in enumerate(obj.name.split(COMPOSITE_NAME_SEPARATOR)):
+            component = component_model.objects.get(user=None, name=component_name)
+            lm.objects.create(combination=obj, **{component_global: component}, order=order)
+
+    composite_model.post_fixture_load = post_fixture_load
+
     return composite_model, layer_model
 
 
@@ -524,27 +544,6 @@ FiringTemperature = _make_simple_global_model('firing_temperature')
 #: Ordered combination of glaze layers — generated base from workflow.yml.
 GlazeCombination, GlazeCombinationLayer = _make_compose_global_models('glaze_combination')
 
-# --- GlazeCombination bespoke additions ---
-
-@classmethod  # type: ignore[misc]
-def _glaze_combination_post_fixture_load(cls, obj, created: bool) -> None:
-    """Reconstruct ordered M2M layers from the stored name after fixture load.
-
-    Called by load_public_library for any model that declares this hook.
-    Only runs on newly created records; existing records already have layers.
-    Expects all referenced GlazeType names (public, user=None) to exist.
-    """
-    if not created:
-        return
-    layer_names = obj.name.split(COMPOSITE_NAME_SEPARATOR)
-    for order, gt_name in enumerate(layer_names):
-        gt = GlazeType.objects.get(user=None, name=gt_name)
-        GlazeCombinationLayer.objects.create(combination=obj, glaze_type=gt, order=order)
-
-
-GlazeCombination.post_fixture_load = _glaze_combination_post_fixture_load
-
-GlazeCombinationLayer.__str__ = lambda self: f'{self.glaze_type} (drag to reorder)'
 
 
 class FavoriteModel(models.Model):
