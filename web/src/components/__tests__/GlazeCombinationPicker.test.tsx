@@ -8,7 +8,7 @@ import type { GlazeCombinationEntry } from '@common/api'
 vi.mock('@common/api', () => ({
     fetchGlazeCombinations: vi.fn(),
     fetchGlobalEntries: vi.fn(),
-    toggleFavoriteGlazeCombination: vi.fn(),
+    toggleGlobalEntryFavorite: vi.fn(),
 }))
 
 vi.mock('../CloudinaryImage', () => ({
@@ -55,7 +55,7 @@ beforeEach(() => {
         }
         return Promise.resolve([])
     })
-    vi.mocked(api.toggleFavoriteGlazeCombination).mockResolvedValue(undefined)
+    vi.mocked(api.toggleGlobalEntryFavorite).mockResolvedValue(undefined)
 })
 
 describe('GlazeCombinationPicker', () => {
@@ -126,22 +126,22 @@ describe('GlazeCombinationPicker', () => {
             await waitFor(() => expect(screen.getByLabelText('Remove from favorites')).toBeInTheDocument())
         })
 
-        it('calls toggleFavoriteGlazeCombination with correct args when favoriting', async () => {
+        it('calls toggleGlobalEntryFavorite with correct args when favoriting', async () => {
             render(<GlazeCombinationPicker {...defaultProps} />)
             await waitFor(() => expect(screen.getByLabelText('Add to favorites')).toBeInTheDocument())
             await userEvent.click(screen.getByLabelText('Add to favorites'))
             await waitFor(() =>
-                expect(api.toggleFavoriteGlazeCombination).toHaveBeenCalledWith('1', true)
+                expect(api.toggleGlobalEntryFavorite).toHaveBeenCalledWith('glaze_combination', '1', true)
             )
         })
 
-        it('calls toggleFavoriteGlazeCombination with false when unfavoriting', async () => {
+        it('calls toggleGlobalEntryFavorite with false when unfavoriting', async () => {
             vi.mocked(api.fetchGlazeCombinations).mockResolvedValue([makeCombo({ is_favorite: true })])
             render(<GlazeCombinationPicker {...defaultProps} />)
             await waitFor(() => expect(screen.getByLabelText('Remove from favorites')).toBeInTheDocument())
             await userEvent.click(screen.getByLabelText('Remove from favorites'))
             await waitFor(() =>
-                expect(api.toggleFavoriteGlazeCombination).toHaveBeenCalledWith('1', false)
+                expect(api.toggleGlobalEntryFavorite).toHaveBeenCalledWith('glaze_combination', '1', false)
             )
         })
 
