@@ -231,6 +231,13 @@ $defs:
           Must only appear on fields with type: image. At most one field per global
           may carry this flag — enforced in tests/test_workflow.py.
         default: false
+      max_length:
+        type: integer
+        description: |
+          Maximum character length for string and image fields. When present,
+          overrides the factory default (255 for non-description strings).
+          Only meaningful when type is "string" or "image"; ignored otherwise.
+        minimum: 1
       label:
         type: string
         description: |

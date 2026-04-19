@@ -64,6 +64,11 @@ class TestDslFieldToDjangoField:
         f = self._call('data', {'type': 'object'})
         assert isinstance(f, models.JSONField)
 
+    def test_max_length_overrides_default(self):
+        f = self._call('atmosphere', {'type': 'string', 'max_length': 255})
+        assert isinstance(f, models.CharField)
+        assert f.max_length == 255
+
 
 # ---------------------------------------------------------------------------
 # _make_simple_global_model — generated class structure

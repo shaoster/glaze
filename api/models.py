@@ -133,7 +133,8 @@ def _dsl_field_to_django_field(field_name: str, field_def: dict) -> models.Field
         if enum:
             max_length = max(max(len(v) for v in enum), 16)
             return models.CharField(max_length=max_length, blank=True, default='', choices=[(v, v) for v in enum])
-        return models.CharField(max_length=1024, blank=True, default='')
+        max_length = field_def.get('max_length', 1024)
+        return models.CharField(max_length=max_length, blank=True, default='')
     if field_type == 'integer':
         return models.IntegerField(null=True, blank=True)
     if field_type == 'number':
@@ -447,42 +448,8 @@ GlazeType = _make_simple_global_model('glaze_type')
 GlazeMethod = _make_simple_global_model('glaze_method')
 
 
-class FiringTemperature(GlobalModel):
-    """A named firing profile (cone, peak temperature, atmosphere).
-
-    Public-only (user=NULL, managed via Django admin). There are no private
-    FiringTemperature records; users reference the shared public library.
-    """
-
-    CONE_CHOICES = [
-        ('04', '04'), ('03', '03'), ('02', '02'), ('01', '01'),
-        ('1', '1'), ('2', '2'), ('3', '3'), ('4', '4'), ('5', '5'),
-        ('6', '6'), ('7', '7'), ('8', '8'), ('9', '9'), ('10', '10'),
-    ]
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='firing_temperatures',
-    )
-    name = models.CharField(max_length=255)
-    cone = models.CharField(max_length=16, blank=True, default='', choices=CONE_CHOICES)
-    temperature_c = models.IntegerField(null=True, blank=True)
-    atmosphere = models.CharField(max_length=255, blank=True, default='')
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['name'],
-                condition=Q(user__isnull=True),
-                name='uniq_firing_temperature_name_public',
-            ),
-        ]
-
-    def __str__(self) -> str:
-        return self.name
+#: Public-only firing profile. Fields: name, cone (enum), temperature_c, atmosphere.
+FiringTemperature = _make_simple_global_model('firing_temperature')
 
 
 class GlazeCombination(GlobalModel):

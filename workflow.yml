@@ -166,6 +166,7 @@ globals:
       atmosphere:
         type: string
         description: Kiln atmosphere (e.g. oxidation, reduction, soda).
+        max_length: 255
 
   glaze_combination:
     model: GlazeCombination
