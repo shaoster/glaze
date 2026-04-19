@@ -14,6 +14,7 @@ from .workflow import (
     WORKFLOW_VERSION,
     build_additional_fields_schema,
     get_filterable_fields,
+    get_global_config,
     get_global_model_and_field,
     get_state_ref_fields,
 )
@@ -82,50 +83,345 @@ class GlobalModel(models.Model):
         super().save(*args, **kwargs)
 
 
-class Location(GlobalModel):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='locations')
-    name = models.CharField(max_length=255)
+# ---------------------------------------------------------------------------
+# Simple global model factory
+# ---------------------------------------------------------------------------
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['user', 'name'], name='uniq_location_name_per_user'),
-        ]
+def _pluralize_snake(name: str) -> str:
+    """Return the simple plural form of a snake_case identifier.
 
-    def __str__(self) -> str:
-        return self.name
+    Handles the English y→ies rule; otherwise appends 's'.
+    Examples: 'location' → 'locations', 'clay_body' → 'clay_bodies'.
+    """
+    if name.endswith('y'):
+        return name[:-1] + 'ies'
+    return name + 's'
 
 
-class ClayBody(GlobalModel):
-    # Public clay bodies (public library managed by admins) have user=None.
-    # Private clay bodies are owned by a specific user.
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='clay_bodies',
-    )
-    name = models.CharField(max_length=255)
-    short_description = models.CharField(max_length=1024, blank=True, default='')
+def _dsl_field_to_django_field(field_name: str, field_def: dict) -> models.Field:
+    """Convert a workflow.yml DSL field definition to a Django model Field.
 
-    class Meta:
-        constraints = [
-            # Per-user uniqueness for private objects.
+    Applies these conventions:
+    - ``name`` fields → CharField(max_length=255) — no blank/default, to match
+      the migration baseline for all existing globals.
+    - Enum string fields → CharField with choices and max_length=max(enum values, 16).
+    - Other string/image fields → CharField(max_length=1024, blank=True, default='').
+    - integer → IntegerField(null=True, blank=True)
+    - number  → FloatField(null=True, blank=True)
+    - boolean → BooleanField(null=True, blank=True)  (nullable for tri-state UI)
+    - array/object → JSONField(default=dict)
+    """
+    field_type = field_def.get('type', 'string')
+    enum = field_def.get('enum')
+
+    if field_type in ('string', 'image'):
+        if field_name == 'name':
+            return models.CharField(max_length=255)
+        if enum:
+            max_length = max(max(len(v) for v in enum), 16)
+            return models.CharField(max_length=max_length, blank=True, default='', choices=[(v, v) for v in enum])
+        return models.CharField(max_length=1024, blank=True, default='')
+    if field_type == 'integer':
+        return models.IntegerField(null=True, blank=True)
+    if field_type == 'number':
+        return models.FloatField(null=True, blank=True)
+    if field_type == 'boolean':
+        return models.BooleanField(null=True, blank=True)
+    return models.JSONField(default=dict)
+
+
+def _make_simple_global_model(global_name: str) -> type:
+    """Generate a GlobalModel subclass for a simple (non-compose_from) global.
+
+    Fields, the user FK, and uniqueness constraints are derived entirely from
+    the workflow.yml global declaration — no hand-written model class is needed.
+    Globals with bespoke ``save()`` logic or cross-model constraints should
+    remain hand-written.
+
+    The generated class is assigned ``__module__ = 'api.models'`` so Django
+    migrations treat it identically to a hand-written model class.  Adding a
+    new simple global to workflow.yml only requires a ``makemigrations`` run.
+
+    DSL fields whose definition contains a ``$ref`` key are skipped — those
+    describe ``additional_fields`` references, not columns on the global model.
+    """
+    config = get_global_config(global_name)
+    if not config:
+        raise ValueError(f'Unknown global: {global_name!r}')
+
+    model_name: str = config['model']
+    is_public: bool = bool(config.get('public', False))
+    is_private: bool = bool(config.get('private', True))
+    dsl_fields: dict = config.get('fields', {})
+
+    attrs: dict = {
+        '__module__': 'api.models',
+        '__str__': lambda self: self.name,
+    }
+
+    # user FK — nullable for public (or public+private) globals, required for private-only.
+    user_kwargs: dict = {
+        'to': settings.AUTH_USER_MODEL,
+        'on_delete': models.CASCADE,
+        'related_name': _pluralize_snake(global_name),
+    }
+    if is_public:
+        user_kwargs.update({'null': True, 'blank': True})
+    attrs['user'] = models.ForeignKey(**user_kwargs)
+
+    # Inline DSL fields — $ref entries are additional_fields references, not model columns.
+    for field_name, field_def in dsl_fields.items():
+        if '$ref' not in field_def:
+            attrs[field_name] = _dsl_field_to_django_field(field_name, field_def)
+
+    # Standard uniqueness constraints derived from public/private flags.
+    constraints: list = []
+    if is_public and is_private:
+        constraints += [
             models.UniqueConstraint(
                 fields=['user', 'name'],
                 condition=Q(user__isnull=False),
-                name='uniq_clay_body_name_per_user',
+                name=f'uniq_{global_name}_name_per_user',
             ),
-            # Global uniqueness for public objects (user IS NULL).
             models.UniqueConstraint(
                 fields=['name'],
                 condition=Q(user__isnull=True),
-                name='uniq_clay_body_name_public',
+                name=f'uniq_{global_name}_name_public',
             ),
         ]
+    elif is_public:
+        # public-only (private: false) — only admin-managed public objects exist.
+        constraints.append(
+            models.UniqueConstraint(
+                fields=['name'],
+                condition=Q(user__isnull=True),
+                name=f'uniq_{global_name}_name_public',
+            )
+        )
+    else:
+        # private-only — each user owns their own set.
+        constraints.append(
+            models.UniqueConstraint(
+                fields=['user', 'name'],
+                name=f'uniq_{global_name}_name_per_user',
+            )
+        )
 
-    def __str__(self) -> str:
-        return self.name
+    attrs['Meta'] = type('Meta', (), {'constraints': constraints})
+    return type(model_name, (GlobalModel,), attrs)
+
+
+# ---------------------------------------------------------------------------
+# Compose-from global model factory
+# ---------------------------------------------------------------------------
+
+def _make_compose_global_models(global_name: str) -> tuple[type, type]:
+    """Generate (CompositeModel, LayerModel) for a compose_from global.
+
+    Returns a pair of Django model classes:
+
+    - **CompositeModel** — a GlobalModel subclass with an ordered M2M field,
+      a stored computed ``name`` (component names joined by
+      ``GLAZE_COMBINATION_NAME_SEPARATOR``), inline DSL fields, FK fields for
+      global $ref entries, standard public/private UniqueConstraints, and
+      ``compute_name()`` / ``get_or_create_with_layers()`` helpers.
+    - **LayerModel** — the through table with FKs to the composite and the
+      component model, an ``order`` field (when ``ordered: true``), and any
+      ``through_fields`` declared in the DSL as FK columns.
+
+    Both classes are assigned ``__module__ = 'api.models'`` so Django
+    migrations treat them identically to hand-written model classes.  Adding a
+    new compose_from global to workflow.yml only requires a ``makemigrations``
+    run — no new model code is needed.
+    """
+    config = get_global_config(global_name)
+    if not config:
+        raise ValueError(f'Unknown global: {global_name!r}')
+    compose_from = config.get('compose_from')
+    if not compose_from:
+        raise ValueError(f"Global '{global_name}' has no compose_from declaration.")
+
+    model_name: str = config['model']
+    is_public: bool = bool(config.get('public', False))
+    is_private: bool = bool(config.get('private', True))
+    dsl_fields: dict = config.get('fields', {})
+    layer_model_name = f'{model_name}Layer'
+
+    # compose_from has exactly one key (the M2M relationship name, e.g. 'glaze_types').
+    compose_key = next(iter(compose_from))
+    compose_config = compose_from[compose_key]
+    component_global: str = compose_config['global']
+    component_model_name: str = get_global_config(component_global)['model']
+    through_fields: dict = compose_config.get('through_fields', {})
+    is_ordered: bool = bool(compose_config.get('ordered', False))
+
+    # --- Through (layer) model ---
+    layer_attrs: dict = {
+        '__module__': 'api.models',
+        'combination': models.ForeignKey(
+            f'api.{model_name}',
+            on_delete=models.CASCADE,
+            related_name='layers',
+        ),
+        component_global: models.ForeignKey(
+            f'api.{component_model_name}',
+            on_delete=models.PROTECT,
+        ),
+        '__str__': lambda self: str(self.pk),
+    }
+    if is_ordered:
+        layer_attrs['order'] = models.PositiveSmallIntegerField()
+
+    for tf_name, tf_def in through_fields.items():
+        ref = tf_def.get('$ref', '')
+        required = bool(tf_def.get('required', False))
+        if ref.startswith('@'):
+            ref_global = ref[1:].split('.')[0]
+            ref_model_name = get_global_config(ref_global)['model']
+            layer_attrs[tf_name] = models.ForeignKey(
+                f'api.{ref_model_name}',
+                on_delete=models.SET_NULL,
+                null=not required,
+                blank=not required,
+                related_name=f'{global_name}_layers',
+            )
+
+    layer_meta_kwargs: dict = {}
+    if is_ordered:
+        layer_meta_kwargs['ordering'] = ['order']
+    layer_attrs['Meta'] = type('Meta', (), layer_meta_kwargs)
+    layer_model = type(layer_model_name, (models.Model,), layer_attrs)
+
+    # --- Composite model ---
+    composite_attrs: dict = {
+        '__module__': 'api.models',
+        # Stored computed name — set via compute_name() before save().
+        'name': models.CharField(max_length=2047, blank=True, default=''),
+        # Ordered M2M to the component type via the through table.
+        compose_key: models.ManyToManyField(
+            f'api.{component_model_name}',
+            through=f'api.{layer_model_name}',
+            related_name='combinations',
+        ),
+        '__str__': lambda self: self.name,
+    }
+
+    # user FK.
+    user_kwargs: dict = {
+        'to': settings.AUTH_USER_MODEL,
+        'on_delete': models.CASCADE,
+        'related_name': _pluralize_snake(global_name),
+    }
+    if is_public:
+        user_kwargs.update({'null': True, 'blank': True})
+    composite_attrs['user'] = models.ForeignKey(**user_kwargs)
+
+    # Inline and global-ref fields from the DSL (skip 'name' — already added).
+    for field_name, field_def in dsl_fields.items():
+        if field_name == 'name':
+            continue
+        if '$ref' in field_def:
+            ref = field_def['$ref']
+            if ref.startswith('@'):
+                ref_global = ref[1:].split('.')[0]
+                ref_model_name = get_global_config(ref_global)['model']
+                composite_attrs[field_name] = models.ForeignKey(
+                    f'api.{ref_model_name}',
+                    on_delete=models.SET_NULL,
+                    null=True,
+                    blank=True,
+                    related_name=_pluralize_snake(global_name),
+                )
+        else:
+            composite_attrs[field_name] = _dsl_field_to_django_field(field_name, field_def)
+
+    # Standard uniqueness constraints.
+    constraints: list = []
+    if is_public and is_private:
+        constraints += [
+            models.UniqueConstraint(
+                fields=['name'],
+                condition=Q(user__isnull=True),
+                name=f'uniq_{global_name}_name_public',
+            ),
+            models.UniqueConstraint(
+                fields=['user', 'name'],
+                condition=Q(user__isnull=False),
+                name=f'uniq_{global_name}_name_per_user',
+            ),
+        ]
+    elif is_public:
+        constraints.append(
+            models.UniqueConstraint(
+                fields=['name'],
+                condition=Q(user__isnull=True),
+                name=f'uniq_{global_name}_name_public',
+            )
+        )
+    else:
+        constraints.append(
+            models.UniqueConstraint(
+                fields=['user', 'name'],
+                name=f'uniq_{global_name}_name_per_user',
+            )
+        )
+    composite_attrs['Meta'] = type('Meta', (), {'constraints': constraints})
+
+    # compute_name — joins component display names with the standard separator.
+    @staticmethod  # type: ignore[misc]
+    def compute_name(component_names: list[str]) -> str:
+        return GLAZE_COMBINATION_NAME_SEPARATOR.join(component_names)
+
+    composite_attrs['compute_name'] = compute_name
+
+    # get_or_create_with_layers — finds or creates a composite from a list of component instances.
+    _component_model_name = component_model_name
+    _layer_model_ref: list = []  # filled after layer_model is created (avoids closure mutation)
+
+    @classmethod  # type: ignore[misc]
+    def get_or_create_with_layers(cls, user, components: list) -> tuple:
+        name = cls.compute_name([str(c) for c in components])
+        composite, created = cls.objects.get_or_create(user=user, name=name)
+        if created:
+            lm = _layer_model_ref[0]
+            for order, component in enumerate(components):
+                lm.objects.create(combination=composite, **{component_global: component}, order=order)
+        return composite, created
+
+    composite_attrs['get_or_create_with_layers'] = get_or_create_with_layers
+
+    # get_or_create_from_ordered_pks — resolves PKs to component instances, then delegates.
+    @classmethod  # type: ignore[misc]
+    def get_or_create_from_ordered_pks(cls, user, pks: list) -> tuple:
+        from django.apps import apps as _apps
+        component_model = _apps.get_model('api', _component_model_name)
+        components = []
+        for pk in pks:
+            try:
+                components.append(component_model.objects.get(pk=pk))
+            except component_model.DoesNotExist as exc:
+                raise ValueError(f'Unknown {_component_model_name} pk: {pk!r}') from exc
+        if not components:
+            raise ValueError(f'A {model_name} must have at least one layer.')
+        return cls.get_or_create_with_layers(user, components)
+
+    composite_attrs['get_or_create_from_ordered_pks'] = get_or_create_from_ordered_pks
+
+    composite_model = type(model_name, (GlobalModel,), composite_attrs)
+    _layer_model_ref.append(layer_model)
+
+    return composite_model, layer_model
+
+
+# ---------------------------------------------------------------------------
+# Simple globals — generated from workflow.yml (no bespoke model code needed)
+# ---------------------------------------------------------------------------
+
+#: Private-only location. Fields: name.
+Location = _make_simple_global_model('location')
+
+#: Public + private clay body. Fields: name, short_description.
+ClayBody = _make_simple_global_model('clay_body')
 
 
 class GlazeType(GlobalModel):
@@ -176,20 +472,8 @@ class GlazeType(GlobalModel):
         return self.name
 
 
-class GlazeMethod(GlobalModel):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='glaze_methods'
-    )
-    name = models.CharField(max_length=255)
-    short_description = models.CharField(max_length=1024, blank=True, default='')
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['user', 'name'], name='uniq_glaze_method_name_per_user'),
-        ]
-
-    def __str__(self) -> str:
-        return self.name
+#: Private-only glaze application method. Fields: name, short_description.
+GlazeMethod = _make_simple_global_model('glaze_method')
 
 
 class FiringTemperature(GlobalModel):

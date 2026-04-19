@@ -153,6 +153,16 @@ def get_global_names() -> list[str]:
     return list(_GLOBALS_MAP.keys())
 
 
+def get_global_config(global_name: str) -> dict:
+    """Return the full workflow.yml config dict for a global, or {} if unknown.
+
+    Used by model factories that need the raw DSL config (model name, public/
+    private flags, fields dict, compose_from) without going through the
+    higher-level typed helpers.
+    """
+    return dict(_GLOBALS_MAP.get(global_name, {}))
+
+
 def get_compose_from(global_name: str) -> dict | None:
     """Return the compose_from declaration for a global, or None.
 
