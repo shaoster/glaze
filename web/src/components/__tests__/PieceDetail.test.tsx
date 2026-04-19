@@ -37,7 +37,7 @@ function makePiece(overrides: Partial<PieceDetailType> = {}): PieceDetailType {
         name: 'Test Bowl',
         created: new Date('2024-01-15T10:00:00Z'),
         last_modified: new Date('2024-01-15T10:00:00Z'),
-        thumbnail: '/thumbnails/bowl.svg',
+        thumbnail: { url: '/thumbnails/bowl.svg', cloudinary_public_id: null },
         current_state: state,
         current_location: '',
         history: [state],

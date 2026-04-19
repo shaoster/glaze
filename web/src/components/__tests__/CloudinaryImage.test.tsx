@@ -53,6 +53,7 @@ vi.mock('@cloudinary/url-gen/actions/delivery', () => ({
 
 vi.mock('@cloudinary/url-gen/qualifiers/format', () => ({
     auto: vi.fn(),
+    jpg: vi.fn(),
 }))
 
 vi.mock('@cloudinary/url-gen/qualifiers/quality', () => ({

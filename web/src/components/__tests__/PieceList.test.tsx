@@ -1,9 +1,13 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import PieceList from '../PieceList'
 import type { PieceSummary } from '@common/types'
+
+vi.mock('../CloudinaryImage', () => ({
+    default: ({ url, alt }: { url: string; alt?: string }) => <img src={url} alt={alt ?? ''} />,
+}))
 
 function makePiece(overrides: Partial<PieceSummary> = {}): PieceSummary {
     return {
@@ -11,7 +15,7 @@ function makePiece(overrides: Partial<PieceSummary> = {}): PieceSummary {
         name: 'Clay Bowl',
         created: new Date('2024-01-15T10:00:00Z'),
         last_modified: new Date('2024-02-20T12:00:00Z'),
-        thumbnail: 'https://example.com/bowl.jpg',
+        thumbnail: { url: 'https://example.com/bowl.jpg', cloudinary_public_id: null },
         current_location: null,
         current_state: { state: 'designed' } as any,
         ...overrides,
@@ -60,8 +64,8 @@ describe('PieceList', () => {
 
         it('renders the thumbnail image with correct src', () => {
             renderPieceList([makePiece()])
-            const img = screen.getByRole('img')
-            expect(img).toHaveAttribute('src', 'https://example.com/bowl.jpg')
+            const imgs = screen.getAllByRole('img')
+            expect(imgs.some((img) => img.getAttribute('src') === 'https://example.com/bowl.jpg')).toBe(true)
         })
 
         it('renders formatted created date', () => {
