@@ -128,6 +128,7 @@ _MOCK_GLOBALS_MAP = {
             'glaze_types': {
                 'global': 'glaze_type',
                 'ordered': True,
+                'filter_label': 'Contains glaze types (all must match)',
             },
         },
         'fields': {
@@ -135,6 +136,7 @@ _MOCK_GLOBALS_MAP = {
             'is_food_safe': {'type': 'boolean', 'filterable': True, 'label': 'Food safe'},
             'runs': {'type': 'boolean', 'filterable': True, 'label': 'Runs'},
             'test_tile_image': {'type': 'image'},
+            'firing_profile': {'$ref': '@firing_profile.code', 'filterable': True},
         },
     },
     'glaze_type': {
@@ -392,6 +394,7 @@ def test_get_compose_from_returns_declaration_when_present(monkeypatch):
         'glaze_types': {
             'global': 'glaze_type',
             'ordered': True,
+            'filter_label': 'Contains glaze types (all must match)',
         },
     }
 
@@ -404,3 +407,71 @@ def test_get_compose_from_returns_none_when_absent(monkeypatch):
 def test_get_compose_from_returns_none_for_unknown_global(monkeypatch):
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
     assert workflow_module.get_compose_from('does_not_exist') is None
+
+
+# ---------------------------------------------------------------------------
+# get_filterable_ref_fields
+# ---------------------------------------------------------------------------
+
+def test_get_filterable_ref_fields_returns_fk_id_entries(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    result = workflow_module.get_filterable_ref_fields('glaze_combination')
+    assert result == {
+        'firing_profile_id': {'type': 'fk_id', 'param': 'firing_profile_id'},
+    }
+
+
+def test_get_filterable_ref_fields_ignores_inline_filterable_fields(monkeypatch):
+    """Boolean inline fields with filterable: true must not appear in ref filter output."""
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    result = workflow_module.get_filterable_ref_fields('glaze_combination')
+    assert 'is_food_safe_id' not in result
+    assert 'runs_id' not in result
+
+
+def test_get_filterable_ref_fields_returns_empty_when_no_filterable_refs(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.get_filterable_ref_fields('location') == {}
+
+
+def test_get_filterable_ref_fields_returns_empty_for_unknown_global(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.get_filterable_ref_fields('does_not_exist') == {}
+
+
+# ---------------------------------------------------------------------------
+# get_filterable_compose_fields
+# ---------------------------------------------------------------------------
+
+def test_get_filterable_compose_fields_returns_m2m_id_entry(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    result = workflow_module.get_filterable_compose_fields('glaze_combination')
+    assert result == {
+        'layers__glaze_type_id': {'type': 'm2m_id', 'param': 'glaze_type_ids'},
+    }
+
+
+def test_get_filterable_compose_fields_omits_entries_without_filter_label(monkeypatch):
+    """compose_from entries with no filter_label must not appear in output."""
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', {
+        'combo': {
+            'model': 'Combo',
+            'public': True,
+            'private': True,
+            'compose_from': {
+                'parts': {'global': 'part', 'ordered': True},  # no filter_label
+            },
+            'fields': {'name': {'type': 'string'}},
+        },
+    })
+    assert workflow_module.get_filterable_compose_fields('combo') == {}
+
+
+def test_get_filterable_compose_fields_returns_empty_when_no_compose_from(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.get_filterable_compose_fields('location') == {}
+
+
+def test_get_filterable_compose_fields_returns_empty_for_unknown_global(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.get_filterable_compose_fields('does_not_exist') == {}

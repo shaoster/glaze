@@ -13,7 +13,9 @@ from .workflow import (
     VALID_STATES,
     WORKFLOW_VERSION,
     build_additional_fields_schema,
+    get_filterable_compose_fields,
     get_filterable_fields,
+    get_filterable_ref_fields,
     get_global_config,
     get_global_model_and_field,
     get_state_ref_fields,
@@ -442,6 +444,16 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
     composite_model = type(model_name, (GlobalModel,), composite_attrs)
     _layer_model_ref.append(layer_model)
 
+    # filterable_fields — fully derived from workflow.yml:
+    # - boolean fields with filterable: true (inline fields)
+    # - FK fields with filterable: true (global ref fields → _id suffix)
+    # - compose_from relationships with filter_label (m2m → layers__<component>_id)
+    composite_model.filterable_fields = {
+        **{k: {'type': 'boolean'} for k in get_filterable_fields(global_name)},
+        **get_filterable_ref_fields(global_name),
+        **get_filterable_compose_fields(global_name),
+    }
+
     return composite_model, layer_model
 
 
@@ -476,19 +488,6 @@ FiringTemperature = _make_simple_global_model('firing_temperature')
 GlazeCombination, GlazeCombinationLayer = _make_compose_global_models('glaze_combination')
 
 # --- GlazeCombination bespoke additions ---
-
-# Declares which fields are exposed as query-param filters in the global_entries view.
-# Boolean fields are derived from workflow.yml (filterable: true entries).
-# Relational filters (m2m_id, fk_id) use ORM lookups not expressible in workflow.yml
-# and are declared explicitly here.
-GlazeCombination.filterable_fields = {
-    # Derived from workflow.yml — boolean property filters.
-    **{k: {'type': 'boolean'} for k in get_filterable_fields('glaze_combination')},
-    # Relational filters that require custom ORM lookups and param names.
-    'layers__glaze_type_id': {'type': 'm2m_id', 'param': 'glaze_type_ids'},
-    'firing_temperature_id': {'type': 'fk_id', 'param': 'firing_temperature_id'},
-}
-
 
 @classmethod  # type: ignore[misc]
 def _glaze_combination_post_fixture_load(cls, obj, created: bool) -> None:
