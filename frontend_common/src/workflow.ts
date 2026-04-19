@@ -10,7 +10,7 @@
  */
 import workflow from '../../workflow.yml'
 
-type FieldType = 'string' | 'number' | 'integer' | 'boolean' | 'array' | 'object'
+type FieldType = 'string' | 'number' | 'integer' | 'boolean' | 'array' | 'object' | 'image'
 
 interface InlineFieldDef {
     type: FieldType
@@ -18,6 +18,7 @@ interface InlineFieldDef {
     required?: boolean
     enum?: string[]
     filterable?: boolean
+    use_as_thumbnail?: boolean
     label?: string
 }
 
@@ -32,6 +33,7 @@ interface GlobalRefFieldDef {
     description?: string
     required?: boolean
     can_create?: boolean
+    filterable?: boolean
 }
 
 type FieldDefinition = InlineFieldDef | StateRefFieldDef | GlobalRefFieldDef
@@ -46,6 +48,8 @@ interface WorkflowStateDefinition {
 
 export interface ComposeFromEntry {
     global: string
+    ordered?: boolean
+    filter_label?: string
 }
 
 interface WorkflowGlobalDefinition {
@@ -114,6 +118,82 @@ export function getFilterableFields(globalName: string): FilterableFieldDef[] {
             const inline = def as InlineFieldDef
             return { name, type: inline.type, label: inline.label ?? formatWorkflowFieldLabel(name) }
         })
+}
+
+/**
+ * Returns the name of the field tagged `use_as_thumbnail: true` for the given
+ * global, or null if none is declared. workflow.yml enforces that at most one
+ * field per global carries this flag and that it must have type: image.
+ * Used by pickers to render a thumbnail without hardcoding field names.
+ */
+export function getGlobalThumbnailField(globalName: string): string | null {
+    const fields = GLOBALS_MAP[globalName]?.fields ?? {}
+    for (const [name, def] of Object.entries(fields)) {
+        if ('use_as_thumbnail' in def && (def as InlineFieldDef).use_as_thumbnail) {
+            return name
+        }
+    }
+    return null
+}
+
+/**
+ * Describes a related-object filter that a global entry picker should expose
+ * as an autocomplete control. Derived from compose_from entries (multi-select)
+ * and filterable global ref fields (single-select) declared in workflow.yml.
+ */
+export interface GlobalPickerFilter {
+    /** globalName whose entries to fetch as autocomplete options */
+    optionsGlobalName: string
+    /** UI label for the autocomplete */
+    label: string
+    /** Multi-select (compose_from) or single-select (FK ref) */
+    multiple: boolean
+    /** Query-param key sent to the backend (e.g. 'glaze_type_ids', 'firing_temperature_id') */
+    paramKey: string
+    /** Key on the entry response object whose value(s) to render as chips */
+    entryKey: string
+}
+
+/**
+ * Returns the related-object filters that a picker for the given global should
+ * expose, derived entirely from workflow.yml metadata:
+ *   - compose_from entries → multi-select filters (paramKey: `${global}_ids`)
+ *   - global ref fields with filterable: true → single-select filters (paramKey: `${fieldName}_id`)
+ * The ordering is compose_from entries first, then filterable ref fields in
+ * declaration order.
+ */
+export function getGlobalPickerFilters(globalName: string): GlobalPickerFilter[] {
+    const globalDef = GLOBALS_MAP[globalName]
+    if (!globalDef) return []
+
+    const filters: GlobalPickerFilter[] = []
+
+    // compose_from entries → multi-select
+    for (const [fieldName, entry] of Object.entries(globalDef.compose_from ?? {})) {
+        filters.push({
+            optionsGlobalName: entry.global,
+            label: entry.filter_label ?? formatWorkflowFieldLabel(fieldName),
+            multiple: true,
+            paramKey: `${entry.global}_ids`,
+            entryKey: fieldName,
+        })
+    }
+
+    // global ref fields with filterable: true → single-select
+    for (const [fieldName, def] of Object.entries(globalDef.fields ?? {})) {
+        if (!isGlobalRefField(def) || !(def as GlobalRefFieldDef).filterable) continue
+        const [refGlobalName] = parseGlobalRef(def)
+        if (!refGlobalName) continue
+        filters.push({
+            optionsGlobalName: refGlobalName,
+            label: formatWorkflowFieldLabel(fieldName),
+            multiple: false,
+            paramKey: `${fieldName}_id`,
+            entryKey: fieldName,
+        })
+    }
+
+    return filters
 }
 
 /**

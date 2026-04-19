@@ -117,6 +117,7 @@ globals:
       test_tile_image:
         type: image
         description: URL of the glaze test tile image.
+        use_as_thumbnail: true
       is_food_safe:
         type: boolean
         description: Whether this glaze is food safe.
@@ -176,6 +177,7 @@ globals:
       glaze_types:
         global: glaze_type
         ordered: true
+        filter_label: "Contains glaze types (all must match)"
         through_fields:
           glaze_method:
             $ref: "@glaze_method.name"
@@ -188,9 +190,11 @@ globals:
       firing_temperature:
         $ref: "@firing_temperature.name"
         description: Firing profile this combination is designed for.
+        filterable: true
       test_tile_image:
         type: image
         description: Image of the glaze combination test tile.
+        use_as_thumbnail: true
       is_food_safe:
         type: boolean
         description: Whether this glaze combination is food safe.

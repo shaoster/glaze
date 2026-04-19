@@ -255,6 +255,14 @@ export async function fetchGlazeCombinations(
     return data
 }
 
+export async function fetchGlobalEntriesWithFilters<T extends { id: string; name?: string; is_favorite?: boolean }>(
+    globalName: string,
+    params: Record<string, string> = {}
+): Promise<T[]> {
+    const { data } = await client.get<T[]>(`globals/${globalName}/`, { params })
+    return data
+}
+
 export async function toggleGlobalEntryFavorite(globalName: string, id: string, favorite: boolean): Promise<void> {
     if (favorite) {
         await client.post(`globals/${globalName}/${id}/favorite/`)

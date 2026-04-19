@@ -28,7 +28,7 @@ import {
     getAdditionalFieldDefinitions,
 } from '@common/workflow'
 import GlobalFieldPicker from './GlobalFieldPicker'
-import GlazeCombinationPicker from './GlazeCombinationPicker'
+import GlobalEntryPicker from './GlobalEntryPicker'
 
 type WorkflowStateProps = {
     pieceState: PieceState
@@ -181,7 +181,7 @@ export default function WorkflowState({
 
     const [savingImage, setSavingImage] = useState(false)
     const [imageError, setImageError] = useState<string | null>(null)
-    const [glazePickerOpen, setGlazePickerOpen] = useState(false)
+    const [pickerGlobalName, setPickerGlobalName] = useState<string | null>(null)
 
     const isDirty =
         notes !== pieceState.notes ||
@@ -434,7 +434,7 @@ export default function WorkflowState({
                                         {isGlazeCombination && (
                                             <Button
                                                 variant="outlined"
-                                                onClick={() => setGlazePickerOpen(true)}
+                                                onClick={() => setPickerGlobalName(field.globalName ?? null)}
                                                 sx={{ mt: '1px', whiteSpace: 'nowrap', flexShrink: 0 }}
                                             >
                                                 Browse
@@ -643,15 +643,18 @@ export default function WorkflowState({
                 />
             )}
 
-            {/* Glaze combination picker */}
-            <GlazeCombinationPicker
-                open={glazePickerOpen}
-                onClose={() => setGlazePickerOpen(false)}
-                onSelect={(name) => {
-                    const glazeField = additionalFieldDefs.find((f) => f.globalName === 'glaze_combination')
-                    if (glazeField) handleAdditionalFieldChange(glazeField.name, name)
-                }}
-            />
+            {/* Global entry picker — opened for any global field with a Browse button */}
+            {pickerGlobalName !== null && (
+                <GlobalEntryPicker
+                    globalName={pickerGlobalName}
+                    open={true}
+                    onClose={() => setPickerGlobalName(null)}
+                    onSelect={(name: string) => {
+                        const field = additionalFieldDefs.find((f) => f.globalName === pickerGlobalName)
+                        if (field) handleAdditionalFieldChange(field.name, name)
+                    }}
+                />
+            )}
         </Box>
     )
 }
