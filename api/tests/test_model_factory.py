@@ -272,9 +272,9 @@ class TestMakeComposeGlobalModels:
         return m._make_compose_global_models
 
     def test_returns_two_model_classes(self, make):
-        CompositeModel, LayerModel = make('composite')
+        CompositeModel, ThroughModel = make('composite')
         assert CompositeModel.__name__ == 'Composite'
-        assert LayerModel.__name__ == 'CompositeLayer'
+        assert ThroughModel.__name__ == 'CompositeThrough'
 
     def test_composite_inherits_global_model(self, make):
         from api.models import GlobalModel
@@ -283,8 +283,8 @@ class TestMakeComposeGlobalModels:
 
     def test_layer_model_does_not_inherit_global_model(self, make):
         from api.models import GlobalModel
-        _, LayerModel = make('composite')
-        assert not issubclass(LayerModel, GlobalModel)
+        _, ThroughModel = make('composite')
+        assert not issubclass(ThroughModel, GlobalModel)
 
     def test_composite_has_stored_name_field(self, make):
         CompositeModel, _ = make('composite')
@@ -293,7 +293,7 @@ class TestMakeComposeGlobalModels:
         assert name_field.max_length == 2047
 
     def test_composite_has_m2m_via_through_table(self, make):
-        CompositeModel, LayerModel = make('composite')
+        CompositeModel, ThroughModel = make('composite')
         m2m = CompositeModel._meta.get_field('components')
         assert isinstance(m2m, models.ManyToManyField)
 
@@ -307,19 +307,19 @@ class TestMakeComposeGlobalModels:
         assert isinstance(source_field, models.ForeignKey)
 
     def test_layer_has_order_field_when_ordered(self, make):
-        _, LayerModel = make('composite')
-        order_field = LayerModel._meta.get_field('order')
+        _, ThroughModel = make('composite')
+        order_field = ThroughModel._meta.get_field('order')
         assert isinstance(order_field, models.PositiveSmallIntegerField)
 
     def test_layer_has_through_field_as_fk(self, make):
-        _, LayerModel = make('composite')
-        method_field = LayerModel._meta.get_field('method')
+        _, ThroughModel = make('composite')
+        method_field = ThroughModel._meta.get_field('method')
         assert isinstance(method_field, models.ForeignKey)
         assert method_field.null  # required: false → nullable
 
     def test_layer_ordering_by_order(self, make):
-        _, LayerModel = make('composite')
-        assert list(LayerModel._meta.ordering) == ['order']
+        _, ThroughModel = make('composite')
+        assert list(ThroughModel._meta.ordering) == ['order']
 
     def test_composite_compute_name_joins_with_separator(self, make):
         from api.models import COMPOSITE_NAME_SEPARATOR as SEP
@@ -333,18 +333,18 @@ class TestMakeComposeGlobalModels:
 
     def test_layer_save_is_present(self, make):
         """The factory must attach a save() method to the layer model."""
-        _, LayerModel = make('composite')
-        assert 'save' in LayerModel.__dict__
+        _, ThroughModel = make('composite')
+        assert 'save' in ThroughModel.__dict__
 
-    def test_get_or_create_with_layers_accepts_compose_key_kwarg(self, make):
-        """get_or_create_with_layers must accept the compose_key name as a keyword."""
+    def test_get_or_create_with_components_accepts_compose_key_kwarg(self, make):
+        """get_or_create_with_components must accept the compose_key name as a keyword."""
         CompositeModel, _ = make('composite')
         # Verify the method exists; calling it requires DB access so we just
         # confirm it doesn't raise TypeError on the keyword check alone.
         import inspect
-        assert hasattr(CompositeModel, 'get_or_create_with_layers')
+        assert hasattr(CompositeModel, 'get_or_create_with_components')
         # The method should also accept the generic 'components' alias.
-        sig = inspect.signature(CompositeModel.get_or_create_with_layers)
+        sig = inspect.signature(CompositeModel.get_or_create_with_components)
         assert 'kwargs' in str(sig)  # accepts **kwargs
 
     def test_no_compose_from_raises(self, monkeypatch):

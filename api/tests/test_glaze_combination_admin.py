@@ -70,7 +70,7 @@ class TestNewLayerOrderAssignment:
     def test_single_new_layer_gets_order_after_existing(self):
         gt1 = GlazeType.objects.create(user=None, name='First')
         gt2 = GlazeType.objects.create(user=None, name='Second')
-        combo, _ = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt1])
+        combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt1])
         existing = list(combo.layers.order_by('order'))
 
         formset = _build_formset(combo, existing, [l.order for l in existing], [gt2.pk])
@@ -87,7 +87,7 @@ class TestNewLayerOrderAssignment:
         gt1 = GlazeType.objects.create(user=None, name='First')
         gt2 = GlazeType.objects.create(user=None, name='Second')
         gt3 = GlazeType.objects.create(user=None, name='Third')
-        combo, _ = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt1])
+        combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt1])
         existing = list(combo.layers.order_by('order'))
 
         formset = _build_formset(combo, existing, [l.order for l in existing], [gt2.pk, gt3.pk])
@@ -118,7 +118,7 @@ class TestReorderLayers:
     def test_reorder_only(self):
         gt1 = GlazeType.objects.create(user=None, name='Alpha')
         gt2 = GlazeType.objects.create(user=None, name='Beta')
-        combo, _ = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt1, gt2])
+        combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt1, gt2])
         layers = list(combo.layers.order_by('order'))  # [gt1@0, gt2@1]
 
         # Drag gt2 above gt1: adminsortable2 submits 1-based positions.
@@ -134,7 +134,7 @@ class TestReorderLayers:
         gt1 = GlazeType.objects.create(user=None, name='Alpha')
         gt2 = GlazeType.objects.create(user=None, name='Beta')
         gt3 = GlazeType.objects.create(user=None, name='Gamma')
-        combo, _ = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt1, gt2])
+        combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt1, gt2])
         layers = list(combo.layers.order_by('order'))  # [gt1@0, gt2@1]
 
         formset = _build_formset(combo, layers, [2, 1], [gt3.pk])

@@ -234,7 +234,7 @@ def _make_simple_global_model(global_name: str) -> type:
 # ---------------------------------------------------------------------------
 
 def _make_compose_global_models(global_name: str) -> tuple[type, type]:
-    """Generate (CompositeModel, LayerModel) for a compose_from global.
+    """Generate (CompositeModel, ThroughModel) for a compose_from global.
 
     Returns a pair of Django model classes:
 
@@ -242,8 +242,8 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
       a stored computed ``name`` (component names joined by
       ``COMPOSITE_NAME_SEPARATOR``), inline DSL fields, FK fields for
       global $ref entries, standard public/private UniqueConstraints, and
-      ``compute_name()`` / ``get_or_create_with_layers()`` helpers.
-    - **LayerModel** — the through table with FKs to the composite and the
+      ``compute_name()`` / ``get_or_create_with_components()`` helpers.
+    - **ThroughModel** — the through table with FKs to the composite and the
       component model, an ``order`` field (when ``ordered: true``), and any
       ``through_fields`` declared in the DSL as FK columns.
 
@@ -264,7 +264,6 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
     is_private: bool = bool(config.get('private', True))
     dsl_fields: dict = config.get('fields', {})
     plural: str = config.get('plural', _pluralize_snake(global_name))
-    layer_model_name = f'{model_name}Layer'
 
     # compose_from has exactly one key (the M2M relationship name, e.g. 'glaze_types').
     compose_key = next(iter(compose_from))
@@ -273,9 +272,13 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
     component_model_name: str = get_global_config(component_global)['model']
     through_fields: dict = compose_config.get('through_fields', {})
     is_ordered: bool = bool(compose_config.get('ordered', False))
+    # through_model key in compose_from lets workflow.yml name the through class
+    # explicitly (required for migration-tracked models like GlazeCombinationLayer).
+    # Defaults to f'{model_name}Through' for new globals.
+    through_model_name: str = compose_config.get('through_model', f'{model_name}Through')
 
-    # --- Through (layer) model ---
-    layer_attrs: dict = {
+    # --- Through model ---
+    through_attrs: dict = {
         '__module__': 'api.models',
         'combination': models.ForeignKey(
             f'api.{model_name}',
@@ -289,7 +292,7 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
         '__str__': (lambda cg: lambda self: str(getattr(self, cg)))(component_global),
     }
     if is_ordered:
-        layer_attrs['order'] = models.PositiveSmallIntegerField()
+        through_attrs['order'] = models.PositiveSmallIntegerField()
 
     for tf_name, tf_def in through_fields.items():
         ref = tf_def.get('$ref', '')
@@ -297,7 +300,7 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
         if ref.startswith('@'):
             ref_global = ref[1:].split('.')[0]
             ref_model_name = get_global_config(ref_global)['model']
-            layer_attrs[tf_name] = models.ForeignKey(
+            through_attrs[tf_name] = models.ForeignKey(
                 f'api.{ref_model_name}',
                 on_delete=models.SET_NULL,
                 null=not required,
@@ -305,10 +308,10 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
                 related_name=f'{global_name}_layers',
             )
 
-    layer_meta_kwargs: dict = {}
+    through_meta_kwargs: dict = {}
     if is_ordered:
-        layer_meta_kwargs['ordering'] = ['order']
-    layer_attrs['Meta'] = type('Meta', (), layer_meta_kwargs)
+        through_meta_kwargs['ordering'] = ['order']
+    through_attrs['Meta'] = type('Meta', (), through_meta_kwargs)
 
     # Public-reference invariant: if the parent composite is public (user=NULL),
     # its component and all through-field references must also be public.
@@ -326,7 +329,7 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
     ]
     _cg = component_global  # captured name for closure
 
-    def _layer_save(self, *args, **kwargs):
+    def _through_save(self, *args, **kwargs):
         if self.combination.user_id is None:
             component = getattr(self, _cg)
             if component.user_id is not None:
@@ -344,8 +347,8 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
                     )
         super(type(self), self).save(*args, **kwargs)
 
-    layer_attrs['save'] = _layer_save
-    layer_model = type(layer_model_name, (models.Model,), layer_attrs)
+    through_attrs['save'] = _through_save
+    through_model = type(through_model_name, (models.Model,), through_attrs)
 
     # --- Composite model ---
     composite_attrs: dict = {
@@ -357,7 +360,7 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
         # Ordered M2M to the component type via the through table.
         compose_key: models.ManyToManyField(
             f'api.{component_model_name}',
-            through=f'api.{layer_model_name}',
+            through=f'api.{through_model_name}',
             related_name='combinations',
         ),
         '__str__': lambda self: self.name,
@@ -431,35 +434,35 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
 
     composite_attrs['compute_name'] = compute_name
 
-    # get_or_create_with_layers — finds or creates a composite from a list of component instances.
-    # The second positional/keyword parameter is named after the compose_key so callers can
-    # use the domain-specific keyword name (e.g. glaze_types=[...] for glaze_combination).
+    # get_or_create_with_components — finds or creates a composite from a list of component
+    # instances.  The keyword parameter is named after the compose_key so callers can use
+    # the domain-specific name (e.g. glaze_types=[...] for glaze_combination).
     _component_model_name = component_model_name
-    _layer_model_ref: list = []  # filled after layer_model is created (avoids closure mutation)
+    _through_model_ref: list = []  # filled after through_model is created (avoids closure mutation)
     _compose_key = compose_key  # capture for closure
 
-    def _make_get_or_create(ck, cg, lmr):
+    def _make_get_or_create(ck, cg, tmr):
         @classmethod  # type: ignore[misc]
-        def get_or_create_with_layers(cls, user, **kwargs) -> tuple:
+        def get_or_create_with_components(cls, user, **kwargs) -> tuple:
             components = kwargs[ck] if ck in kwargs else kwargs.get('components')
             if components is None:
                 raise TypeError(
-                    f'get_or_create_with_layers() requires keyword argument '
+                    f'get_or_create_with_components() requires keyword argument '
                     f'{ck!r} (or generic alias "components")'
                 )
             if not components:
-                raise ValueError(f'A {cls.__name__} must have at least one layer.')
+                raise ValueError(f'A {cls.__name__} must have at least one component.')
             name = cls.compute_name([str(c) for c in components])
             composite, created = cls.objects.get_or_create(user=user, name=name)
             if created:
-                lm = lmr[0]
+                tm = tmr[0]
                 for order, component in enumerate(components):
-                    lm.objects.create(combination=composite, **{cg: component}, order=order)
+                    tm.objects.create(combination=composite, **{cg: component}, order=order)
             return composite, created
-        return get_or_create_with_layers
+        return get_or_create_with_components
 
-    get_or_create_with_layers = _make_get_or_create(_compose_key, component_global, _layer_model_ref)
-    composite_attrs['get_or_create_with_layers'] = get_or_create_with_layers
+    get_or_create_with_components = _make_get_or_create(_compose_key, component_global, _through_model_ref)
+    composite_attrs['get_or_create_with_components'] = get_or_create_with_components
 
     # get_or_create_from_ordered_pks — resolves PKs to component instances, then delegates.
     @classmethod  # type: ignore[misc]
@@ -473,13 +476,13 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
             except component_model.DoesNotExist as exc:
                 raise ValueError(f'Unknown {_component_model_name} pk: {pk!r}') from exc
         if not components:
-            raise ValueError(f'A {model_name} must have at least one layer.')
-        return cls.get_or_create_with_layers(user=user, components=components)
+            raise ValueError(f'A {cls.__name__} must have at least one component.')
+        return cls.get_or_create_with_components(user=user, components=components)
 
     composite_attrs['get_or_create_from_ordered_pks'] = get_or_create_from_ordered_pks
 
     composite_model = type(model_name, (GlobalModel,), composite_attrs)
-    _layer_model_ref.append(layer_model)
+    _through_model_ref.append(through_model)
 
     # filterable_fields — fully derived from workflow.yml:
     # - boolean fields with filterable: true (inline fields)
@@ -491,27 +494,27 @@ def _make_compose_global_models(global_name: str) -> tuple[type, type]:
         **get_filterable_compose_fields(global_name),
     }
 
-    # post_fixture_load — reconstructs ordered M2M layers from the stored computed
-    # name after a public-library fixture is loaded.  Called by load_public_library
-    # for any model that declares this hook; only runs on newly created records.
+    # post_fixture_load — reconstructs ordered M2M rows from the stored computed name
+    # after a public-library fixture is loaded.  Called by load_public_library for any
+    # model that declares this hook; only runs on newly created records.
     #
     # Splits obj.name on COMPOSITE_NAME_SEPARATOR to recover component names, then
     # looks up each public (user=None) component instance by name and creates a
-    # layer row.  Generic for any ordered compose_from global whose components have
-    # a unique public name.
+    # through-table row.  Generic for any ordered compose_from global whose components
+    # have a unique public name.
     def post_fixture_load(obj, created: bool) -> None:
         if not created:
             return
         from django.apps import apps as _apps
         component_model = _apps.get_model('api', _component_model_name)
-        lm = _layer_model_ref[0]
+        tm = _through_model_ref[0]
         for order, component_name in enumerate(obj.name.split(COMPOSITE_NAME_SEPARATOR)):
             component = component_model.objects.get(user=None, name=component_name)
-            lm.objects.create(combination=obj, **{component_global: component}, order=order)
+            tm.objects.create(combination=obj, **{component_global: component}, order=order)
 
     composite_model.post_fixture_load = post_fixture_load
 
-    return composite_model, layer_model
+    return composite_model, through_model
 
 
 # ---------------------------------------------------------------------------

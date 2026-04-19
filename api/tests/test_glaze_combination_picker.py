@@ -28,7 +28,7 @@ def _pub_gt(name: str) -> GlazeType:
 
 
 def _pub_combo(*glaze_types, **props) -> GlazeCombination:
-    combo = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=list(glaze_types))[0]
+    combo = GlazeCombination.get_or_create_with_components(user=None, glaze_types=list(glaze_types))[0]
     if props:
         for k, v in props.items():
             setattr(combo, k, v)
@@ -150,7 +150,7 @@ class TestGlazeCombinationFiltering:
         gt1 = _pub_gt('Pub')
         gt2 = _pub_gt('Priv')
         pub_combo = _pub_combo(gt1)
-        priv_combo = GlazeCombination.get_or_create_with_layers(user=user, glaze_types=[gt2])[0]
+        priv_combo = GlazeCombination.get_or_create_with_components(user=user, glaze_types=[gt2])[0]
 
         response = client.get('/api/globals/glaze_combination/')
 
@@ -213,7 +213,7 @@ class TestFavoriteAdd:
 
     def test_cannot_favorite_other_users_private_combination(self, client, user, other_user):
         gt = _pub_gt('PrivGlaze')
-        priv_combo = GlazeCombination.get_or_create_with_layers(user=other_user, glaze_types=[gt])[0]
+        priv_combo = GlazeCombination.get_or_create_with_components(user=other_user, glaze_types=[gt])[0]
 
         response = client.post(f'/api/globals/glaze_combination/{priv_combo.pk}/favorite/')
 

@@ -121,6 +121,14 @@ $defs:
                 Human-readable label used in pickers that expose this compose_from
                 relationship as a multi-select filter. If omitted, the field name is
                 converted to title case (e.g. "glaze_types" → "Glaze Types").
+            through_model:
+              type: string
+              pattern: '^[A-Z][A-Za-z0-9]*$'
+              description: |
+                The PascalCase name of the Django through model class for this M2M
+                relationship. If omitted, the factory defaults to
+                `<CompositeModelName>Through`. Set this explicitly when the through
+                model already exists in migrations and its name must be preserved.
             through_fields:
               type: object
               description: |

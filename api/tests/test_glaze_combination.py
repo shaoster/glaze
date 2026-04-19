@@ -3,7 +3,7 @@
 Covers:
 - GlazeCombinationLayer.save(): public combination → public glaze types only
 - GlazeCombination.compute_name(): name built from ordered layer names
-- GlazeCombination.get_or_create_with_layers(): find-or-create semantics
+- GlazeCombination.get_or_create_with_components(): find-or-create semantics
 - GlazeType.name validation: separator character is rejected
 - Name-based uniqueness constraints (public and per-user)
 - API GET /api/globals/glaze_combination/: returns public + user-private combos (via global_entries)
@@ -35,7 +35,7 @@ def _priv_gt(user, name: str) -> GlazeType:
 
 def _pub_combo(*glaze_types) -> GlazeCombination:
     """Create a public combination from the given ordered GlazeType instances."""
-    return GlazeCombination.get_or_create_with_layers(user=None, glaze_types=list(glaze_types))[0]
+    return GlazeCombination.get_or_create_with_components(user=None, glaze_types=list(glaze_types))[0]
 
 
 # ---------------------------------------------------------------------------
@@ -109,14 +109,14 @@ class TestLayerPublicConstraint:
 
 
 # ---------------------------------------------------------------------------
-# GlazeCombination.get_or_create_with_layers
+# GlazeCombination.get_or_create_with_components
 # ---------------------------------------------------------------------------
 
 @pytest.mark.django_db
 class TestGetOrCreateWithLayers:
     def test_single_layer_name(self):
         gt = _pub_gt('Celadon')
-        combo, created = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt])
+        combo, created = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt])
         assert created
         assert combo.name == 'Celadon'
 
@@ -124,7 +124,7 @@ class TestGetOrCreateWithLayers:
         sep = COMPOSITE_NAME_SEPARATOR
         gt1 = _pub_gt('Celadon')
         gt2 = _pub_gt('Iron Red')
-        combo, created = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt1, gt2])
+        combo, created = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt1, gt2])
         assert created
         assert combo.name == f'Celadon{sep}Iron Red'
 
@@ -133,13 +133,13 @@ class TestGetOrCreateWithLayers:
         gt1 = _pub_gt('A')
         gt2 = _pub_gt('B')
         gt3 = _pub_gt('C')
-        combo, _ = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt1, gt2, gt3])
+        combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt1, gt2, gt3])
         assert combo.name == f'A{sep}B{sep}C'
 
     def test_same_glaze_twice(self):
         sep = COMPOSITE_NAME_SEPARATOR
         gt = _pub_gt('Shino')
-        combo, created = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt, gt])
+        combo, created = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt, gt])
         assert created
         assert combo.name == f'Shino{sep}Shino'
         assert combo.layers.count() == 2
@@ -147,8 +147,8 @@ class TestGetOrCreateWithLayers:
     def test_idempotent_returns_existing(self):
         gt1 = _pub_gt('Celadon')
         gt2 = _pub_gt('Iron Red')
-        combo1, created1 = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt1, gt2])
-        combo2, created2 = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt1, gt2])
+        combo1, created1 = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt1, gt2])
+        combo2, created2 = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt1, gt2])
         assert created1
         assert not created2
         assert combo1.pk == combo2.pk
@@ -157,29 +157,30 @@ class TestGetOrCreateWithLayers:
         gt1 = _pub_gt('First')
         gt2 = _pub_gt('Second')
         gt3 = _pub_gt('Third')
-        combo, _ = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt1, gt2, gt3])
+        combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt1, gt2, gt3])
         layers = list(combo.layers.order_by('order'))
         assert [l.glaze_type for l in layers] == [gt1, gt2, gt3]
 
     def test_empty_list_raises(self):
-        with pytest.raises(ValueError, match='at least one layer'):
-            GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[])
+        with pytest.raises(ValueError, match='at least one component'):
+            GlazeCombination.get_or_create_with_components(user=None, glaze_types=[])
+
 
     def test_name_persisted_to_db(self):
         gt = _pub_gt('Tenmoku')
-        combo, _ = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt])
+        combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt])
         combo.refresh_from_db()
         assert combo.name == 'Tenmoku'
 
     def test_str_returns_name(self):
         gt = _pub_gt('Ash')
-        combo, _ = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt])
+        combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt])
         assert str(combo) == combo.name
 
     def test_private_combo_for_user(self, user):
         gt1 = _pub_gt('Celadon')
         gt2 = _pub_gt('Iron Red')
-        combo, created = GlazeCombination.get_or_create_with_layers(user=user, glaze_types=[gt1, gt2])
+        combo, created = GlazeCombination.get_or_create_with_components(user=user, glaze_types=[gt1, gt2])
         assert created
         assert combo.user == user
 
@@ -199,15 +200,15 @@ class TestUniquenessConstraints:
 
     def test_per_user_uniqueness_by_name(self, user):
         gt = _pub_gt('Celadon')
-        GlazeCombination.get_or_create_with_layers(user=user, glaze_types=[gt])
+        GlazeCombination.get_or_create_with_components(user=user, glaze_types=[gt])
         from django.db import IntegrityError
         with pytest.raises(IntegrityError):
             GlazeCombination.objects.create(user=user, name='Celadon')
 
     def test_public_and_private_may_share_name(self, user):
         gt = _pub_gt('Celadon')
-        pub, _ = GlazeCombination.get_or_create_with_layers(user=None, glaze_types=[gt])
-        priv, created = GlazeCombination.get_or_create_with_layers(user=user, glaze_types=[gt])
+        pub, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt])
+        priv, created = GlazeCombination.get_or_create_with_components(user=user, glaze_types=[gt])
         assert created
         assert pub.pk != priv.pk
         assert pub.name == priv.name
@@ -231,7 +232,7 @@ class TestGlazeCombinationApiGet:
 
     def test_returns_user_private_combinations(self, client, user):
         gt = _pub_gt('Iron Red')
-        GlazeCombination.get_or_create_with_layers(user=user, glaze_types=[gt])
+        GlazeCombination.get_or_create_with_components(user=user, glaze_types=[gt])
         response = client.get('/api/globals/glaze_combination/')
         assert response.status_code == 200
         names = [e['name'] for e in response.json()]
@@ -241,7 +242,7 @@ class TestGlazeCombinationApiGet:
         pub_gt = _pub_gt('Celadon')
         priv_gt = _priv_gt(user, 'Private Red')
         _pub_combo(pub_gt)
-        GlazeCombination.get_or_create_with_layers(user=user, glaze_types=[priv_gt])
+        GlazeCombination.get_or_create_with_components(user=user, glaze_types=[priv_gt])
         response = client.get('/api/globals/glaze_combination/')
         assert response.status_code == 200
         data = response.json()
@@ -251,7 +252,7 @@ class TestGlazeCombinationApiGet:
 
     def test_does_not_return_other_users_private_combinations(self, client, user, other_user):
         gt = _priv_gt(other_user, 'Other Users Glaze')
-        GlazeCombination.get_or_create_with_layers(user=other_user, glaze_types=[gt])
+        GlazeCombination.get_or_create_with_components(user=other_user, glaze_types=[gt])
         response = client.get('/api/globals/glaze_combination/')
         assert response.status_code == 200
         names = [e['name'] for e in response.json()]
@@ -304,7 +305,7 @@ class TestGlazeCombinationApiPost:
 
     def test_returns_200_if_already_exists(self, client, user):
         gt = _pub_gt('Celadon')
-        GlazeCombination.get_or_create_with_layers(user=user, glaze_types=[gt])
+        GlazeCombination.get_or_create_with_components(user=user, glaze_types=[gt])
         response = client.post(
             '/api/globals/glaze_combination/',
             {'layers': [gt.pk]},

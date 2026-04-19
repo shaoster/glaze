@@ -178,6 +178,7 @@ globals:
       glaze_types:
         global: glaze_type
         ordered: true
+        through_model: GlazeCombinationLayer
         filter_label: "Contains glaze types (all must match)"
         through_fields:
           glaze_method:
