@@ -26,6 +26,9 @@ export type State = components['schemas']['StateEnum']
 // CaptionedImage is correct as-is — direct re-export.
 export type CaptionedImage = components['schemas']['CaptionedImage']
 
+// Thumbnail stored on a Piece. Distinct from CaptionedImage — no caption field.
+export type Thumbnail = components['schemas']['Thumbnail']
+
 // Minimal state shape returned in list responses.
 // Intersection narrows state: string → state: State.
 // PieceState is a structural subtype, so it can substitute for StateSummary.

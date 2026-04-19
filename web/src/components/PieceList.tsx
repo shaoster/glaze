@@ -18,6 +18,9 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import type { PieceSummary } from '@common/types'
 import { SUCCESSORS } from '@common/types'
+import CloudinaryImage from './CloudinaryImage'
+
+const DEFAULT_THUMBNAIL = '/thumbnails/question-mark.svg'
 
 type FilterCategory = 'wip' | 'completed' | 'discarded'
 
@@ -52,7 +55,13 @@ const PieceListItem = (props: PieceListItemProps) => {
       sx={{ cursor: 'pointer' }}
     >
       <TableCell>
-        <img src={piece.thumbnail} />
+        <CloudinaryImage
+                  url={piece.thumbnail?.url ?? DEFAULT_THUMBNAIL}
+                  cloudinary_public_id={piece.thumbnail?.cloudinary_public_id}
+                  alt={piece.name}
+                  context="thumbnail"
+                  style={{ objectFit: 'cover', borderRadius: 4 }}
+                />
       </TableCell>
       <TableCell sx={{ color: 'text.primary' }}>
         <Link

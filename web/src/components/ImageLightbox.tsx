@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Box, IconButton, Modal, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, IconButton, Modal, Typography } from '@mui/material'
 import type { CaptionedImage } from '@common/types'
 import CloudinaryImage from './CloudinaryImage'
 
@@ -7,10 +7,13 @@ type ImageLightboxProps = {
     images: CaptionedImage[]
     initialIndex: number
     onClose: () => void
+    currentThumbnailUrl?: string
+    onSetAsThumbnail?: (image: CaptionedImage) => Promise<void>
 }
 
-export default function ImageLightbox({ images, initialIndex, onClose }: ImageLightboxProps) {
+export default function ImageLightbox({ images, initialIndex, onClose, currentThumbnailUrl, onSetAsThumbnail }: ImageLightboxProps) {
     const [index, setIndex] = useState(initialIndex)
+    const [settingThumbnail, setSettingThumbnail] = useState(false)
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
     const touchStartX = useRef<number | null>(null)
 
@@ -29,6 +32,18 @@ export default function ImageLightbox({ images, initialIndex, onClose }: ImageLi
     }
 
     const image = images[index]
+    const isCurrentThumbnail = !!currentThumbnailUrl && image.url === currentThumbnailUrl
+
+    async function handleSetAsThumbnail(e: React.MouseEvent) {
+        e.stopPropagation()
+        if (!onSetAsThumbnail) return
+        setSettingThumbnail(true)
+        try {
+            await onSetAsThumbnail(image)
+        } finally {
+            setSettingThumbnail(false)
+        }
+    }
 
     return (
         <Modal
@@ -62,6 +77,20 @@ export default function ImageLightbox({ images, initialIndex, onClose }: ImageLi
                     <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
                         {image.caption}
                     </Typography>
+                )}
+                {onSetAsThumbnail && (
+                    <Box onClick={(e) => e.stopPropagation()}>
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            disabled={isCurrentThumbnail || settingThumbnail}
+                            onClick={handleSetAsThumbnail}
+                            startIcon={settingThumbnail ? <CircularProgress size={14} color="inherit" /> : undefined}
+                            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
+                        >
+                            {isCurrentThumbnail ? 'Current thumbnail' : settingThumbnail ? 'Setting…' : 'Set as thumbnail'}
+                        </Button>
+                    </Box>
                 )}
                 {!isTouchDevice && images.length > 1 && (
                     <Box

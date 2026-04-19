@@ -14,7 +14,7 @@
  * this module.
  */
 import axios from 'axios'
-import type { CaptionedImage, FiringTemperatureRef, GlazeCombinationEntry, GlazeTypeRef, PieceDetail, PieceSummary, PieceState, State, StateSummary } from './types'
+import type { CaptionedImage, FiringTemperatureRef, GlazeCombinationEntry, GlazeTypeRef, PieceDetail, PieceSummary, PieceState, State, StateSummary, Thumbnail } from './types'
 
 export type AuthUser = {
     id: number
@@ -97,7 +97,7 @@ function mapPieceSummary(raw: Wire<PieceSummary>): PieceSummary {
         name: raw.name,
         created: new Date(raw.created ?? ''),
         last_modified: new Date(raw.last_modified ?? ''),
-        thumbnail: raw.thumbnail,
+        thumbnail: raw.thumbnail as Thumbnail | null,
         current_state: mapStateSummary(raw.current_state),
         current_location: raw.current_location ?? '',
     }
@@ -207,6 +207,7 @@ export async function updateCurrentState(pieceId: string, payload: UpdateStatePa
 
 export type UpdatePiecePayload = {
     current_location?: string
+    thumbnail?: Thumbnail | null
 }
 
 export async function updatePiece(pieceId: string, payload: UpdatePiecePayload): Promise<PieceDetail> {

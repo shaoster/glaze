@@ -36,6 +36,7 @@ type WorkflowStateProps = {
     onSaved: (updated: PieceDetail) => void
     onDirtyChange?: (dirty: boolean) => void
     currentLocation?: string
+    currentThumbnail?: import('@common/types').Thumbnail | null
 }
 
 type ImageEntry = { url: string; caption: string; cloudinary_public_id?: string | null }
@@ -129,6 +130,7 @@ export default function WorkflowState({
     onSaved,
     onDirtyChange,
     currentLocation: currentLocationProp = '',
+    currentThumbnail,
 }: WorkflowStateProps) {
     const [notes, setNotes] = useState(pieceState.notes)
     const [images, setImages] = useState<ImageEntry[]>(stateImages(pieceState))
@@ -161,6 +163,13 @@ export default function WorkflowState({
 
     // Lightbox state
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+
+    async function handleSetAsThumbnail(image: ImageEntry) {
+        const updated = await updatePiece(pieceId, {
+            thumbnail: { url: image.url, cloudinary_public_id: image.cloudinary_public_id ?? null },
+        })
+        onSaved(updated)
+    }
 
     // Reset form when pieceState changes (e.g. after a state transition)
     useEffect(() => {
@@ -629,6 +638,8 @@ export default function WorkflowState({
                     images={images}
                     initialIndex={lightboxIndex}
                     onClose={() => setLightboxIndex(null)}
+                    currentThumbnailUrl={currentThumbnail?.url}
+                    onSetAsThumbnail={handleSetAsThumbnail}
                 />
             )}
 
