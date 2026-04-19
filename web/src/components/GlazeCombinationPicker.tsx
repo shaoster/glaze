@@ -21,7 +21,7 @@ import TextField from '@mui/material/TextField'
 import {
     fetchGlazeCombinations,
     fetchGlobalEntries,
-    toggleFavoriteGlazeCombination,
+    toggleGlobalEntryFavorite,
     type GlazeCombinationEntry,
     type GlazeCombinationFilters,
     type GlazeTypeRef,
@@ -126,7 +126,7 @@ export default function GlazeCombinationPicker({ open, onClose, onSelect }: Glaz
     async function handleToggleFavorite(combo: GlazeCombinationEntry) {
         setTogglingId(combo.id)
         try {
-            await toggleFavoriteGlazeCombination(combo.id, !combo.is_favorite)
+            await toggleGlobalEntryFavorite('glaze_combination', combo.id, !combo.is_favorite)
             setCombinations((prev) =>
                 prev.map((c) => (c.id === combo.id ? { ...c, is_favorite: !c.is_favorite } : c))
             )

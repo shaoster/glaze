@@ -255,14 +255,11 @@ export async function fetchGlazeCombinations(
     return data
 }
 
-// TODO(#82): replace with a generic toggleGlobalEntryFavorite(globalName, id, favorite)
-// that constructs the URL from globalName rather than hardcoding 'glaze_combination'.
-// https://github.com/shaoster/glaze/issues/82
-export async function toggleFavoriteGlazeCombination(id: string, favorite: boolean): Promise<void> {
+export async function toggleGlobalEntryFavorite(globalName: string, id: string, favorite: boolean): Promise<void> {
     if (favorite) {
-        await client.post(`globals/glaze_combination/${id}/favorite/`)
+        await client.post(`globals/${globalName}/${id}/favorite/`)
     } else {
-        await client.delete(`globals/glaze_combination/${id}/favorite/`)
+        await client.delete(`globals/${globalName}/${id}/favorite/`)
     }
 }
 
