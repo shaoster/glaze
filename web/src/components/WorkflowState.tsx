@@ -29,6 +29,7 @@ import {
 } from '@common/workflow'
 import GlobalFieldPicker from './GlobalFieldPicker'
 import GlobalEntryPicker from './GlobalEntryPicker'
+import { getGlobalFieldOverride } from '../globalFieldRegistry'
 
 type WorkflowStateProps = {
     pieceState: PieceState
@@ -410,15 +411,7 @@ export default function WorkflowState({
                                 )
                             }
                             if (field.isGlobalRef && field.globalName) {
-                                // TODO(#84): replace the inline isGlazeCombination flag with a
-                                // registration pattern — a module-level registry mapping globalName
-                                // to a custom field component. WorkflowState should look up the
-                                // registry rather than accumulating per-type branches here.
-                                // Connections: #81 (filterable fields in workflow.yml could drive
-                                // the registry), #83 (generic GlobalEntryPicker could be the
-                                // registered component for any filterable global type).
-                                // https://github.com/shaoster/glaze/issues/84
-                                const isGlazeCombination = field.globalName === 'glaze_combination'
+                                const override = getGlobalFieldOverride(field.globalName)
                                 return (
                                     <Box key={field.name} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                                         <GlobalFieldPicker
@@ -431,7 +424,7 @@ export default function WorkflowState({
                                             required={field.required}
                                             sx={{ flex: 1 }}
                                         />
-                                        {isGlazeCombination && (
+                                        {override?.showBrowse && (
                                             <Button
                                                 variant="outlined"
                                                 onClick={() => setPickerGlobalName(field.globalName ?? null)}
