@@ -148,6 +148,16 @@ def is_favoritable_global(global_name: str) -> bool:
     return bool(config.get('favoritable', False))
 
 
+def is_factory_global(global_name: str) -> bool:
+    """Return True if the model factory should generate a Django model for this global.
+
+    Defaults to True.  Set ``factory: false`` in workflow.yml for reference-only
+    globals whose Django model is hand-written (e.g. ``piece``).
+    """
+    config = _GLOBALS_MAP.get(global_name, {})
+    return bool(config.get('factory', True))
+
+
 def get_global_names() -> list[str]:
     """Return all global names registered in workflow.yml, in declaration order."""
     return list(_GLOBALS_MAP.keys())

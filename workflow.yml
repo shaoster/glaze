@@ -79,6 +79,7 @@ globals:
   piece:
     model: Piece
     description: A pottery piece being tracked through the workflow.
+    factory: false
     public: false
     private: true
     fields:
