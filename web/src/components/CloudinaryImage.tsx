@@ -14,7 +14,7 @@
 import { Cloudinary } from '@cloudinary/url-gen'
 import { fill, fit } from '@cloudinary/url-gen/actions/resize'
 import { format, quality } from '@cloudinary/url-gen/actions/delivery'
-import { auto as autoFormat } from '@cloudinary/url-gen/qualifiers/format'
+import { auto as autoFormat, jpg } from '@cloudinary/url-gen/qualifiers/format'
 import { auto as autoQuality } from '@cloudinary/url-gen/qualifiers/quality'
 import { autoGravity } from '@cloudinary/url-gen/qualifiers/gravity'
 import { AdvancedImage } from '@cloudinary/react'
@@ -177,7 +177,10 @@ export default function CloudinaryImage({
             img.resize(fill().width(THUMBNAIL_SIZE).height(THUMBNAIL_SIZE).gravity(autoGravity()))
         }
 
-        img.delivery(format(autoFormat()))
+        // Thumbnail and preview contexts request JPG explicitly — consistent
+        // format for small fill crops. Lightbox uses auto format so the browser
+        // can receive WebP/AVIF for large images.
+        img.delivery(format(context === 'lightbox' ? autoFormat() : jpg()))
         img.delivery(quality(autoQuality()))
 
         return (
