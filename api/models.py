@@ -457,7 +457,7 @@ class Piece(models.Model):
     # Tracks changes to owned fields (name, thumbnail) only.
     # Use the `last_modified` property externally — it incorporates the current state's timestamp.
     fields_last_modified = models.DateTimeField(auto_now=True)
-    thumbnail = models.CharField(max_length=1024, blank=True, default='')
+    thumbnail = models.JSONField(null=True, blank=True, default=None)
     current_location = models.ForeignKey(
         'Location',
         null=True,

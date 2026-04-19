@@ -19,7 +19,7 @@ import {
 import { useBlocker } from 'react-router-dom'
 import type { CaptionedImage, PieceDetail as PieceDetailType } from '@common/types'
 import { formatState, SUCCESSORS } from '@common/types'
-import { addPieceState } from '@common/api'
+import { addPieceState, updatePiece } from '@common/api'
 import ImageLightbox from './ImageLightbox'
 import CloudinaryImage from './CloudinaryImage'
 import WorkflowState from './WorkflowState'
@@ -82,7 +82,8 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
             {piece.thumbnail && (
                 <CloudinaryImage
-                    url={piece.thumbnail}
+                    url={piece.thumbnail.url}
+                    cloudinary_public_id={piece.thumbnail.cloudinary_public_id}
                     alt={piece.name}
                     context="thumbnail"
                     style={{ objectFit: 'cover', borderRadius: 4 }}
@@ -111,7 +112,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                 onSaved={onPieceUpdated}
                 onDirtyChange={setIsDirty}
                 currentLocation={piece.current_location ?? ''}
-                currentThumbnailUrl={piece.thumbnail ?? undefined}
+                currentThumbnail={piece.thumbnail}
             />
 
             <Divider sx={{ my: 3 }} />
@@ -216,6 +217,13 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                             images={allHistoryImages}
                             initialIndex={lightboxIndex}
                             onClose={() => setLightboxIndex(null)}
+                            currentThumbnailUrl={piece.thumbnail?.url}
+                            onSetAsThumbnail={async (image) => {
+                                const updated = await updatePiece(piece.id, {
+                                    thumbnail: { url: image.url, cloudinary_public_id: image.cloudinary_public_id ?? null },
+                                })
+                                onPieceUpdated(updated)
+                            }}
                         />
                     )}
                 </Box>

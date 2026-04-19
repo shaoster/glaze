@@ -143,18 +143,20 @@ class StateSummarySerializer(serializers.Serializer):
     state = serializers.CharField()
 
 
+class ThumbnailSerializer(serializers.Serializer):
+    url = serializers.CharField()
+    cloudinary_public_id = serializers.CharField(allow_blank=True, allow_null=True, default=None)
+
+
 class PieceSummarySerializer(serializers.ModelSerializer):
     current_state = serializers.SerializerMethodField()
     current_location = serializers.SerializerMethodField()
+    thumbnail = ThumbnailSerializer(allow_null=True, read_only=True)
     last_modified = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Piece
         fields = ['id', 'name', 'created', 'last_modified', 'thumbnail', 'current_state', 'current_location']
-        # thumbnail always present in responses (model default='')
-        extra_kwargs = {
-            'thumbnail': {'required': True},
-        }
 
     @extend_schema_field(StateSummarySerializer)
     def get_current_state(self, obj: Piece) -> dict:
@@ -190,6 +192,9 @@ class PieceDetailSerializer(PieceSummarySerializer):
 class PieceCreateSerializer(serializers.ModelSerializer):
     notes = serializers.CharField(required=False, default='', allow_blank=True, max_length=300)
     current_location = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
+    # Accept a bare URL string from the curated SVG gallery; wrap it into the
+    # {url, cloudinary_public_id} shape that Piece.thumbnail now stores.
+    thumbnail = serializers.CharField(required=False, allow_blank=True, default=None)
 
     class Meta:
         model = Piece
@@ -202,7 +207,9 @@ class PieceCreateSerializer(serializers.ModelSerializer):
         location_obj = None
         if location_name:
             location_obj, _ = Location.objects.get_or_create(user=user, name=location_name)
-        piece = Piece.objects.create(user=user, **validated_data, current_location=location_obj)
+        raw_thumbnail = validated_data.pop('thumbnail', None)
+        thumbnail = {'url': raw_thumbnail, 'cloudinary_public_id': None} if raw_thumbnail else None
+        piece = Piece.objects.create(user=user, thumbnail=thumbnail, **validated_data, current_location=location_obj)
         PieceState.objects.create(user=user, piece=piece, state=ENTRY_STATE, notes=notes)
         return piece
 
@@ -299,6 +306,7 @@ class PieceStateUpdateSerializer(serializers.Serializer):
 class PieceUpdateSerializer(serializers.Serializer):
     """Partial update of Piece fields."""
     current_location = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
+    thumbnail = ThumbnailSerializer(required=False, allow_null=True)
 
     def update(self, instance: Piece, validated_data: dict) -> Piece:  # type: ignore[override] — DRF base is untyped; narrowing instance/return to Piece is intentional
         if 'current_location' in validated_data:
@@ -309,6 +317,8 @@ class PieceUpdateSerializer(serializers.Serializer):
             else:
                 location_obj = None
             instance.current_location = location_obj
+        if 'thumbnail' in validated_data:
+            instance.thumbnail = validated_data['thumbnail']
         instance.save()
         return instance
 

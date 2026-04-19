@@ -52,7 +52,7 @@ const PieceListItem = (props: PieceListItemProps) => {
       sx={{ cursor: 'pointer' }}
     >
       <TableCell>
-        <img src={piece.thumbnail} />
+        <img src={piece.thumbnail?.url} />
       </TableCell>
       <TableCell sx={{ color: 'text.primary' }}>
         <Link

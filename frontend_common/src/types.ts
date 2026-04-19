@@ -26,6 +26,15 @@ export type State = components['schemas']['StateEnum']
 // CaptionedImage is correct as-is — direct re-export.
 export type CaptionedImage = components['schemas']['CaptionedImage']
 
+// Thumbnail stored on a Piece. Distinct from CaptionedImage — no caption field.
+// Omit<> on PieceSummary below is required because the generated schema still
+// declares thumbnail as string (from the prior CharField); the intersection
+// `string & Thumbnail` would collapse to never without it.
+export type Thumbnail = {
+    url: string
+    cloudinary_public_id: string | null
+}
+
 // Minimal state shape returned in list responses.
 // Intersection narrows state: string → state: State.
 // PieceState is a structural subtype, so it can substitute for StateSummary.
@@ -38,8 +47,12 @@ export type PieceState = components['schemas']['PieceState'] & {
     additional_fields: Record<string, unknown>
 }
 
-// Piece list entry. Intersection narrows current_state to use our typed StateSummary.
-export type PieceSummary = components['schemas']['PieceSummary'] & { current_state: StateSummary }
+// Piece list entry. Intersection narrows current_state and replaces the
+// generated string thumbnail with the structured Thumbnail type.
+export type PieceSummary = Omit<components['schemas']['PieceSummary'], 'thumbnail'> & {
+    thumbnail: Thumbnail | null
+    current_state: StateSummary
+}
 
 
 // Piece detail. Intersection narrows current_state to PieceState (subtype of StateSummary)
