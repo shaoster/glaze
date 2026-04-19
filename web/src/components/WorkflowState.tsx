@@ -26,10 +26,10 @@ import {
     type ResolvedAdditionalField,
     formatWorkflowFieldLabel,
     getAdditionalFieldDefinitions,
+    getGlobalPickerFilters,
 } from '@common/workflow'
 import GlobalFieldPicker from './GlobalFieldPicker'
 import GlobalEntryPicker from './GlobalEntryPicker'
-import { getGlobalFieldOverride } from '../globalFieldRegistry'
 
 type WorkflowStateProps = {
     pieceState: PieceState
@@ -411,7 +411,7 @@ export default function WorkflowState({
                                 )
                             }
                             if (field.isGlobalRef && field.globalName) {
-                                const override = getGlobalFieldOverride(field.globalName)
+                                const hasBrowse = getGlobalPickerFilters(field.globalName).length > 0
                                 return (
                                     <Box key={field.name} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                                         <GlobalFieldPicker
@@ -424,7 +424,7 @@ export default function WorkflowState({
                                             required={field.required}
                                             sx={{ flex: 1 }}
                                         />
-                                        {override?.showBrowse && (
+                                        {hasBrowse && (
                                             <Button
                                                 variant="outlined"
                                                 onClick={() => setPickerGlobalName(field.globalName ?? null)}
