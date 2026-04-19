@@ -79,6 +79,7 @@ globals:
   piece:
     model: Piece
     description: A pottery piece being tracked through the workflow.
+    factory: false
     public: false
     private: true
     fields:
@@ -166,6 +167,7 @@ globals:
       atmosphere:
         type: string
         description: Kiln atmosphere (e.g. oxidation, reduction, soda).
+        max_length: 255
 
   glaze_combination:
     model: GlazeCombination
@@ -177,6 +179,7 @@ globals:
       glaze_types:
         global: glaze_type
         ordered: true
+        through_model: GlazeCombinationLayer
         filter_label: "Contains glaze types (all must match)"
         through_fields:
           glaze_method:

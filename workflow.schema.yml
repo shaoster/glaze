@@ -70,6 +70,16 @@ $defs:
           Whether this global type supports user-private instances.
           Private objects are owned by a specific user and invisible to others.
         default: true
+      factory:
+        type: boolean
+        description: |
+          Whether the model factory should generate a Django model class for this
+          global. Defaults to true. Set to false for "reference-only" globals whose
+          model is hand-written elsewhere (e.g. the core Piece model, which is
+          registered in globals only so that additional_fields DSL refs like
+          "@piece.name" can be validated, but whose model class is not a GlobalModel
+          subclass and must not be auto-generated).
+        default: true
       favoritable:
         type: boolean
         description: |
@@ -77,6 +87,16 @@ $defs:
           authenticated users can mark individual entries as favorites via
           POST/DELETE /api/globals/<global_name>/<pk>/favorite/.
         default: false
+      plural:
+        type: string
+        description: |
+          Explicit plural form of the global name, used for FK related_name
+          attributes (e.g. "glaze_types" for "glaze_type").
+          When omitted, the plural is derived automatically by _pluralize_snake:
+          names ending in 'y' become 'ies'; all others get an 's' suffix.
+          Override this key when the automatic rule produces the wrong result
+          (e.g. compound words, irregular plurals, or names ending in a silent 'e').
+        pattern: '^[a-z][a-z0-9_]*$'
       compose_from:
         type: object
         description: |
@@ -111,6 +131,14 @@ $defs:
                 Human-readable label used in pickers that expose this compose_from
                 relationship as a multi-select filter. If omitted, the field name is
                 converted to title case (e.g. "glaze_types" → "Glaze Types").
+            through_model:
+              type: string
+              pattern: '^[A-Z][A-Za-z0-9]*$'
+              description: |
+                The PascalCase name of the Django through model class for this M2M
+                relationship. If omitted, the factory defaults to
+                `<CompositeModelName>Through`. Set this explicitly when the through
+                model already exists in migrations and its name must be preserved.
             through_fields:
               type: object
               description: |
@@ -231,6 +259,13 @@ $defs:
           Must only appear on fields with type: image. At most one field per global
           may carry this flag — enforced in tests/test_workflow.py.
         default: false
+      max_length:
+        type: integer
+        description: |
+          Maximum character length for string and image fields. When present,
+          overrides the factory default (255 for non-description strings).
+          Only meaningful when type is "string" or "image"; ignored otherwise.
+        minimum: 1
       label:
         type: string
         description: |

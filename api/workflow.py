@@ -134,7 +134,7 @@ def get_filterable_fields(global_name: str) -> dict[str, dict]:
             if k in ('type', 'label')
         }
         for field_name, field_def in config.get('fields', {}).items()
-        if field_def.get('filterable', False)
+        if field_def.get('filterable', False) and 'type' in field_def
     }
 
 
@@ -148,9 +148,82 @@ def is_favoritable_global(global_name: str) -> bool:
     return bool(config.get('favoritable', False))
 
 
+def is_factory_global(global_name: str) -> bool:
+    """Return True if the model factory should generate a Django model for this global.
+
+    Defaults to True.  Set ``factory: false`` in workflow.yml for reference-only
+    globals whose Django model is hand-written (e.g. ``piece``).
+    """
+    config = _GLOBALS_MAP.get(global_name, {})
+    return bool(config.get('factory', True))
+
+
 def get_global_names() -> list[str]:
     """Return all global names registered in workflow.yml, in declaration order."""
     return list(_GLOBALS_MAP.keys())
+
+
+def get_global_config(global_name: str) -> dict:
+    """Return the full workflow.yml config dict for a global, or {} if unknown.
+
+    Used by model factories that need the raw DSL config (model name, public/
+    private flags, fields dict, compose_from) without going through the
+    higher-level typed helpers.
+    """
+    return dict(_GLOBALS_MAP.get(global_name, {}))
+
+
+def get_filterable_ref_fields(global_name: str) -> dict[str, dict]:
+    """Return FK filter metadata for global ref fields declared with filterable: true.
+
+    For each field in the global's ``fields`` section that is a global ref
+    (``$ref: @...``) with ``filterable: true``, returns an entry:
+
+        { '<field_name>_id': {'type': 'fk_id', 'param': '<field_name>_id'} }
+
+    The ``_id`` suffix maps to the Django ORM lookup on the FK column; the
+    ``param`` is the query-string key callers use to filter by that FK.
+
+    Used by the composite model factory to populate ``filterable_fields``
+    without hardcoding field names.
+    """
+    config = _GLOBALS_MAP.get(global_name, {})
+    result: dict[str, dict] = {}
+    for field_name, field_def in config.get('fields', {}).items():
+        if field_def.get('filterable', False) and '$ref' in field_def and field_def['$ref'].startswith('@'):
+            orm_key = f'{field_name}_id'
+            result[orm_key] = {'type': 'fk_id', 'param': orm_key}
+    return result
+
+
+def get_filterable_compose_fields(global_name: str) -> dict[str, dict]:
+    """Return M2M filter metadata for compose_from relationships with a filter_label.
+
+    For each entry in the global's ``compose_from`` section that carries a
+    ``filter_label``, returns an entry:
+
+        { 'layers__<component_global>_id': {'type': 'm2m_id', 'param': '<component_global>_ids'} }
+
+    The ORM lookup ``layers__<component_global>_id`` filters composites that
+    contain at least one layer referencing the given component PK.  The ``param``
+    key uses the plural form (``_ids``) to signal multi-value selection.
+
+    ``filter_label`` presence is the signal — its schema description already
+    states it is "used in pickers that expose this compose_from relationship as
+    a multi-select filter".
+
+    Used by the composite model factory to populate ``filterable_fields``
+    without hardcoding field names.
+    """
+    config = _GLOBALS_MAP.get(global_name, {})
+    result: dict[str, dict] = {}
+    for _rel_name, compose_config in config.get('compose_from', {}).items():
+        if 'filter_label' not in compose_config:
+            continue
+        component_global: str = compose_config['global']
+        orm_key = f'layers__{component_global}_id'
+        result[orm_key] = {'type': 'm2m_id', 'param': f'{component_global}_ids'}
+    return result
 
 
 def get_compose_from(global_name: str) -> dict | None:

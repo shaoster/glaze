@@ -394,8 +394,8 @@ class GlazeCombinationAdmin(SortableAdminBase, PublicLibraryAdmin):
         layer_names = list(
             obj.layers.order_by('order').values_list('glaze_type__name', flat=True)
         )
-        from .models import GLAZE_COMBINATION_NAME_SEPARATOR
-        obj.name = GLAZE_COMBINATION_NAME_SEPARATOR.join(layer_names)
+        from .models import COMPOSITE_NAME_SEPARATOR
+        obj.name = COMPOSITE_NAME_SEPARATOR.join(layer_names)
         obj.save(update_fields=['name'])
 
 

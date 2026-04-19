@@ -162,6 +162,62 @@ class TestSchemaValidation:
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
 
+    def test_max_length_accepted_on_inline_string_field(self, schema):
+        """max_length: integer must be accepted on an inline string field."""
+        valid = {
+            "version": "1.0.0",
+            "globals": {
+                "thing": {
+                    "model": "Thing",
+                    "fields": {
+                        "name": {"type": "string"},
+                        "label": {"type": "string", "max_length": 64},
+                    },
+                }
+            },
+            "states": [
+                {"id": "a", "visible": True, "successors": ["b"]},
+                {"id": "b", "visible": True, "terminal": True},
+            ],
+        }
+        jsonschema.validate(instance=valid, schema=schema)
+
+    def test_max_length_must_be_positive(self, schema):
+        """max_length: 0 must be rejected (minimum: 1)."""
+        bad = {
+            "version": "1.0.0",
+            "globals": {
+                "thing": {
+                    "model": "Thing",
+                    "fields": {"name": {"type": "string", "max_length": 0}},
+                }
+            },
+            "states": [
+                {"id": "a", "visible": True, "successors": ["b"]},
+                {"id": "b", "visible": True, "terminal": True},
+            ],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
+    def test_plural_accepted_on_global_def(self, schema):
+        """plural: string must be accepted on a global definition."""
+        valid = {
+            "version": "1.0.0",
+            "globals": {
+                "entity": {
+                    "model": "Entity",
+                    "plural": "entities",
+                    "fields": {"name": {"type": "string"}},
+                }
+            },
+            "states": [
+                {"id": "a", "visible": True, "successors": ["b"]},
+                {"id": "b", "visible": True, "terminal": True},
+            ],
+        }
+        jsonschema.validate(instance=valid, schema=schema)
+
     def test_global_ref_accepted(self, schema):
         """A global ref (@global.field) in additional_fields must pass the schema."""
         valid = {

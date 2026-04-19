@@ -8,7 +8,7 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from api.models import GLAZE_COMBINATION_NAME_SEPARATOR, ClayBody, GlazeCombination, GlazeType
+from api.models import COMPOSITE_NAME_SEPARATOR, ClayBody, GlazeCombination, GlazeType
 
 
 @pytest.mark.django_db
@@ -229,7 +229,7 @@ class TestLoadPublicLibrary:
         call_command('load_public_library', fixture=str(fixture))
 
         combo = GlazeCombination.objects.get(user=None)
-        sep = GLAZE_COMBINATION_NAME_SEPARATOR
+        sep = COMPOSITE_NAME_SEPARATOR
         assert combo.name == f'Celadon{sep}Tenmoku'
         layer_names = list(combo.layers.order_by('order').values_list('glaze_type__name', flat=True))
         assert layer_names == ['Celadon', 'Tenmoku']
