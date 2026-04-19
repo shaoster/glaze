@@ -117,6 +117,7 @@ globals:
       test_tile_image:
         type: image
         description: URL of the glaze test tile image.
+        use_as_thumbnail: true
       is_food_safe:
         type: boolean
         description: Whether this glaze is food safe.
@@ -191,6 +192,7 @@ globals:
       test_tile_image:
         type: image
         description: Image of the glaze combination test tile.
+        use_as_thumbnail: true
       is_food_safe:
         type: boolean
         description: Whether this glaze combination is food safe.

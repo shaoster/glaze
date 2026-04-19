@@ -599,6 +599,31 @@ class TestGlobals:
                         f"Global '@{alias}' flag '{flag}' must be a boolean, got {type(value).__name__}"
                     )
 
+    def test_at_most_one_thumbnail_field_per_global(self, globals_section):
+        """At most one field per global may carry use_as_thumbnail: true."""
+        for alias, global_def in globals_section.items():
+            thumbnail_fields = [
+                name
+                for name, field_def in global_def.get("fields", {}).items()
+                if isinstance(field_def, dict) and field_def.get("use_as_thumbnail")
+            ]
+            assert len(thumbnail_fields) <= 1, (
+                f"Global '@{alias}' declares use_as_thumbnail: true on multiple fields: "
+                f"{thumbnail_fields!r} — at most one thumbnail field is allowed per global"
+            )
+
+    def test_thumbnail_field_must_be_image_type(self, globals_section):
+        """A field with use_as_thumbnail: true must have type: image."""
+        for alias, global_def in globals_section.items():
+            for name, field_def in global_def.get("fields", {}).items():
+                if not (isinstance(field_def, dict) and field_def.get("use_as_thumbnail")):
+                    continue
+                field_type = field_def.get("type")
+                assert field_type == "image", (
+                    f"Global '@{alias}' field '{name}' has use_as_thumbnail: true "
+                    f"but type is '{field_type}' — only image fields may be used as thumbnails"
+                )
+
 
 # ---------------------------------------------------------------------------
 # compose_from — ordered M2M composition relationships

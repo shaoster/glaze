@@ -10,7 +10,7 @@
  */
 import workflow from '../../workflow.yml'
 
-type FieldType = 'string' | 'number' | 'integer' | 'boolean' | 'array' | 'object'
+type FieldType = 'string' | 'number' | 'integer' | 'boolean' | 'array' | 'object' | 'image'
 
 interface InlineFieldDef {
     type: FieldType
@@ -18,6 +18,7 @@ interface InlineFieldDef {
     required?: boolean
     enum?: string[]
     filterable?: boolean
+    use_as_thumbnail?: boolean
     label?: string
 }
 
@@ -114,6 +115,22 @@ export function getFilterableFields(globalName: string): FilterableFieldDef[] {
             const inline = def as InlineFieldDef
             return { name, type: inline.type, label: inline.label ?? formatWorkflowFieldLabel(name) }
         })
+}
+
+/**
+ * Returns the name of the field tagged `use_as_thumbnail: true` for the given
+ * global, or null if none is declared. workflow.yml enforces that at most one
+ * field per global carries this flag and that it must have type: image.
+ * Used by pickers to render a thumbnail without hardcoding field names.
+ */
+export function getGlobalThumbnailField(globalName: string): string | null {
+    const fields = GLOBALS_MAP[globalName]?.fields ?? {}
+    for (const [name, def] of Object.entries(fields)) {
+        if ('use_as_thumbnail' in def && (def as InlineFieldDef).use_as_thumbnail) {
+            return name
+        }
+    }
+    return null
 }
 
 /**

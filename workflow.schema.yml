@@ -218,6 +218,13 @@ $defs:
           Intended for boolean fields; consumers use get_filterable_fields() /
           getFilterableFields() to discover which fields to expose as filter controls.
         default: false
+      use_as_thumbnail:
+        type: boolean
+        description: |
+          Marks this field as the thumbnail image for entries of this global type.
+          Must only appear on fields with type: image. At most one field per global
+          may carry this flag — enforced in tests/test_workflow.py.
+        default: false
       label:
         type: string
         description: |
