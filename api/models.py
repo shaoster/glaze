@@ -652,12 +652,9 @@ class FavoriteModel(models.Model):
     favorites logic — the user FK, the uniqueness constraint naming convention,
     and ``get_favorite_ids_for`` — is generic and lives here.
 
-    To add favorites support for a new global type, subclass FavoriteModel,
-    add a FK to the target model, set ``global_fk_field``, declare a
-    UniqueConstraint, and register the subclass in ``_FAVORITE_MODEL_REGISTRY``
-    in views.py.  With a ``_make_favorite_model`` factory (see below), this
-    reduces to a single ``makemigrations`` run once the global carries
-    ``favoritable: true`` in workflow.yml.
+    Use ``_make_favorite_model(global_name)`` to generate a concrete subclass
+    from a ``favoritable: true`` global in workflow.yml.  Only a
+    ``makemigrations`` run is required for a new favoritable global.
     """
 
     # Name of the FK field pointing to the favorited global object.  Subclasses
@@ -680,63 +677,53 @@ class FavoriteModel(models.Model):
         return set(cls.objects.filter(user=user).values_list(f'{cls.global_fk_field}_id', flat=True))
 
 
-class FavoriteGlazeCombination(FavoriteModel):
-    """Records a user's favorited glaze combinations.
+def _make_favorite_model(global_name: str) -> type:
+    """Generate a FavoriteModel subclass for a ``favoritable: true`` global.
 
-    GlazeCombination-specific aspects:
-    - The ``glaze_combination`` FK and its ``related_name='favorited_by'`` accessor.
-    - The constraint name ``uniq_favorite_glaze_combination_per_user``.
-    - The ``user`` related_name ``favorite_glaze_combinations`` (for reverse lookups).
+    Produces a class named ``Favorite<ModelName>`` with:
+    - ``user`` FK (related_name=``favorite_<plural>``)
+    - ``<global_name>`` FK (related_name=``'favorited_by'``)
+    - ``global_fk_field = global_name``
+    - UniqueConstraint named ``uniq_favorite_<global_name>_per_user``
 
-    Everything else — user FK, get_favorite_ids_for(), global_fk_field — is
-    inherited from FavoriteModel.
-
-    Design note — factory path
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Adding a ``_make_favorite_model(global_name)`` factory to models.py would
-    generate a FavoriteModel subclass from a ``favoritable: true`` declaration
-    in workflow.yml.  The factory would:
-
-      1. Read ``_GLOBALS_MAP[global_name]['model']`` → target model class name.
-      2. Create a ForeignKey(f'api.{model_name}', on_delete=CASCADE,
-         related_name='favorited_by') on the subclass.
-      3. Set ``global_fk_field = global_name``.
-      4. Set ``user.related_name = f'favorite_{pluralize(global_name)}'``
-         (or leave it as '+' for an access-via-manager-only pattern).
-      5. Add UniqueConstraint(fields=['user', global_name],
-         name=f'uniq_favorite_{global_name}_per_user').
-
-    The only thing ``favoritable: true`` cannot express today is whether the
-    FK should use on_delete=CASCADE (safe default) or SET_NULL.  That could be
-    added as an optional ``on_delete`` DSL key if needed.
-
-    The factory-generated subclass would also need to be registered in
-    ``_FAVORITE_MODEL_REGISTRY`` in views.py so the generic favorite endpoint
-    can discover it.  That registry could itself be derived at startup from
-    all FavoriteModel subclasses, or driven by a ``get_favorite_model(global_name)``
-    helper in workflow.py.
+    The generated class is assigned ``__module__ = 'api.models'`` so Django
+    migrations treat it identically to a hand-written model class.
     """
+    config = get_global_config(global_name)
+    if not config:
+        raise ValueError(f'Unknown global: {global_name!r}')
 
-    global_fk_field = 'glaze_combination'
+    model_name: str = config['model']
+    plural: str = config.get('plural', _pluralize_snake(global_name))
 
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='favorite_glaze_combinations',
-    )
-    glaze_combination = models.ForeignKey(
-        GlazeCombination,
-        on_delete=models.CASCADE,
-        related_name='favorited_by',
-    )
+    attrs: dict = {
+        '__module__': 'api.models',
+        'global_fk_field': global_name,
+        'user': models.ForeignKey(
+            settings.AUTH_USER_MODEL,
+            on_delete=models.CASCADE,
+            related_name=f'favorite_{plural}',
+        ),
+        global_name: models.ForeignKey(
+            f'api.{model_name}',
+            on_delete=models.CASCADE,
+            related_name='favorited_by',
+        ),
+        'Meta': type('Meta', (), {
+            'constraints': [
+                models.UniqueConstraint(
+                    fields=['user', global_name],
+                    name=f'uniq_favorite_{global_name}_per_user',
+                )
+            ]
+        }),
+    }
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'glaze_combination'],
-                name='uniq_favorite_glaze_combination_per_user',
-            )
-        ]
+    return type(f'Favorite{model_name}', (FavoriteModel,), attrs)
+
+
+#: Per-user favorites for glaze combinations — generated from workflow.yml favoritable: true.
+FavoriteGlazeCombination = _make_favorite_model('glaze_combination')
 
 
 class Piece(models.Model):
