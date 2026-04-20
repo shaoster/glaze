@@ -32,9 +32,11 @@ The source of truth for piece states is [`workflow.yml`](../../workflow.yml) at 
 
 **`globals` section:** The optional top-level `globals` map registers named domain types backed by Django models. Each entry declares the model class name (PascalCase, verified against `api/models.py` by tests) and a subset of its fields exposed to the field DSL. `api/models.py` remains the authoritative source of truth — `globals` is a DSL-level view of those models, kept in sync by tests.
 
-Each global definition also carries two optional boolean flags:
+Each global definition also carries several optional flags:
 - `public` (default `false`): when `true`, this global type has an admin-managed shared library of public objects (stored with `user=NULL`) visible to all authenticated users. The corresponding Django model's `user` field must be nullable.
 - `private` (default `true`): when `true`, users can create their own private instances of this type.
+- `factory` (default `true`): when `false`, the Django model is hand-written and `_register_globals()` skips auto-generation for this global. Use only when bespoke model logic is required (currently only `piece`).
+- `favoritable` (default `false`): when `true`, a `FavoriteModel` subclass is auto-generated for this global and the favorites API endpoints are enabled.
 
 Currently `clay_body` and `glaze_type` have `public: true`; `location` and `glaze_method` are private-only. Models for public globals (`ClayBody`, `GlazeType`) allow `user=NULL`; public and private objects each have their own DB-level `UniqueConstraint` (conditional on `user IS NULL` / `user IS NOT NULL`). A private entry may share its name with a public entry — the two scopes are independent. Three helpers in `api/workflow.py` expose this information to the rest of the backend without leaking the private `_GLOBALS_MAP`:
 - `is_public_global(name) -> bool` — returns `True` if the named global has `public: true`
@@ -175,9 +177,19 @@ All API endpoints are registered in `backend/urls.py`.
 | `CLOUDINARY_CLOUD_NAME` / `API_KEY` / `API_SECRET` | *(same names)* | Empty — widget-config returns 503 | Set to enable Cloudinary uploads |
 | `CLOUDINARY_UPLOAD_FOLDER` | `CLOUDINARY_UPLOAD_FOLDER` | Not set | Optional subfolder for uploaded images |
 
-**`GlobalModel` abstract base class** (`api/models.py`): all global domain models inherit from it.
+**Model factory pattern** (`api/model_factories.py` → re-exported from `api/models.py`): global domain models are generated at import time from `workflow.yml` declarations — no hand-written model class is needed for new globals. Three factories handle every case:
+
+- **`make_simple_global_model(global_name)`** — generates a `GlobalModel` subclass for any non-`compose_from` global. Fields, the `user` FK, and `UniqueConstraint`s are derived entirely from the `workflow.yml` declaration. Only a `makemigrations` run is required to add a new simple global.
+- **`make_compose_global_models(global_name)`** — generates a `(CompositeModel, ThroughModel)` pair for a `compose_from` global. The composite receives an ordered M2M field, a stored computed `name`, inline and FK DSL fields, `compute_name()`, `get_or_create_with_components()`, `get_or_create_from_ordered_pks()`, `filterable_fields`, and a `post_fixture_load` hook — all derived from the DSL. Only a `makemigrations` run is required.
+- **`make_favorite_model(global_name)`** — generates a `FavoriteModel` subclass for any `favoritable: true` global. Only a `makemigrations` run is required.
+
+`api/models.py` calls `_register_globals()` at import time, which iterates `workflow.yml` globals and injects the generated classes into the module namespace so they are importable as `api.models.Location`, `api.models.GlazeCombination`, etc. and Django migrations treat them identically to hand-written classes.
+
+`factory: false` opts a global out of auto-generation; use it for globals whose Django model is hand-written (currently only `piece`).
+
+**`GlobalModel` abstract base class** (`api/model_factories.py`): all global domain models inherit from it.
 - Enforces user immutability: the `user` FK cannot change after creation (prevents silent breakage of public/private reference invariants).
-- Declares the `name` field convention: every concrete subclass must have a `name` CharField (or a stored computed equivalent). For `GlazeCombination`, `name` is auto-populated in `save()` by joining the two layer glaze type names with `GLAZE_COMBINATION_NAME_SEPARATOR` (`!`). `GlazeType.name` validation rejects the separator to prevent malformed combination names.
+- Declares the `name` field convention: every concrete subclass must have a `name` CharField (or a stored computed equivalent). For `compose_from` globals the `name` is a stored computed string (component names joined by `COMPOSITE_NAME_SEPARATOR` (`!`)). Simple-global `name` validation rejects the separator to keep component names embeddable.
 - Maintains `GlobalModel._registry` — a list of every registered concrete subclass — for use in parameterised tests.
 
 **Globals visibility tiers:**
@@ -223,7 +235,7 @@ Name uniqueness for public globals is enforced with two conditional DB constrain
 - The `piece` fixture in `api/tests/conftest.py` creates a piece via the ORM directly; prefer the API client (`client.post(...)`) for tests that exercise request/response behavior.
 - Every new API endpoint or serializer change → add or update a test under `api/tests/`.
 - Every new or modified `api/workflow.py` helper → add or update a test in `api/tests/test_workflow_helpers.py`, patching `_STATE_MAP` / `_GLOBALS_MAP` via `monkeypatch`.
-- **New global domain models**: adding a new concrete `GlobalModel` subclass automatically enrolls it in the parameterised test suites in `api/tests/test_globals.py`. No manual test additions needed for registry invariants — focus new tests on model-specific constraints and API behavior instead.
+- **New global domain models**: adding a new entry to `workflow.yml` and running `makemigrations` is sufficient — `_register_globals()` auto-generates and registers the model at import time. The generated class is automatically enrolled in the parameterised test suites in `api/tests/test_globals.py`. No manual model or test additions are needed for registry invariants — focus new tests on model-specific constraints and API behavior instead. Set `factory: false` only if the global needs a hand-written model class with bespoke logic.
 
 ---
 

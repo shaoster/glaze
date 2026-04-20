@@ -435,6 +435,7 @@ Claude will read the comment, make the change, and push it to the branch.
 ```
 backend/          Django project settings, root URL config
 api/              Models, serializers, views, tests
+  model_factories.py  Auto-generates GlobalModel subclasses from workflow.yml
 frontend_common/
   src/
     generated-types.ts  Auto-generated OpenAPI types (gitignored)
@@ -460,7 +461,7 @@ The workflow state machine and all valid transitions are defined in [`workflow.y
 
 `workflow.yml` also contains two optional sections beyond the state list:
 
-- **`globals`** — named domain types backed by Django models (`location`, `piece`, `clay_body`, `glaze_type`, `glaze_method`), registered so they can be referenced from `additional_fields` and verified against `api/models.py` by the test suite.
+- **`globals`** — named domain types backed by Django models. Each entry drives both the backend and frontend: `api/model_factories.py` auto-generates the Django model class at import time (a `makemigrations` run is all that is needed to add a new global), and the frontend reads the same declaration to render pickers and resolve display fields. Set `factory: false` for globals whose model is hand-written (currently only `piece`).
 - **`additional_fields`** (per-state) — state-specific fields declared using the embedded DSL. See the “Authoring `additional_fields`” section below for the exact syntax and how the web renders the inputs.
 
 ### Authoring `additional_fields`
