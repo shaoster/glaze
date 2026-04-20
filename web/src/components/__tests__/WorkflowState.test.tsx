@@ -174,8 +174,8 @@ describe('WorkflowState', () => {
 
     it('allows creating a new global reference option', async () => {
         vi.mocked(api.fetchGlobalEntries).mockResolvedValue([])
-        let resolveCreate!: (value: string) => void
-        const createPromise = new Promise<string>((resolve) => {
+        let resolveCreate!: (value: api.GlobalEntry) => void
+        const createPromise = new Promise<api.GlobalEntry>((resolve) => {
             resolveCreate = resolve
         })
         vi.mocked(api.createGlobalEntry).mockReturnValue(createPromise)
@@ -194,7 +194,7 @@ describe('WorkflowState', () => {
         await waitFor(() =>
             expect(api.createGlobalEntry).toHaveBeenCalledWith('location', 'name', 'New Kiln')
         )
-        await act(async () => resolveCreate('New Kiln'))
+        await act(async () => resolveCreate({ id: 'new-id', name: 'New Kiln', isPublic: false }))
         await waitFor(() => expect(input).toHaveValue('New Kiln'))
     })
 
@@ -214,8 +214,8 @@ describe('WorkflowState', () => {
         })
         vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
         vi.mocked(api.updatePiece).mockResolvedValue(updated)
-        let resolveCreate!: (value: string) => void
-        const createPromise = new Promise<string>((resolve) => {
+        let resolveCreate!: (value: api.GlobalEntry) => void
+        const createPromise = new Promise<api.GlobalEntry>((resolve) => {
             resolveCreate = resolve
         })
         vi.mocked(api.createGlobalEntry).mockReturnValue(createPromise)
@@ -236,7 +236,7 @@ describe('WorkflowState', () => {
         await waitFor(() =>
             expect(api.createGlobalEntry).toHaveBeenCalledWith('location', 'name', 'New Shelf')
         )
-        await act(async () => resolveCreate('New Shelf'))
+        await act(async () => resolveCreate({ id: 'new-id', name: 'New Shelf', isPublic: false }))
         await waitFor(() => expect(input).toHaveValue('New Shelf'))
         expect(api.updatePiece).not.toHaveBeenCalled()
         fireEvent.click(screen.getByTestId('save-button'))

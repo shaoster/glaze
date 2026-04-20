@@ -103,7 +103,7 @@ describe('GlobalEntryPicker (glaze_combination)', () => {
             render(<GlobalEntryPicker {...defaultProps} />)
             await waitFor(() => expect(screen.getByText('Iron Red!Clear')).toBeInTheDocument())
             await userEvent.click(screen.getByText('Iron Red!Clear'))
-            expect(defaultProps.onSelect).toHaveBeenCalledWith('Iron Red!Clear')
+            expect(defaultProps.onSelect).toHaveBeenCalledWith({ id: '1', name: 'Iron Red!Clear' })
         })
 
         it('calls onClose after selecting', async () => {

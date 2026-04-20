@@ -84,7 +84,7 @@ describe('PieceDetail', () => {
     it('creates a new current location through the autocomplete', async () => {
         const updated = makePiece({ current_location: 'Studio K' })
         vi.mocked(api.fetchGlobalEntries).mockResolvedValue([])
-        vi.mocked(api.createGlobalEntry).mockResolvedValue('Studio K')
+        vi.mocked(api.createGlobalEntry).mockResolvedValue({ id: 'new-id', name: 'Studio K', isPublic: false })
         vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
         vi.mocked(api.updatePiece).mockResolvedValue(updated)
         const onPieceUpdated = vi.fn()
