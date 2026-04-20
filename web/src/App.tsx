@@ -1,5 +1,5 @@
-import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
 import {
   Link,
   Navigate,
@@ -37,6 +37,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles'
 
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
 import { fetchPiece, fetchPieces, fetchCurrentUser, loginWithEmail, loginWithGoogle, logoutUser, registerWithEmail } from '@common/api'
+import ErrorBoundary from './components/ErrorBoundary'
 import NewPieceDialog from './components/NewPieceDialog'
 import PieceList from './components/PieceList'
 import PieceDetailComponent from './components/PieceDetail'
@@ -358,7 +359,9 @@ function AppShell({
           </MenuItem>
         </Menu>
       </Box>
-      <Outlet />
+      <ErrorBoundary>
+        <Outlet />
+      </ErrorBoundary>
     </Container>
   )
 }
