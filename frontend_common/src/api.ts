@@ -219,13 +219,19 @@ export interface GlobalEntry {
     id: string
     name: string
     isPublic: boolean
+    isFavorite?: boolean
 }
 
 export async function fetchGlobalEntries(globalName: string): Promise<GlobalEntry[]> {
-    const { data } = await client.get<Array<{ id: string; name: string; is_public: boolean }>>(
+    const { data } = await client.get<Array<{ id: string; name: string; is_public: boolean; is_favorite?: boolean }>>(
         `globals/${globalName}/`
     )
-    return data.map((entry) => ({ id: entry.id, name: entry.name, isPublic: entry.is_public }))
+    return data.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        isPublic: entry.is_public,
+        ...(entry.is_favorite !== undefined ? { isFavorite: entry.is_favorite } : {}),
+    }))
 }
 
 export type { GlazeTypeRef, FiringTemperatureRef, GlazeCombinationEntry }

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete'
-import { CircularProgress, TextField } from '@mui/material'
+import { CircularProgress, IconButton, TextField } from '@mui/material'
 import type { SxProps, Theme } from '@mui/material'
-import { createGlobalEntry, fetchGlobalEntries, type GlobalEntry } from '@common/api'
-import { getGlobalDisplayField } from '@common/workflow'
+import StarIcon from '@mui/icons-material/Star'
+import StarBorderIcon from '@mui/icons-material/StarBorder'
+import { createGlobalEntry, fetchGlobalEntries, toggleGlobalEntryFavorite, type GlobalEntry } from '@common/api'
+import { getGlobalDisplayField, isFavoritableGlobal } from '@common/workflow'
 
 // Pre-built filter; module-level to avoid reconstruction on every render.
 const FILTER = createFilterOptions<string>()
@@ -93,6 +95,13 @@ export interface GlobalFieldPickerProps {
  *
  * When `options` is omitted the component fetches and manages its own list;
  * when provided the caller owns the list.
+ *
+ * When the global type is declared `favoritable: true` in workflow.yml, a star
+ * icon is shown in the field's endAdornment whenever the current value matches
+ * an existing entry. Clicking the star toggles the favorite status via the API
+ * and updates local state optimistically. Favorited entries are ranked first
+ * (alphabetically within the favorites group, then the rest alphabetically) in
+ * the autocomplete option list. Newly created entries are never auto-favorited.
  */
 export default function GlobalFieldPicker({
     globalName,
@@ -107,12 +116,16 @@ export default function GlobalFieldPicker({
     sx,
 }: GlobalFieldPickerProps) {
     const fieldName = getGlobalDisplayField(globalName)
+    const isFavoritable = isFavoritableGlobal(globalName)
     const [internalEntries, setInternalEntries] = useState<GlobalEntry[]>([])
     const [creating, setCreating] = useState(false)
     const [error, setError] = useState<string | null>(null)
     // Tracks what is shown in the text field while the user is typing.
     // Separate from `value` so that partially-typed text is never committed.
     const [inputValue, setInputValue] = useState(value)
+    // Local overrides for favorite status, populated by optimistic toggle updates.
+    const [localFavorites, setLocalFavorites] = useState<Record<string, boolean>>({})
+    const [togglingFavorite, setTogglingFavorite] = useState(false)
 
     // Keep the displayed text in sync when the committed value changes externally.
     useEffect(() => {
@@ -121,9 +134,33 @@ export default function GlobalFieldPicker({
 
     const entries = optionsProp ?? internalEntries
 
+    /**
+     * Returns the effective favorite status for an entry, merging optimistic
+     * local overrides with the server-provided value.
+     */
+    function getEffectiveFavorite(entry: GlobalEntry): boolean {
+        return localFavorites[entry.id] ?? entry.isFavorite ?? false
+    }
+
+    /**
+     * Sort entries so favorited items come first (alphabetically within each
+     * group). Only applied for favoritable globals; otherwise preserves server
+     * order.
+     */
+    const sortedEntries = useMemo(() => {
+        if (!isFavoritable) return entries
+        return [...entries].sort((a, b) => {
+            const af = localFavorites[a.id] ?? a.isFavorite ?? false
+            const bf = localFavorites[b.id] ?? b.isFavorite ?? false
+            if (af !== bf) return af ? -1 : 1
+            return a.name.localeCompare(b.name)
+        })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [entries, isFavoritable, localFavorites])
+
     // Display strings: public entries whose name also appears as a private entry
     // get a "(public)" suffix so users can distinguish the two.
-    const displayOptions = useMemo(() => buildDisplayOptions(entries), [entries])
+    const displayOptions = useMemo(() => buildDisplayOptions(sortedEntries), [sortedEntries])
 
     useEffect(() => {
         if (optionsProp !== undefined) return
@@ -131,6 +168,25 @@ export default function GlobalFieldPicker({
             .then(setInternalEntries)
             .catch(() => {})
     }, [globalName, optionsProp])
+
+    // The entry currently committed as the field value, if it exists in the
+    // entries list. Used to drive the favorite star affordance.
+    const selectedEntry = useMemo(
+        () => (value ? (entries.find((e) => e.name === value) ?? null) : null),
+        [entries, value]
+    )
+
+    async function handleToggleFavorite() {
+        if (!selectedEntry || togglingFavorite) return
+        const newFav = !getEffectiveFavorite(selectedEntry)
+        setTogglingFavorite(true)
+        try {
+            await toggleGlobalEntryFavorite(globalName, selectedEntry.id, newFav)
+            setLocalFavorites((prev) => ({ ...prev, [selectedEntry.id]: newFav }))
+        } finally {
+            setTogglingFavorite(false)
+        }
+    }
 
     async function handleChange(displayOption: string | null) {
         if (!displayOption) {
@@ -155,6 +211,8 @@ export default function GlobalFieldPicker({
                 }
                 onChange(created.name)
                 onSelectEntry?.(created)
+                // Newly created entries are never auto-favorited; the user
+                // hasn't expressed a preference yet.
             } catch {
                 setError(`Failed to create ${label.toLowerCase()}. Please try again.`)
             } finally {
@@ -170,6 +228,9 @@ export default function GlobalFieldPicker({
             onSelectEntry(entry)
         }
     }
+
+    const showFavoriteStar = isFavoritable && selectedEntry !== null && !creating
+    const isFavorite = selectedEntry ? getEffectiveFavorite(selectedEntry) : false
 
     return (
         <Autocomplete
@@ -216,6 +277,23 @@ export default function GlobalFieldPicker({
                             endAdornment: (
                                 <>
                                     {creating && <CircularProgress size={16} sx={{ mr: 1 }} />}
+                                    {showFavoriteStar && (
+                                        <IconButton
+                                            size="small"
+                                            onClick={handleToggleFavorite}
+                                            disabled={togglingFavorite}
+                                            aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                                            edge="end"
+                                            sx={{ mr: 0.5 }}
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                        >
+                                            {isFavorite ? (
+                                                <StarIcon fontSize="small" color="warning" />
+                                            ) : (
+                                                <StarBorderIcon fontSize="small" />
+                                            )}
+                                        </IconButton>
+                                    )}
                                     {params.InputProps.endAdornment}
                                 </>
                             ),
