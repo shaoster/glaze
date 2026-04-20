@@ -26,12 +26,19 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - name: Install RTK
+        run: |
+          curl -L https://rtk.rs | sh
+          echo "$HOME/.rtk/bin" >> $GITHUB_PATH
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           trigger_phrase: "@claude"
-          claude_args: "--dangerously-skip-permissions"
+          claude_args: |
+            --allowed-tools Bash,Edit,Read
+            --system-prompt "Use RTK-compressed output for all terminal commands."
+            --dangerously-skip-permissions
           show_full_output: "true"
 
   decline-non-claude-pr:
@@ -53,11 +60,18 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - name: Install RTK
+        run: |
+          curl -L https://rtk.rs | sh
+          echo "$HOME/.rtk/bin" >> $GITHUB_PATH
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: "--dangerously-skip-permissions"
+          claude_args: |
+            --allowed-tools Bash,Edit,Read
+            --system-prompt "Use RTK-compressed output for all terminal commands."
+            --dangerously-skip-permissions
           show_full_output: "true"
           prompt: |
             A user has mentioned @claude in a comment on pull request #${{ github.event.issue.number }}.
@@ -90,12 +104,20 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
+      - name: Install RTK
+        run: |
+          curl -L https://rtk.rs | sh
+          echo "$HOME/.rtk/bin" >> $GITHUB_PATH
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: "--dangerously-skip-permissions"
+          claude_args: |
+            --allowed-tools Bash,Edit,Read
+            --system-prompt "Use RTK-compressed output for all terminal commands."
+            --dangerously-skip-permissions
           show_full_output: "true"
+
           prompt: |
             A reviewer has requested changes on pull request #${{ github.event.pull_request.number }}.
 

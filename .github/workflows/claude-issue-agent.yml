@@ -24,13 +24,20 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v5
+      - name: Install RTK
+        run: |
+          curl -L https://rtk.rs | sh
+          echo "$HOME/.rtk/bin" >> $GITHUB_PATH
       - uses: anthropics/claude-code-action@v1
         id: claude
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           trigger_phrase: ""
-          claude_args: "--dangerously-skip-permissions"
+          claude_args: |
+            --allowed-tools Bash,Edit,Read
+            --system-prompt "Use RTK-compressed output for all terminal commands."
+            --dangerously-skip-permissions
           show_full_output: "true"
           prompt: |
             You are an autonomous software agent helping resolve GitHub issues for the
