@@ -194,8 +194,14 @@ describe('NewPieceDialog', () => {
 
         it('sends location when provided', async () => {
             vi.mocked(api.createPiece).mockResolvedValue(makePieceDetail())
+            vi.mocked(api.fetchGlobalEntries).mockResolvedValue([{ id: '1', name: 'Studio 7', isPublic: false }])
             render(<NewPieceDialog {...defaultProps} />)
-            fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Studio 7' } })
+            await userEvent.type(screen.getByLabelText('Location'), 'Studio 7')
+            await waitFor(() =>
+                expect(screen.getByRole('option', { name: 'Studio 7' })).toBeInTheDocument()
+            )
+            fireEvent.click(screen.getByRole('option', { name: 'Studio 7' }))
+            await waitFor(() => expect(screen.getByLabelText('Location')).toHaveValue('Studio 7'))
             await userEvent.type(screen.getByTestId('name-input'), 'Bowl')
             await userEvent.click(screen.getByTestId('save-button'))
             await waitFor(() => {

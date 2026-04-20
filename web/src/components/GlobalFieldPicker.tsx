@@ -103,6 +103,14 @@ export default function GlobalFieldPicker({
     const [internalEntries, setInternalEntries] = useState<GlobalEntry[]>([])
     const [creating, setCreating] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    // Tracks what is shown in the text field while the user is typing.
+    // Separate from `value` so that partially-typed text is never committed.
+    const [inputValue, setInputValue] = useState(value)
+
+    // Keep the displayed text in sync when the committed value changes externally.
+    useEffect(() => {
+        setInputValue(value)
+    }, [value])
 
     const entries = optionsProp ?? internalEntries
 
@@ -153,8 +161,19 @@ export default function GlobalFieldPicker({
         <Autocomplete
             freeSolo={canCreate}
             options={displayOptions}
-            inputValue={value}
-            onInputChange={(_e, val) => onChange(val)}
+            inputValue={inputValue}
+            onInputChange={(_e, val, reason) => {
+                setInputValue(val)
+                // 'reset' fires when the user clears the field or an option is
+                // selected; 'input' fires on every keystroke. Only propagate on
+                // 'reset' (i.e. clear) — actual selections are handled by onChange.
+                if (reason === 'reset' && val === '') onChange('')
+            }}
+            onBlur={() => {
+                // If the user typed something but never made a selection, discard
+                // the partial text and restore the last committed value.
+                setInputValue(value)
+            }}
             onChange={(_e, val) => handleChange(val ?? null)}
             filterOptions={(opts, params) => {
                 const filtered = FILTER(opts, params)
