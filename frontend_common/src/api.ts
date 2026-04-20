@@ -206,6 +206,7 @@ export async function updateCurrentState(pieceId: string, payload: UpdateStatePa
 }
 
 export type UpdatePiecePayload = {
+    name?: string
     current_location?: string
     thumbnail?: Thumbnail | null
 }
