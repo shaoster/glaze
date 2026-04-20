@@ -72,6 +72,14 @@ Project-specific definition-of-done checks (e.g. serializer/type alignment, work
 
 ## GitHub Actions: design principles
 
+### Environment Setup
+
+When running in a github action, first `source env.sh && gz_setup` to set up the environment.
+
+To run frontend tests, use `gz_test_web`.
+To run backend tests, use `gz_test_backend`.
+To run the common tests, use `gz_test_common`. 
+
 ### Avoid PATs — use `GITHUB_TOKEN` and `workflow_run`
 
 Personal Access Tokens (PATs) are long-lived, user-scoped, and hard to rotate. Prefer `GITHUB_TOKEN` (scoped to the repository and the run) wherever possible. Declare only the minimum `permissions` each job actually needs.
