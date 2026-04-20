@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Link,
   Navigate,
@@ -414,10 +414,10 @@ export default function App() {
     return () => clearTimeout(timer)
   }, [])
 
-  async function handleLogout() {
+  const handleLogout = useCallback(async () => {
     await logoutUser()
     setCurrentUser(null)
-  }
+  }, []) // setCurrentUser is stable — no deps needed
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID ?? ''}>
