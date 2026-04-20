@@ -93,6 +93,32 @@ class GlobalModel(models.Model):
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+def _deregister_model_if_exists(app_label: str, model_name: str) -> None:
+    """Remove a model from the Django app registry if it is already registered.
+
+    Called by factory functions before creating a new model class to prevent
+    Django's "Model was already registered" RuntimeWarning when the same factory
+    is invoked multiple times with the same model name — most commonly in tests
+    that monkeypatch ``_GLOBALS_MAP`` and call the factory once per test method.
+
+    In production the factories are called exactly once at import time, so this
+    function is a no-op there.  In tests it cleanly replaces the previous
+    incarnation of the class so each test starts with a fresh model.
+    """
+    from django.apps import apps
+
+    model_name_lower = model_name.lower()
+    app_models = apps.all_models.get(app_label, {})
+    if model_name_lower in app_models:
+        existing = app_models.pop(model_name_lower)
+        # Also remove from GlobalModel._registry so the stale class does not
+        # show up in parameterised registry tests.
+        try:
+            GlobalModel._registry.remove(existing)
+        except ValueError:
+            pass  # not a GlobalModel subclass (e.g. through or favorite models)
+
+
 def _pluralize_snake(name: str) -> str:
     """Return the simple plural form of a snake_case identifier.
 
@@ -220,6 +246,7 @@ def make_simple_global_model(global_name: str) -> type:
         )
 
     attrs['Meta'] = type('Meta', (), {'constraints': constraints})
+    _deregister_model_if_exists('api', model_name)
     return type(model_name, (GlobalModel,), attrs)
 
 
@@ -342,6 +369,7 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
         super(type(self), self).save(*args, **kwargs)
 
     through_attrs['save'] = _through_save
+    _deregister_model_if_exists('api', through_model_name)
     through_model = type(through_model_name, (models.Model,), through_attrs)
 
     # --- Composite model ---
@@ -475,6 +503,7 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
 
     composite_attrs['get_or_create_from_ordered_pks'] = get_or_create_from_ordered_pks
 
+    _deregister_model_if_exists('api', model_name)
     composite_model = type(model_name, (GlobalModel,), composite_attrs)
     _through_model_ref.append(through_model)
 
@@ -590,6 +619,7 @@ def make_favorite_model(global_name: str) -> type:
         }),
     }
 
+    _deregister_model_if_exists('api', f'Favorite{model_name}')
     return type(f'Favorite{model_name}', (FavoriteModel,), attrs)
 
 
