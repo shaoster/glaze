@@ -9,7 +9,17 @@ import type { GlobalEntry } from '@common/api'
 vi.mock('@common/api', () => ({
     fetchGlobalEntries: vi.fn().mockResolvedValue([]),
     createGlobalEntry: vi.fn(),
+    toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),
 }))
+
+// Only glaze_combination is favoritable in workflow.yml
+vi.mock('@common/workflow', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@common/workflow')>()
+    return {
+        ...actual,
+        isFavoritableGlobal: (name: string) => name === 'glaze_combination',
+    }
+})
 
 const defaultProps = {
     globalName: 'location',
@@ -18,8 +28,8 @@ const defaultProps = {
     onChange: vi.fn(),
 }
 
-function entry(name: string, isPublic = false): GlobalEntry {
-    return { id: crypto.randomUUID(), name, isPublic }
+function entry(name: string, isPublic = false, isFavorite?: boolean): GlobalEntry {
+    return { id: `id-${name}`, name, isPublic, isFavorite }
 }
 
 // Stateful wrapper so controlled `value` actually updates when the user types.
@@ -258,6 +268,170 @@ describe('GlobalFieldPicker', () => {
             await waitFor(() =>
                 expect(screen.queryByRole('option', { name: /Create/ })).not.toBeInTheDocument()
             )
+        })
+    })
+
+    describe('favorites (favoritable globals)', () => {
+        const favoritableProps = {
+            globalName: 'glaze_combination',
+            label: 'Glaze Combination',
+            value: '',
+            onChange: vi.fn(),
+        }
+
+        it('does not show star icon for non-favoritable globals', async () => {
+            // location is not favoritable
+            await act(async () => {
+                render(
+                    <GlobalFieldPicker
+                        {...defaultProps}
+                        value="Studio A"
+                        options={[entry('Studio A')]}
+                    />
+                )
+            })
+            expect(screen.queryByLabelText('Add to favorites')).not.toBeInTheDocument()
+            expect(screen.queryByLabelText('Remove from favorites')).not.toBeInTheDocument()
+        })
+
+        it('does not show star icon when field is empty', async () => {
+            await act(async () => {
+                render(
+                    <GlobalFieldPicker
+                        {...favoritableProps}
+                        value=""
+                        options={[entry('Iron Red', false, false)]}
+                    />
+                )
+            })
+            expect(screen.queryByLabelText('Add to favorites')).not.toBeInTheDocument()
+        })
+
+        it('does not show star icon when value does not match any entry', async () => {
+            await act(async () => {
+                render(
+                    <GlobalFieldPicker
+                        {...favoritableProps}
+                        value="Unknown Glaze"
+                        options={[entry('Iron Red', false, false)]}
+                    />
+                )
+            })
+            expect(screen.queryByLabelText('Add to favorites')).not.toBeInTheDocument()
+        })
+
+        it('shows unfavorited star when value matches an existing non-favorite entry', async () => {
+            await act(async () => {
+                render(
+                    <GlobalFieldPicker
+                        {...favoritableProps}
+                        value="Iron Red"
+                        options={[entry('Iron Red', false, false)]}
+                    />
+                )
+            })
+            expect(screen.getByLabelText('Add to favorites')).toBeInTheDocument()
+        })
+
+        it('shows filled star when value matches an existing favorited entry', async () => {
+            await act(async () => {
+                render(
+                    <GlobalFieldPicker
+                        {...favoritableProps}
+                        value="Iron Red"
+                        options={[entry('Iron Red', false, true)]}
+                    />
+                )
+            })
+            expect(screen.getByLabelText('Remove from favorites')).toBeInTheDocument()
+        })
+
+        it('calls toggleGlobalEntryFavorite with correct args when favoriting', async () => {
+            await act(async () => {
+                render(
+                    <GlobalFieldPicker
+                        {...favoritableProps}
+                        value="Iron Red"
+                        options={[entry('Iron Red', false, false)]}
+                    />
+                )
+            })
+            await userEvent.click(screen.getByLabelText('Add to favorites'))
+            await waitFor(() =>
+                expect(api.toggleGlobalEntryFavorite).toHaveBeenCalledWith('glaze_combination', 'id-Iron Red', true)
+            )
+        })
+
+        it('calls toggleGlobalEntryFavorite with false when unfavoriting', async () => {
+            await act(async () => {
+                render(
+                    <GlobalFieldPicker
+                        {...favoritableProps}
+                        value="Iron Red"
+                        options={[entry('Iron Red', false, true)]}
+                    />
+                )
+            })
+            await userEvent.click(screen.getByLabelText('Remove from favorites'))
+            await waitFor(() =>
+                expect(api.toggleGlobalEntryFavorite).toHaveBeenCalledWith('glaze_combination', 'id-Iron Red', false)
+            )
+        })
+
+        it('updates star icon optimistically after toggling', async () => {
+            await act(async () => {
+                render(
+                    <GlobalFieldPicker
+                        {...favoritableProps}
+                        value="Iron Red"
+                        options={[entry('Iron Red', false, false)]}
+                    />
+                )
+            })
+            expect(screen.getByLabelText('Add to favorites')).toBeInTheDocument()
+            await userEvent.click(screen.getByLabelText('Add to favorites'))
+            await waitFor(() =>
+                expect(screen.getByLabelText('Remove from favorites')).toBeInTheDocument()
+            )
+        })
+
+        it('favorites appear first in the options list', async () => {
+            render(
+                <GlobalFieldPicker
+                    {...favoritableProps}
+                    options={[
+                        entry('Celadon', false, false),
+                        entry('Iron Red', false, true),
+                        entry('Shino', false, false),
+                    ]}
+                />
+            )
+            await userEvent.click(screen.getByLabelText('Glaze Combination'))
+            await waitFor(() => {
+                const options = screen.getAllByRole('option')
+                // Iron Red (favorited) must come before non-favorites
+                const ironRedIdx = options.findIndex((o) => o.textContent === 'Iron Red')
+                const celadonIdx = options.findIndex((o) => o.textContent === 'Celadon')
+                const shinoIdx = options.findIndex((o) => o.textContent === 'Shino')
+                expect(ironRedIdx).toBeLessThan(celadonIdx)
+                expect(ironRedIdx).toBeLessThan(shinoIdx)
+            })
+        })
+
+        it('newly created entries are not auto-favorited', async () => {
+            vi.mocked(api.createGlobalEntry).mockResolvedValue({
+                id: 'new-id',
+                name: 'New Glaze',
+                isPublic: false,
+            })
+            render(<Controlled globalName="glaze_combination" label="Glaze Combination" canCreate />)
+            await userEvent.type(screen.getByLabelText('Glaze Combination'), 'New Glaze')
+            await waitFor(() =>
+                expect(screen.getByRole('option', { name: 'Create "New Glaze"' })).toBeInTheDocument()
+            )
+            fireEvent.click(screen.getByRole('option', { name: 'Create "New Glaze"' }))
+            await waitFor(() => expect(screen.getByLabelText('Glaze Combination')).toHaveValue('New Glaze'))
+            expect(api.toggleGlobalEntryFavorite).not.toHaveBeenCalled()
         })
     })
 })

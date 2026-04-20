@@ -8,9 +8,11 @@ import * as api from '@common/api'
 // Mock the api module
 vi.mock('@common/api', () => ({
     fetchGlobalEntries: vi.fn().mockResolvedValue([]),
+    fetchGlobalEntriesWithFilters: vi.fn().mockResolvedValue([]),
     updateCurrentState: vi.fn(),
     updatePiece: vi.fn(),
     createGlobalEntry: vi.fn(),
+    toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),
     fetchCloudinaryWidgetConfig: vi.fn().mockResolvedValue({ cloud_name: 'demo', api_key: '123456' }),
     signCloudinaryWidgetParams: vi.fn().mockResolvedValue('mock-signature'),
 }))
@@ -519,5 +521,69 @@ describe('WorkflowState', () => {
                 expect(() => render(<WorkflowState {...defaultProps} pieceState={makeState({ state })} />)).not.toThrow()
             })
         }
+    })
+
+    describe('thumbnail-backed global ref picker (glazed → glaze_combination)', () => {
+        it('renders a Browse button instead of a text input for thumbnail-backed globals', async () => {
+            const glazedState = makeState({ state: 'glazed', additional_fields: {} })
+            await act(async () => {
+                render(<WorkflowState {...defaultProps} pieceState={glazedState} />)
+            })
+            expect(screen.getByRole('button', { name: 'Browse…' })).toBeInTheDocument()
+            // No text input with the field label — free typing is not supported
+            expect(screen.queryByLabelText('Glaze Combination')).not.toBeInTheDocument()
+        })
+
+        it('shows the selected value as a chip when a glaze combination is set', async () => {
+            const glazedState = makeState({
+                state: 'glazed',
+                additional_fields: { glaze_combination: { id: 'gc1', name: 'Iron Red!Clear' } },
+            })
+            await act(async () => {
+                render(<WorkflowState {...defaultProps} pieceState={glazedState} />)
+            })
+            expect(screen.getByText('Iron Red!Clear')).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: 'Change…' })).toBeInTheDocument()
+        })
+
+        it('shows the chip as deletable when a value is set', async () => {
+            const glazedState = makeState({
+                state: 'glazed',
+                additional_fields: { glaze_combination: { id: 'gc1', name: 'Iron Red!Clear' } },
+            })
+            await act(async () => {
+                render(<WorkflowState {...defaultProps} pieceState={glazedState} />)
+            })
+            const chip = screen.getByRole('button', { name: /iron red!clear/i })
+            // MUI adds MuiChip-deletable when onDelete is wired up
+            expect(chip).toHaveClass('MuiChip-deletable')
+        })
+
+        it('clears the selected value when the chip cancel icon is clicked', async () => {
+            const glazedState = makeState({
+                state: 'glazed',
+                additional_fields: { glaze_combination: { id: 'gc1', name: 'Iron Red!Clear' } },
+            })
+            await act(async () => {
+                render(<WorkflowState {...defaultProps} pieceState={glazedState} />)
+            })
+            const chip = screen.getByRole('button', { name: /iron red!clear/i })
+            // The MUI Chip cancel SVG icon is the last child element of the chip
+            const cancelIcon = chip.lastElementChild
+            await act(async () => {
+                if (cancelIcon) fireEvent.click(cancelIcon)
+            })
+            await waitFor(() => expect(screen.queryByText('Iron Red!Clear')).not.toBeInTheDocument())
+            expect(screen.getByRole('button', { name: 'Browse…' })).toBeInTheDocument()
+        })
+
+        it('opens GlobalEntryPicker when Browse button is clicked', async () => {
+            const glazedState = makeState({ state: 'glazed', additional_fields: {} })
+            render(<WorkflowState {...defaultProps} pieceState={glazedState} />)
+            await userEvent.click(screen.getByRole('button', { name: 'Browse…' }))
+            await waitFor(() =>
+                expect(screen.getByText('Browse Glaze Combinations')).toBeInTheDocument()
+            )
+        })
     })
 })

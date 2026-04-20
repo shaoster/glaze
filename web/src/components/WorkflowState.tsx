@@ -3,6 +3,7 @@ import { useTheme } from '@mui/material'
 import {
     Box,
     Button,
+    Chip,
     CircularProgress,
     Divider,
     IconButton,
@@ -27,6 +28,7 @@ import {
     formatWorkflowFieldLabel,
     getAdditionalFieldDefinitions,
     getGlobalPickerFilters,
+    getGlobalThumbnailField,
 } from '@common/workflow'
 import GlobalFieldPicker from './GlobalFieldPicker'
 import GlobalEntryPicker from './GlobalEntryPicker'
@@ -450,6 +452,53 @@ export default function WorkflowState({
                                 )
                             }
                             if (field.isGlobalRef && field.globalName) {
+                                const hasThumbnail = getGlobalThumbnailField(field.globalName) !== null
+                                if (hasThumbnail) {
+                                    // Thumbnail-backed globals use GlobalEntryPicker exclusively.
+                                    // The field renders as a chip (selected value) + Browse/Change
+                                    // button. Free typing is not supported — the user must go
+                                    // through the picker to avoid split-brain between entry paths.
+                                    return (
+                                        <Box key={field.name}>
+                                            <Typography
+                                                variant="caption"
+                                                color="text.secondary"
+                                                sx={{ display: 'block', mb: 0.5 }}
+                                            >
+                                                {label}
+                                                {field.required && ' *'}
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                                                {value && (
+                                                    <Chip
+                                                        label={value}
+                                                        onDelete={() => {
+                                                            handleAdditionalFieldChange(field.name, '')
+                                                            setGlobalRefPks((prev) =>
+                                                                Object.fromEntries(
+                                                                    Object.entries(prev).filter(([k]) => k !== field.name)
+                                                                )
+                                                            )
+                                                        }}
+                                                    />
+                                                )}
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    onClick={() => setPickerGlobalName(field.globalName ?? null)}
+                                                    sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                                                >
+                                                    {value ? 'Change…' : 'Browse…'}
+                                                </Button>
+                                            </Box>
+                                            {helperText && (
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {helperText}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    )
+                                }
                                 const hasBrowse = getGlobalPickerFilters(field.globalName).length > 0
                                 return (
                                     <Box key={field.name} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
