@@ -14,12 +14,12 @@ version: "0.0.2"
 # that tests/test_workflow.py can verify the declared fields actually exist on
 # the corresponding Django models.
 #
-# additional_fields & field DSL
-# -----------------------------
-# Each state may declare `additional_fields` — state-specific fields that
-# supplement the base PieceState fields.
+# fields & field DSL
+# -------------------
+# Each state may declare `fields` — state-specific fields that supplement
+# the base PieceState fields.
 #
-# Each entry in `additional_fields` maps a snake_case field name to one of
+# Each entry in `fields` maps a snake_case field name to one of
 # two forms:
 #
 #   Inline field — declares a new field directly on this state:
@@ -237,7 +237,7 @@ states:
     successors:
       - recycled
       - trimmed
-    additional_fields:
+    fields:
       clay_weight_grams:
         type: number
         description: Weight of clay on the scale before throwing, in grams.
@@ -256,7 +256,7 @@ states:
       - slip_applied
       - carved
       - submitted_to_bisque_fire
-    additional_fields:
+    fields:
       trimmed_weight_grams:
         type: number
         description: Weight after trimming; compare to pre_trim_weight_grams to gauge clay lost.
@@ -271,7 +271,7 @@ states:
       - slip_applied
       - carved
       - submitted_to_bisque_fire
-    additional_fields:
+    fields:
       clay_body:
         $ref: "@clay_body.name"
         description: Clay body used for this handbuilt piece.
@@ -296,7 +296,7 @@ states:
     successors:
       - recycled
       - bisque_fired
-    additional_fields:
+    fields:
       kiln_location:
         $ref: "@location.name"
         description: Name of the kiln where this piece was submitted for bisque firing.
@@ -308,7 +308,7 @@ states:
       - recycled
       - waxed
       - glazed
-    additional_fields:
+    fields:
       kiln_temperature_c:
         type: integer
         description: Peak kiln temperature during bisque firing, in degrees Celsius.
@@ -328,7 +328,7 @@ states:
     successors:
       - recycled
       - submitted_to_glaze_fire
-    additional_fields:
+    fields:
       glaze_combination:
         $ref: "@glaze_combination.name"
         description: The glaze combination applied (one or more layers).
@@ -339,7 +339,7 @@ states:
     successors:
       - recycled
       - glaze_fired
-    additional_fields:
+    fields:
       kiln_location:
         $ref: "@location.name"
         description: Name of the kiln where this piece was submitted for glaze firing.
@@ -351,7 +351,7 @@ states:
       - recycled
       - sanded
       - completed
-    additional_fields:
+    fields:
       kiln_temperature_c:
         $ref: "bisque_fired.kiln_temperature_c"
         description: Peak kiln temperature during glaze firing, in degrees Celsius.

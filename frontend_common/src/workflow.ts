@@ -43,7 +43,7 @@ interface WorkflowStateDefinition {
     visible: boolean
     terminal?: boolean
     successors?: string[]
-    additional_fields?: Record<string, FieldDefinition>
+    fields?: Record<string, FieldDefinition>
 }
 
 export interface ComposeFromEntry {
@@ -228,7 +228,7 @@ export function getAdditionalFieldDefinitions(stateId: string): ResolvedAddition
     if (!state) {
         return []
     }
-    const fields = state.additional_fields ?? {}
+    const fields = state.fields ?? {}
     return Object.entries(fields).map(([name, def]) => buildResolvedField(name, def))
 }
 
@@ -297,7 +297,7 @@ function resolveInlineField(fieldDef: FieldDefinition, seen = new Set<string>())
         return { type: 'string' }
     }
     const state = STATE_MAP.get(stateId)
-    const target = state?.additional_fields?.[fieldName]
+    const target = state?.fields?.[fieldName]
     if (!target) {
         return { type: 'string' }
     }

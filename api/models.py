@@ -10,6 +10,7 @@ from .model_factories import (
     GlobalModel as GlobalModel,
     make_compose_global_models,
     make_favorite_model,
+    make_piece_state_global_ref_model,
     make_simple_global_model,
 )
 from .workflow import (
@@ -23,6 +24,7 @@ from .workflow import (
     get_global_config,
     get_global_model_and_field as get_global_model_and_field,
     get_global_names,
+    get_state_global_ref_map,
     get_state_ref_fields as get_state_ref_fields,
     is_factory_global,
     is_favoritable_global,
@@ -60,6 +62,13 @@ def _register_globals():
         if is_favoritable_global(global_name):
             fav = make_favorite_model(global_name)
             ns[fav.__name__] = fav
+
+    # Generate one junction model per global type that appears as a global ref
+    # in any state's fields DSL.  Each junction model stores FK references from
+    # PieceState to the global type with DB-level PROTECT integrity.
+    for global_name in get_state_global_ref_map():
+        ref_model = make_piece_state_global_ref_model(global_name)
+        ns[ref_model.__name__] = ref_model
 
 _register_globals()
 
@@ -119,8 +128,8 @@ class PieceState(models.Model):
     last_modified = models.DateTimeField(auto_now=True)
     # Stored as a list of {url, caption, created} objects.
     images = models.JSONField(default=list)
-    # State-specific data conforming to the additional_fields DSL for this state
-    # in the workflow version recorded on piece.workflow_version.
+    # Inline (non-global-ref) state-specific fields for this state.
+    # Global ref fields are stored in per-type junction tables (PieceState*Ref models).
     additional_fields = models.JSONField(default=dict)
 
     @property
@@ -133,11 +142,11 @@ class PieceState(models.Model):
 
     def save(self, *args, allow_sealed_edit: bool = False, **kwargs):
         """
-        Validates additional_fields against the workflow DSL for this state, then
-        enforces the sealed-state invariant.
+        Validates inline additional_fields against the workflow DSL for this state,
+        then enforces the sealed-state invariant.
 
-        The workflow version used for validation is piece.workflow_version
-        (hardcoded to WORKFLOW_VERSION for now).
+        Global ref fields are stored in junction tables and validated separately by
+        the serializer; this method only validates the inline JSON blob.
 
         Past states are sealed — only the current state of a piece may be modified.
         Pass allow_sealed_edit=True to bypass the sealed check for exceptional
@@ -146,7 +155,8 @@ class PieceState(models.Model):
         if self.user_id is None and self.piece_id:
             self.user = self.piece.user
 
-        # Validate additional_fields against the DSL schema for this state.
+        # Validate inline additional_fields against the DSL schema for this state.
+        # Global ref fields are excluded from this schema (they live in junction tables).
         schema = build_additional_fields_schema(self.state)
         try:
             jsonschema.validate(instance=self.additional_fields, schema=schema)

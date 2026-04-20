@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from api.models import ENTRY_STATE, SUCCESSORS
+from api.models import ENTRY_STATE, SUCCESSORS, ClayBody, Location
 
 
 # ---------------------------------------------------------------------------
@@ -47,21 +47,22 @@ class TestPieceStates:
         cs = data['current_state']
         assert cs['notes'] == 'Looks good'
 
-    def test_additional_fields_recorded(self, client, piece):
+    def test_additional_fields_recorded(self, client, piece, user):
+        kiln = Location.objects.create(user=user, name='Kiln A')
         client.post(f'/api/pieces/{piece.id}/states/', {'state': 'wheel_thrown'}, format='json')
         client.post(f'/api/pieces/{piece.id}/states/', {'state': 'trimmed'}, format='json')
         response = client.post(
             f'/api/pieces/{piece.id}/states/',
             {
                 'state': 'submitted_to_bisque_fire',
-                'additional_fields': {'kiln_location': 'Kiln A'},
+                'additional_fields': {'kiln_location': str(kiln.pk)},
             },
             format='json',
         )
         assert response.status_code == 201
         cs = response.json()['current_state']
         assert cs['state'] == 'submitted_to_bisque_fire'
-        assert cs['additional_fields']['kiln_location'] == 'Kiln A'
+        assert cs['additional_fields']['kiln_location'] == {'id': str(kiln.pk), 'name': 'Kiln A'}
 
     def test_invalid_additional_fields_returns_400(self, client, piece):
         # additional_fields must be a JSON object — passing a list should fail validation
@@ -72,12 +73,13 @@ class TestPieceStates:
         )
         assert response.status_code == 400
 
-    def test_new_state_has_empty_additional_fields_when_no_source(self, client, piece):
+    def test_new_state_has_empty_additional_fields_when_no_source(self, client, piece, user):
         # If the source field for a state ref was never set, the new state's
         # additional_fields should not include that ref field.
+        clay = ClayBody.objects.create(user=user, name='Stoneware')
         client.post(
             f'/api/pieces/{piece.id}/states/',
-            {'state': 'wheel_thrown', 'additional_fields': {'clay_body': 'Stoneware'}},
+            {'state': 'wheel_thrown', 'additional_fields': {'clay_body': str(clay.pk)}},
             format='json',
         )
         response = client.post(

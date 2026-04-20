@@ -56,7 +56,7 @@ vi.mock('../../workflow.yml', () => ({
                 id: 'wheel_thrown',
                 visible: true,
                 successors: ['trimmed', 'recycled'],
-                additional_fields: {
+                fields: {
                     clay_weight_grams: {
                         type: 'number',
                         description: 'Weight of clay before trimming',
@@ -71,7 +71,7 @@ vi.mock('../../workflow.yml', () => ({
                 id: 'submitted_to_bisque_fire',
                 visible: true,
                 successors: ['bisque_fired', 'recycled'],
-                additional_fields: {
+                fields: {
                     kiln_location: {
                         $ref: '@location.name',
                         can_create: true,
@@ -82,7 +82,7 @@ vi.mock('../../workflow.yml', () => ({
                 id: 'trimmed',
                 visible: true,
                 successors: ['submitted_to_bisque_fire', 'recycled'],
-                additional_fields: {
+                fields: {
                     trimmed_weight_grams: {
                         type: 'number',
                     },
@@ -96,7 +96,7 @@ vi.mock('../../workflow.yml', () => ({
                 id: 'bisque_fired',
                 visible: true,
                 successors: ['glazed', 'recycled'],
-                additional_fields: {
+                fields: {
                     kiln_temperature_c: {
                         type: 'integer',
                     },
@@ -110,7 +110,7 @@ vi.mock('../../workflow.yml', () => ({
                 id: 'glaze_fired',
                 visible: true,
                 successors: ['completed', 'recycled'],
-                additional_fields: {
+                fields: {
                     kiln_temperature_c: {
                         $ref: 'bisque_fired.kiln_temperature_c',
                     },

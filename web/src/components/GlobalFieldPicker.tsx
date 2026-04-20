@@ -74,6 +74,12 @@ export interface GlobalFieldPickerProps {
      * owns the list and is responsible for refreshing it after a create.
      */
     options?: GlobalEntry[]
+    /**
+     * Optional callback that fires alongside `onChange` and provides the full
+     * GlobalEntry (including `id`) when a selection is made. Use this when the
+     * caller needs the PK for an API call (e.g. additional_fields global refs).
+     */
+    onSelectEntry?: (entry: GlobalEntry | null) => void
     sx?: SxProps<Theme>
 }
 
@@ -93,6 +99,7 @@ export default function GlobalFieldPicker({
     label,
     value,
     onChange,
+    onSelectEntry,
     helperText,
     required,
     canCreate = false,
@@ -128,6 +135,7 @@ export default function GlobalFieldPicker({
     async function handleChange(displayOption: string | null) {
         if (!displayOption) {
             onChange('')
+            onSelectEntry?.(null)
             return
         }
         const createValue = parseCreateOption(displayOption)
@@ -135,17 +143,18 @@ export default function GlobalFieldPicker({
             setCreating(true)
             setError(null)
             try {
-                const createdName = await createGlobalEntry(globalName, fieldName, createValue)
+                const created = await createGlobalEntry(globalName, fieldName, createValue)
                 if (optionsProp === undefined) {
                     // Caller owns the list when optionsProp is provided; only
                     // update internal state when managing the list ourselves.
                     setInternalEntries((prev) => {
-                        const merged = [...prev, { id: '', name: createdName, isPublic: false }]
+                        const merged = [...prev, created]
                         merged.sort((a, b) => a.name.localeCompare(b.name))
                         return merged
                     })
                 }
-                onChange(createdName)
+                onChange(created.name)
+                onSelectEntry?.(created)
             } catch {
                 setError(`Failed to create ${label.toLowerCase()}. Please try again.`)
             } finally {
@@ -154,7 +163,12 @@ export default function GlobalFieldPicker({
             return
         }
         // Strip display suffix before emitting the raw name.
-        onChange(stripPublicSuffix(displayOption))
+        const rawName = stripPublicSuffix(displayOption)
+        onChange(rawName)
+        if (onSelectEntry) {
+            const entry = entries.find((e) => e.name === rawName) ?? null
+            onSelectEntry(entry)
+        }
     }
 
     return (

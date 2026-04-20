@@ -87,9 +87,9 @@ def _parse_ref(ref_str):
 
 
 def _all_refs(workflow):
-    """Yield (host_state_id, local_field_name, ref_str) for every $ref in additional_fields."""
+    """Yield (host_state_id, local_field_name, ref_str) for every $ref in state fields."""
     for state in workflow["states"]:
-        for field_name, field_def in state.get("additional_fields", {}).items():
+        for field_name, field_def in state.get("fields", {}).items():
             if "$ref" in field_def:
                 yield state["id"], field_name, field_def["$ref"]
 
@@ -97,7 +97,7 @@ def _all_refs(workflow):
 def _all_inline_fields(workflow):
     """Yield (context, field_name, field_def) for every inline field in states and globals."""
     for state in workflow["states"]:
-        for field_name, field_def in state.get("additional_fields", {}).items():
+        for field_name, field_def in state.get("fields", {}).items():
             if "type" in field_def:
                 yield f"state '{state['id']}'", field_name, field_def
     for global_name, global_def in workflow.get("globals", {}).items():
@@ -219,7 +219,7 @@ class TestSchemaValidation:
         jsonschema.validate(instance=valid, schema=schema)
 
     def test_global_ref_accepted(self, schema):
-        """A global ref (@global.field) in additional_fields must pass the schema."""
+        """A global ref (@global.field) in state fields must pass the schema."""
         valid = {
             "version": "1.0.0",
             "globals": {
@@ -233,7 +233,7 @@ class TestSchemaValidation:
                     "id": "a",
                     "visible": True,
                     "successors": ["b"],
-                    "additional_fields": {
+                    "fields": {
                         "kiln": {"$ref": "@location.name"},
                     },
                 },
@@ -257,7 +257,7 @@ class TestSchemaValidation:
                     "id": "a",
                     "visible": True,
                     "successors": ["b"],
-                    "additional_fields": {
+                    "fields": {
                         "kiln": {"$ref": "@location.name", "can_create": True},
                     },
                 },
@@ -275,7 +275,7 @@ class TestSchemaValidation:
                     "id": "a",
                     "visible": True,
                     "successors": ["b"],
-                    "additional_fields": {
+                    "fields": {
                         "x": {"type": "number"},
                     },
                 },
@@ -283,7 +283,7 @@ class TestSchemaValidation:
                     "id": "b",
                     "visible": True,
                     "successors": ["c"],
-                    "additional_fields": {
+                    "fields": {
                         "y": {"$ref": "a.x", "can_create": True},
                     },
                 },
@@ -302,7 +302,7 @@ class TestSchemaValidation:
                     "id": "a",
                     "visible": True,
                     "successors": ["b"],
-                    "additional_fields": {
+                    "fields": {
                         "x": {"type": "number", "can_create": True},
                     },
                 },
@@ -321,7 +321,7 @@ class TestSchemaValidation:
                     "id": "a",
                     "visible": True,
                     "successors": ["b"],
-                    "additional_fields": {"x": {"$ref": "not-valid"}},
+                    "fields": {"x": {"$ref": "not-valid"}},
                 },
                 {"id": "b", "visible": True, "terminal": True},
             ],
@@ -552,7 +552,7 @@ class TestAdditionalFieldsDSL:
     def test_state_ref_field_exists(self, workflow):
         """The field_name in a state ref must be declared on that state."""
         fields_by_state = {
-            s["id"]: set(s.get("additional_fields", {}).keys())
+            s["id"]: set(s.get("fields", {}).keys())
             for s in workflow["states"]
         }
         for host_state, field_name, ref_str in _all_refs(workflow):

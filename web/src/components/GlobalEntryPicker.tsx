@@ -30,8 +30,8 @@ export interface GlobalEntryPickerProps {
     globalName: string
     open: boolean
     onClose: () => void
-    /** Called when the user selects an entry. Receives the entry name. */
-    onSelect: (name: string) => void
+    /** Called when the user selects an entry. Receives the entry id and name. */
+    onSelect: (entry: { id: string; name: string }) => void
 }
 
 interface NamedRef {
@@ -294,7 +294,7 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
                                 <Box
                                     key={entry.id}
                                     onClick={() => {
-                                        onSelect(entry.name ?? '')
+                                        onSelect({ id: entry.id, name: entry.name ?? '' })
                                         handleClose()
                                     }}
                                     sx={{

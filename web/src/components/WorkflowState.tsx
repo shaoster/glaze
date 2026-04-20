@@ -43,6 +43,7 @@ type WorkflowStateProps = {
 type ImageEntry = { url: string; caption: string; cloudinary_public_id?: string | null }
 
 type AdditionalFieldInputMap = Record<string, string>
+type GlobalRefPkMap = Record<string, string>
 
 function formatAdditionalFieldValue(
     value: unknown,
@@ -50,6 +51,10 @@ function formatAdditionalFieldValue(
 ): string {
     if (value === null || value === undefined) {
         return ''
+    }
+    // Global ref values arrive as {id, name} objects — show the name in the UI.
+    if (typeof value === 'object' && 'name' in (value as object)) {
+        return String((value as { name: unknown }).name)
     }
     if (typeof value === 'object') {
         try {
@@ -64,6 +69,14 @@ function formatAdditionalFieldValue(
     return String(value)
 }
 
+function extractGlobalRefPk(value: unknown): string | undefined {
+    if (typeof value === 'object' && value !== null && 'id' in value) {
+        const id = (value as { id: unknown }).id
+        return typeof id === 'string' ? id : undefined
+    }
+    return undefined
+}
+
 function buildAdditionalFieldInputMap(
     defs: ResolvedAdditionalField[],
     values: Record<string, unknown>
@@ -75,12 +88,32 @@ function buildAdditionalFieldInputMap(
     return map
 }
 
+function buildGlobalRefPkMap(
+    defs: ResolvedAdditionalField[],
+    values: Record<string, unknown>
+): GlobalRefPkMap {
+    const map: GlobalRefPkMap = {}
+    defs.forEach((def) => {
+        if (def.isGlobalRef) {
+            const pk = extractGlobalRefPk(values[def.name])
+            if (pk) map[def.name] = pk
+        }
+    })
+    return map
+}
+
 function normalizeAdditionalFieldPayload(
     defs: ResolvedAdditionalField[],
-    inputs: AdditionalFieldInputMap
+    inputs: AdditionalFieldInputMap,
+    globalRefPks: GlobalRefPkMap
 ): Record<string, string | number | boolean> {
     const payload: Record<string, string | number | boolean> = {}
     defs.forEach((def) => {
+        if (def.isGlobalRef) {
+            const pk = globalRefPks[def.name]
+            if (pk) payload[def.name] = pk
+            return
+        }
         const raw = inputs[def.name]
         if (raw === undefined) {
             return
@@ -147,14 +180,19 @@ export default function WorkflowState({
         () => buildAdditionalFieldInputMap(additionalFieldDefs, pieceState.additional_fields ?? {}),
         [additionalFieldDefs, pieceState.additional_fields]
     )
+    const baseGlobalRefPks = useMemo(
+        () => buildGlobalRefPkMap(additionalFieldDefs, pieceState.additional_fields ?? {}),
+        [additionalFieldDefs, pieceState.additional_fields]
+    )
     const [additionalFieldInputs, setAdditionalFieldInputs] = useState(baseAdditionalFieldInputs)
+    const [globalRefPks, setGlobalRefPks] = useState<GlobalRefPkMap>(baseGlobalRefPks)
     const normalizedAdditionalFields = useMemo(
-        () => normalizeAdditionalFieldPayload(additionalFieldDefs, additionalFieldInputs),
-        [additionalFieldDefs, additionalFieldInputs]
+        () => normalizeAdditionalFieldPayload(additionalFieldDefs, additionalFieldInputs, globalRefPks),
+        [additionalFieldDefs, additionalFieldInputs, globalRefPks]
     )
     const normalizedBaseAdditionalFields = useMemo(
-        () => normalizeAdditionalFieldPayload(additionalFieldDefs, baseAdditionalFieldInputs),
-        [additionalFieldDefs, baseAdditionalFieldInputs]
+        () => normalizeAdditionalFieldPayload(additionalFieldDefs, baseAdditionalFieldInputs, baseGlobalRefPks),
+        [additionalFieldDefs, baseAdditionalFieldInputs, baseGlobalRefPks]
     )
     const additionalFieldsDirty =
         JSON.stringify(normalizedAdditionalFields) !== JSON.stringify(normalizedBaseAdditionalFields)
@@ -177,8 +215,9 @@ export default function WorkflowState({
         setNotes(pieceState.notes)
         setImages(stateImages(pieceState))
         setAdditionalFieldInputs(baseAdditionalFieldInputs)
+        setGlobalRefPks(baseGlobalRefPks)
         setCurrentLocation(currentLocationProp)
-    }, [pieceState, baseAdditionalFieldInputs, currentLocationProp])
+    }, [pieceState, baseAdditionalFieldInputs, baseGlobalRefPks, currentLocationProp])
 
     const [savingImage, setSavingImage] = useState(false)
     const [imageError, setImageError] = useState<string | null>(null)
@@ -419,6 +458,13 @@ export default function WorkflowState({
                                             label={label}
                                             value={value}
                                             onChange={(val) => handleAdditionalFieldChange(field.name, val)}
+                                            onSelectEntry={(entry) =>
+                                                setGlobalRefPks((prev) =>
+                                                    entry
+                                                        ? { ...prev, [field.name]: entry.id }
+                                                        : Object.fromEntries(Object.entries(prev).filter(([k]) => k !== field.name))
+                                                )
+                                            }
                                             canCreate={Boolean(field.canCreate)}
                                             helperText={helperText}
                                             required={field.required}
@@ -642,9 +688,12 @@ export default function WorkflowState({
                     globalName={pickerGlobalName}
                     open={true}
                     onClose={() => setPickerGlobalName(null)}
-                    onSelect={(name: string) => {
+                    onSelect={(entry) => {
                         const field = additionalFieldDefs.find((f) => f.globalName === pickerGlobalName)
-                        if (field) handleAdditionalFieldChange(field.name, name)
+                        if (field) {
+                            handleAdditionalFieldChange(field.name, entry.name)
+                            setGlobalRefPks((prev) => ({ ...prev, [field.name]: entry.id }))
+                        }
                     }}
                 />
             )}
