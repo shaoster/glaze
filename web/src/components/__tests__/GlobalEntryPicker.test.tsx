@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import GlobalEntryPicker from '../GlobalEntryPicker'
 import * as api from '@common/api'
@@ -62,7 +62,9 @@ beforeEach(() => {
 describe('GlobalEntryPicker (glaze_combination)', () => {
     describe('rendering', () => {
         it('renders the dialog title when open', async () => {
-            render(<GlobalEntryPicker {...defaultProps} />)
+            await act(async () => {
+                render(<GlobalEntryPicker {...defaultProps} />)
+            })
             expect(screen.getByText('Browse Glaze Combinations')).toBeInTheDocument()
         })
 
@@ -179,9 +181,11 @@ describe('GlobalEntryPicker (glaze_combination)', () => {
     })
 
     describe('generic globalName', () => {
-        it('uses a generic dialog title for non-glaze-combination globals', () => {
+        it('uses a generic dialog title for non-glaze-combination globals', async () => {
             vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([])
-            render(<GlobalEntryPicker {...defaultProps} globalName="clay_body" />)
+            await act(async () => {
+                render(<GlobalEntryPicker {...defaultProps} globalName="clay_body" />)
+            })
             expect(screen.getByText('Browse Clay Bodys')).toBeInTheDocument()
         })
 
@@ -193,9 +197,11 @@ describe('GlobalEntryPicker (glaze_combination)', () => {
             )
         })
 
-        it('does not show favorites toggle for non-favoritable globals', () => {
+        it('does not show favorites toggle for non-favoritable globals', async () => {
             vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([])
-            render(<GlobalEntryPicker {...defaultProps} globalName="clay_body" />)
+            await act(async () => {
+                render(<GlobalEntryPicker {...defaultProps} globalName="clay_body" />)
+            })
             expect(screen.queryByLabelText('Only favorites')).not.toBeInTheDocument()
         })
     })

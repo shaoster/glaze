@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import NewPieceDialog, { CURATED_THUMBNAILS } from '../NewPieceDialog'
 import * as api from '@common/api'
@@ -46,18 +46,24 @@ beforeEach(() => {
 
 describe('NewPieceDialog', () => {
     describe('rendering', () => {
-        it('renders the dialog title', () => {
-            render(<NewPieceDialog {...defaultProps} />)
+        it('renders the dialog title', async () => {
+            await act(async () => {
+                render(<NewPieceDialog {...defaultProps} />)
+            })
             expect(screen.getByText('New Piece')).toBeInTheDocument()
         })
 
-        it('renders the name field as required', () => {
-            render(<NewPieceDialog {...defaultProps} />)
+        it('renders the name field as required', async () => {
+            await act(async () => {
+                render(<NewPieceDialog {...defaultProps} />)
+            })
             expect(screen.getByTestId('name-input')).toBeInTheDocument()
         })
 
-        it('renders the notes field', () => {
-            render(<NewPieceDialog {...defaultProps} />)
+        it('renders the notes field', async () => {
+            await act(async () => {
+                render(<NewPieceDialog {...defaultProps} />)
+            })
             expect(screen.getByTestId('notes-input')).toBeInTheDocument()
         })
 
@@ -74,26 +80,34 @@ describe('NewPieceDialog', () => {
             await waitFor(() => expect(locationInput).toHaveValue('Studio K'))
         })
 
-        it('renders the location field', () => {
-            render(<NewPieceDialog {...defaultProps} />)
+        it('renders the location field', async () => {
+            await act(async () => {
+                render(<NewPieceDialog {...defaultProps} />)
+            })
             expect(screen.getByLabelText('Location')).toBeInTheDocument()
         })
 
-        it('fetches location suggestions', () => {
-            render(<NewPieceDialog {...defaultProps} />)
+        it('fetches location suggestions', async () => {
+            await act(async () => {
+                render(<NewPieceDialog {...defaultProps} />)
+            })
             expect(api.fetchGlobalEntries).toHaveBeenCalledWith('location')
         })
 
-        it('shows curated thumbnail images by default', () => {
-            render(<NewPieceDialog {...defaultProps} />)
+        it('shows curated thumbnail images by default', async () => {
+            await act(async () => {
+                render(<NewPieceDialog {...defaultProps} />)
+            })
             const images = screen.getAllByRole('img')
             expect(images.length).toBe(CURATED_THUMBNAILS.length)
         })
     })
 
     describe('save button', () => {
-        it('is disabled when name is empty', () => {
-            render(<NewPieceDialog {...defaultProps} />)
+        it('is disabled when name is empty', async () => {
+            await act(async () => {
+                render(<NewPieceDialog {...defaultProps} />)
+            })
             expect(screen.getByTestId('save-button')).toBeDisabled()
         })
 
@@ -111,8 +125,10 @@ describe('NewPieceDialog', () => {
     })
 
     describe('notes field', () => {
-        it('shows character count', () => {
-            render(<NewPieceDialog {...defaultProps} />)
+        it('shows character count', async () => {
+            await act(async () => {
+                render(<NewPieceDialog {...defaultProps} />)
+            })
             expect(screen.getByText('0 / 300')).toBeInTheDocument()
         })
     })
