@@ -52,7 +52,6 @@ _APP_ORIGIN = os.environ.get('APP_ORIGIN', '')
 if _APP_ORIGIN:
     CORS_ALLOWED_ORIGINS.append(_APP_ORIGIN)
     CSRF_TRUSTED_ORIGINS.append(_APP_ORIGIN)
-print(f"CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
 
 
 # Application definition
