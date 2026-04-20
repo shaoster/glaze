@@ -135,8 +135,23 @@ expect(element).toHaveValue('expected')             // may run before state upda
 fireEvent.click(screen.getByTestId('save-button'))  // may miss queued microtasks
 ```
 
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+For tests that exercise react-router navigation, use playwright's browser tests.
+
 ### What to test
 
 - Every new or modified React component → add or update a test.
 - For Autocomplete components with controlled `inputValue`: use a stateful wrapper in tests because `inputValue={value}` with a mock `onChange: vi.fn()` means the component never sees typed text.
 - Workflow/config helpers loaded from a data file → mock the data file with a minimal fixture to decouple tests from real project data and enable edge-case coverage.
+
+## Debugging
+
+- When something in a third party library or framework behaves differently from what is expected based on context, prefer to look up the documentation before blindly scanning the code.
