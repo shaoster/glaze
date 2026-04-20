@@ -8,6 +8,7 @@ import {
   RouterProvider,
   createBrowserRouter,
   createRoutesFromElements,
+  useLocation,
   useNavigate,
   useParams,
 } from 'react-router-dom'
@@ -25,6 +26,8 @@ import {
   MenuItem,
   Paper,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from '@mui/material'
@@ -288,6 +291,31 @@ function PieceDetailPage() {
   )
 }
 
+function AnalyzePage() {
+  return <Typography>Coming soon</Typography>
+}
+
+function LandingPage() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const currentTab = location.pathname === '/analyze' ? '/analyze' : '/'
+
+  return (
+    <>
+      <Tabs
+        value={currentTab}
+        onChange={(_event, nextTab: string) => navigate(nextTab)}
+        aria-label="Landing page navigation"
+        sx={{ mb: 3 }}
+      >
+        <Tab label="Pieces" value="/" />
+        <Tab label="Analyze" value="/analyze" />
+      </Tabs>
+      <Outlet />
+    </>
+  )
+}
+
 function AppShell({
   currentUser,
   onLogout,
@@ -347,7 +375,10 @@ function AuthenticatedApp({
       createBrowserRouter(
         createRoutesFromElements(
           <Route element={<AppShell currentUser={currentUser} onLogout={onLogout} />}>
-            <Route path="/" element={<PieceListPage />} />
+            <Route path="/" element={<LandingPage />}>
+              <Route index element={<PieceListPage />} />
+              <Route path="analyze" element={<AnalyzePage />} />
+            </Route>
             <Route path="/pieces/:id" element={<PieceDetailPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>,
