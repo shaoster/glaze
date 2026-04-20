@@ -17,6 +17,7 @@ npm run dev
 ```
 
 See [`env.sh`](../../env.sh) for shell helpers (`gz_setup`, `gz_start`, etc.) that wrap these commands.
+In a new environment, always run `source env.sh` and `gz_setup` before trying to do anything else.
 
 ---
 

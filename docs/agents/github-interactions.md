@@ -74,7 +74,7 @@ Project-specific definition-of-done checks (e.g. serializer/type alignment, work
 
 ### Environment Setup
 
-When running in a github action, first `source env.sh && gz_setup` to set up the environment.
+When running in a github action, or in any remote sandboxed environment, first `source env.sh && gz_setup` to set up the test environment.
 
 To run frontend tests, use `gz_test_web`.
 To run backend tests, use `gz_test_backend`.
