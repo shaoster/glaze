@@ -415,10 +415,13 @@ class PieceStateUpdateSerializer(serializers.Serializer):
 
 class PieceUpdateSerializer(serializers.Serializer):
     """Partial update of Piece fields."""
+    name = serializers.CharField(required=False, max_length=255)
     current_location = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
     thumbnail = ThumbnailSerializer(required=False, allow_null=True)
 
     def update(self, instance: Piece, validated_data: dict) -> Piece:  # type: ignore[override] — DRF base is untyped; narrowing instance/return to Piece is intentional
+        if 'name' in validated_data:
+            instance.name = validated_data['name']
         if 'current_location' in validated_data:
             location_name = validated_data['current_location']
             if location_name:

@@ -216,4 +216,95 @@ describe('PieceDetail', () => {
         await renderPieceDetail()
         expect(screen.queryByRole('button', { name: /show history/i })).not.toBeInTheDocument()
     })
+
+    describe('piece name editing', () => {
+        it('shows edit icon button next to piece name', async () => {
+            await renderPieceDetail()
+            expect(screen.getByRole('button', { name: 'Edit piece name' })).toBeInTheDocument()
+        })
+
+        it('clicking edit icon shows name input field', async () => {
+            await renderPieceDetail()
+            fireEvent.click(screen.getByRole('button', { name: 'Edit piece name' }))
+            expect(screen.getByRole('textbox', { name: 'Piece name' })).toBeInTheDocument()
+        })
+
+        it('name input is pre-filled with current piece name', async () => {
+            await renderPieceDetail()
+            fireEvent.click(screen.getByRole('button', { name: 'Edit piece name' }))
+            expect(screen.getByRole('textbox', { name: 'Piece name' })).toHaveValue('Test Bowl')
+        })
+
+        it('cancel button restores display mode', async () => {
+            await renderPieceDetail()
+            fireEvent.click(screen.getByRole('button', { name: 'Edit piece name' }))
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel name edit' }))
+            await waitFor(() =>
+                expect(screen.queryByRole('textbox', { name: 'Piece name' })).not.toBeInTheDocument()
+            )
+            expect(screen.getByText('Test Bowl')).toBeInTheDocument()
+        })
+
+        it('pressing Escape cancels editing', async () => {
+            await renderPieceDetail()
+            fireEvent.click(screen.getByRole('button', { name: 'Edit piece name' }))
+            const input = screen.getByRole('textbox', { name: 'Piece name' })
+            fireEvent.keyDown(input, { key: 'Escape' })
+            await waitFor(() =>
+                expect(screen.queryByRole('textbox', { name: 'Piece name' })).not.toBeInTheDocument()
+            )
+        })
+
+        it('save button calls updatePiece with new name', async () => {
+            const updated = makePiece({ name: 'New Vase' })
+            vi.mocked(api.updatePiece).mockResolvedValue(updated)
+            const onPieceUpdated = vi.fn()
+            await renderPieceDetail(makePiece(), onPieceUpdated)
+            fireEvent.click(screen.getByRole('button', { name: 'Edit piece name' }))
+            const input = screen.getByRole('textbox', { name: 'Piece name' })
+            fireEvent.change(input, { target: { value: 'New Vase' } })
+            await userEvent.click(screen.getByRole('button', { name: 'Save name' }))
+            await waitFor(() =>
+                expect(api.updatePiece).toHaveBeenCalledWith('piece-id-1', { name: 'New Vase' })
+            )
+            await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(updated))
+        })
+
+        it('pressing Enter saves the name', async () => {
+            const updated = makePiece({ name: 'Pressed Enter Bowl' })
+            vi.mocked(api.updatePiece).mockResolvedValue(updated)
+            const onPieceUpdated = vi.fn()
+            await renderPieceDetail(makePiece(), onPieceUpdated)
+            fireEvent.click(screen.getByRole('button', { name: 'Edit piece name' }))
+            const input = screen.getByRole('textbox', { name: 'Piece name' })
+            fireEvent.change(input, { target: { value: 'Pressed Enter Bowl' } })
+            fireEvent.keyDown(input, { key: 'Enter' })
+            await waitFor(() =>
+                expect(api.updatePiece).toHaveBeenCalledWith('piece-id-1', { name: 'Pressed Enter Bowl' })
+            )
+        })
+
+        it('shows error if name is empty and save is attempted', async () => {
+            await renderPieceDetail()
+            fireEvent.click(screen.getByRole('button', { name: 'Edit piece name' }))
+            const input = screen.getByRole('textbox', { name: 'Piece name' })
+            fireEvent.change(input, { target: { value: '' } })
+            fireEvent.click(screen.getByRole('button', { name: 'Save name' }))
+            await waitFor(() =>
+                expect(screen.getByText('Name cannot be empty.')).toBeInTheDocument()
+            )
+            expect(api.updatePiece).not.toHaveBeenCalled()
+        })
+
+        it('does not call API if name is unchanged', async () => {
+            await renderPieceDetail()
+            fireEvent.click(screen.getByRole('button', { name: 'Edit piece name' }))
+            // Name input starts as 'Test Bowl' and we do not change it
+            await userEvent.click(screen.getByRole('button', { name: 'Save name' }))
+            await waitFor(() =>
+                expect(screen.queryByRole('textbox', { name: 'Piece name' })).not.toBeInTheDocument()
+            )
+            expect(api.updatePiece).not.toHaveBeenCalled()
+        })
+    })
 })
