@@ -14,7 +14,7 @@ _MOCK_STATE_MAP = {
         'id': 'wheel_thrown',
         'visible': True,
         'successors': ['recycled', 'trimmed'],
-        'additional_fields': {
+        'fields': {
             'clay_weight_grams': {
                 'type': 'number',
                 'description': 'Weight of clay on the scale before throwing, in grams.',
@@ -30,7 +30,7 @@ _MOCK_STATE_MAP = {
         'id': 'trimmed',
         'visible': True,
         'successors': ['recycled', 'submitted_to_bisque_fire'],
-        'additional_fields': {
+        'fields': {
             'trimmed_weight_grams': {
                 'type': 'number',
             },
@@ -44,7 +44,7 @@ _MOCK_STATE_MAP = {
         'id': 'submitted_to_bisque_fire',
         'visible': True,
         'successors': ['recycled', 'bisque_fired'],
-        'additional_fields': {
+        'fields': {
             'kiln_location': {
                 '$ref': '@location.name',
                 'can_create': True,
@@ -55,7 +55,7 @@ _MOCK_STATE_MAP = {
         'id': 'bisque_fired',
         'visible': True,
         'successors': ['recycled', 'glazed'],
-        'additional_fields': {
+        'fields': {
             'kiln_temperature_c': {'type': 'integer'},
             'cone': {'type': 'string', 'enum': ['04', '03', '02', '01']},
         },
@@ -64,7 +64,7 @@ _MOCK_STATE_MAP = {
         'id': 'glaze_fired',
         'visible': True,
         'successors': ['recycled', 'completed'],
-        'additional_fields': {
+        'fields': {
             'kiln_temperature_c': {
                 '$ref': 'bisque_fired.kiln_temperature_c',
             },
@@ -292,7 +292,7 @@ def test_resolve_image_type_maps_to_string_in_schema(monkeypatch):
             'id': 'photo_state',
             'visible': True,
             'terminal': True,
-            'additional_fields': {
+            'fields': {
                 'thumbnail': {'type': 'image'},
             },
         },
@@ -314,15 +314,15 @@ def test_build_additional_fields_schema_unknown_state_is_empty_object(monkeypatc
 
 
 def test_build_additional_fields_schema_resolves_global_refs(monkeypatch):
+    # Global ref fields are stored in junction tables — they are excluded from
+    # the inline JSON schema entirely.
     monkeypatch.setattr(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP)
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
 
     schema = workflow_module.build_additional_fields_schema('submitted_to_bisque_fire')
     assert schema == {
         'type': 'object',
-        'properties': {
-            'kiln_location': {'type': 'string'},
-        },
+        'properties': {},
         'additionalProperties': False,
     }
 

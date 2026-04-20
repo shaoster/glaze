@@ -62,7 +62,7 @@ describe('NewPieceDialog', () => {
         })
 
         it('lets you create a new location option', async () => {
-            vi.mocked(api.createGlobalEntry).mockResolvedValue('Studio K')
+            vi.mocked(api.createGlobalEntry).mockResolvedValue({ id: 'new-id', name: 'Studio K', isPublic: false })
             render(<NewPieceDialog {...defaultProps} />)
             const locationInput = screen.getByLabelText('Location')
             await userEvent.type(locationInput, 'Studio K')

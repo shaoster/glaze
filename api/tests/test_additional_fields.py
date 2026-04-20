@@ -26,7 +26,7 @@ _MOCK_STATE_MAP = {
         'id': 'mock_typed',
         'visible': True,
         'successors': ['mock_with_ref', 'mock_terminal'],
-        'additional_fields': {
+        'fields': {
             'required_num': {'type': 'number', 'required': True},
             'optional_str': {'type': 'string'},
             'enum_field': {'type': 'string', 'enum': ['alpha', 'beta', 'gamma']},
@@ -38,13 +38,14 @@ _MOCK_STATE_MAP = {
         'id': 'mock_with_ref',
         'visible': True,
         'successors': ['mock_terminal'],
-        'additional_fields': {
-            # State ref — resolves to mock_typed.required_num (number)
+        'fields': {
+            # State ref — resolves to mock_typed.required_num (number, inline)
             'carried_num': {
                 '$ref': 'mock_typed.required_num',
                 'description': 'Carried forward from mock_typed.',
             },
-            # Global ref — resolves to mock_global.name_field (string)
+            # Global ref — stored in a junction table, NOT in the JSON blob.
+            # The inline schema for this state excludes it entirely.
             'global_str': {
                 '$ref': '@mock_global.name_field',
             },
@@ -54,7 +55,7 @@ _MOCK_STATE_MAP = {
         'id': 'mock_no_fields',
         'visible': True,
         'successors': ['mock_terminal'],
-        # No additional_fields key at all.
+        # No fields key at all.
     },
     'mock_terminal': {
         'id': 'mock_terminal',
@@ -188,7 +189,7 @@ class TestAdditionalFieldsValidation:
     def test_state_ref_valid_value_passes(self, db):
         with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
              patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
-            # carried_num resolves to number type
+            # carried_num is a state ref to an inline field — stays in the blob.
             ps = _make_piece_with_state('mock_with_ref', {'carried_num': 3.14})
             ps.save()  # must not raise
 
@@ -199,21 +200,32 @@ class TestAdditionalFieldsValidation:
             with pytest.raises(ValueError, match='additional_fields validation failed'):
                 ps.save()
 
-    # -- global ref ($ref to a globals entry) --------------------------------
-
-    def test_global_ref_valid_value_passes(self, db):
+    def test_state_ref_empty_blob_passes(self, db):
         with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
              patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
-            # global_str resolves to string type
-            ps = _make_piece_with_state('mock_with_ref', {'global_str': 'Kiln Room'})
+            # Empty blob is also valid — state refs are optional by default.
+            ps = _make_piece_with_state('mock_with_ref', {})
             ps.save()  # must not raise
 
-    def test_global_ref_wrong_type_fails(self, db):
+    # -- global ref ($ref to a globals entry) --------------------------------
+    # Global ref fields are stored in junction tables — they are excluded from
+    # the inline JSON schema entirely.  Putting a global-ref value in the blob
+    # is now an error (additionalProperties: false on the inline schema).
+
+    def test_global_ref_in_blob_fails(self, db):
         with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
              patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
-            ps = _make_piece_with_state('mock_with_ref', {'global_str': 123})
+            # global_str is a global ref — it must NOT appear in the blob.
+            ps = _make_piece_with_state('mock_with_ref', {'global_str': 'Kiln Room'})
             with pytest.raises(ValueError, match='additional_fields validation failed'):
                 ps.save()
+
+    def test_global_ref_absent_from_blob_passes(self, db):
+        with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
+             patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
+            # Blob without global_str is valid; the FK is handled by the serializer.
+            ps = _make_piece_with_state('mock_with_ref', {'carried_num': 3.14})
+            ps.save()  # must not raise
 
     # -- unknown state (not in _STATE_MAP) -----------------------------------
 

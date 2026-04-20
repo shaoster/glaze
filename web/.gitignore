@@ -19,11 +19,13 @@ dist-ssr
 .codex
 .codex/
 .DS_Store
+.vitest-attachments
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+src/components/__tests__/__screenshots__/
 venv/
 node_modules/
 

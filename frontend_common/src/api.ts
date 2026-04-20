@@ -271,12 +271,12 @@ export async function toggleGlobalEntryFavorite(globalName: string, id: string, 
     }
 }
 
-export async function createGlobalEntry(globalName: string, field: string, value: string): Promise<string> {
-    const { data } = await client.post<{ id: string; name: string }>(`globals/${globalName}/`, {
+export async function createGlobalEntry(globalName: string, field: string, value: string): Promise<GlobalEntry> {
+    const { data } = await client.post<{ id: string; name: string; is_public: boolean }>(`globals/${globalName}/`, {
         field,
         value,
     })
-    return data.name
+    return { id: data.id, name: data.name, isPublic: data.is_public }
 }
 
 export async function fetchCloudinaryWidgetConfig(): Promise<CloudinaryWidgetConfig> {

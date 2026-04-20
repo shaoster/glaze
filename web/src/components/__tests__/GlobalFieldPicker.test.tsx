@@ -109,7 +109,7 @@ describe('GlobalFieldPicker', () => {
 
     describe('creating a new entry', () => {
         it('calls createGlobalEntry with globalName, fieldName, and the typed value', async () => {
-            vi.mocked(api.createGlobalEntry).mockResolvedValue('New Studio')
+            vi.mocked(api.createGlobalEntry).mockResolvedValue({ id: 'new-id', name: 'New Studio', isPublic: false })
             render(<Controlled canCreate />)
             await userEvent.type(screen.getByLabelText('Location'), 'New Studio')
             await waitFor(() =>
@@ -122,7 +122,7 @@ describe('GlobalFieldPicker', () => {
         })
 
         it('calls onChange with the created name on success', async () => {
-            vi.mocked(api.createGlobalEntry).mockResolvedValue('New Studio')
+            vi.mocked(api.createGlobalEntry).mockResolvedValue({ id: 'new-id', name: 'New Studio', isPublic: false })
             render(<Controlled canCreate />)
             await userEvent.type(screen.getByLabelText('Location'), 'New Studio')
             await waitFor(() =>
@@ -189,7 +189,7 @@ describe('GlobalFieldPicker', () => {
         })
 
         it('preserves the input after a successful create', async () => {
-            vi.mocked(api.createGlobalEntry).mockResolvedValue('New Studio')
+            vi.mocked(api.createGlobalEntry).mockResolvedValue({ id: 'new-id', name: 'New Studio', isPublic: false })
             render(<Controlled canCreate />)
             await userEvent.type(screen.getByLabelText('Location'), 'New Studio')
             await waitFor(() =>

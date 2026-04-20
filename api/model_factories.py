@@ -591,3 +591,58 @@ def make_favorite_model(global_name: str) -> type:
     }
 
     return type(f'Favorite{model_name}', (FavoriteModel,), attrs)
+
+
+# ---------------------------------------------------------------------------
+# PieceState global-ref junction model factory
+# ---------------------------------------------------------------------------
+
+def make_piece_state_global_ref_model(global_name: str) -> type:
+    """Generate a junction model that stores FK references from PieceState to a global type.
+
+    For each global type that appears as a global ref (``$ref: @...``) in any
+    state's ``fields`` DSL, this factory generates a model named
+    ``PieceState<ModelName>Ref`` with:
+
+    - ``piece_state`` ForeignKey → PieceState (CASCADE)
+    - ``field_name`` CharField — the DSL field name (e.g. ``'clay_body'``)
+    - ``<global_name>`` ForeignKey → the global model (PROTECT)
+    - UniqueConstraint on (piece_state, field_name) — one value per field per state
+
+    PROTECT on the global FK prevents deleting a global object that is still
+    referenced by a PieceState.  The unique constraint ensures at most one
+    value per (piece_state, field_name) pair.
+    """
+    config = get_global_config(global_name)
+    if not config:
+        raise ValueError(f'Unknown global: {global_name!r}')
+
+    model_name: str = config['model']
+    ref_model_class_name = f'PieceState{model_name}Ref'
+    plural = _pluralize_snake(global_name)
+
+    attrs: dict = {
+        '__module__': 'api.models',
+        'piece_state': models.ForeignKey(
+            'api.PieceState',
+            on_delete=models.CASCADE,
+            related_name=f'{plural}_refs',
+        ),
+        'field_name': models.CharField(max_length=100),
+        global_name: models.ForeignKey(
+            f'api.{model_name}',
+            on_delete=models.PROTECT,
+            related_name=f'piece_state_refs',
+        ),
+        '__str__': (lambda gn: lambda self: f'{self.piece_state} / {self.field_name}={getattr(self, gn)}')(global_name),
+        'Meta': type('Meta', (), {
+            'constraints': [
+                models.UniqueConstraint(
+                    fields=['piece_state', 'field_name'],
+                    name=f'uniq_piece_state_{global_name}_ref',
+                )
+            ]
+        }),
+    }
+
+    return type(ref_model_class_name, (models.Model,), attrs)

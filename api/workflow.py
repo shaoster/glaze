@@ -41,7 +41,7 @@ def get_state_ref_fields(state_id: str) -> dict[str, tuple[str, str]]:
     if not state:
         return {}
     result: dict[str, tuple[str, str]] = {}
-    for field_name, field_def in state.get('additional_fields', {}).items():
+    for field_name, field_def in state.get('fields', {}).items():
         ref: str = field_def.get('$ref', '')
         if ref and not ref.startswith('@'):
             source_state_id, source_field_name = ref.split('.', 1)
@@ -238,6 +238,74 @@ def get_compose_from(global_name: str) -> dict | None:
     return config.get('compose_from') or None
 
 
+def _resolve_to_global_ref(field_def: dict, seen: frozenset | None = None) -> tuple[str, str] | None:
+    """Return (global_name, field_name) if this field_def ultimately resolves to a global ref.
+
+    Follows $ref chains transitively. Returns None for inline fields or state refs that
+    resolve to inline fields.  Used to decide which fields go to junction tables.
+    """
+    if seen is None:
+        seen = frozenset()
+
+    if 'type' in field_def:
+        return None
+
+    ref: str = field_def['$ref']
+    if ref in seen:
+        return None
+    seen = seen | {ref}
+
+    if ref.startswith('@'):
+        global_name, field_name = ref[1:].split('.', 1)
+        return global_name, field_name
+
+    # State ref — follow the chain
+    state_id, field_name = ref.split('.', 1)
+    target_state = _STATE_MAP.get(state_id, {})
+    target = target_state.get('fields', {}).get(field_name)
+    if target is None:
+        return None
+    return _resolve_to_global_ref(target, seen)
+
+
+def get_global_ref_fields_for_state(state_id: str) -> dict[str, str]:
+    """Return {field_name: global_name} for every field in this state that ultimately
+    resolves to a global ref (including state refs that chain to global refs).
+
+    Used by the serializer and views to identify which fields are stored in junction
+    tables rather than the inline_fields JSON blob.
+    """
+    state = _STATE_MAP.get(state_id)
+    if not state:
+        return {}
+    result: dict[str, str] = {}
+    for field_name, field_def in state.get('fields', {}).items():
+        resolved = _resolve_to_global_ref(field_def)
+        if resolved is not None:
+            result[field_name] = resolved[0]
+    return result
+
+
+def get_state_global_ref_map() -> dict[str, list[str]]:
+    """Return {global_name: [field_name, ...]} for every unique global ref across all states.
+
+    Each entry lists the DSL field names that reference that global type.
+    Used by _register_globals() to decide which junction models to generate.
+    """
+    result: dict[str, list[str]] = {}
+    seen: set[tuple[str, str]] = set()
+    for state in _STATE_MAP.values():
+        for field_name, field_def in state.get('fields', {}).items():
+            resolved = _resolve_to_global_ref(field_def)
+            if resolved is not None:
+                global_name = resolved[0]
+                key = (global_name, field_name)
+                if key not in seen:
+                    seen.add(key)
+                    result.setdefault(global_name, []).append(field_name)
+    return result
+
+
 def _resolve_field_def(field_def: dict) -> dict:
     """Recursively resolve a DSL field_def to its effective JSON Schema property dict.
 
@@ -265,25 +333,30 @@ def _resolve_field_def(field_def: dict) -> dict:
     else:
         # State ref: state_id.field_name
         state_id, field_name = ref.split('.', 1)
-        target = _STATE_MAP[state_id]['additional_fields'][field_name]
+        target = _STATE_MAP[state_id]['fields'][field_name]
 
     return _resolve_field_def(target)
 
 
 def build_additional_fields_schema(state_id: str) -> dict:
-    """Return a JSON Schema that validates the additional_fields blob for a given state.
+    """Return a JSON Schema that validates the inline_fields blob for a given state.
 
-    Fields declared in the DSL with `required: true` are placed in the `required`
-    array.  `additionalProperties: false` rejects keys not declared in the DSL.
-    States with no additional_fields definition only accept an empty object.
+    Only includes fields that are NOT global refs (or state refs resolving to global
+    refs) — those are stored in junction tables and validated separately.
+
+    Fields declared with `required: true` are placed in the `required` array.
+    `additionalProperties: false` rejects keys not declared in the DSL.
+    States with no inline fields only accept an empty object.
     """
     state = _STATE_MAP.get(state_id)
-    dsl_fields: dict = state.get('additional_fields', {}) if state else {}
+    dsl_fields: dict = state.get('fields', {}) if state else {}
 
     properties: dict = {}
     required: list[str] = []
 
     for field_name, field_def in dsl_fields.items():
+        if _resolve_to_global_ref(field_def) is not None:
+            continue
         properties[field_name] = _resolve_field_def(field_def)
         if field_def.get('required', False):
             required.append(field_name)

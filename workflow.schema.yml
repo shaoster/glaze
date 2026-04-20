@@ -22,7 +22,7 @@ properties:
     type: object
     description: |
       Named domain types from api/models.py available as foreign-key references
-      in additional_fields via the @<global>.<field> syntax.
+      in fields via the @<global>.<field> syntax.
       api/models.py remains the source of truth — tests verify that every declared
       global and its fields match the corresponding Django model exactly.
     propertyNames:
@@ -76,7 +76,7 @@ $defs:
           Whether the model factory should generate a Django model class for this
           global. Defaults to true. Set to false for "reference-only" globals whose
           model is hand-written elsewhere (e.g. the core Piece model, which is
-          registered in globals only so that additional_fields DSL refs like
+          registered in globals only so that fields DSL refs like
           "@piece.name" can be validated, but whose model class is not a GlobalModel
           subclass and must not be auto-generated).
         default: true
@@ -144,7 +144,7 @@ $defs:
               description: |
                 Fields declared on the through (join) model for this M2M relationship.
                 Each key is a field name on the through model; each value is an inline
-                field definition or a global ref, using the same DSL as additional_fields.
+                field definition or a global ref, using the same DSL as fields.
                 Referential integrity (through field exists on model, global refs valid)
                 is enforced in tests/test_workflow.py.
               propertyNames:
@@ -191,7 +191,7 @@ $defs:
           type: string
           pattern: '^[a-z][a-z0-9_]*$'
         uniqueItems: true
-      additional_fields:
+      fields:
         type: object
         description: |
           State-specific fields declared using the Glaze field DSL.
@@ -205,7 +205,7 @@ $defs:
   # ---------------------------------------------------------------------------
   # Field DSL
   #
-  # field_def      — used in state additional_fields; all three forms allowed.
+  # field_def      — used in state fields; all three forms allowed.
   # global_field_def — used in global fields; inline and global refs only
   #                    (state refs don't apply outside the state graph).
   # ---------------------------------------------------------------------------

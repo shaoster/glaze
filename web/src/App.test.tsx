@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 // Mock the module before importing App
 vi.mock('@common/api', () => ({
     fetchCurrentUser: vi.fn().mockResolvedValue(null),
+    loginWithGoogle: vi.fn(),
     loginWithEmail: vi.fn(),
     logoutUser: vi.fn().mockResolvedValue(undefined),
     registerWithEmail: vi.fn(),
@@ -34,7 +35,7 @@ vi.mock('./components/PieceDetail', () => ({
 }))
 
 // Now import App and the mocked api
-import { fetchCurrentUser, loginWithEmail } from '@common/api'
+import { fetchCurrentUser, loginWithEmail, loginWithGoogle } from '@common/api'
 import App from './App'
 
 const MOCK_USER = {
