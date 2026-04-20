@@ -49,6 +49,7 @@ const MOCK_USER = {
 describe('App auth flow', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        window.history.pushState({}, '', '/')
         // Reset fetchCurrentUser to return null by default
         vi.mocked(fetchCurrentUser).mockResolvedValue(null)
     })
@@ -103,5 +104,48 @@ describe('App auth flow', () => {
             expect(screen.getByText('Pat Potter')).toBeInTheDocument()
             expect(screen.getByText('Piece List Content')).toBeInTheDocument()
         })
+
+        expect(screen.getByRole('tab', { name: 'Pieces' })).toHaveAttribute('aria-selected', 'true')
+        expect(screen.getByRole('tab', { name: 'Analyze' })).toHaveAttribute('aria-selected', 'false')
+    })
+
+    it('switches between landing tabs and keeps the URL in sync', async () => {
+        vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_USER)
+
+        render(<App />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Pottery Pieces')).toBeInTheDocument()
+        })
+
+        await userEvent.click(screen.getByRole('tab', { name: 'Analyze' }))
+
+        await waitFor(() => {
+            expect(screen.getByText('Coming soon')).toBeInTheDocument()
+            expect(window.location.pathname).toBe('/analyze')
+        })
+
+        expect(screen.getByRole('tab', { name: 'Analyze' })).toHaveAttribute('aria-selected', 'true')
+
+        await userEvent.click(screen.getByRole('tab', { name: 'Pieces' }))
+
+        await waitFor(() => {
+            expect(screen.getByText('Pottery Pieces')).toBeInTheDocument()
+            expect(window.location.pathname).toBe('/')
+        })
+    })
+
+    it('activates the analyze tab on direct navigation to /analyze', async () => {
+        vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_USER)
+        window.history.pushState({}, '', '/analyze')
+
+        render(<App />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Coming soon')).toBeInTheDocument()
+        })
+
+        expect(screen.getByRole('tab', { name: 'Analyze' })).toHaveAttribute('aria-selected', 'true')
+        expect(screen.getByRole('tab', { name: 'Pieces' })).toHaveAttribute('aria-selected', 'false')
     })
 })
