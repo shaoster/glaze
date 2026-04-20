@@ -108,53 +108,66 @@ beforeEach(() => {
 })
 
 describe('WorkflowState', () => {
-    it('renders without crashing', () => {
-        const { container } = render(<WorkflowState {...defaultProps} />)
-        expect(container).toBeInTheDocument()
+    it('renders without crashing', async () => {
+        let container: HTMLElement
+        await act(async () => {
+            ;({ container } = render(<WorkflowState {...defaultProps} />))
+        })
+        expect(container!).toBeInTheDocument()
     })
 
-    it('renders a Notes field', () => {
-        render(<WorkflowState {...defaultProps} />)
+    it('renders a Notes field', async () => {
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} />)
+        })
         expect(screen.getByLabelText('Notes')).toBeInTheDocument()
     })
 
-    it('renders state-specific fields when the state defines additional_fields', () => {
+    it('renders state-specific fields when the state defines additional_fields', async () => {
         const bisqueState = makeState({
             state: 'bisque_fired',
             additional_fields: { kiln_temperature_c: '1200', cone: '04' },
         })
-        render(<WorkflowState {...defaultProps} pieceState={bisqueState} />)
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} pieceState={bisqueState} />)
+        })
         const tempInput = screen.getByLabelText('Kiln Temperature C')
         expect(tempInput).toBeInTheDocument()
         expect(tempInput).toHaveAttribute('type', 'number')
         expect(screen.getByLabelText('Cone')).toBeInTheDocument()
     })
 
-    it('renders state-reference additional fields with their values', () => {
+    it('renders state-reference additional fields with their values', async () => {
         const trimmedState = makeState({
             state: 'trimmed',
             additional_fields: { trimmed_weight_grams: 900, pre_trim_weight_grams: 1200 },
         })
-        render(<WorkflowState {...defaultProps} pieceState={trimmedState} />)
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} pieceState={trimmedState} />)
+        })
         expect(screen.getByLabelText('Trimmed Weight Grams')).toHaveValue(900)
         expect(screen.getByLabelText('Pre Trim Weight Grams')).toHaveValue(1200)
     })
 
-    it('renders state ref fields as disabled (read-only)', () => {
+    it('renders state ref fields as disabled (read-only)', async () => {
         const trimmedState = makeState({
             state: 'trimmed',
             additional_fields: { pre_trim_weight_grams: 1200 },
         })
-        render(<WorkflowState {...defaultProps} pieceState={trimmedState} />)
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} pieceState={trimmedState} />)
+        })
         expect(screen.getByLabelText('Pre Trim Weight Grams')).toBeDisabled()
     })
 
-    it('renders inline additional fields as editable', () => {
+    it('renders inline additional fields as editable', async () => {
         const trimmedState = makeState({
             state: 'trimmed',
             additional_fields: { trimmed_weight_grams: 900 },
         })
-        render(<WorkflowState {...defaultProps} pieceState={trimmedState} />)
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} pieceState={trimmedState} />)
+        })
         expect(screen.getByLabelText('Trimmed Weight Grams')).not.toBeDisabled()
     })
 
@@ -245,35 +258,47 @@ describe('WorkflowState', () => {
         )
     })
 
-    it('renders a Save button', () => {
-        render(<WorkflowState {...defaultProps} />)
+    it('renders a Save button', async () => {
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} />)
+        })
         expect(screen.getByTestId('save-button')).toBeInTheDocument()
     })
 
-    it('Save button is disabled when no changes', () => {
-        render(<WorkflowState {...defaultProps} />)
+    it('Save button is disabled when no changes', async () => {
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} />)
+        })
         expect(screen.getByTestId('save-button')).toBeDisabled()
     })
 
-    it('shows notes from pieceState', () => {
-        render(<WorkflowState {...defaultProps} pieceState={makeState({ notes: 'Some notes' })} />)
+    it('shows notes from pieceState', async () => {
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} pieceState={makeState({ notes: 'Some notes' })} />)
+        })
         expect(screen.getByLabelText('Notes')).toHaveValue('Some notes')
     })
 
-    it('Save button enabled after editing notes', () => {
-        render(<WorkflowState {...defaultProps} />)
+    it('Save button enabled after editing notes', async () => {
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} />)
+        })
         fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'New notes' } })
         expect(screen.getByTestId('save-button')).not.toBeDisabled()
     })
 
-    it('shows unsaved indicator after editing', () => {
-        render(<WorkflowState {...defaultProps} />)
+    it('shows unsaved indicator after editing', async () => {
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} />)
+        })
         fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'Changed' } })
         expect(screen.getByTestId('unsaved-indicator')).toBeInTheDocument()
     })
 
-    it('no unsaved indicator when not dirty', () => {
-        render(<WorkflowState {...defaultProps} />)
+    it('no unsaved indicator when not dirty', async () => {
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} />)
+        })
         expect(screen.queryByTestId('unsaved-indicator')).not.toBeInTheDocument()
     })
 
@@ -330,24 +355,30 @@ describe('WorkflowState', () => {
         expect(api.updatePiece).toHaveBeenCalledWith('test-piece-id', { current_location: 'Shelf Z' })
     })
 
-    it('calls onDirtyChange with true when dirty', () => {
+    it('calls onDirtyChange with true when dirty', async () => {
         const onDirtyChange = vi.fn()
-        render(<WorkflowState {...defaultProps} onDirtyChange={onDirtyChange} />)
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} onDirtyChange={onDirtyChange} />)
+        })
         fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'Changed' } })
         expect(onDirtyChange).toHaveBeenCalledWith(true)
     })
 
-    it('calls onDirtyChange with false when reverted', () => {
+    it('calls onDirtyChange with false when reverted', async () => {
         const onDirtyChange = vi.fn()
-        render(<WorkflowState {...defaultProps} pieceState={makeState({ notes: 'original' })} onDirtyChange={onDirtyChange} />)
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} pieceState={makeState({ notes: 'original' })} onDirtyChange={onDirtyChange} />)
+        })
         // Change and revert
         fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'changed' } })
         fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'original' } })
         expect(onDirtyChange).toHaveBeenLastCalledWith(false)
     })
 
-    it('upload button is always visible', () => {
-        render(<WorkflowState {...defaultProps} />)
+    it('upload button is always visible', async () => {
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} />)
+        })
         expect(screen.getByRole('button', { name: 'Upload Image' })).toBeInTheDocument()
     })
 
@@ -379,7 +410,9 @@ describe('WorkflowState', () => {
 
     it('upload button shows spinner and is disabled while widget is loading', async () => {
         setupControllableWidget()
-        render(<WorkflowState {...defaultProps} />)
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} />)
+        })
         fireEvent.click(screen.getByRole('button', { name: 'Upload Image' }))
         // widgetLoading is set synchronously on click, before the async config fetch
         expect(screen.getByRole('button', { name: 'Upload Image' })).toBeDisabled()
@@ -423,8 +456,10 @@ describe('WorkflowState', () => {
         await waitFor(() => expect(api.updateCurrentState).toHaveBeenCalled())
     })
 
-    it('clicking the pencil icon makes the caption editable', () => {
-        render(<WorkflowState {...defaultProps} pieceState={makeState({ images: [{ url: 'http://example.com/img.jpg', caption: 'My caption', created: new Date() }] })} />)
+    it('clicking the pencil icon makes the caption editable', async () => {
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} pieceState={makeState({ images: [{ url: 'http://example.com/img.jpg', caption: 'My caption', created: new Date() }] })} />)
+        })
         fireEvent.click(screen.getByRole('button', { name: 'edit caption' }))
         expect(screen.getByRole('textbox', { name: 'Edit caption' })).toBeInTheDocument()
         expect(screen.queryByText('My caption')).not.toBeInTheDocument()
@@ -445,16 +480,20 @@ describe('WorkflowState', () => {
         expect(screen.queryByRole('textbox', { name: 'Edit caption' })).not.toBeInTheDocument()
     })
 
-    it('skips server call when caption is unchanged on blur', () => {
-        render(<WorkflowState {...defaultProps} pieceState={makeState({ images: [{ url: 'http://example.com/img.jpg', caption: 'Same', created: new Date() }] })} />)
+    it('skips server call when caption is unchanged on blur', async () => {
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} pieceState={makeState({ images: [{ url: 'http://example.com/img.jpg', caption: 'Same', created: new Date() }] })} />)
+        })
         fireEvent.click(screen.getByRole('button', { name: 'edit caption' }))
         const input = screen.getByRole('textbox', { name: 'Edit caption' })
         fireEvent.blur(input)
         expect(api.updateCurrentState).not.toHaveBeenCalled()
     })
 
-    it('pressing Escape exits edit mode without saving', () => {
-        render(<WorkflowState {...defaultProps} pieceState={makeState({ images: [{ url: 'http://example.com/img.jpg', caption: 'Keep', created: new Date() }] })} />)
+    it('pressing Escape exits edit mode without saving', async () => {
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} pieceState={makeState({ images: [{ url: 'http://example.com/img.jpg', caption: 'Keep', created: new Date() }] })} />)
+        })
         fireEvent.click(screen.getByRole('button', { name: 'edit caption' }))
         const input = screen.getByRole('textbox', { name: 'Edit caption' })
         fireEvent.change(input, { target: { value: 'Changed' } })
@@ -463,18 +502,22 @@ describe('WorkflowState', () => {
         expect(screen.queryByRole('textbox', { name: 'Edit caption' })).not.toBeInTheDocument()
     })
 
-    it('does not remove image when confirmation is cancelled', () => {
+    it('does not remove image when confirmation is cancelled', async () => {
         vi.spyOn(window, 'confirm').mockReturnValue(false)
-        render(<WorkflowState {...defaultProps} pieceState={makeState({ images: [{ url: 'http://example.com/img.jpg', caption: 'Keep me', created: new Date() }] })} />)
+        await act(async () => {
+            render(<WorkflowState {...defaultProps} pieceState={makeState({ images: [{ url: 'http://example.com/img.jpg', caption: 'Keep me', created: new Date() }] })} />)
+        })
         fireEvent.click(screen.getByRole('button', { name: 'remove image' }))
         expect(screen.getByText('Keep me')).toBeInTheDocument()
     })
 
 
-    it('accepts any valid workflow state', () => {
+    it('accepts any valid workflow state', async () => {
         const states: PieceState['state'][] = ['designed', 'glazed', 'completed', 'recycled']
         for (const state of states) {
-            expect(() => render(<WorkflowState {...defaultProps} pieceState={makeState({ state })} />)).not.toThrow()
+            await act(async () => {
+                expect(() => render(<WorkflowState {...defaultProps} pieceState={makeState({ state })} />)).not.toThrow()
+            })
         }
     })
 })

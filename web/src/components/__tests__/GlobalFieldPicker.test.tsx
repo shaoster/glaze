@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import GlobalFieldPicker, { type GlobalFieldPickerProps, stripPublicSuffix } from '../GlobalFieldPicker'
@@ -36,25 +36,33 @@ beforeEach(() => {
 
 describe('GlobalFieldPicker', () => {
     describe('rendering', () => {
-        it('renders the label', () => {
-            render(<GlobalFieldPicker {...defaultProps} />)
+        it('renders the label', async () => {
+            await act(async () => {
+                render(<GlobalFieldPicker {...defaultProps} />)
+            })
             expect(screen.getByLabelText('Location')).toBeInTheDocument()
         })
 
-        it('shows helperText when provided and there is no error', () => {
-            render(<GlobalFieldPicker {...defaultProps} helperText="Where is this piece stored?" />)
+        it('shows helperText when provided and there is no error', async () => {
+            await act(async () => {
+                render(<GlobalFieldPicker {...defaultProps} helperText="Where is this piece stored?" />)
+            })
             expect(screen.getByText('Where is this piece stored?')).toBeInTheDocument()
         })
 
-        it('marks the field as required when required prop is set', () => {
-            render(<GlobalFieldPicker {...defaultProps} required />)
+        it('marks the field as required when required prop is set', async () => {
+            await act(async () => {
+                render(<GlobalFieldPicker {...defaultProps} required />)
+            })
             expect(screen.getByLabelText(/Location\s*\*/)).toBeInTheDocument()
         })
     })
 
     describe('options — internal fetch', () => {
-        it('fetches options for globalName on mount', () => {
-            render(<GlobalFieldPicker {...defaultProps} />)
+        it('fetches options for globalName on mount', async () => {
+            await act(async () => {
+                render(<GlobalFieldPicker {...defaultProps} />)
+            })
             expect(api.fetchGlobalEntries).toHaveBeenCalledWith('location')
         })
 

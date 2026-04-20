@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import PieceDetail from '../PieceDetail'
@@ -45,13 +45,15 @@ function makePiece(overrides: Partial<PieceDetailType> = {}): PieceDetailType {
     }
 }
 
-function renderPieceDetail(piece = makePiece(), onPieceUpdated = vi.fn()) {
+async function renderPieceDetail(piece = makePiece(), onPieceUpdated = vi.fn()) {
     // Use createMemoryRouter (data router) so useBlocker works in tests
     const router = createMemoryRouter(
         [{ path: '/pieces/:id', element: <PieceDetail piece={piece} onPieceUpdated={onPieceUpdated} /> }],
         { initialEntries: ['/pieces/piece-id-1'] }
     )
-    return render(<RouterProvider router={router} />)
+    await act(async () => {
+        render(<RouterProvider router={router} />)
+    })
 }
 
 beforeEach(() => {
@@ -60,24 +62,24 @@ beforeEach(() => {
 })
 
 describe('PieceDetail', () => {
-    it('renders piece name', () => {
-        renderPieceDetail()
+    it('renders piece name', async () => {
+        await renderPieceDetail()
         expect(screen.getByText('Test Bowl')).toBeInTheDocument()
     })
 
-    it('renders current state label', () => {
-        renderPieceDetail()
+    it('renders current state label', async () => {
+        await renderPieceDetail()
         expect(screen.getAllByText('Designed').length).toBeGreaterThan(0)
     })
 
-    it('renders thumbnail image', () => {
-        renderPieceDetail()
+    it('renders thumbnail image', async () => {
+        await renderPieceDetail()
         const imgs = screen.getAllByRole('img')
         expect(imgs.some((img) => img.getAttribute('src') === '/thumbnails/bowl.svg')).toBe(true)
     })
 
-    it('renders current location input', () => {
-        renderPieceDetail()
+    it('renders current location input', async () => {
+        await renderPieceDetail()
         expect(screen.getByLabelText('Current location')).toBeInTheDocument()
     })
 
@@ -88,7 +90,7 @@ describe('PieceDetail', () => {
         vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
         vi.mocked(api.updatePiece).mockResolvedValue(updated)
         const onPieceUpdated = vi.fn()
-        renderPieceDetail(undefined, onPieceUpdated)
+        await renderPieceDetail(undefined, onPieceUpdated)
         const input = screen.getByLabelText('Current location')
         await userEvent.type(input, 'Studio K')
         await waitFor(() =>
@@ -112,7 +114,7 @@ describe('PieceDetail', () => {
         vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
         vi.mocked(api.updatePiece).mockResolvedValue(updated)
         const onPieceUpdated = vi.fn()
-        renderPieceDetail(undefined, onPieceUpdated)
+        await renderPieceDetail(undefined, onPieceUpdated)
         const input = screen.getByLabelText('Current location')
         await userEvent.type(input, 'Studio 7')
         await waitFor(() =>
@@ -127,40 +129,40 @@ describe('PieceDetail', () => {
         await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(updated))
     })
 
-    it('renders successor state buttons for non-terminal state', () => {
-        renderPieceDetail()
+    it('renders successor state buttons for non-terminal state', async () => {
+        await renderPieceDetail()
         // 'designed' has successors: wheel_thrown, handbuilt
         expect(screen.getByRole('button', { name: 'Wheel Thrown' })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Handbuilt' })).toBeInTheDocument()
     })
 
-    it('shows terminal state alert for terminal states', () => {
+    it('shows terminal state alert for terminal states', async () => {
         const piece = makePiece({ current_state: makeState({ state: 'completed' }), history: [makeState({ state: 'completed' })] })
-        renderPieceDetail(piece)
+        await renderPieceDetail(piece)
         expect(screen.getByText(/terminal state/i)).toBeInTheDocument()
     })
 
-    it('shows no transition buttons for terminal states', () => {
+    it('shows no transition buttons for terminal states', async () => {
         const piece = makePiece({ current_state: makeState({ state: 'completed' }), history: [makeState({ state: 'completed' })] })
-        renderPieceDetail(piece)
+        await renderPieceDetail(piece)
         expect(screen.queryByRole('button', { name: 'Wheel Thrown' })).not.toBeInTheDocument()
     })
 
     it('transition buttons disabled when there are unsaved changes', async () => {
-        renderPieceDetail()
+        await renderPieceDetail()
         fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'Dirty notes' } })
         const transitionBtn = screen.getByRole('button', { name: 'Wheel Thrown' })
         expect(transitionBtn).toBeDisabled()
     })
 
-    it('clicking transition button opens confirmation dialog', () => {
-        renderPieceDetail()
+    it('clicking transition button opens confirmation dialog', async () => {
+        await renderPieceDetail()
         fireEvent.click(screen.getByRole('button', { name: 'Wheel Thrown' }))
         expect(screen.getByText(/Confirm State Transition/i)).toBeInTheDocument()
     })
 
-    it('confirmation dialog shows from/to states', () => {
-        renderPieceDetail()
+    it('confirmation dialog shows from/to states', async () => {
+        await renderPieceDetail()
         fireEvent.click(screen.getByRole('button', { name: 'Wheel Thrown' }))
         // The dialog body contains both state names (human-readable)
         expect(screen.getAllByText(/Designed/).length).toBeGreaterThan(0)
@@ -168,7 +170,7 @@ describe('PieceDetail', () => {
     })
 
     it('cancelling confirmation closes dialog', async () => {
-        renderPieceDetail()
+        await renderPieceDetail()
         fireEvent.click(screen.getByRole('button', { name: 'Wheel Thrown' }))
         fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
         await waitFor(() =>
@@ -180,7 +182,7 @@ describe('PieceDetail', () => {
         const updated = makePiece({ current_state: makeState({ state: 'wheel_thrown' }) })
         vi.mocked(api.addPieceState).mockResolvedValue(updated)
         const onPieceUpdated = vi.fn()
-        renderPieceDetail(makePiece(), onPieceUpdated)
+        await renderPieceDetail(makePiece(), onPieceUpdated)
         fireEvent.click(screen.getByRole('button', { name: 'Wheel Thrown' }))
         await waitFor(() => expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument())
         fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
@@ -188,16 +190,16 @@ describe('PieceDetail', () => {
         await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(updated))
     })
 
-    it('history panel hidden by default', () => {
+    it('history panel hidden by default', async () => {
         const piece = makePiece({
             history: [makeState({ state: 'designed' }), makeState({ state: 'wheel_thrown' })],
             current_state: makeState({ state: 'wheel_thrown' }),
         })
-        renderPieceDetail(piece)
+        await renderPieceDetail(piece)
         expect(screen.getByRole('button', { name: /show history/i })).toBeInTheDocument()
     })
 
-    it('history panel toggles on click', () => {
+    it('history panel toggles on click', async () => {
         const piece = makePiece({
             history: [
                 makeState({ state: 'designed', created: new Date('2024-01-14T10:00:00Z') }),
@@ -205,13 +207,13 @@ describe('PieceDetail', () => {
             ],
             current_state: makeState({ state: 'wheel_thrown', created: new Date('2024-01-15T10:00:00Z') }),
         })
-        renderPieceDetail(piece)
+        await renderPieceDetail(piece)
         fireEvent.click(screen.getByRole('button', { name: /show history/i }))
         expect(screen.getByText('Designed')).toBeInTheDocument()
     })
 
-    it('no history panel when piece has only one state', () => {
-        renderPieceDetail()
+    it('no history panel when piece has only one state', async () => {
+        await renderPieceDetail()
         expect(screen.queryByRole('button', { name: /show history/i })).not.toBeInTheDocument()
     })
 })
