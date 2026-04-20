@@ -230,7 +230,7 @@ function PieceListPage() {
   return (
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
+        <Typography variant="h6" component="h6">
           Pottery Pieces
         </Typography>
         <Button variant="contained" onClick={() => setDialogOpen(true)}>
@@ -333,9 +333,14 @@ function AppShell({
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h6" component="p" color="text.secondary">
-          Glaze Workspace
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+          <Typography variant="h6" component="p" color="text.primary" display="inline">
+            PotterDoc
+          </Typography>
+          <Typography variant="subtitle1" component="p" color="text.secondary" display="inline">
+            The Patient Potter's Companion
+          </Typography>
+        </Box>
         <Chip
           label={displayName}
           color="primary"
