@@ -23,6 +23,7 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'jsdom',
           environment: 'jsdom',
           include: [
               'src/**/*.{test,spec}.{ts,tsx}',
@@ -34,6 +35,7 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'browser',
           environment: 'jsdom',
           include: ['src/App.test.tsx'], // Include App.test.tsx for browser tests
           browser: {
