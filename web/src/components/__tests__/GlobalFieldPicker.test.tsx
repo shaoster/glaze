@@ -172,6 +172,34 @@ describe('GlobalFieldPicker', () => {
         })
     })
 
+    describe('uncommitted text', () => {
+        it('does not call onChange while the user is typing', async () => {
+            const onChange = vi.fn()
+            render(<GlobalFieldPicker {...defaultProps} onChange={onChange} canCreate />)
+            await userEvent.type(screen.getByLabelText('Location'), 'New Studio')
+            expect(onChange).not.toHaveBeenCalled()
+        })
+
+        it('resets the input to the committed value on blur when nothing was selected', async () => {
+            render(<Controlled canCreate options={[entry('Studio A')]} />)
+            const input = screen.getByLabelText('Location')
+            await userEvent.type(input, 'something partial')
+            fireEvent.blur(input)
+            await waitFor(() => expect(input).toHaveValue(''))
+        })
+
+        it('preserves the input after a successful create', async () => {
+            vi.mocked(api.createGlobalEntry).mockResolvedValue('New Studio')
+            render(<Controlled canCreate />)
+            await userEvent.type(screen.getByLabelText('Location'), 'New Studio')
+            await waitFor(() =>
+                expect(screen.getByRole('option', { name: 'Create "New Studio"' })).toBeInTheDocument()
+            )
+            fireEvent.click(screen.getByRole('option', { name: 'Create "New Studio"' }))
+            await waitFor(() => expect(screen.getByLabelText('Location')).toHaveValue('New Studio'))
+        })
+    })
+
     describe('public/private disambiguation', () => {
         it('appends (public) suffix to a public entry that shares a name with a private entry', async () => {
             render(

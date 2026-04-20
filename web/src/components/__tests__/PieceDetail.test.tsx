@@ -108,12 +108,18 @@ describe('PieceDetail', () => {
 
     it('saves location updates when confirmed', async () => {
         const updated = makePiece({ current_location: 'Studio 7' })
+        vi.mocked(api.fetchGlobalEntries).mockResolvedValue([{ id: '1', name: 'Studio 7', isPublic: false }])
         vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
         vi.mocked(api.updatePiece).mockResolvedValue(updated)
         const onPieceUpdated = vi.fn()
         renderPieceDetail(undefined, onPieceUpdated)
         const input = screen.getByLabelText('Current location')
         await userEvent.type(input, 'Studio 7')
+        await waitFor(() =>
+            expect(screen.getByRole('option', { name: 'Studio 7' })).toBeInTheDocument()
+        )
+        fireEvent.click(screen.getByRole('option', { name: 'Studio 7' }))
+        await waitFor(() => expect(input).toHaveValue('Studio 7'))
         await userEvent.click(screen.getByTestId('save-button'))
         await waitFor(() =>
             expect(api.updatePiece).toHaveBeenCalledWith('piece-id-1', { current_location: 'Studio 7' })

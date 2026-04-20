@@ -309,6 +309,7 @@ describe('WorkflowState', () => {
         const updated = makePieceDetail()
         vi.mocked(api.updateCurrentState).mockResolvedValue(updated)
         vi.mocked(api.updatePiece).mockRejectedValue(new Error('Network error'))
+        vi.mocked(api.fetchGlobalEntries).mockResolvedValue([{ id: '1', name: 'Shelf Z', isPublic: false }])
         render(
             <WorkflowState
                 {...defaultProps}
@@ -317,6 +318,11 @@ describe('WorkflowState', () => {
         )
         const input = screen.getByLabelText('Current location')
         await userEvent.type(input, 'Shelf Z')
+        await waitFor(() =>
+            expect(screen.getByRole('option', { name: 'Shelf Z' })).toBeInTheDocument()
+        )
+        fireEvent.click(screen.getByRole('option', { name: 'Shelf Z' }))
+        await waitFor(() => expect(input).toHaveValue('Shelf Z'))
         await userEvent.click(screen.getByTestId('save-button'))
         await waitFor(() => expect(screen.getByText('Failed to save. Please try again.')).toBeInTheDocument())
         expect(screen.getByTestId('unsaved-indicator')).toBeInTheDocument()
