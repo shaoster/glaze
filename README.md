@@ -157,7 +157,7 @@ Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`
 
 | Command | Description |
 |---|---|
-| `gz_build` | Run the same frontend build command used in CI (`cd web && npm run build`, which expands to `tsc -b && vite build`). |
+| `gz_build` | Run the same frontend build command used in CI (`gz_gentypes` then `cd web && npm run build`, which expands to `tsc -b && vite build`). |
 
 ### Type generation
 
