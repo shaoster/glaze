@@ -8,6 +8,12 @@
 
 ---
 
+## Instruction Priority
+
+When a referenced agent doc specifies setup, test, build, or verification commands, use those documented commands exactly by default.
+Do not substitute "equivalent" commands or skip wrapper scripts unless the documented command is blocked or fails in the current environment.
+If you must deviate, say so explicitly in your user update and final response, including why the documented command could not be used.
+
 ## What goes where
 
 Agent documentation is split across five files so that the generic stack guides can be reused in other projects without modification. When editing or adding documentation, put content in the right file:
