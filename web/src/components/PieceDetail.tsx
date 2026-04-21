@@ -11,6 +11,7 @@ import {
     DialogContentText,
     DialogTitle,
     Divider,
+    Grid,
     IconButton,
     List,
     ListItem,
@@ -29,7 +30,6 @@ import ImageLightbox from './ImageLightbox'
 import CloudinaryImage from './CloudinaryImage'
 import WorkflowState from './WorkflowState'
 import { pickDefaultTagColor } from './tagPalette'
-import TagChipList from './TagChipList'
 import TagAutocomplete from './TagAutocomplete'
 import CreateTagDialog from './CreateTagDialog'
 
@@ -198,7 +198,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     return (
         <Box sx={{ textAlign: 'left' }}>
             {/* Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
             {piece.thumbnail && (
                 <CloudinaryImage
                     url={piece.thumbnail.url}
@@ -265,31 +265,30 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                         sx={{ mt: 0.5 }}
                         color={isTerminal ? 'default' : 'primary'}
                     />
-                    <Box sx={{ mt: 1 }}>
-                        <TagChipList tags={piece.tags ?? []} />
-                    </Box>
             </Box>
         </Box>
-
+        <Grid container alignItems="left" spacing={2} size={4} sx={{ mb: 2, alignItems: 'center' }}>
+          <Grid size={3}>
+            <TagAutocomplete
+                label="Tags"
+                options={availableTags}
+                value={selectedTags}
+                onChange={(nextValue) => {
+                    setSelectedTags(nextValue)
+                    void saveTags(nextValue)
+                }}
+                helperText={tagError ?? ''}
+                disabled={tagSaving}
+                sx={{ minWidth: 260, maxWidth: 560}}
+            />
+          </Grid>
+          <Grid size={1}>
+            <Button variant="outlined" size="small" onClick={() => setTagDialogOpen(true)} disabled={tagSaving}>
+              +    
+            </Button>
+          </Grid>
+        </Grid>
         <Divider sx={{ mb: 3 }} />
-
-            <Box sx={{ mb: 3, display: 'flex', alignItems: 'flex-start', gap: 1, flexDirection: 'column' }}>
-                <TagAutocomplete
-                    label="Tags"
-                    options={availableTags}
-                    value={selectedTags}
-                    onChange={(nextValue) => {
-                        setSelectedTags(nextValue)
-                        void saveTags(nextValue)
-                    }}
-                    helperText={tagError ?? 'Select existing tags or create a new one.'}
-                    disabled={tagSaving}
-                    sx={{ minWidth: 320, maxWidth: 560 }}
-                />
-                <Button variant="outlined" size="small" onClick={() => setTagDialogOpen(true)} disabled={tagSaving}>
-                    Create tag
-                </Button>
-            </Box>
 
             {/* Current state form */}
             <WorkflowState

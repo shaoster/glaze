@@ -37,7 +37,7 @@ export default function CreateTagDialog({
 }: CreateTagDialogProps) {
     return (
         <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-            <DialogTitle>Create tag</DialogTitle>
+            <DialogTitle>Create Tag</DialogTitle>
             <DialogContent>
                 <TextField
                     label="Tag name"
@@ -65,7 +65,6 @@ export default function CreateTagDialog({
                                 color: 'common.black',
                             }}
                         >
-                            {' '}
                         </Button>
                     ))}
                 </Box>

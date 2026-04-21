@@ -210,7 +210,6 @@ globals:
       firing_temperature:
         $ref: "@firing_temperature.name"
         description: Firing profile this combination is designed for.
-        filterable: true
       test_tile_image:
         type: image
         description: Image of the glaze combination test tile.
@@ -219,27 +218,27 @@ globals:
         type: boolean
         description: Whether this glaze combination is food safe.
         filterable: true
-        label: "Food safe"
+        label: "Food safe?"
       runs:
         type: boolean
         description: Whether this combination runs during firing.
         filterable: true
-        label: "Runs"
+        label: "Runs?"
       highlights_grooves:
         type: boolean
         description: Whether this combination highlights surface grooves and texture.
         filterable: true
-        label: "Highlights grooves"
+        label: "Highlights grooves?"
       is_different_on_white_and_brown_clay:
         type: boolean
         description: Whether the combination appears different on white versus brown clay.
         filterable: true
-        label: "Different on white/brown clay"
+        label: "Clay Color Contrast?"
       apply_thin:
         type: boolean
         description: Whether this glaze combination should be applied thinly.
         filterable: true
-        label: "Apply thin"
+        label: "Apply thin?"
 
 # Built-in states for standard workflow.
 states:

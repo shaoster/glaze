@@ -190,9 +190,9 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
             fullWidth
             PaperProps={{ sx: { height: '85vh', display: 'flex', flexDirection: 'column' } }}
         >
-            <DialogTitle>{dialogTitle}</DialogTitle>
+            <DialogTitle sx={{paddingTop: 2, paddingBottom: 0 }}>{dialogTitle}</DialogTitle>
             {/* Filters — sticky, never scroll away */}
-            <Box sx={{ px: 3, pt: 1, pb: 2, flexShrink: 0, borderBottom: 1, borderColor: 'divider' }}>
+            <Box sx={{ px: 3, pt: 1, pb: 1, flexShrink: 0, borderBottom: 1, borderColor: 'divider' }}>
                 <Stack spacing={2}>
                     {/* Related-object filters (from registry) */}
                     {relatedFilterDefs.map((rf) =>
@@ -226,34 +226,34 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
 
                     {/* Boolean property filters — derived from workflow.yml filterable fields */}
                     {boolFilterableFields.length > 0 && (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0, pt: 0, mt: '6px !important' }}>
                             {boolFilterableFields.map(({ name, label }) => (
                                 <Box key={name}>
-                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.25 }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0, padding: 0 }}>
                                         {label}
                                     </Typography>
-                                    <FormGroup row>
-                                        <FormControlLabel
-                                            label="Yes"
-                                            control={
-                                                <Checkbox
-                                                    size="small"
-                                                    checked={filters.boolFilters[name] === true}
-                                                    onChange={(e) => handleBoolFilter(name, e.target.checked, true)}
-                                                />
-                                            }
-                                        />
-                                        <FormControlLabel
-                                            label="No"
-                                            control={
-                                                <Checkbox
-                                                    size="small"
-                                                    checked={filters.boolFilters[name] === false}
-                                                    onChange={(e) => handleBoolFilter(name, e.target.checked, false)}
-                                                />
-                                            }
-                                        />
-                                    </FormGroup>
+                                    <FormControlLabel
+                                        label="Yes"
+                                        control={
+                                            <Checkbox
+                                                sx={{ pt: 0, pb: 0}}
+                                                size="small"
+                                                checked={filters.boolFilters[name] === true}
+                                                onChange={(e) => handleBoolFilter(name, e.target.checked, true)}
+                                            />
+                                        }
+                                    />
+                                    <FormControlLabel
+                                        label="No"
+                                        control={
+                                            <Checkbox
+                                                sx={{ pt: 0, pb: 0 }}
+                                                size="small"
+                                                checked={filters.boolFilters[name] === false}
+                                                onChange={(e) => handleBoolFilter(name, e.target.checked, false)}
+                                            />
+                                        }
+                                      />
                                 </Box>
                             ))}
                         </Box>
@@ -271,6 +271,7 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
                                 />
                             }
                             label="Only favorites"
+                            sx={{ mt: "4px !important", mb: "0px !important"}}
                         />
                     )}
                 </Stack>

@@ -35,6 +35,7 @@ import { fetchCurrentUser, loginWithEmail, loginWithGoogle, logoutUser, register
 import { useAsync } from './util/useAsync'
 import ErrorBoundary from './components/ErrorBoundary'
 import type { AuthUser } from '@common/api'
+import { background } from '@cloudinary/url-gen/qualifiers/focusOn'
 
 const LandingPage = lazy(() => import('./pages/LandingPage'))
 const PieceListPage = lazy(() => import('./pages/PieceListPage'))
@@ -54,7 +55,28 @@ declare global {
   }
 }
 
-const DARK_THEME = createTheme({ palette: { mode: 'dark' } })
+const DARK_THEME = createTheme({
+  palette: { mode: 'dark' },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          variants: [
+            {
+              props: { variant: 'contained' },
+              style: { 
+                'box-shadow': '0px 4px 4px -4px rgba(0,0,0,1),4px 4px 4px 0px rgba(0,0,0,1),0px 4px 4px 0px rgba(0,0,0,1);',
+                '&:hover': {
+                  'box-shadow': '0px 4px 4px -4px rgba(0,0,0,1),4px 4px 4px 0px rgba(0,0,0,1),0px 4px 4px 0px rgba(0,0,0,1);'
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+})
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 
 type AuthViewMode = 'login' | 'register'
