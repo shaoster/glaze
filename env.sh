@@ -61,8 +61,8 @@ _gz_ensure_node() {
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
     export NVM_DIR="$HOME/.nvm"
     source "$NVM_DIR/nvm.sh"
-    nvm install 20
-    nvm use 20
+    rtk nvm install 20
+    rtk nvm use 20
 }
 
 _gz_load_env_file() {  # _gz_load_env_file <path>
@@ -111,31 +111,30 @@ gz_install_mcp_tools() {
 
 gz_setup() {
     echo "=== Glaze: setting up development environment ==="
-
-    # Python venv
-    if [[ ! -d "$GLAZE_ROOT/.venv" ]]; then
-        echo "--- Creating virtual environment..."
-        python3 -m venv "$GLAZE_ROOT/.venv"
-    fi
-    source "$GLAZE_ROOT/.venv/bin/activate"
-    echo "--- Installing Python dependencies..."
-    pip install -r "$GLAZE_ROOT/requirements-dev.txt" -q
-
-    # Database
-    echo "--- Running migrations..."
-    python "$GLAZE_ROOT/manage.py" migrate --run-syncdb
-
-    # Node + web deps
-    _gz_ensure_node
-    echo "--- Installing web dependencies..."
-    (cd "$GLAZE_ROOT/web" && npm install --silent && npx playwright install chromium --with-deps)
-
     # RTK
     if ! command -v rtk &>/dev/null; then
         echo "--- Installing RTK (for test optimizations and type generation)..."
         curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
         rtk init -g --auto-patch
     fi
+
+    # Python venv
+    if [[ ! -d "$GLAZE_ROOT/.venv" ]]; then
+        echo "--- Creating virtual environment..."
+        rtk python3 -m venv "$GLAZE_ROOT/.venv"
+    fi
+    source "$GLAZE_ROOT/.venv/bin/activate"
+    echo "--- Installing Python dependencies..."
+    rtk pip install -r "$GLAZE_ROOT/requirements-dev.txt" -q
+
+    # Database
+    echo "--- Running migrations..."
+    rtk python3 "$GLAZE_ROOT/manage.py" migrate --run-syncdb
+
+    # Node + web deps
+    _gz_ensure_node
+    echo "--- Installing web dependencies..."
+    (cd "$GLAZE_ROOT/web" && rtk npm install --silent && rtk npx playwright install chromium --with-deps)
 
     echo "=== Setup complete ==="
     echo "    Run 'gz_gentypes' to regenerate TypeScript types (requires the backend)."

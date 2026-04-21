@@ -104,6 +104,7 @@ GitHub Actions runs all three test suites (`common`, `backend`, `web`) plus a `w
 In addition to the environment's RTK rules, make sure you use the `rtk` prefixed equivalents to common commands:
 
 For example:
+Instead of `pip`, run `gtk pip`. Also:
 - cat -> rtk read
 - ls -> rtk ls
 - grep -> rtk grep
