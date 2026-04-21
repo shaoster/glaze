@@ -88,9 +88,7 @@ source env.sh
 gz_build
 ```
 
-`gz_build` is the local helper for the same frontend build command used by the CI `web-build` job: `cd web && npm run build` (which expands to `tsc -b && vite build`).
-
-If your change affects the generated API types, run `gz_gentypes` first; CI does that in the `web-build` job before the build step.
+`gz_build` is the local helper for the same frontend build command used by the CI `web-build` job that also pre-generates types.
 
 ### Production build
 
