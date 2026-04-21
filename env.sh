@@ -202,6 +202,12 @@ gz_test() {
     return $(( common_exit | backend_exit | web_exit ))
 }
 
+gz_build() {
+    _gz_ensure_node
+    gz_gentypes
+    (cd "$GLAZE_ROOT/web" && npm run build "$@")
+}
+
 # ---------------------------------------------------------------------------
 # Servers
 # ---------------------------------------------------------------------------
@@ -319,6 +325,7 @@ _GZ_SHORTCUTS=(
     "gz_test_common    — run workflow schema/integrity tests (pytest tests/)"
     "gz_test_backend   — run Django API tests (pytest api/)"
     "gz_test_web       — run the web tests only"
+    "gz_build          — run the CI-aligned web build (tsc -b && vite build)"
     "gz_gentypes       — regenerate shared TypeScript types"
     "gz_start/stop     — start or stop backend + web"
     "gz_status         — show what services are running"

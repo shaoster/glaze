@@ -153,6 +153,12 @@ Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`
 | `gz_test_backend` | Run Django API tests only (`pytest api/`). |
 | `gz_test_web` | Run web tests only (`npm test`). |
 
+### Build
+
+| Command | Description |
+|---|---|
+| `gz_build` | Run the same frontend build command used in CI (`gz_gentypes` then `cd web && npm run build`, which expands to `tsc -b && vite build`). |
+
 ### Type generation
 
 | Command | Description |
@@ -199,6 +205,7 @@ pytest api/           # 62 tests across 10 files
 cd web
 npm test              # single run (CI) — 101 tests across 6 files
 npm run test:watch    # watch mode
+npm run build         # same build command wrapped by gz_build
 ```
 
 ## Cloudinary image uploads (web)
