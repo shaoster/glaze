@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Link,
   Navigate,
@@ -8,9 +8,6 @@ import {
   RouterProvider,
   createBrowserRouter,
   createRoutesFromElements,
-  useLocation,
-  useNavigate,
-  useParams,
 } from 'react-router-dom'
 import {
   Alert,
@@ -26,8 +23,6 @@ import {
   MenuItem,
   Paper,
   Stack,
-  Tab,
-  Tabs,
   TextField,
   Typography,
 } from '@mui/material'
@@ -36,14 +31,14 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
-import { fetchPiece, fetchPieces, fetchCurrentUser, loginWithEmail, loginWithGoogle, logoutUser, registerWithEmail } from '@common/api'
+import { fetchCurrentUser, loginWithEmail, loginWithGoogle, logoutUser, registerWithEmail } from '@common/api'
 import ErrorBoundary from './components/ErrorBoundary'
-import GlazeCombinationGallery from './components/GlazeCombinationGallery'
-import NewPieceDialog from './components/NewPieceDialog'
-import PieceList from './components/PieceList'
-import PieceDetailComponent from './components/PieceDetail'
 import type { AuthUser } from '@common/api'
-import type { PieceDetail, PieceSummary } from '@common/types'
+
+const LandingPage = lazy(() => import('./pages/LandingPage'))
+const PieceListPage = lazy(() => import('./pages/PieceListPage'))
+const PieceDetailPage = lazy(() => import('./pages/PieceDetailPage'))
+const AnalyzePage = lazy(() => import('./pages/AnalyzePage'))
 
 // Extend window type for Google OAuth
 declare global {
@@ -212,112 +207,6 @@ function AuthLanding({
   )
 }
 
-function PieceListPage() {
-  const [pieces, setPieces] = useState<PieceSummary[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [dialogOpen, setDialogOpen] = useState(false)
-
-  useEffect(() => {
-    fetchPieces()
-      .then(setPieces)
-      .catch(() => setError('Failed to load pieces.'))
-      .finally(() => setLoading(false))
-  }, [])
-
-  function handleCreated(piece: PieceDetail) {
-    setPieces((prev) => [piece, ...prev])
-  }
-
-  return (
-    <>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h6" component="h6">
-          Pottery Pieces
-        </Typography>
-        <Button variant="contained" onClick={() => setDialogOpen(true)}>
-          + New Piece
-        </Button>
-      </Box>
-      {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress />
-        </Box>
-      )}
-      {error && <Typography color="error">{error}</Typography>}
-      {!loading && !error && <PieceList pieces={pieces} />}
-      <NewPieceDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onCreated={handleCreated}
-      />
-    </>
-  )
-}
-
-function PieceDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
-  const [piece, setPiece] = useState<PieceDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!id) return
-    fetchPiece(id)
-      .then(setPiece)
-      .catch(() => setError('Failed to load piece.'))
-      .finally(() => setLoading(false))
-  }, [id])
-
-  return (
-    <>
-      <Box sx={{ mb: 2, textAlign: 'left' }}>
-        <Button variant="text" onClick={() => navigate('/')} sx={{ px: 0 }}>
-          ← Back to Pottery Pieces
-        </Button>
-      </Box>
-      {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress />
-        </Box>
-      )}
-      {error && <Typography color="error">{error}</Typography>}
-      {piece && (
-        <PieceDetailComponent
-          piece={piece}
-          onPieceUpdated={setPiece}
-        />
-      )}
-    </>
-  )
-}
-
-function AnalyzePage() {
-  return <GlazeCombinationGallery />
-}
-
-function LandingPage() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const currentTab = location.pathname === '/analyze' ? '/analyze' : '/'
-
-  return (
-    <>
-      <Tabs
-        value={currentTab}
-        onChange={(_event, nextTab: string) => navigate(nextTab)}
-        aria-label="Landing page navigation"
-        sx={{ mb: 3 }}
-      >
-        <Tab label="Pieces" value="/" />
-        <Tab label="Analyze" value="/analyze" />
-      </Tabs>
-      <Outlet />
-    </>
-  )
-}
-
 function AppShell({
   currentUser,
   onLogout,
@@ -366,7 +255,9 @@ function AppShell({
         </Menu>
       </Box>
       <ErrorBoundary>
-        <Outlet />
+        <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}>
+          <Outlet />
+        </Suspense>
       </ErrorBoundary>
     </Container>
   )
