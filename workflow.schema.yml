@@ -87,6 +87,14 @@ $defs:
           authenticated users can mark individual entries as favorites via
           POST/DELETE /api/globals/<global_name>/<pk>/favorite/.
         default: false
+      taggable:
+        type: boolean
+        description: |
+          Whether instances of this global type can be tagged with entries from
+          the shared Tag global. When true, the backend generates an ordered
+          per-object join model (for example `PieceTag` for `piece`) and
+          exposes tag editing/filtering behavior for that object type.
+        default: false
       plural:
         type: string
         description: |

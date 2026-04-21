@@ -56,6 +56,7 @@ interface WorkflowGlobalDefinition {
     model: string
     description?: string
     favoritable?: boolean
+    taggable?: boolean
     compose_from?: Record<string, ComposeFromEntry>
     fields: Record<string, InlineFieldDef | GlobalRefFieldDef>
 }
@@ -203,6 +204,15 @@ export function getGlobalPickerFilters(globalName: string): GlobalPickerFilter[]
  */
 export function isFavoritableGlobal(globalName: string): boolean {
     return !!(GLOBALS_MAP[globalName] as WorkflowGlobalDefinition | undefined)?.favoritable
+}
+
+/**
+ * Returns true if the global declares taggable: true — i.e. it supports ordered
+ * tag assignments using the shared Tag global and a generated join model.
+ * Mirrors the backend's `is_taggable_global` helper.
+ */
+export function isTaggableGlobal(globalName: string): boolean {
+    return !!(GLOBALS_MAP[globalName] as WorkflowGlobalDefinition | undefined)?.taggable
 }
 
 /**

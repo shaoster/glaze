@@ -48,9 +48,10 @@ function makePieceDetail(overrides: Partial<PieceDetail> = {}): PieceDetail {
         name: 'Test Bowl',
         created: new Date('2024-01-15T10:00:00Z'),
         last_modified: new Date('2024-01-15T10:00:00Z'),
-        thumbnail: '',
+        thumbnail: null,
         current_state: state,
         current_location: '',
+        tags: [],
         history: [state],
         ...overrides,
     }

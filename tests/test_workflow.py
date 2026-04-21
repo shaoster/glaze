@@ -218,6 +218,24 @@ class TestSchemaValidation:
         }
         jsonschema.validate(instance=valid, schema=schema)
 
+    def test_taggable_accepted_on_global_def(self, schema):
+        valid = {
+            "version": "1.0.0",
+            "globals": {
+                "piece": {
+                    "model": "Piece",
+                    "factory": False,
+                    "taggable": True,
+                    "fields": {"name": {"type": "string"}},
+                }
+            },
+            "states": [
+                {"id": "a", "visible": True, "successors": ["b"]},
+                {"id": "b", "visible": True, "terminal": True},
+            ],
+        }
+        jsonschema.validate(instance=valid, schema=schema)
+
     def test_global_ref_accepted(self, schema):
         """A global ref (@global.field) in state fields must pass the schema."""
         valid = {

@@ -16,9 +16,11 @@ import {
   TableRow,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
-import type { PieceSummary } from '@common/types'
+import type { PieceSummary, TagEntry } from '@common/types'
 import { SUCCESSORS } from '@common/types'
 import CloudinaryImage from './CloudinaryImage'
+import TagAutocomplete from './TagAutocomplete'
+import TagChipList from './TagChipList'
 
 const DEFAULT_THUMBNAIL = '/thumbnails/question-mark.svg'
 
@@ -75,6 +77,9 @@ const PieceListItem = (props: PieceListItemProps) => {
       <TableCell sx={{ color: 'text.primary' }}>
         {piece.current_state.state}
       </TableCell>
+      <TableCell sx={{ color: 'text.primary' }}>
+        <TagChipList tags={piece.tags ?? []} />
+      </TableCell>
       <TableCell sx={{ color: 'text.secondary' }}>
         {piece.created.toLocaleDateString()}
       </TableCell>
@@ -92,13 +97,27 @@ type PieceListingProps = {
 const PieceList = (props: PieceListingProps) => {
   const { pieces } = props;
   const [activeFilters, setActiveFilters] = useState<FilterCategory[]>([])
+  const [activeTags, setActiveTags] = useState<TagEntry[]>([])
+
+  const availableTags = useMemo(() => {
+    const deduped = new Map<string, TagEntry>()
+    pieces.forEach((piece) => {
+      ;(piece.tags ?? []).forEach((tag) => deduped.set(tag.id, tag))
+    })
+    return [...deduped.values()].sort((a, b) => a.name.localeCompare(b.name))
+  }, [pieces])
 
   const filteredPieces = useMemo(() => {
-    if (activeFilters.length === 0) return pieces
-    return pieces.filter((piece) =>
-      activeFilters.some((filter) => matchesFilter(piece, filter))
-    )
-  }, [pieces, activeFilters])
+    return pieces.filter((piece) => {
+      const matchesState = activeFilters.length === 0
+        ? true
+        : activeFilters.some((filter) => matchesFilter(piece, filter))
+      const matchesTags = activeTags.length === 0
+        ? true
+        : activeTags.every((tag) => (piece.tags ?? []).some((pieceTag) => pieceTag.id === tag.id))
+      return matchesState && matchesTags
+    })
+  }, [pieces, activeFilters, activeTags])
 
   function handleFilterChange(event: SelectChangeEvent<FilterCategory[]>) {
     setActiveFilters(event.target.value as FilterCategory[])
@@ -107,6 +126,13 @@ const PieceList = (props: PieceListingProps) => {
   return (
     <>
       <Box sx={{ mb: 2 }}>
+        <TagAutocomplete
+          label="Tags"
+          options={availableTags}
+          value={activeTags}
+          onChange={setActiveTags}
+          sx={{ mb: 2, minWidth: 260, maxWidth: 520 }}
+        />
         <FormControl size="small" sx={{ minWidth: 220 }}>
           <InputLabel id="piece-filter-label">Filter</InputLabel>
           <Select
@@ -137,6 +163,7 @@ const PieceList = (props: PieceListingProps) => {
               <TableCell sx={{ color: 'text.secondary' }}>Thumbnail</TableCell>
               <TableCell sx={{ color: 'text.secondary' }}>Name</TableCell>
               <TableCell sx={{ color: 'text.secondary' }}>State</TableCell>
+              <TableCell sx={{ color: 'text.secondary' }}>Tags</TableCell>
               <TableCell sx={{ color: 'text.secondary' }}>Created</TableCell>
               <TableCell sx={{ color: 'text.secondary' }}>Last Modified</TableCell>
             </TableRow>

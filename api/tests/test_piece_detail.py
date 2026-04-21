@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from api.models import Location
+from api.models import Location, Tag
 
 
 # ---------------------------------------------------------------------------
@@ -66,6 +66,21 @@ class TestPieceDetail:
         assert response.json()['name'] == 'Revised Vase'
         piece.refresh_from_db()
         assert piece.name == 'Revised Vase'
+
+    def test_patch_updates_ordered_tags(self, client, piece, user):
+        first = Tag.objects.create(user=user, name='Functional', color='#E76F51')
+        second = Tag.objects.create(user=user, name='Gift', color='#2A9D8F')
+
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'tags': [str(second.id), str(first.id)]},
+            format='json',
+        )
+        assert response.status_code == 200
+        assert response.json()['tags'] == [
+            {'id': str(second.id), 'name': 'Gift', 'color': '#2A9D8F'},
+            {'id': str(first.id), 'name': 'Functional', 'color': '#E76F51'},
+        ]
 
     def test_patch_name_empty_rejected(self, client, piece):
         response = client.patch(

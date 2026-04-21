@@ -28,9 +28,10 @@ urlpatterns = [
 ]
 
 # Generate one route per global declared in workflow.yml.  The view factory
-# derives the correct extend_schema annotation from _GLOBAL_ENTRY_SERIALIZERS,
-# so schema accuracy is mechanically guaranteed by the same registry that drives
-# view behaviour.  Favoritable globals additionally get a favorite-toggle route,
+# derives the correct extend_schema annotation from the the global name, so the
+# schema is mechanically guaranteed.
+#
+# Favoritable globals additionally get a favorite-toggle route,
 # derived from _FAVORITES_REGISTRY — non-favoritable types simply have no route,
 # so requests to them return 404 rather than 405.
 for _global_name in get_global_names():

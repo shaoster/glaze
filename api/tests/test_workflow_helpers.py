@@ -1,5 +1,6 @@
 from unittest.mock import Mock
 
+from api.models import Piece
 import api.workflow as workflow_module
 
 
@@ -139,6 +140,14 @@ _MOCK_GLOBALS_MAP = {
             'firing_profile': {'$ref': '@firing_profile.code', 'filterable': True},
         },
     },
+    'piece': {
+        'model': 'Piece',
+        'factory': False,
+        'taggable': True,
+        'fields': {
+            'name': {'type': 'string'},
+        },
+    },
     'glaze_type': {
         'model': 'GlazeType',
         'public': True,
@@ -148,6 +157,12 @@ _MOCK_GLOBALS_MAP = {
         },
     },
 }
+
+def test_get_name_for_global(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP)
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+
+    assert workflow_module.get_name_for_global(Piece) == 'piece'
 
 
 def test_get_state_ref_fields_returns_state_refs_only(monkeypatch):
@@ -381,6 +396,31 @@ def test_is_favoritable_global_returns_false_when_flag_absent(monkeypatch):
 def test_is_favoritable_global_returns_false_for_unknown_global(monkeypatch):
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
     assert workflow_module.is_favoritable_global('does_not_exist') is False
+
+
+# ---------------------------------------------------------------------------
+# is_taggable_global / get_taggable_globals
+# ---------------------------------------------------------------------------
+
+def test_is_taggable_global_returns_true_when_flag_set(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.is_taggable_global('piece') is True
+
+
+def test_is_taggable_global_returns_false_when_flag_absent(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.is_taggable_global('location') is False
+
+
+def test_is_taggable_global_returns_false_for_unknown_global(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    assert workflow_module.is_taggable_global('does_not_exist') is False
+
+
+def test_get_taggable_globals_returns_declared_globals(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+    monkeypatch.setattr(workflow_module, 'get_global_names', lambda: list(_MOCK_GLOBALS_MAP.keys()))
+    assert workflow_module.get_taggable_globals() == {'piece'}
 
 
 # ---------------------------------------------------------------------------

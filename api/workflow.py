@@ -5,7 +5,6 @@ helper functions.  Has no dependency on Django ORM models.
 """
 from pathlib import Path
 
-import jsonschema
 import yaml
 from django.apps import apps
 from django.db import models as django_models
@@ -28,6 +27,15 @@ _GLOBALS_MAP: dict[str, dict] = _workflow.get('globals', {})
 # ---------------------------------------------------------------------------
 # Public helpers
 # ---------------------------------------------------------------------------
+
+def get_name_for_global(model: type[django_models.Model]) -> str | None:
+    """Return the global name for a given Django model class, or None if not a registered global."""
+    model_name = model.__name__
+    for global_name in get_global_names():
+        config = get_global_config(global_name)
+        if config.get('model') == model_name:
+            return global_name
+    return None
 
 def get_state_ref_fields(state_id: str) -> dict[str, tuple[str, str]]:
     """Return {field_name: (source_state_id, source_field_name)} for all state ref fields.
@@ -161,6 +169,21 @@ def is_factory_global(global_name: str) -> bool:
 def get_global_names() -> list[str]:
     """Return all global names registered in workflow.yml, in declaration order."""
     return list(_GLOBALS_MAP.keys())
+
+
+def is_taggable_global(global_name: str) -> bool:
+    """Return True if the global declares taggable: true.
+
+    Taggable globals support ordered per-object tag assignments using the shared
+    ``Tag`` global and a generated join model `TagEntry`.
+    """
+    config = _GLOBALS_MAP.get(global_name, {})
+    return bool(config.get('taggable', False))
+
+
+def get_taggable_globals() -> set[str]:
+    """Return all globals that declare taggable: true, in declaration order."""
+    return {name for name in get_global_names() if is_taggable_global(name)}
 
 
 def get_global_config(global_name: str) -> dict:

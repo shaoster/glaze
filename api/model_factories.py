@@ -148,7 +148,7 @@ def dsl_field_to_django_field(field_name: str, field_def: dict) -> models.Field:
 
     if field_type in ('string', 'image'):
         if field_name == 'name':
-            return models.CharField(max_length=255)
+            return models.CharField(max_length=field_def.get('max_length', 255))
         if enum:
             max_length = max(max(len(v) for v in enum), 16)
             return models.CharField(max_length=max_length, blank=True, default='', choices=[(v, v) for v in enum])
@@ -676,3 +676,41 @@ def make_piece_state_global_ref_model(global_name: str) -> type:
     }
 
     return type(ref_model_class_name, (models.Model,), attrs)
+
+
+def make_taggable_model(global_name: str) -> type:
+    """Generate an ordered shared-tag junction model for a ``taggable: true`` global."""
+    config = get_global_config(global_name)
+    if not config:
+        raise ValueError(f'Unknown global: {global_name!r}')
+
+    model_name: str = config['model']
+    through_model_name = f'{model_name}Tag'
+
+    attrs: dict = {
+        '__module__': 'api.models',
+        global_name: models.ForeignKey(
+            f'api.{model_name}',
+            on_delete=models.CASCADE,
+            related_name='tag_links',
+        ),
+        'tag': models.ForeignKey(
+            'api.Tag',
+            on_delete=models.PROTECT,
+            related_name=f'{global_name}_links',
+        ),
+        'order': models.PositiveSmallIntegerField(),
+        '__str__': (lambda gn: lambda self: f'{getattr(self, gn)} / {self.tag}')(global_name),
+        'Meta': type('Meta', (), {
+            'ordering': ['order', 'pk'],
+            'constraints': [
+                models.UniqueConstraint(
+                    fields=[global_name, 'tag'],
+                    name=f'uniq_{global_name}_tag',
+                )
+            ]
+        }),
+    }
+
+    _deregister_model_if_exists('api', through_model_name)
+    return type(through_model_name, (models.Model,), attrs)

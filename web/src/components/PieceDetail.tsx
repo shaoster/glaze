@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
     Alert,
     Box,
@@ -22,12 +22,16 @@ import EditIcon from '@mui/icons-material/Edit'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import { useBlocker } from 'react-router-dom'
-import type { CaptionedImage, PieceDetail as PieceDetailType } from '@common/types'
+import type { CaptionedImage, PieceDetail as PieceDetailType, TagEntry } from '@common/types'
 import { formatState, SUCCESSORS } from '@common/types'
-import { addPieceState, updatePiece } from '@common/api'
+import { addPieceState, createTagEntry, fetchGlobalEntries, updatePiece } from '@common/api'
 import ImageLightbox from './ImageLightbox'
 import CloudinaryImage from './CloudinaryImage'
 import WorkflowState from './WorkflowState'
+import { pickDefaultTagColor } from './tagPalette'
+import TagChipList from './TagChipList'
+import TagAutocomplete from './TagAutocomplete'
+import CreateTagDialog from './CreateTagDialog'
 
 type PieceDetailProps = {
     piece: PieceDetailType
@@ -46,6 +50,13 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     const [nameValue, setNameValue] = useState(piece.name)
     const [nameSaving, setNameSaving] = useState(false)
     const [nameError, setNameError] = useState<string | null>(null)
+    const [availableTags, setAvailableTags] = useState<TagEntry[]>([])
+    const [selectedTags, setSelectedTags] = useState<TagEntry[]>(piece.tags ?? [])
+    const [tagDialogOpen, setTagDialogOpen] = useState(false)
+    const [newTagName, setNewTagName] = useState('')
+    const [newTagColor, setNewTagColor] = useState(pickDefaultTagColor(piece.tags.length))
+    const [tagSaving, setTagSaving] = useState(false)
+    const [tagError, setTagError] = useState<string | null>(null)
     const nameInputRef = useRef<HTMLInputElement>(null)
     const currentState = piece.current_state
     const successors = SUCCESSORS[currentState.state] ?? []
@@ -59,6 +70,28 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
 
     // Block navigation when there are unsaved changes
     const blocker = useBlocker(isDirty)
+
+    useEffect(() => {
+        setSelectedTags(piece.tags ?? [])
+    }, [piece.tags])
+
+    useEffect(() => {
+        let cancelled = false
+        void fetchGlobalEntries('tag').then((entries) => {
+            if (cancelled) return
+            setAvailableTags(entries.map((entry) => ({
+                id: entry.id,
+                name: entry.name,
+                color: entry.color ?? '',
+                is_public: entry.isPublic,
+            })))
+        }).catch(() => {
+            if (!cancelled) setTagError('Failed to load tags.')
+        })
+        return () => {
+            cancelled = true
+        }
+    }, [])
 
     async function handleTransition(nextState: string) {
         setTransitioning(true)
@@ -120,6 +153,45 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
             setNameError('Failed to save name. Please try again.')
         } finally {
             setNameSaving(false)
+        }
+    }
+
+    async function saveTags(nextTags: TagEntry[]) {
+        setTagSaving(true)
+        setTagError(null)
+        try {
+            const updated = await updatePiece(piece.id, { tags: nextTags.map((tag) => tag.id) })
+            onPieceUpdated(updated)
+        } catch {
+            setTagError('Failed to save tags. Please try again.')
+            setSelectedTags(piece.tags ?? [])
+        } finally {
+            setTagSaving(false)
+        }
+    }
+
+    async function createTag() {
+        const trimmed = newTagName.trim()
+        if (!trimmed) {
+            setTagError('Tag name cannot be empty.')
+            return
+        }
+        setTagSaving(true)
+        setTagError(null)
+        try {
+            const created = await createTagEntry({ name: trimmed, color: newTagColor })
+            const createdTag = { id: created.id, name: created.name, color: created.color }
+            setAvailableTags((prev) => [...prev, createdTag].sort((a, b) => a.name.localeCompare(b.name)))
+            const nextTags = [...selectedTags, createdTag]
+            setSelectedTags(nextTags)
+            await saveTags(nextTags)
+            setTagDialogOpen(false)
+            setNewTagName('')
+            setNewTagColor(pickDefaultTagColor(trimmed.length))
+        } catch {
+            setTagError('Failed to create tag. Please try again.')
+        } finally {
+            setTagSaving(false)
         }
     }
 
@@ -193,10 +265,31 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                         sx={{ mt: 0.5 }}
                         color={isTerminal ? 'default' : 'primary'}
                     />
+                    <Box sx={{ mt: 1 }}>
+                        <TagChipList tags={piece.tags ?? []} />
+                    </Box>
             </Box>
         </Box>
 
         <Divider sx={{ mb: 3 }} />
+
+            <Box sx={{ mb: 3, display: 'flex', alignItems: 'flex-start', gap: 1, flexDirection: 'column' }}>
+                <TagAutocomplete
+                    label="Tags"
+                    options={availableTags}
+                    value={selectedTags}
+                    onChange={(nextValue) => {
+                        setSelectedTags(nextValue)
+                        void saveTags(nextValue)
+                    }}
+                    helperText={tagError ?? 'Select existing tags or create a new one.'}
+                    disabled={tagSaving}
+                    sx={{ minWidth: 320, maxWidth: 560 }}
+                />
+                <Button variant="outlined" size="small" onClick={() => setTagDialogOpen(true)} disabled={tagSaving}>
+                    Create tag
+                </Button>
+            </Box>
 
             {/* Current state form */}
             <WorkflowState
@@ -365,6 +458,18 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <CreateTagDialog
+                open={tagDialogOpen}
+                name={newTagName}
+                color={newTagColor}
+                error={tagError}
+                saving={tagSaving}
+                onClose={() => setTagDialogOpen(false)}
+                onNameChange={setNewTagName}
+                onColorChange={setNewTagColor}
+                onCreate={() => void createTag()}
+            />
         </Box>
     )
 }
