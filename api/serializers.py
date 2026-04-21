@@ -46,7 +46,7 @@ from django.utils import timezone
 
 from django.apps import apps
 
-from .models import FavoriteGlazeCombination, FiringTemperature, GlazeCombination, Location, Piece, PieceState, Tag, UserProfile
+from .models import FiringTemperature, GlazeCombination, Location, Piece, PieceState, Tag, UserProfile, models 
 from .registry import global_entry_serializer
 from .workflow import (
     ENTRY_STATE,
@@ -56,6 +56,27 @@ from .workflow import (
     get_global_ref_fields_for_state,
     get_state_ref_fields,
 )
+
+def _serialize_tags(model: models.Model, junction_name: str) -> list[dict[str, str]]:
+    tag_links = getattr(model, '_prefetched_objects_cache', {}).get('tag_links')
+    if tag_links is None:
+        tag_links = apps.get_model('api', junction_name).objects.select_related('tag').filter(piece=model).order_by('order', 'pk')
+    return [
+        {'id': str(link.tag_id), 'name': link.tag.name, 'color': link.tag.color or ''}
+        for link in tag_links
+    ]
+
+
+def add_tags(model_cls: type[models.Model]):
+    def decorator(serializer_cls: type[serializers.Serializer]):
+        serializer_cls.Meta.fields.append('tags')
+        serializer_cls._declared_fields['tags'] = serializers.SerializerMethodField()
+        @extend_schema_field(TagEntrySerializer(many=True))
+        def get_tags(self, obj: models.Model):
+            return _serialize_tags(obj, f'{model_cls._meta.model_name}tag')
+        serializer_cls.get_tags = get_tags
+        return serializer_cls
+    return decorator
 
 
 class GlazeTypeRefSerializer(serializers.Serializer):
@@ -73,14 +94,12 @@ class FiringTemperatureRefSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'cone', 'temperature_c', 'atmosphere']
 
 
-@global_entry_serializer(Tag)
 class TagEntrySerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
-    is_public = serializers.SerializerMethodField()
 
     class Meta:
         model = Tag
-        fields = ['id', 'name', 'color', 'is_public']
+        fields = ['id', 'name', 'color']
 
     @extend_schema_field(serializers.CharField())
     def get_id(self, obj: Tag) -> str:
@@ -220,32 +239,17 @@ class ThumbnailSerializer(serializers.Serializer):
     cloudinary_public_id = serializers.CharField(allow_blank=True, allow_null=True, default=None)
 
 
-class PieceTagSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    name = serializers.CharField()
-    color = serializers.CharField(allow_blank=True, allow_null=True, default='')
-
-
-def _serialize_piece_tags(piece: Piece) -> list[dict[str, str]]:
-    tag_links = getattr(piece, '_prefetched_objects_cache', {}).get('tag_links')
-    if tag_links is None:
-        tag_links = apps.get_model('api', 'PieceTag').objects.select_related('tag').filter(piece=piece).order_by('order', 'pk')
-    return [
-        {'id': str(link.tag_id), 'name': link.tag.name, 'color': link.tag.color or ''}
-        for link in tag_links
-    ]
-
-
+@add_tags(Piece)
+@global_entry_serializer(Piece)
 class PieceSummarySerializer(serializers.ModelSerializer):
     current_state = serializers.SerializerMethodField()
     current_location = serializers.SerializerMethodField()
-    tags = serializers.SerializerMethodField()
     thumbnail = ThumbnailSerializer(allow_null=True, read_only=True)
     last_modified = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Piece
-        fields = ['id', 'name', 'created', 'last_modified', 'thumbnail', 'current_state', 'current_location', 'tags']
+        fields = ['id', 'name', 'created', 'last_modified', 'thumbnail', 'current_state', 'current_location']
 
     @extend_schema_field(StateSummarySerializer)
     def get_current_state(self, obj: Piece) -> dict:
@@ -257,10 +261,6 @@ class PieceSummarySerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.CharField(allow_null=True, required=False))
     def get_current_location(self, obj: Piece) -> str | None:
         return obj.current_location.name if obj.current_location else None
-
-    @extend_schema_field(PieceTagSerializer(many=True))
-    def get_tags(self, obj: Piece) -> list[dict[str, str]]:
-        return _serialize_piece_tags(obj)
 
 
 class PieceDetailSerializer(PieceSummarySerializer):

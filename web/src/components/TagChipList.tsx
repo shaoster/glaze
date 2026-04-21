@@ -1,15 +1,11 @@
 import Box from '@mui/material/Box'
 
 import TagChip from './TagChip'
+import type { TagEntry } from '@common/types'
 
-export interface TagChipListItem {
-    id: string
-    name: string
-    color: string
-}
 
 interface TagChipListProps {
-    tags: TagChipListItem[]
+    tags: TagEntry[]
 }
 
 export default function TagChipList({ tags }: TagChipListProps) {

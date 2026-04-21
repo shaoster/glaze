@@ -3,18 +3,13 @@ import TextField from '@mui/material/TextField'
 import type { SxProps, Theme } from '@mui/material/styles'
 
 import TagChip from './TagChip'
-
-export interface TagAutocompleteOption {
-    id: string
-    name: string
-    color: string
-}
+import type { TagEntry } from '@common/types'
 
 interface TagAutocompleteProps {
     label: string
-    options: TagAutocompleteOption[]
-    value: TagAutocompleteOption[]
-    onChange: (value: TagAutocompleteOption[]) => void
+    options: TagEntry[]
+    value: TagEntry[]
+    onChange: (value: TagEntry[]) => void
     disabled?: boolean
     helperText?: string
     sx?: SxProps<Theme>

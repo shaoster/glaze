@@ -14,7 +14,7 @@
  * this module.
  */
 import axios from 'axios'
-import type { CaptionedImage, FiringTemperatureRef, GlazeCombinationEntry, GlazeCombinationImageEntry, GlazeCombinationImagePiece, GlazeTypeRef, PieceDetail, PieceSummary, PieceState, PieceTag, State, StateSummary, TagEntry, Thumbnail } from './types'
+import type { CaptionedImage, FiringTemperatureRef, GlazeCombinationEntry, GlazeCombinationImageEntry, GlazeTypeRef, PieceDetail, PieceSummary, PieceState, State, StateSummary, TagEntry, Thumbnail } from './types'
 
 export type AuthUser = {
     id: number
@@ -78,7 +78,7 @@ function mapStateSummary(raw: Wire<StateSummary>): StateSummary {
     return { state: raw.state as State }
 }
 
-function mapPieceTag(raw: Wire<PieceTag>): PieceTag {
+function mapTagEntry(raw: Wire<TagEntry>): TagEntry {
     return {
         id: raw.id,
         name: raw.name,
@@ -108,7 +108,7 @@ function mapPieceSummary(raw: Wire<PieceSummary>): PieceSummary {
         thumbnail: raw.thumbnail as Thumbnail | null,
         current_state: mapStateSummary(raw.current_state),
         current_location: raw.current_location ?? '',
-        tags: (raw.tags ?? []).map(mapPieceTag),
+        tags: (raw.tags ?? []).map(mapTagEntry),
     }
 }
 
@@ -304,8 +304,6 @@ export async function createTagEntry(payload: { name: string; color?: string }):
     })
     return data
 }
-
-export type { GlazeCombinationImagePiece, GlazeCombinationImageEntry }
 
 /** Fetch glaze combination image gallery data for the Analyze tab. */
 export async function fetchGlazeCombinationImages(): Promise<GlazeCombinationImageEntry[]> {

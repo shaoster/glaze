@@ -33,11 +33,6 @@ export type Thumbnail = components['schemas']['Thumbnail']
 // Intersection narrows state: string → state: State.
 // PieceState is a structural subtype, so it can substitute for StateSummary.
 export type StateSummary = components['schemas']['StateSummary'] & { state: State }
-export type PieceTag = {
-    id: string
-    name: string
-    color: string
-}
 
 // Full state record returned in detail responses.
 // Intersection narrows state: string → state: State.
@@ -49,7 +44,7 @@ export type PieceState = components['schemas']['PieceState'] & {
 // Piece list entry. Intersection narrows current_state to use our typed StateSummary.
 export type PieceSummary = components['schemas']['PieceSummary'] & {
     current_state: StateSummary
-    tags: PieceTag[]
+    tags: TagEntry[]
 }
 
 
@@ -64,13 +59,7 @@ export type PieceDetail = PieceSummary & {
 export type GlazeTypeRef = components['schemas']['GlazeTypeRef']
 export type FiringTemperatureRef = components['schemas']['FiringTemperatureRef']
 export type GlazeCombinationEntry = components['schemas']['GlazeCombinationEntry']
-export type TagEntry = {
-    id: string
-    name: string
-    color: string
-    is_public: boolean
-}
-
+export type TagEntry = components['schemas']['TagEntry']
 // ---------------------------------------------------------------------------
 // Glaze Combination Gallery — analysis endpoint types
 // ---------------------------------------------------------------------------

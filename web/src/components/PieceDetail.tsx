@@ -22,7 +22,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import { useBlocker } from 'react-router-dom'
-import type { CaptionedImage, PieceDetail as PieceDetailType } from '@common/types'
+import type { CaptionedImage, PieceDetail as PieceDetailType, TagEntry } from '@common/types'
 import { formatState, SUCCESSORS } from '@common/types'
 import { addPieceState, createTagEntry, fetchGlobalEntries, updatePiece } from '@common/api'
 import ImageLightbox from './ImageLightbox'
@@ -30,7 +30,7 @@ import CloudinaryImage from './CloudinaryImage'
 import WorkflowState from './WorkflowState'
 import { pickDefaultTagColor } from './tagPalette'
 import TagChipList from './TagChipList'
-import TagAutocomplete, { type TagAutocompleteOption } from './TagAutocomplete'
+import TagAutocomplete from './TagAutocomplete'
 import CreateTagDialog from './CreateTagDialog'
 
 type PieceDetailProps = {
@@ -50,8 +50,8 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     const [nameValue, setNameValue] = useState(piece.name)
     const [nameSaving, setNameSaving] = useState(false)
     const [nameError, setNameError] = useState<string | null>(null)
-    const [availableTags, setAvailableTags] = useState<TagAutocompleteOption[]>([])
-    const [selectedTags, setSelectedTags] = useState<TagAutocompleteOption[]>(piece.tags ?? [])
+    const [availableTags, setAvailableTags] = useState<TagEntry[]>([])
+    const [selectedTags, setSelectedTags] = useState<TagEntry[]>(piece.tags ?? [])
     const [tagDialogOpen, setTagDialogOpen] = useState(false)
     const [newTagName, setNewTagName] = useState('')
     const [newTagColor, setNewTagColor] = useState(pickDefaultTagColor(piece.tags.length))
@@ -156,7 +156,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
         }
     }
 
-    async function saveTags(nextTags: TagAutocompleteOption[]) {
+    async function saveTags(nextTags: TagEntry[]) {
         setTagSaving(true)
         setTagError(null)
         try {

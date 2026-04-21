@@ -1,5 +1,6 @@
 from unittest.mock import Mock
 
+from api.models import Piece
 import api.workflow as workflow_module
 
 
@@ -156,6 +157,12 @@ _MOCK_GLOBALS_MAP = {
         },
     },
 }
+
+def test_get_name_for_global(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP)
+    monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
+
+    assert workflow_module.get_name_for_global(Piece) == 'piece'
 
 
 def test_get_state_ref_fields_returns_state_refs_only(monkeypatch):
@@ -410,10 +417,10 @@ def test_is_taggable_global_returns_false_for_unknown_global(monkeypatch):
     assert workflow_module.is_taggable_global('does_not_exist') is False
 
 
-def test_get_taggable_globals_returns_declared_globals_in_order(monkeypatch):
+def test_get_taggable_globals_returns_declared_globals(monkeypatch):
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
     monkeypatch.setattr(workflow_module, 'get_global_names', lambda: list(_MOCK_GLOBALS_MAP.keys()))
-    assert workflow_module.get_taggable_globals() == ['piece']
+    assert workflow_module.get_taggable_globals() == {'piece'}
 
 
 # ---------------------------------------------------------------------------

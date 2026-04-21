@@ -24,7 +24,6 @@ from .models import FavoriteGlazeCombination, GlazeCombination, Piece, PieceStat
 from .registry import _GLOBAL_ENTRY_SERIALIZERS  # populated by @global_entry_serializer decorators in serializers.py
 from .serializers import (
     AuthUserSerializer,
-    GlazeCombinationEntrySerializer,
     GlazeCombinationImageEntrySerializer,
     GoogleAuthSerializer,
     LoginSerializer,
@@ -36,7 +35,7 @@ from .serializers import (
     PieceUpdateSerializer,
     RegisterSerializer,
 )
-from .workflow import get_global_model_and_field, get_global_names, get_glaze_image_qualifying_states, is_favoritable_global, is_private_global, is_public_global
+from .workflow import get_global_model_and_field, get_glaze_image_qualifying_states, is_private_global, is_public_global
 
 def _apply_global_filters(qs, model_cls, request):
     """Apply query-param filters declared in a model's ``filterable_fields`` dict.

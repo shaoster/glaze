@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
-import type { PieceSummary, PieceTag } from '@common/types'
+import type { PieceSummary, TagEntry } from '@common/types'
 import { SUCCESSORS } from '@common/types'
 import CloudinaryImage from './CloudinaryImage'
 import TagAutocomplete from './TagAutocomplete'
@@ -97,10 +97,10 @@ type PieceListingProps = {
 const PieceList = (props: PieceListingProps) => {
   const { pieces } = props;
   const [activeFilters, setActiveFilters] = useState<FilterCategory[]>([])
-  const [activeTags, setActiveTags] = useState<PieceTag[]>([])
+  const [activeTags, setActiveTags] = useState<TagEntry[]>([])
 
   const availableTags = useMemo(() => {
-    const deduped = new Map<string, PieceTag>()
+    const deduped = new Map<string, TagEntry>()
     pieces.forEach((piece) => {
       ;(piece.tags ?? []).forEach((tag) => deduped.set(tag.id, tag))
     })
