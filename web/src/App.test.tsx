@@ -40,7 +40,7 @@ vi.mock('./components/GlazeCombinationGallery', () => ({
 }))
 
 // Now import App and the mocked api
-import { fetchCurrentUser, loginWithEmail, loginWithGoogle } from '@common/api'
+import { fetchCurrentUser, loginWithEmail, loginWithGoogle, logoutUser } from '@common/api'
 import App from './App'
 
 const MOCK_USER = {
@@ -138,6 +138,28 @@ describe('App auth flow', () => {
         await waitFor(() => {
             expect(screen.getByText('Pottery Pieces')).toBeInTheDocument()
             expect(window.location.pathname).toBe('/')
+        })
+    })
+
+    it('clicking Log out calls logoutUser and returns to the login form', async () => {
+        vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_USER)
+        vi.mocked(logoutUser).mockResolvedValue(undefined)
+
+        render(<App />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Pottery Pieces')).toBeInTheDocument()
+        })
+
+        // Open the user menu and click log out
+        await userEvent.click(screen.getByText('Pat Potter'))
+        await userEvent.click(screen.getByText('Log out'))
+
+        await waitFor(() => {
+            expect(logoutUser).toHaveBeenCalled()
+        })
+        await waitFor(() => {
+            expect(screen.getByText('Track every pottery piece through your workflow.')).toBeInTheDocument()
         })
     })
 
