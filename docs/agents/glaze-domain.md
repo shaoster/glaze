@@ -32,6 +32,13 @@ The source of truth for piece states is [`workflow.yml`](../../workflow.yml) at 
 
 **`globals` section:** The optional top-level `globals` map registers named domain types backed by Django models. Each entry declares the model class name (PascalCase, verified against `api/models.py` by tests) and a subset of its fields exposed to the field DSL. `api/models.py` remains the authoritative source of truth — `globals` is a DSL-level view of those models, kept in sync by tests.
 
+**What belongs in `workflow.yml` vs. what does not:** `workflow.yml` is for domain structure and business rules that both backend and frontend must agree on: state IDs, transitions, field existence, requiredness, persistence shape, and domain constraints that affect validation or query behavior. It is not a home for presentation defaults, styling choices, or convenience UI metadata.
+
+- **Belongs in `workflow.yml`:** lifecycle states, successor relationships, whether a field/global exists at all, whether it is required, whether a global is public/private/favoritable, and true domain constraints where the allowed values are part of the business model.
+- **Does not belong in `workflow.yml`:** default colors, color palettes, icon choices, display order chosen only for UX, wording tweaks for labels, component layout, and other presentation-layer defaults that the backend does not need in order to validate or persist the data.
+- **Rule of thumb:** if changing the value should require a migration, backend validation change, API contract change, or data cleanup plan, it may belong in `workflow.yml`. If changing it should only affect how the UI looks or which default the user sees first, it belongs in frontend code instead.
+- **Example:** a `Tag` having a persisted `color` field can be valid domain data if users explicitly choose and save a color. But a built-in palette of suggested colors, or a default initial color shown in the create form, is presentation logic and should live in the web layer, not in `workflow.yml`.
+
 Each global definition also carries several optional flags:
 - `public` (default `false`): when `true`, this global type has an admin-managed shared library of public objects (stored with `user=NULL`) visible to all authenticated users. The corresponding Django model's `user` field must be nullable.
 - `private` (default `true`): when `true`, users can create their own private instances of this type.
