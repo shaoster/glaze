@@ -30,6 +30,7 @@ jobs:
         run: |
           curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
           echo "$HOME/.rtk/bin" >> $GITHUB_PATH
+          mkdir -p /home/runner/.claude/
           rtk init -g --auto-patch
       - uses: anthropics/claude-code-action@v1
         with:
@@ -79,6 +80,7 @@ jobs:
         run: |
           curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
           echo "$HOME/.rtk/bin" >> $GITHUB_PATH
+          mkdir -p /home/runner/.claude/
           rtk init -g --auto-patch
       - uses: anthropics/claude-code-action@v1
         with:
@@ -135,6 +137,7 @@ jobs:
         run: |
           curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
           echo "$HOME/.rtk/bin" >> $GITHUB_PATH
+          mkdir -p /home/runner/.claude/
           rtk init -g --auto-patch
       - uses: anthropics/claude-code-action@v1
         with:
