@@ -57,6 +57,12 @@ jobs:
 
             Post a summary of your token usage and cost to the github step summary.
 
+      - name: Discover missed optimizations
+        run: rtk discover >> $GITHUB_STEP_SUMMARY
+
+      - name: Show token savings
+        run: rtk gain >> $GITHUB_STEP_SUMMARY
+
   decline-non-claude-pr:
     # When @claude is mentioned on a PR without the 'claude' label, respond to the
     # comment without making code changes — Claude can answer questions but must not
