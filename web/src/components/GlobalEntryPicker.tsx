@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useAsync } from '../util/useAsync'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -107,9 +108,6 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
         makeEmptyFilters(boolFieldNames, relatedFilterDefs)
     )
     const [relatedOptions, setRelatedOptions] = useState<Record<string, NamedRef[]>>({})
-    const [entries, setEntries] = useState<GenericGlobalEntry[]>([])
-    const [loading, setLoading] = useState(false)
-    const [entriesError, setEntriesError] = useState<string | null>(null)
     const [togglingId, setTogglingId] = useState<string | null>(null)
 
     // Fetch autocomplete options for each related-filter global when the dialog opens.
@@ -128,29 +126,23 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, globalName])
 
-    const loadEntries = useCallback(
-        (f: FilterState) => {
-            setLoading(true)
-            setEntriesError(null)
-            const params = buildParams(f, boolFieldNames, relatedFilterDefs)
-            fetchGlobalEntriesWithFilters<GenericGlobalEntry>(globalName, params)
-                .then((results) => {
-                    setEntries(results)
-                    setEntriesError(null)
-                })
-                .catch(() => {
-                    setEntriesError('Failed to load entries. Please try again.')
-                })
-                .finally(() => setLoading(false))
+    const {
+        data: entriesData,
+        loading,
+        error: entriesAsyncError,
+        setData: setEntries,
+    } = useAsync<GenericGlobalEntry[]>(
+        () => {
+            if (!open) return Promise.resolve([])
+            const params = buildParams(filters, boolFieldNames, relatedFilterDefs)
+            return fetchGlobalEntriesWithFilters<GenericGlobalEntry>(globalName, params)
         },
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [globalName]
+        [open, filters, globalName],
     )
 
-    useEffect(() => {
-        if (!open) return
-        loadEntries(filters)
-    }, [open, filters, loadEntries])
+    const entries = entriesData ?? []
+    const entriesError = entriesAsyncError ? 'Failed to load entries. Please try again.' : null
 
     function handleBoolFilter(field: string, checked: boolean, value: boolean) {
         setFilters((prev) => ({
@@ -174,7 +166,7 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
         try {
             await toggleGlobalEntryFavorite(globalName, entry.id, !entry.is_favorite)
             setEntries((prev) =>
-                prev.map((e) => (e.id === entry.id ? { ...e, is_favorite: !e.is_favorite } : e))
+                (prev ?? []).map((e) => (e.id === entry.id ? { ...e, is_favorite: !e.is_favorite } : e))
             )
         } finally {
             setTogglingId(null)
