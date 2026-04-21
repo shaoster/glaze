@@ -68,7 +68,9 @@ jobs:
             Do not raise PRs for linked issues that do not have the 'claude' label — only work on issues that have been explicitly
             marked for you to address.
 
+            Post token your token usage and cost summary to the github step summary.
+
       - name: Discover missed optimizations
-        run: rtk discover
+        run: rtk discover >> $GITHUB_STEP_SUMMARY
       - name: Show token savings
-        run: rtk gain
+        run: rtk gain >> $GITHUB_STEP_SUMMARY

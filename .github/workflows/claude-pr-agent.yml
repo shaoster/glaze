@@ -41,6 +41,20 @@ jobs:
             --system-prompt "Use RTK-compressed output for all terminal commands."
             --dangerously-skip-permissions
           show_full_output: "true"
+          prompt: |
+            A user has mentioned @claude in a comment on pull request #${{ github.event.issue.number }}
+            wheret the Claude label is present.
+
+            The comment was:
+            ${{ github.event.comment.body }}
+
+            Read the PR, the code, and any relevant context, then post a helpful comment
+            responding to the user's question or request. You can also make code changes
+            if needed — this PR has the 'claude' label, so you have permission to edit files.
+            If you make code changes, be sure to run the full test suite to verify nothing is broken
+            (backend: `gz_test`, web: `gz_test_web`, common: `gz_test_common`).
+
+            Post a summary of your token usage and cost to the github step summary.
 
   decline-non-claude-pr:
     # When @claude is mentioned on a PR without the 'claude' label, respond to the
@@ -88,11 +102,16 @@ jobs:
             PR to give you edit access, or open a new issue labeled 'claude' for you to
             handle in a fresh PR.
 
+            Post a clear, concise response. If you don't know the answer, say so — do not attempt
+            to guess or fabricate information.
+
+            Post a summary of your token usage and cost to the github step summary.
+
       - name: Discover missed optimizations
-        run: rtk discover
+        run: rtk discover >> $GITHUB_STEP_SUMMARY
 
       - name: Show token savings
-        run: rtk gain
+        run: rtk gain >> $GITHUB_STEP_SUMMARY
 
   address-review-changes:
     # Run when a reviewer requests changes on a PR with the 'claude' label.
@@ -145,9 +164,10 @@ jobs:
             5. Commit your changes with a message like "Address review feedback from @${{ github.event.review.user.login }}".
             6. Push the changes to this PR branch.
             7. Post a comment on the PR summarising what you changed and how each piece of feedback was addressed.
+            8. Post token your token usage and cost summary to the github step summary.
 
       - name: Discover missed optimizations
-        run: rtk discover
+        run: rtk discover >> $GITHUB_STEP_SUMMARY
 
       - name: Show token savings
-        run: rtk gain
+        run: rtk gain >> $GITHUB_STEP_SUMMARY
