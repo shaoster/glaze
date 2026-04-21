@@ -28,8 +28,9 @@ jobs:
           fetch-depth: 0
       - name: Install RTK
         run: |
-          curl -L https://rtk.rs | sh
+          curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
           echo "$HOME/.rtk/bin" >> $GITHUB_PATH
+          rtk init -g --auto-patch
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -62,8 +63,9 @@ jobs:
           fetch-depth: 0
       - name: Install RTK
         run: |
-          curl -L https://rtk.rs | sh
+          curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
           echo "$HOME/.rtk/bin" >> $GITHUB_PATH
+          rtk init -g --auto-patch
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -112,8 +114,9 @@ jobs:
           fetch-depth: 0
       - name: Install RTK
         run: |
-          curl -L https://rtk.rs | sh
+          curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
           echo "$HOME/.rtk/bin" >> $GITHUB_PATH
+          rtk init -g --auto-patch
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}

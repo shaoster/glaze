@@ -130,6 +130,13 @@ gz_setup() {
     echo "--- Installing web dependencies..."
     (cd "$GLAZE_ROOT/web" && npm install --silent && npx playwright install chromium --with-deps)
 
+    # RTK
+    if ! command -v rtk &>/dev/null; then
+        echo "--- Installing RTK (for test optimizations and type generation)..."
+        curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+        rtk init -g --auto-patch
+    fi
+
     echo "=== Setup complete ==="
     echo "    Run 'gz_gentypes' to regenerate TypeScript types (requires the backend)."
     echo "    Run 'gz_start' to start both servers."
