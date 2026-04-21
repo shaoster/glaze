@@ -120,6 +120,7 @@ export default function GlobalFieldPicker({
     const [internalEntries, setInternalEntries] = useState<GlobalEntry[]>([])
     const [creating, setCreating] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [fetchError, setFetchError] = useState<string | null>(null)
     // Tracks what is shown in the text field while the user is typing.
     // Separate from `value` so that partially-typed text is never committed.
     const [inputValue, setInputValue] = useState(value)
@@ -165,9 +166,14 @@ export default function GlobalFieldPicker({
     useEffect(() => {
         if (optionsProp !== undefined) return
         fetchGlobalEntries(globalName)
-            .then(setInternalEntries)
-            .catch(() => {})
-    }, [globalName, optionsProp])
+            .then((entries) => {
+                setInternalEntries(entries)
+                setFetchError(null)
+            })
+            .catch(() => {
+                setFetchError(`Failed to load ${label.toLowerCase()} options. Please refresh.`)
+            })
+    }, [globalName, optionsProp, label])
 
     // The entry currently committed as the field value, if it exists in the
     // entries list. Used to drive the favorite star affordance.
@@ -268,8 +274,8 @@ export default function GlobalFieldPicker({
                     label={label}
                     fullWidth
                     sx={sx}
-                    helperText={error ?? helperText ?? ''}
-                    error={Boolean(error)}
+                    helperText={error ?? fetchError ?? helperText ?? ''}
+                    error={Boolean(error) || Boolean(fetchError)}
                     required={required}
                     slotProps={{
                         input: {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Checkbox from '@mui/material/Checkbox'
@@ -108,6 +109,7 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
     const [relatedOptions, setRelatedOptions] = useState<Record<string, NamedRef[]>>({})
     const [entries, setEntries] = useState<GenericGlobalEntry[]>([])
     const [loading, setLoading] = useState(false)
+    const [entriesError, setEntriesError] = useState<string | null>(null)
     const [togglingId, setTogglingId] = useState<string | null>(null)
 
     // Fetch autocomplete options for each related-filter global when the dialog opens.
@@ -129,10 +131,16 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
     const loadEntries = useCallback(
         (f: FilterState) => {
             setLoading(true)
+            setEntriesError(null)
             const params = buildParams(f, boolFieldNames, relatedFilterDefs)
             fetchGlobalEntriesWithFilters<GenericGlobalEntry>(globalName, params)
-                .then(setEntries)
-                .catch(() => {})
+                .then((results) => {
+                    setEntries(results)
+                    setEntriesError(null)
+                })
+                .catch(() => {
+                    setEntriesError('Failed to load entries. Please try again.')
+                })
                 .finally(() => setLoading(false))
         },
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -282,6 +290,8 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                         <CircularProgress />
                     </Box>
+                ) : entriesError ? (
+                    <Alert severity="error" sx={{ my: 2 }}>{entriesError}</Alert>
                 ) : visible.length === 0 ? (
                     <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
                         No entries match the current filters.

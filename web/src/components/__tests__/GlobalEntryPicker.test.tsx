@@ -98,6 +98,25 @@ describe('GlobalEntryPicker (glaze_combination)', () => {
                 expect(screen.getByText(/No entries match/)).toBeInTheDocument()
             )
         })
+
+        it('shows an error alert when fetchGlobalEntriesWithFilters fails', async () => {
+            vi.mocked(api.fetchGlobalEntriesWithFilters).mockRejectedValue(new Error('Network error'))
+            render(<GlobalEntryPicker {...defaultProps} />)
+            await waitFor(() =>
+                expect(
+                    screen.getByText('Failed to load entries. Please try again.')
+                ).toBeInTheDocument()
+            )
+        })
+
+        it('does not show the empty state when there is a fetch error', async () => {
+            vi.mocked(api.fetchGlobalEntriesWithFilters).mockRejectedValue(new Error('Network error'))
+            render(<GlobalEntryPicker {...defaultProps} />)
+            await waitFor(() =>
+                expect(screen.getByText('Failed to load entries. Please try again.')).toBeInTheDocument()
+            )
+            expect(screen.queryByText(/No entries match/)).not.toBeInTheDocument()
+        })
     })
 
     describe('selection', () => {
