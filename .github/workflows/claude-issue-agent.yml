@@ -60,3 +60,14 @@ jobs:
               `gh pr edit <number> --add-label claude`
               (If the label doesn't exist: `gh label create claude --color 5319e7 --force`)
             - Post a comment on the issue linking to the PR.
+
+            Prioritize the issue that triggered this workflow run, but if there are multiple open issues with the 'claude' label,
+            you may also work on those in order of relevance to the current PR or comment.
+
+            Do not raise PRs for linked issues that do not have the 'claude' label — only work on issues that have been explicitly
+            marked for you to address.
+
+      - name: Discover missed optimizations
+        run: rtk discover
+      - name: Show token savings
+        run: rtk gain

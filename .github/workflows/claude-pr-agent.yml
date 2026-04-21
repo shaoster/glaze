@@ -86,6 +86,12 @@ jobs:
             PR to give you edit access, or open a new issue labeled 'claude' for you to
             handle in a fresh PR.
 
+      - name: Discover missed optimizations
+        run: rtk discover
+
+      - name: Show token savings
+        run: rtk gain
+
   address-review-changes:
     # Run when a reviewer requests changes on a PR with the 'claude' label.
     if: |
@@ -136,3 +142,9 @@ jobs:
             5. Commit your changes with a message like "Address review feedback from @${{ github.event.review.user.login }}".
             6. Push the changes to this PR branch.
             7. Post a comment on the PR summarising what you changed and how each piece of feedback was addressed.
+
+      - name: Discover missed optimizations
+        run: rtk discover
+
+      - name: Show token savings
+        run: rtk gain
