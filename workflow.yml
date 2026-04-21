@@ -80,6 +80,7 @@ globals:
     model: Piece
     description: A pottery piece being tracked through the workflow.
     factory: false
+    taggable: true
     public: false
     private: true
     fields:
@@ -154,9 +155,6 @@ globals:
     public: false
     private: true
     plural: tags
-    piece_relation:
-      ordered: true
-      through_model: PieceTag
     fields:
       name:
         type: string
@@ -165,19 +163,7 @@ globals:
       color:
         type: string
         description: Hex color code used to render the tag chip.
-        enum:
-          - "#E76F51"
-          - "#F4A261"
-          - "#E9C46A"
-          - "#7CB342"
-          - "#2A9D8F"
-          - "#4FC3F7"
-          - "#5C6BC0"
-          - "#7E57C2"
-          - "#EC407A"
-          - "#D4A373"
-          - "#90A4AE"
-          - "#EF5350"
+        max_length: 7
 
   firing_temperature:
     model: FiringTemperature

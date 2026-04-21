@@ -163,15 +163,19 @@ def get_global_names() -> list[str]:
     return list(_GLOBALS_MAP.keys())
 
 
-def get_piece_relation_config(global_name: str) -> dict | None:
-    """Return the piece_relation declaration for a global, or None."""
+def is_taggable_global(global_name: str) -> bool:
+    """Return True if the global declares taggable: true.
+
+    Taggable globals support ordered per-object tag assignments using the shared
+    ``Tag`` global and a generated join model (for example ``PieceTag``).
+    """
     config = _GLOBALS_MAP.get(global_name, {})
-    return config.get('piece_relation') or None
+    return bool(config.get('taggable', False))
 
 
-def get_piece_related_globals() -> list[str]:
-    """Return all globals that declare a piece_relation, in declaration order."""
-    return [name for name in get_global_names() if get_piece_relation_config(name)]
+def get_taggable_globals() -> list[str]:
+    """Return all globals that declare taggable: true, in declaration order."""
+    return [name for name in get_global_names() if is_taggable_global(name)]
 
 
 def get_global_config(global_name: str) -> dict:

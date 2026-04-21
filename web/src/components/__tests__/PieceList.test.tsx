@@ -35,11 +35,12 @@ describe('PieceList', () => {
     describe('table headers', () => {
         it('renders all column headers', () => {
             renderPieceList([])
-            expect(screen.getByText('Thumbnail')).toBeInTheDocument()
-            expect(screen.getByText('Name')).toBeInTheDocument()
-            expect(screen.getByText('State')).toBeInTheDocument()
-            expect(screen.getByText('Created')).toBeInTheDocument()
-            expect(screen.getByText('Last Modified')).toBeInTheDocument()
+            expect(screen.getByRole('columnheader', { name: 'Thumbnail' })).toBeInTheDocument()
+            expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument()
+            expect(screen.getByRole('columnheader', { name: 'State' })).toBeInTheDocument()
+            expect(screen.getByRole('columnheader', { name: 'Tags' })).toBeInTheDocument()
+            expect(screen.getByRole('columnheader', { name: 'Created' })).toBeInTheDocument()
+            expect(screen.getByRole('columnheader', { name: 'Last Modified' })).toBeInTheDocument()
         })
     })
 
@@ -85,6 +86,19 @@ describe('PieceList', () => {
             renderPieceList([makePiece()])
             const link = screen.getByRole('link', { name: 'Clay Bowl' })
             expect(link).toHaveAttribute('href', '/pieces/aaaaaaaa-0000-0000-0000-000000000001')
+        })
+
+        it('renders tags as chips', () => {
+            renderPieceList([
+                makePiece({
+                    tags: [
+                        { id: 'tag-1', name: 'Gift', color: '#2A9D8F' },
+                        { id: 'tag-2', name: 'Functional', color: '#E76F51' },
+                    ],
+                }),
+            ])
+            expect(screen.getByText('Gift')).toBeInTheDocument()
+            expect(screen.getByText('Functional')).toBeInTheDocument()
         })
     })
 
@@ -227,6 +241,37 @@ describe('PieceList', () => {
             await user.keyboard('{Escape}')
             expect(screen.getByText('Bowl')).toBeInTheDocument()
             expect(screen.getByText('Mug')).toBeInTheDocument()
+        })
+    })
+
+    describe('tag filtering', () => {
+        it('filters pieces to those matching all selected tags', async () => {
+            const user = userEvent.setup()
+            const pieces = [
+                makePiece({
+                    id: 'id-1',
+                    name: 'Bowl',
+                    tags: [
+                        { id: 'gift', name: 'Gift', color: '#2A9D8F' },
+                        { id: 'sale', name: 'For Sale', color: '#4FC3F7' },
+                    ],
+                }),
+                makePiece({
+                    id: 'id-2',
+                    name: 'Mug',
+                    tags: [{ id: 'gift', name: 'Gift', color: '#2A9D8F' }],
+                }),
+            ]
+            renderPieceList(pieces)
+
+            await user.click(screen.getByLabelText('Tags'))
+            await user.click(screen.getByRole('option', { name: 'Gift' }))
+            await user.click(screen.getByLabelText('Tags'))
+            await user.click(screen.getByRole('option', { name: 'For Sale' }))
+            await user.keyboard('{Escape}')
+
+            expect(screen.getByText('Bowl')).toBeInTheDocument()
+            expect(screen.queryByText('Mug')).not.toBeInTheDocument()
         })
     })
 })

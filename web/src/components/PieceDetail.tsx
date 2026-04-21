@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
     Alert,
-    Autocomplete,
     Box,
     Button,
     Chip,
@@ -23,13 +22,16 @@ import EditIcon from '@mui/icons-material/Edit'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import { useBlocker } from 'react-router-dom'
-import type { CaptionedImage, PieceDetail as PieceDetailType, TagEntry } from '@common/types'
+import type { CaptionedImage, PieceDetail as PieceDetailType } from '@common/types'
 import { formatState, SUCCESSORS } from '@common/types'
 import { addPieceState, createTagEntry, fetchGlobalEntries, updatePiece } from '@common/api'
 import ImageLightbox from './ImageLightbox'
 import CloudinaryImage from './CloudinaryImage'
 import WorkflowState from './WorkflowState'
-import { TAG_COLOR_OPTIONS, pickDefaultTagColor } from './tagPalette'
+import { pickDefaultTagColor } from './tagPalette'
+import TagChipList from './TagChipList'
+import TagAutocomplete, { type TagAutocompleteOption } from './TagAutocomplete'
+import CreateTagDialog from './CreateTagDialog'
 
 type PieceDetailProps = {
     piece: PieceDetailType
@@ -48,8 +50,8 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     const [nameValue, setNameValue] = useState(piece.name)
     const [nameSaving, setNameSaving] = useState(false)
     const [nameError, setNameError] = useState<string | null>(null)
-    const [availableTags, setAvailableTags] = useState<TagEntry[]>([])
-    const [selectedTags, setSelectedTags] = useState<TagEntry[]>(piece.tags ?? [])
+    const [availableTags, setAvailableTags] = useState<TagAutocompleteOption[]>([])
+    const [selectedTags, setSelectedTags] = useState<TagAutocompleteOption[]>(piece.tags ?? [])
     const [tagDialogOpen, setTagDialogOpen] = useState(false)
     const [newTagName, setNewTagName] = useState('')
     const [newTagColor, setNewTagColor] = useState(pickDefaultTagColor(piece.tags.length))
@@ -154,7 +156,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
         }
     }
 
-    async function saveTags(nextTags: TagEntry[]) {
+    async function saveTags(nextTags: TagAutocompleteOption[]) {
         setTagSaving(true)
         setTagError(null)
         try {
@@ -178,8 +180,9 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
         setTagError(null)
         try {
             const created = await createTagEntry({ name: trimmed, color: newTagColor })
-            setAvailableTags((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
-            const nextTags = [...selectedTags, created]
+            const createdTag = { id: created.id, name: created.name, color: created.color }
+            setAvailableTags((prev) => [...prev, createdTag].sort((a, b) => a.name.localeCompare(b.name)))
+            const nextTags = [...selectedTags, createdTag]
             setSelectedTags(nextTags)
             await saveTags(nextTags)
             setTagDialogOpen(false)
@@ -262,15 +265,8 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                         sx={{ mt: 0.5 }}
                         color={isTerminal ? 'default' : 'primary'}
                     />
-                    <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        {(piece.tags ?? []).map((tag) => (
-                            <Chip
-                                key={tag.id}
-                                label={tag.name}
-                                size="small"
-                                sx={{ backgroundColor: tag.color || undefined, color: 'common.black' }}
-                            />
-                        ))}
+                    <Box sx={{ mt: 1 }}>
+                        <TagChipList tags={piece.tags ?? []} />
                     </Box>
             </Box>
         </Box>
@@ -278,34 +274,15 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
         <Divider sx={{ mb: 3 }} />
 
             <Box sx={{ mb: 3, display: 'flex', alignItems: 'flex-start', gap: 1, flexDirection: 'column' }}>
-                <Autocomplete
-                    multiple
+                <TagAutocomplete
+                    label="Tags"
                     options={availableTags}
                     value={selectedTags}
-                    onChange={(_event, nextValue) => {
+                    onChange={(nextValue) => {
                         setSelectedTags(nextValue)
                         void saveTags(nextValue)
                     }}
-                    getOptionLabel={(option) => option.name}
-                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                    renderTags={(value, getTagProps) =>
-                        value.map((option, index) => (
-                            <Chip
-                                {...getTagProps({ index })}
-                                key={option.id}
-                                label={option.name}
-                                size="small"
-                                sx={{ backgroundColor: option.color || undefined, color: 'common.black' }}
-                            />
-                        ))
-                    }
-                    renderInput={(params) => (
-                        <TextField
-                            {...params}
-                            label="Tags"
-                            helperText={tagError ?? 'Select existing tags or create a new one.'}
-                        />
-                    )}
+                    helperText={tagError ?? 'Select existing tags or create a new one.'}
                     disabled={tagSaving}
                     sx={{ minWidth: 320, maxWidth: 560 }}
                 />
@@ -482,50 +459,17 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={tagDialogOpen} onClose={() => setTagDialogOpen(false)} maxWidth="xs" fullWidth>
-                <DialogTitle>Create tag</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        label="Tag name"
-                        value={newTagName}
-                        onChange={(event) => setNewTagName(event.target.value)}
-                        fullWidth
-                        margin="dense"
-                        slotProps={{ htmlInput: { maxLength: 64 } }}
-                    />
-                    <DialogContentText sx={{ mt: 2, mb: 1 }}>
-                        Tag color
-                    </DialogContentText>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        {TAG_COLOR_OPTIONS.map((color) => (
-                            <Button
-                                key={color}
-                                onClick={() => setNewTagColor(color)}
-                                variant={newTagColor === color ? 'contained' : 'outlined'}
-                                sx={{
-                                    minWidth: 0,
-                                    width: 36,
-                                    height: 36,
-                                    backgroundColor: color,
-                                    borderColor: color,
-                                    color: 'common.black',
-                                }}
-                            >
-                                {' '}
-                            </Button>
-                        ))}
-                    </Box>
-                    {tagError && (
-                        <Alert severity="error" sx={{ mt: 2 }}>
-                            {tagError}
-                        </Alert>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setTagDialogOpen(false)} disabled={tagSaving}>Cancel</Button>
-                    <Button onClick={() => void createTag()} disabled={tagSaving}>Create</Button>
-                </DialogActions>
-            </Dialog>
+            <CreateTagDialog
+                open={tagDialogOpen}
+                name={newTagName}
+                color={newTagColor}
+                error={tagError}
+                saving={tagSaving}
+                onClose={() => setTagDialogOpen(false)}
+                onNameChange={setNewTagName}
+                onColorChange={setNewTagColor}
+                onCreate={() => void createTag()}
+            />
         </Box>
     )
 }

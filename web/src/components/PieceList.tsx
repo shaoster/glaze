@@ -1,15 +1,12 @@
 import { useMemo, useState } from "react";
 import {
-  Autocomplete,
   Box,
   Checkbox,
-  Chip,
   FormControl,
   InputLabel,
   ListItemText,
   MenuItem,
   Select,
-  TextField,
   type SelectChangeEvent,
   Table,
   TableBody,
@@ -22,6 +19,8 @@ import { Link, useNavigate } from "react-router-dom";
 import type { PieceSummary, PieceTag } from '@common/types'
 import { SUCCESSORS } from '@common/types'
 import CloudinaryImage from './CloudinaryImage'
+import TagAutocomplete from './TagAutocomplete'
+import TagChipList from './TagChipList'
 
 const DEFAULT_THUMBNAIL = '/thumbnails/question-mark.svg'
 
@@ -79,16 +78,7 @@ const PieceListItem = (props: PieceListItemProps) => {
         {piece.current_state.state}
       </TableCell>
       <TableCell sx={{ color: 'text.primary' }}>
-        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-          {(piece.tags ?? []).map((tag) => (
-            <Chip
-              key={tag.id}
-              label={tag.name}
-              size="small"
-              sx={{ backgroundColor: tag.color || undefined, color: 'common.black' }}
-            />
-          ))}
-        </Box>
+        <TagChipList tags={piece.tags ?? []} />
       </TableCell>
       <TableCell sx={{ color: 'text.secondary' }}>
         {piece.created.toLocaleDateString()}
@@ -136,26 +126,11 @@ const PieceList = (props: PieceListingProps) => {
   return (
     <>
       <Box sx={{ mb: 2 }}>
-        <Autocomplete
-          multiple
-          size="small"
+        <TagAutocomplete
+          label="Tags"
           options={availableTags}
           value={activeTags}
-          onChange={(_event, value) => setActiveTags(value)}
-          getOptionLabel={(option) => option.name}
-          isOptionEqualToValue={(option, value) => option.id === value.id}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip
-                {...getTagProps({ index })}
-                key={option.id}
-                label={option.name}
-                size="small"
-                sx={{ backgroundColor: option.color || undefined, color: 'common.black' }}
-              />
-            ))
-          }
-          renderInput={(params) => <TextField {...params} label="Tags" />}
+          onChange={setActiveTags}
           sx={{ mb: 2, minWidth: 260, maxWidth: 520 }}
         />
         <FormControl size="small" sx={{ minWidth: 220 }}>

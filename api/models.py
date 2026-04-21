@@ -10,7 +10,7 @@ from .model_factories import (
     GlobalModel as GlobalModel,
     make_compose_global_models,
     make_favorite_model,
-    make_piece_global_relation_model,
+    make_taggable_model,
     make_piece_state_global_ref_model,
     make_simple_global_model,
 )
@@ -25,7 +25,7 @@ from .workflow import (
     get_global_config,
     get_global_model_and_field as get_global_model_and_field,
     get_global_names,
-    get_piece_related_globals,
+    get_taggable_globals,
     get_state_global_ref_map,
     get_state_ref_fields as get_state_ref_fields,
     is_factory_global,
@@ -72,9 +72,9 @@ def _register_globals():
         ref_model = make_piece_state_global_ref_model(global_name)
         ns[ref_model.__name__] = ref_model
 
-    for global_name in get_piece_related_globals():
-        relation_model = make_piece_global_relation_model(global_name)
-        ns[relation_model.__name__] = relation_model
+    for global_name in get_taggable_globals():
+        tag_model = make_taggable_model(global_name)
+        ns[tag_model.__name__] = tag_model
 
 _register_globals()
 

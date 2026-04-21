@@ -23,7 +23,6 @@ from .workflow import (
     get_filterable_fields,
     get_filterable_ref_fields,
     get_global_config,
-    get_piece_relation_config,
     is_public_global,
 )
 
@@ -679,48 +678,39 @@ def make_piece_state_global_ref_model(global_name: str) -> type:
     return type(ref_model_class_name, (models.Model,), attrs)
 
 
-def make_piece_global_relation_model(global_name: str) -> type:
-    """Generate a Piece-global junction model for globals that declare piece_relation."""
+def make_taggable_model(global_name: str) -> type:
+    """Generate an ordered shared-tag junction model for a ``taggable: true`` global."""
     config = get_global_config(global_name)
     if not config:
         raise ValueError(f'Unknown global: {global_name!r}')
 
     model_name: str = config['model']
-    piece_relation = get_piece_relation_config(global_name)
-    if not piece_relation:
-        raise ValueError(f"Global '{global_name}' has no piece_relation declaration.")
-
-    through_model_name: str = piece_relation['through_model']
-    ordered: bool = bool(piece_relation.get('ordered', False))
+    through_model_name = f'{model_name}Tag'
 
     attrs: dict = {
         '__module__': 'api.models',
-        'piece': models.ForeignKey(
-            'api.Piece',
-            on_delete=models.CASCADE,
-            related_name=f'{global_name}_links',
-        ),
         global_name: models.ForeignKey(
             f'api.{model_name}',
-            on_delete=models.PROTECT,
-            related_name='piece_links',
+            on_delete=models.CASCADE,
+            related_name='tag_links',
         ),
-        '__str__': (lambda gn: lambda self: f'{self.piece} / {getattr(self, gn)}')(global_name),
+        'tag': models.ForeignKey(
+            'api.Tag',
+            on_delete=models.PROTECT,
+            related_name=f'{global_name}_links',
+        ),
+        'order': models.PositiveSmallIntegerField(),
+        '__str__': (lambda gn: lambda self: f'{getattr(self, gn)} / {self.tag}')(global_name),
+        'Meta': type('Meta', (), {
+            'ordering': ['order', 'pk'],
+            'constraints': [
+                models.UniqueConstraint(
+                    fields=[global_name, 'tag'],
+                    name=f'uniq_{global_name}_tag',
+                )
+            ]
+        }),
     }
-    if ordered:
-        attrs['order'] = models.PositiveSmallIntegerField()
-
-    meta_kwargs: dict = {
-        'constraints': [
-            models.UniqueConstraint(
-                fields=['piece', global_name],
-                name=f'uniq_piece_{global_name}',
-            )
-        ]
-    }
-    if ordered:
-        meta_kwargs['ordering'] = ['order', 'pk']
-    attrs['Meta'] = type('Meta', (), meta_kwargs)
 
     _deregister_model_if_exists('api', through_model_name)
     return type(through_model_name, (models.Model,), attrs)

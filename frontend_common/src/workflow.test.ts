@@ -45,6 +45,13 @@ vi.mock('../../workflow.yml', () => ({
                     test_tile_image: { type: 'image' },
                 },
             },
+            piece: {
+                model: 'Piece',
+                taggable: true,
+                fields: {
+                    name: { type: 'string' },
+                },
+            },
         },
         states: [
             {
@@ -135,6 +142,7 @@ import {
     getGlobalComposeFrom,
     getGlobalDisplayField,
     isFavoritableGlobal,
+    isTaggableGlobal,
 } from './workflow'
 
 describe('formatWorkflowFieldLabel', () => {
@@ -308,5 +316,19 @@ describe('isFavoritableGlobal', () => {
 
     it('returns false for an unknown global', () => {
         expect(isFavoritableGlobal('nonexistent')).toBe(false)
+    })
+})
+
+describe('isTaggableGlobal', () => {
+    it('returns true for a global with taggable: true', () => {
+        expect(isTaggableGlobal('piece')).toBe(true)
+    })
+
+    it('returns false for a global without the taggable flag', () => {
+        expect(isTaggableGlobal('location')).toBe(false)
+    })
+
+    it('returns false for an unknown global', () => {
+        expect(isTaggableGlobal('nonexistent')).toBe(false)
     })
 })

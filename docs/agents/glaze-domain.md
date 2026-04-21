@@ -34,16 +34,18 @@ The source of truth for piece states is [`workflow.yml`](../../workflow.yml) at 
 
 **What belongs in `workflow.yml` vs. what does not:** `workflow.yml` is for domain structure and business rules that both backend and frontend must agree on: state IDs, transitions, field existence, requiredness, persistence shape, and domain constraints that affect validation or query behavior. It is not a home for presentation defaults, styling choices, or convenience UI metadata.
 
-- **Belongs in `workflow.yml`:** lifecycle states, successor relationships, whether a field/global exists at all, whether it is required, whether a global is public/private/favoritable, and true domain constraints where the allowed values are part of the business model.
+- **Belongs in `workflow.yml`:** lifecycle states, successor relationships, whether a field/global exists at all, whether it is required, whether a global is public/private/favoritable/taggable, and true domain constraints where the allowed values are part of the business model.
 - **Does not belong in `workflow.yml`:** default colors, color palettes, icon choices, display order chosen only for UX, wording tweaks for labels, component layout, and other presentation-layer defaults that the backend does not need in order to validate or persist the data.
 - **Rule of thumb:** if changing the value should require a migration, backend validation change, API contract change, or data cleanup plan, it may belong in `workflow.yml`. If changing it should only affect how the UI looks or which default the user sees first, it belongs in frontend code instead.
 - **Example:** a `Tag` having a persisted `color` field can be valid domain data if users explicitly choose and save a color. But a built-in palette of suggested colors, or a default initial color shown in the create form, is presentation logic and should live in the web layer, not in `workflow.yml`.
+- **Capability pattern:** use `workflow.yml` to opt models into generic capabilities such as `favoritable: true` or `taggable: true`, not to encode one-off wiring details that generated backend/frontend code can infer.
 
 Each global definition also carries several optional flags:
 - `public` (default `false`): when `true`, this global type has an admin-managed shared library of public objects (stored with `user=NULL`) visible to all authenticated users. The corresponding Django model's `user` field must be nullable.
 - `private` (default `true`): when `true`, users can create their own private instances of this type.
 - `factory` (default `true`): when `false`, the Django model is hand-written and `_register_globals()` skips auto-generation for this global. Use only when bespoke model logic is required (currently only `piece`).
 - `favoritable` (default `false`): when `true`, a `FavoriteModel` subclass is auto-generated for this global and the favorites API endpoints are enabled.
+- `taggable` (default `false`): when `true`, instances of this global can be tagged using the shared `Tag` global. The developer interface should mirror favorites: a single `taggable: true` flag in `workflow.yml` opts the type into generated join-model support (for example `piece` → `PieceTag`) instead of bespoke per-type tagging code.
 
 Currently `clay_body` and `glaze_type` have `public: true`; `location` and `glaze_method` are private-only. Models for public globals (`ClayBody`, `GlazeType`) allow `user=NULL`; public and private objects each have their own DB-level `UniqueConstraint` (conditional on `user IS NULL` / `user IS NOT NULL`). A private entry may share its name with a public entry — the two scopes are independent. Three helpers in `api/workflow.py` expose this information to the rest of the backend without leaking the private `_GLOBALS_MAP`:
 - `is_public_global(name) -> bool` — returns `True` if the named global has `public: true`

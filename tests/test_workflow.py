@@ -218,13 +218,14 @@ class TestSchemaValidation:
         }
         jsonschema.validate(instance=valid, schema=schema)
 
-    def test_piece_relation_accepted_on_global_def(self, schema):
+    def test_taggable_accepted_on_global_def(self, schema):
         valid = {
             "version": "1.0.0",
             "globals": {
-                "tag": {
-                    "model": "Tag",
-                    "piece_relation": {"through_model": "PieceTag", "ordered": True},
+                "piece": {
+                    "model": "Piece",
+                    "factory": False,
+                    "taggable": True,
                     "fields": {"name": {"type": "string"}},
                 }
             },

@@ -87,6 +87,14 @@ $defs:
           authenticated users can mark individual entries as favorites via
           POST/DELETE /api/globals/<global_name>/<pk>/favorite/.
         default: false
+      taggable:
+        type: boolean
+        description: |
+          Whether instances of this global type can be tagged with entries from
+          the shared Tag global. When true, the backend generates an ordered
+          per-object join model (for example `PieceTag` for `piece`) and
+          exposes tag editing/filtering behavior for that object type.
+        default: false
       plural:
         type: string
         description: |
@@ -151,26 +159,6 @@ $defs:
                 pattern: '^[a-z][a-z0-9_]*$'
               additionalProperties:
                 $ref: "#/$defs/global_field_def"
-      piece_relation:
-        type: object
-        description: |
-          Declares that instances of this global can be attached directly to a Piece
-          via a generated junction model. Used for ordered piece-level metadata such
-          as tags that are not tied to one specific workflow state.
-        required: [through_model]
-        additionalProperties: false
-        properties:
-          ordered:
-            type: boolean
-            description: |
-              Whether the piece-level relationship preserves explicit order via an
-              integer `order` column on the through model. Default: false.
-          through_model:
-            type: string
-            pattern: '^[A-Z][A-Za-z0-9]*$'
-            description: |
-              The PascalCase name of the Django through model class used for the
-              piece-to-global relationship.
       fields:
         type: object
         description: |
