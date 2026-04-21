@@ -1,24 +1,18 @@
-import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Box, Button, CircularProgress, Typography } from '@mui/material'
 import { fetchPiece } from '@common/api'
+import { useAsync } from '../util/useAsync'
 import PieceDetailComponent from '../components/PieceDetail'
 import type { PieceDetail } from '@common/types'
 
 export default function PieceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [piece, setPiece] = useState<PieceDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!id) return
-    fetchPiece(id)
-      .then(setPiece)
-      .catch(() => setError('Failed to load piece.'))
-      .finally(() => setLoading(false))
-  }, [id])
+  // id is always defined — this component is only rendered via the /pieces/:id route
+  const { data: piece, loading, error, setData: setPiece } = useAsync<PieceDetail>(
+    () => fetchPiece(id!),
+    [id],
+  )
 
   return (
     <>
@@ -32,11 +26,11 @@ export default function PieceDetailPage() {
           <CircularProgress />
         </Box>
       )}
-      {error && <Typography color="error">{error}</Typography>}
+      {error && <Typography color="error">Failed to load piece.</Typography>}
       {piece && (
         <PieceDetailComponent
           piece={piece}
-          onPieceUpdated={setPiece}
+          onPieceUpdated={(updated) => setPiece(updated)}
         />
       )}
     </>

@@ -12,7 +12,6 @@
  * thumbnails. Hovering a thumbnail shows the piece name and state; clicking
  * navigates to /pieces/<id>.
  */
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
     Box,
@@ -29,21 +28,15 @@ import CloudinaryImage from './CloudinaryImage'
 import { fetchGlazeCombinationImages } from '@common/api'
 import type { GlazeCombinationImageEntry } from '@common/types'
 import { formatState } from '@common/types'
+import { useAsync } from '../util/useAsync'
 
 const EMPTY_STATE_MESSAGE =
     'No images yet — add images to pieces that use a glaze combination to see them here.'
 
 export default function GlazeCombinationGallery() {
-    const [entries, setEntries] = useState<GlazeCombinationImageEntry[]>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
-
-    useEffect(() => {
-        fetchGlazeCombinationImages()
-            .then(setEntries)
-            .catch(() => setError('Failed to load glaze combination gallery.'))
-            .finally(() => setLoading(false))
-    }, [])
+    const { data: entries, loading, error } = useAsync<GlazeCombinationImageEntry[]>(
+        fetchGlazeCombinationImages,
+    )
 
     if (loading) {
         return (
@@ -54,10 +47,10 @@ export default function GlazeCombinationGallery() {
     }
 
     if (error) {
-        return <Typography color="error">{error}</Typography>
+        return <Typography color="error">Failed to load glaze combination gallery.</Typography>
     }
 
-    if (entries.length === 0) {
+    if (!entries || entries.length === 0) {
         return (
             <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
                 {EMPTY_STATE_MESSAGE}

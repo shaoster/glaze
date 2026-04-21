@@ -37,7 +37,9 @@ export default defineConfig({
         test: {
           name: 'browser',
           environment: 'jsdom',
-          include: ['src/App.test.tsx'], // Include App.test.tsx for browser tests
+          include: [
+            'src/App.test.tsx'
+          ], // Include App.test.tsx for browser tests
           browser: {
             headless: true,
             provider: playwright(),
