@@ -15,12 +15,17 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from collections import defaultdict
+
+from django.apps import apps
 from django.db.models import Q
 
-from .models import FavoriteGlazeCombination, GlazeCombination, Piece, UserProfile
+from .models import FavoriteGlazeCombination, GlazeCombination, Piece, PieceState, UserProfile
 from .registry import _GLOBAL_ENTRY_SERIALIZERS  # populated by @global_entry_serializer decorators in serializers.py
 from .serializers import (
     AuthUserSerializer,
+    GlazeCombinationEntrySerializer,
+    GlazeCombinationImageEntrySerializer,
     GoogleAuthSerializer,
     LoginSerializer,
     PieceCreateSerializer,
@@ -31,7 +36,7 @@ from .serializers import (
     PieceUpdateSerializer,
     RegisterSerializer,
 )
-from .workflow import get_global_model_and_field, get_global_names, is_favoritable_global, is_private_global, is_public_global
+from .workflow import get_global_model_and_field, get_global_names, get_glaze_image_qualifying_states, is_favoritable_global, is_private_global, is_public_global
 
 def _apply_global_filters(qs, model_cls, request):
     """Apply query-param filters declared in a model's ``filterable_fields`` dict.
@@ -528,6 +533,138 @@ def auth_google(request: Request) -> Response:
 
     login(request, user)
     return Response(AuthUserSerializer(user).data)
+
+
+@extend_schema(
+    methods=['GET'],
+    responses={200: GlazeCombinationImageEntrySerializer(many=True)},
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def glaze_combination_images(request: Request) -> Response:
+    """Return images from pieces grouped by the glaze combination applied.
+
+    Only includes combinations for which at least one qualifying piece state
+    (glazed, glaze_fired, completed — derived from workflow.yml) has images.
+    Each piece appears once, with images aggregated from all qualifying states.
+    Pieces are sorted by last_modified descending within each combination;
+    combinations are sorted by the most-recently-modified qualifying piece.
+
+    Results are scoped to the requesting user's pieces only.
+    """
+    qualifying = get_glaze_image_qualifying_states()
+
+    # Resolve the GlazeCombination junction model generated at import time.
+    GlazeCombinationRef = apps.get_model('api', 'PieceStateGlazeCombinationRef')
+
+    # Collect all (piece_id → combo_id) mappings for this user's pieces.
+    # A piece may appear in multiple refs (glazed + glaze_fired both carry the
+    # combo forward), so deduplicate by piece — same combo in each case.
+    refs = (
+        GlazeCombinationRef.objects
+        .filter(piece_state__piece__user=request.user)
+        .values('piece_state__piece_id', 'glaze_combination_id')
+        .distinct()
+    )
+    piece_to_combo: dict = {}
+    for ref in refs:
+        piece_id = ref['piece_state__piece_id']
+        combo_id = ref['glaze_combination_id']
+        piece_to_combo[piece_id] = combo_id
+
+    if not piece_to_combo:
+        return Response([])
+
+    # Fetch qualifying PieceState records that have at least one image.
+    qualifying_ps = (
+        PieceState.objects
+        .filter(
+            piece_id__in=piece_to_combo.keys(),
+            piece__user=request.user,
+            state__in=qualifying,
+        )
+        .select_related('piece')
+        .order_by('-last_modified')
+    )
+
+    # Group images and state by piece — collect all images across qualifying states.
+    piece_data: dict = {}
+    for ps in qualifying_ps:
+        if not ps.images:
+            continue
+        pid = ps.piece_id
+        if pid not in piece_data:
+            piece_data[pid] = {
+                'id': str(pid),
+                'name': ps.piece.name,
+                'state': ps.state,
+                'images': list(ps.images),
+                'last_modified': ps.last_modified,
+            }
+        else:
+            # Additional qualifying state for the same piece: extend images;
+            # keep state pointing at the most recently modified qualifying state.
+            if ps.last_modified > piece_data[pid]['last_modified']:
+                piece_data[pid]['state'] = ps.state
+                piece_data[pid]['last_modified'] = ps.last_modified
+            piece_data[pid]['images'].extend(ps.images)
+
+    # Group pieces by combo.
+    combo_pieces: dict = defaultdict(list)
+    for pid, data in piece_data.items():
+        combo_id = piece_to_combo.get(pid)
+        if combo_id is not None:
+            combo_pieces[combo_id].append(data)
+
+    # Sort pieces within each combo by last_modified descending.
+    for combo_id in combo_pieces:
+        combo_pieces[combo_id].sort(key=lambda d: d['last_modified'], reverse=True)
+
+    # Sort combos by the most-recently-modified qualifying piece.
+    def _combo_latest(combo_id):
+        pieces = combo_pieces.get(combo_id, [])
+        if not pieces:
+            return None
+        return max(d['last_modified'] for d in pieces)
+
+    sorted_combo_ids = sorted(combo_pieces.keys(), key=_combo_latest, reverse=True)
+
+    # Bulk-fetch GlazeCombination objects for serialization.
+    combos_qs = (
+        GlazeCombination.objects
+        .filter(pk__in=sorted_combo_ids)
+        .prefetch_related('layers__glaze_type', 'firing_temperature')
+    )
+    combo_by_id = {c.pk: c for c in combos_qs}
+
+    favorite_ids = FavoriteGlazeCombination.get_favorite_ids_for(request.user)
+    ctx = {'request': request, 'favorite_ids': favorite_ids}
+
+    result = []
+    for combo_id in sorted_combo_ids:
+        combo = combo_by_id.get(combo_id)
+        if combo is None:
+            continue
+        pieces_payload = [
+            {
+                'id': d['id'],
+                'name': d['name'],
+                'state': d['state'],
+                'images': d['images'],
+            }
+            for d in combo_pieces[combo_id]
+        ]
+        result.append({
+            # Pass the model instance so the nested GlazeCombinationEntrySerializer
+            # can serialize it properly (it expects obj.pk, obj.layers, etc.).
+            # Context (favorite_ids) propagates from the top-level serializer.
+            'glaze_combination': combo,
+            'pieces': pieces_payload,
+        })
+
+    return Response(
+        GlazeCombinationImageEntrySerializer(result, many=True, context=ctx).data
+    )
 
 
 @extend_schema(request=RegisterSerializer, responses={201: AuthUserSerializer})
