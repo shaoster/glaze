@@ -43,6 +43,7 @@ This is a Single Page Application (SPA). Routing is handled client-side via Reac
 ## Component patterns
 
 - Keep components small and focused on a single responsibility. Extract sub-concerns into child components or custom hooks.
+- When the same UI concept or JSX pattern appears in more than one place, extract a shared component instead of duplicating inline JSX. Treat repeated presentational structure as a refactoring trigger even if the first implementation started life inside a single screen component.
 - Always define a typed props interface; prefer explicit interfaces over inline object types for reusability and readability:
   ```tsx
   interface ButtonProps {

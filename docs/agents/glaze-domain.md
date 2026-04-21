@@ -271,6 +271,8 @@ useEffect(() => {
 
 All data-fetching components must render a loading spinner (`<CircularProgress />`) while `loading` is true and an error message when `error` is non-null. Silent `.catch(() => {})` is only acceptable for best-effort background operations where failure is genuinely invisible to the user.
 
+**Shared UI extraction:** Treat route-level and detail/list container components such as `PieceDetail.tsx` and `PieceList.tsx` as orchestration layers, not homes for duplicated presentational subtrees. When a feature introduces the same UI concept in multiple places, extract a reusable component in `web/src/components/` rather than keeping separate inline implementations in each parent. If a new feature adds more than a small self-contained JSX block to one of these containers, prefer a named child component with typed props.
+
 **Workflow config interface (`workflow.ts`):**
 [`frontend_common/src/workflow.ts`](../../frontend_common/src/workflow.ts) loads `workflow.yml` at build time and exposes typed helpers — do not duplicate state or globals data elsewhere.
 - `getAdditionalFieldDefinitions(stateId)` — resolves per-state additional field definitions into a form-ready structure; used by `WorkflowState` to render dynamic fields.
