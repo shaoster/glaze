@@ -58,8 +58,8 @@ Before opening or pushing to a PR, verify every item:
 - Add the appropriate `Co-authored-by:` tag to commits (e.g. `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`). Include the model version when possible.
 - Every commit should have a short descriptive title with detailed bullets in the body explaining what was done and why.
 - If a PR includes refactoring alongside functional changes, describe both clearly in the commit and PR body.
-- All test suites pass.
-- The production build succeeds.
+- All test suites pass (gz_test_web, gz_test_backend, gz_test_common).
+- The build succeeds (gz_build).
 - PR body contains "Closes #<N>" linking to the originating issue.
 - PR title is concise (under 70 characters).
 - No debug code, temporary workarounds, or stray `print`/`console.log` statements.
@@ -79,6 +79,7 @@ When running in a github action, or in any remote sandboxed environment, first `
 To run frontend tests, use `gz_test_web`.
 To run backend tests, use `gz_test_backend`.
 To run the common tests, use `gz_test_common`. 
+To ensure build correctness, use `gz_build`. 
 
 ### Avoid PATs — use `GITHUB_TOKEN` and `workflow_run`
 
