@@ -13,6 +13,15 @@ class TestCloudinaryWidgetConfig:
         assert response.status_code == 503
         assert response.json()['detail'] == 'Cloudinary is not configured on the server.'
 
+    def test_returns_403_when_not_authenticated(self, client, monkeypatch):
+        monkeypatch.delenv('CLOUDINARY_CLOUD_NAME', raising=False)
+        monkeypatch.delenv('CLOUDINARY_API_KEY', raising=False)
+        client.force_authenticate(user=None)
+        response = client.get('/api/uploads/cloudinary/widget-config/')
+
+        assert response.status_code == 403
+        assert response.json()['detail'] == 'Authentication credentials were not provided.'
+
     def test_returns_config_without_folder(self, client, monkeypatch):
         monkeypatch.setenv('CLOUDINARY_CLOUD_NAME', 'demo-cloud')
         monkeypatch.setenv('CLOUDINARY_API_KEY', 'public-api-key')
@@ -59,6 +68,19 @@ class TestCloudinaryWidgetSign:
 
         assert response.status_code == 503
         assert response.json()['detail'] == 'Cloudinary is not configured on the server.'
+
+    def test_returns_403_when_not_authenticated(self, client, monkeypatch):
+        monkeypatch.delenv('CLOUDINARY_API_SECRET', raising=False)
+        client.force_authenticate(user=None)
+        response = client.post(
+            '/api/uploads/cloudinary/widget-signature/',
+            {'params_to_sign': {}},
+            format='json',
+        )
+
+        assert response.status_code == 403
+        assert response.json()['detail'] == 'Authentication credentials were not provided.'
+
 
     def test_returns_signature(self, client, monkeypatch):
         monkeypatch.setenv('CLOUDINARY_API_SECRET', 'super-secret')
