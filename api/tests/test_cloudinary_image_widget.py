@@ -1,5 +1,3 @@
-import pytest
-
 from api.admin import (
     CloudinaryImageWidget,
     _cloudinary_lightbox_url,

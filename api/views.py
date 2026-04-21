@@ -378,7 +378,6 @@ def make_global_entry_favorite_view(global_name: str):
     return view
 
 
-
 @extend_schema(
     request=None,
     responses={
@@ -394,6 +393,7 @@ def make_global_entry_favorite_view(global_name: str):
     },
 )
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def cloudinary_widget_config(request: Request) -> Response:
     """Return Cloudinary config needed to initialize the Upload Widget."""
     cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
@@ -432,6 +432,7 @@ def cloudinary_widget_config(request: Request) -> Response:
     },
 )
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def cloudinary_widget_sign(request: Request) -> Response:
     """Sign the params_to_sign dict provided by the Cloudinary Upload Widget."""
     api_secret = os.environ.get('CLOUDINARY_API_SECRET')
