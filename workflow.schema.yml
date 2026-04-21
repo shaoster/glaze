@@ -151,6 +151,26 @@ $defs:
                 pattern: '^[a-z][a-z0-9_]*$'
               additionalProperties:
                 $ref: "#/$defs/global_field_def"
+      piece_relation:
+        type: object
+        description: |
+          Declares that instances of this global can be attached directly to a Piece
+          via a generated junction model. Used for ordered piece-level metadata such
+          as tags that are not tied to one specific workflow state.
+        required: [through_model]
+        additionalProperties: false
+        properties:
+          ordered:
+            type: boolean
+            description: |
+              Whether the piece-level relationship preserves explicit order via an
+              integer `order` column on the through model. Default: false.
+          through_model:
+            type: string
+            pattern: '^[A-Z][A-Za-z0-9]*$'
+            description: |
+              The PascalCase name of the Django through model class used for the
+              piece-to-global relationship.
       fields:
         type: object
         description: |

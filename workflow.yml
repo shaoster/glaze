@@ -148,6 +148,37 @@ globals:
         type: string
         description: Notes on the application method or adjustments.
 
+  tag:
+    model: Tag
+    description: A short user-defined label that can be attached to a piece.
+    public: false
+    private: true
+    plural: tags
+    piece_relation:
+      ordered: true
+      through_model: PieceTag
+    fields:
+      name:
+        type: string
+        description: Short tag name shown in piece lists and detail views.
+        max_length: 64
+      color:
+        type: string
+        description: Hex color code used to render the tag chip.
+        enum:
+          - "#E76F51"
+          - "#F4A261"
+          - "#E9C46A"
+          - "#7CB342"
+          - "#2A9D8F"
+          - "#4FC3F7"
+          - "#5C6BC0"
+          - "#7E57C2"
+          - "#EC407A"
+          - "#D4A373"
+          - "#90A4AE"
+          - "#EF5350"
+
   firing_temperature:
     model: FiringTemperature
     description: A named firing profile (cone, peak temperature, atmosphere).

@@ -218,6 +218,23 @@ class TestSchemaValidation:
         }
         jsonschema.validate(instance=valid, schema=schema)
 
+    def test_piece_relation_accepted_on_global_def(self, schema):
+        valid = {
+            "version": "1.0.0",
+            "globals": {
+                "tag": {
+                    "model": "Tag",
+                    "piece_relation": {"through_model": "PieceTag", "ordered": True},
+                    "fields": {"name": {"type": "string"}},
+                }
+            },
+            "states": [
+                {"id": "a", "visible": True, "successors": ["b"]},
+                {"id": "b", "visible": True, "terminal": True},
+            ],
+        }
+        jsonschema.validate(instance=valid, schema=schema)
+
     def test_global_ref_accepted(self, schema):
         """A global ref (@global.field) in state fields must pass the schema."""
         valid = {

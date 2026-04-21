@@ -18,6 +18,7 @@ function makePiece(overrides: Partial<PieceSummary> = {}): PieceSummary {
         thumbnail: { url: 'https://example.com/bowl.jpg', cloudinary_public_id: null },
         current_location: null,
         current_state: { state: 'designed' } as any,
+        tags: [],
         ...overrides,
     }
 }
@@ -142,7 +143,7 @@ describe('PieceList', () => {
             ]
             renderPieceList(pieces)
 
-            await user.click(screen.getByRole('combobox'))
+            await user.click(screen.getByLabelText('Filter'))
             await user.click(screen.getByRole('option', { name: 'Work in Progress' }))
             await user.keyboard('{Escape}')
 
@@ -160,7 +161,7 @@ describe('PieceList', () => {
             ]
             renderPieceList(pieces)
 
-            await user.click(screen.getByRole('combobox'))
+            await user.click(screen.getByLabelText('Filter'))
             await user.click(screen.getByRole('option', { name: 'Completed' }))
             await user.keyboard('{Escape}')
 
@@ -178,7 +179,7 @@ describe('PieceList', () => {
             ]
             renderPieceList(pieces)
 
-            await user.click(screen.getByRole('combobox'))
+            await user.click(screen.getByLabelText('Filter'))
             await user.click(screen.getByRole('option', { name: 'Discarded' }))
             await user.keyboard('{Escape}')
 
@@ -196,7 +197,7 @@ describe('PieceList', () => {
             ]
             renderPieceList(pieces)
 
-            await user.click(screen.getByRole('combobox'))
+            await user.click(screen.getByLabelText('Filter'))
             await user.click(screen.getByRole('option', { name: 'Completed' }))
             await user.click(screen.getByRole('option', { name: 'Discarded' }))
             await user.keyboard('{Escape}')
@@ -215,13 +216,13 @@ describe('PieceList', () => {
             renderPieceList(pieces)
 
             // Apply filter
-            await user.click(screen.getByRole('combobox'))
+            await user.click(screen.getByLabelText('Filter'))
             await user.click(screen.getByRole('option', { name: 'Completed' }))
             await user.keyboard('{Escape}')
             expect(screen.queryByText('Bowl')).not.toBeInTheDocument()
 
             // Remove filter by clicking the same option again
-            await user.click(screen.getByRole('combobox'))
+            await user.click(screen.getByLabelText('Filter'))
             await user.click(screen.getByRole('option', { name: 'Completed' }))
             await user.keyboard('{Escape}')
             expect(screen.getByText('Bowl')).toBeInTheDocument()

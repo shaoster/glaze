@@ -163,6 +163,17 @@ def get_global_names() -> list[str]:
     return list(_GLOBALS_MAP.keys())
 
 
+def get_piece_relation_config(global_name: str) -> dict | None:
+    """Return the piece_relation declaration for a global, or None."""
+    config = _GLOBALS_MAP.get(global_name, {})
+    return config.get('piece_relation') or None
+
+
+def get_piece_related_globals() -> list[str]:
+    """Return all globals that declare a piece_relation, in declaration order."""
+    return [name for name in get_global_names() if get_piece_relation_config(name)]
+
+
 def get_global_config(global_name: str) -> dict:
     """Return the full workflow.yml config dict for a global, or {} if unknown.
 

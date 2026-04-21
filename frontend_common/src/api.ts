@@ -14,7 +14,7 @@
  * this module.
  */
 import axios from 'axios'
-import type { CaptionedImage, FiringTemperatureRef, GlazeCombinationEntry, GlazeCombinationImageEntry, GlazeCombinationImagePiece, GlazeTypeRef, PieceDetail, PieceSummary, PieceState, State, StateSummary, Thumbnail } from './types'
+import type { CaptionedImage, FiringTemperatureRef, GlazeCombinationEntry, GlazeCombinationImageEntry, GlazeCombinationImagePiece, GlazeTypeRef, PieceDetail, PieceSummary, PieceState, PieceTag, State, StateSummary, TagEntry, Thumbnail } from './types'
 
 export type AuthUser = {
     id: number
@@ -78,6 +78,14 @@ function mapStateSummary(raw: Wire<StateSummary>): StateSummary {
     return { state: raw.state as State }
 }
 
+function mapPieceTag(raw: Wire<PieceTag>): PieceTag {
+    return {
+        id: raw.id,
+        name: raw.name,
+        color: raw.color ?? '',
+    }
+}
+
 function mapPieceState(raw: Wire<PieceState>): PieceState {
     return {
         state: raw.state as State,
@@ -100,6 +108,7 @@ function mapPieceSummary(raw: Wire<PieceSummary>): PieceSummary {
         thumbnail: raw.thumbnail as Thumbnail | null,
         current_state: mapStateSummary(raw.current_state),
         current_location: raw.current_location ?? '',
+        tags: (raw.tags ?? []).map(mapPieceTag),
     }
 }
 
@@ -209,6 +218,7 @@ export type UpdatePiecePayload = {
     name?: string
     current_location?: string
     thumbnail?: Thumbnail | null
+    tags?: string[]
 }
 
 export async function updatePiece(pieceId: string, payload: UpdatePiecePayload): Promise<PieceDetail> {
@@ -221,21 +231,23 @@ export interface GlobalEntry {
     name: string
     isPublic: boolean
     isFavorite?: boolean
+    color?: string
 }
 
 export async function fetchGlobalEntries(globalName: string): Promise<GlobalEntry[]> {
-    const { data } = await client.get<Array<{ id: string; name: string; is_public: boolean; is_favorite?: boolean }>>(
+    const { data } = await client.get<Array<{ id: string; name: string; is_public: boolean; is_favorite?: boolean; color?: string }>>(
         `globals/${globalName}/`
     )
     return data.map((entry) => ({
         id: entry.id,
         name: entry.name,
         isPublic: entry.is_public,
+        ...(entry.color !== undefined ? { color: entry.color } : {}),
         ...(entry.is_favorite !== undefined ? { isFavorite: entry.is_favorite } : {}),
     }))
 }
 
-export type { GlazeTypeRef, FiringTemperatureRef, GlazeCombinationEntry }
+export type { GlazeTypeRef, FiringTemperatureRef, GlazeCombinationEntry, TagEntry }
 
 export interface GlazeCombinationFilters {
     glazeTypeIds?: string[]
@@ -284,6 +296,13 @@ export async function createGlobalEntry(globalName: string, field: string, value
         value,
     })
     return { id: data.id, name: data.name, isPublic: data.is_public }
+}
+
+export async function createTagEntry(payload: { name: string; color?: string }): Promise<TagEntry> {
+    const { data } = await client.post<TagEntry>('globals/tag/', {
+        values: payload,
+    })
+    return data
 }
 
 export type { GlazeCombinationImagePiece, GlazeCombinationImageEntry }

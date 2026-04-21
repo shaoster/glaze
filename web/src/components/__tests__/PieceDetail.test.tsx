@@ -11,6 +11,7 @@ vi.mock('@common/api', () => ({
     updateCurrentState: vi.fn(),
     addPieceState: vi.fn(),
     updatePiece: vi.fn(),
+    createTagEntry: vi.fn(),
     createGlobalEntry: vi.fn(),
     hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
     uploadImageToCloudinary: vi.fn(),
@@ -40,6 +41,7 @@ function makePiece(overrides: Partial<PieceDetailType> = {}): PieceDetailType {
         thumbnail: { url: '/thumbnails/bowl.svg', cloudinary_public_id: null },
         current_state: state,
         current_location: '',
+        tags: [],
         history: [state],
         ...overrides,
     }

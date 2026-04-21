@@ -79,7 +79,7 @@ _FAVORITES_REGISTRY = {
 
 
 def _piece_queryset(request: Request):
-    return Piece.objects.prefetch_related('states').filter(user=request.user)
+    return Piece.objects.prefetch_related('states', 'tag_links__tag').filter(user=request.user)
 
 
 @extend_schema(
@@ -96,6 +96,11 @@ def _piece_queryset(request: Request):
 def pieces(request: Request) -> Response:
     if request.method == 'GET':
         qs = _piece_queryset(request)
+        raw_tag_ids = request.query_params.get('tag_ids', '').strip()
+        if raw_tag_ids:
+            for tag_id in (item.strip() for item in raw_tag_ids.split(',') if item.strip()):
+                qs = qs.filter(tag_links__tag_id=tag_id)
+            qs = qs.distinct()
         return Response(PieceSummarySerializer(qs, many=True).data)
 
     serializer = PieceCreateSerializer(data=request.data, context={'request': request})
@@ -265,13 +270,36 @@ def _global_entries_impl(request: Request, global_name: str) -> Response:
 
     field = request.data.get('field')
     value = request.data.get('value')
-    if not field or field not in fields:
-        return Response({'detail': 'Invalid field'}, status=status.HTTP_400_BAD_REQUEST)
-    if not value:
+    values = request.data.get('values')
+    if values is not None and not isinstance(values, dict):
+        return Response({'detail': 'values must be an object.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    payload = dict(values or {})
+    if field:
+        if field not in fields:
+            return Response({'detail': 'Invalid field'}, status=status.HTTP_400_BAD_REQUEST)
+        payload[field] = value
+
+    allowed_fields = {
+        field_name for field_name, field_def in fields.items()
+        if '$ref' not in field_def
+    }
+    unknown_fields = sorted(set(payload) - allowed_fields)
+    if unknown_fields:
+        return Response({'detail': f'Invalid field: {unknown_fields[0]}'}, status=status.HTTP_400_BAD_REQUEST)
+    if not payload.get(display_field):
         return Response({'detail': 'Value is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-    obj, created = model_cls.objects.get_or_create(user=request.user, **{field: value})
+    lookup = {'user': request.user, display_field: payload[display_field]}
+    defaults = {key: val for key, val in payload.items() if key != display_field}
+    obj, created = model_cls.objects.get_or_create(**lookup, defaults=defaults)
     status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+    entry_serializer_cls = _GLOBAL_ENTRY_SERIALIZERS.get(model_cls)
+    if entry_serializer_cls is not None:
+        return Response(
+            entry_serializer_cls(obj, context={'request': request, 'favorite_ids': set()}).data,
+            status=status_code,
+        )
     return Response({'id': str(obj.pk), 'name': getattr(obj, display_field)}, status=status_code)
 
 
@@ -679,5 +707,3 @@ def auth_register(request: Request) -> Response:
     user = serializer.save()
     login(request, user)
     return Response(AuthUserSerializer(user).data, status=status.HTTP_201_CREATED)
-
-

@@ -46,7 +46,7 @@ from django.utils import timezone
 
 from django.apps import apps
 
-from .models import FavoriteGlazeCombination, FiringTemperature, GlazeCombination, Location, Piece, PieceState, UserProfile
+from .models import FavoriteGlazeCombination, FiringTemperature, GlazeCombination, Location, Piece, PieceState, Tag, UserProfile
 from .registry import global_entry_serializer
 from .workflow import (
     ENTRY_STATE,
@@ -71,6 +71,24 @@ class FiringTemperatureRefSerializer(serializers.ModelSerializer):
     class Meta:
         model = FiringTemperature
         fields = ['id', 'name', 'cone', 'temperature_c', 'atmosphere']
+
+
+@global_entry_serializer(Tag)
+class TagEntrySerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+    is_public = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Tag
+        fields = ['id', 'name', 'color', 'is_public']
+
+    @extend_schema_field(serializers.CharField())
+    def get_id(self, obj: Tag) -> str:
+        return str(obj.pk)
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_public(self, obj: Tag) -> bool:
+        return obj.user_id is None
 
 
 @global_entry_serializer(GlazeCombination)
@@ -202,15 +220,32 @@ class ThumbnailSerializer(serializers.Serializer):
     cloudinary_public_id = serializers.CharField(allow_blank=True, allow_null=True, default=None)
 
 
+class PieceTagSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    name = serializers.CharField()
+    color = serializers.CharField(allow_blank=True, allow_null=True, default='')
+
+
+def _serialize_piece_tags(piece: Piece) -> list[dict[str, str]]:
+    tag_links = getattr(piece, '_prefetched_objects_cache', {}).get('tag_links')
+    if tag_links is None:
+        tag_links = apps.get_model('api', 'PieceTag').objects.select_related('tag').filter(piece=piece).order_by('order', 'pk')
+    return [
+        {'id': str(link.tag_id), 'name': link.tag.name, 'color': link.tag.color or ''}
+        for link in tag_links
+    ]
+
+
 class PieceSummarySerializer(serializers.ModelSerializer):
     current_state = serializers.SerializerMethodField()
     current_location = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField()
     thumbnail = ThumbnailSerializer(allow_null=True, read_only=True)
     last_modified = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Piece
-        fields = ['id', 'name', 'created', 'last_modified', 'thumbnail', 'current_state', 'current_location']
+        fields = ['id', 'name', 'created', 'last_modified', 'thumbnail', 'current_state', 'current_location', 'tags']
 
     @extend_schema_field(StateSummarySerializer)
     def get_current_state(self, obj: Piece) -> dict:
@@ -222,6 +257,10 @@ class PieceSummarySerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.CharField(allow_null=True, required=False))
     def get_current_location(self, obj: Piece) -> str | None:
         return obj.current_location.name if obj.current_location else None
+
+    @extend_schema_field(PieceTagSerializer(many=True))
+    def get_tags(self, obj: Piece) -> list[dict[str, str]]:
+        return _serialize_piece_tags(obj)
 
 
 class PieceDetailSerializer(PieceSummarySerializer):
@@ -442,6 +481,7 @@ class PieceUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(required=False, max_length=255)
     current_location = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
     thumbnail = ThumbnailSerializer(required=False, allow_null=True)
+    tags = serializers.ListField(child=serializers.CharField(), required=False)
 
     def update(self, instance: Piece, validated_data: dict) -> Piece:  # type: ignore[override] — DRF base is untyped; narrowing instance/return to Piece is intentional
         if 'name' in validated_data:
@@ -457,7 +497,24 @@ class PieceUpdateSerializer(serializers.Serializer):
         if 'thumbnail' in validated_data:
             instance.thumbnail = validated_data['thumbnail']
         instance.save()
+        if 'tags' in validated_data:
+            tag_ids = [str(tag_id) for tag_id in validated_data['tags']]
+            _replace_piece_tags(instance, self.context['request'].user, tag_ids)
         return instance
+
+
+def _replace_piece_tags(piece: Piece, user, tag_ids: list[str]) -> None:
+    tag_model = apps.get_model('api', 'Tag')
+    piece_tag_model = apps.get_model('api', 'PieceTag')
+    tags = list(tag_model.objects.filter(user=user, pk__in=tag_ids).order_by('name'))
+    tags_by_id = {str(tag.pk): tag for tag in tags}
+    missing = [tag_id for tag_id in tag_ids if tag_id not in tags_by_id]
+    if missing:
+        raise serializers.ValidationError({'tags': [f'Invalid tag id: {missing[0]!r}']})
+
+    piece_tag_model.objects.filter(piece=piece).delete()
+    for order, tag_id in enumerate(tag_ids):
+        piece_tag_model.objects.create(piece=piece, tag=tags_by_id[tag_id], order=order)
 
 
 class AuthUserSerializer(serializers.Serializer):
