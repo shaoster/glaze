@@ -33,6 +33,7 @@ jobs:
           mkdir -p /home/runner/.claude/
           rtk init -g --auto-patch
       - uses: anthropics/claude-code-action@v1
+        id: claude
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -41,6 +42,7 @@ jobs:
             --allowed-tools Bash,Edit,Read
             --system-prompt "Use RTK-compressed output for all terminal commands."
             --dangerously-skip-permissions
+            --output-format stream-json
           show_full_output: "true"
           prompt: |
             A user has mentioned @claude in a comment on pull request #${{ github.event.issue.number }}
@@ -56,6 +58,23 @@ jobs:
             (backend: `gz_test`, web: `gz_test_web`, common: `gz_test_common`).
 
             Post a summary of your token usage and cost to the github step summary.
+
+      - name: Parse and Save Log
+        if: always()
+        run: |
+          # Extract thinking/cost using jq from the previous step's output
+          # Assuming verbose log is stored in a file or captured
+          echo "${{ steps.claude.outputs.result }}" | \
+          jq -r '. | select(.type=="thinking" or .type=="cost") | 
+          if .type=="thinking" then "# Thinking\n\(.content)" else "### Cost\n**Model:** \(.model) | **Cost:** $\(.cost)" end' \
+          > claude-log.md
+
+      - name: Upload Log Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-thinking-log
+          path: claude-log.md
 
       - name: Discover missed optimizations
         run: rtk discover >> $GITHUB_STEP_SUMMARY
@@ -89,6 +108,7 @@ jobs:
           mkdir -p /home/runner/.claude/
           rtk init -g --auto-patch
       - uses: anthropics/claude-code-action@v1
+        id: claude
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -96,6 +116,7 @@ jobs:
             --allowed-tools Bash,Edit,Read
             --system-prompt "Use RTK-compressed output for all terminal commands."
             --dangerously-skip-permissions
+            --output-format stream-json
           show_full_output: "true"
           prompt: |
             A user has mentioned @claude in a comment on pull request #${{ github.event.issue.number }}.
@@ -114,6 +135,24 @@ jobs:
             to guess or fabricate information.
 
             Post a summary of your token usage and cost to the github step summary.
+
+      - name: Parse and Save Log
+        if: always()
+        run: |
+          # Extract thinking/cost using jq from the previous step's output
+          # Assuming verbose log is stored in a file or captured
+          echo "${{ steps.claude.outputs.result }}" | \
+          jq -r '. | select(.type=="thinking" or .type=="cost") | 
+          if .type=="thinking" then "# Thinking\n\(.content)" else "### Cost\n**Model:** \(.model) | **Cost:** $\(.cost)" end' \
+          > claude-log.md
+
+      - name: Upload Log Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-thinking-log
+          path: claude-log.md
+
 
       - name: Discover missed optimizations
         run: rtk discover >> $GITHUB_STEP_SUMMARY
@@ -146,6 +185,7 @@ jobs:
           mkdir -p /home/runner/.claude/
           rtk init -g --auto-patch
       - uses: anthropics/claude-code-action@v1
+        id: claude
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -153,6 +193,7 @@ jobs:
             --allowed-tools Bash,Edit,Read
             --system-prompt "Use RTK-compressed output for all terminal commands."
             --dangerously-skip-permissions
+            --output-format stream-json
           show_full_output: "true"
 
           prompt: |
@@ -174,6 +215,23 @@ jobs:
             6. Push the changes to this PR branch.
             7. Post a comment on the PR summarising what you changed and how each piece of feedback was addressed.
             8. Post token your token usage and cost summary to the github step summary.
+
+      - name: Parse and Save Log
+        if: always()
+        run: |
+          # Extract thinking/cost using jq from the previous step's output
+          # Assuming verbose log is stored in a file or captured
+          echo "${{ steps.claude.outputs.result }}" | \
+          jq -r '. | select(.type=="thinking" or .type=="cost") | 
+          if .type=="thinking" then "# Thinking\n\(.content)" else "### Cost\n**Model:** \(.model) | **Cost:** $\(.cost)" end' \
+          > claude-log.md
+
+      - name: Upload Log Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-thinking-log
+          path: claude-log.md
 
       - name: Discover missed optimizations
         run: rtk discover >> $GITHUB_STEP_SUMMARY
