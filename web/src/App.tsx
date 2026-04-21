@@ -37,6 +37,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles'
 
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
 import { fetchPiece, fetchPieces, fetchCurrentUser, loginWithEmail, loginWithGoogle, logoutUser, registerWithEmail } from '@common/api'
+import ErrorBoundary from './components/ErrorBoundary'
 import GlazeCombinationGallery from './components/GlazeCombinationGallery'
 import NewPieceDialog from './components/NewPieceDialog'
 import PieceList from './components/PieceList'
@@ -364,7 +365,9 @@ function AppShell({
           </MenuItem>
         </Menu>
       </Box>
-      <Outlet />
+      <ErrorBoundary>
+        <Outlet />
+      </ErrorBoundary>
     </Container>
   )
 }
