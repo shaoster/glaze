@@ -6,6 +6,7 @@ import StarIcon from '@mui/icons-material/Star'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
 import { createGlobalEntry, fetchGlobalEntries, toggleGlobalEntryFavorite, type GlobalEntry } from '@common/api'
 import { getGlobalDisplayField, isFavoritableGlobal } from '@common/workflow'
+import { useAsync } from '../util/useAsync'
 
 // Pre-built filter; module-level to avoid reconstruction on every render.
 const FILTER = createFilterOptions<string>()
@@ -117,7 +118,6 @@ export default function GlobalFieldPicker({
 }: GlobalFieldPickerProps) {
     const fieldName = getGlobalDisplayField(globalName)
     const isFavoritable = isFavoritableGlobal(globalName)
-    const [internalEntries, setInternalEntries] = useState<GlobalEntry[]>([])
     const [creating, setCreating] = useState(false)
     const [error, setError] = useState<string | null>(null)
     // Tracks what is shown in the text field while the user is typing.
@@ -132,6 +132,20 @@ export default function GlobalFieldPicker({
         setInputValue(value)
     }, [value])
 
+    const {
+        data: fetchedEntries,
+        error: fetchAsyncError,
+        setData: setFetchedEntries,
+    } = useAsync<GlobalEntry[]>(
+        () => (optionsProp !== undefined ? Promise.resolve([]) : fetchGlobalEntries(globalName)),
+        [globalName, optionsProp],
+    )
+
+    const fetchError = optionsProp !== undefined
+        ? null
+        : (fetchAsyncError ? `Failed to load ${label.toLowerCase()} options. Please refresh.` : null)
+
+    const internalEntries = fetchedEntries ?? []
     const entries = optionsProp ?? internalEntries
 
     /**
@@ -161,13 +175,6 @@ export default function GlobalFieldPicker({
     // Display strings: public entries whose name also appears as a private entry
     // get a "(public)" suffix so users can distinguish the two.
     const displayOptions = useMemo(() => buildDisplayOptions(sortedEntries), [sortedEntries])
-
-    useEffect(() => {
-        if (optionsProp !== undefined) return
-        fetchGlobalEntries(globalName)
-            .then(setInternalEntries)
-            .catch(() => {})
-    }, [globalName, optionsProp])
 
     // The entry currently committed as the field value, if it exists in the
     // entries list. Used to drive the favorite star affordance.
@@ -203,8 +210,8 @@ export default function GlobalFieldPicker({
                 if (optionsProp === undefined) {
                     // Caller owns the list when optionsProp is provided; only
                     // update internal state when managing the list ourselves.
-                    setInternalEntries((prev) => {
-                        const merged = [...prev, created]
+                    setFetchedEntries((prev) => {
+                        const merged = [...(prev ?? []), created]
                         merged.sort((a, b) => a.name.localeCompare(b.name))
                         return merged
                     })
@@ -268,8 +275,8 @@ export default function GlobalFieldPicker({
                     label={label}
                     fullWidth
                     sx={sx}
-                    helperText={error ?? helperText ?? ''}
-                    error={Boolean(error)}
+                    helperText={error ?? fetchError ?? helperText ?? ''}
+                    error={Boolean(error) || Boolean(fetchError)}
                     required={required}
                     slotProps={{
                         input: {

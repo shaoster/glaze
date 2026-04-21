@@ -81,6 +81,47 @@ describe('GlobalFieldPicker', () => {
             expect(api.fetchGlobalEntries).not.toHaveBeenCalled()
         })
 
+        it('shows an error message when fetchGlobalEntries fails', async () => {
+            vi.mocked(api.fetchGlobalEntries).mockRejectedValue(new Error('Network error'))
+            render(<GlobalFieldPicker {...defaultProps} />)
+            await waitFor(() =>
+                expect(
+                    screen.getByText('Failed to load location options. Please refresh.')
+                ).toBeInTheDocument()
+            )
+        })
+
+        it('marks the field as errored when fetchGlobalEntries fails', async () => {
+            vi.mocked(api.fetchGlobalEntries).mockRejectedValue(new Error('Network error'))
+            await act(async () => {
+                render(<GlobalFieldPicker {...defaultProps} />)
+            })
+            await waitFor(() =>
+                expect(screen.getByLabelText('Location')).toBeInTheDocument()
+            )
+            // helperText containing the error should be rendered
+            await waitFor(() =>
+                expect(
+                    screen.getByText('Failed to load location options. Please refresh.')
+                ).toBeInTheDocument()
+            )
+        })
+
+        it('does not show fetch error when options prop is provided even if fetch would fail', async () => {
+            vi.mocked(api.fetchGlobalEntries).mockRejectedValue(new Error('Network error'))
+            await act(async () => {
+                render(
+                    <GlobalFieldPicker
+                        {...defaultProps}
+                        options={[{ id: '', name: 'Studio A', isPublic: false }]}
+                    />
+                )
+            })
+            expect(
+                screen.queryByText(/Failed to load/)
+            ).not.toBeInTheDocument()
+        })
+
         it('shows fetched options in the dropdown', async () => {
             vi.mocked(api.fetchGlobalEntries).mockResolvedValue([entry('Studio A'), entry('Studio B')])
             render(<GlobalFieldPicker {...defaultProps} />)
