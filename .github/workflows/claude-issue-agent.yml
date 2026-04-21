@@ -40,6 +40,7 @@ jobs:
             --allowed-tools Bash,Edit,Read
             --system-prompt "Use RTK-compressed output for all terminal commands."
             --dangerously-skip-permissions
+            --output-format stream-json
           show_full_output: "true"
           prompt: |
             You are an autonomous software agent helping resolve GitHub issues for the
@@ -69,7 +70,22 @@ jobs:
             Do not raise PRs for linked issues that do not have the 'claude' label — only work on issues that have been explicitly
             marked for you to address.
 
-            Post token your token usage and cost summary to the github step summary.
+      - name: Parse and Save Log
+        if: always()
+        run: |
+          # Extract thinking/cost using jq from the previous step's output
+          # Assuming verbose log is stored in a file or captured
+          echo "${{ steps.claude.outputs.result }}" | \
+          jq -r '. | select(.type=="thinking" or .type=="cost") | 
+          if .type=="thinking" then "# Thinking\n\(.content)" else "### Cost\n**Model:** \(.model) | **Cost:** $\(.cost)" end' \
+          > claude-log.md
+
+      - name: Upload Log Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-thinking-log
+          path: claude-log.md
 
       - name: Discover missed optimizations
         run: rtk discover >> $GITHUB_STEP_SUMMARY

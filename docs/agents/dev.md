@@ -99,3 +99,14 @@ GitHub Actions runs all three test suites (`common`, `backend`, `web`) plus a `w
 - Every new or modified React component → add or update a test in `web/src/components/__tests__/`.
 - Every new or modified `workflow.ts` helper → add or update a test in `frontend_common/src/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture.
 - Every new or modified `api/workflow.py` helper → add or update a test in `api/tests/test_workflow_helpers.py`, patching `_STATE_MAP` / `_GLOBALS_MAP` via `monkeypatch`.
+
+## Token Efficiency
+In addition to the environment's RTK rules, make sure you use the `rtk` prefixed equivalents to common commands:
+
+For example:
+- cat -> rtk read
+- ls -> rtk ls
+- grep -> rtk grep
+- gh -> rtk gh
+- git -> rtk git
+- npx tsc -> rtk tsc
