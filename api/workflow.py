@@ -226,6 +226,27 @@ def get_filterable_compose_fields(global_name: str) -> dict[str, dict]:
     return result
 
 
+def get_glaze_image_qualifying_states() -> frozenset:
+    """Derive the set of states from which glaze combination images are relevant.
+
+    Computed from workflow.yml — do not hardcode state names at call sites.
+
+    A state qualifies if it either:
+    - carries a ``glaze_combination`` global-ref field (directly or via a
+      transitive state ref), OR
+    - is a non-recycled terminal state (i.e. a finished-piece state).
+
+    With the current workflow this resolves to
+    ``frozenset({'glazed', 'glaze_fired', 'completed'})``.
+    """
+    states_with_combo: frozenset = frozenset(
+        s_id for s_id in VALID_STATES
+        if 'glaze_combination' in get_global_ref_fields_for_state(s_id)
+    )
+    non_recycled_terminals: frozenset = TERMINAL_STATES - {'recycled'}
+    return states_with_combo | non_recycled_terminals
+
+
 def get_compose_from(global_name: str) -> dict | None:
     """Return the compose_from declaration for a global, or None.
 

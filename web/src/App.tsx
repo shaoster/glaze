@@ -37,6 +37,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles'
 
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
 import { fetchPiece, fetchPieces, fetchCurrentUser, loginWithEmail, loginWithGoogle, logoutUser, registerWithEmail } from '@common/api'
+import GlazeCombinationGallery from './components/GlazeCombinationGallery'
 import NewPieceDialog from './components/NewPieceDialog'
 import PieceList from './components/PieceList'
 import PieceDetailComponent from './components/PieceDetail'
@@ -292,7 +293,7 @@ function PieceDetailPage() {
 }
 
 function AnalyzePage() {
-  return <Typography>Coming soon</Typography>
+  return <GlazeCombinationGallery />
 }
 
 function LandingPage() {
