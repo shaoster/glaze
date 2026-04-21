@@ -72,6 +72,7 @@ cd web
 npm install
 npm test          # single run (used in CI)
 npm run test:watch  # watch mode for development
+npm run build       # CI build command: tsc -b && vite build
 ```
 
 Tests live in two places:
@@ -79,6 +80,17 @@ Tests live in two places:
 - [`frontend_common/src/workflow.test.ts`](../../frontend_common/src/workflow.test.ts) — unit tests for `workflow.ts` helpers (picked up by the web vitest config via an explicit `include` glob)
 
 The test environment is jsdom; setup file is [`web/src/test-setup.ts`](../../web/src/test-setup.ts).
+
+### Web build helper
+
+```bash
+source env.sh
+gz_build
+```
+
+`gz_build` is the local helper for the same frontend build command used by the CI `web-build` job: `cd web && npm run build` (which expands to `tsc -b && vite build`).
+
+If your change affects the generated API types, run `gz_gentypes` first; CI does that in the `web-build` job before the build step.
 
 ### Production build
 
@@ -90,7 +102,7 @@ The test environment is jsdom; setup file is [`web/src/test-setup.ts`](../../web
 
 ### CI
 
-GitHub Actions runs all three test suites (`common`, `backend`, `web`) plus a `web-build` job (type generation + `npm run build`) in parallel on every push and pull request — see [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). A PR should not be merged if any job is red.
+GitHub Actions runs all three test suites (`common`, `backend`, `web`) plus a `web-build` job (`npm run generate-types` followed by `npm run build`) in parallel on every push and pull request — see [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). A PR should not be merged if any job is red.
 
 ### What to test
 
