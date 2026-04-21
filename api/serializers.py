@@ -114,6 +114,30 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
         ]
 
 
+class GlazeCombinationImagePieceSerializer(serializers.Serializer):
+    """A single piece entry in a GlazeCombinationImageEntrySerializer response.
+
+    Represents one piece that was glazed with the parent combination. ``state``
+    is the most recent qualifying state that contributed images (e.g.
+    ``'glaze_fired'``). ``images`` aggregates all images recorded across every
+    qualifying state for that piece.
+    """
+    id = serializers.CharField()
+    name = serializers.CharField()
+    state = serializers.CharField()
+    images = serializers.ListField(child=serializers.DictField())
+
+
+class GlazeCombinationImageEntrySerializer(serializers.Serializer):
+    """Response shape for GET /api/analysis/glaze-combination-images/.
+
+    Each entry groups a glaze combination with the pieces that used it and
+    have images in at least one qualifying state.
+    """
+    glaze_combination = GlazeCombinationEntrySerializer()
+    pieces = GlazeCombinationImagePieceSerializer(many=True)
+
+
 class CaptionedImageSerializer(serializers.Serializer):
     url = serializers.CharField()
     caption = serializers.CharField(allow_blank=True, default='')
@@ -415,10 +439,13 @@ class PieceStateUpdateSerializer(serializers.Serializer):
 
 class PieceUpdateSerializer(serializers.Serializer):
     """Partial update of Piece fields."""
+    name = serializers.CharField(required=False, max_length=255)
     current_location = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
     thumbnail = ThumbnailSerializer(required=False, allow_null=True)
 
     def update(self, instance: Piece, validated_data: dict) -> Piece:  # type: ignore[override] — DRF base is untyped; narrowing instance/return to Piece is intentional
+        if 'name' in validated_data:
+            instance.name = validated_data['name']
         if 'current_location' in validated_data:
             location_name = validated_data['current_location']
             if location_name:

@@ -20,6 +20,7 @@ vi.mock('@common/api', () => ({
     createGlobalEntry: vi.fn(),
     hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
     uploadImageToCloudinary: vi.fn(),
+    fetchGlazeCombinationImages: vi.fn().mockResolvedValue([]),
 }))
 
 vi.mock('./components/NewPieceDialog', () => ({
@@ -34,8 +35,12 @@ vi.mock('./components/PieceDetail', () => ({
     default: () => <div>Piece Detail Content</div>,
 }))
 
+vi.mock('./components/GlazeCombinationGallery', () => ({
+    default: () => <div>Glaze Gallery Content</div>,
+}))
+
 // Now import App and the mocked api
-import { fetchCurrentUser, loginWithEmail, loginWithGoogle } from '@common/api'
+import { fetchCurrentUser, loginWithEmail, loginWithGoogle, logoutUser } from '@common/api'
 import App from './App'
 
 const MOCK_USER = {
@@ -122,7 +127,7 @@ describe('App auth flow', () => {
         await userEvent.click(screen.getByRole('tab', { name: 'Analyze' }))
 
         await waitFor(() => {
-            expect(screen.getByText('Coming soon')).toBeInTheDocument()
+            expect(screen.getByText('Glaze Gallery Content')).toBeInTheDocument()
             expect(window.location.pathname).toBe('/analyze')
         })
 
@@ -136,6 +141,28 @@ describe('App auth flow', () => {
         })
     })
 
+    it('clicking Log out calls logoutUser and returns to the login form', async () => {
+        vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_USER)
+        vi.mocked(logoutUser).mockResolvedValue(undefined)
+
+        render(<App />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Pottery Pieces')).toBeInTheDocument()
+        })
+
+        // Open the user menu and click log out
+        await userEvent.click(screen.getByText('Pat Potter'))
+        await userEvent.click(screen.getByText('Log out'))
+
+        await waitFor(() => {
+            expect(logoutUser).toHaveBeenCalled()
+        })
+        await waitFor(() => {
+            expect(screen.getByText('Track every pottery piece through your workflow.')).toBeInTheDocument()
+        })
+    })
+
     it('activates the analyze tab on direct navigation to /analyze', async () => {
         vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_USER)
         window.history.pushState({}, '', '/analyze')
@@ -143,7 +170,7 @@ describe('App auth flow', () => {
         render(<App />)
 
         await waitFor(() => {
-            expect(screen.getByText('Coming soon')).toBeInTheDocument()
+            expect(screen.getByText('Glaze Gallery Content')).toBeInTheDocument()
         })
 
         expect(screen.getByRole('tab', { name: 'Analyze' })).toHaveAttribute('aria-selected', 'true')

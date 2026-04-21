@@ -14,7 +14,7 @@
  * this module.
  */
 import axios from 'axios'
-import type { CaptionedImage, FiringTemperatureRef, GlazeCombinationEntry, GlazeTypeRef, PieceDetail, PieceSummary, PieceState, State, StateSummary, Thumbnail } from './types'
+import type { CaptionedImage, FiringTemperatureRef, GlazeCombinationEntry, GlazeCombinationImageEntry, GlazeCombinationImagePiece, GlazeTypeRef, PieceDetail, PieceSummary, PieceState, State, StateSummary, Thumbnail } from './types'
 
 export type AuthUser = {
     id: number
@@ -206,6 +206,7 @@ export async function updateCurrentState(pieceId: string, payload: UpdateStatePa
 }
 
 export type UpdatePiecePayload = {
+    name?: string
     current_location?: string
     thumbnail?: Thumbnail | null
 }
@@ -283,6 +284,30 @@ export async function createGlobalEntry(globalName: string, field: string, value
         value,
     })
     return { id: data.id, name: data.name, isPublic: data.is_public }
+}
+
+export type { GlazeCombinationImagePiece, GlazeCombinationImageEntry }
+
+/** Fetch glaze combination image gallery data for the Analyze tab. */
+export async function fetchGlazeCombinationImages(): Promise<GlazeCombinationImageEntry[]> {
+    const { data } = await client.get<Array<{
+        glaze_combination: GlazeCombinationEntry
+        pieces: Array<{
+            id: string
+            name: string
+            state: string
+            images: Wire<CaptionedImage>[]
+        }>
+    }>>('analysis/glaze-combination-images/')
+    return data.map((entry) => ({
+        glaze_combination: entry.glaze_combination,
+        pieces: entry.pieces.map((p) => ({
+            id: p.id,
+            name: p.name,
+            state: p.state as State,
+            images: p.images.map(mapImage),
+        })),
+    }))
 }
 
 export async function fetchCloudinaryWidgetConfig(): Promise<CloudinaryWidgetConfig> {

@@ -57,6 +57,26 @@ export type GlazeTypeRef = components['schemas']['GlazeTypeRef']
 export type FiringTemperatureRef = components['schemas']['FiringTemperatureRef']
 export type GlazeCombinationEntry = components['schemas']['GlazeCombinationEntry']
 
+// ---------------------------------------------------------------------------
+// Glaze Combination Gallery — analysis endpoint types
+// ---------------------------------------------------------------------------
+
+/** A single piece entry returned by GET /api/analysis/glaze-combination-images/. */
+export type GlazeCombinationImagePiece = {
+    id: string
+    name: string
+    /** Most recent qualifying state (glazed | glaze_fired | completed) that has images. */
+    state: State
+    /** Images aggregated across all qualifying states for this piece. */
+    images: CaptionedImage[]
+}
+
+/** One entry in the glaze combination image gallery response. */
+export type GlazeCombinationImageEntry = {
+    glaze_combination: GlazeCombinationEntry
+    pieces: GlazeCombinationImagePiece[]
+}
+
 // Convert a snake_case state id to a human-readable label.
 // e.g. "wheel_thrown" → "Wheel Thrown", "designed" → "Designed"
 export function formatState(state: string): string {

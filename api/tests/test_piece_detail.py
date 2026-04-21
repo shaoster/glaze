@@ -56,6 +56,25 @@ class TestPieceDetail:
         assert data['current_location'] == 'Kiln Garden'
         assert Location.objects.filter(name='Kiln Garden').exists()
 
+    def test_patch_updates_name(self, client, piece):
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'name': 'Revised Vase'},
+            format='json',
+        )
+        assert response.status_code == 200
+        assert response.json()['name'] == 'Revised Vase'
+        piece.refresh_from_db()
+        assert piece.name == 'Revised Vase'
+
+    def test_patch_name_empty_rejected(self, client, piece):
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'name': ''},
+            format='json',
+        )
+        assert response.status_code == 400
+
     def test_cannot_read_other_users_piece(self, client, other_user):
         from api.models import ENTRY_STATE, Piece, PieceState
 

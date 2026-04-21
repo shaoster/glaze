@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
     Alert,
     Box,
@@ -11,11 +11,16 @@ import {
     DialogContentText,
     DialogTitle,
     Divider,
+    IconButton,
     List,
     ListItem,
     ListItemText,
+    TextField,
     Typography,
 } from '@mui/material'
+import EditIcon from '@mui/icons-material/Edit'
+import CheckIcon from '@mui/icons-material/Check'
+import CloseIcon from '@mui/icons-material/Close'
 import { useBlocker } from 'react-router-dom'
 import type { CaptionedImage, PieceDetail as PieceDetailType } from '@common/types'
 import { formatState, SUCCESSORS } from '@common/types'
@@ -37,6 +42,11 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     const [pendingTransition, setPendingTransition] = useState<string | null>(null)
     const [transitioning, setTransitioning] = useState(false)
     const [transitionError, setTransitionError] = useState<string | null>(null)
+    const [editingName, setEditingName] = useState(false)
+    const [nameValue, setNameValue] = useState(piece.name)
+    const [nameSaving, setNameSaving] = useState(false)
+    const [nameError, setNameError] = useState<string | null>(null)
+    const nameInputRef = useRef<HTMLInputElement>(null)
     const currentState = piece.current_state
     const successors = SUCCESSORS[currentState.state] ?? []
     const isTerminal = successors.length === 0
@@ -76,6 +86,43 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
         // content changing during the dialog close animation.
     }
 
+    function startEditingName() {
+        setNameValue(piece.name)
+        setNameError(null)
+        setEditingName(true)
+        // Focus the input on the next tick after it mounts
+        setTimeout(() => nameInputRef.current?.focus(), 0)
+    }
+
+    function cancelEditingName() {
+        setEditingName(false)
+        setNameError(null)
+        setNameValue(piece.name)
+    }
+
+    async function saveName() {
+        const trimmed = nameValue.trim()
+        if (!trimmed) {
+            setNameError('Name cannot be empty.')
+            return
+        }
+        if (trimmed === piece.name) {
+            setEditingName(false)
+            return
+        }
+        setNameSaving(true)
+        setNameError(null)
+        try {
+            const updated = await updatePiece(piece.id, { name: trimmed })
+            onPieceUpdated(updated)
+            setEditingName(false)
+        } catch {
+            setNameError('Failed to save name. Please try again.')
+        } finally {
+            setNameSaving(false)
+        }
+    }
+
     return (
         <Box sx={{ textAlign: 'left' }}>
             {/* Header */}
@@ -90,9 +137,56 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                 />
             )}
             <Box>
-                <Typography variant="h5" component="h2">
-                    {piece.name}
-                </Typography>
+                {editingName ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TextField
+                            inputRef={nameInputRef}
+                            value={nameValue}
+                            onChange={(e) => setNameValue(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') saveName()
+                                if (e.key === 'Escape') cancelEditingName()
+                            }}
+                            size="small"
+                            error={!!nameError}
+                            helperText={nameError}
+                            disabled={nameSaving}
+                            slotProps={{ htmlInput: { 'aria-label': 'Piece name', maxLength: 255 } }}
+                            sx={{ minWidth: 200 }}
+                        />
+                        <IconButton
+                            aria-label="Save name"
+                            onClick={saveName}
+                            disabled={nameSaving}
+                            size="small"
+                            color="primary"
+                        >
+                            <CheckIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                            aria-label="Cancel name edit"
+                            onClick={cancelEditingName}
+                            disabled={nameSaving}
+                            size="small"
+                        >
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
+                    </Box>
+                ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography variant="h5" component="h2">
+                            {piece.name}
+                        </Typography>
+                        <IconButton
+                            aria-label="Edit piece name"
+                            onClick={startEditingName}
+                            size="small"
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <EditIcon fontSize="small" />
+                        </IconButton>
+                    </Box>
+                )}
                     <Chip
                         label={formatState(currentState.state)}
                         size="small"
