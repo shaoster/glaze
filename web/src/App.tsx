@@ -32,6 +32,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles'
 
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
 import { fetchCurrentUser, loginWithEmail, loginWithGoogle, logoutUser, registerWithEmail } from '@common/api'
+import { useAsync } from './util/useAsync'
 import ErrorBoundary from './components/ErrorBoundary'
 import type { AuthUser } from '@common/api'
 
@@ -294,14 +295,9 @@ function AuthenticatedApp({
 export { Link }
 
 export default function App() {
-  const [loading, setLoading] = useState(true)
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
-
-  useEffect(() => {
-    fetchCurrentUser()
-      .then(setCurrentUser)
-      .finally(() => setLoading(false))
-  }, [])
+  const { data: currentUser, loading, setData: setCurrentUser } = useAsync<AuthUser | null>(
+    fetchCurrentUser,
+  )
 
   // Disable Google one-tap prompt
   useEffect(() => {
@@ -317,7 +313,7 @@ export default function App() {
   const handleLogout = useCallback(async () => {
     await logoutUser()
     setCurrentUser(null)
-  }, []) // setCurrentUser is stable — no deps needed
+  }, [setCurrentUser])
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID ?? ''}>
@@ -330,7 +326,7 @@ export default function App() {
         ) : currentUser ? (
           <AuthenticatedApp currentUser={currentUser} onLogout={handleLogout} />
         ) : (
-          <AuthLanding onAuthenticated={setCurrentUser} />
+          <AuthLanding onAuthenticated={(user) => setCurrentUser(user)} />
         )}
       </ThemeProvider>
     </GoogleOAuthProvider>

@@ -35,7 +35,8 @@
     "../frontend_common/src/generated-types.ts",
     "../frontend_common/src/types.ts",
     "../frontend_common/src/api.ts",
-    "../frontend_common/src/workflow.ts"
+    "../frontend_common/src/workflow.ts",
+    "src/util/useAsync.ts"
   ],
   "exclude": ["**/*.test.ts", "**/*.test.tsx", "node_modules"]
 }

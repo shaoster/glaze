@@ -243,11 +243,33 @@ Name uniqueness for public globals is enforced with two conditional DB constrain
 
 These supplement the generic TypeScript/React/Vite conventions.
 
-**Shared module alias:** Import shared types, API helpers, and workflow utilities using the `@common` path alias (`@common/types`, `@common/api`, `@common/workflow`) — never use relative `../../../frontend_common/src/...` paths. The alias resolves to `frontend_common/src/` and is configured in each app's tsconfig `paths` and bundler config.
+**Shared module alias:** Import shared types, API helpers, and workflow utilities using the `@common` path alias (`@common/types`, `@common/api`, `@common/workflow`) — never use relative `../../../frontend_common/src/...` paths. The alias resolves to `frontend_common/src/` and is configured in each app's tsconfig `paths` and bundler config. Note: This shared module cannot take direct dependencies on React, since React is only imported from `../../web/src/...`.
 
 **State names and transitions:** Come from `workflow.yml` via the constants in `@common/types` (`STATES`, `SUCCESSORS`) — do not hardcode them in components.
 
 **HTTP calls:** All go through [`frontend_common/src/api.ts`](../../frontend_common/src/api.ts) (imported as `@common/api`). This is the single place where wire types (ISO date strings, etc.) are mapped to domain types. Components must never perform their own serialization or deserialization.
+
+**Data-fetching pattern (`useAsync`):** Any component that loads data from the API on mount or when a dependency changes must use the `useAsync` hook from `../../web/src/util/useAsync`. Do not inline `useState` + `useEffect` + `.catch` + `.finally` for loading/error/data state management — use `useAsync` instead. It handles the cancellation flag, error normalization, and exposes `setData` for optimistic local mutations.
+
+```tsx
+// ✅ correct
+const { data: pieces, loading, error, setData: setPieces } = useAsync<PieceSummary[]>(fetchPieces)
+// On new piece created locally:
+setPieces(prev => [newPiece, ...(prev ?? [])])
+
+// ❌ incorrect — do not inline this pattern
+const [data, setData] = useState(null)
+const [loading, setLoading] = useState(true)
+const [error, setError] = useState<string | null>(null)
+useEffect(() => {
+  fetchSomething()
+    .then(setData)
+    .catch(() => setError('Failed'))
+    .finally(() => setLoading(false))
+}, [])
+```
+
+All data-fetching components must render a loading spinner (`<CircularProgress />`) while `loading` is true and an error message when `error` is non-null. Silent `.catch(() => {})` is only acceptable for best-effort background operations where failure is genuinely invisible to the user.
 
 **Workflow config interface (`workflow.ts`):**
 [`frontend_common/src/workflow.ts`](../../frontend_common/src/workflow.ts) loads `workflow.yml` at build time and exposes typed helpers — do not duplicate state or globals data elsewhere.

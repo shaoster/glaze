@@ -25,7 +25,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-src/components/__tests__/__screenshots__/
+**/__screenshots__/**
 venv/
 node_modules/
 
