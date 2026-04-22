@@ -241,7 +241,7 @@ function AppShell({
   }, [currentUser])
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0 }}>
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1}}>
           <Typography variant="h6" component="p" color="text.primary" display="inline">

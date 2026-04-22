@@ -71,7 +71,7 @@ describe('PieceDetail', () => {
 
     it('renders current state label', async () => {
         await renderPieceDetail()
-        expect(screen.getAllByText('Designed').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Designing').length).toBeGreaterThan(0)
     })
 
     it('renders thumbnail image', async () => {
@@ -135,9 +135,19 @@ describe('PieceDetail', () => {
         await renderPieceDetail()
         // 'designed' has successors: wheel_thrown, handbuilt
         const stateFlow = screen.getByRole('group', { name: 'State flow' })
-        expect(within(stateFlow).getByText('Designed')).toBeInTheDocument()
-        expect(within(stateFlow).getByRole('button', { name: 'Wheel Thrown' })).toBeInTheDocument()
-        expect(within(stateFlow).getByRole('button', { name: 'Handbuilt' })).toBeInTheDocument()
+        expect(within(stateFlow).getByText('Designing')).toBeInTheDocument()
+        expect(within(stateFlow).getByRole('button', { name: 'Throwing' })).toBeInTheDocument()
+        expect(within(stateFlow).getByRole('button', { name: 'Handbuilding' })).toBeInTheDocument()
+    })
+
+    it('renders completed before recycled at the end of the successor list', async () => {
+        const piece = makePiece({ current_state: makeState({ state: 'glaze_fired' }) })
+        await renderPieceDetail(piece)
+
+        const stateFlow = screen.getByRole('group', { name: 'State flow' })
+        const buttons = within(stateFlow).getAllByRole('button')
+
+        expect(buttons.map((button) => button.textContent)).toEqual(['Sanding', 'Completed', 'Recycled'])
     })
 
     it('shows terminal state alert for terminal states', async () => {
@@ -149,33 +159,33 @@ describe('PieceDetail', () => {
     it('shows no transition buttons for terminal states', async () => {
         const piece = makePiece({ current_state: makeState({ state: 'completed' }), history: [makeState({ state: 'completed' })] })
         await renderPieceDetail(piece)
-        expect(screen.queryByRole('button', { name: 'Wheel Thrown' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Throwing' })).not.toBeInTheDocument()
     })
 
     it('transition buttons disabled when there are unsaved changes', async () => {
         await renderPieceDetail()
         fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'Dirty notes' } })
-        const transitionBtn = screen.getByRole('button', { name: 'Wheel Thrown' })
+        const transitionBtn = screen.getByRole('button', { name: 'Throwing' })
         expect(transitionBtn).toBeDisabled()
     })
 
     it('clicking transition button opens confirmation dialog', async () => {
         await renderPieceDetail()
-        fireEvent.click(screen.getByRole('button', { name: 'Wheel Thrown' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Throwing' }))
         expect(screen.getByText(/Confirm State Transition/i)).toBeInTheDocument()
     })
 
     it('confirmation dialog shows from/to states', async () => {
         await renderPieceDetail()
-        fireEvent.click(screen.getByRole('button', { name: 'Wheel Thrown' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Throwing' }))
         // The dialog body contains both state names (human-readable)
-        expect(screen.getAllByText(/Designed/).length).toBeGreaterThan(0)
-        expect(screen.getAllByText(/Wheel Thrown/).length).toBeGreaterThan(0)
+        expect(screen.getAllByText(/Designing/).length).toBeGreaterThan(0)
+        expect(screen.getAllByText(/Throwing/).length).toBeGreaterThan(0)
     })
 
     it('cancelling confirmation closes dialog', async () => {
         await renderPieceDetail()
-        fireEvent.click(screen.getByRole('button', { name: 'Wheel Thrown' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Throwing' }))
         fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
         await waitFor(() =>
             expect(screen.queryByText(/Confirm State Transition/i)).not.toBeInTheDocument()
@@ -187,7 +197,7 @@ describe('PieceDetail', () => {
         vi.mocked(api.addPieceState).mockResolvedValue(updated)
         const onPieceUpdated = vi.fn()
         await renderPieceDetail(makePiece(), onPieceUpdated)
-        fireEvent.click(screen.getByRole('button', { name: 'Wheel Thrown' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Throwing' }))
         await waitFor(() => expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument())
         fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
         await waitFor(() => expect(api.addPieceState).toHaveBeenCalledWith('piece-id-1', { state: 'wheel_thrown' }))
@@ -213,7 +223,7 @@ describe('PieceDetail', () => {
         })
         await renderPieceDetail(piece)
         fireEvent.click(screen.getByRole('button', { name: /show history/i }))
-        expect(screen.getByText('Designed')).toBeInTheDocument()
+        expect(screen.getByText('Designing')).toBeInTheDocument()
     })
 
     it('no history panel when piece has only one state', async () => {
@@ -417,7 +427,6 @@ describe('PieceDetail', () => {
                 id: 'sale',
                 name: 'For Sale',
                 color: '#4FC3F7',
-                isPublic: false,
             })
 
             await renderPieceDetail()

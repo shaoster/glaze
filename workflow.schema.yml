@@ -179,7 +179,7 @@ $defs:
 
   state:
     type: object
-    required: [id, visible]
+    required: [id, visible, friendly_name, description]
     additionalProperties: false
     properties:
       id:
@@ -189,6 +189,18 @@ $defs:
       visible:
         type: boolean
         description: Whether this state is shown in the default UI.
+      friendly_name:
+        type: string
+        description: |
+          Human-friendly label for this state, used by clients when displaying
+          workflow state names. This is required so every visible state label is
+          authored explicitly in workflow.yml rather than synthesized from the ID.
+      description:
+        type: string
+        description: |
+          Required short description of the state's current meaning, written for
+          humans. Clients may use this text for tooltips, helper copy, or other
+          contextual explanations of the workflow step.
       terminal:
         type: boolean
         description: If true, no outgoing transitions are allowed.

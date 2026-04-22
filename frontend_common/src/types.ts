@@ -1,7 +1,15 @@
 import type { components } from './generated-types'
 import workflow from '../../workflow.yml'
+export { formatState, getStateDescription, getStateMetadata, isTerminalState } from './workflow'
 
-type WorkflowState = { id: string; visible: boolean; successors?: string[]; terminal?: boolean }
+type WorkflowState = {
+    id: string
+    visible: boolean
+    friendly_name: string
+    description: string
+    successors?: string[]
+    terminal?: boolean
+}
 
 // Runtime constants derived from workflow.json.
 // STATES preserves lifecycle order; SUCCESSORS encodes the transition graph.
@@ -78,10 +86,4 @@ export type GlazeCombinationImagePiece = {
 export type GlazeCombinationImageEntry = {
     glaze_combination: GlazeCombinationEntry
     pieces: GlazeCombinationImagePiece[]
-}
-
-// Convert a snake_case state id to a human-readable label.
-// e.g. "wheel_thrown" → "Wheel Thrown", "designed" → "Designed"
-export function formatState(state: string): string {
-    return state.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
 }

@@ -41,6 +41,8 @@ type FieldDefinition = InlineFieldDef | StateRefFieldDef | GlobalRefFieldDef
 interface WorkflowStateDefinition {
     id: string
     visible: boolean
+    friendly_name: string
+    description: string
     terminal?: boolean
     successors?: string[]
     fields?: Record<string, FieldDefinition>
@@ -75,6 +77,13 @@ const STATE_MAP = new Map<string, WorkflowStateDefinition>(
 )
 const GLOBALS_MAP = workflowDef.globals ?? {}
 
+function toTitleWords(value: string): string {
+    return value
+        .split('_')
+        .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ''))
+        .join(' ')
+}
+
 export type ResolvedAdditionalField = {
     name: string
     type: FieldType
@@ -86,6 +95,13 @@ export type ResolvedAdditionalField = {
     canCreate?: boolean
     globalName?: string
     globalField?: string
+}
+
+export interface WorkflowStateMetadata {
+    id: string
+    friendlyName: string
+    description: string
+    isTerminal: boolean
 }
 
 /**
@@ -248,10 +264,37 @@ export function getAdditionalFieldDefinitions(stateId: string): ResolvedAddition
  * additional field names are shown in the UI.
  */
 export function formatWorkflowFieldLabel(fieldName: string): string {
-    return fieldName
-        .split('_')
-        .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ''))
-        .join(' ')
+    return toTitleWords(fieldName)
+}
+
+/**
+ * Converts a state ID into the shared display label used throughout the UI.
+ * State labels are required in workflow.yml; this helper intentionally does not
+ * synthesize a fallback label from the state ID.
+ */
+export function formatState(stateId: string): string {
+    return STATE_MAP.get(stateId)?.friendly_name ?? ''
+}
+
+export function getStateDescription(stateId: string): string {
+    return STATE_MAP.get(stateId)?.description ?? ''
+}
+
+export function isTerminalState(stateId: string): boolean {
+    return !!STATE_MAP.get(stateId)?.terminal
+}
+
+export function getStateMetadata(stateId: string): WorkflowStateMetadata | null {
+    const state = STATE_MAP.get(stateId)
+    if (!state) {
+        return null
+    }
+    return {
+        id: state.id,
+        friendlyName: state.friendly_name,
+        description: state.description,
+        isTerminal: !!state.terminal,
+    }
 }
 
 function isStateRefField(def: FieldDefinition): boolean {

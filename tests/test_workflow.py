@@ -106,6 +106,18 @@ def _all_inline_fields(workflow):
                 yield f"global '{global_name}'", field_name, field_def
 
 
+def _state(state_id, **overrides):
+    """Build a minimal valid state fixture for schema tests."""
+    state = {
+        "id": state_id,
+        "visible": True,
+        "friendly_name": state_id.title(),
+        "description": f"{state_id} description",
+    }
+    state.update(overrides)
+    return state
+
+
 # ---------------------------------------------------------------------------
 # Schema validation
 # ---------------------------------------------------------------------------
@@ -116,7 +128,7 @@ class TestSchemaValidation:
         jsonschema.validate(instance=workflow, schema=schema)
 
     def test_missing_version_fails(self, schema):
-        bad = {"states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}]}
+        bad = {"states": [_state("a"), _state("b", terminal=True)]}
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
 
@@ -126,14 +138,14 @@ class TestSchemaValidation:
             jsonschema.validate(instance=bad, schema=schema)
 
     def test_invalid_version_format_fails(self, schema):
-        bad = {"version": "v1", "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}]}
+        bad = {"version": "v1", "states": [_state("a"), _state("b", terminal=True)]}
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
 
     def test_invalid_state_id_format_fails(self, schema):
         bad = {
             "version": "1.0.0",
-            "states": [{"id": "Bad-ID", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+            "states": [_state("Bad-ID"), _state("b", terminal=True)],
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
@@ -142,22 +154,44 @@ class TestSchemaValidation:
         bad = {
             "version": "1.0.0",
             "states": [
-                {"id": "a", "visible": True, "successors": ["b", "b"]},
-                {"id": "b", "visible": True, "terminal": True},
+                _state("a", successors=["b", "b"]),
+                _state("b", terminal=True),
             ],
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
 
     def test_extra_top_level_key_fails(self, schema):
-        bad = {"version": "1.0.0", "states": [{"id": "a", "visible": True}], "extra": True}
+        bad = {"version": "1.0.0", "states": [_state("a")], "extra": True}
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
 
     def test_extra_state_key_fails(self, schema):
         bad = {
             "version": "1.0.0",
-            "states": [{"id": "a", "visible": True, "unknown_field": "x"}],
+            "states": [_state("a", unknown_field="x")],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
+    def test_missing_friendly_name_fails(self, schema):
+        bad = {
+            "version": "1.0.0",
+            "states": [
+                {"id": "a", "visible": True, "description": "desc", "successors": ["b"]},
+                _state("b", terminal=True),
+            ],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
+    def test_missing_description_fails(self, schema):
+        bad = {
+            "version": "1.0.0",
+            "states": [
+                {"id": "a", "visible": True, "friendly_name": "A", "successors": ["b"]},
+                _state("b", terminal=True),
+            ],
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
@@ -176,8 +210,8 @@ class TestSchemaValidation:
                 }
             },
             "states": [
-                {"id": "a", "visible": True, "successors": ["b"]},
-                {"id": "b", "visible": True, "terminal": True},
+                _state("a", successors=["b"]),
+                _state("b", terminal=True),
             ],
         }
         jsonschema.validate(instance=valid, schema=schema)
@@ -193,8 +227,8 @@ class TestSchemaValidation:
                 }
             },
             "states": [
-                {"id": "a", "visible": True, "successors": ["b"]},
-                {"id": "b", "visible": True, "terminal": True},
+                _state("a", successors=["b"]),
+                _state("b", terminal=True),
             ],
         }
         with pytest.raises(jsonschema.ValidationError):
@@ -212,8 +246,8 @@ class TestSchemaValidation:
                 }
             },
             "states": [
-                {"id": "a", "visible": True, "successors": ["b"]},
-                {"id": "b", "visible": True, "terminal": True},
+                _state("a", successors=["b"]),
+                _state("b", terminal=True),
             ],
         }
         jsonschema.validate(instance=valid, schema=schema)
@@ -230,8 +264,8 @@ class TestSchemaValidation:
                 }
             },
             "states": [
-                {"id": "a", "visible": True, "successors": ["b"]},
-                {"id": "b", "visible": True, "terminal": True},
+                _state("a", successors=["b"]),
+                _state("b", terminal=True),
             ],
         }
         jsonschema.validate(instance=valid, schema=schema)
@@ -248,14 +282,13 @@ class TestSchemaValidation:
             },
             "states": [
                 {
-                    "id": "a",
-                    "visible": True,
+                    **_state("a"),
                     "successors": ["b"],
                     "fields": {
                         "kiln": {"$ref": "@location.name"},
                     },
                 },
-                {"id": "b", "visible": True, "terminal": True},
+                _state("b", terminal=True),
             ],
         }
         jsonschema.validate(instance=valid, schema=schema)
@@ -272,14 +305,13 @@ class TestSchemaValidation:
             },
             "states": [
                 {
-                    "id": "a",
-                    "visible": True,
+                    **_state("a"),
                     "successors": ["b"],
                     "fields": {
                         "kiln": {"$ref": "@location.name", "can_create": True},
                     },
                 },
-                {"id": "b", "visible": True, "terminal": True},
+                _state("b", terminal=True),
             ],
         }
         jsonschema.validate(instance=valid, schema=schema)
@@ -290,22 +322,20 @@ class TestSchemaValidation:
             "version": "1.0.0",
             "states": [
                 {
-                    "id": "a",
-                    "visible": True,
+                    **_state("a"),
                     "successors": ["b"],
                     "fields": {
                         "x": {"type": "number"},
                     },
                 },
                 {
-                    "id": "b",
-                    "visible": True,
+                    **_state("b"),
                     "successors": ["c"],
                     "fields": {
                         "y": {"$ref": "a.x", "can_create": True},
                     },
                 },
-                {"id": "c", "visible": True, "terminal": True},
+                _state("c", terminal=True),
             ],
         }
         with pytest.raises(jsonschema.ValidationError):
@@ -317,14 +347,13 @@ class TestSchemaValidation:
             "version": "1.0.0",
             "states": [
                 {
-                    "id": "a",
-                    "visible": True,
+                    **_state("a"),
                     "successors": ["b"],
                     "fields": {
                         "x": {"type": "number", "can_create": True},
                     },
                 },
-                {"id": "b", "visible": True, "terminal": True},
+                _state("b", terminal=True),
             ],
         }
         with pytest.raises(jsonschema.ValidationError):
@@ -336,12 +365,11 @@ class TestSchemaValidation:
             "version": "1.0.0",
             "states": [
                 {
-                    "id": "a",
-                    "visible": True,
+                    **_state("a"),
                     "successors": ["b"],
                     "fields": {"x": {"$ref": "not-valid"}},
                 },
-                {"id": "b", "visible": True, "terminal": True},
+                _state("b", terminal=True),
             ],
         }
         with pytest.raises(jsonschema.ValidationError):
@@ -351,7 +379,7 @@ class TestSchemaValidation:
         bad = {
             "version": "1.0.0",
             "globals": {"location": {"fields": {"name": {"type": "string"}}}},
-            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+            "states": [_state("a"), _state("b", terminal=True)],
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
@@ -360,7 +388,7 @@ class TestSchemaValidation:
         bad = {
             "version": "1.0.0",
             "globals": {"location": {"model": "Location", "fields": {}}},
-            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+            "states": [_state("a"), _state("b", terminal=True)],
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
@@ -382,7 +410,7 @@ class TestSchemaValidation:
                     },
                 },
             },
-            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+            "states": [_state("a"), _state("b", terminal=True)],
         }
         jsonschema.validate(instance=valid, schema=schema)
 
@@ -399,7 +427,7 @@ class TestSchemaValidation:
                     },
                 },
             },
-            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+            "states": [_state("a"), _state("b", terminal=True)],
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
@@ -417,7 +445,7 @@ class TestSchemaValidation:
                     },
                 },
             },
-            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+            "states": [_state("a"), _state("b", terminal=True)],
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
@@ -452,7 +480,7 @@ class TestSchemaValidation:
                     },
                 },
             },
-            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+            "states": [_state("a"), _state("b", terminal=True)],
         }
         jsonschema.validate(instance=valid, schema=schema)
 
@@ -469,7 +497,7 @@ class TestSchemaValidation:
                     },
                 },
             },
-            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+            "states": [_state("a"), _state("b", terminal=True)],
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
@@ -492,7 +520,7 @@ class TestSchemaValidation:
                     },
                 },
             },
-            "states": [{"id": "a", "visible": True}, {"id": "b", "visible": True, "terminal": True}],
+            "states": [_state("a"), _state("b", terminal=True)],
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)

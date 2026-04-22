@@ -17,8 +17,9 @@ import {
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import type { PieceSummary, TagEntry } from '@common/types'
-import { SUCCESSORS } from '@common/types'
+import { formatState, getStateDescription, isTerminalState, SUCCESSORS } from '@common/types'
 import CloudinaryImage from './CloudinaryImage'
+import StateChip from './StateChip'
 import TagAutocomplete from './TagAutocomplete'
 import TagChipList from './TagChipList'
 
@@ -75,7 +76,13 @@ const PieceListItem = (props: PieceListItemProps) => {
         </Link>
       </TableCell>
       <TableCell sx={{ color: 'text.primary' }}>
-        {piece.current_state.state}
+        <StateChip
+          state={piece.current_state.state}
+          label={formatState(piece.current_state.state)}
+          description={getStateDescription(piece.current_state.state)}
+          variant="current"
+          isTerminal={isTerminalState(piece.current_state.state)}
+        />
       </TableCell>
       <TableCell sx={{ color: 'text.primary' }}>
         <TagChipList tags={piece.tags ?? []} />

@@ -32,10 +32,10 @@ The source of truth for piece states is [`workflow.yml`](../../workflow.yml) at 
 
 **`globals` section:** The optional top-level `globals` map registers named domain types backed by Django models. Each entry declares the model class name (PascalCase, verified against `api/models.py` by tests) and a subset of its fields exposed to the field DSL. `api/models.py` remains the authoritative source of truth — `globals` is a DSL-level view of those models, kept in sync by tests.
 
-**What belongs in `workflow.yml` vs. what does not:** `workflow.yml` is for domain structure and business rules that both backend and frontend must agree on: state IDs, transitions, field existence, requiredness, persistence shape, and domain constraints that affect validation or query behavior. It is not a home for presentation defaults, styling choices, or convenience UI metadata.
+**What belongs in `workflow.yml` vs. what does not:** `workflow.yml` is for domain structure and business rules that both backend and frontend must agree on: state IDs, required state `friendly_name` labels, required state descriptions, transitions, field existence, requiredness, persistence shape, and domain constraints that affect validation or query behavior. It is not a home for presentation defaults, styling choices, or convenience UI metadata.
 
-- **Belongs in `workflow.yml`:** lifecycle states, successor relationships, whether a field/global exists at all, whether it is required, whether a global is public/private/favoritable/taggable, and true domain constraints where the allowed values are part of the business model.
-- **Does not belong in `workflow.yml`:** default colors, color palettes, icon choices, display order chosen only for UX, wording tweaks for labels, component layout, and other presentation-layer defaults that the backend does not need in order to validate or persist the data.
+- **Belongs in `workflow.yml`:** lifecycle states, required `friendly_name` labels and descriptions for those states, successor relationships, whether a field/global exists at all, whether it is required, whether a global is public/private/favoritable/taggable, and true domain constraints where the allowed values are part of the business model.
+- **Does not belong in `workflow.yml`:** default colors, color palettes, icon choices, display order chosen only for UX, component layout, and other presentation-layer defaults that the backend does not need in order to validate or persist the data.
 - **Rule of thumb:** if changing the value should require a migration, backend validation change, API contract change, or data cleanup plan, it may belong in `workflow.yml`. If changing it should only affect how the UI looks or which default the user sees first, it belongs in frontend code instead.
 - **Example:** a `Tag` having a persisted `color` field can be valid domain data if users explicitly choose and save a color. But a built-in palette of suggested colors, or a default initial color shown in the create form, is presentation logic and should live in the web layer, not in `workflow.yml`.
 - **Capability pattern:** use `workflow.yml` to opt models into generic capabilities such as `favoritable: true` or `taggable: true`, not to encode one-off wiring details that generated backend/frontend code can infer.
@@ -90,23 +90,25 @@ Referential rules enforced by `TestAdditionalFieldsDSL`:
 
 **States** (in rough lifecycle order):
 
-| State | Description |
-|---|---|
-| `designed` | Piece conceived/designed — universal entry point |
-| `wheel_thrown` | Piece created on the wheel |
-| `handbuilt` | Piece hand-sculpted |
-| `trimmed` | Wheel-thrown piece trimmed |
-| `slip_applied` | Decorative slip added |
-| `carved` | Surface carved or decorated |
-| `submitted_to_bisque_fire` | Ready for initial firing |
-| `bisque_fired` | Initial bisque fire complete |
-| `waxed` | Wax resist applied before glazing |
-| `glazed` | Glaze applied |
-| `submitted_to_glaze_fire` | Ready for glaze firing |
-| `glaze_fired` | Glaze fire complete |
-| `sanded` | Final sanding/finishing |
-| `completed` | Terminal — finished piece |
-| `recycled` | Terminal — piece discarded or clay reclaimed |
+Each state in [`workflow.yml`](../../workflow.yml) must declare a `friendly_name` and a `description`. Clients use the authored label directly and do not derive a fallback from the snake_case state ID.
+
+| State | Friendly name | Description |
+|---|---|---|
+| `designed` | `Designing` | Piece conceived/designed — universal entry point |
+| `wheel_thrown` | `Throwing` | Piece created on the wheel |
+| `handbuilt` | `Handbuilding` | Piece hand-sculpted |
+| `trimmed` | `Decorating` | Wheel-thrown piece trimmed |
+| `slip_applied` | `Adding Slip` | Decorative slip added |
+| `carved` | `Carving` | Surface carved or decorated |
+| `submitted_to_bisque_fire` | `Queued → Bisque` | Ready for initial firing |
+| `bisque_fired` | `Planning → Glaze` | Initial bisque fire complete |
+| `waxed` | `Waxing` | Wax resist applied before glazing |
+| `glazed` | `Glazing` | Glaze applied |
+| `submitted_to_glaze_fire` | `Queued → Glaze` | Ready for glaze firing |
+| `glaze_fired` | `Touching Up` | Glaze fire complete |
+| `sanded` | `Sanding` | Final sanding/finishing |
+| `completed` | `Completed` | Terminal — finished piece |
+| `recycled` | `Recycled` | Terminal — piece discarded or clay reclaimed |
 
 **Rules:**
 - `designed` is the single entry point for all new pieces — `POST /api/pieces/` always creates a piece in the `designed` state.
@@ -307,6 +309,30 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 - [`WorkflowState.tsx`](../../web/src/components/WorkflowState.tsx) — edits the current `PieceState`: notes, location, additional fields, images (upload or URL), caption editing, lightbox launch
 - [`CloudinaryImage.tsx`](../../web/src/components/CloudinaryImage.tsx) — renders a `CaptionedImage` via `@cloudinary/url-gen` + `@cloudinary/react` when available; falls back to a plain `<img>`. Sizing context: `thumbnail`/`preview` (64×64 fill), `lightbox` (90vw×80vh fit).
 - [`ImageLightbox.tsx`](../../web/src/components/ImageLightbox.tsx) — full-screen modal image viewer with caption and keyboard/touch navigation
+- [`StateChip.tsx`](../../web/src/components/StateChip.tsx) — shared workflow-state token. Takes `variant: 'current' | 'past' | 'future'` plus `isTerminal` and optional interaction hooks so list/detail/timeline UIs stay in one visual family.
+
+**Visual design system — state chips and state flow:**
+- Treat workflow-state tokens as a dedicated UI language, not as interchangeable tag chips or generic MUI buttons. Tags represent user-authored metadata; state chips represent the pottery workflow itself and should stay visually distinct.
+- Keep state-chip color rules in frontend code, not in [`workflow.yml`](../../workflow.yml). The workflow file defines which states exist and which successors are valid; the web layer owns presentation decisions such as chip color, dot treatment, connector lines, hover fills, and emphasis.
+- The current state in [`PieceDetail.tsx`](../../web/src/components/PieceDetail.tsx) should read as the anchor of the flow: solid outline, lightly filled background, and a filled status dot on the left. It may be slightly larger than successor chips, but it should still feel related to them.
+- Valid successor states should render as actionable state chips, not CTA-style buttons. They should size to their content, use dotted or dashed outlines plus outlined dots by default, and become visually "promoted" on hover by filling the background, solidifying the outline, and filling the dot.
+- Hovering a valid successor should also temporarily de-emphasize the current state with a muted gray treatment. This creates a preview of "if you clicked this, the hovered successor would become the new current state."
+- Use semantic state colors consistently across the app. Current conventions in `PieceDetail` are:
+- `completed` → green
+- `recycled` → red
+- all other active workflow states → the shared warm clay accent (`oklch(0.66 0.17 35)`)
+- When the UI needs to show a branch from one current state to multiple valid successors, use an explicit connector treatment rather than text labels like "Current" or "Next". [`PieceDetail.tsx`](../../web/src/components/PieceDetail.tsx) currently uses a small SVG branch connector between the current-state chip and the vertical list of successors.
+- Past states are sealed historical records, not available actions. When rendered as chips in future history or timeline views, they should stay in the same visual family as state chips but with clearly reduced emphasis: read-only, no hover preview, no interactive affordance, and a lower-contrast or muted treatment that distinguishes them from both the current state and valid successors.
+- Do not restyle state chips to match tags, favorites, filter pills, or upload buttons for convenience. If a new screen needs workflow states, prefer extracting or extending a shared state-chip component rather than recreating an ad hoc variant.
+- If the state-flow styling changes in a meaningful way, update this section alongside the implementation so future agents do not reintroduce tag-like current states or button-like successor states by accident.
+
+**State-flow screenshots:**
+- There are currently no repo-hosted screenshots for this pattern.
+- When adding them, store them under a stable docs path such as `docs/images/state-flow/` and link them here with ordinary Markdown image links so the screenshots travel with the repository history.
+- Suggested captures:
+- `PieceDetail` showing one current state with multiple valid successors
+- `PieceDetail` showing a hovered valid successor and the muted current-state preview
+- a history or timeline view once past-state chips exist as a first-class pattern
 
 **Auth UI flow (`App.tsx`):**
 - On load, calls `fetchCurrentUser()` (`GET /api/auth/me/`).

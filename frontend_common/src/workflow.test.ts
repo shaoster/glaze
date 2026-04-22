@@ -57,11 +57,15 @@ vi.mock('../../workflow.yml', () => ({
             {
                 id: 'designed',
                 visible: true,
+                friendly_name: 'Designing',
+                description: 'Dreaming it up.',
                 successors: ['wheel_thrown', 'handbuilt'],
             },
             {
                 id: 'wheel_thrown',
                 visible: true,
+                friendly_name: 'Throwing',
+                description: 'Fresh off the wheel.',
                 successors: ['trimmed', 'recycled'],
                 fields: {
                     clay_weight_grams: {
@@ -77,6 +81,8 @@ vi.mock('../../workflow.yml', () => ({
             {
                 id: 'submitted_to_bisque_fire',
                 visible: true,
+                friendly_name: 'Queued → Bisque',
+                description: 'Waiting on the kiln...',
                 successors: ['bisque_fired', 'recycled'],
                 fields: {
                     kiln_location: {
@@ -88,6 +94,8 @@ vi.mock('../../workflow.yml', () => ({
             {
                 id: 'trimmed',
                 visible: true,
+                friendly_name: 'Decorating',
+                description: 'Ready for surface work.',
                 successors: ['submitted_to_bisque_fire', 'recycled'],
                 fields: {
                     trimmed_weight_grams: {
@@ -102,6 +110,8 @@ vi.mock('../../workflow.yml', () => ({
             {
                 id: 'bisque_fired',
                 visible: true,
+                friendly_name: 'Planning → Glaze',
+                description: 'Done with the first firing!',
                 successors: ['glazed', 'recycled'],
                 fields: {
                     kiln_temperature_c: {
@@ -116,6 +126,8 @@ vi.mock('../../workflow.yml', () => ({
             {
                 id: 'glaze_fired',
                 visible: true,
+                friendly_name: 'Touching Up',
+                description: 'Final cleanup stretch.',
                 successors: ['completed', 'recycled'],
                 fields: {
                     kiln_temperature_c: {
@@ -129,6 +141,8 @@ vi.mock('../../workflow.yml', () => ({
             {
                 id: 'recycled',
                 visible: true,
+                friendly_name: 'Recycled',
+                description: 'Oops! Next time.',
                 terminal: true,
             },
         ],
@@ -136,7 +150,9 @@ vi.mock('../../workflow.yml', () => ({
 }))
 
 import {
+    formatState,
     formatWorkflowFieldLabel,
+    getStateDescription,
     getAdditionalFieldDefinitions,
     getFilterableFields,
     getGlobalComposeFrom,
@@ -152,6 +168,22 @@ describe('formatWorkflowFieldLabel', () => {
 
     it('converts a multi-word snake_case name to Title Case', () => {
         expect(formatWorkflowFieldLabel('clay_weight_grams')).toBe('Clay Weight Grams')
+    })
+})
+
+describe('formatState', () => {
+    it('uses the workflow-authored friendly_name', () => {
+        expect(formatState('submitted_to_bisque_fire')).toBe('Queued → Bisque')
+    })
+
+    it('returns an empty string for an unknown state instead of synthesizing a fallback', () => {
+        expect(formatState('unknown_state')).toBe('')
+    })
+})
+
+describe('getStateDescription', () => {
+    it('returns the workflow-authored state description', () => {
+        expect(getStateDescription('bisque_fired')).toBe('Done with the first firing!')
     })
 })
 
