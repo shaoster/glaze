@@ -1,3 +1,4 @@
+import json
 import os
 import re
 
@@ -9,8 +10,11 @@ from django.contrib import admin
 from django.forms import widgets
 from django.http import HttpRequest
 from django.utils.html import format_html
+from import_export import fields, resources
+from import_export.admin import ExportMixin
 
 from .models import FiringTemperature, GlazeCombination, GlazeCombinationLayer, GlazeMethod, GlazeType, Piece, PieceState, UserProfile
+from .serializers import PieceStateSerializer
 from .workflow import get_image_fields_for_global_model, get_public_global_models
 
 
@@ -420,8 +424,109 @@ class PieceStateInline(admin.TabularInline):
         return False
 
 
+class PieceResource(resources.ModelResource):
+    current_state = fields.Field(column_name='current_state')
+    current_location = fields.Field(column_name='current_location')
+    state_count = fields.Field(column_name='state_count')
+    history = fields.Field(column_name='history')
+
+    class Meta:
+        model = Piece
+        fields = (
+            'id',
+            'user__email',
+            'user__username',
+            'name',
+            'current_state',
+            'current_location',
+            'state_count',
+            'history',
+            'created',
+            'fields_last_modified',
+            'thumbnail',
+            'workflow_version',
+        )
+        export_order = (
+            'id',
+            'user__email',
+            'user__username',
+            'name',
+            'current_state',
+            'current_location',
+            'state_count',
+            'history',
+            'created',
+            'fields_last_modified',
+            'thumbnail',
+            'workflow_version',
+        )
+
+    def dehydrate_current_state(self, obj: Piece) -> str:
+        current = obj.current_state
+        return current.state if current else ''
+
+    def dehydrate_current_location(self, obj: Piece) -> str:
+        return obj.current_location.name if obj.current_location_id and obj.current_location else ''
+
+    def dehydrate_state_count(self, obj: Piece) -> int:
+        return obj.states.count()
+
+    def dehydrate_history(self, obj: Piece) -> list[dict]:
+        history = obj.states.order_by('created')
+        # DRF returns ReturnList / ReturnDict wrappers here; convert them to
+        # plain Python containers so tablib's JSON/YAML exporters can emit them.
+        return json.loads(json.dumps(PieceStateSerializer(history, many=True).data))
+
+
+class PieceStateResource(resources.ModelResource):
+    piece_id = fields.Field(column_name='piece_id')
+    piece_name = fields.Field(column_name='piece_name')
+    piece_workflow_version = fields.Field(column_name='piece_workflow_version')
+
+    class Meta:
+        model = PieceState
+        fields = (
+            'id',
+            'piece_id',
+            'piece_name',
+            'piece_workflow_version',
+            'user__email',
+            'user__username',
+            'state',
+            'notes',
+            'created',
+            'last_modified',
+            'images',
+            'additional_fields',
+        )
+        export_order = (
+            'id',
+            'piece_id',
+            'piece_name',
+            'piece_workflow_version',
+            'user__email',
+            'user__username',
+            'state',
+            'notes',
+            'created',
+            'last_modified',
+            'images',
+            'additional_fields',
+        )
+
+    def dehydrate_piece_id(self, obj: PieceState) -> str:
+        return str(obj.piece_id)
+
+    def dehydrate_piece_name(self, obj: PieceState) -> str:
+        return obj.piece.name
+
+    def dehydrate_piece_workflow_version(self, obj: PieceState) -> str:
+        return obj.piece.workflow_version
+
+
 @admin.register(Piece)
-class PieceAdmin(admin.ModelAdmin):
+class PieceAdmin(ExportMixin, admin.ModelAdmin):
+    resource_classes = [PieceResource]
     list_display = ('name', 'user', 'get_current_state', 'created', 'fields_last_modified')
     readonly_fields = ('id', 'created', 'fields_last_modified')
     inlines = [PieceStateInline]
@@ -448,7 +553,8 @@ class PieceStateAdminForm(forms.ModelForm):
 
 
 @admin.register(PieceState)
-class PieceStateAdmin(admin.ModelAdmin):
+class PieceStateAdmin(ExportMixin, admin.ModelAdmin):
+    resource_classes = [PieceStateResource]
     form = PieceStateAdminForm
     list_display = ('piece', 'state', 'created', 'last_modified')
     readonly_fields = ('id', 'piece', 'created', 'last_modified')

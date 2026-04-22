@@ -158,6 +158,8 @@ gz_makemigrations()  { gz_manage makemigrations "$@"; }
 gz_shell()           { gz_manage shell "$@"; }
 gz_dbshell()         { gz_manage dbshell "$@"; }
 gz_showmigrations()  { gz_manage showmigrations "$@"; }
+gz_dump_public_library() { gz_manage dump_public_library "$@"; }
+gz_load_public_library() { gz_manage load_public_library "$@"; }
 
 gz_prod() {          # gz_prod <manage.py subcommand> [args…]
     local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
@@ -318,6 +320,8 @@ _GZ_SHORTCUTS=(
     "gz_shell          — Django shell"
     "gz_dbshell        — database shell"
     "gz_showmigrations — showmigrations"
+    "gz_dump_public_library — export public library fixture via dump_public_library"
+    "gz_load_public_library — import public library fixture via load_public_library"
     "gz_prod <cmd>     — run any manage.py subcommand on production (requires GLAZE_PROD_HOST in .env.local)"
     "gz_prod_shell     — Django shell on production"
     "gz_prod_dbshell   — database shell on production"

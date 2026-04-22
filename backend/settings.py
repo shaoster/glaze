@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'adminsortable2',
+    'import_export',
     'rest_framework',
     'corsheaders',
     'drf_spectacular',

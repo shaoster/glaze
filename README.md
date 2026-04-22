@@ -143,6 +143,8 @@ Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`
 | `gz_shell` | Django interactive shell |
 | `gz_dbshell` | Raw database shell (SQLite) |
 | `gz_showmigrations` | `manage.py showmigrations` |
+| `gz_dump_public_library` | `manage.py dump_public_library` |
+| `gz_load_public_library` | `manage.py load_public_library` |
 
 ### Testing
 
@@ -573,7 +575,7 @@ Once you have authored public library entries via the admin, you can export them
 **1. Export from your dev environment:**
 
 ```bash
-python manage.py dump_public_library
+gz_dump_public_library
 ```
 
 This writes `fixtures/public_library.json` — a portable snapshot of every public object across all `public: true` globals (currently Clay Bodies and Glaze Types). The `pk` and `user` fields are excluded so the file works across databases.
@@ -591,7 +593,7 @@ git commit -m "Update public library"
 When the PR merges, CI builds and pushes a new Docker image. On the next `docker compose up -d`, the container runs [`docker-entrypoint.sh`](docker-entrypoint.sh), which includes:
 
 ```bash
-python manage.py load_public_library --skip-if-missing
+gz_load_public_library --skip-if-missing
 ```
 
 `load_public_library` does an idempotent `update_or_create` for each record — running it multiple times is safe. The `--skip-if-missing` flag lets fresh deployments start cleanly before any fixture has been committed yet.
@@ -600,11 +602,11 @@ python manage.py load_public_library --skip-if-missing
 
 ```bash
 # Load from a non-default path:
-python manage.py load_public_library --fixture path/to/custom.json
+gz_load_public_library --fixture path/to/custom.json
 
 # Export to a non-default path:
-python manage.py dump_public_library --output path/to/custom.json
+gz_dump_public_library --output path/to/custom.json
 
 # Inspect the export without writing a file:
-python manage.py dump_public_library --output -
+gz_dump_public_library --output -
 ```
