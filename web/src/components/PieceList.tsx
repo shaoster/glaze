@@ -63,7 +63,7 @@ const PieceListItem = (props: PieceListItemProps) => {
                   cloudinary_public_id={piece.thumbnail?.cloudinary_public_id}
                   alt={piece.name}
                   context="thumbnail"
-                  style={{ objectFit: 'cover', borderRadius: 4 }}
+                  style={{ objectFit: 'cover', borderRadius: 4, marginTop: "10px"}}
                 />
       </TableCell>
       <TableCell sx={{ color: 'text.primary' }}>
@@ -195,7 +195,11 @@ const PieceList = (props: PieceListingProps) => {
         </Box>
       </Box>
       <TableContainer>
-        <Table sx={{ minWidth: 650 }} aria-label="simple table">
+        <Table sx={{
+          minWidth: 650,
+          mx: 1,
+          '& .MuiTableCell-root': { p: 0 },
+        }} aria-label="simple table" size="small">
           <TableHead>
             <TableRow>
               <TableCell sx={{ color: 'text.secondary' }}>Thumbnail</TableCell>

@@ -409,7 +409,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                 aria-label="State flow"
                 role="group"
                 sx={{
-                    mb: 1.5,
+                    mb: 2,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1.25,

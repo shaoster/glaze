@@ -5,7 +5,6 @@ import {
     Button,
     Chip,
     CircularProgress,
-    Divider,
     IconButton,
     List,
     ListItem,
@@ -400,7 +399,7 @@ export default function WorkflowState({
 
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, textAlign: 'left' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left' }}>
             {/* Notes */}
             <TextField
                 label="Notes"
@@ -610,7 +609,7 @@ export default function WorkflowState({
                     {saveError}
                 </Typography>
             )}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center'}}>
                 <Button
                     variant="contained"
                     color="primary"
@@ -627,12 +626,8 @@ export default function WorkflowState({
                     </Typography>
                 )}
             </Box>
-            <Divider sx={{ my: 0 }} />
             {/* Images */}
             <Box>
-                <Typography variant="subtitle1" sx={{ color: 'text.secondary', my: 0, mb: 1 }}>
-                    Images
-                </Typography>
                 {images.length > 0 && (
                     <List dense disablePadding>
                         {images.map((img, i) => (
@@ -704,7 +699,7 @@ export default function WorkflowState({
                         onClick={handleUploadWidgetClick}
                         disabled={savingImage || widgetLoading}
                         startIcon={savingImage ? <CircularProgress size={14} color="inherit" /> : undefined}
-                        sx={{ position: 'relative' }}
+                        sx={{ position: 'relative', mt: 1 }}
                     >
                         <Box sx={{ opacity: widgetLoading ? 0 : 1 }}>
                             {savingImage ? 'Saving…' : 'Upload Image'}
