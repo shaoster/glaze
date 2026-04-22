@@ -1,18 +1,22 @@
 import { useMemo, useState } from "react";
+import type { ReactNode } from 'react'
+import Autocomplete from "@mui/material/Autocomplete";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import LabelIcon from "@mui/icons-material/Label";
 import {
   Box,
+  Button,
   Card,
   CardActionArea,
   CardContent,
   CardHeader,
-  Checkbox,
-  FormControl,
+  Chip,
+  Collapse,
   Grid,
-  InputLabel,
-  ListItemText,
-  MenuItem,
-  Select,
-  type SelectChangeEvent,
+  Stack,
+  TextField,
+  Typography,
 } from "@mui/material";
 import type { PieceSummary, TagEntry } from '@common/types'
 import { formatState, getStateDescription, isTerminalState, SUCCESSORS } from '@common/types'
@@ -25,7 +29,23 @@ const DEFAULT_THUMBNAIL = '/thumbnails/question-mark.svg'
 
 type FilterCategory = 'wip' | 'completed' | 'discarded'
 
-const FILTER_OPTIONS: { value: FilterCategory; label: string }[] = [
+interface FilterOption {
+  value: FilterCategory
+  label: string
+}
+
+interface SelectorPanelProps {
+  title: string
+  expanded: boolean
+  count: number
+  emptyLabel: string
+  icon: ReactNode
+  onToggle: () => void
+  summary: ReactNode
+  children: ReactNode
+}
+
+const FILTER_OPTIONS: FilterOption[] = [
   { value: 'wip', label: 'Work in Progress' },
   { value: 'completed', label: 'Completed' },
   { value: 'discarded', label: 'Discarded' },
@@ -40,6 +60,86 @@ function matchesFilter(piece: PieceSummary, filter: FilterCategory): boolean {
   return false
 }
 
+function SelectorPanel({
+  title,
+  expanded,
+  count,
+  emptyLabel,
+  icon,
+  onToggle,
+  summary,
+  children,
+}: SelectorPanelProps) {
+  const compactSummary = count > 0 ? (
+    <Box sx={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>{summary}</Box>
+  ) : (
+    <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+      {emptyLabel}
+    </Typography>
+  )
+
+  return (
+    <Box
+      sx={{
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 2,
+        p: expanded ? 1.5 : 1,
+        backgroundColor: 'background.paper',
+      }}
+    >
+      <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          sx={{
+            minWidth: 0,
+            flex: 1,
+            overflow: 'hidden',
+          }}
+        >
+          {icon}
+          {count > 0 && <Chip label={count} size="small" color="primary" sx={{ flexShrink: 0 }} />}
+          {expanded ? (
+            <Stack spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
+              {count > 0 ? (
+                <Box sx={{ minWidth: 0 }}>{summary}</Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  {emptyLabel}
+                </Typography>
+              )}
+            </Stack>
+          ) : (
+            compactSummary
+          )}
+        </Stack>
+        <Button
+          size="small"
+          variant="text"
+          sx={{ flexShrink: 0, minWidth: 0, px: 1 }}
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-label={expanded ? `Hide ${title.toLowerCase()}` : `Show ${title.toLowerCase()}`}
+        >
+          <ExpandMoreIcon
+            sx={{
+              transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.2s ease',
+            }}
+          />
+        </Button>
+      </Stack>
+      <Collapse in={expanded} unmountOnExit>
+        <Box sx={{ pt: 1.5 }}>
+          {children}
+        </Box>
+      </Collapse>
+    </Box>
+  )
+}
+
 type PieceListItemProps = {
   piece: PieceSummary
 };
@@ -52,7 +152,7 @@ const PieceListItem = (props: PieceListItemProps) => {
     <Grid size={{xs: 6, sm: 4, md: 3, lg: 2}} sx={{ display: "flex", flexDirection: "column" }} role="row">
       <Card
         sx={{ cursor: 'pointer', padding: 0, margin: 0, height: '100%' }}
-        data-state={piece.current_state.state} 
+        data-state={piece.current_state.state}
       >
         <CardActionArea
           sx={{
@@ -66,7 +166,7 @@ const PieceListItem = (props: PieceListItemProps) => {
         >
           <CardHeader
             title={<h4 style={{ margin: 0 }}>{piece.name}</h4>}
-            avatar={<CloudinaryImage 
+            avatar={<CloudinaryImage
               url={piece.thumbnail?.url ?? DEFAULT_THUMBNAIL}
               cloudinary_public_id={piece.thumbnail?.cloudinary_public_id}
               context="thumbnail"
@@ -98,8 +198,13 @@ const PieceList = (props: PieceListingProps) => {
   const { pieces } = props;
   const [activeFilters, setActiveFilters] = useState<FilterCategory[]>([])
   const [activeTags, setActiveTags] = useState<TagEntry[]>([])
-  const filterDesktopColumns = activeFilters.length === 0 ? 2 : 4
-  const tagDesktopColumns = activeTags.length === 0 ? 2 : 4
+  const [filtersExpanded, setFiltersExpanded] = useState(false)
+  const [tagsExpanded, setTagsExpanded] = useState(false)
+
+  const activeFilterOptions = useMemo(
+    () => FILTER_OPTIONS.filter((option) => activeFilters.includes(option.value)),
+    [activeFilters]
+  )
 
   const availableTags = useMemo(() => {
     const deduped = new Map<string, TagEntry>()
@@ -121,62 +226,75 @@ const PieceList = (props: PieceListingProps) => {
     })
   }, [pieces, activeFilters, activeTags])
 
-  function handleFilterChange(event: SelectChangeEvent<FilterCategory[]>) {
-    setActiveFilters(event.target.value as FilterCategory[])
-  }
-
   return (
     <>
       <Box
         sx={{
           mb: 2,
           display: 'grid',
-          gap: 2,
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, minmax(0, 1fr))' },
+          gap: 1.5,
+          gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' },
           alignItems: 'start',
         }}
       >
-        <Box
-          data-testid="piece-list-filter-control"
-          data-desktop-columns={filterDesktopColumns}
-          sx={{
-            gridColumn: { xs: '1 / -1', sm: `span ${filterDesktopColumns}` },
-            minWidth: 0,
-          }}
-        >
-          <FormControl
-            size="small"
-            fullWidth
-          >
-            <InputLabel id="piece-filter-label">Filter</InputLabel>
-            <Select
-              labelId="piece-filter-label"
-              label="Filter"
-              multiple
-              value={activeFilters}
-              onChange={handleFilterChange}
-              renderValue={(selected) =>
-                selected
-                  .map((v) => FILTER_OPTIONS.find((o) => o.value === v)?.label ?? v)
-                  .join(', ')
-              }
-            >
-              {FILTER_OPTIONS.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  <Checkbox checked={activeFilters.includes(option.value)} />
-                  <ListItemText primary={option.label} />
-                </MenuItem>
+        <SelectorPanel
+          title="Filters"
+          expanded={filtersExpanded}
+          count={activeFilterOptions.length}
+          emptyLabel="No status filters applied."
+          icon={<FilterListIcon fontSize="small" color="action" />}
+          onToggle={() => setFiltersExpanded((prev) => !prev)}
+          summary={
+            <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+              {activeFilterOptions.map((option) => (
+                <Chip
+                  key={option.value}
+                  label={option.label}
+                  size="small"
+                  onDelete={() => setActiveFilters((prev) => prev.filter((value) => value !== option.value))}
+                />
               ))}
-            </Select>
-          </FormControl>
-        </Box>
-        <Box
-          data-testid="piece-list-tags-control"
-          data-desktop-columns={tagDesktopColumns}
-          sx={{
-            gridColumn: { xs: '1 / -1', sm: `span ${tagDesktopColumns}` },
-            minWidth: 0,
-          }}
+            </Stack>
+          }
+        >
+          <Autocomplete
+            multiple
+            disableCloseOnSelect
+            size="small"
+            options={FILTER_OPTIONS}
+            value={activeFilterOptions}
+            onChange={(_event, nextValue) => {
+              setActiveFilters(nextValue.map((option) => option.value))
+            }}
+            getOptionLabel={(option) => option.label}
+            isOptionEqualToValue={(option, selected) => option.value === selected.value}
+            renderTags={(selected, getTagProps) =>
+              selected.map((option, index) => (
+                <Chip
+                  {...getTagProps({ index })}
+                  key={option.value}
+                  label={option.label}
+                  size="small"
+                />
+              ))
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Filters"
+                fullWidth
+              />
+            )}
+          />
+        </SelectorPanel>
+        <SelectorPanel
+          title="Tags"
+          expanded={tagsExpanded}
+          count={activeTags.length}
+          emptyLabel="No tags selected."
+          icon={<LabelIcon fontSize="small" color="action" />}
+          onToggle={() => setTagsExpanded((prev) => !prev)}
+          summary={<TagChipList tags={activeTags} />}
         >
           <TagAutocomplete
             label="Tags"
@@ -185,7 +303,7 @@ const PieceList = (props: PieceListingProps) => {
             onChange={setActiveTags}
             sx={{ minWidth: 0 }}
           />
-        </Box>
+        </SelectorPanel>
       </Box>
       <Grid container spacing={1} alignItems="stretch" role="rowgroup">
         {filteredPieces.map((piece) => <PieceListItem key={piece.id} piece={piece} />)}
