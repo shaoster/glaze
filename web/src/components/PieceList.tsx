@@ -65,7 +65,7 @@ const PieceListItem = (props: PieceListItemProps) => {
           aria-label={piece.name}
         >
           <CardHeader
-            title={<h4>{piece.name}</h4>}
+            title={<h4 style={{ margin: 0 }}>{piece.name}</h4>}
             avatar={<CloudinaryImage 
               url={piece.thumbnail?.url ?? DEFAULT_THUMBNAIL}
               cloudinary_public_id={piece.thumbnail?.cloudinary_public_id}
