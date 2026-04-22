@@ -1,5 +1,7 @@
 # Glaze — Agent Guide
 
+`PotterDoc` is the external product/brand name. `glaze` remains the internal repository and project name for code, paths, and internal documentation unless a task explicitly changes those identifiers too.
+
 @docs/agents/glaze-domain.md
 @docs/agents/django-drf-python.md
 @docs/agents/typescript-react-vite.md

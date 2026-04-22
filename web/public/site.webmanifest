@@ -1,6 +1,6 @@
 {
-  "name": "Glaze",
-  "short_name": "Glaze",
+  "name": "PotterDoc",
+  "short_name": "PotterDoc",
   "description": "Track every pottery piece through your workflow.",
   "start_url": "/",
   "scope": "/",

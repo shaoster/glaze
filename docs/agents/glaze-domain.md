@@ -1,5 +1,9 @@
 # Glaze — Domain Logic
 
+## Branding
+
+`PotterDoc` is the external product name. `glaze` remains the internal repository/project name for code identifiers, paths, and domain documentation during the rebrand unless a task explicitly calls for renaming internals too.
+
 ## Language
 
 Use American English spelling throughout — in code, comments, documentation, and UI strings. For example: "behavior" not "behaviour", "initialize" not "initialise", "labeled" not "labelled", "analyze" not "analyse".

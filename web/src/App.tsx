@@ -140,9 +140,22 @@ function AuthLanding({
         }}
       >
           <Stack spacing={2}>
-            <Typography variant="h4" component="h1" sx={{ fontSize: { xs: '2rem', sm: '2.5rem' } }}>
-              Glaze
-            </Typography>
+            <Stack direction="row" spacing={1.25} alignItems="center">
+              <Box
+                component="img"
+                src="/favicon.svg"
+                alt="PotterDoc icon"
+                sx={{
+                  width: { xs: 32, sm: 36 },
+                  height: { xs: 32, sm: 36 },
+                  flexShrink: 0,
+                  display: 'block',
+                }}
+              />
+              <Typography variant="h4" component="h1" sx={{ fontSize: { xs: '2rem', sm: '2.5rem' }, lineHeight: 1.1 }}>
+                PotterDoc
+              </Typography>
+            </Stack>
             <Typography color="text.secondary">
               Track every pottery piece through your workflow.
             </Typography>
@@ -281,7 +294,18 @@ function AppShell({
           flexWrap: 'nowrap',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1}}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1}}>
+          <Box
+            component="img"
+            src="/favicon.svg"
+            alt="PotterDoc app icon"
+            sx={{
+              width: 22,
+              height: 22,
+              flexShrink: 0,
+              display: 'block',
+            }}
+          />
           <Typography variant="h6" component="p" color="text.primary" display="inline">
             PotterDoc
           </Typography>

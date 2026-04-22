@@ -81,7 +81,7 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Glaze API',
+    'TITLE': 'PotterDoc API',
     'DESCRIPTION': 'Pottery workflow tracking API',
     'VERSION': '0.0.1',
 }
