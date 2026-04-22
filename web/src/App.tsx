@@ -119,22 +119,40 @@ function AuthLanding({
   }
 
   return (
-    <>
-      <Container maxWidth="sm" sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-        <Paper sx={{ width: '100%', p: 4 }}>
+    <Container
+      maxWidth="sm"
+      sx={{
+        minHeight: '100dvh',
+        display: 'grid',
+        placeItems: 'center',
+        px: { xs: 2, sm: 3 },
+        py: {
+          xs: 'max(16px, env(safe-area-inset-top))',
+          sm: 3,
+        },
+      }}
+    >
+      <Paper
+        sx={{
+          width: '100%',
+          p: { xs: 2.5, sm: 4 },
+          borderRadius: { xs: 3, sm: 4 },
+        }}
+      >
           <Stack spacing={2}>
-            <Typography variant="h4" component="h1">
+            <Typography variant="h4" component="h1" sx={{ fontSize: { xs: '2rem', sm: '2.5rem' } }}>
               Glaze
             </Typography>
             <Typography color="text.secondary">
               Track every pottery piece through your workflow.
             </Typography>
 
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
               <Button
                 variant={mode === 'login' ? 'contained' : 'outlined'}
                 onClick={() => setMode('login')}
                 disabled={submitting}
+                fullWidth
               >
                 Log In
               </Button>
@@ -142,10 +160,11 @@ function AuthLanding({
                 variant={mode === 'register' ? 'contained' : 'outlined'}
                 onClick={() => setMode('register')}
                 disabled={submitting || !SIGN_UP_ENABLED}
+                fullWidth
               >
                 Sign Up
               </Button>
-            </Box>
+            </Stack>
             {!SIGN_UP_ENABLED && (
               <Typography variant="body2" color="text.secondary">
                 Sign up is temporarily disabled. Ask an admin to create your account.
@@ -198,7 +217,7 @@ function AuthLanding({
             {GOOGLE_CLIENT_ID && (
               <>
                 <Divider>or</Divider>
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', overflowX: 'auto' }}>
                   <GoogleLogin
                     theme="outline"
                     onSuccess={async ({ credential }) => {
@@ -220,9 +239,8 @@ function AuthLanding({
               </>
             )}
           </Stack>
-        </Paper>
-      </Container>
-    </>
+      </Paper>
+    </Container>
   )
 }
 
@@ -241,8 +259,28 @@ function AppShell({
   }, [currentUser])
 
   return (
-    <Container maxWidth="lg" sx={{ py: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0 }}>
+    <Container
+      maxWidth="lg"
+      sx={{
+        minHeight: '100dvh',
+        py: 2,
+        px: {
+          xs: 'max(16px, env(safe-area-inset-left))',
+          sm: 3,
+        },
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 1.5,
+          mb: 0,
+          flexDirection: 'row',
+          flexWrap: 'nowrap',
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1}}>
           <Typography variant="h6" component="p" color="text.primary" display="inline">
             PotterDoc
@@ -255,7 +293,7 @@ function AppShell({
           onClick={(e) => setMenuAnchor(e.currentTarget)}
           onDelete={(e) => setMenuAnchor(e.currentTarget)}
           deleteIcon={<ExpandMoreIcon />}
-          sx={{ cursor: 'pointer' }}
+          sx={{ cursor: 'pointer', flexShrink: 0 }}
         />
         <Menu
           anchorEl={menuAnchor}
@@ -335,7 +373,7 @@ export default function App() {
       <ThemeProvider theme={DARK_THEME}>
         <CssBaseline />
         {loading ? (
-          <Container maxWidth="sm" sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+          <Container maxWidth="sm" sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}>
             <CircularProgress />
           </Container>
         ) : currentUser ? (
