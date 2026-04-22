@@ -97,7 +97,7 @@ Each state in [`workflow.yml`](../../workflow.yml) must declare a `friendly_name
 | `designed` | `Designing` | Piece conceived/designed — universal entry point |
 | `wheel_thrown` | `Throwing` | Piece created on the wheel |
 | `handbuilt` | `Handbuilding` | Piece hand-sculpted |
-| `trimmed` | `Decorating` | Wheel-thrown piece trimmed |
+| `trimmed` | `Trimming` | Wheel-thrown piece trimmed |
 | `slip_applied` | `Adding Slip` | Decorative slip added |
 | `carved` | `Carving` | Surface carved or decorated |
 | `submitted_to_bisque_fire` | `Queued → Bisque` | Ready for initial firing |

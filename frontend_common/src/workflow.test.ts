@@ -94,7 +94,7 @@ vi.mock('../../workflow.yml', () => ({
             {
                 id: 'trimmed',
                 visible: true,
-                friendly_name: 'Decorating',
+                friendly_name: 'Trimming',
                 description: 'Ready for surface work.',
                 successors: ['submitted_to_bisque_fire', 'recycled'],
                 fields: {

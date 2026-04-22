@@ -253,7 +253,7 @@ states:
   - id: wheel_thrown
     visible: true
     friendly_name: Throwing
-    description: Fresh off the wheel and drying toward trimming.
+    description: The initial shaping on the wheel. Infinite possibilities ahead!
     successors:
       - recycled
       - trimmed
@@ -271,8 +271,8 @@ states:
 
   - id: trimmed
     visible: true
-    friendly_name: Decorating
-    description: Trimmed and ready for carving, slip, or a straight shot to bisque.
+    friendly_name: Trimming 
+    description: Getting that shape just right.
     successors:
       - recycled
       - slip_applied
@@ -289,7 +289,7 @@ states:
   - id: handbuilt
     visible: true
     friendly_name: Handbuilding
-    description: Built by hand and settling in before decoration or the bisque queue.
+    description: Building by hand for that uniquely organic feel. No wheel required!
     successors:
       - recycled
       - slip_applied
@@ -322,7 +322,7 @@ states:
   - id: submitted_to_bisque_fire
     visible: true
     friendly_name: "Queued → Bisque"
-    description: Waiting on the kiln...
+    description: Ready for the first firing. Just waiting on the kiln...
     successors:
       - recycled
       - bisque_fired
@@ -360,7 +360,7 @@ states:
   - id: glazed
     visible: true
     friendly_name: Glazing
-    description: Glaze is on and the glaze kiln is up next.
+    description: Applying glaze and getting ready for the final firing. The piece is really coming to life now!
     successors:
       - recycled
       - submitted_to_glaze_fire
@@ -373,7 +373,7 @@ states:
   - id: submitted_to_glaze_fire
     visible: true
     friendly_name: "Queued → Glaze"
-    description: Lined up for the glaze firing. Fingers crossed for kiln luck.
+    description: Lined up for the glaze firing. Time to pray to the kiln gods!
     successors:
       - recycled
       - glaze_fired
