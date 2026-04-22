@@ -16,6 +16,10 @@ export interface UseAsyncResult<T> extends AsyncState<T> {
     setData: Dispatch<SetStateAction<T | null>>
 }
 
+interface UseAsyncOptions {
+    enabled?: boolean
+}
+
 /**
  * Manages loading / error / data state for an async function.
  *
@@ -32,14 +36,20 @@ export interface UseAsyncResult<T> extends AsyncState<T> {
 export function useAsync<T>(
     asyncFn: () => Promise<T>,
     deps: DependencyList = [],
+    options: UseAsyncOptions = {},
 ): UseAsyncResult<T> {
+    const { enabled = true } = options
     const [state, setState] = useState<AsyncState<T>>({
         data: null,
-        loading: true,
+        loading: enabled,
         error: null,
     })
 
     useEffect(() => {
+        if (!enabled) {
+            setState({ data: null, loading: false, error: null })
+            return
+        }
         let cancelled = false
         setState({ data: null, loading: true, error: null })
         asyncFn()
@@ -58,7 +68,7 @@ export function useAsync<T>(
             cancelled = true
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, deps)
+    }, [enabled, ...deps])
 
     const setData = useCallback(
         (updater: SetStateAction<T | null>) => {

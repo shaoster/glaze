@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // Mock the module before importing App
@@ -94,8 +94,8 @@ describe('App auth flow', () => {
         const passwordInput = inputs[1] as HTMLInputElement
 
         if (emailInput && passwordInput) {
-            await userEvent.type(emailInput, 'potter@example.com')
-            await userEvent.type(passwordInput, 'password123')
+            fireEvent.change(emailInput, { target: { value: 'potter@example.com' } })
+            fireEvent.change(passwordInput, { target: { value: 'password123' } })
         }
 
         // Submit the form - find the submit button (inside the form)

@@ -15,6 +15,16 @@ describe('useAsync', () => {
             expect(result.current.data).toBeNull()
             expect(result.current.error).toBeNull()
         })
+
+        it('stays idle when disabled', () => {
+            const asyncFn = vi.fn(() => Promise.resolve('hello'))
+            const { result } = renderHook(() => useAsync(asyncFn, [], { enabled: false }))
+
+            expect(asyncFn).not.toHaveBeenCalled()
+            expect(result.current.loading).toBe(false)
+            expect(result.current.data).toBeNull()
+            expect(result.current.error).toBeNull()
+        })
     })
 
     describe('successful fetch', () => {

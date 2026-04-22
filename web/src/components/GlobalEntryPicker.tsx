@@ -138,6 +138,7 @@ export default function GlobalEntryPicker({ globalName, open, onClose, onSelect 
         },
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [open, filters, globalName],
+        { enabled: open },
     )
 
     const entries = entriesData ?? []

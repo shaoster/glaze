@@ -139,6 +139,7 @@ export default function GlobalFieldPicker({
     } = useAsync<GlobalEntry[]>(
         () => (optionsProp !== undefined ? Promise.resolve([]) : fetchGlobalEntries(globalName)),
         [globalName, optionsProp],
+        { enabled: optionsProp === undefined },
     )
 
     const fetchError = optionsProp !== undefined

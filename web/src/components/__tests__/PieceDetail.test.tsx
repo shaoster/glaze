@@ -94,7 +94,7 @@ describe('PieceDetail', () => {
         const onPieceUpdated = vi.fn()
         await renderPieceDetail(undefined, onPieceUpdated)
         const input = screen.getByLabelText('Current location')
-        await userEvent.type(input, 'Studio K')
+        fireEvent.change(input, { target: { value: 'Studio K' } })
         await waitFor(() =>
             expect(screen.getByRole('option', { name: 'Create "Studio K"' })).toBeInTheDocument()
         )
@@ -118,7 +118,7 @@ describe('PieceDetail', () => {
         const onPieceUpdated = vi.fn()
         await renderPieceDetail(undefined, onPieceUpdated)
         const input = screen.getByLabelText('Current location')
-        await userEvent.type(input, 'Studio 7')
+        fireEvent.change(input, { target: { value: 'Studio 7' } })
         await waitFor(() =>
             expect(screen.getByRole('option', { name: 'Studio 7' })).toBeInTheDocument()
         )
@@ -336,7 +336,7 @@ describe('PieceDetail', () => {
             await renderPieceDetail()
 
             await userEvent.click(screen.getByRole('button', { name: 'New' }))
-            await userEvent.type(screen.getByLabelText('Tag name'), 'gift')
+            fireEvent.change(screen.getByLabelText('Tag name'), { target: { value: 'gift' } })
             await userEvent.click(screen.getByRole('button', { name: 'Create' }))
 
             expect(api.createTagEntry).not.toHaveBeenCalled()

@@ -72,7 +72,7 @@ describe('NewPieceDialog', () => {
             vi.mocked(api.createGlobalEntry).mockResolvedValue({ id: 'new-id', name: 'Studio K', isPublic: false })
             render(<NewPieceDialog {...defaultProps} />)
             const locationInput = screen.getByLabelText('Location')
-            await userEvent.type(locationInput, 'Studio K')
+            fireEvent.change(locationInput, { target: { value: 'Studio K' } })
             await waitFor(() => expect(screen.getByRole('option', { name: 'Create "Studio K"' })).toBeInTheDocument())
             fireEvent.click(screen.getByRole('option', { name: 'Create "Studio K"' }))
             await waitFor(() =>
@@ -113,14 +113,18 @@ describe('NewPieceDialog', () => {
         })
 
         it('is enabled when name has a value', async () => {
-            render(<NewPieceDialog {...defaultProps} />)
-            await userEvent.type(screen.getByTestId('name-input'), 'My Bowl')
+            await act(async () => {
+                render(<NewPieceDialog {...defaultProps} />)
+            })
+            fireEvent.change(screen.getByTestId('name-input'), { target: { value: 'My Bowl' } })
             expect(screen.getByTestId('save-button')).not.toBeDisabled()
         })
 
         it('remains disabled if name is only whitespace', async () => {
-            render(<NewPieceDialog {...defaultProps} />)
-            await userEvent.type(screen.getByTestId('name-input'), '   ')
+            await act(async () => {
+                render(<NewPieceDialog {...defaultProps} />)
+            })
+            fireEvent.change(screen.getByTestId('name-input'), { target: { value: '   ' } })
             expect(screen.getByTestId('save-button')).toBeDisabled()
         })
     })
@@ -143,7 +147,7 @@ describe('NewPieceDialog', () => {
 
         it('shows discard confirmation when dialog is dirty and closed', async () => {
             render(<NewPieceDialog {...defaultProps} />)
-            await userEvent.type(screen.getByTestId('name-input'), 'Draft')
+            fireEvent.change(screen.getByTestId('name-input'), { target: { value: 'Draft' } })
             await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
             expect(screen.getByText('Discard new piece?')).toBeInTheDocument()
             expect(defaultProps.onClose).not.toHaveBeenCalled()
@@ -151,7 +155,7 @@ describe('NewPieceDialog', () => {
 
         it('keeps dialog open when user clicks Keep editing in confirmation', async () => {
             render(<NewPieceDialog {...defaultProps} />)
-            await userEvent.type(screen.getByTestId('name-input'), 'Draft')
+            fireEvent.change(screen.getByTestId('name-input'), { target: { value: 'Draft' } })
             await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
             await userEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
             expect(defaultProps.onClose).not.toHaveBeenCalled()
@@ -160,7 +164,7 @@ describe('NewPieceDialog', () => {
 
         it('calls onClose after confirming discard', async () => {
             render(<NewPieceDialog {...defaultProps} />)
-            await userEvent.type(screen.getByTestId('name-input'), 'Draft')
+            fireEvent.change(screen.getByTestId('name-input'), { target: { value: 'Draft' } })
             await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
             await userEvent.click(screen.getByTestId('discard-button'))
             expect(defaultProps.onClose).toHaveBeenCalledOnce()
@@ -173,8 +177,8 @@ describe('NewPieceDialog', () => {
             vi.mocked(api.createPiece).mockResolvedValue(piece)
 
             render(<NewPieceDialog {...defaultProps} />)
-            await userEvent.type(screen.getByTestId('name-input'), 'My Mug')
-            await userEvent.type(screen.getByTestId('notes-input'), 'Wide handle')
+            fireEvent.change(screen.getByTestId('name-input'), { target: { value: 'My Mug' } })
+            fireEvent.change(screen.getByTestId('notes-input'), { target: { value: 'Wide handle' } })
             await userEvent.click(screen.getByTestId('save-button'))
 
             await waitFor(() => {
@@ -189,7 +193,7 @@ describe('NewPieceDialog', () => {
             vi.mocked(api.createPiece).mockResolvedValue(piece)
 
             render(<NewPieceDialog {...defaultProps} />)
-            await userEvent.type(screen.getByTestId('name-input'), 'Bowl')
+            fireEvent.change(screen.getByTestId('name-input'), { target: { value: 'Bowl' } })
             await userEvent.click(screen.getByTestId('save-button'))
 
             await waitFor(() => {
@@ -200,7 +204,7 @@ describe('NewPieceDialog', () => {
         it('trims the name before saving', async () => {
             vi.mocked(api.createPiece).mockResolvedValue(makePieceDetail())
             render(<NewPieceDialog {...defaultProps} />)
-            await userEvent.type(screen.getByTestId('name-input'), '  Trimmed  ')
+            fireEvent.change(screen.getByTestId('name-input'), { target: { value: '  Trimmed  ' } })
             await userEvent.click(screen.getByTestId('save-button'))
             await waitFor(() => {
                 expect(api.createPiece).toHaveBeenCalledWith(
@@ -213,13 +217,13 @@ describe('NewPieceDialog', () => {
             vi.mocked(api.createPiece).mockResolvedValue(makePieceDetail())
             vi.mocked(api.fetchGlobalEntries).mockResolvedValue([{ id: '1', name: 'Studio 7', isPublic: false }])
             render(<NewPieceDialog {...defaultProps} />)
-            await userEvent.type(screen.getByLabelText('Location'), 'Studio 7')
+            fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Studio 7' } })
             await waitFor(() =>
                 expect(screen.getByRole('option', { name: 'Studio 7' })).toBeInTheDocument()
             )
             fireEvent.click(screen.getByRole('option', { name: 'Studio 7' }))
             await waitFor(() => expect(screen.getByLabelText('Location')).toHaveValue('Studio 7'))
-            await userEvent.type(screen.getByTestId('name-input'), 'Bowl')
+            fireEvent.change(screen.getByTestId('name-input'), { target: { value: 'Bowl' } })
             await userEvent.click(screen.getByTestId('save-button'))
             await waitFor(() => {
                 expect(api.createPiece).toHaveBeenCalledWith(
@@ -231,7 +235,7 @@ describe('NewPieceDialog', () => {
         it('sends selected curated thumbnail', async () => {
             vi.mocked(api.createPiece).mockResolvedValue(makePieceDetail())
             render(<NewPieceDialog {...defaultProps} />)
-            await userEvent.type(screen.getByTestId('name-input'), 'Bowl')
+            fireEvent.change(screen.getByTestId('name-input'), { target: { value: 'Bowl' } })
             const images = screen.getAllByRole('img')
             fireEvent.click(images[0])
             await userEvent.click(screen.getByTestId('save-button'))

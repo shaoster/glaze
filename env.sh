@@ -134,7 +134,7 @@ gz_setup() {
     # Node + web deps
     _gz_ensure_node
     echo "--- Installing web dependencies..."
-    (cd "$GLAZE_ROOT/web" && rtk npm install --silent && rtk npx playwright install chromium --with-deps)
+    (cd "$GLAZE_ROOT/web" && rtk npm install --silent)
 
     echo "=== Setup complete ==="
     echo "    Run 'gz_gentypes' to regenerate TypeScript types (requires the backend)."
