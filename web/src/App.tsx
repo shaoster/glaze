@@ -266,7 +266,6 @@ function AuthLanding({
                 <Button component={Link} to="/privacy-policy" variant="text" size="small" sx={{ minWidth: 0, px: 0.5 }}>
                   Privacy Policy
                 </Button>
-                .
               </Typography>
             </Stack>
           </Box>
