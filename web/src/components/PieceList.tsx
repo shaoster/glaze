@@ -1,21 +1,20 @@
 import { useMemo, useState } from "react";
 import {
   Box,
+  Card,
+  CardActionArea,
+  CardContent,
+  CardHeader,
   Checkbox,
   FormControl,
+  Grid,
   InputLabel,
   ListItemText,
   MenuItem,
   Select,
   type SelectChangeEvent,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
 } from "@mui/material";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { PieceSummary, TagEntry } from '@common/types'
 import { formatState, getStateDescription, isTerminalState, SUCCESSORS } from '@common/types'
 import CloudinaryImage from './CloudinaryImage'
@@ -48,52 +47,47 @@ type PieceListItemProps = {
 
 const PieceListItem = (props: PieceListItemProps) => {
   const { piece } = props;
-  const navigate = useNavigate()
   const detailPath = `/pieces/${piece.id}`
 
   return (
-    <TableRow
-      hover
-      onClick={() => navigate(detailPath)}
-      sx={{ cursor: 'pointer' }}
-    >
-      <TableCell>
-        <CloudinaryImage
-                  url={piece.thumbnail?.url ?? DEFAULT_THUMBNAIL}
-                  cloudinary_public_id={piece.thumbnail?.cloudinary_public_id}
-                  alt={piece.name}
-                  context="thumbnail"
-                  style={{ objectFit: 'cover', borderRadius: 4, marginTop: "10px"}}
-                />
-      </TableCell>
-      <TableCell sx={{ color: 'text.primary' }}>
-        <Link
-          to={detailPath}
-          onClick={(e) => e.stopPropagation()}
-          style={{ color: 'inherit', textDecoration: 'none' }}
+    <Grid size={{xs: 6, sm: 4, md: 3, lg: 2}} sx={{ display: "flex", flexDirection: "column" }} role="row">
+      <Card
+        sx={{ cursor: 'pointer', padding: 0, margin: 0, height: '100%' }}
+        data-state={piece.current_state.state} 
+      >
+        <CardActionArea
+          sx={{
+            transition: 'transform 0.15s ease-in-out',
+            padding: 1.5,
+            height: '100%',
+          }}
+          href={detailPath}
+          role="navigation"
+          aria-label={piece.name}
         >
-          {piece.name}
-        </Link>
-      </TableCell>
-      <TableCell sx={{ color: 'text.primary' }}>
-        <StateChip
-          state={piece.current_state.state}
-          label={formatState(piece.current_state.state)}
-          description={getStateDescription(piece.current_state.state)}
-          variant="current"
-          isTerminal={isTerminalState(piece.current_state.state)}
-        />
-      </TableCell>
-      <TableCell sx={{ color: 'text.primary' }}>
-        <TagChipList tags={piece.tags ?? []} />
-      </TableCell>
-      <TableCell sx={{ color: 'text.secondary' }}>
-        {piece.created.toLocaleDateString()}
-      </TableCell>
-      <TableCell sx={{ color: 'text.secondary' }}>
-        {piece.last_modified.toLocaleDateString()}
-      </TableCell>
-    </TableRow>
+          <CardHeader
+            title={<h4>{piece.name}</h4>}
+            avatar={<CloudinaryImage 
+              url={piece.thumbnail?.url ?? DEFAULT_THUMBNAIL}
+              cloudinary_public_id={piece.thumbnail?.cloudinary_public_id}
+              context="thumbnail"
+              style={{borderRadius:4, margin: 0}}
+            />}
+            sx={{ padding: 0, pb: 1 }}
+          />
+          <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'start', padding: 0, pb: 1 }}>
+            <StateChip
+              state={piece.current_state.state}
+              label={formatState(piece.current_state.state)}
+              description={getStateDescription(piece.current_state.state)}
+              variant="current"
+              isTerminal={isTerminalState(piece.current_state.state)}
+            />
+            <TagChipList tags={piece.tags ?? []} />
+          </CardContent>
+        </CardActionArea>
+      </Card>
+    </Grid>
   );
 };
 
@@ -194,27 +188,9 @@ const PieceList = (props: PieceListingProps) => {
           />
         </Box>
       </Box>
-      <TableContainer>
-        <Table sx={{
-          minWidth: 650,
-          mx: 1,
-          '& .MuiTableCell-root': { p: 0 },
-        }} aria-label="simple table" size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ color: 'text.secondary' }}>Thumbnail</TableCell>
-              <TableCell sx={{ color: 'text.secondary' }}>Name</TableCell>
-              <TableCell sx={{ color: 'text.secondary' }}>State</TableCell>
-              <TableCell sx={{ color: 'text.secondary' }}>Tags</TableCell>
-              <TableCell sx={{ color: 'text.secondary' }}>Created</TableCell>
-              <TableCell sx={{ color: 'text.secondary' }}>Last Modified</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredPieces.map((piece) => <PieceListItem key={piece.id} piece={piece} />)}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Grid container spacing={1} alignItems="stretch" role="rowgroup">
+        {filteredPieces.map((piece) => <PieceListItem key={piece.id} piece={piece} />)}
+      </Grid>
     </>
   );
 };

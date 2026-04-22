@@ -219,6 +219,7 @@ export default function CloudinaryImage({
                 onLoad={handleLoad}
                 onError={handleError}
                 data-testid={testId}
+                role="img"
             />
         </Box>
     )

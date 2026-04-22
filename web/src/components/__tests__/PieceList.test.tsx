@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import PieceList from '../PieceList'
 import type { PieceSummary } from '@common/types'
+import { act } from 'react'
 
 vi.mock('../CloudinaryImage', () => ({
     default: ({ url, alt }: { url: string; alt?: string }) => <img src={url} alt={alt ?? ''} />,
@@ -32,24 +33,11 @@ function renderPieceList(pieces: PieceSummary[]) {
 }
 
 describe('PieceList', () => {
-    describe('table headers', () => {
-        it('renders all column headers', () => {
-            renderPieceList([])
-            expect(screen.getByRole('columnheader', { name: 'Thumbnail' })).toBeInTheDocument()
-            expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument()
-            expect(screen.getByRole('columnheader', { name: 'State' })).toBeInTheDocument()
-            expect(screen.getByRole('columnheader', { name: 'Tags' })).toBeInTheDocument()
-            expect(screen.getByRole('columnheader', { name: 'Created' })).toBeInTheDocument()
-            expect(screen.getByRole('columnheader', { name: 'Last Modified' })).toBeInTheDocument()
-        })
-    })
-
     describe('with no pieces', () => {
-        it('renders an empty table body', () => {
+        it('renders an empty grid', () => {
             renderPieceList([])
-            const tbody = document.querySelector('tbody')!
-            expect(tbody).toBeInTheDocument()
-            expect(tbody.children).toHaveLength(0)
+            const container = screen.getByRole('rowgroup')!
+            expect(container.children).toHaveLength(0)
         })
     })
 
@@ -66,26 +54,14 @@ describe('PieceList', () => {
 
         it('renders the thumbnail image with correct src', () => {
             renderPieceList([makePiece()])
-            const imgs = screen.getAllByRole('img')
+            const imgs = screen.getAllByRole('presentation')
             expect(imgs.some((img) => img.getAttribute('src') === 'https://example.com/bowl.jpg')).toBe(true)
         })
 
-        it('renders formatted created date', () => {
-            const piece = makePiece({ created: new Date('2024-01-15T10:00:00Z') })
-            renderPieceList([piece])
-            expect(screen.getByText(piece.created.toLocaleDateString())).toBeInTheDocument()
-        })
-
-        it('renders formatted last_modified date', () => {
-            const piece = makePiece({ last_modified: new Date('2024-02-20T12:00:00Z') })
-            renderPieceList([piece])
-            expect(screen.getByText(piece.last_modified.toLocaleDateString())).toBeInTheDocument()
-        })
-
-        it('name cell links to piece detail page', () => {
+        it('name cell links to piece detail page', async () => {
             renderPieceList([makePiece()])
-            const link = screen.getByRole('link', { name: 'Clay Bowl' })
-            expect(link).toHaveAttribute('href', '/pieces/aaaaaaaa-0000-0000-0000-000000000001')
+            const link = screen.getByRole('navigation', { name: 'Clay Bowl' })
+            expect(link.attributes.href.value).toBe('/pieces/aaaaaaaa-0000-0000-0000-000000000001')
         })
 
         it('renders tags as chips', () => {
@@ -123,10 +99,10 @@ describe('PieceList', () => {
             renderPieceList(pieces)
             const rows = screen.getAllByRole('row')
             // rows[0] is the header row
-            expect(within(rows[1]).getByText('Bowl')).toBeInTheDocument()
-            expect(within(rows[1]).getByText('Designing')).toBeInTheDocument()
-            expect(within(rows[2]).getByText('Mug')).toBeInTheDocument()
-            expect(within(rows[2]).getByText('Glazing')).toBeInTheDocument()
+            expect(within(rows[0]).getByText('Bowl')).toBeInTheDocument()
+            expect(within(rows[0]).getByText('Designing')).toBeInTheDocument()
+            expect(within(rows[1]).getByText('Mug')).toBeInTheDocument()
+            expect(within(rows[1]).getByText('Glazing')).toBeInTheDocument()
         })
     })
 
