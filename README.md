@@ -1,4 +1,6 @@
-# Glaze
+# PotterDoc
+
+PotterDoc is the external product name for this app. The repository, internal code identifiers, and some contributor documentation still use `glaze` as the internal project name during the transition.
 
 A pottery workflow tracking application. Log pieces and record state transitions as work moves through throwing, bisque firing, glazing, and finishing.
 
@@ -22,7 +24,7 @@ While the UI is similar at a surface level to other craft journaling application
 
 ## Authentication and Data Isolation
 
-Glaze now runs as a user-scoped application with session authentication.
+PotterDoc now runs as a user-scoped application with session authentication.
 
 - Auth is session/cookie-based (Django + DRF `SessionAuthentication`).
 - The web client fetches a CSRF cookie from `GET /api/auth/csrf/` before login/logout/register writes.
@@ -36,7 +38,7 @@ Glaze now runs as a user-scoped application with session authentication.
 
 ### Google OAuth Flow
 
-Glaze supports Google Sign-In using OAuth 2.0 with OpenID Connect. The flow works as follows:
+PotterDoc supports Google Sign-In using OAuth 2.0 with OpenID Connect. The flow works as follows:
 
 1. **Frontend**: The web app uses `@react-oauth/google` to display a Google Sign-In button when `VITE_GOOGLE_CLIENT_ID` is configured.
 2. **Google Authentication**: User clicks the button, Google handles authentication and returns a JWT credential.
@@ -231,7 +233,7 @@ export CLOUDINARY_UPLOAD_FOLDER=glaze   # optional; images are placed in this fo
 Cloudinary is optional — if the env vars are not set, the config endpoint returns 503 and the UI falls back to URL-paste mode.
 
 ## Google OAuth (web)
-Glaze supports Google Sign-In using OAuth 2.0 with OpenID Connect. To enable the Google sign-in button in the web UI:
+PotterDoc supports Google Sign-In using OAuth 2.0 with OpenID Connect. To enable the Google sign-in button in the web UI:
 
 1. **Create Google OAuth credentials:**
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
@@ -259,7 +261,7 @@ Glaze supports Google Sign-In using OAuth 2.0 with OpenID Connect. To enable the
 
 ## Deployment
 
-Glaze supports Docker Compose (self-hosted on any VPS/droplet).
+PotterDoc supports Docker Compose (self-hosted on any VPS/droplet).
 
 ### Docker Compose (self-hosted)
 

@@ -68,6 +68,8 @@ describe('App auth flow', () => {
             expect(screen.getByText('Track every pottery piece through your workflow.')).toBeInTheDocument()
         })
 
+        expect(screen.getByRole('img', { name: 'PotterDoc icon' })).toBeInTheDocument()
+
         // Verify we can find an input field (email input)
         const inputs = screen.getAllByRole('textbox')
         expect(inputs.length).toBeGreaterThan(0)
@@ -110,6 +112,7 @@ describe('App auth flow', () => {
             expect(screen.getByText('Piece List Content')).toBeInTheDocument()
         })
 
+        expect(screen.getByRole('img', { name: 'PotterDoc app icon' })).toBeInTheDocument()
         expect(screen.getByRole('tab', { name: 'Pieces' })).toHaveAttribute('aria-selected', 'true')
         expect(screen.getByRole('tab', { name: 'Analyze' })).toHaveAttribute('aria-selected', 'false')
     })
