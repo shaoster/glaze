@@ -61,7 +61,7 @@ describe('PieceList', () => {
 
         it('renders the current state', () => {
             renderPieceList([makePiece({ current_state: { state: 'bisque_fired' } })])
-            expect(screen.getByText('bisque_fired')).toBeInTheDocument()
+            expect(screen.getByText('Planning → Glaze')).toBeInTheDocument()
         })
 
         it('renders the thumbnail image with correct src', () => {
@@ -124,9 +124,9 @@ describe('PieceList', () => {
             const rows = screen.getAllByRole('row')
             // rows[0] is the header row
             expect(within(rows[1]).getByText('Bowl')).toBeInTheDocument()
-            expect(within(rows[1]).getByText('designed')).toBeInTheDocument()
+            expect(within(rows[1]).getByText('Designing')).toBeInTheDocument()
             expect(within(rows[2]).getByText('Mug')).toBeInTheDocument()
-            expect(within(rows[2]).getByText('glazed')).toBeInTheDocument()
+            expect(within(rows[2]).getByText('Glazing')).toBeInTheDocument()
         })
     })
 

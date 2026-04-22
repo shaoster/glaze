@@ -18,7 +18,7 @@ export default function PieceDetailPage() {
     <>
       <Box sx={{ mb: 2, textAlign: 'left' }}>
         <Button variant="text" onClick={() => navigate('/')} sx={{ px: 0 }}>
-          ← Back to Pottery Pieces
+          ← Back to Pieces
         </Button>
       </Box>
       {loading && (

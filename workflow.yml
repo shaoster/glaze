@@ -244,12 +244,16 @@ globals:
 states:
   - id: designed
     visible: true
+    friendly_name: Designing
+    description: Dreaming it up and deciding how this piece wants to begin.
     successors:
       - wheel_thrown
       - handbuilt
 
   - id: wheel_thrown
     visible: true
+    friendly_name: Throwing
+    description: The initial shaping on the wheel. Infinite possibilities ahead!
     successors:
       - recycled
       - trimmed
@@ -267,6 +271,8 @@ states:
 
   - id: trimmed
     visible: true
+    friendly_name: Trimming 
+    description: Getting that shape just right.
     successors:
       - recycled
       - slip_applied
@@ -282,6 +288,8 @@ states:
 
   - id: handbuilt
     visible: true
+    friendly_name: Handbuilding
+    description: Building by hand for that uniquely organic feel. No wheel required!
     successors:
       - recycled
       - slip_applied
@@ -295,6 +303,8 @@ states:
 
   - id: slip_applied
     visible: true
+    friendly_name: Adding Slip
+    description: Slip is going on for color, contrast, and future carving fun.
     successors:
       - recycled
       - carved
@@ -302,6 +312,8 @@ states:
 
   - id: carved
     visible: true
+    friendly_name: Carving
+    description: Carving time. A little more surface work and then off to bisque.
     successors:
       - recycled
       - slip_applied
@@ -309,6 +321,8 @@ states:
 
   - id: submitted_to_bisque_fire
     visible: true
+    friendly_name: "Queued → Bisque"
+    description: Ready for the first firing. Just waiting on the kiln...
     successors:
       - recycled
       - bisque_fired
@@ -320,6 +334,8 @@ states:
 
   - id: bisque_fired
     visible: true
+    friendly_name: "Planning → Glaze"
+    description: Done with the first firing! Glazing comes next...
     successors:
       - recycled
       - waxed
@@ -335,12 +351,16 @@ states:
 
   - id: waxed
     visible: true
+    friendly_name: Waxing
+    description: Wax resist is going on so the glaze behaves itself.
     successors:
       - recycled
       - glazed
 
   - id: glazed
     visible: true
+    friendly_name: Glazing
+    description: Applying glaze and getting ready for the final firing. The piece is really coming to life now!
     successors:
       - recycled
       - submitted_to_glaze_fire
@@ -352,6 +372,8 @@ states:
 
   - id: submitted_to_glaze_fire
     visible: true
+    friendly_name: "Queued → Glaze"
+    description: Lined up for the glaze firing. Time to pray to the kiln gods!
     successors:
       - recycled
       - glaze_fired
@@ -363,6 +385,8 @@ states:
 
   - id: glaze_fired
     visible: true
+    friendly_name: Touching Up
+    description: Out of the glaze kiln and into the final cleanup stretch.
     successors:
       - recycled
       - sanded
@@ -380,14 +404,20 @@ states:
 
   - id: sanded
     visible: true
+    friendly_name: Sanding
+    description: Almost there. Smoothing the last rough spots before calling it done.
     successors:
       - recycled
       - completed
 
   - id: completed
     visible: true
+    friendly_name: Completed
+    description: All done and ready to admire.
     terminal: true
 
   - id: recycled
     visible: true
+    friendly_name: Recycled
+    description: "Oops! Next time things will go better. :)"
     terminal: true
