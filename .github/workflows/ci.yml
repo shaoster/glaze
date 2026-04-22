@@ -17,8 +17,68 @@ on:
   pull_request:
 
 jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      fingerprint: ${{ steps.fingerprint.outputs.value }}
+      artifact_key: ${{ steps.fingerprint.outputs.artifact_key }}
+      skip_main: ${{ steps.lookup.outputs.skip_main }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - id: fingerprint
+        name: Compute CI fingerprint
+        shell: bash
+        run: |
+          tree="$(git rev-parse HEAD^{tree})"
+          ci="$(sha256sum .github/workflows/ci.yml | cut -d' ' -f1)"
+          pydev="$(sha256sum requirements-dev.txt | cut -d' ' -f1)"
+          py="$(sha256sum requirements.txt | cut -d' ' -f1)"
+          node="$(sha256sum web/package-lock.json | cut -d' ' -f1)"
+          value="${tree}-${ci}-${pydev}-${py}-${node}"
+          artifact_key="$(printf '%s' "$value" | sha256sum | cut -d' ' -f1)"
+
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+          echo "artifact_key=$artifact_key" >> "$GITHUB_OUTPUT"
+
+      - id: lookup
+        name: Check for prior successful PR validation
+        uses: actions/github-script@v8
+        env:
+          ARTIFACT_KEY: ${{ steps.fingerprint.outputs.artifact_key }}
+        with:
+          script: |
+            if (context.eventName !== 'push' || context.ref !== 'refs/heads/main') {
+              core.setOutput('skip_main', 'false');
+              return;
+            }
+
+            const artifactName = `ci-fingerprint-${process.env.ARTIFACT_KEY}`;
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
+              }
+            );
+
+            const match = artifacts.find(
+              artifact => artifact.name === artifactName && !artifact.expired
+            );
+
+            core.setOutput('skip_main', match ? 'true' : 'false');
+
   common:
     name: Common (workflow schema)
+    needs: preflight
+    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -36,6 +96,8 @@ jobs:
 
   backend:
     name: Backend (pytest)
+    needs: preflight
+    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -53,6 +115,8 @@ jobs:
 
   web:
     name: Web (vitest)
+    needs: preflight
+    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -74,6 +138,8 @@ jobs:
 
   web-build:
     name: Web (build)
+    needs: preflight
+    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -98,18 +164,28 @@ jobs:
 
       - name: Generate TypeScript types
         run: |
-          python manage.py runserver 8080 &
-          DJANGO_PID=$!
-          echo "Waiting for Django on :8080..."
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:8080/api/schema/ > /dev/null 2>&1 && break
-            sleep 1
-          done
-          cd web && npm run generate-types
-          kill "$DJANGO_PID"
-          wait "$DJANGO_PID" 2>/dev/null || true
+          schema_path="$(mktemp "${TMPDIR:-/tmp}/glaze-openapi.XXXXXX.json")"
+          python manage.py spectacular --format openapi-json --file "$schema_path"
+          cd web && GLAZE_SCHEMA_SOURCE="$schema_path" npm run generate-types
+          rm -f "$schema_path"
 
       - name: Build
         working-directory: web
         run: npm run build
 
+  record-fingerprint:
+    name: Record successful fingerprint
+    needs: [preflight, common, backend, web, web-build]
+    if: ${{ github.event_name == 'pull_request' && needs.common.result == 'success' && needs.backend.result == 'success' && needs.web.result == 'success' && needs.web-build.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write fingerprint marker
+        shell: bash
+        run: |
+          printf '%s\n' '${{ needs.preflight.outputs.fingerprint }}' > ci-fingerprint.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-fingerprint-${{ needs.preflight.outputs.artifact_key }}
+          path: ci-fingerprint.txt
+          retention-days: 30
