@@ -106,7 +106,6 @@ describe('App auth flow', () => {
 
         // Wait for the authenticated view to fully appear
         await waitFor(() => {
-            expect(screen.getByText('Pottery Pieces')).toBeInTheDocument()
             expect(screen.getByText('Pat Potter')).toBeInTheDocument()
             expect(screen.getByText('Piece List Content')).toBeInTheDocument()
         })
@@ -121,7 +120,7 @@ describe('App auth flow', () => {
         render(<App />)
 
         await waitFor(() => {
-            expect(screen.getByText('Pottery Pieces')).toBeInTheDocument()
+            expect(screen.getByText('+ New Piece')).toBeInTheDocument()
         })
 
         await userEvent.click(screen.getByRole('tab', { name: 'Analyze' }))
@@ -136,7 +135,7 @@ describe('App auth flow', () => {
         await userEvent.click(screen.getByRole('tab', { name: 'Pieces' }))
 
         await waitFor(() => {
-            expect(screen.getByText('Pottery Pieces')).toBeInTheDocument()
+            expect(screen.getByText('+ New Piece')).toBeInTheDocument()
             expect(window.location.pathname).toBe('/')
         })
     })
@@ -148,7 +147,7 @@ describe('App auth flow', () => {
         render(<App />)
 
         await waitFor(() => {
-            expect(screen.getByText('Pottery Pieces')).toBeInTheDocument()
+            expect(screen.getByText('+ New Piece')).toBeInTheDocument()
         })
 
         // Open the user menu and click log out
