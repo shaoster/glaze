@@ -56,13 +56,31 @@ export default function CreateTagDialog({
                             key={option}
                             onClick={() => onColorChange(option)}
                             variant={color === option ? 'contained' : 'outlined'}
+                            aria-label={`Select ${option} tag color`}
+                            aria-pressed={color === option}
+                            disableElevation
                             sx={{
                                 minWidth: 0,
-                                width: 36,
-                                height: 36,
+                                width: 40,
+                                height: 40,
                                 backgroundColor: option,
                                 borderColor: option,
                                 color: 'common.black',
+                                opacity: color === option ? 1 : 0.72,
+                                transform: color === option ? 'scale(1.08)' : 'none',
+                                boxShadow: (theme) =>
+                                    color === option
+                                        ? `0 0 0 2px ${theme.palette.background.paper}, 0 0 0 5px ${option}`
+                                        : 'none',
+                                transition: 'transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease',
+                                '&:hover': color === option
+                                    ? {
+                                        backgroundColor: option,
+                                        borderColor: option,
+                                        boxShadow: (theme) =>
+                                            `0 0 0 2px ${theme.palette.background.paper}, 0 0 0 5px ${option}`,
+                                    }
+                                    : undefined,
                             }}
                         >
                         </Button>

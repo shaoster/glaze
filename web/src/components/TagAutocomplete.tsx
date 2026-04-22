@@ -11,7 +11,6 @@ interface TagAutocompleteProps {
     value: TagEntry[]
     onChange: (value: TagEntry[]) => void
     disabled?: boolean
-    helperText?: string
     sx?: SxProps<Theme>
 }
 
@@ -21,7 +20,6 @@ export default function TagAutocomplete({
     value,
     onChange,
     disabled = false,
-    helperText,
     sx,
 }: TagAutocompleteProps) {
     return (
@@ -49,11 +47,23 @@ export default function TagAutocomplete({
                 <TextField
                     {...params}
                     label={label}
-                    helperText={helperText}
+                    fullWidth
                 />
             )}
             disabled={disabled}
-            sx={sx}
+            sx={[
+                {
+                    width: '100%',
+                    '& .MuiAutocomplete-inputRoot': {
+                        alignItems: 'flex-start',
+                        ...(value.length > 0 ? { paddingTop: '10px !important' } : {}),
+                    },
+                    '& .MuiAutocomplete-tag': {
+                        maxWidth: '100%',
+                    },
+                },
+                ...(Array.isArray(sx) ? sx : [sx]),
+            ]}
         />
     )
 }

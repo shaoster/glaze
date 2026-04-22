@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import axios from 'axios'
 import {
     Alert,
     Box,
@@ -11,11 +12,11 @@ import {
     DialogContentText,
     DialogTitle,
     Divider,
-    Grid,
     IconButton,
     List,
     ListItem,
     ListItemText,
+    Snackbar,
     TextField,
     Typography,
 } from '@mui/material'
@@ -32,6 +33,10 @@ import WorkflowState from './WorkflowState'
 import { pickDefaultTagColor } from './tagPalette'
 import TagAutocomplete from './TagAutocomplete'
 import CreateTagDialog from './CreateTagDialog'
+
+const DUPLICATE_TAG_ERROR = 'A tag with that name already exists. Choose the existing tag or enter a different name.'
+const TAG_ATTACH_SNACKBAR_ERROR = 'Failed to attach the selected tag. Please check your connection and try again.'
+const TAG_CREATE_ATTACH_ERROR = 'The tag was created, but it could not be attached to this piece. Please check your connection and try again.'
 
 type PieceDetailProps = {
     piece: PieceDetailType
@@ -57,6 +62,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     const [newTagColor, setNewTagColor] = useState(pickDefaultTagColor(piece.tags.length))
     const [tagSaving, setTagSaving] = useState(false)
     const [tagError, setTagError] = useState<string | null>(null)
+    const [tagAttachSnackbarOpen, setTagAttachSnackbarOpen] = useState(false)
     const nameInputRef = useRef<HTMLInputElement>(null)
     const currentState = piece.current_state
     const successors = SUCCESSORS[currentState.state] ?? []
@@ -156,15 +162,23 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
         }
     }
 
-    async function saveTags(nextTags: TagEntry[]) {
+    async function saveTags(nextTags: TagEntry[], errorMode: 'snackbar' | 'dialog' = 'snackbar') {
         setTagSaving(true)
-        setTagError(null)
+        if (errorMode === 'dialog') {
+            setTagError(null)
+        }
         try {
             const updated = await updatePiece(piece.id, { tags: nextTags.map((tag) => tag.id) })
             onPieceUpdated(updated)
+            return true
         } catch {
-            setTagError('Failed to save tags. Please try again.')
             setSelectedTags(piece.tags ?? [])
+            if (errorMode === 'dialog') {
+                setTagError(TAG_CREATE_ATTACH_ERROR)
+            } else {
+                setTagAttachSnackbarOpen(true)
+            }
+            return false
         } finally {
             setTagSaving(false)
         }
@@ -176,6 +190,11 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
             setTagError('Tag name cannot be empty.')
             return
         }
+        const normalizedName = trimmed.toLocaleLowerCase()
+        if (availableTags.some((tag) => tag.name.trim().toLocaleLowerCase() === normalizedName)) {
+            setTagError(DUPLICATE_TAG_ERROR)
+            return
+        }
         setTagSaving(true)
         setTagError(null)
         try {
@@ -184,11 +203,18 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
             setAvailableTags((prev) => [...prev, createdTag].sort((a, b) => a.name.localeCompare(b.name)))
             const nextTags = [...selectedTags, createdTag]
             setSelectedTags(nextTags)
-            await saveTags(nextTags)
+            const attached = await saveTags(nextTags, 'dialog')
+            if (!attached) {
+                return
+            }
             setTagDialogOpen(false)
             setNewTagName('')
             setNewTagColor(pickDefaultTagColor(trimmed.length))
-        } catch {
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response?.status === 400) {
+                setTagError(DUPLICATE_TAG_ERROR)
+                return
+            }
             setTagError('Failed to create tag. Please try again.')
         } finally {
             setTagSaving(false)
@@ -267,8 +293,15 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                     />
             </Box>
         </Box>
-        <Grid container alignItems="left" spacing={2} size={4} sx={{ mb: 2, alignItems: 'center' }}>
-          <Grid size={3}>
+        <Box
+            sx={{
+                mb: 2,
+                display: 'flex',
+                gap: 1,
+                flexWrap: 'wrap',
+                alignItems: { xs: 'flex-start', sm: 'center' },
+            }}
+        >
             <TagAutocomplete
                 label="Tags"
                 options={availableTags}
@@ -277,17 +310,28 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                     setSelectedTags(nextValue)
                     void saveTags(nextValue)
                 }}
-                helperText={tagError ?? ''}
                 disabled={tagSaving}
-                sx={{ minWidth: 260, maxWidth: 560}}
+                sx={{
+                    flex: '1 1 260px',
+                    minWidth: { xs: '100%', sm: 260 },
+                    maxWidth: '100%',
+                }}
             />
-          </Grid>
-          <Grid size={1}>
-            <Button variant="outlined" size="small" onClick={() => setTagDialogOpen(true)} disabled={tagSaving}>
-              +    
+            <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setTagDialogOpen(true)}
+                disabled={tagSaving}
+                sx={{
+                    flexShrink: 0,
+                    width: { xs: '100%', sm: 'auto' },
+                    minWidth: { sm: 88 },
+                    alignSelf: { xs: 'stretch', sm: 'center' },
+                }}
+            >
+              New
             </Button>
-          </Grid>
-        </Grid>
+        </Box>
         <Divider sx={{ mb: 3 }} />
 
             {/* Current state form */}
@@ -468,6 +512,15 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                 onNameChange={setNewTagName}
                 onColorChange={setNewTagColor}
                 onCreate={() => void createTag()}
+            />
+            <Snackbar
+                open={tagAttachSnackbarOpen}
+                autoHideDuration={4000}
+                onClose={(_event, reason) => {
+                    if (reason === 'clickaway') return
+                    setTagAttachSnackbarOpen(false)
+                }}
+                message={TAG_ATTACH_SNACKBAR_ERROR}
             />
         </Box>
     )

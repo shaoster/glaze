@@ -58,5 +58,6 @@ describe('CreateTagDialog', () => {
 
         expect(screen.getByLabelText('Tag name')).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Select #2A9D8F tag color' })).toHaveAttribute('aria-pressed', 'true')
     })
 })

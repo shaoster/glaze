@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import PieceDetail from '../PieceDetail'
@@ -307,6 +307,42 @@ describe('PieceDetail', () => {
                 expect(screen.queryByRole('textbox', { name: 'Piece name' })).not.toBeInTheDocument()
             )
             expect(api.updatePiece).not.toHaveBeenCalled()
+        })
+    })
+
+    describe('tag creation', () => {
+        it('shows a self-closing snackbar when selecting an existing tag fails to attach', async () => {
+            vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
+                { id: 'gift', name: 'Gift', isPublic: false, color: '#2A9D8F' },
+            ])
+            vi.mocked(api.updatePiece).mockRejectedValue(new Error('Network error'))
+
+            await renderPieceDetail()
+
+            await userEvent.click(screen.getByLabelText('Tags'))
+            await userEvent.click(screen.getByRole('option', { name: 'Gift' }))
+
+            await waitFor(() =>
+                expect(api.updatePiece).toHaveBeenCalledWith('piece-id-1', { tags: ['gift'] })
+            )
+            expect(screen.getByText('Failed to attach the selected tag. Please check your connection and try again.')).toBeInTheDocument()
+        })
+
+        it('shows a descriptive error and keeps the dialog open when the tag name already exists', async () => {
+            vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
+                { id: 'gift', name: 'Gift', isPublic: false, color: '#2A9D8F' },
+            ])
+
+            await renderPieceDetail()
+
+            await userEvent.click(screen.getByRole('button', { name: 'New' }))
+            await userEvent.type(screen.getByLabelText('Tag name'), 'gift')
+            await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+            expect(api.createTagEntry).not.toHaveBeenCalled()
+            const dialog = screen.getByRole('dialog', { name: 'Create Tag' })
+            expect(dialog).toBeInTheDocument()
+            expect(within(dialog).getByText('A tag with that name already exists. Choose the existing tag or enter a different name.')).toBeInTheDocument()
         })
     })
 })

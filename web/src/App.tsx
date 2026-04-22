@@ -28,14 +28,13 @@ import {
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import LogoutIcon from '@mui/icons-material/Logout'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
+import { alpha, ThemeProvider, createTheme } from '@mui/material/styles'
 
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
 import { fetchCurrentUser, loginWithEmail, loginWithGoogle, logoutUser, registerWithEmail } from '@common/api'
 import { useAsync } from './util/useAsync'
 import ErrorBoundary from './components/ErrorBoundary'
 import type { AuthUser } from '@common/api'
-import { background } from '@cloudinary/url-gen/qualifiers/focusOn'
 
 const LandingPage = lazy(() => import('./pages/LandingPage'))
 const PieceListPage = lazy(() => import('./pages/PieceListPage'))
@@ -59,23 +58,20 @@ const DARK_THEME = createTheme({
   palette: { mode: 'dark' },
   components: {
     MuiButton: {
-      styleOverrides: {
-        root: {
-          variants: [
-            {
-              props: { variant: 'contained' },
-              style: { 
-                'box-shadow': '0px 4px 4px -4px rgba(0,0,0,1),4px 4px 4px 0px rgba(0,0,0,1),0px 4px 4px 0px rgba(0,0,0,1);',
-                '&:hover': {
-                  'box-shadow': '0px 4px 4px -4px rgba(0,0,0,1),4px 4px 4px 0px rgba(0,0,0,1),0px 4px 4px 0px rgba(0,0,0,1);'
-                }
-              }
-            }
-          ]
-        }
-      }
-    }
-  }
+      variants: [
+        {
+          props: { variant: 'contained' },
+          style: ({ theme }) => ({
+            boxShadow: `0 8px 18px ${alpha(theme.palette.common.black, 0.35)}`,
+            border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
+            '&:hover': {
+              boxShadow: `0 10px 22px ${alpha(theme.palette.common.black, 0.42)}`,
+            },
+          }),
+        },
+      ],
+    },
+  },
 })
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 

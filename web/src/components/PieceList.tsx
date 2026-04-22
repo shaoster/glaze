@@ -125,15 +125,22 @@ const PieceList = (props: PieceListingProps) => {
 
   return (
     <>
-      <Box sx={{ mb: 2 }}>
-        <TagAutocomplete
-          label="Tags"
-          options={availableTags}
-          value={activeTags}
-          onChange={setActiveTags}
-          sx={{ mb: 2, minWidth: 260, maxWidth: 520 }}
-        />
-        <FormControl size="small" sx={{ minWidth: 220 }}>
+      <Box
+        sx={{
+          mb: 2,
+          display: 'flex',
+          gap: 2,
+          flexWrap: 'wrap',
+          alignItems: 'flex-start',
+        }}
+      >
+        <FormControl
+          size="small"
+          sx={{
+            flex: '0 0 220px',
+            minWidth: { xs: '100%', sm: 220 },
+          }}
+        >
           <InputLabel id="piece-filter-label">Filter</InputLabel>
           <Select
             labelId="piece-filter-label"
@@ -155,6 +162,17 @@ const PieceList = (props: PieceListingProps) => {
             ))}
           </Select>
         </FormControl>
+        <TagAutocomplete
+          label="Tags"
+          options={availableTags}
+          value={activeTags}
+          onChange={setActiveTags}
+          sx={{
+            flex: '1 1 280px',
+            minWidth: { xs: '100%', sm: 260 },
+            maxWidth: '100%',
+          }}
+        />
       </Box>
       <TableContainer>
         <Table sx={{ minWidth: 650 }} aria-label="simple table">
