@@ -40,6 +40,8 @@ const LandingPage = lazy(() => import('./pages/LandingPage'))
 const PieceListPage = lazy(() => import('./pages/PieceListPage'))
 const PieceDetailPage = lazy(() => import('./pages/PieceDetailPage'))
 const AnalyzePage = lazy(() => import('./pages/AnalyzePage'))
+const AboutPage = lazy(() => import('./pages/AboutPage'))
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
 
 // Extend window type for Google OAuth
 declare global {
@@ -139,122 +141,180 @@ function AuthLanding({
           borderRadius: { xs: 3, sm: 4 },
         }}
       >
-          <Stack spacing={2}>
-            <Stack direction="row" spacing={1.25} alignItems="center">
-              <Box
-                component="img"
-                src="/favicon.svg"
-                alt="PotterDoc icon"
-                sx={{
-                  width: { xs: 32, sm: 36 },
-                  height: { xs: 32, sm: 36 },
-                  flexShrink: 0,
-                  display: 'block',
-                }}
-              />
-              <Typography variant="h4" component="h1" sx={{ fontSize: { xs: '2rem', sm: '2.5rem' }, lineHeight: 1.1 }}>
-                PotterDoc
-              </Typography>
-            </Stack>
-            <Typography color="text.secondary">
-              Track every pottery piece through your workflow.
+        <Stack spacing={2}>
+          <Stack direction="row" spacing={1.25} alignItems="center">
+            <Box
+              component="img"
+              src="/favicon.svg"
+              alt="PotterDoc icon"
+              sx={{
+                width: { xs: 32, sm: 36 },
+                height: { xs: 32, sm: 36 },
+                flexShrink: 0,
+                display: 'block',
+              }}
+            />
+            <Typography variant="h4" component="h1" sx={{ fontSize: { xs: '2rem', sm: '2.5rem' }, lineHeight: 1.1 }}>
+              PotterDoc
             </Typography>
+          </Stack>
+          <Typography color="text.secondary">
+            Track every pottery piece through your workflow.
+          </Typography>
 
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-              <Button
-                variant={mode === 'login' ? 'contained' : 'outlined'}
-                onClick={() => setMode('login')}
-                disabled={submitting}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+            <Button
+              variant={mode === 'login' ? 'contained' : 'outlined'}
+              onClick={() => setMode('login')}
+              disabled={submitting}
+              fullWidth
+            >
+              Log In
+            </Button>
+            <Button
+              variant={mode === 'register' ? 'contained' : 'outlined'}
+              onClick={() => setMode('register')}
+              disabled={submitting || !SIGN_UP_ENABLED}
+              fullWidth
+            >
+              Sign Up
+            </Button>
+          </Stack>
+          {!SIGN_UP_ENABLED && (
+            <Typography variant="body2" color="text.secondary">
+              Sign up is temporarily disabled. Ask an admin to create your account.
+            </Typography>
+          )}
+
+          <Box component="form" onSubmit={handleSubmit}>
+            <Stack spacing={2}>
+              <TextField
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 fullWidth
-              >
-                Log In
-              </Button>
-              <Button
-                variant={mode === 'register' ? 'contained' : 'outlined'}
-                onClick={() => setMode('register')}
-                disabled={submitting || !SIGN_UP_ENABLED}
+                slotProps={{ htmlInput: { autoComplete: 'email' } }}
+              />
+              <TextField
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
                 fullWidth
-              >
-                Sign Up
+                slotProps={{ htmlInput: { autoComplete: mode === 'login' ? 'current-password' : 'new-password' } }}
+              />
+              {mode === 'register' && (
+                <>
+                  <TextField
+                    label="First name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    fullWidth
+                  />
+                  <TextField
+                    label="Last name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    fullWidth
+                  />
+                </>
+              )}
+              {error && <Alert severity="error">{error}</Alert>}
+              <Button type="submit" variant="contained" disabled={submitting || !email.trim() || !password}>
+                {mode === 'login' ? 'Log In' : 'Create Account'}
               </Button>
             </Stack>
-            {!SIGN_UP_ENABLED && (
+          </Box>
+
+          {GOOGLE_CLIENT_ID && (
+            <>
+              <Divider>or</Divider>
+              <Box sx={{ display: 'flex', justifyContent: 'center', overflowX: 'auto' }}>
+                <GoogleLogin
+                  theme="outline"
+                  onSuccess={async ({ credential }) => {
+                    if (!credential) return
+                    setSubmitting(true)
+                    setError(null)
+                    try {
+                      const user = await loginWithGoogle(credential)
+                      onAuthenticated(user)
+                    } catch {
+                      setError('Google sign-in failed. Please try again.')
+                    } finally {
+                      setSubmitting(false)
+                    }
+                  }}
+                  onError={() => setError('Google sign-in failed. Please try again.')}
+                />
+              </Box>
+            </>
+          )}
+
+          <Box component="footer" sx={{ pt: 1 }}>
+            <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" flexWrap="wrap">
+              <Button component={Link} to="/about" variant="text" size="small" sx={{ minWidth: 0, px: 0.5 }}>
+                About Us
+              </Button>
               <Typography variant="body2" color="text.secondary">
-                Sign up is temporarily disabled. Ask an admin to create your account.
+                •
               </Typography>
-            )}
-
-            <Box component="form" onSubmit={handleSubmit}>
-              <Stack spacing={2}>
-                <TextField
-                  label="Email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  fullWidth
-                  slotProps={{ htmlInput: { autoComplete: 'email' } }}
-                />
-                <TextField
-                  label="Password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  fullWidth
-                  slotProps={{ htmlInput: { autoComplete: mode === 'login' ? 'current-password' : 'new-password' } }}
-                />
-                {mode === 'register' && (
-                  <>
-                    <TextField
-                      label="First name"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      fullWidth
-                    />
-                    <TextField
-                      label="Last name"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      fullWidth
-                    />
-                  </>
-                )}
-                {error && <Alert severity="error">{error}</Alert>}
-                <Button type="submit" variant="contained" disabled={submitting || !email.trim() || !password}>
-                  {mode === 'login' ? 'Log In' : 'Create Account'}
+              <Typography variant="body2" color="text.secondary" textAlign="center">
+                <Button component={Link} to="/privacy-policy" variant="text" size="small" sx={{ minWidth: 0, px: 0.5 }}>
+                  Privacy Policy
                 </Button>
-              </Stack>
-            </Box>
-
-            {GOOGLE_CLIENT_ID && (
-              <>
-                <Divider>or</Divider>
-                <Box sx={{ display: 'flex', justifyContent: 'center', overflowX: 'auto' }}>
-                  <GoogleLogin
-                    theme="outline"
-                    onSuccess={async ({ credential }) => {
-                      if (!credential) return
-                      setSubmitting(true)
-                      setError(null)
-                      try {
-                        const user = await loginWithGoogle(credential)
-                        onAuthenticated(user)
-                      } catch {
-                        setError('Google sign-in failed. Please try again.')
-                      } finally {
-                        setSubmitting(false)
-                      }
-                    }}
-                    onError={() => setError('Google sign-in failed. Please try again.')}
-                  />
-                </Box>
-              </>
-            )}
-          </Stack>
+                .
+              </Typography>
+            </Stack>
+          </Box>
+        </Stack>
       </Paper>
     </Container>
   )
+}
+
+function UnauthenticatedApp({
+  onAuthenticated,
+}: {
+  onAuthenticated: (user: AuthUser) => void
+}) {
+  const router = useMemo(
+    () =>
+      createBrowserRouter(
+        createRoutesFromElements(
+          <>
+            <Route path="/" element={<AuthLanding onAuthenticated={onAuthenticated} />} />
+            <Route
+              path="/about"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}>
+                    <AboutPage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/privacy-policy"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}>
+                    <PrivacyPolicyPage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </>,
+        ),
+      ),
+    [onAuthenticated],
+  )
+
+  return <RouterProvider router={router} />
 }
 
 function AppShell({
@@ -375,6 +435,9 @@ export default function App() {
   const { data: currentUser, loading, setData: setCurrentUser } = useAsync<AuthUser | null>(
     fetchCurrentUser,
   )
+  const handleAuthenticated = useCallback((user: AuthUser) => {
+    setCurrentUser(user)
+  }, [setCurrentUser])
 
   // Disable Google one-tap prompt
   useEffect(() => {
@@ -403,7 +466,7 @@ export default function App() {
         ) : currentUser ? (
           <AuthenticatedApp currentUser={currentUser} onLogout={handleLogout} />
         ) : (
-          <AuthLanding onAuthenticated={(user) => setCurrentUser(user)} />
+          <UnauthenticatedApp onAuthenticated={handleAuthenticated} />
         )}
       </ThemeProvider>
     </GoogleOAuthProvider>

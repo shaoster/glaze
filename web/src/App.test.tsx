@@ -69,6 +69,8 @@ describe('App auth flow', () => {
         })
 
         expect(screen.getByRole('img', { name: 'PotterDoc icon' })).toBeInTheDocument()
+        expect(screen.getByRole('link', { name: 'About Us' })).toHaveAttribute('href', '/about')
+        expect(screen.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy-policy')
 
         // Verify we can find an input field (email input)
         const inputs = screen.getAllByRole('textbox')
@@ -77,6 +79,39 @@ describe('App auth flow', () => {
         const buttons = screen.getAllByRole('button')
         const logInButton = buttons.find(btn => btn.textContent === 'Log In' && btn.closest('form'))
         expect(logInButton).toBeDefined()
+    })
+
+    it('opens the privacy policy from the unauthenticated footer', async () => {
+        render(<App />)
+
+        await waitFor(() => {
+            expect(screen.getByRole('link', { name: 'Privacy Policy' })).toBeInTheDocument()
+        })
+
+        await userEvent.click(screen.getByRole('link', { name: 'Privacy Policy' }))
+
+        await waitFor(() => {
+            expect(screen.getByRole('heading', { name: 'Privacy Policy' })).toBeInTheDocument()
+            expect(screen.getByText(/we do not sell your data/i)).toBeInTheDocument()
+            expect(window.location.pathname).toBe('/privacy-policy')
+        })
+    })
+
+    it('opens the about page from the unauthenticated footer', async () => {
+        render(<App />)
+
+        await waitFor(() => {
+            expect(screen.getByRole('link', { name: 'About Us' })).toBeInTheDocument()
+        })
+
+        await userEvent.click(screen.getByRole('link', { name: 'About Us' }))
+
+        await waitFor(() => {
+            expect(screen.getByRole('heading', { name: 'About Us' })).toBeInTheDocument()
+            expect(screen.getByRole('link', { name: 'View on GitHub' })).toHaveAttribute('href', 'https://github.com/shaoster/glaze')
+            expect(screen.getByText(/dinosaurs were the first great potters/i)).toBeInTheDocument()
+            expect(window.location.pathname).toBe('/about')
+        })
     })
 
     it('logs in and shows piece list view with current user badge', async () => {
