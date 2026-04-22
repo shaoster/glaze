@@ -14,7 +14,6 @@ import {
   Select,
   type SelectChangeEvent,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import type { PieceSummary, TagEntry } from '@common/types'
 import { formatState, getStateDescription, isTerminalState, SUCCESSORS } from '@common/types'
 import CloudinaryImage from './CloudinaryImage'
