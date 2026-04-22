@@ -120,7 +120,7 @@ describe('App auth flow', () => {
         render(<App />)
 
         await waitFor(() => {
-            expect(screen.getByText('+ New Piece')).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /new piece/i })).toBeInTheDocument()
         })
 
         await userEvent.click(screen.getByRole('tab', { name: 'Analyze' }))
@@ -135,7 +135,7 @@ describe('App auth flow', () => {
         await userEvent.click(screen.getByRole('tab', { name: 'Pieces' }))
 
         await waitFor(() => {
-            expect(screen.getByText('+ New Piece')).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /new piece/i })).toBeInTheDocument()
             expect(window.location.pathname).toBe('/')
         })
     })
@@ -147,7 +147,7 @@ describe('App auth flow', () => {
         render(<App />)
 
         await waitFor(() => {
-            expect(screen.getByText('+ New Piece')).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /new piece/i })).toBeInTheDocument()
         })
 
         // Open the user menu and click log out

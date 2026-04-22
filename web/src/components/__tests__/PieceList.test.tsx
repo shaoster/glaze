@@ -1,10 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import PieceList from '../PieceList'
 import type { PieceSummary } from '@common/types'
-import { act } from 'react'
 
 vi.mock('../CloudinaryImage', () => ({
     default: ({ url, alt }: { url: string; alt?: string }) => <img src={url} alt={alt ?? ''} />,
@@ -107,16 +106,12 @@ describe('PieceList', () => {
     })
 
     describe('filter dropdown', () => {
-        it('renders the filter dropdown', () => {
+        it('renders filter and tag summaries in a compact state', () => {
             renderPieceList([])
-            expect(screen.getByLabelText('Filter')).toBeInTheDocument()
-        })
-
-        it('keeps empty filter and tag controls at two desktop columns each', () => {
-            renderPieceList([])
-
-            expect(screen.getByTestId('piece-list-filter-control')).toHaveAttribute('data-desktop-columns', '2')
-            expect(screen.getByTestId('piece-list-tags-control')).toHaveAttribute('data-desktop-columns', '2')
+            expect(screen.getByText('No status filters applied.')).toBeInTheDocument()
+            expect(screen.getByText('No tags selected.')).toBeInTheDocument()
+            expect(screen.queryByLabelText('Filters')).not.toBeInTheDocument()
+            expect(screen.queryByLabelText('Tags')).not.toBeInTheDocument()
         })
 
         it('shows all pieces when no filter is selected', () => {
@@ -140,14 +135,15 @@ describe('PieceList', () => {
             ]
             renderPieceList(pieces)
 
-            await user.click(screen.getByLabelText('Filter'))
+            await user.click(screen.getByRole('button', { name: /show filters/i }))
+            await user.click(screen.getByLabelText('Filters'))
             await user.click(screen.getByRole('option', { name: 'Work in Progress' }))
             await user.keyboard('{Escape}')
 
             expect(screen.getByText('Bowl')).toBeInTheDocument()
             expect(screen.queryByText('Mug')).not.toBeInTheDocument()
             expect(screen.queryByText('Vase')).not.toBeInTheDocument()
-            expect(screen.getByTestId('piece-list-filter-control')).toHaveAttribute('data-desktop-columns', '4')
+            expect(screen.getAllByText('Work in Progress').length).toBeGreaterThan(0)
         })
 
         it('filters to completed pieces only', async () => {
@@ -159,7 +155,8 @@ describe('PieceList', () => {
             ]
             renderPieceList(pieces)
 
-            await user.click(screen.getByLabelText('Filter'))
+            await user.click(screen.getByRole('button', { name: /show filters/i }))
+            await user.click(screen.getByLabelText('Filters'))
             await user.click(screen.getByRole('option', { name: 'Completed' }))
             await user.keyboard('{Escape}')
 
@@ -177,7 +174,8 @@ describe('PieceList', () => {
             ]
             renderPieceList(pieces)
 
-            await user.click(screen.getByLabelText('Filter'))
+            await user.click(screen.getByRole('button', { name: /show filters/i }))
+            await user.click(screen.getByLabelText('Filters'))
             await user.click(screen.getByRole('option', { name: 'Discarded' }))
             await user.keyboard('{Escape}')
 
@@ -195,7 +193,8 @@ describe('PieceList', () => {
             ]
             renderPieceList(pieces)
 
-            await user.click(screen.getByLabelText('Filter'))
+            await user.click(screen.getByRole('button', { name: /show filters/i }))
+            await user.click(screen.getByLabelText('Filters'))
             await user.click(screen.getByRole('option', { name: 'Completed' }))
             await user.click(screen.getByRole('option', { name: 'Discarded' }))
             await user.keyboard('{Escape}')
@@ -214,13 +213,14 @@ describe('PieceList', () => {
             renderPieceList(pieces)
 
             // Apply filter
-            await user.click(screen.getByLabelText('Filter'))
+            await user.click(screen.getByRole('button', { name: /show filters/i }))
+            await user.click(screen.getByLabelText('Filters'))
             await user.click(screen.getByRole('option', { name: 'Completed' }))
             await user.keyboard('{Escape}')
             expect(screen.queryByText('Bowl')).not.toBeInTheDocument()
 
             // Remove filter by clicking the same option again
-            await user.click(screen.getByLabelText('Filter'))
+            await user.click(screen.getByLabelText('Filters'))
             await user.click(screen.getByRole('option', { name: 'Completed' }))
             await user.keyboard('{Escape}')
             expect(screen.getByText('Bowl')).toBeInTheDocument()
@@ -248,6 +248,7 @@ describe('PieceList', () => {
             ]
             renderPieceList(pieces)
 
+            await user.click(screen.getByRole('button', { name: /show tags/i }))
             await user.click(screen.getByLabelText('Tags'))
             await user.click(screen.getByRole('option', { name: 'Gift' }))
             await user.click(screen.getByLabelText('Tags'))
@@ -256,7 +257,28 @@ describe('PieceList', () => {
 
             expect(screen.getByText('Bowl')).toBeInTheDocument()
             expect(screen.queryByText('Mug')).not.toBeInTheDocument()
-            expect(screen.getByTestId('piece-list-tags-control')).toHaveAttribute('data-desktop-columns', '4')
+            expect(screen.getAllByText('For Sale').length).toBeGreaterThan(0)
+        })
+
+        it('can hide the selectors again after expanding them', async () => {
+            const user = userEvent.setup()
+            renderPieceList([])
+
+            await user.click(screen.getByRole('button', { name: /show filters/i }))
+            expect(screen.getByLabelText('Filters')).toBeInTheDocument()
+
+            await user.click(screen.getByRole('button', { name: /hide filters/i }))
+            await waitFor(() => {
+                expect(screen.queryByLabelText('Filters')).not.toBeInTheDocument()
+            })
+
+            await user.click(screen.getByRole('button', { name: /show tags/i }))
+            expect(screen.getByLabelText('Tags')).toBeInTheDocument()
+
+            await user.click(screen.getByRole('button', { name: /hide tags/i }))
+            await waitFor(() => {
+                expect(screen.queryByLabelText('Tags')).not.toBeInTheDocument()
+            })
         })
     })
 })
