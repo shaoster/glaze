@@ -247,9 +247,6 @@ function AppShell({
           <Typography variant="h6" component="p" color="text.primary" display="inline">
             PotterDoc
           </Typography>
-          <Typography variant="subtitle1" component="p" color="text.secondary" display="inline">
-            The Patient Potter's Companion
-          </Typography>
         </Box>
         <Chip
           label={displayName}
