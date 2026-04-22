@@ -136,6 +136,13 @@ describe('PieceList', () => {
             expect(screen.getByLabelText('Filter')).toBeInTheDocument()
         })
 
+        it('keeps empty filter and tag controls at two desktop columns each', () => {
+            renderPieceList([])
+
+            expect(screen.getByTestId('piece-list-filter-control')).toHaveAttribute('data-desktop-columns', '2')
+            expect(screen.getByTestId('piece-list-tags-control')).toHaveAttribute('data-desktop-columns', '2')
+        })
+
         it('shows all pieces when no filter is selected', () => {
             const pieces = [
                 makePiece({ id: 'id-1', name: 'Bowl', current_state: { state: 'designed' } as any }),
@@ -164,6 +171,7 @@ describe('PieceList', () => {
             expect(screen.getByText('Bowl')).toBeInTheDocument()
             expect(screen.queryByText('Mug')).not.toBeInTheDocument()
             expect(screen.queryByText('Vase')).not.toBeInTheDocument()
+            expect(screen.getByTestId('piece-list-filter-control')).toHaveAttribute('data-desktop-columns', '4')
         })
 
         it('filters to completed pieces only', async () => {
@@ -272,6 +280,7 @@ describe('PieceList', () => {
 
             expect(screen.getByText('Bowl')).toBeInTheDocument()
             expect(screen.queryByText('Mug')).not.toBeInTheDocument()
+            expect(screen.getByTestId('piece-list-tags-control')).toHaveAttribute('data-desktop-columns', '4')
         })
     })
 })

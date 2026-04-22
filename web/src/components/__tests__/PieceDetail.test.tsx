@@ -311,7 +311,69 @@ describe('PieceDetail', () => {
     })
 
     describe('tag creation', () => {
-        it('shows a self-closing snackbar when selecting an existing tag fails to attach', async () => {
+        it('shows tag chips with an edit button by default', async () => {
+            await renderPieceDetail(makePiece({
+                tags: [{ id: 'gift', name: 'Gift', color: '#2A9D8F' }],
+            }))
+
+            expect(screen.getByText('Gift')).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: 'Edit tags' })).toBeInTheDocument()
+            expect(screen.queryByLabelText('Tags')).not.toBeInTheDocument()
+        })
+
+        it('shows the tag editor when the edit button is pressed', async () => {
+            await renderPieceDetail()
+
+            await userEvent.click(screen.getByRole('button', { name: 'Edit tags' }))
+
+            expect(screen.getByLabelText('Tags')).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: 'Save tags' })).toBeInTheDocument()
+        })
+
+        it('does not save tag changes until Save is pressed', async () => {
+            vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
+                { id: 'gift', name: 'Gift', isPublic: false, color: '#2A9D8F' },
+            ])
+
+            await renderPieceDetail()
+
+            await userEvent.click(screen.getByRole('button', { name: 'Edit tags' }))
+            await userEvent.click(screen.getByLabelText('Tags'))
+            await userEvent.click(screen.getByRole('option', { name: 'Gift' }))
+
+            expect(api.updatePiece).not.toHaveBeenCalled()
+
+            await userEvent.click(screen.getByRole('button', { name: 'Save tags' }))
+
+            await waitFor(() =>
+                expect(api.updatePiece).toHaveBeenCalledWith('piece-id-1', { tags: ['gift'] })
+            )
+        })
+
+        it('returns to the chip list after a successful tag save', async () => {
+            const updated = makePiece({
+                tags: [{ id: 'gift', name: 'Gift', color: '#2A9D8F' }],
+            })
+            vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
+                { id: 'gift', name: 'Gift', isPublic: false, color: '#2A9D8F' },
+            ])
+            vi.mocked(api.updatePiece).mockResolvedValue(updated)
+
+            await renderPieceDetail()
+
+            await userEvent.click(screen.getByRole('button', { name: 'Edit tags' }))
+            await userEvent.click(screen.getByLabelText('Tags'))
+            await userEvent.click(screen.getByRole('option', { name: 'Gift' }))
+            await userEvent.click(screen.getByRole('button', { name: 'Save tags' }))
+
+            await waitFor(() =>
+                expect(screen.queryByLabelText('Tags')).not.toBeInTheDocument()
+            )
+            expect(screen.getByText('Gift')).toBeInTheDocument()
+        })
+
+        it('shows a self-closing snackbar when saving selected tags fails', async () => {
             vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
                 { id: 'gift', name: 'Gift', isPublic: false, color: '#2A9D8F' },
             ])
@@ -319,8 +381,10 @@ describe('PieceDetail', () => {
 
             await renderPieceDetail()
 
+            await userEvent.click(screen.getByRole('button', { name: 'Edit tags' }))
             await userEvent.click(screen.getByLabelText('Tags'))
             await userEvent.click(screen.getByRole('option', { name: 'Gift' }))
+            await userEvent.click(screen.getByRole('button', { name: 'Save tags' }))
 
             await waitFor(() =>
                 expect(api.updatePiece).toHaveBeenCalledWith('piece-id-1', { tags: ['gift'] })
@@ -335,6 +399,7 @@ describe('PieceDetail', () => {
 
             await renderPieceDetail()
 
+            await userEvent.click(screen.getByRole('button', { name: 'Edit tags' }))
             await userEvent.click(screen.getByRole('button', { name: 'New' }))
             fireEvent.change(screen.getByLabelText('Tag name'), { target: { value: 'gift' } })
             await userEvent.click(screen.getByRole('button', { name: 'Create' }))
@@ -343,6 +408,28 @@ describe('PieceDetail', () => {
             const dialog = screen.getByRole('dialog', { name: 'Create Tag' })
             expect(dialog).toBeInTheDocument()
             expect(within(dialog).getByText('A tag with that name already exists. Choose the existing tag or enter a different name.')).toBeInTheDocument()
+        })
+
+        it('adds a newly created tag to the draft selection and waits for Save to persist it', async () => {
+            vi.mocked(api.createTagEntry).mockResolvedValue({
+                id: 'sale',
+                name: 'For Sale',
+                color: '#4FC3F7',
+                isPublic: false,
+            })
+
+            await renderPieceDetail()
+
+            await userEvent.click(screen.getByRole('button', { name: 'Edit tags' }))
+            await userEvent.click(screen.getByRole('button', { name: 'New' }))
+            fireEvent.change(screen.getByLabelText('Tag name'), { target: { value: 'For Sale' } })
+            await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+            expect(api.updatePiece).not.toHaveBeenCalled()
+            expect(screen.getByText('For Sale')).toBeInTheDocument()
+            await waitFor(() =>
+                expect(screen.getByRole('button', { name: 'Save tags' })).toBeInTheDocument()
+            )
         })
     })
 })

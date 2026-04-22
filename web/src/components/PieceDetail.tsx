@@ -33,10 +33,10 @@ import WorkflowState from './WorkflowState'
 import { pickDefaultTagColor } from './tagPalette'
 import TagAutocomplete from './TagAutocomplete'
 import CreateTagDialog from './CreateTagDialog'
+import TagChipList from './TagChipList'
 
 const DUPLICATE_TAG_ERROR = 'A tag with that name already exists. Choose the existing tag or enter a different name.'
 const TAG_ATTACH_SNACKBAR_ERROR = 'Failed to attach the selected tag. Please check your connection and try again.'
-const TAG_CREATE_ATTACH_ERROR = 'The tag was created, but it could not be attached to this piece. Please check your connection and try again.'
 
 type PieceDetailProps = {
     piece: PieceDetailType
@@ -57,6 +57,8 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     const [nameError, setNameError] = useState<string | null>(null)
     const [availableTags, setAvailableTags] = useState<TagEntry[]>([])
     const [selectedTags, setSelectedTags] = useState<TagEntry[]>(piece.tags ?? [])
+    const [editingTags, setEditingTags] = useState(false)
+    const [draftTags, setDraftTags] = useState<TagEntry[]>(piece.tags ?? [])
     const [tagDialogOpen, setTagDialogOpen] = useState(false)
     const [newTagName, setNewTagName] = useState('')
     const [newTagColor, setNewTagColor] = useState(pickDefaultTagColor(piece.tags.length))
@@ -79,6 +81,8 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
 
     useEffect(() => {
         setSelectedTags(piece.tags ?? [])
+        setDraftTags(piece.tags ?? [])
+        setEditingTags(false)
     }, [piece.tags])
 
     useEffect(() => {
@@ -162,22 +166,23 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
         }
     }
 
-    async function saveTags(nextTags: TagEntry[], errorMode: 'snackbar' | 'dialog' = 'snackbar') {
+    function startEditingTags() {
+        setDraftTags(selectedTags)
+        setTagError(null)
+        setEditingTags(true)
+    }
+
+    async function saveTags(nextTags: TagEntry[]) {
         setTagSaving(true)
-        if (errorMode === 'dialog') {
-            setTagError(null)
-        }
         try {
             const updated = await updatePiece(piece.id, { tags: nextTags.map((tag) => tag.id) })
+            setSelectedTags(nextTags)
             onPieceUpdated(updated)
+            setEditingTags(false)
             return true
         } catch {
-            setSelectedTags(piece.tags ?? [])
-            if (errorMode === 'dialog') {
-                setTagError(TAG_CREATE_ATTACH_ERROR)
-            } else {
-                setTagAttachSnackbarOpen(true)
-            }
+            setDraftTags(selectedTags)
+            setTagAttachSnackbarOpen(true)
             return false
         } finally {
             setTagSaving(false)
@@ -201,12 +206,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
             const created = await createTagEntry({ name: trimmed, color: newTagColor })
             const createdTag = { id: created.id, name: created.name, color: created.color }
             setAvailableTags((prev) => [...prev, createdTag].sort((a, b) => a.name.localeCompare(b.name)))
-            const nextTags = [...selectedTags, createdTag]
-            setSelectedTags(nextTags)
-            const attached = await saveTags(nextTags, 'dialog')
-            if (!attached) {
-                return
-            }
+            setDraftTags((prev) => [...prev, createdTag])
             setTagDialogOpen(false)
             setNewTagName('')
             setNewTagColor(pickDefaultTagColor(trimmed.length))
@@ -293,45 +293,59 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                     />
             </Box>
         </Box>
-        <Box
-            sx={{
-                mb: 2,
-                display: 'flex',
-                gap: 1,
-                flexWrap: 'wrap',
-                alignItems: { xs: 'flex-start', sm: 'center' },
-            }}
-        >
-            <TagAutocomplete
-                label="Tags"
-                options={availableTags}
-                value={selectedTags}
-                onChange={(nextValue) => {
-                    setSelectedTags(nextValue)
-                    void saveTags(nextValue)
-                }}
-                disabled={tagSaving}
-                sx={{
-                    flex: '1 1 260px',
-                    minWidth: { xs: '100%', sm: 260 },
-                    maxWidth: '100%',
-                }}
-            />
-            <Button
-                variant="outlined"
-                size="small"
-                onClick={() => setTagDialogOpen(true)}
-                disabled={tagSaving}
-                sx={{
-                    flexShrink: 0,
-                    width: { xs: '100%', sm: 'auto' },
-                    minWidth: { sm: 88 },
-                    alignSelf: { xs: 'stretch', sm: 'center' },
-                }}
-            >
-              New
-            </Button>
-        </Box>
+        {editingTags ? (
+            <Box sx={{ mb: 2 }}>
+                <Box
+                    sx={{
+                        display: 'grid',
+                        gap: 1,
+                        gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1fr) auto' },
+                        alignItems: 'start',
+                    }}
+                >
+                    <TagAutocomplete
+                        label="Tags"
+                        options={availableTags}
+                        value={draftTags}
+                        onChange={setDraftTags}
+                        disabled={tagSaving}
+                        sx={{ minWidth: 0 }}
+                    />
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => setTagDialogOpen(true)}
+                        disabled={tagSaving}
+                        sx={{ width: { xs: '100%', sm: 'auto' }, minWidth: { sm: 88 } }}
+                    >
+                      New
+                    </Button>
+                </Box>
+                <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => void saveTags(draftTags)}
+                    disabled={tagSaving}
+                    aria-label="Save tags"
+                    sx={{ mt: 1 }}
+                >
+                    Save
+                </Button>
+            </Box>
+        ) : (
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <TagChipList tags={selectedTags} />
+                <IconButton
+                    aria-label="Edit tags"
+                    onClick={startEditingTags}
+                    disabled={tagSaving}
+                    size="small"
+                    sx={{ color: 'text.secondary' }}
+                >
+                    <EditIcon fontSize="small" />
+                </IconButton>
+            </Box>
+        )}
         <Divider sx={{ mb: 3 }} />
 
             {/* Current state form */}

@@ -98,6 +98,8 @@ const PieceList = (props: PieceListingProps) => {
   const { pieces } = props;
   const [activeFilters, setActiveFilters] = useState<FilterCategory[]>([])
   const [activeTags, setActiveTags] = useState<TagEntry[]>([])
+  const filterDesktopColumns = activeFilters.length === 0 ? 2 : 4
+  const tagDesktopColumns = activeTags.length === 0 ? 2 : 4
 
   const availableTags = useMemo(() => {
     const deduped = new Map<string, TagEntry>()
@@ -128,51 +130,62 @@ const PieceList = (props: PieceListingProps) => {
       <Box
         sx={{
           mb: 2,
-          display: 'flex',
+          display: 'grid',
           gap: 2,
-          flexWrap: 'wrap',
-          alignItems: 'flex-start',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, minmax(0, 1fr))' },
+          alignItems: 'start',
         }}
       >
-        <FormControl
-          size="small"
+        <Box
+          data-testid="piece-list-filter-control"
+          data-desktop-columns={filterDesktopColumns}
           sx={{
-            flex: '0 0 220px',
-            minWidth: { xs: '100%', sm: 220 },
+            gridColumn: { xs: '1 / -1', sm: `span ${filterDesktopColumns}` },
+            minWidth: 0,
           }}
         >
-          <InputLabel id="piece-filter-label">Filter</InputLabel>
-          <Select
-            labelId="piece-filter-label"
-            label="Filter"
-            multiple
-            value={activeFilters}
-            onChange={handleFilterChange}
-            renderValue={(selected) =>
-              selected
-                .map((v) => FILTER_OPTIONS.find((o) => o.value === v)?.label ?? v)
-                .join(', ')
-            }
+          <FormControl
+            size="small"
+            fullWidth
           >
-            {FILTER_OPTIONS.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                <Checkbox checked={activeFilters.includes(option.value)} />
-                <ListItemText primary={option.label} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <TagAutocomplete
-          label="Tags"
-          options={availableTags}
-          value={activeTags}
-          onChange={setActiveTags}
+            <InputLabel id="piece-filter-label">Filter</InputLabel>
+            <Select
+              labelId="piece-filter-label"
+              label="Filter"
+              multiple
+              value={activeFilters}
+              onChange={handleFilterChange}
+              renderValue={(selected) =>
+                selected
+                  .map((v) => FILTER_OPTIONS.find((o) => o.value === v)?.label ?? v)
+                  .join(', ')
+              }
+            >
+              {FILTER_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  <Checkbox checked={activeFilters.includes(option.value)} />
+                  <ListItemText primary={option.label} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+        <Box
+          data-testid="piece-list-tags-control"
+          data-desktop-columns={tagDesktopColumns}
           sx={{
-            flex: '1 1 280px',
-            minWidth: { xs: '100%', sm: 260 },
-            maxWidth: '100%',
+            gridColumn: { xs: '1 / -1', sm: `span ${tagDesktopColumns}` },
+            minWidth: 0,
           }}
-        />
+        >
+          <TagAutocomplete
+            label="Tags"
+            options={availableTags}
+            value={activeTags}
+            onChange={setActiveTags}
+            sx={{ minWidth: 0 }}
+          />
+        </Box>
       </Box>
       <TableContainer>
         <Table sx={{ minWidth: 650 }} aria-label="simple table">

@@ -17,9 +17,6 @@ export default function PieceListPage() {
   return (
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h6" component="h6">
-          Pottery Pieces
-        </Typography>
         <Button variant="contained" onClick={() => setDialogOpen(true)}>
           + New Piece
         </Button>

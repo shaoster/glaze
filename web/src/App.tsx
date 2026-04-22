@@ -242,8 +242,8 @@ function AppShell({
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1}}>
           <Typography variant="h6" component="p" color="text.primary" display="inline">
             PotterDoc
           </Typography>
