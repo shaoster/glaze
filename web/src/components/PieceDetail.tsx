@@ -4,7 +4,6 @@ import {
     Alert,
     Box,
     Button,
-    Chip,
     Collapse,
     Dialog,
     DialogActions,
@@ -37,10 +36,177 @@ import TagChipList from './TagChipList'
 
 const DUPLICATE_TAG_ERROR = 'A tag with that name already exists. Choose the existing tag or enter a different name.'
 const TAG_ATTACH_SNACKBAR_ERROR = 'Failed to attach the selected tag. Please check your connection and try again.'
+const DEFAULT_STATE_COLOR = 'oklch(0.66 0.17 35)'
+const COMPLETED_STATE_COLOR = 'oklch(0.72 0.17 145)'
+const RECYCLED_STATE_COLOR = 'oklch(0.63 0.23 25)'
 
 type PieceDetailProps = {
     piece: PieceDetailType
     onPieceUpdated: (updated: PieceDetailType) => void
+}
+
+type StateChipProps = {
+    state: string
+    label: string
+    current?: boolean
+    muted?: boolean
+    onClick?: () => void
+    disabled?: boolean
+    onHoverStart?: () => void
+    onHoverEnd?: () => void
+}
+
+function getStateColor(state: string): string {
+    if (state === 'completed') {
+        return COMPLETED_STATE_COLOR
+    }
+    if (state === 'recycled') {
+        return RECYCLED_STATE_COLOR
+    }
+    return DEFAULT_STATE_COLOR
+}
+
+function StateChip({
+    state,
+    label,
+    current = false,
+    muted = false,
+    onClick,
+    disabled = false,
+    onHoverStart,
+    onHoverEnd,
+}: StateChipProps) {
+    const color = getStateColor(state)
+    const mutedColor = 'oklch(0.62 0 0)'
+    const outlineColor = current && muted ? `color-mix(in oklab, ${mutedColor} 55%, transparent)` : color
+    const backgroundColor = current
+        ? muted
+            ? `color-mix(in oklab, ${mutedColor} 14%, transparent)`
+            : `color-mix(in oklab, ${color} 18%, transparent)`
+        : 'transparent'
+    const dotFillColor = current ? (muted ? `color-mix(in oklab, ${mutedColor} 45%, white)` : color) : 'transparent'
+    const stateChipSx = {
+        borderRadius: 999,
+        border: '1px solid',
+        borderColor: outlineColor,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.75,
+        fontWeight: 500,
+        lineHeight: 1,
+        minHeight: current ? 28 : 24,
+        px: current ? 1.25 : 1,
+        py: current ? 0.5 : 0.25,
+        textTransform: 'none',
+        whiteSpace: 'nowrap',
+        width: 'fit-content',
+        color: current && muted ? `color-mix(in oklab, ${mutedColor} 80%, black)` : color,
+        backgroundColor,
+        borderStyle: current ? 'solid' : 'dashed',
+        fontSize: current ? '0.85rem' : '0.8125rem',
+        boxShadow: 'none',
+    }
+    const dot = (
+        <Box
+            component="span"
+            className="state-chip-dot"
+            sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                border: `1.5px solid ${outlineColor}`,
+                backgroundColor: dotFillColor,
+                flexShrink: 0,
+            }}
+        />
+    )
+    const content = (
+        <>
+            {dot}
+            <Box component="span">{label}</Box>
+        </>
+    )
+
+    if (onClick) {
+        return (
+            <Button
+                onClick={onClick}
+                disabled={disabled}
+                variant="text"
+                sx={{
+                    ...stateChipSx,
+                    justifyContent: 'flex-start',
+                    minWidth: 0,
+                    '&:hover': {
+                        borderStyle: 'solid',
+                        borderColor: color,
+                        backgroundColor: `color-mix(in oklab, ${color} 18%, transparent)`,
+                        '& .state-chip-dot': {
+                            backgroundColor: color,
+                        },
+                    },
+                    '&.Mui-disabled': {
+                        color: `color-mix(in oklab, ${color} 55%, white)`,
+                        borderColor: `color-mix(in oklab, ${color} 55%, white)`,
+                    },
+                }}
+                onMouseEnter={onHoverStart}
+                onMouseLeave={onHoverEnd}
+                onFocus={onHoverStart}
+                onBlur={onHoverEnd}
+            >
+                {content}
+            </Button>
+        )
+    }
+
+    return (
+        <Box component="span" sx={stateChipSx}>
+            {content}
+        </Box>
+    )
+}
+
+type StateBranchConnectorProps = {
+    count: number
+}
+
+function StateBranchConnector({ count }: StateBranchConnectorProps) {
+    const connectorCount = Math.max(count, 1)
+    const height = connectorCount === 1 ? 24 : connectorCount * 28 - 4
+    const centerY = height / 2
+    const targetYs = connectorCount === 1
+        ? [centerY]
+        : Array.from({ length: connectorCount }, (_, index) => {
+            const start = 10
+            const end = height - 10
+            return start + ((end - start) * index) / (connectorCount - 1)
+        })
+
+    return (
+        <Box
+            component="svg"
+            aria-hidden="true"
+            sx={(theme) => ({
+                width: 24,
+                height,
+                flexShrink: 0,
+                overflow: 'visible',
+                '--line': theme.palette.divider,
+            })}
+            viewBox={`0 0 24 ${height}`}
+        >
+            {targetYs.map((targetY) => (
+                <path
+                    key={targetY}
+                    d={`M 0 ${centerY} Q 12 ${centerY} 24 ${targetY}`}
+                    stroke="var(--line)"
+                    fill="none"
+                    strokeWidth="1"
+                />
+            ))}
+        </Box>
+    )
 }
 
 export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps) {
@@ -65,6 +231,7 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     const [tagSaving, setTagSaving] = useState(false)
     const [tagError, setTagError] = useState<string | null>(null)
     const [tagAttachSnackbarOpen, setTagAttachSnackbarOpen] = useState(false)
+    const [hoveredSuccessor, setHoveredSuccessor] = useState<string | null>(null)
     const nameInputRef = useRef<HTMLInputElement>(null)
     const currentState = piece.current_state
     const successors = SUCCESSORS[currentState.state] ?? []
@@ -224,77 +391,104 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
     return (
         <Box sx={{ textAlign: 'left' }}>
             {/* Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-            {piece.thumbnail && (
-                <CloudinaryImage
-                    url={piece.thumbnail.url}
-                    cloudinary_public_id={piece.thumbnail.cloudinary_public_id}
-                    alt={piece.name}
-                    context="thumbnail"
-                    style={{ objectFit: 'cover', borderRadius: 4 }}
-                />
-            )}
-            <Box>
-                {editingName ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <TextField
-                            inputRef={nameInputRef}
-                            value={nameValue}
-                            onChange={(e) => setNameValue(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') saveName()
-                                if (e.key === 'Escape') cancelEditingName()
-                            }}
-                            size="small"
-                            error={!!nameError}
-                            helperText={nameError}
-                            disabled={nameSaving}
-                            slotProps={{ htmlInput: { 'aria-label': 'Piece name', maxLength: 255 } }}
-                            sx={{ minWidth: 200 }}
-                        />
-                        <IconButton
-                            aria-label="Save name"
-                            onClick={saveName}
-                            disabled={nameSaving}
-                            size="small"
-                            color="primary"
-                        >
-                            <CheckIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                            aria-label="Cancel name edit"
-                            onClick={cancelEditingName}
-                            disabled={nameSaving}
-                            size="small"
-                        >
-                            <CloseIcon fontSize="small" />
-                        </IconButton>
-                    </Box>
-                ) : (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography variant="h5" component="h2">
-                            {piece.name}
-                        </Typography>
-                        <IconButton
-                            aria-label="Edit piece name"
-                            onClick={startEditingName}
-                            size="small"
-                            sx={{ color: 'text.secondary' }}
-                        >
-                            <EditIcon fontSize="small" />
-                        </IconButton>
-                    </Box>
-                )}
-                    <Chip
-                        label={formatState(currentState.state)}
-                        size="small"
-                        sx={{ mt: 0.5 }}
-                        color={isTerminal ? 'default' : 'primary'}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                {piece.thumbnail && (
+                    <CloudinaryImage
+                        url={piece.thumbnail.url}
+                        cloudinary_public_id={piece.thumbnail.cloudinary_public_id}
+                        alt={piece.name}
+                        context="thumbnail"
+                        style={{ objectFit: 'cover', borderRadius: 4 }}
                     />
+                )}
+                <Box sx={{ minWidth: 0 }}>
+                    {editingName ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <TextField
+                                inputRef={nameInputRef}
+                                value={nameValue}
+                                onChange={(e) => setNameValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') saveName()
+                                    if (e.key === 'Escape') cancelEditingName()
+                                }}
+                                size="small"
+                                error={!!nameError}
+                                helperText={nameError}
+                                disabled={nameSaving}
+                                slotProps={{ htmlInput: { 'aria-label': 'Piece name', maxLength: 255 } }}
+                                sx={{ minWidth: 200 }}
+                            />
+                            <IconButton
+                                aria-label="Save name"
+                                onClick={saveName}
+                                disabled={nameSaving}
+                                size="small"
+                                color="primary"
+                            >
+                                <CheckIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                                aria-label="Cancel name edit"
+                                onClick={cancelEditingName}
+                                disabled={nameSaving}
+                                size="small"
+                            >
+                                <CloseIcon fontSize="small" />
+                            </IconButton>
+                        </Box>
+                    ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography variant="h5" component="h2">
+                                {piece.name}
+                            </Typography>
+                            <IconButton
+                                aria-label="Edit piece name"
+                                onClick={startEditingName}
+                                size="small"
+                                sx={{ color: 'text.secondary' }}
+                            >
+                                <EditIcon fontSize="small" />
+                            </IconButton>
+                        </Box>
+                    )}
+                    <Box
+                        aria-label="State flow"
+                        role="group"
+                        sx={{
+                            mt: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.25,
+                        }}
+                    >
+                        <StateChip
+                            state={currentState.state}
+                            label={formatState(currentState.state)}
+                            current
+                            muted={hoveredSuccessor !== null}
+                        />
+                        {!isTerminal && <StateBranchConnector count={successors.length} />}
+                        {!isTerminal && (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.75 }}>
+                                {successors.map((next) => (
+                                    <StateChip
+                                        key={next}
+                                        state={next}
+                                        label={formatState(next)}
+                                        onClick={() => openTransitionDialog(next)}
+                                        disabled={isDirty || transitioning}
+                                        onHoverStart={() => setHoveredSuccessor(next)}
+                                        onHoverEnd={() => setHoveredSuccessor((value) => (value === next ? null : value))}
+                                    />
+                                ))}
+                            </Box>
+                        )}
+                    </Box>
+                </Box>
             </Box>
-        </Box>
-        {editingTags ? (
-            <Box sx={{ mb: 2 }}>
+            {editingTags ? (
+                <Box sx={{ mb: 2 }}>
                 <Box
                     sx={{
                         display: 'grid',
@@ -331,22 +525,22 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                 >
                     Save
                 </Button>
-            </Box>
-        ) : (
-            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <TagChipList tags={selectedTags} />
-                <IconButton
-                    aria-label="Edit tags"
-                    onClick={startEditingTags}
-                    disabled={tagSaving}
-                    size="small"
-                    sx={{ color: 'text.secondary' }}
-                >
-                    <EditIcon fontSize="small" />
-                </IconButton>
-            </Box>
-        )}
-        <Divider sx={{ mb: 3 }} />
+                </Box>
+            ) : (
+                <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                    <TagChipList tags={selectedTags} />
+                    <IconButton
+                        aria-label="Edit tags"
+                        onClick={startEditingTags}
+                        disabled={tagSaving}
+                        size="small"
+                        sx={{ color: 'text.secondary' }}
+                    >
+                        <EditIcon fontSize="small" />
+                    </IconButton>
+                </Box>
+            )}
+            <Divider sx={{ mb: 3 }} />
 
             {/* Current state form */}
             <WorkflowState
@@ -368,27 +562,11 @@ export default function PieceDetail({ piece, onPieceUpdated }: PieceDetailProps)
                 </Alert>
             ) : (
                 <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle1" gutterBottom>
-                        Transition to next state:
-                    </Typography>
                     {transitionError && (
                         <Typography color="error" variant="body2" sx={{ mb: 1 }}>
                             {transitionError}
                         </Typography>
                     )}
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        {successors.map((next) => (
-                            <Button
-                                key={next}
-                                variant="outlined"
-                                onClick={() => openTransitionDialog(next)}
-                                disabled={isDirty || transitioning}
-                                color={next === 'recycled' ? 'error' : 'primary'}
-                            >
-                                {formatState(next)}
-                            </Button>
-                        ))}
-                    </Box>
                     {isDirty && (
                         <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
                             Save your changes before transitioning to a new state.

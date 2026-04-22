@@ -23,6 +23,12 @@ Always refer to PRs and issues as Markdown links using the full URL, e.g. `[owne
 
 Name branches `issue/<N>-short-slug` when opening a branch in response to a GitHub issue (e.g. `issue/42-fix-auth-flow`). For other work use `<type>/short-slug` (`fix/`, `feat/`, `docs/`, etc.).
 
+## GitHub CLI In Sandboxed Sessions
+
+In Codex or other sandboxed environments, `gh` commands that contact `api.github.com` may fail because of network restrictions and can misleadingly report an invalid token or auth failure.
+
+Do not treat a sandboxed `gh` auth or repo check failure as proof that GitHub credentials are broken. If a `gh` command such as `gh auth status`, `gh repo view`, or `gh pr create` fails in a sandboxed session, retry the same command with escalated permissions before concluding that the token is invalid or the user is unauthenticated.
+
 ## Scope Limits — Ask Before Acting
 
 Certain categories of change warrant explicit confirmation before proceeding autonomously. The project's domain guide defines the specific protected files, but the general categories are:
@@ -163,8 +169,7 @@ When an agent is mentioned on a PR it does not own (no matching label), it shoul
 When an issue agent opens a PR, it should immediately apply its own label to the PR so the PR agent can take over:
 
 ```bash
-gh pr edit <number> --add-label claude
+rtk gh pr edit <number> --add-label claude
 ```
 
 This ensures review requests and `@agent` mentions on the PR are handled by the same agent that wrote the code, without any manual label management.
-

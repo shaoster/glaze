@@ -134,8 +134,10 @@ describe('PieceDetail', () => {
     it('renders successor state buttons for non-terminal state', async () => {
         await renderPieceDetail()
         // 'designed' has successors: wheel_thrown, handbuilt
-        expect(screen.getByRole('button', { name: 'Wheel Thrown' })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Handbuilt' })).toBeInTheDocument()
+        const stateFlow = screen.getByRole('group', { name: 'State flow' })
+        expect(within(stateFlow).getByText('Designed')).toBeInTheDocument()
+        expect(within(stateFlow).getByRole('button', { name: 'Wheel Thrown' })).toBeInTheDocument()
+        expect(within(stateFlow).getByRole('button', { name: 'Handbuilt' })).toBeInTheDocument()
     })
 
     it('shows terminal state alert for terminal states', async () => {
