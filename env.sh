@@ -206,7 +206,7 @@ gz_test() {
 
 gz_build() {
     _gz_ensure_node
-    gz_gentypes
+    gz_gentypes || return $?
     (cd "$GLAZE_ROOT/web" && npm run build "$@")
 }
 
@@ -278,35 +278,33 @@ gz_logs() {    # gz_logs [backend|web]  — defaults to both
 # ---------------------------------------------------------------------------
 
 gz_gentypes() {
-    local we_started=false
     local generated_path="$GLAZE_ROOT/frontend_common/src/generated-types.ts"
-
-    if ! _gz_is_running backend; then
-        gz_backend
-        we_started=true
-        echo "Waiting for backend on :8080..."
-        local i=0
-        until curl -sf http://localhost:8080/api/schema/ >/dev/null 2>&1; do
-            sleep 1
-            (( i++ ))
-            if (( i >= 30 )); then
-                echo "Backend did not become ready in time — check: gz_logs backend"
-                $we_started && _gz_stop backend
-                return 1
-            fi
-        done
-    fi
+    local schema_path
+    schema_path="$(mktemp "${TMPDIR:-/tmp}/glaze-openapi.XXXXXX.json")" || return 1
 
     _gz_ensure_node
+    echo "Exporting OpenAPI schema..."
+    (
+        source "$GLAZE_ROOT/.venv/bin/activate"
+        cd "$GLAZE_ROOT"
+        python manage.py spectacular --format openapi-json --file "$schema_path"
+    ) || {
+        rm -f "$schema_path"
+        return 1
+    }
+
     echo "Regenerating shared TypeScript types..."
-    (cd "$GLAZE_ROOT/web" && npm run generate-types)
+    (
+        cd "$GLAZE_ROOT/web" &&
+        GLAZE_SCHEMA_SOURCE="$schema_path" npm run generate-types
+    )
     local exit_code=$?
+    rm -f "$schema_path"
 
     if (( exit_code == 0 )) && [[ -f "$generated_path" ]]; then
         echo "Generated: $generated_path"
     fi
 
-    $we_started && _gz_stop backend
     return $exit_code
 }
 
