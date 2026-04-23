@@ -60,7 +60,7 @@ describe('PieceList', () => {
         it('name cell links to piece detail page', async () => {
             renderPieceList([makePiece()])
             const link = screen.getByRole('navigation', { name: 'Clay Bowl' })
-            expect(link.attributes.href.value).toBe('/pieces/aaaaaaaa-0000-0000-0000-000000000001')
+            expect(link.getAttribute('href')).toBe('/pieces/aaaaaaaa-0000-0000-0000-000000000001')
         })
 
         it('renders tags as chips', () => {

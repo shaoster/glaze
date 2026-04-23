@@ -19,7 +19,7 @@ import { auto as autoQuality } from '@cloudinary/url-gen/qualifiers/quality'
 import { autoGravity } from '@cloudinary/url-gen/qualifiers/gravity'
 import { AdvancedImage } from '@cloudinary/react'
 import { Box, CircularProgress } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const CLOUDINARY_HOSTNAME = 'res.cloudinary.com'
 const THUMBNAIL_SIZE = 64
@@ -111,9 +111,28 @@ export default function CloudinaryImage({
     'data-testid': testId,
 }: CloudinaryImageProps) {
     const [isLoading, setIsLoading] = useState(true)
+    const imageRef = useRef<HTMLImageElement | null>(null)
+    const advancedImageRef = useRef<AdvancedImage | null>(null)
 
     useEffect(() => {
         setIsLoading(true)
+    }, [url, cloudinary_public_id, context])
+
+    useEffect(() => {
+        function syncLoadedStateFromDom() {
+            const image = imageRef.current ?? advancedImageRef.current?.imageRef?.current ?? null
+            if (image?.complete && image.naturalWidth > 0) {
+                setIsLoading(false)
+            }
+        }
+
+        syncLoadedStateFromDom()
+        window.addEventListener('pageshow', syncLoadedStateFromDom)
+        document.addEventListener('visibilitychange', syncLoadedStateFromDom)
+        return () => {
+            window.removeEventListener('pageshow', syncLoadedStateFromDom)
+            document.removeEventListener('visibilitychange', syncLoadedStateFromDom)
+        }
     }, [url, cloudinary_public_id, context])
 
     function handleLoad(event: React.SyntheticEvent<HTMLImageElement>) {
@@ -191,6 +210,7 @@ export default function CloudinaryImage({
                     </Box>
                 )}
                 <AdvancedImage
+                    ref={advancedImageRef}
                     cldImg={img}
                     alt={alt}
                     style={imageStyle}
@@ -212,6 +232,7 @@ export default function CloudinaryImage({
                 </Box>
             )}
             <img
+                ref={imageRef}
                 src={url}
                 alt={alt}
                 style={imageStyle}

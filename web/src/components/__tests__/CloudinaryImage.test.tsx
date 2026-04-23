@@ -1,25 +1,42 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { forwardRef, useImperativeHandle, useRef } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import CloudinaryImage from '../CloudinaryImage'
 
 vi.mock('@cloudinary/react', () => ({
-    AdvancedImage: ({ alt, className, 'data-testid': testId, onError, onLoad, style }: {
-        alt?: string
-        className?: string
-        'data-testid'?: string
-        onError?: React.ReactEventHandler<HTMLImageElement>
-        onLoad?: React.ReactEventHandler<HTMLImageElement>
-        style?: React.CSSProperties
-    }) => (
-        <img
-            alt={alt}
-            className={className}
-            data-testid={testId}
-            onError={onError}
-            onLoad={onLoad}
-            style={style}
-        />
-    ),
+    AdvancedImage: forwardRef(function MockAdvancedImage(
+        {
+            alt,
+            className,
+            'data-testid': testId,
+            onError,
+            onLoad,
+            style,
+        }: {
+            alt?: string
+            className?: string
+            'data-testid'?: string
+            onError?: React.ReactEventHandler<HTMLImageElement>
+            onLoad?: React.ReactEventHandler<HTMLImageElement>
+            style?: React.CSSProperties
+        },
+        ref: React.ForwardedRef<{ imageRef: React.RefObject<HTMLImageElement | null> }>
+    ) {
+        const imageRef = useRef<HTMLImageElement>(null)
+        useImperativeHandle(ref, () => ({ imageRef }), [])
+
+        return (
+            <img
+                ref={imageRef}
+                alt={alt}
+                className={className}
+                data-testid={testId}
+                onError={onError}
+                onLoad={onLoad}
+                style={style}
+            />
+        )
+    }),
 }))
 
 vi.mock('@cloudinary/url-gen', () => ({
@@ -107,5 +124,18 @@ describe('CloudinaryImage', () => {
         fireEvent.load(image)
 
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    })
+
+    it('hides the spinner when the browser restores a cached image without a new load event', () => {
+        render(<CloudinaryImage url="https://example.com/pot.jpg" alt="Pot" context="thumbnail" />)
+
+        const image = screen.getByAltText('Pot')
+        Object.defineProperty(image, 'complete', { configurable: true, get: () => true })
+        Object.defineProperty(image, 'naturalWidth', { configurable: true, get: () => 64 })
+
+        fireEvent(document, new Event('visibilitychange'))
+
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+        expect(image).toHaveStyle({ opacity: '1' })
     })
 })
