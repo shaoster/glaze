@@ -20,6 +20,7 @@ class TestAuthEndpoints:
         assert response.status_code == 201
         data = response.json()
         assert data['email'] == 'newuser@example.com'
+        assert data['is_staff'] is False
         assert User.objects.filter(email='newuser@example.com').exists()
         me_response = client.get('/api/auth/me/')
         assert me_response.status_code == 200
@@ -39,6 +40,7 @@ class TestAuthEndpoints:
         )
         assert response.status_code == 200
         assert response.json()['email'] == 'person@example.com'
+        assert response.json()['is_staff'] is False
 
     def test_logout_clears_session(self):
         user = User.objects.create(
@@ -54,6 +56,18 @@ class TestAuthEndpoints:
         client = APIClient()
         response = client.get('/api/auth/me/')
         assert response.status_code == 403
+
+    def test_me_includes_staff_flag(self):
+        user = User.objects.create(
+            username='admin@example.com',
+            email='admin@example.com',
+            is_staff=True,
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+        response = client.get('/api/auth/me/')
+        assert response.status_code == 200
+        assert response.json()['is_staff'] is True
 
     def test_data_endpoints_require_auth(self):
         client = APIClient()
