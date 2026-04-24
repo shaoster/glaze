@@ -47,7 +47,6 @@ vi.mock("./pages/AdminManualSquareCropToolPage", () => ({
 import {
   fetchCurrentUser,
   loginWithEmail,
-  loginWithGoogle,
   logoutUser,
 } from "@common/api";
 import App from "./App";

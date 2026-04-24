@@ -14,21 +14,7 @@ import {
 import { createPiece } from "@common/api";
 import type { PieceDetail } from "@common/types";
 import GlobalFieldPicker from "./GlobalFieldPicker";
-
-// Exported so other components (e.g. PieceList) can reference the default
-// thumbnail path without duplicating the string literal.
-export const DEFAULT_THUMBNAIL = "/thumbnails/question-mark.svg";
-
-// Exported so tests can assert on the full set of selectable thumbnails without
-// scraping the DOM. All thumbnails live in web/public/thumbnails/.
-export const CURATED_THUMBNAILS = [
-  DEFAULT_THUMBNAIL,
-  "/thumbnails/bowl.svg",
-  "/thumbnails/mug.svg",
-  "/thumbnails/vase.svg",
-  "/thumbnails/plate.svg",
-  "/thumbnails/teapot.svg",
-];
+import { DEFAULT_THUMBNAIL, CURATED_THUMBNAILS } from "./thumbnailConstants";
 
 const MAX_NOTES_LENGTH = 300;
 

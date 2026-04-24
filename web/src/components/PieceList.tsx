@@ -29,8 +29,7 @@ import CloudinaryImage from "./CloudinaryImage";
 import StateChip from "./StateChip";
 import TagAutocomplete from "./TagAutocomplete";
 import TagChipList from "./TagChipList";
-
-const DEFAULT_THUMBNAIL = "/thumbnails/question-mark.svg";
+import { DEFAULT_THUMBNAIL } from "./thumbnailConstants";
 
 type FilterCategory = "wip" | "completed" | "discarded";
 

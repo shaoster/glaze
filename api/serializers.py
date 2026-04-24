@@ -38,6 +38,8 @@ choices worth knowing about:
 - Serialization of wire dates — all ``DateTimeField`` instances are handled
   automatically by DRF; the ``Wire<T>`` mapping is a frontend concern only.
 """
+from typing import Any, cast
+
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -77,12 +79,13 @@ def _serialize_tags(model: models.Model, junction_name: str) -> list[dict[str, s
 
 def add_tags(model_cls: type[models.Model]):
     def decorator(serializer_cls: type[serializers.Serializer]):
-        serializer_cls.Meta.fields.append('tags')
-        serializer_cls._declared_fields['tags'] = serializers.SerializerMethodField()
+        cls_any: Any = serializer_cls
+        cls_any.Meta.fields.append('tags')
+        cls_any._declared_fields['tags'] = serializers.SerializerMethodField()
         @extend_schema_field(TagEntrySerializer(many=True))
         def get_tags(self, obj: models.Model):
             return _serialize_tags(obj, f'{model_cls._meta.model_name}tag')
-        serializer_cls.get_tags = get_tags
+        cls_any.get_tags = get_tags
         return serializer_cls
     return decorator
 
@@ -272,7 +275,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
 
 
 class PieceDetailSerializer(PieceSummarySerializer):
-    current_state = serializers.SerializerMethodField()  # type: ignore[assignment]
+    current_state = serializers.SerializerMethodField()
     history = serializers.SerializerMethodField()
 
     class Meta(PieceSummarySerializer.Meta):
@@ -283,11 +286,11 @@ class PieceDetailSerializer(PieceSummarySerializer):
         cs = obj.current_state
         if cs is None:
             raise ValueError(f'Piece {obj.id} has no states — data integrity error')
-        return PieceStateSerializer(cs).data  # type: ignore[return-value]
+        return PieceStateSerializer(cs).data
 
     @extend_schema_field(PieceStateSerializer(many=True))
     def get_history(self, obj: Piece) -> list:
-        return PieceStateSerializer(obj.states.all(), many=True).data  # type: ignore[return-value]
+        return list(PieceStateSerializer(obj.states.all(), many=True).data)
 
 
 class PieceCreateSerializer(serializers.ModelSerializer):
@@ -301,7 +304,7 @@ class PieceCreateSerializer(serializers.ModelSerializer):
         model = Piece
         fields = ['name', 'thumbnail', 'notes', 'current_location']
 
-    def create(self, validated_data: dict) -> Piece:  # type: ignore[override]
+    def create(self, validated_data: dict) -> Piece:
         user = self.context['request'].user
         notes = validated_data.pop('notes', '')
         location_name = validated_data.pop('current_location', None)
@@ -341,7 +344,7 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
                 )
         return value
 
-    def create(self, validated_data: dict) -> PieceState:  # type: ignore[override]
+    def create(self, validated_data: dict) -> PieceState:
         # Ensure all images have a created timestamp set by the backend.
         images = validated_data.get('images', [])
         if images:
@@ -444,7 +447,7 @@ class PieceStateUpdateSerializer(serializers.Serializer):
             raise serializers.ValidationError('Must be a JSON object.')
         return value
 
-    def update(self, instance: PieceState, validated_data: dict) -> PieceState:  # type: ignore[override]
+    def update(self, instance: PieceState, validated_data: dict) -> PieceState:
         if 'notes' in validated_data:
             instance.notes = validated_data['notes']
         if 'images' in validated_data:
@@ -491,7 +494,7 @@ class PieceUpdateSerializer(serializers.Serializer):
     thumbnail = ThumbnailSerializer(required=False, allow_null=True)
     tags = serializers.ListField(child=serializers.CharField(), required=False)
 
-    def update(self, instance: Piece, validated_data: dict) -> Piece:  # type: ignore[override] — DRF base is untyped; narrowing instance/return to Piece is intentional
+    def update(self, instance: Piece, validated_data: dict) -> Piece:
         if 'name' in validated_data:
             instance.name = validated_data['name']
         if 'current_location' in validated_data:
@@ -560,7 +563,7 @@ class RegisterSerializer(serializers.Serializer):
     first_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
     last_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
 
-    def create(self, validated_data: dict):  # type: ignore[override]
+    def create(self, validated_data: dict):
         user_model = get_user_model()
         user = user_model.objects.create_user(
             username=validated_data['email'],

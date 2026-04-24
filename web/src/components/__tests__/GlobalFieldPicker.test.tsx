@@ -10,8 +10,8 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import GlobalFieldPicker, {
   type GlobalFieldPickerProps,
-  stripPublicSuffix,
 } from "../GlobalFieldPicker";
+import { stripPublicSuffix } from "../globalFieldPickerUtils";
 import * as api from "@common/api";
 import type { GlobalEntry } from "@common/api";
 

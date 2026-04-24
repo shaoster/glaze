@@ -95,7 +95,7 @@ def _configure_cloudinary() -> None:
 def _load_image(path: Path) -> Image.Image:
     image = Image.open(path)
     if image.mode != 'RGB':
-        image = image.convert('RGB')
+        image = image.convert('RGB')  # type: ignore[assignment]
     return image
 
 

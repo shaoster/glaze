@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 from collections import defaultdict
+from typing import Optional, cast
 
 from django.apps import apps
 from django.conf import settings
@@ -92,7 +93,7 @@ _FAVORITES_REGISTRY = {
 
 
 def _piece_queryset(request: Request):
-    return Piece.objects.prefetch_related('states', 'tag_links__tag').filter(user=request.user)
+    return Piece.objects.prefetch_related('states', 'tag_links__tag').filter(user=request.user)  # type: ignore[misc]
 
 
 @extend_schema(
@@ -345,8 +346,8 @@ def make_global_entry_view(global_name: str):
     def view(request: Request) -> Response:
         return _global_entries_impl(request, global_name)
 
-    view.__name__ = f'global_entries_{global_name}'
-    view.__qualname__ = f'global_entries_{global_name}'
+    view.__name__ = f'global_entries_{global_name}'  # type: ignore[attr-defined]
+    view.__qualname__ = f'global_entries_{global_name}'  # type: ignore[attr-defined]
     return view
 
 
@@ -387,8 +388,8 @@ def make_global_entry_favorite_view(global_name: str):
     def view(request: Request, pk: str) -> Response:
         return _global_entry_favorite_impl(request, model_cls, fav_model_cls, pk)
 
-    view.__name__ = f'global_entry_favorite_{global_name}'
-    view.__qualname__ = f'global_entry_favorite_{global_name}'
+    view.__name__ = f'global_entry_favorite_{global_name}'  # type: ignore[attr-defined]
+    view.__qualname__ = f'global_entry_favorite_{global_name}'  # type: ignore[attr-defined]
     return view
 
 
@@ -556,8 +557,9 @@ def auth_google(request: Request) -> Response:
     else:
         # Fall back to matching by email so existing email/password accounts
         # can sign in via Google without creating a duplicate.
-        user = User.objects.filter(email__iexact=email).first()
-        if user is None:
+        existing_profile = UserProfile.objects.filter(user__email__iexact=email).select_related('user').first()
+        found_user = existing_profile.user if existing_profile else None
+        if found_user is None:
             user = User.objects.create_user(
                 username=email,
                 email=email,
@@ -567,6 +569,8 @@ def auth_google(request: Request) -> Response:
             # No usable password — Google-only account.
             user.set_unusable_password()
             user.save()
+        else:
+            user = found_user
 
         profile, _ = UserProfile.objects.get_or_create(user=user)
         profile.openid_subject = google_sub
@@ -622,7 +626,7 @@ def glaze_combination_images(request: Request) -> Response:
         PieceState.objects
         .filter(
             piece_id__in=piece_to_combo.keys(),
-            piece__user=request.user,
+            piece__user=request.user,  # type: ignore[misc]
             state__in=qualifying,
         )
         .select_related('piece')

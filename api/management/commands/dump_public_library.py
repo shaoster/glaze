@@ -40,7 +40,7 @@ class Command(BaseCommand):
         for model_cls in get_public_global_models():
             app_label = model_cls._meta.app_label
             model_name = model_cls._meta.model_name
-            public_qs = model_cls.objects.filter(user__isnull=True).order_by('name')
+            public_qs = model_cls.objects.filter(user__isnull=True).order_by('name')  # type: ignore[attr-defined]
 
             for obj in public_qs:
                 fields: dict = {}

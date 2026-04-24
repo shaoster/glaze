@@ -12,7 +12,7 @@ This module contains:
 Nothing in this module should be imported directly by application code outside of
 ``api/models.py``.  All public symbols are re-exported from there.
 """
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from django.conf import settings
 from django.db import models
@@ -49,6 +49,7 @@ class GlobalModel(models.Model):
     """
 
     _registry: ClassVar[list[type['GlobalModel']]] = []
+    objects: ClassVar[Any]
 
     # Set to True on compose_from globals whose ``name`` is a separator-joined
     # string of component names (e.g. GlazeCombination).  When False, save()
@@ -75,12 +76,12 @@ class GlobalModel(models.Model):
                 .values_list('user_id', flat=True)
                 .first()
             )
-            if old_user_id != self.user_id:
+            if old_user_id != self.user_id:  # type: ignore[attr-defined]
                 raise ValueError(
                     f'Cannot change the user field on {type(self).__name__} '
                     f'(pk={self.pk}) after creation.'
                 )
-        if not self._computed_name and self.name and COMPOSITE_NAME_SEPARATOR in self.name:
+        if not self._computed_name and self.name and COMPOSITE_NAME_SEPARATOR in self.name:  # type: ignore[attr-defined]
             raise ValueError(
                 f'{type(self).__name__} names cannot contain '
                 f'"{COMPOSITE_NAME_SEPARATOR}" '
@@ -114,7 +115,7 @@ def _deregister_model_if_exists(app_label: str, model_name: str) -> None:
         # Also remove from GlobalModel._registry so the stale class does not
         # show up in parameterised registry tests.
         try:
-            GlobalModel._registry.remove(existing)
+            GlobalModel._registry.remove(existing)  # type: ignore[arg-type]
         except ValueError:
             pass  # not a GlobalModel subclass (e.g. through or favorite models)
 
@@ -511,7 +512,7 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
     # - boolean fields with filterable: true (inline fields)
     # - FK fields with filterable: true (global ref fields → _id suffix)
     # - compose_from relationships with filter_label (m2m → layers__<component>_id)
-    composite_model.filterable_fields = {
+    composite_model.filterable_fields = {  # type: ignore[attr-defined]
         **{k: {'type': 'boolean'} for k in get_filterable_fields(global_name)},
         **get_filterable_ref_fields(global_name),
         **get_filterable_compose_fields(global_name),
@@ -535,7 +536,7 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
             component = component_model.objects.get(user=None, name=component_name)
             tm.objects.create(combination=obj, **{component_global: component}, order=order)
 
-    composite_model.post_fixture_load = post_fixture_load
+    composite_model.post_fixture_load = post_fixture_load  # type: ignore[attr-defined]
 
     return composite_model, through_model
 
@@ -561,6 +562,7 @@ class FavoriteModel(models.Model):
     # must override this.  Used by get_favorite_ids_for() and by views that
     # must add/remove favorites without knowing the concrete FK name.
     global_fk_field: ClassVar[str]
+    objects: ClassVar[Any]
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

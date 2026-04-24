@@ -7,3 +7,4 @@ pytest-cov==6.2.1
 pytest-env==1.6.0
 pytest-django==4.10.0
 ruff==0.12.1
+types-requests

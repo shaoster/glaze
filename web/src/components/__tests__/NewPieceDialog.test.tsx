@@ -7,7 +7,8 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import NewPieceDialog, { CURATED_THUMBNAILS } from "../NewPieceDialog";
+import NewPieceDialog from "../NewPieceDialog";
+import { CURATED_THUMBNAILS } from "../thumbnailConstants";
 import * as api from "@common/api";
 import type { PieceDetail } from "@common/types";
 

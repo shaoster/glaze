@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from typing import ClassVar
 
 import cloudinary
 from adminsortable2.admin import SortableAdminBase, SortableInlineAdminMixin
@@ -13,7 +14,11 @@ from django.utils.html import format_html
 from import_export import fields, resources
 from import_export.admin import ExportMixin
 
-from .models import (
+from api.model_factories import GlobalModel
+
+from typing import TYPE_CHECKING
+
+from .models import ( # type: ignore[attr-defined]
     FiringTemperature,
     GlazeCombination,
     GlazeCombinationLayer,
@@ -228,9 +233,8 @@ class PublicLibraryAdmin(admin.ModelAdmin):
     in workflow.yml automatically use CloudinaryImageWidget.
     """
 
-    list_display = ('name', 'is_public_entry')
-    search_fields = ('name',)
-    exclude = ('user',)
+    list_display: ClassVar[tuple[str, ...]] = ('name', 'is_public_entry') # type: ignore[misc]
+    exclude: ClassVar[tuple[str, ...]] = ('user',)
 
     @admin.display(boolean=True, description='Public')
     def is_public_entry(self, obj) -> bool:
@@ -322,7 +326,8 @@ class GlazeCombinationLayerInline(SortableInlineAdminMixin, admin.TabularInline)
         # formfield_for_foreignkey returns, so can_delete_related must be
         # suppressed here rather than in formfield_for_foreignkey.
         if db_field.name in ('glaze_type', 'glaze_method') and hasattr(field, 'widget'):
-            field.widget.can_delete_related = False
+            if field is not None and hasattr(field, 'widget'):
+                setattr(field.widget, 'can_delete_related', False)
         return field
 
 
@@ -333,8 +338,7 @@ class GlazeCombinationAdmin(SortableAdminBase, PublicLibraryAdmin):
     from the edit form (it is stale until save and would be confusing); it is
     still visible in the list view via ``__str__``.
     """
-
-    list_display = (
+    list_display: ClassVar[tuple[str, ...]] = ( # type: ignore[misc]
         '__str__',
         'firing_temperature',
         'is_food_safe',
@@ -342,7 +346,7 @@ class GlazeCombinationAdmin(SortableAdminBase, PublicLibraryAdmin):
         'highlights_grooves',
         'is_different_on_white_and_brown_clay',
         'is_public_entry',
-    )
+    ) 
     list_filter = (
         'firing_temperature',
         'is_food_safe',

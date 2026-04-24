@@ -1,4 +1,5 @@
 import uuid
+from typing import TYPE_CHECKING, Any
 
 import jsonschema
 from django.conf import settings
@@ -71,10 +72,11 @@ def _register_globals():
             continue
         config = get_global_config(global_name)
         model_name: str = config['model']
-        if get_compose_from(global_name):
+        compose_from = get_compose_from(global_name)
+        if compose_from:
             composite, through = make_compose_global_models(global_name)
             ns[model_name] = composite
-            compose_config = next(iter(get_compose_from(global_name).values()))
+            compose_config = next(iter(compose_from.values()))
             through_model_name: str = compose_config.get('through_model', f'{model_name}Through')
             ns[through_model_name] = through
         else:
@@ -127,7 +129,7 @@ class Piece(models.Model):
 
     @property
     def current_state(self) -> 'PieceState | None':
-        return self.states.order_by('-created').first()  # type: ignore[return-value]
+        return self.states.order_by('-created').first()
 
     @property
     def last_modified(self):
@@ -209,3 +211,15 @@ class UserProfile(models.Model):
 
     def __str__(self) -> str:
         return f'Profile({self.user})'
+
+
+# These names are injected into the module namespace by _register_globals().
+# Typed as Any so mypy allows arbitrary attribute access and type annotation use.
+if TYPE_CHECKING:
+    FiringTemperature: Any
+    GlazeCombination: Any
+    GlazeCombinationLayer: Any
+    FavoriteGlazeCombination: Any
+    GlazeType: Any
+    Location: Any
+    Tag: Any
