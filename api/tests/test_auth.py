@@ -42,6 +42,21 @@ class TestAuthEndpoints:
         assert response.json()['email'] == 'person@example.com'
         assert response.json()['is_staff'] is False
 
+    def test_login_rejects_invalid_password(self):
+        User.objects.create_user(
+            username='person@example.com',
+            email='person@example.com',
+            password='password123',
+        )
+        client = APIClient()
+        response = client.post(
+            '/api/auth/login/',
+            {'email': 'person@example.com', 'password': 'wrong-password'},
+            format='json',
+        )
+        assert response.status_code == 400
+        assert response.json() == {'detail': 'Invalid email or password.'}
+
     def test_logout_clears_session(self):
         user = User.objects.create(
             username='logout@example.com',
@@ -56,6 +71,40 @@ class TestAuthEndpoints:
         client = APIClient()
         response = client.get('/api/auth/me/')
         assert response.status_code == 403
+
+    def test_csrf_endpoint_returns_204(self):
+        client = APIClient()
+        response = client.get('/api/auth/csrf/')
+        assert response.status_code == 204
+
+    def test_register_rejects_duplicate_email(self):
+        User.objects.create_user(
+            username='existing@example.com',
+            email='existing@example.com',
+            password='password123',
+        )
+        client = APIClient()
+        response = client.post(
+            '/api/auth/register/',
+            {
+                'email': 'existing@example.com',
+                'password': 'password123',
+            },
+            format='json',
+        )
+        assert response.status_code == 400
+        assert response.json() == {'email': ['A user with this email already exists.']}
+
+    def test_google_auth_returns_503_when_not_configured(self, settings):
+        settings.GOOGLE_OAUTH_CLIENT_ID = ''
+        client = APIClient()
+        response = client.post(
+            '/api/auth/google/',
+            {'credential': 'fake-token'},
+            format='json',
+        )
+        assert response.status_code == 503
+        assert response.json() == {'detail': 'Google sign-in is not configured on this server.'}
 
     def test_me_includes_staff_flag(self):
         user = User.objects.create(

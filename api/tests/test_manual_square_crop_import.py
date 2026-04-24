@@ -178,3 +178,51 @@ class TestManualSquareCropImport:
         assert body['summary']['skipped_duplicates'] == 1
         assert body['results'][0]['status'] == 'skipped_duplicate'
         assert body['results'][0]['object_id'] == str(existing.pk)
+
+    def test_rejects_missing_payload(self):
+        admin = User.objects.create(username='admin4@example.com', email='admin4@example.com', is_staff=True)
+        client = APIClient()
+        client.force_authenticate(user=admin)
+
+        response = client.post(URL, {}, format='multipart')
+
+        assert response.status_code == 400
+        assert response.json() == {'detail': 'payload is required.'}
+
+    def test_rejects_invalid_json_payload(self):
+        admin = User.objects.create(username='admin5@example.com', email='admin5@example.com', is_staff=True)
+        client = APIClient()
+        client.force_authenticate(user=admin)
+
+        response = client.post(URL, {'payload': '{not-json'}, format='multipart')
+
+        assert response.status_code == 400
+        assert response.json() == {'detail': 'payload must be valid JSON.'}
+
+    def test_rejects_unreviewed_records(self):
+        admin = User.objects.create(username='admin6@example.com', email='admin6@example.com', is_staff=True)
+        client = APIClient()
+        client.force_authenticate(user=admin)
+
+        response = client.post(
+            URL,
+            {'payload': json.dumps({'records': [{'client_id': 'rec-1', 'reviewed': False}]})},
+            format='multipart',
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {'detail': 'All records must be reviewed before import.'}
+
+    def test_rejects_record_without_client_id(self):
+        admin = User.objects.create(username='admin7@example.com', email='admin7@example.com', is_staff=True)
+        client = APIClient()
+        client.force_authenticate(user=admin)
+
+        response = client.post(
+            URL,
+            {'payload': json.dumps({'records': [{'reviewed': True}]})},
+            format='multipart',
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {'detail': 'Each record must include client_id.'}

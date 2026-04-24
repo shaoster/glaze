@@ -130,3 +130,50 @@ class TestPublicLibraryPost:
         assert response.status_code == 201
         loc = Location.objects.get(name='New Kiln')
         assert loc.user == user
+
+    def test_post_rejects_non_object_values_payload(self, client):
+        response = client.post(
+            '/api/globals/location/',
+            {'values': ['not-an-object']},
+            format='json',
+        )
+        assert response.status_code == 400
+        assert response.json() == {'detail': 'values must be an object.'}
+
+    def test_post_creates_private_object_from_values_payload(self, client, user):
+        response = client.post(
+            '/api/globals/location/',
+            {'values': {'name': 'Drying Rack'}},
+            format='json',
+        )
+        assert response.status_code == 201
+        assert response.json()['name'] == 'Drying Rack'
+        loc = Location.objects.get(name='Drying Rack')
+        assert loc.user == user
+
+    def test_post_public_only_global_returns_405(self, client):
+        response = client.post(
+            '/api/globals/firing_temperature/',
+            {'field': 'name', 'value': 'Cone 6 Oxidation'},
+            format='json',
+        )
+        assert response.status_code == 405
+        assert response.json() == {'detail': 'Private instances of this type are not supported.'}
+
+    def test_glaze_combination_post_requires_non_empty_layers(self, client):
+        response = client.post(
+            '/api/globals/glaze_combination/',
+            {'layers': []},
+            format='json',
+        )
+        assert response.status_code == 400
+        assert response.json() == {'detail': 'layers must be a non-empty list of PKs.'}
+
+    def test_glaze_combination_post_rejects_unknown_layer_pk(self, client):
+        response = client.post(
+            '/api/globals/glaze_combination/',
+            {'layers': ['00000000-0000-0000-0000-000000000000']},
+            format='json',
+        )
+        assert response.status_code == 400
+        assert response.json() == {'detail': "Unknown GlazeType pk: '00000000-0000-0000-0000-000000000000'"}

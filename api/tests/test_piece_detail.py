@@ -81,6 +81,16 @@ class TestPieceDetail:
             {'id': str(first.id), 'name': 'Functional', 'color': '#E76F51'},
         ]
 
+    def test_patch_rejects_unknown_tag_id(self, client, piece):
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'tags': ['00000000-0000-0000-0000-000000000000']},
+            format='json',
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {'tags': ["Invalid tag id: '00000000-0000-0000-0000-000000000000'"]}
+
     def test_patch_name_empty_rejected(self, client, piece):
         response = client.patch(
             f'/api/pieces/{piece.id}/',

@@ -93,6 +93,18 @@ class TestPatchCurrentState:
         )
         assert response.status_code == 404
 
+    def test_piece_with_no_states_returns_404(self, client, user):
+        from api.models import Piece
+
+        piece = Piece.objects.create(user=user, name='No History Yet')
+        response = client.patch(
+            f'/api/pieces/{piece.id}/state/',
+            {'notes': 'x'},
+            format='json',
+        )
+        assert response.status_code == 404
+        assert response.json() == {'detail': 'Piece has no states.'}
+
     def test_invalid_additional_fields_returns_400(self, client, piece):
         # additional_fields must be a JSON object — passing a list should fail validation
         response = client.patch(

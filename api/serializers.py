@@ -517,7 +517,10 @@ class PieceUpdateSerializer(serializers.Serializer):
 def _replace_piece_tags(piece: Piece, user, tag_ids: list[str]) -> None:
     tag_model = apps.get_model('api', 'Tag')
     piece_tag_model = apps.get_model('api', 'PieceTag')
-    tags = list(tag_model.objects.filter(user=user, pk__in=tag_ids).order_by('name'))
+    try:
+        tags = list(tag_model.objects.filter(user=user, pk__in=tag_ids).order_by('name'))
+    except (TypeError, ValueError) as exc:
+        raise serializers.ValidationError({'tags': [f'Invalid tag id: {tag_ids[0]!r}']}) from exc
     tags_by_id = {str(tag.pk): tag for tag in tags}
     missing = [tag_id for tag_id in tag_ids if tag_id not in tags_by_id]
     if missing:

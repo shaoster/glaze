@@ -496,7 +496,7 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
         for pk in pks:
             try:
                 components.append(component_model.objects.get(pk=pk))
-            except component_model.DoesNotExist as exc:
+            except (component_model.DoesNotExist, TypeError, ValueError) as exc:
                 raise ValueError(f'Unknown {_component_model_name} pk: {pk!r}') from exc
         if not components:
             raise ValueError(f'A {cls.__name__} must have at least one component.')
