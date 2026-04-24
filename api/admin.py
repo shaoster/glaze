@@ -3,8 +3,8 @@ import os
 import re
 
 import cloudinary
-from cloudinary import CloudinaryImage
 from adminsortable2.admin import SortableAdminBase, SortableInlineAdminMixin
+from cloudinary import CloudinaryImage
 from django import forms
 from django.contrib import admin
 from django.forms import widgets
@@ -13,7 +13,16 @@ from django.utils.html import format_html
 from import_export import fields, resources
 from import_export.admin import ExportMixin
 
-from .models import FiringTemperature, GlazeCombination, GlazeCombinationLayer, GlazeMethod, GlazeType, Piece, PieceState, UserProfile
+from .models import (
+    FiringTemperature,
+    GlazeCombination,
+    GlazeCombinationLayer,
+    GlazeMethod,
+    GlazeType,
+    Piece,
+    PieceState,
+    UserProfile,
+)
 from .serializers import PieceStateSerializer
 from .utils import sync_glaze_type_singleton_combination
 from .workflow import get_image_fields_for_global_model, get_public_global_models

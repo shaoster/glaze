@@ -1,8 +1,6 @@
 """Tests for the dump_public_library and load_public_library management commands."""
 import json
-import tempfile
 from io import StringIO
-from pathlib import Path
 
 import pytest
 from django.core.management import call_command

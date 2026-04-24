@@ -1,31 +1,35 @@
 import hashlib
-import os
 import json
+import os
+from collections import defaultdict
 
-from drf_spectacular.utils import extend_schema
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
+from drf_spectacular.utils import extend_schema
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 from rest_framework import status
-from rest_framework.decorators import api_view
-from rest_framework.decorators import parser_classes
-from rest_framework.decorators import permission_classes
+from rest_framework.decorators import api_view, parser_classes, permission_classes
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from collections import defaultdict
-
-from django.apps import apps
-from django.db.models import Q
-
 from .manual_tile_imports import import_manual_tile_records
-from .models import FavoriteGlazeCombination, GlazeCombination, Piece, PieceState, UserProfile
-from .registry import _GLOBAL_ENTRY_SERIALIZERS  # populated by @global_entry_serializer decorators in serializers.py
+from .models import (
+    FavoriteGlazeCombination,
+    GlazeCombination,
+    Piece,
+    PieceState,
+    UserProfile,
+)
+from .registry import (
+    _GLOBAL_ENTRY_SERIALIZERS,  # populated by @global_entry_serializer decorators in serializers.py
+)
 from .serializers import (
     AuthUserSerializer,
     GlazeCombinationImageEntrySerializer,
@@ -33,13 +37,19 @@ from .serializers import (
     LoginSerializer,
     PieceCreateSerializer,
     PieceDetailSerializer,
-    PieceSummarySerializer,
     PieceStateCreateSerializer,
     PieceStateUpdateSerializer,
+    PieceSummarySerializer,
     PieceUpdateSerializer,
     RegisterSerializer,
 )
-from .workflow import get_global_model_and_field, get_glaze_image_qualifying_states, is_private_global, is_public_global
+from .workflow import (
+    get_glaze_image_qualifying_states,
+    get_global_model_and_field,
+    is_private_global,
+    is_public_global,
+)
+
 
 def _apply_global_filters(qs, model_cls, request):
     """Apply query-param filters declared in a model's ``filterable_fields`` dict.

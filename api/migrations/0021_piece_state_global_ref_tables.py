@@ -14,7 +14,6 @@ Data migration:
 import django.db.models.deletion
 from django.db import migrations, models
 
-
 # ---------------------------------------------------------------------------
 # State → (field_name, global_model_name) snapshot at migration time.
 # ---------------------------------------------------------------------------

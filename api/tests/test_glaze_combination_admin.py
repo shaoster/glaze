@@ -5,12 +5,10 @@ adminsortable2-backed inline.  Tests use CustomInlineFormSet (the real formset
 class used by SortableInlineAdminMixin) to match runtime behavior exactly.
 """
 import pytest
+from adminsortable2.admin import CustomInlineFormSet
 from django.forms.models import inlineformset_factory
 
-from adminsortable2.admin import CustomInlineFormSet
-
 from api.models import GlazeCombination, GlazeCombinationLayer, GlazeType
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -73,7 +71,7 @@ class TestNewLayerOrderAssignment:
         combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt1])
         existing = list(combo.layers.order_by('order'))
 
-        formset = _build_formset(combo, existing, [l.order for l in existing], [gt2.pk])
+        formset = _build_formset(combo, existing, [layer.order for layer in existing], [gt2.pk])
         assert formset.is_valid(), formset.errors
         formset.save()
 
@@ -90,13 +88,13 @@ class TestNewLayerOrderAssignment:
         combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt1])
         existing = list(combo.layers.order_by('order'))
 
-        formset = _build_formset(combo, existing, [l.order for l in existing], [gt2.pk, gt3.pk])
+        formset = _build_formset(combo, existing, [layer.order for layer in existing], [gt2.pk, gt3.pk])
         assert formset.is_valid(), formset.errors
         formset.save()
 
         layers = list(combo.layers.order_by('order'))
         assert len(layers) == 3
-        orders = [l.order for l in layers]
+        orders = [layer.order for layer in layers]
         assert orders == sorted(orders)
         assert len(set(orders)) == 3
 

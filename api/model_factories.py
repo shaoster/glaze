@@ -662,7 +662,7 @@ def make_piece_state_global_ref_model(global_name: str) -> type:
         global_name: models.ForeignKey(
             f'api.{model_name}',
             on_delete=models.PROTECT,
-            related_name=f'piece_state_refs',
+            related_name='piece_state_refs',
         ),
         '__str__': (lambda gn: lambda self: f'{self.piece_state} / {self.field_name}={getattr(self, gn)}')(global_name),
         'Meta': type('Meta', (), {

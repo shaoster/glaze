@@ -38,15 +38,22 @@ choices worth knowing about:
 - Serialization of wire dates — all ``DateTimeField`` instances are handled
   automatically by DRF; the ``Wire<T>`` mapping is a frontend concern only.
 """
+from django.apps import apps
+from django.contrib.auth import get_user_model
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-
-from django.apps import apps
-
-from .models import FiringTemperature, GlazeCombination, Location, Piece, PieceState, Tag, UserProfile, models 
+from .models import (
+    FiringTemperature,
+    GlazeCombination,
+    Location,
+    Piece,
+    PieceState,
+    Tag,
+    UserProfile,
+    models,
+)
 from .registry import global_entry_serializer
 from .workflow import (
     ENTRY_STATE,
@@ -56,6 +63,7 @@ from .workflow import (
     get_global_ref_fields_for_state,
     get_state_ref_fields,
 )
+
 
 def _serialize_tags(model: models.Model, junction_name: str) -> list[dict[str, str]]:
     tag_links = getattr(model, '_prefetched_objects_cache', {}).get('tag_links')

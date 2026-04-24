@@ -5,9 +5,8 @@ imports nothing from the rest of the app, so models, serializers, and views
 can all import from here without creating cycles.
 """
 
-from rest_framework import serializers
 from django.db import models as django_models
-
+from rest_framework import serializers
 
 _GLOBAL_ENTRY_SERIALIZERS: dict = {}
 

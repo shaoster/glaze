@@ -20,7 +20,6 @@ from api.models import (
     GlazeType,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -159,7 +158,7 @@ class TestGetOrCreateWithLayers:
         gt3 = _pub_gt('Third')
         combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt1, gt2, gt3])
         layers = list(combo.layers.order_by('order'))
-        assert [l.glaze_type for l in layers] == [gt1, gt2, gt3]
+        assert [layer.glaze_type for layer in layers] == [gt1, gt2, gt3]
 
     def test_empty_list_raises(self):
         with pytest.raises(ValueError, match='at least one component'):

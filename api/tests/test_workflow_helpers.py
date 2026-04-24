@@ -1,8 +1,7 @@
 from unittest.mock import Mock
 
-from api.models import Piece
 import api.workflow as workflow_module
-
+from api.models import Piece
 
 # Snapshot-style fixture that mirrors the current workflow.yml shape and naming.
 _MOCK_STATE_MAP = {

@@ -6,30 +6,48 @@ from django.db import models
 
 from .model_factories import (
     COMPOSITE_NAME_SEPARATOR as COMPOSITE_NAME_SEPARATOR,
+)
+from .model_factories import (
     FavoriteModel as FavoriteModel,
+)
+from .model_factories import (
     GlobalModel as GlobalModel,
+)
+from .model_factories import (
     make_compose_global_models,
     make_favorite_model,
-    make_taggable_model,
     make_piece_state_global_ref_model,
     make_simple_global_model,
+    make_taggable_model,
 )
 from .workflow import (
     ENTRY_STATE as ENTRY_STATE,
+)
+from .workflow import (
     SUCCESSORS as SUCCESSORS,
+)
+from .workflow import (
     TERMINAL_STATES as TERMINAL_STATES,
+)
+from .workflow import (
     VALID_STATES as VALID_STATES,
+)
+from .workflow import (
     WORKFLOW_VERSION,
     build_additional_fields_schema,
     get_compose_from,
     get_global_config,
-    get_global_model_and_field as get_global_model_and_field,
     get_global_names,
-    get_taggable_globals,
     get_state_global_ref_map,
-    get_state_ref_fields as get_state_ref_fields,
+    get_taggable_globals,
     is_factory_global,
     is_favoritable_global,
+)
+from .workflow import (
+    get_global_model_and_field as get_global_model_and_field,
+)
+from .workflow import (
+    get_state_ref_fields as get_state_ref_fields,
 )
 
 # ---------------------------------------------------------------------------

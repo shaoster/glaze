@@ -7,7 +7,6 @@ from django.contrib.auth.models import User
 import api.workflow as workflow_module
 from api.models import Piece, PieceState
 
-
 # ---------------------------------------------------------------------------
 # Model: PieceState.additional_fields schema validation
 #

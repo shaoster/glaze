@@ -1,8 +1,7 @@
-from django.contrib import admin
 from django.conf import settings
+from django.contrib import admin
 from django.http import HttpResponse, HttpResponseNotFound
 from django.urls import include, path, re_path
-
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 _INDEX_HTML = settings.BASE_DIR / 'web' / 'dist' / 'index.html'
