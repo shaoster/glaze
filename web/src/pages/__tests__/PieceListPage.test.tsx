@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,7 +13,9 @@ vi.mock("../..//util/useAsync", () => ({
 
 vi.mock("../../components/PieceList", () => ({
   default: ({ pieces }: { pieces: PieceSummary[] }) => (
-    <div data-testid="piece-list">{pieces.map((piece) => piece.name).join(", ")}</div>
+    <div data-testid="piece-list">
+      {pieces.map((piece) => piece.name).join(", ")}
+    </div>
   ),
 }));
 
@@ -134,12 +136,22 @@ describe("PieceListPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "New Piece" }));
     expect(screen.getByText("New Piece Dialog")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Finish Create" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Finish Create" }),
+    );
 
     expect(setData).toHaveBeenCalledTimes(1);
-    const updateFn = setData.mock.calls[0][0] as (prev: PieceSummary[] | null) => PieceSummary[];
-    expect(updateFn([{ id: "piece-1", name: "Existing Bowl" } as PieceSummary])[0].name).toBe("Fresh Mug");
-    expect(updateFn([{ id: "piece-1", name: "Existing Bowl" } as PieceSummary])[1].name).toBe("Existing Bowl");
+    const updateFn = setData.mock.calls[0][0] as (
+      prev: PieceSummary[] | null,
+    ) => PieceSummary[];
+    expect(
+      updateFn([{ id: "piece-1", name: "Existing Bowl" } as PieceSummary])[0]
+        .name,
+    ).toBe("Fresh Mug");
+    expect(
+      updateFn([{ id: "piece-1", name: "Existing Bowl" } as PieceSummary])[1]
+        .name,
+    ).toBe("Existing Bowl");
   });
 
   it("shows the mobile fab on small screens", () => {
@@ -153,6 +165,8 @@ describe("PieceListPage", () => {
 
     render(<PieceListPage />);
 
-    expect(screen.getByRole("button", { name: "New Piece" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "New Piece" }),
+    ).toBeInTheDocument();
   });
 });
