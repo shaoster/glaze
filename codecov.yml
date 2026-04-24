@@ -1,0 +1,23 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 2%
+    patch:
+      default:
+        target: auto
+        threshold: 2%
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+
+flags:
+  backend:
+    paths:
+      - api/
+  frontend:
+    paths:
+      - web/src/
+      - frontend_common/src/

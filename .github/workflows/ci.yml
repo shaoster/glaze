@@ -95,7 +95,7 @@ jobs:
         run: pytest tests/
 
   backend:
-    name: Backend (pytest)
+    name: Backend (pytest + coverage)
     needs: preflight
     if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
     runs-on: ubuntu-latest
@@ -110,34 +110,44 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
-      - name: Run tests
-        run: pytest api/
+      - name: Run tests with coverage
+        run: pytest api/ --cov=api --cov-report=lcov:coverage/lcov.info --cov-report=term-missing
 
-  web:
-    name: Web (vitest)
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/lcov.info
+          flags: backend
+          fail_ci_if_error: false
+
+  python-quality:
+    name: Python (ruff + mypy)
     needs: preflight
     if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-python@v6
         with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
+          python-version: '3.12'
+          cache: pip
 
       - name: Install dependencies
-        run: npm ci
+        run: pip install -r requirements-dev.txt
 
-      - name: Run tests
-        run: npm test
+      - name: Lint (ruff) and type-check (mypy) in parallel
+        run: |
+          ruff check . &
+          RUFF_PID=$!
+          mypy . &
+          MYPY_PID=$!
+          wait $RUFF_PID; RUFF_EXIT=$?
+          wait $MYPY_PID; MYPY_EXIT=$?
+          exit $(( RUFF_EXIT | MYPY_EXIT ))
 
-  web-build:
-    name: Web (build)
+  web:
+    name: Web (test + build + lint)
     needs: preflight
     if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
     runs-on: ubuntu-latest
@@ -169,14 +179,31 @@ jobs:
           cd web && GLAZE_SCHEMA_SOURCE="$schema_path" npm run generate-types
           rm -f "$schema_path"
 
-      - name: Build
+      - name: Test, build, and lint in parallel
         working-directory: web
-        run: npm run build
+        run: |
+          npm run test -- --coverage &
+          TEST_PID=$!
+          npm run build &
+          BUILD_PID=$!
+          npm run lint &
+          LINT_PID=$!
+          wait $TEST_PID; TEST_EXIT=$?
+          wait $BUILD_PID; BUILD_EXIT=$?
+          wait $LINT_PID; LINT_EXIT=$?
+          exit $(( TEST_EXIT | BUILD_EXIT | LINT_EXIT ))
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: web/coverage/lcov.info
+          flags: frontend
+          fail_ci_if_error: false
 
   record-fingerprint:
     name: Record successful fingerprint
-    needs: [preflight, common, backend, web, web-build]
-    if: ${{ github.event_name == 'pull_request' && needs.common.result == 'success' && needs.backend.result == 'success' && needs.web.result == 'success' && needs.web-build.result == 'success' }}
+    needs: [preflight, common, backend, python-quality, web]
+    if: ${{ github.event_name == 'pull_request' && needs.common.result == 'success' && needs.backend.result == 'success' && needs.python-quality.result == 'success' && needs.web.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Write fingerprint marker

@@ -23,5 +23,12 @@ export default defineConfig({
       'src/**/*.{test,spec}.{ts,tsx}',
       '../frontend_common/src/**/*.test.ts',
     ],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.{ts,tsx}', '../frontend_common/src/**/*.ts'],
+      exclude: ['src/test-setup.ts', '**/*.d.ts', '**/generated-types.ts'],
+    },
   },
 })

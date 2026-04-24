@@ -1,0 +1,8 @@
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]  # line too long — handled by formatter preferences
+
+[lint.per-file-ignores]
+"api/migrations/*.py" = ["E", "F", "W"]
