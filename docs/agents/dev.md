@@ -48,6 +48,23 @@ Two scripts handle environment bootstrap:
 
 ---
 
+## Skills
+
+Reusable agent skills live in [`.agents/skills/`](../../.agents/skills/). Each skill is a folder containing a `SKILL.md` file.
+
+| Agent | How skills are loaded |
+|---|---|
+| Codex | Reads `.agents/skills/` natively — no setup needed |
+| Claude Code | Reads `.claude/<name>.md`; each skill has a git-tracked symlink there pointing into `.agents/skills/<name>/SKILL.md` |
+
+### Adding a new skill
+
+1. Create `.agents/skills/<skill-name>/SKILL.md` with the skill content.
+2. Add a Claude symlink: `ln -s ../.agents/skills/<skill-name>/SKILL.md .claude/<skill-name>.md`
+3. Commit both the folder and the symlink.
+
+---
+
 ## Environment variables
 
 All vars are optional. The app runs without any of them; each missing group degrades gracefully.
