@@ -136,6 +136,15 @@ Tests live in two places:
 
 The test environment is jsdom; setup file is [`web/src/test-setup.ts`](../../web/src/test-setup.ts).
 
+### Web — type-check
+
+```bash
+cd web
+npx tsc --noEmit      # standalone type-check without emitting files
+```
+
+`npm run build` also type-checks (via `tsc -b`), but `--noEmit` is faster for an isolated check during development.
+
 ### Web — lint
 
 ```bash
