@@ -10,6 +10,10 @@
 
 ---
 
+## Git Worktree Policy
+
+When asked to work on a PR or implement a feature branch, always create a git worktree first using the `EnterWorktree` tool rather than modifying the current branch directly. Ask before proceeding if worktree creation would be inappropriate (e.g. the user explicitly wants to work on the current branch).
+
 ## Instruction Priority
 
 When a referenced agent doc specifies setup, test, build, or verification commands, use those documented commands exactly by default.
