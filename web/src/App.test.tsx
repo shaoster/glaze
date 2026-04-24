@@ -39,6 +39,10 @@ vi.mock('./components/GlazeCombinationGallery', () => ({
     default: () => <div>Glaze Gallery Content</div>,
 }))
 
+vi.mock('./pages/AdminManualSquareCropToolPage', () => ({
+    default: () => <div>Glaze Import Tool Page</div>,
+}))
+
 // Now import App and the mocked api
 import { fetchCurrentUser, loginWithEmail, loginWithGoogle, logoutUser } from '@common/api'
 import App from './App'
@@ -48,8 +52,14 @@ const MOCK_USER = {
     email: 'potter@example.com',
     first_name: 'Pat',
     last_name: 'Potter',
+    is_staff: false,
     openid_subject: '',
     profile_image_url: '',
+}
+
+const MOCK_ADMIN_USER = {
+    ...MOCK_USER,
+    is_staff: true,
 }
 
 describe('App auth flow', () => {
@@ -198,6 +208,38 @@ describe('App auth flow', () => {
         await waitFor(() => {
             expect(screen.getByText('Track every pottery piece through your workflow.')).toBeInTheDocument()
         })
+    })
+
+    it('shows the manual crop tool menu item only for admin users and routes to it', async () => {
+        vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_ADMIN_USER)
+
+        render(<App />)
+
+        await waitFor(() => {
+            expect(screen.getByRole('button', { name: /new piece/i })).toBeInTheDocument()
+        })
+
+        await userEvent.click(screen.getByText('Pat Potter'))
+        await userEvent.click(screen.getByText('Glaze Import Tool'))
+
+        await waitFor(() => {
+            expect(screen.getByText('Glaze Import Tool Page')).toBeInTheDocument()
+            expect(window.location.pathname).toBe('/tools/glaze-import')
+        })
+    })
+
+    it('does not show the manual crop tool menu item for non-admin users', async () => {
+        vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_USER)
+
+        render(<App />)
+
+        await waitFor(() => {
+            expect(screen.getByRole('button', { name: /new piece/i })).toBeInTheDocument()
+        })
+
+        await userEvent.click(screen.getByText('Pat Potter'))
+
+        expect(screen.queryByText('Glaze Import Tool')).not.toBeInTheDocument()
     })
 
     it('activates the analyze tab on direct navigation to /analyze', async () => {

@@ -612,3 +612,36 @@ gz_dump_public_library --output path/to/custom.json
 # Inspect the export without writing a file:
 gz_dump_public_library --output -
 ```
+
+## Glaze Import Tool
+
+The **Glaze Import Tool** at `/tools/glaze-import` is a browser-based admin workflow for seeding the public `GlazeType` and `GlazeCombination` libraries from physical test-tile photographs (JPEG, PNG, or HEIC via Cloudinary). It replaces manual admin entry for bulk imports.
+
+> Only staff users (`is_staff = True`) can access this tool.
+
+### The five-step flow
+
+1. **Upload** — drag-and-drop or select source images from disk, or use the Cloudinary widget for HEIC/HEIF files (Cloudinary converts them to JPEG automatically).
+2. **Crop** — draw a rotatable square crop box over each image. The box may extend beyond the image boundary; overflow becomes transparent. A live preview updates after 200 ms of inactivity.
+3. **OCR** — optionally draw a rotatable OCR region box on the crop preview to focus text extraction. Click **Run OCR For All Records** — Tesseract reads each region and auto-fills the name, glaze kind, first/second glaze, runs, and food-safe fields. OCR understands structured labels (`1st Glaze: …` / `2nd Glaze: …`) and annotation lines (`CAUTION: RUNS`, `NOT FOOD SAFE`).
+4. **Review** — verify and correct each record's parsed fields, then check the **Reviewed** box. Combination names are auto-computed as `<first>!<second>` and are read-only.
+5. **Import** — sends all reviewed records and compressed crop images to the backend. A per-record progress list tracks each file; results show admin links to every created object.
+
+If any records are skipped as duplicates, a **6. Reconcile** tab appears with the scraped fields and a direct link to the existing admin record.
+
+### What the import creates
+
+| Record kind | Created objects |
+|-------------|----------------|
+| `glaze_type` | Public `GlazeType` + a matching single-layer public `GlazeCombination` |
+| `glaze_combination` | Public `GlazeCombination` with two ordered layers (both referenced `GlazeType` rows must already exist as public records) |
+
+`runs` and `is_food_safe` parsed from OCR are written to both `GlazeType` and `GlazeCombination` on creation.
+
+After a successful import, export and deploy the updated library:
+
+```bash
+gz_dump_public_library
+git add fixtures/public_library.json
+git commit -m "Update public library after glaze import"
+```
