@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.db import migrations, models
 
-
 LEGACY_USER_USERNAME = 'legacy'
 LEGACY_USER_EMAIL = 'legacy@glaze.local'
 

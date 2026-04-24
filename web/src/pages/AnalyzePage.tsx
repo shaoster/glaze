@@ -1,5 +1,5 @@
-import GlazeCombinationGallery from '../components/GlazeCombinationGallery'
+import GlazeCombinationGallery from "../components/GlazeCombinationGallery";
 
 export default function AnalyzePage() {
-  return <GlazeCombinationGallery />
+  return <GlazeCombinationGallery />;
 }

@@ -1,26 +1,34 @@
-import type { components } from './generated-types'
-import workflow from '../../workflow.yml'
-export { formatState, getStateDescription, getStateMetadata, isTerminalState } from './workflow'
+import type { components } from "./generated-types";
+import workflow from "../../workflow.yml";
+export {
+  formatState,
+  getStateDescription,
+  getStateMetadata,
+  isTerminalState,
+} from "./workflow";
 
 type WorkflowState = {
-    id: string
-    visible: boolean
-    friendly_name: string
-    description: string
-    successors?: string[]
-    terminal?: boolean
-}
+  id: string;
+  visible: boolean;
+  friendly_name: string;
+  description: string;
+  successors?: string[];
+  terminal?: boolean;
+};
 
 // Runtime constants derived from workflow.json.
 // STATES preserves lifecycle order; SUCCESSORS encodes the transition graph.
 // Neither is expressed in the OpenAPI schema, so they stay anchored to workflow.json.
-export const STATES = (workflow.states as WorkflowState[]).map(({ id }) => id)
+export const STATES = (workflow.states as WorkflowState[]).map(({ id }) => id);
 export const SUCCESSORS: Record<string, string[]> = Object.fromEntries(
-    (workflow.states as WorkflowState[]).map(({ id, successors }) => [id, successors ?? []])
-)
+  (workflow.states as WorkflowState[]).map(({ id, successors }) => [
+    id,
+    successors ?? [],
+  ]),
+);
 
 // State type from the generated schema — stays in sync with backend validation.
-export type State = components['schemas']['StateEnum']
+export type State = components["schemas"]["StateEnum"];
 
 // ---------------------------------------------------------------------------
 // Domain types
@@ -32,58 +40,61 @@ export type State = components['schemas']['StateEnum']
 // ---------------------------------------------------------------------------
 
 // CaptionedImage is correct as-is — direct re-export.
-export type CaptionedImage = components['schemas']['CaptionedImage']
+export type CaptionedImage = components["schemas"]["CaptionedImage"];
 
 // Thumbnail stored on a Piece. Distinct from CaptionedImage — no caption field.
-export type Thumbnail = components['schemas']['Thumbnail']
+export type Thumbnail = components["schemas"]["Thumbnail"];
 
 // Minimal state shape returned in list responses.
 // Intersection narrows state: string → state: State.
 // PieceState is a structural subtype, so it can substitute for StateSummary.
-export type StateSummary = components['schemas']['StateSummary'] & { state: State }
+export type StateSummary = components["schemas"]["StateSummary"] & {
+  state: State;
+};
 
 // Full state record returned in detail responses.
 // Intersection narrows state: string → state: State.
-export type PieceState = components['schemas']['PieceState'] & {
-    state: State
-    additional_fields: Record<string, unknown>
-}
+export type PieceState = components["schemas"]["PieceState"] & {
+  state: State;
+  additional_fields: Record<string, unknown>;
+};
 
 // Piece list entry. Intersection narrows current_state to use our typed StateSummary.
-export type PieceSummary = components['schemas']['PieceSummary'] & {
-    current_state: StateSummary
-    tags: TagEntry[]
-}
-
+export type PieceSummary = components["schemas"]["PieceSummary"] & {
+  current_state: StateSummary;
+  tags: TagEntry[];
+};
 
 // Piece detail. Intersection narrows current_state to PieceState (subtype of StateSummary)
 // and adds the history array. No Omit needed — PieceState satisfies StateSummary structurally.
 export type PieceDetail = PieceSummary & {
-    current_state: PieceState
-    history: PieceState[]
-}
+  current_state: PieceState;
+  history: PieceState[];
+};
 
 // GlazeCombination entry and related types — derived from generated OpenAPI types.
-export type GlazeTypeRef = components['schemas']['GlazeTypeRef']
-export type FiringTemperatureRef = components['schemas']['FiringTemperatureRef']
-export type GlazeCombinationEntry = components['schemas']['GlazeCombinationEntry']
-export type TagEntry = components['schemas']['TagEntry']
+export type GlazeTypeRef = components["schemas"]["GlazeTypeRef"];
+export type FiringTemperatureRef =
+  components["schemas"]["FiringTemperatureRef"];
+export type GlazeCombinationEntry =
+  components["schemas"]["GlazeCombinationEntry"];
+export type TagEntry = components["schemas"]["TagEntry"];
 // ---------------------------------------------------------------------------
 // Glaze Combination Gallery — analysis endpoint types
 // ---------------------------------------------------------------------------
 
 /** A single piece entry returned by GET /api/analysis/glaze-combination-images/. */
 export type GlazeCombinationImagePiece = {
-    id: string
-    name: string
-    /** Most recent qualifying state (glazed | glaze_fired | completed) that has images. */
-    state: State
-    /** Images aggregated across all qualifying states for this piece. */
-    images: CaptionedImage[]
-}
+  id: string;
+  name: string;
+  /** Most recent qualifying state (glazed | glaze_fired | completed) that has images. */
+  state: State;
+  /** Images aggregated across all qualifying states for this piece. */
+  images: CaptionedImage[];
+};
 
 /** One entry in the glaze combination image gallery response. */
 export type GlazeCombinationImageEntry = {
-    glaze_combination: GlazeCombinationEntry
-    pieces: GlazeCombinationImagePiece[]
-}
+  glaze_combination: GlazeCombinationEntry;
+  pieces: GlazeCombinationImagePiece[];
+};

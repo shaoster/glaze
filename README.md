@@ -1,5 +1,8 @@
 # PotterDoc
 
+[![CI](https://github.com/shaoster/glaze/actions/workflows/ci.yml/badge.svg)](https://github.com/shaoster/glaze/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/shaoster/glaze/graph/badge.svg)](https://codecov.io/gh/shaoster/glaze)
+
 PotterDoc is the external product name for this app. The repository, internal code identifiers, and some contributor documentation still use `glaze` as the internal project name during the transition.
 
 A pottery workflow tracking application. Log pieces and record state transitions as work moves through throwing, bisque firing, glazing, and finishing.
@@ -160,6 +163,12 @@ Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`
 | `gz_test_common` | Run workflow schema/integrity tests only (`pytest tests/`). |
 | `gz_test_backend` | Run Django API tests only (`pytest api/`). |
 | `gz_test_web` | Run web tests only (`npm test`). |
+
+### Linting and type-checking
+
+| Command | Description |
+|---|---|
+| `gz_lint` | Run all linters and type-checkers in parallel: `ruff check + format --check`, `mypy`, `eslint`, and `tsc --noEmit`. Exits non-zero if any fails. |
 
 ### Build
 

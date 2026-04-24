@@ -10,12 +10,12 @@ Covers:
   most-recent qualifying piece last_modified desc.
 - The glaze_combination entry matches GlazeCombinationEntrySerializer shape.
 """
+from datetime import timedelta
+
 import pytest
 from django.apps import apps
 from django.utils import timezone
-from datetime import timedelta
 from rest_framework.test import APIClient
-from django.contrib.auth.models import User
 
 from api.models import GlazeCombination, GlazeType, Piece, PieceState
 

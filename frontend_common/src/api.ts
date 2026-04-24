@@ -13,35 +13,49 @@
  * `Wire<T>` → `T` using `new Date()` and state casts before the data leaves
  * this module.
  */
-import axios from 'axios'
-import type { CaptionedImage, FiringTemperatureRef, GlazeCombinationEntry, GlazeCombinationImageEntry, GlazeTypeRef, PieceDetail, PieceSummary, PieceState, State, StateSummary, TagEntry, Thumbnail } from './types'
+import axios from "axios";
+import type {
+  CaptionedImage,
+  FiringTemperatureRef,
+  GlazeCombinationEntry,
+  GlazeCombinationImageEntry,
+  GlazeTypeRef,
+  PieceDetail,
+  PieceSummary,
+  PieceState,
+  State,
+  StateSummary,
+  TagEntry,
+  Thumbnail,
+} from "./types";
 
 export type AuthUser = {
-    id: number
-    email: string
-    first_name: string
-    last_name: string
-    is_staff: boolean
-    openid_subject: string
-    profile_image_url: string
-}
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_staff: boolean;
+  openid_subject: string;
+  profile_image_url: string;
+};
 
-const client = axios.create({ baseURL: '/api/' })
-client.defaults.withCredentials = true
-client.defaults.xsrfCookieName = 'csrftoken'
-client.defaults.xsrfHeaderName = 'X-CSRFToken'
-const expoBaseUrl = (globalThis as { process?: { env?: Record<string, string | undefined> } })
-    .process?.env?.EXPO_PUBLIC_API_BASE_URL
+const client = axios.create({ baseURL: "/api/" });
+client.defaults.withCredentials = true;
+client.defaults.xsrfCookieName = "csrftoken";
+client.defaults.xsrfHeaderName = "X-CSRFToken";
+const expoBaseUrl = (
+  globalThis as { process?: { env?: Record<string, string | undefined> } }
+).process?.env?.EXPO_PUBLIC_API_BASE_URL;
 if (expoBaseUrl) {
-    client.defaults.baseURL = expoBaseUrl
+  client.defaults.baseURL = expoBaseUrl;
 }
 
 export type CloudinaryWidgetConfig = {
-    cloud_name: string
-    api_key: string
-    folder?: string
-    upload_preset?: string
-}
+  cloud_name: string;
+  api_key: string;
+  folder?: string;
+  upload_preset?: string;
+};
 
 // ---------------------------------------------------------------------------
 // Wire<T> — converts domain types back to the raw format Axios delivers.
@@ -53,72 +67,72 @@ export type CloudinaryWidgetConfig = {
 //   everything else unchanged
 // ---------------------------------------------------------------------------
 type Wire<T> = {
-    [K in keyof T]: T[K] extends Date
-        ? string
-        : T[K] extends (infer U)[]
-        ? Wire<U>[]
-        : T[K] extends object
+  [K in keyof T]: T[K] extends Date
+    ? string
+    : T[K] extends (infer U)[]
+      ? Wire<U>[]
+      : T[K] extends object
         ? Wire<T[K]>
-        : T[K]
-}
+        : T[K];
+};
 
 // ---------------------------------------------------------------------------
 // Mappers: wire → domain
 // ---------------------------------------------------------------------------
 
 function mapImage(raw: Wire<CaptionedImage>): CaptionedImage {
-    return {
-        url: raw.url,
-        caption: raw.caption,
-        created: new Date(raw.created ?? ''),
-        cloudinary_public_id: raw.cloudinary_public_id ?? null,
-    }
+  return {
+    url: raw.url,
+    caption: raw.caption,
+    created: new Date(raw.created ?? ""),
+    cloudinary_public_id: raw.cloudinary_public_id ?? null,
+  };
 }
 
 function mapStateSummary(raw: Wire<StateSummary>): StateSummary {
-    return { state: raw.state as State }
+  return { state: raw.state as State };
 }
 
 function mapTagEntry(raw: Wire<TagEntry>): TagEntry {
-    return {
-        id: raw.id,
-        name: raw.name,
-        color: raw.color ?? '',
-    }
+  return {
+    id: raw.id,
+    name: raw.name,
+    color: raw.color ?? "",
+  };
 }
 
 function mapPieceState(raw: Wire<PieceState>): PieceState {
-    return {
-        state: raw.state as State,
-        notes: raw.notes,
-        created: new Date(raw.created ?? ''),
-        last_modified: new Date(raw.last_modified ?? ''),
-        images: raw.images.map(mapImage),
-        previous_state: raw.previous_state as State | null,
-        next_state: raw.next_state as State | null,
-        additional_fields: raw.additional_fields ?? {},
-    }
+  return {
+    state: raw.state as State,
+    notes: raw.notes,
+    created: new Date(raw.created ?? ""),
+    last_modified: new Date(raw.last_modified ?? ""),
+    images: raw.images.map(mapImage),
+    previous_state: raw.previous_state as State | null,
+    next_state: raw.next_state as State | null,
+    additional_fields: raw.additional_fields ?? {},
+  };
 }
 
 function mapPieceSummary(raw: Wire<PieceSummary>): PieceSummary {
-    return {
-        id: raw.id,
-        name: raw.name,
-        created: new Date(raw.created ?? ''),
-        last_modified: new Date(raw.last_modified ?? ''),
-        thumbnail: raw.thumbnail as Thumbnail | null,
-        current_state: mapStateSummary(raw.current_state),
-        current_location: raw.current_location ?? '',
-        tags: (raw.tags ?? []).map(mapTagEntry),
-    }
+  return {
+    id: raw.id,
+    name: raw.name,
+    created: new Date(raw.created ?? ""),
+    last_modified: new Date(raw.last_modified ?? ""),
+    thumbnail: raw.thumbnail as Thumbnail | null,
+    current_state: mapStateSummary(raw.current_state),
+    current_location: raw.current_location ?? "",
+    tags: (raw.tags ?? []).map(mapTagEntry),
+  };
 }
 
 function mapPieceDetail(raw: Wire<PieceDetail>): PieceDetail {
-    return {
-        ...mapPieceSummary(raw),
-        current_state: mapPieceState(raw.current_state),
-        history: raw.history.map(mapPieceState),
-    }
+  return {
+    ...mapPieceSummary(raw),
+    current_state: mapPieceState(raw.current_state),
+    history: raw.history.map(mapPieceState),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -126,265 +140,349 @@ function mapPieceDetail(raw: Wire<PieceDetail>): PieceDetail {
 // ---------------------------------------------------------------------------
 
 export async function fetchPieces(): Promise<PieceSummary[]> {
-    const { data } = await client.get<Wire<PieceSummary>[]>('pieces/')
-    return data.map(mapPieceSummary)
+  const { data } = await client.get<Wire<PieceSummary>[]>("pieces/");
+  return data.map(mapPieceSummary);
 }
 
 export async function ensureCsrfCookie(): Promise<void> {
-    await client.get('auth/csrf/')
+  await client.get("auth/csrf/");
 }
 
-export async function loginWithEmail(email: string, password: string): Promise<AuthUser> {
-    await ensureCsrfCookie()
-    const { data } = await client.post<AuthUser>('auth/login/', { email, password })
-    return data
+export async function loginWithEmail(
+  email: string,
+  password: string,
+): Promise<AuthUser> {
+  await ensureCsrfCookie();
+  const { data } = await client.post<AuthUser>("auth/login/", {
+    email,
+    password,
+  });
+  return data;
 }
 
 export async function registerWithEmail(payload: {
-    email: string
-    password: string
-    first_name?: string
-    last_name?: string
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
 }): Promise<AuthUser> {
-    await ensureCsrfCookie()
-    const { data } = await client.post<AuthUser>('auth/register/', payload)
-    return data
+  await ensureCsrfCookie();
+  const { data } = await client.post<AuthUser>("auth/register/", payload);
+  return data;
 }
 
 export async function fetchCurrentUser(): Promise<AuthUser | null> {
-    try {
-        const { data } = await client.get<AuthUser>('auth/me/')
-        return data
-    } catch (error) {
-        if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
-            return null
-        }
-        throw error
+  try {
+    const { data } = await client.get<AuthUser>("auth/me/");
+    return data;
+  } catch (error) {
+    if (
+      axios.isAxiosError(error) &&
+      (error.response?.status === 401 || error.response?.status === 403)
+    ) {
+      return null;
     }
+    throw error;
+  }
 }
 
 export async function loginWithGoogle(credential: string): Promise<AuthUser> {
-    await ensureCsrfCookie()
-    const { data } = await client.post<AuthUser>('auth/google/', { credential })
-    return data
+  await ensureCsrfCookie();
+  const { data } = await client.post<AuthUser>("auth/google/", { credential });
+  return data;
 }
 
 export async function logoutUser(): Promise<void> {
-    await ensureCsrfCookie()
-    await client.post('auth/logout/', {})
+  await ensureCsrfCookie();
+  await client.post("auth/logout/", {});
 }
 
 export async function fetchPiece(id: string): Promise<PieceDetail> {
-    const { data } = await client.get<Wire<PieceDetail>>(`pieces/${id}/`)
-    return mapPieceDetail(data)
+  const { data } = await client.get<Wire<PieceDetail>>(`pieces/${id}/`);
+  return mapPieceDetail(data);
 }
 
 export type CreatePiecePayload = {
-    name: string
-    thumbnail?: string
-    notes?: string
-    current_location?: string
-}
+  name: string;
+  thumbnail?: string;
+  notes?: string;
+  current_location?: string;
+};
 
 // New pieces always start in the `designed` state — the backend enforces this.
-export async function createPiece(payload: CreatePiecePayload): Promise<PieceDetail> {
-    const { data } = await client.post<Wire<PieceDetail>>('pieces/', payload)
-    return mapPieceDetail(data)
+export async function createPiece(
+  payload: CreatePiecePayload,
+): Promise<PieceDetail> {
+  const { data } = await client.post<Wire<PieceDetail>>("pieces/", payload);
+  return mapPieceDetail(data);
 }
 
 export type AddStatePayload = {
-    state: State
-    notes?: string
-    images?: Wire<CaptionedImage>[]
-    additional_fields?: Record<string, string | number | boolean>
-}
+  state: State;
+  notes?: string;
+  images?: Wire<CaptionedImage>[];
+  additional_fields?: Record<string, string | number | boolean>;
+};
 
-export async function addPieceState(pieceId: string, payload: AddStatePayload): Promise<PieceDetail> {
-    const { data } = await client.post<Wire<PieceDetail>>(`pieces/${pieceId}/states/`, payload)
-    return mapPieceDetail(data)
+export async function addPieceState(
+  pieceId: string,
+  payload: AddStatePayload,
+): Promise<PieceDetail> {
+  const { data } = await client.post<Wire<PieceDetail>>(
+    `pieces/${pieceId}/states/`,
+    payload,
+  );
+  return mapPieceDetail(data);
 }
 
 export type UpdateStatePayload = {
-    notes?: string
-    images?: Array<{ url: string; caption: string; cloudinary_public_id?: string | null }>
-    additional_fields?: Record<string, string | number | boolean>
-}
+  notes?: string;
+  images?: Array<{
+    url: string;
+    caption: string;
+    cloudinary_public_id?: string | null;
+  }>;
+  additional_fields?: Record<string, string | number | boolean>;
+};
 
-export async function updateCurrentState(pieceId: string, payload: UpdateStatePayload): Promise<PieceDetail> {
-    const { data } = await client.patch<Wire<PieceDetail>>(`pieces/${pieceId}/state/`, payload)
-    return mapPieceDetail(data)
+export async function updateCurrentState(
+  pieceId: string,
+  payload: UpdateStatePayload,
+): Promise<PieceDetail> {
+  const { data } = await client.patch<Wire<PieceDetail>>(
+    `pieces/${pieceId}/state/`,
+    payload,
+  );
+  return mapPieceDetail(data);
 }
 
 export type UpdatePiecePayload = {
-    name?: string
-    current_location?: string
-    thumbnail?: Thumbnail | null
-    tags?: string[]
-}
+  name?: string;
+  current_location?: string;
+  thumbnail?: Thumbnail | null;
+  tags?: string[];
+};
 
-export async function updatePiece(pieceId: string, payload: UpdatePiecePayload): Promise<PieceDetail> {
-    const { data } = await client.patch<Wire<PieceDetail>>(`pieces/${pieceId}/`, payload)
-    return mapPieceDetail(data)
+export async function updatePiece(
+  pieceId: string,
+  payload: UpdatePiecePayload,
+): Promise<PieceDetail> {
+  const { data } = await client.patch<Wire<PieceDetail>>(
+    `pieces/${pieceId}/`,
+    payload,
+  );
+  return mapPieceDetail(data);
 }
 
 export interface GlobalEntry {
-    id: string
-    name: string
-    isPublic: boolean
-    isFavorite?: boolean
-    color?: string
+  id: string;
+  name: string;
+  isPublic: boolean;
+  isFavorite?: boolean;
+  color?: string;
 }
 
-export async function fetchGlobalEntries(globalName: string): Promise<GlobalEntry[]> {
-    const { data } = await client.get<Array<{ id: string; name: string; is_public: boolean; is_favorite?: boolean; color?: string }>>(
-        `globals/${globalName}/`
-    )
-    return data.map((entry) => ({
-        id: entry.id,
-        name: entry.name,
-        isPublic: entry.is_public,
-        ...(entry.color !== undefined ? { color: entry.color } : {}),
-        ...(entry.is_favorite !== undefined ? { isFavorite: entry.is_favorite } : {}),
-    }))
+export async function fetchGlobalEntries(
+  globalName: string,
+): Promise<GlobalEntry[]> {
+  const { data } = await client.get<
+    Array<{
+      id: string;
+      name: string;
+      is_public: boolean;
+      is_favorite?: boolean;
+      color?: string;
+    }>
+  >(`globals/${globalName}/`);
+  return data.map((entry) => ({
+    id: entry.id,
+    name: entry.name,
+    isPublic: entry.is_public,
+    ...(entry.color !== undefined ? { color: entry.color } : {}),
+    ...(entry.is_favorite !== undefined
+      ? { isFavorite: entry.is_favorite }
+      : {}),
+  }));
 }
 
-export type { GlazeTypeRef, FiringTemperatureRef, GlazeCombinationEntry, TagEntry }
+export type {
+  GlazeTypeRef,
+  FiringTemperatureRef,
+  GlazeCombinationEntry,
+  TagEntry,
+};
 
 export interface GlazeCombinationFilters {
-    glazeTypeIds?: string[]
-    isFoodSafe?: boolean
-    runs?: boolean
-    highlightsGrooves?: boolean
-    isDifferentOnWhiteAndBrownClay?: boolean
-    firingTemperatureId?: string
+  glazeTypeIds?: string[];
+  isFoodSafe?: boolean;
+  runs?: boolean;
+  highlightsGrooves?: boolean;
+  isDifferentOnWhiteAndBrownClay?: boolean;
+  firingTemperatureId?: string;
 }
 
 export async function fetchGlazeCombinations(
-    filters: GlazeCombinationFilters = {}
+  filters: GlazeCombinationFilters = {},
 ): Promise<GlazeCombinationEntry[]> {
-    const params: Record<string, string> = {}
-    if (filters.glazeTypeIds?.length) params.glaze_type_ids = filters.glazeTypeIds.join(',')
-    if (filters.isFoodSafe !== undefined) params.is_food_safe = String(filters.isFoodSafe)
-    if (filters.runs !== undefined) params.runs = String(filters.runs)
-    if (filters.highlightsGrooves !== undefined) params.highlights_grooves = String(filters.highlightsGrooves)
-    if (filters.isDifferentOnWhiteAndBrownClay !== undefined)
-        params.is_different_on_white_and_brown_clay = String(filters.isDifferentOnWhiteAndBrownClay)
-    if (filters.firingTemperatureId !== undefined)
-        params.firing_temperature_id = filters.firingTemperatureId
-    const { data } = await client.get<GlazeCombinationEntry[]>('globals/glaze_combination/', { params })
-    return data
+  const params: Record<string, string> = {};
+  if (filters.glazeTypeIds?.length)
+    params.glaze_type_ids = filters.glazeTypeIds.join(",");
+  if (filters.isFoodSafe !== undefined)
+    params.is_food_safe = String(filters.isFoodSafe);
+  if (filters.runs !== undefined) params.runs = String(filters.runs);
+  if (filters.highlightsGrooves !== undefined)
+    params.highlights_grooves = String(filters.highlightsGrooves);
+  if (filters.isDifferentOnWhiteAndBrownClay !== undefined)
+    params.is_different_on_white_and_brown_clay = String(
+      filters.isDifferentOnWhiteAndBrownClay,
+    );
+  if (filters.firingTemperatureId !== undefined)
+    params.firing_temperature_id = filters.firingTemperatureId;
+  const { data } = await client.get<GlazeCombinationEntry[]>(
+    "globals/glaze_combination/",
+    { params },
+  );
+  return data;
 }
 
-export async function fetchGlobalEntriesWithFilters<T extends { id: string; name?: string; is_favorite?: boolean }>(
-    globalName: string,
-    params: Record<string, string> = {}
-): Promise<T[]> {
-    const { data } = await client.get<T[]>(`globals/${globalName}/`, { params })
-    return data
+export async function fetchGlobalEntriesWithFilters<
+  T extends { id: string; name?: string; is_favorite?: boolean },
+>(globalName: string, params: Record<string, string> = {}): Promise<T[]> {
+  const { data } = await client.get<T[]>(`globals/${globalName}/`, { params });
+  return data;
 }
 
-export async function toggleGlobalEntryFavorite(globalName: string, id: string, favorite: boolean): Promise<void> {
-    if (favorite) {
-        await client.post(`globals/${globalName}/${id}/favorite/`)
-    } else {
-        await client.delete(`globals/${globalName}/${id}/favorite/`)
-    }
+export async function toggleGlobalEntryFavorite(
+  globalName: string,
+  id: string,
+  favorite: boolean,
+): Promise<void> {
+  if (favorite) {
+    await client.post(`globals/${globalName}/${id}/favorite/`);
+  } else {
+    await client.delete(`globals/${globalName}/${id}/favorite/`);
+  }
 }
 
-export async function createGlobalEntry(globalName: string, field: string, value: string): Promise<GlobalEntry> {
-    const { data } = await client.post<{ id: string; name: string; is_public: boolean }>(`globals/${globalName}/`, {
-        field,
-        value,
-    })
-    return { id: data.id, name: data.name, isPublic: data.is_public }
+export async function createGlobalEntry(
+  globalName: string,
+  field: string,
+  value: string,
+): Promise<GlobalEntry> {
+  const { data } = await client.post<{
+    id: string;
+    name: string;
+    is_public: boolean;
+  }>(`globals/${globalName}/`, {
+    field,
+    value,
+  });
+  return { id: data.id, name: data.name, isPublic: data.is_public };
 }
 
-export async function createTagEntry(payload: { name: string; color?: string }): Promise<TagEntry> {
-    const { data } = await client.post<TagEntry>('globals/tag/', {
-        values: payload,
-    })
-    return data
+export async function createTagEntry(payload: {
+  name: string;
+  color?: string;
+}): Promise<TagEntry> {
+  const { data } = await client.post<TagEntry>("globals/tag/", {
+    values: payload,
+  });
+  return data;
 }
 
 /** Fetch glaze combination image gallery data for the Analyze tab. */
-export async function fetchGlazeCombinationImages(): Promise<GlazeCombinationImageEntry[]> {
-    const { data } = await client.get<Array<{
-        glaze_combination: GlazeCombinationEntry
-        pieces: Array<{
-            id: string
-            name: string
-            state: string
-            images: Wire<CaptionedImage>[]
-        }>
-    }>>('analysis/glaze-combination-images/')
-    return data.map((entry) => ({
-        glaze_combination: entry.glaze_combination,
-        pieces: entry.pieces.map((p) => ({
-            id: p.id,
-            name: p.name,
-            state: p.state as State,
-            images: p.images.map(mapImage),
-        })),
-    }))
+export async function fetchGlazeCombinationImages(): Promise<
+  GlazeCombinationImageEntry[]
+> {
+  const { data } = await client.get<
+    Array<{
+      glaze_combination: GlazeCombinationEntry;
+      pieces: Array<{
+        id: string;
+        name: string;
+        state: string;
+        images: Wire<CaptionedImage>[];
+      }>;
+    }>
+  >("analysis/glaze-combination-images/");
+  return data.map((entry) => ({
+    glaze_combination: entry.glaze_combination,
+    pieces: entry.pieces.map((p) => ({
+      id: p.id,
+      name: p.name,
+      state: p.state as State,
+      images: p.images.map(mapImage),
+    })),
+  }));
 }
 
 export async function fetchCloudinaryWidgetConfig(): Promise<CloudinaryWidgetConfig> {
-    const { data } = await client.get<CloudinaryWidgetConfig>('uploads/cloudinary/widget-config/')
-    return data
+  const { data } = await client.get<CloudinaryWidgetConfig>(
+    "uploads/cloudinary/widget-config/",
+  );
+  return data;
 }
 
-export async function signCloudinaryWidgetParams(paramsToSign: Record<string, unknown>): Promise<string> {
-    const { data } = await client.post<{ signature: string }>('uploads/cloudinary/widget-signature/', {
-        params_to_sign: paramsToSign,
-    })
-    return data.signature
+export async function signCloudinaryWidgetParams(
+  paramsToSign: Record<string, unknown>,
+): Promise<string> {
+  const { data } = await client.post<{ signature: string }>(
+    "uploads/cloudinary/widget-signature/",
+    {
+      params_to_sign: paramsToSign,
+    },
+  );
+  return data.signature;
 }
 
 export type ManualSquareCropImportRecordPayload = {
-    client_id: string
-    filename: string
-    reviewed: boolean
-    parsed_fields: {
-        name: string
-        kind: 'glaze_type' | 'glaze_combination'
-        first_glaze: string
-        second_glaze: string
-        runs: boolean | null
-        is_food_safe: boolean | null
-    }
-}
+  client_id: string;
+  filename: string;
+  reviewed: boolean;
+  parsed_fields: {
+    name: string;
+    kind: "glaze_type" | "glaze_combination";
+    first_glaze: string;
+    second_glaze: string;
+    runs: boolean | null;
+    is_food_safe: boolean | null;
+  };
+};
 
 export type ManualSquareCropImportResponse = {
-    results: Array<{
-        client_id: string
-        filename: string
-        kind: string
-        name: string
-        status: 'created' | 'skipped_duplicate' | 'error'
-        reason: string | null
-        object_id: string | null
-        image_url: string | null
-    }>
-    summary: {
-        created_glaze_types: number
-        created_glaze_combinations: number
-        skipped_duplicates: number
-        errors: number
-    }
-}
+  results: Array<{
+    client_id: string;
+    filename: string;
+    kind: string;
+    name: string;
+    status: "created" | "skipped_duplicate" | "error";
+    reason: string | null;
+    object_id: string | null;
+    image_url: string | null;
+  }>;
+  summary: {
+    created_glaze_types: number;
+    created_glaze_combinations: number;
+    skipped_duplicates: number;
+    errors: number;
+  };
+};
 
 export async function importManualSquareCropRecords(
-    records: ManualSquareCropImportRecordPayload[],
-    cropFiles: Record<string, File>
+  records: ManualSquareCropImportRecordPayload[],
+  cropFiles: Record<string, File>,
 ): Promise<ManualSquareCropImportResponse> {
-    const form = new FormData()
-    form.append('payload', JSON.stringify({ records }))
-    for (const record of records) {
-        const file = cropFiles[record.client_id]
-        if (file) {
-            form.append(`crop_image__${record.client_id}`, file, file.name)
-        }
+  const form = new FormData();
+  form.append("payload", JSON.stringify({ records }));
+  for (const record of records) {
+    const file = cropFiles[record.client_id];
+    if (file) {
+      form.append(`crop_image__${record.client_id}`, file, file.name);
     }
-    const { data } = await client.post<ManualSquareCropImportResponse>('admin/manual-square-crop-import/', form)
-    return data
+  }
+  const { data } = await client.post<ManualSquareCropImportResponse>(
+    "admin/manual-square-crop-import/",
+    form,
+  );
+  return data;
 }

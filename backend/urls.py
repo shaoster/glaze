@@ -1,14 +1,13 @@
-from django.contrib import admin
 from django.conf import settings
-from django.http import HttpResponse, HttpResponseNotFound
+from django.contrib import admin
+from django.http import HttpRequest, HttpResponse, HttpResponseNotFound
 from django.urls import include, path, re_path
-
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 _INDEX_HTML = settings.BASE_DIR / 'web' / 'dist' / 'index.html'
 
 
-def _spa(request, *args, **kwargs):
+def _spa(request: HttpRequest) -> HttpResponse | HttpResponseNotFound:
     if _INDEX_HTML.exists():
         return HttpResponse(_INDEX_HTML.read_bytes(), content_type='text/html')
     return HttpResponseNotFound('Frontend not built.')

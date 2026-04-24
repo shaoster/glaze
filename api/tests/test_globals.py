@@ -23,7 +23,6 @@ import pytest
 from api.models import ClayBody, GlobalModel, Location
 from api.workflow import get_global_model_and_field
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

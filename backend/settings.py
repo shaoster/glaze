@@ -19,23 +19,23 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # IS_PRODUCTION covers both Render and self-hosted Docker deployments.
-IS_PRODUCTION = bool(os.environ.get('PRODUCTION', ''))
+IS_PRODUCTION = bool(os.environ.get("PRODUCTION", ""))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 if IS_PRODUCTION:
-    SECRET_KEY = os.environ['SECRET_KEY']
+    SECRET_KEY = os.environ["SECRET_KEY"]
 else:
     SECRET_KEY = os.environ.get(
-        'SECRET_KEY',
-        'django-insecure-$jk-$#)vf5(ui&x2=atf+lj(zy6pxcu*ia7%z$kersf*7yrx%',
+        "SECRET_KEY",
+        "django-insecure-$jk-$#)vf5(ui&x2=atf+lj(zy6pxcu*ia7%z$kersf*7yrx%",
     )
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = not IS_PRODUCTION
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 # ALLOWED_HOST: single hostname for self-hosted deployments (e.g. myapp.example.com)
-_ALLOWED_HOST = os.environ.get('ALLOWED_HOST', '')
+_ALLOWED_HOST = os.environ.get("ALLOWED_HOST", "")
 if _ALLOWED_HOST:
     ALLOWED_HOSTS.append(_ALLOWED_HOST)
 
@@ -48,7 +48,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 CSRF_TRUSTED_ORIGINS = []
 CORS_ALLOWED_ORIGINS = []
 # APP_ORIGIN: full origin URL for self-hosted deployments (e.g. https://myapp.example.com)
-_APP_ORIGIN = os.environ.get('APP_ORIGIN', '')
+_APP_ORIGIN = os.environ.get("APP_ORIGIN", "")
 if _APP_ORIGIN:
     CORS_ALLOWED_ORIGINS.append(_APP_ORIGIN)
     CSRF_TRUSTED_ORIGINS.append(_APP_ORIGIN)
@@ -56,67 +56,67 @@ if _APP_ORIGIN:
 
 # Application definition
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'adminsortable2',
-    'import_export',
-    'rest_framework',
-    'corsheaders',
-    'drf_spectacular',
-    'api',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "adminsortable2",
+    "import_export",
+    "rest_framework",
+    "corsheaders",
+    "drf_spectacular",
+    "api",
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
     ],
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'PotterDoc API',
-    'DESCRIPTION': 'Pottery workflow tracking API',
-    'VERSION': '0.0.1',
+    "TITLE": "PotterDoc API",
+    "DESCRIPTION": "Pottery workflow tracking API",
+    "VERSION": "0.0.1",
 }
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
+    "django.middleware.security.SecurityMiddleware",
     # WhiteNoise must come directly after SecurityMiddleware and before all others.
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'backend.urls'
+ROOT_URLCONF = "backend.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'backend.wsgi.application'
+WSGI_APPLICATION = "backend.wsgi.application"
 
 
 # Database
@@ -127,16 +127,16 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 if IS_PRODUCTION:
     DATABASES = {
-        'default': dj_database_url.config(
+        "default": dj_database_url.config(
             conn_max_age=600,
             conn_health_checks=True,
         )
     }
 else:
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": str(BASE_DIR / "db.sqlite3"),
         }
     }
 
@@ -146,16 +146,16 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -163,9 +163,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -179,27 +179,27 @@ USE_TZ = True
 # WHITENOISE_ROOT: serves the Vite-built React SPA at the URL root (no /static/
 #   prefix), so hardcoded paths like /thumbnails/... work without change.
 
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Serve the Vite production build at the URL root when it exists.
 # WHITENOISE_ROOT lets WhiteNoise serve web/dist at / (no /static/ prefix),
 # so asset paths like /thumbnails/... embedded in index.html work unchanged.
 # STATICFILES_DIRS ensures collectstatic copies and compresses these files too.
-_WEB_DIST = BASE_DIR / 'web' / 'dist'
+_WEB_DIST = BASE_DIR / "web" / "dist"
 if _WEB_DIST.is_dir():
     WHITENOISE_ROOT = _WEB_DIST
     STATICFILES_DIRS = [_WEB_DIST]
 
 STORAGES = {
-    'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
-    'staticfiles': {
+    "staticfiles": {
         # Compress files but do not re-hash; Vite already adds content hashes
         # to its output filenames, so a second hash layer would break the URLs
         # embedded in index.html.
-        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
 
@@ -207,11 +207,11 @@ STORAGES = {
 # Default primary key field type
 # https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Google OAuth — set GOOGLE_OAUTH_CLIENT_ID in the environment to enable Google sign-in.
-GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID', '')
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "")
 
 # Security settings
-SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"

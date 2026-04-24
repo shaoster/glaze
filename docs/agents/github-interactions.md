@@ -65,6 +65,9 @@ Before opening or pushing to a PR, verify every item:
 - Every commit should have a short descriptive title with detailed bullets in the body explaining what was done and why.
 - If a PR includes refactoring alongside functional changes, describe both clearly in the commit and PR body.
 - All test suites pass (gz_test_web, gz_test_backend, gz_test_common).
+- Python linting passes: `ruff check .`
+- Python type-checking passes: `mypy .`
+- Frontend linting passes: `cd web && npm run lint`
 - The build succeeds (gz_build).
 - PR body contains "Closes #<N>" linking to the originating issue.
 - PR title is concise (under 70 characters).

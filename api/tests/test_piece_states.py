@@ -4,7 +4,6 @@ import pytest
 
 from api.models import ENTRY_STATE, SUCCESSORS, ClayBody, Location
 
-
 # ---------------------------------------------------------------------------
 # POST /api/pieces/{id}/states/
 # ---------------------------------------------------------------------------

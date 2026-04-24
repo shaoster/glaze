@@ -394,7 +394,7 @@ The endpoint is implemented in `api/manual_tile_imports.py`. For each `glaze_typ
 
 ### Protected files for this feature
 
-`api/manual_tile_imports.py` and `web/src/pages/AdminManualSquareCropToolPage.tsx` are the two primary implementation files. `api/tests/test_manual_square_crop_import.py` must be kept in sync with any import-logic changes.
+`api/manual_tile_imports.py` and `web/src/pages/GlazeImportToolPage.tsx` are the two primary implementation files. `api/tests/test_manual_square_crop_import.py` must be kept in sync with any import-logic changes.
 
 ---
 

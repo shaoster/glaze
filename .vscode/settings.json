@@ -19,5 +19,8 @@
   "jestrunner.vitestCommand": "",
   "vim.handleKeys": {
     "<C-p>": false
-  }
+  },
+  "mypy-type-checker.args": [
+    "--config-file=${workspaceFolder}/mypy.ini"
+  ]
 }

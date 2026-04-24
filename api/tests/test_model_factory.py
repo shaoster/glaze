@@ -9,7 +9,6 @@ globals (Location, ClayBody, GlazeMethod) is validated by running
 import pytest
 from django.db import models
 
-
 # ---------------------------------------------------------------------------
 # dsl_field_to_django_field
 # ---------------------------------------------------------------------------
@@ -80,8 +79,8 @@ class TestMakeSimpleGlobalModel:
     @pytest.fixture
     def make(self, monkeypatch):
         """Return the factory, with _GLOBALS_MAP replaced by a minimal fixture."""
-        import api.workflow as wf
         import api.model_factories as m
+        import api.workflow as wf
 
         fake_map = {
             'widget': {
@@ -153,8 +152,8 @@ class TestMakeSimpleGlobalModel:
     def test_ref_fields_are_skipped(self, monkeypatch):
         """$ref fields in a global's fields section are additional_fields references
         and must not become model columns."""
-        import api.workflow as wf
         import api.model_factories as m
+        import api.workflow as wf
         monkeypatch.setattr(wf, '_GLOBALS_MAP', {
             'thing': {
                 'model': 'Thing',
@@ -203,8 +202,8 @@ class TestMakeSimpleGlobalModel:
     def test_related_name_uses_plural_key_when_present(self, monkeypatch):
         """When the global config carries a 'plural' key the factory must use it
         for the user FK related_name instead of auto-pluralizing the global name."""
-        import api.workflow as wf
         import api.model_factories as m
+        import api.workflow as wf
         monkeypatch.setattr(wf, '_GLOBALS_MAP', {
             'entity': {
                 'model': 'Entity',
@@ -232,8 +231,8 @@ class TestMakeComposeGlobalModels:
 
     @pytest.fixture
     def make(self, monkeypatch):
-        import api.workflow as wf
         import api.model_factories as m
+        import api.workflow as wf
 
         fake_map = {
             'component': {
@@ -348,8 +347,8 @@ class TestMakeComposeGlobalModels:
         assert 'kwargs' in str(sig)  # accepts **kwargs
 
     def test_no_compose_from_raises(self, monkeypatch):
-        import api.workflow as wf
         import api.model_factories as m
+        import api.workflow as wf
         monkeypatch.setattr(wf, '_GLOBALS_MAP', {
             'plain': {'model': 'Plain', 'public': False, 'private': True,
                       'fields': {'name': {'type': 'string'}}},
@@ -367,8 +366,8 @@ class TestMakeFavoriteModel:
 
     @pytest.fixture
     def make(self, monkeypatch):
-        import api.workflow as wf
         import api.model_factories as m
+        import api.workflow as wf
 
         fake_map = {
             'widget': {
@@ -426,8 +425,8 @@ class TestMakeFavoriteModel:
 
     def test_plural_key_used_in_user_related_name(self, monkeypatch):
         """explicit plural key overrides auto-pluralize for related_name."""
-        import api.workflow as wf
         import api.model_factories as m
+        import api.workflow as wf
         monkeypatch.setattr(wf, '_GLOBALS_MAP', {
             'entity': {
                 'model': 'Entity',

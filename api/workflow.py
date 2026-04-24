@@ -4,10 +4,14 @@ Loads workflow.yml once at import time and exposes typed constants and
 helper functions.  Has no dependency on Django ORM models.
 """
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
 from django.apps import apps
 from django.db import models as django_models
+
+if TYPE_CHECKING:
+    from .model_factories import GlobalModel
 
 # ---------------------------------------------------------------------------
 # Load workflow at module import time and cache — do not re-read per request.
@@ -59,7 +63,7 @@ def get_state_ref_fields(state_id: str) -> dict[str, tuple[str, str]]:
 
 def get_global_model_and_field(
     global_name: str,
-) -> tuple[type[django_models.Model], dict[str, dict], str]:
+) -> tuple[type['GlobalModel'], dict[str, dict], str]:
     """Resolve a globals DSL name to (model_cls, fields, display_field).
 
     Raises KeyError if global_name is not declared in workflow.yml globals or
@@ -69,7 +73,7 @@ def get_global_model_and_field(
     config = _GLOBALS_MAP[global_name]
     fields: dict[str, dict] = config['fields']
     display_field: str = 'name' if 'name' in fields else next(iter(fields))
-    model_cls: type[django_models.Model] = apps.get_model('api', config['model'])
+    model_cls: type[GlobalModel] = apps.get_model('api', config['model'])
     return model_cls, fields, display_field
 
 
@@ -266,7 +270,9 @@ def get_glaze_image_qualifying_states() -> frozenset:
         s_id for s_id in VALID_STATES
         if 'glaze_combination' in get_global_ref_fields_for_state(s_id)
     )
-    non_recycled_terminals: frozenset = TERMINAL_STATES - {'recycled'}
+    non_recycled_terminals: frozenset = frozenset(
+        TERMINAL_STATES - {'recycled'}
+    )
     return states_with_combo | non_recycled_terminals
 
 

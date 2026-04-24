@@ -10,17 +10,17 @@
  *   - format: date-time  →  Date  (Axios delivers strings; api.ts converts at runtime)
  */
 
-import openapiTS, { astToString } from 'openapi-typescript'
-import ts from 'typescript'
-import { resolve } from 'path'
-import { pathToFileURL } from 'url'
-import { writeFileSync } from 'fs'
+import openapiTS, { astToString } from "openapi-typescript";
+import ts from "typescript";
+import { resolve } from "path";
+import { pathToFileURL } from "url";
+import { writeFileSync } from "fs";
 
-const schemaSource = process.env.GLAZE_SCHEMA_SOURCE
+const schemaSource = process.env.GLAZE_SCHEMA_SOURCE;
 const SCHEMA_SOURCE = schemaSource
   ? pathToFileURL(resolve(process.cwd(), schemaSource))
-  : new URL('http://localhost:8080/api/schema/?format=json')
-const OUTPUT_PATH = '../frontend_common/src/generated-types.ts'
+  : new URL("http://localhost:8080/api/schema/?format=json");
+const OUTPUT_PATH = "../frontend_common/src/generated-types.ts";
 
 const HEADER = `\
 /**
@@ -29,17 +29,19 @@ const HEADER = `\
  * DO NOT EDIT BY HAND.
  */
 
-`
+`;
 
-const DATE_NODE = ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Date'))
+const DATE_NODE = ts.factory.createTypeReferenceNode(
+  ts.factory.createIdentifier("Date"),
+);
 
 const ast = await openapiTS(SCHEMA_SOURCE, {
   transform(schemaObject) {
-    if (schemaObject.format === 'date-time') {
-      return DATE_NODE
+    if (schemaObject.format === "date-time") {
+      return DATE_NODE;
     }
   },
-})
+});
 
-writeFileSync(OUTPUT_PATH, HEADER + astToString(ast))
-console.log(`✔ Generated ${OUTPUT_PATH}`)
+writeFileSync(OUTPUT_PATH, HEADER + astToString(ast));
+console.log(`✔ Generated ${OUTPUT_PATH}`);

@@ -22,7 +22,6 @@ ROOT = Path(__file__).resolve().parent.parent
 django.setup()
 from django.apps import apps  # noqa: E402 — must come after django.setup()
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

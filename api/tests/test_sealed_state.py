@@ -2,7 +2,6 @@ import pytest
 
 from api.models import ENTRY_STATE, SUCCESSORS, PieceState
 
-
 # ---------------------------------------------------------------------------
 # Model: PieceState sealed-state invariant
 # ---------------------------------------------------------------------------

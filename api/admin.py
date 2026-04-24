@@ -1,10 +1,11 @@
 import json
 import os
 import re
+from typing import ClassVar
 
 import cloudinary
-from cloudinary import CloudinaryImage
 from adminsortable2.admin import SortableAdminBase, SortableInlineAdminMixin
+from cloudinary import CloudinaryImage
 from django import forms
 from django.contrib import admin
 from django.forms import widgets
@@ -13,7 +14,16 @@ from django.utils.html import format_html
 from import_export import fields, resources
 from import_export.admin import ExportMixin
 
-from .models import FiringTemperature, GlazeCombination, GlazeCombinationLayer, GlazeMethod, GlazeType, Piece, PieceState, UserProfile
+from .models import (  # type: ignore[attr-defined]
+    FiringTemperature,
+    GlazeCombination,
+    GlazeCombinationLayer,
+    GlazeMethod,
+    GlazeType,
+    Piece,
+    PieceState,
+    UserProfile,
+)
 from .serializers import PieceStateSerializer
 from .utils import sync_glaze_type_singleton_combination
 from .workflow import get_image_fields_for_global_model, get_public_global_models
@@ -219,9 +229,8 @@ class PublicLibraryAdmin(admin.ModelAdmin):
     in workflow.yml automatically use CloudinaryImageWidget.
     """
 
-    list_display = ('name', 'is_public_entry')
-    search_fields = ('name',)
-    exclude = ('user',)
+    list_display: ClassVar[tuple[str, ...]] = ('name', 'is_public_entry') # type: ignore[misc]
+    exclude: ClassVar[tuple[str, ...]] = ('user',)
 
     @admin.display(boolean=True, description='Public')
     def is_public_entry(self, obj) -> bool:
@@ -313,7 +322,8 @@ class GlazeCombinationLayerInline(SortableInlineAdminMixin, admin.TabularInline)
         # formfield_for_foreignkey returns, so can_delete_related must be
         # suppressed here rather than in formfield_for_foreignkey.
         if db_field.name in ('glaze_type', 'glaze_method') and hasattr(field, 'widget'):
-            field.widget.can_delete_related = False
+            if field is not None and hasattr(field, 'widget'):
+                setattr(field.widget, 'can_delete_related', False)
         return field
 
 
@@ -324,8 +334,7 @@ class GlazeCombinationAdmin(SortableAdminBase, PublicLibraryAdmin):
     from the edit form (it is stale until save and would be confusing); it is
     still visible in the list view via ``__str__``.
     """
-
-    list_display = (
+    list_display: ClassVar[tuple[str, ...]] = ( # type: ignore[misc]
         '__str__',
         'firing_temperature',
         'is_food_safe',

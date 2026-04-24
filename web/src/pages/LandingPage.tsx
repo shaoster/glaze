@@ -1,10 +1,10 @@
-import { useLocation, useNavigate, Outlet } from 'react-router-dom'
-import { Box, Tab, Tabs } from '@mui/material'
+import { useLocation, useNavigate, Outlet } from "react-router-dom";
+import { Box, Tab, Tabs } from "@mui/material";
 
 export default function LandingPage() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const currentTab = location.pathname === '/analyze' ? '/analyze' : '/'
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentTab = location.pathname === "/analyze" ? "/analyze" : "/";
 
   return (
     <Box sx={{ pb: 2 }}>
@@ -16,10 +16,10 @@ export default function LandingPage() {
         sx={{
           mb: 2.5,
           minHeight: 52,
-          '& .MuiTab-root': {
+          "& .MuiTab-root": {
             minHeight: 52,
-            textTransform: 'none',
-            fontSize: { xs: '0.95rem', sm: '1rem' },
+            textTransform: "none",
+            fontSize: { xs: "0.95rem", sm: "1rem" },
           },
         }}
       >
@@ -28,5 +28,5 @@ export default function LandingPage() {
       </Tabs>
       <Outlet />
     </Box>
-  )
+  );
 }

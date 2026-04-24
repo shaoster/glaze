@@ -103,11 +103,22 @@ Tests live in [`tests/test_workflow.py`](../../tests/test_workflow.py). This sui
 ### Backend
 
 ```bash
-pip install -r requirements-dev.txt   # includes pytest and pytest-django
+pip install -r requirements-dev.txt   # includes pytest, pytest-cov, and pytest-django
 pytest api/                            # run from the repo root
+pytest api/ --cov=api --cov-report=term-missing  # with coverage report
 ```
 
 Tests live in [`api/tests/`](../../api/tests/). `pytest.ini` points pytest at `backend.settings` automatically — no extra configuration needed.
+
+### Python quality (ruff + mypy)
+
+```bash
+pip install -r requirements-dev.txt
+ruff check .          # lint
+mypy .                # type-check (config in mypy.ini)
+```
+
+`ruff.toml` configures ruff; `mypy.ini` configures mypy with django-stubs and djangorestframework-stubs. Migrations and test directories are excluded from strict mypy checks.
 
 ### Web
 
@@ -125,6 +136,22 @@ Tests live in two places:
 
 The test environment is jsdom; setup file is [`web/src/test-setup.ts`](../../web/src/test-setup.ts).
 
+### Web — type-check
+
+```bash
+cd web
+npx tsc --noEmit      # standalone type-check without emitting files
+```
+
+`npm run build` also type-checks (via `tsc -b`), but `--noEmit` is faster for an isolated check during development.
+
+### Web — lint
+
+```bash
+cd web
+npm run lint          # ESLint via eslint.config.js
+```
+
 ### Web build helper
 
 ```bash
@@ -132,7 +159,7 @@ source env.sh
 gz_build
 ```
 
-`gz_build` is the local helper for the same frontend build command used by the CI `web-build` job that also pre-generates types.
+`gz_build` is the local helper for the same frontend build command used by the CI `web` job that also pre-generates types.
 
 ### Production build
 
@@ -144,7 +171,16 @@ gz_build
 
 ### CI
 
-GitHub Actions runs all three test suites (`common`, `backend`, `web`) plus a `web-build` job (`npm run generate-types` followed by `npm run build`) in parallel on every push and pull request — see [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). A PR should not be merged if any job is red.
+GitHub Actions runs the following jobs in parallel on every push and pull request — see [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). A PR should not be merged if any job is red.
+
+| Job | What it runs |
+|---|---|
+| `common` | `pytest tests/` — workflow schema validation |
+| `backend` | `pytest api/ --cov` — backend tests + coverage upload to Codecov |
+| `python-quality` | `ruff check .` and `mypy .` in parallel — linting and type-checking |
+| `web` | `npm ci` once, then `npm test --coverage`, `npm run build`, and `npm run lint` in parallel — frontend tests + coverage upload + build + lint |
+
+Coverage reports are uploaded to [Codecov](https://codecov.io) with `backend` and `frontend` flags. Codecov posts a summary comment on each PR.
 
 ### What to test
 
