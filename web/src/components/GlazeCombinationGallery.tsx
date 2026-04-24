@@ -97,7 +97,7 @@ export default function GlazeCombinationGallery() {
                                     testTileImage ? (
                                         <Box
                                             component="button"
-                                            onClick={() => openTileLightbox(testTileImage, combo.name)}
+                                            onClick={() => openTileLightbox(testTileImage!, combo.name)}
                                             sx={{
                                                 background: 'none',
                                                 border: 'none',
