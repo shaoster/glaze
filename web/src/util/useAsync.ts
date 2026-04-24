@@ -1,23 +1,23 @@
-import { useCallback, useEffect, useState } from 'react'
-import type { DependencyList, Dispatch, SetStateAction } from 'react'
+import { useCallback, useEffect, useState } from "react";
+import type { DependencyList, Dispatch, SetStateAction } from "react";
 
 interface AsyncState<T> {
-    data: T | null
-    loading: boolean
-    error: Error | null
+  data: T | null;
+  loading: boolean;
+  error: Error | null;
 }
 
 export interface UseAsyncResult<T> extends AsyncState<T> {
-    /**
-     * Manually update the resolved data without re-fetching.
-     * Accepts a new value or a functional updater, matching the React
-     * `setState` signature.
-     */
-    setData: Dispatch<SetStateAction<T | null>>
+  /**
+   * Manually update the resolved data without re-fetching.
+   * Accepts a new value or a functional updater, matching the React
+   * `setState` signature.
+   */
+  setData: Dispatch<SetStateAction<T | null>>;
 }
 
 interface UseAsyncOptions {
-    enabled?: boolean
+  enabled?: boolean;
 }
 
 /**
@@ -34,54 +34,51 @@ interface UseAsyncOptions {
  * const { data: pieces, loading, error, setData: setPieces } = useAsync(fetchPieces)
  */
 export function useAsync<T>(
-    asyncFn: () => Promise<T>,
-    deps: DependencyList = [],
-    options: UseAsyncOptions = {},
+  asyncFn: () => Promise<T>,
+  deps: DependencyList = [],
+  options: UseAsyncOptions = {},
 ): UseAsyncResult<T> {
-    const { enabled = true } = options
-    const [state, setState] = useState<AsyncState<T>>({
-        data: null,
-        loading: enabled,
-        error: null,
-    })
+  const { enabled = true } = options;
+  const [state, setState] = useState<AsyncState<T>>({
+    data: null,
+    loading: enabled,
+    error: null,
+  });
 
-    useEffect(() => {
-        if (!enabled) {
-            setState({ data: null, loading: false, error: null })
-            return
-        }
-        let cancelled = false
-        setState({ data: null, loading: true, error: null })
-        asyncFn()
-            .then(data => {
-                if (!cancelled) setState({ data, loading: false, error: null })
-            })
-            .catch((err: unknown) => {
-                if (!cancelled)
-                    setState({
-                        data: null,
-                        loading: false,
-                        error: err instanceof Error ? err : new Error(String(err)),
-                    })
-            })
-        return () => {
-            cancelled = true
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [enabled, ...deps])
+  useEffect(() => {
+    if (!enabled) {
+      setState({ data: null, loading: false, error: null });
+      return;
+    }
+    let cancelled = false;
+    setState({ data: null, loading: true, error: null });
+    asyncFn()
+      .then((data) => {
+        if (!cancelled) setState({ data, loading: false, error: null });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled)
+          setState({
+            data: null,
+            loading: false,
+            error: err instanceof Error ? err : new Error(String(err)),
+          });
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, ...deps]);
 
-    const setData = useCallback(
-        (updater: SetStateAction<T | null>) => {
-            setState(prev => ({
-                ...prev,
-                data:
-                    typeof updater === 'function'
-                        ? (updater as (prev: T | null) => T | null)(prev.data)
-                        : updater,
-            }))
-        },
-        [],
-    )
+  const setData = useCallback((updater: SetStateAction<T | null>) => {
+    setState((prev) => ({
+      ...prev,
+      data:
+        typeof updater === "function"
+          ? (updater as (prev: T | null) => T | null)(prev.data)
+          : updater,
+    }));
+  }, []);
 
-    return { ...state, setData }
+  return { ...state, setData };
 }

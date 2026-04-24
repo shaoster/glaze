@@ -1,13 +1,13 @@
-import { Component } from 'react'
-import type { ReactNode } from 'react'
-import { Typography } from '@mui/material'
+import { Component } from "react";
+import type { ReactNode } from "react";
+import { Typography } from "@mui/material";
 
 interface Props {
-    children: ReactNode
+  children: ReactNode;
 }
 
 interface State {
-    hasError: boolean
+  hasError: boolean;
 }
 
 /**
@@ -23,20 +23,20 @@ interface State {
  * navigation shell.
  */
 export default class ErrorBoundary extends Component<Props, State> {
-    state: State = { hasError: false }
+  state: State = { hasError: false };
 
-    static getDerivedStateFromError(): State {
-        return { hasError: true }
-    }
+  static getDerivedStateFromError(): State {
+    return { hasError: true };
+  }
 
-    render() {
-        if (this.state.hasError) {
-            return (
-                <Typography color="error" sx={{ mt: 4 }}>
-                    Something went wrong. Please reload the page.
-                </Typography>
-            )
-        }
-        return this.props.children
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Typography color="error" sx={{ mt: 4 }}>
+          Something went wrong. Please reload the page.
+        </Typography>
+      );
     }
+    return this.props.children;
+  }
 }

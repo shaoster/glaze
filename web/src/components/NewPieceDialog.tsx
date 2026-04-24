@@ -1,189 +1,205 @@
-import { useState } from 'react'
+import { useState } from "react";
 import {
-    Box,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
-    Grid,
-    TextField,
-    Typography,
-} from '@mui/material'
-import { createPiece } from '@common/api'
-import type { PieceDetail } from '@common/types'
-import GlobalFieldPicker from './GlobalFieldPicker'
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Grid,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { createPiece } from "@common/api";
+import type { PieceDetail } from "@common/types";
+import GlobalFieldPicker from "./GlobalFieldPicker";
 
 // Exported so other components (e.g. PieceList) can reference the default
 // thumbnail path without duplicating the string literal.
-export const DEFAULT_THUMBNAIL = '/thumbnails/question-mark.svg'
+export const DEFAULT_THUMBNAIL = "/thumbnails/question-mark.svg";
 
 // Exported so tests can assert on the full set of selectable thumbnails without
 // scraping the DOM. All thumbnails live in web/public/thumbnails/.
 export const CURATED_THUMBNAILS = [
-    DEFAULT_THUMBNAIL,
-    '/thumbnails/bowl.svg',
-    '/thumbnails/mug.svg',
-    '/thumbnails/vase.svg',
-    '/thumbnails/plate.svg',
-    '/thumbnails/teapot.svg',
-]
+  DEFAULT_THUMBNAIL,
+  "/thumbnails/bowl.svg",
+  "/thumbnails/mug.svg",
+  "/thumbnails/vase.svg",
+  "/thumbnails/plate.svg",
+  "/thumbnails/teapot.svg",
+];
 
-const MAX_NOTES_LENGTH = 300
+const MAX_NOTES_LENGTH = 300;
 
 export interface NewPieceDialogProps {
-    open: boolean
-    onClose: () => void
-    onCreated: (piece: PieceDetail) => void
+  open: boolean;
+  onClose: () => void;
+  onCreated: (piece: PieceDetail) => void;
 }
 
-export default function NewPieceDialog({ open, onClose, onCreated }: NewPieceDialogProps) {
-    const [name, setName] = useState('')
-    const [notes, setNotes] = useState('')
-    const [selectedThumbnail, setSelectedThumbnail] = useState<string>(DEFAULT_THUMBNAIL)
-    const [saving, setSaving] = useState(false)
-    const [location, setLocation] = useState('')
-    const [confirmDiscard, setConfirmDiscard] = useState(false)
+export default function NewPieceDialog({
+  open,
+  onClose,
+  onCreated,
+}: NewPieceDialogProps) {
+  const [name, setName] = useState("");
+  const [notes, setNotes] = useState("");
+  const [selectedThumbnail, setSelectedThumbnail] =
+    useState<string>(DEFAULT_THUMBNAIL);
+  const [saving, setSaving] = useState(false);
+  const [location, setLocation] = useState("");
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
-    function resetState() {
-        setName('')
-        setNotes('')
-        setSelectedThumbnail(DEFAULT_THUMBNAIL)
-        setLocation('')
-        setSaving(false)
-        setConfirmDiscard(false)
+  function resetState() {
+    setName("");
+    setNotes("");
+    setSelectedThumbnail(DEFAULT_THUMBNAIL);
+    setLocation("");
+    setSaving(false);
+    setConfirmDiscard(false);
+  }
+
+  const isDirty =
+    name.trim() !== "" ||
+    notes !== "" ||
+    selectedThumbnail !== DEFAULT_THUMBNAIL;
+
+  function handleAttemptClose() {
+    if (isDirty) {
+      setConfirmDiscard(true);
+    } else {
+      resetState();
+      onClose();
     }
+  }
 
-    const isDirty = name.trim() !== '' || notes !== '' || selectedThumbnail !== DEFAULT_THUMBNAIL
+  function handleConfirmDiscard() {
+    resetState();
+    onClose();
+  }
 
-    function handleAttemptClose() {
-        if (isDirty) {
-            setConfirmDiscard(true)
-        } else {
-            resetState()
-            onClose()
-        }
+  async function handleSave() {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const piece = await createPiece({
+        name: name.trim(),
+        thumbnail: selectedThumbnail ?? "",
+        notes: notes || undefined,
+        current_location: location.trim() || undefined,
+      });
+      resetState();
+      onClose();
+      onCreated(piece);
+    } finally {
+      setSaving(false);
     }
+  }
 
-    function handleConfirmDiscard() {
-        resetState()
-        onClose()
-    }
+  const nameIsInvalid = name !== "" && name.trim() === "";
+  const canSave = name.trim() !== "" && !saving;
 
-    async function handleSave() {
-        if (!name.trim()) return
-        setSaving(true)
-        try {
-            const piece = await createPiece({
-                name: name.trim(),
-                thumbnail: selectedThumbnail ?? '',
-                notes: notes || undefined,
-                current_location: location.trim() || undefined,
-            })
-            resetState()
-            onClose()
-            onCreated(piece)
-        } finally {
-            setSaving(false)
-        }
-    }
+  return (
+    <>
+      <Dialog open={open} onClose={handleAttemptClose} maxWidth="sm" fullWidth>
+        <DialogTitle>New Piece</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            fullWidth
+            error={nameIsInvalid}
+            helperText={nameIsInvalid ? "Name cannot be blank" : ""}
+            slotProps={{ htmlInput: { "data-testid": "name-input" } }}
+            sx={{ mt: 1, mb: 2 }}
+          />
+          <TextField
+            label="Notes"
+            value={notes}
+            onChange={(e) =>
+              setNotes(e.target.value.slice(0, MAX_NOTES_LENGTH))
+            }
+            multiline
+            rows={3}
+            fullWidth
+            helperText={`${notes.length} / ${MAX_NOTES_LENGTH}`}
+            slotProps={{ htmlInput: { "data-testid": "notes-input" } }}
+            sx={{ mb: 2 }}
+          />
+          <GlobalFieldPicker
+            globalName="location"
+            label="Location"
+            value={location}
+            onChange={setLocation}
+            canCreate
+            sx={{ mb: 2 }}
+          />
+          <Typography variant="subtitle2" gutterBottom>
+            Thumbnail
+          </Typography>
+          <Grid container spacing={1}>
+            {CURATED_THUMBNAILS.map((url) => (
+              <Grid key={url} size={2}>
+                <Box
+                  component="img"
+                  src={url}
+                  alt={url.split("/").pop()?.replace(".svg", "") ?? url}
+                  onClick={() => setSelectedThumbnail(url)}
+                  sx={{
+                    width: "100%",
+                    aspectRatio: "1",
+                    cursor: "pointer",
+                    border:
+                      selectedThumbnail === url
+                        ? "3px solid"
+                        : "3px solid transparent",
+                    borderColor:
+                      selectedThumbnail === url
+                        ? "primary.main"
+                        : "transparent",
+                    borderRadius: 1,
+                    boxSizing: "border-box",
+                  }}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleAttemptClose}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={!canSave}
+            data-testid="save-button"
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-    const nameIsInvalid = name !== '' && name.trim() === ''
-    const canSave = name.trim() !== '' && !saving
-
-    return (
-        <>
-            <Dialog open={open} onClose={handleAttemptClose} maxWidth="sm" fullWidth>
-                <DialogTitle>New Piece</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        label="Name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                        fullWidth
-                        error={nameIsInvalid}
-                        helperText={nameIsInvalid ? 'Name cannot be blank' : ''}
-                        slotProps={{ htmlInput: { 'data-testid': 'name-input' } }}
-                        sx={{ mt: 1, mb: 2 }}
-                    />
-                    <TextField
-                        label="Notes"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value.slice(0, MAX_NOTES_LENGTH))}
-                        multiline
-                        rows={3}
-                        fullWidth
-                        helperText={`${notes.length} / ${MAX_NOTES_LENGTH}`}
-                        slotProps={{ htmlInput: { 'data-testid': 'notes-input' } }}
-                        sx={{ mb: 2 }}
-                    />
-                    <GlobalFieldPicker
-                        globalName="location"
-                        label="Location"
-                        value={location}
-                        onChange={setLocation}
-                        canCreate
-                        sx={{ mb: 2 }}
-                    />
-                    <Typography variant="subtitle2" gutterBottom>
-                        Thumbnail
-                    </Typography>
-                    <Grid container spacing={1}>
-                        {CURATED_THUMBNAILS.map((url) => (
-                            <Grid key={url} size={2}>
-                                <Box
-                                    component="img"
-                                    src={url}
-                                    alt={url.split('/').pop()?.replace('.svg', '') ?? url}
-                                    onClick={() => setSelectedThumbnail(url)}
-                                    sx={{
-                                        width: '100%',
-                                        aspectRatio: '1',
-                                        cursor: 'pointer',
-                                        border: selectedThumbnail === url
-                                            ? '3px solid'
-                                            : '3px solid transparent',
-                                        borderColor: selectedThumbnail === url
-                                            ? 'primary.main'
-                                            : 'transparent',
-                                        borderRadius: 1,
-                                        boxSizing: 'border-box',
-                                    }}
-                                />
-                            </Grid>
-                        ))}
-                    </Grid>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleAttemptClose}>Cancel</Button>
-                    <Button
-                        variant="contained"
-                        onClick={handleSave}
-                        disabled={!canSave}
-                        data-testid="save-button"
-                    >
-                        Save
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            <Dialog open={confirmDiscard} onClose={() => setConfirmDiscard(false)}>
-                <DialogTitle>Discard new piece?</DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        Your changes have not been saved. If you leave now, your new piece will not be
-                        created.
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setConfirmDiscard(false)}>Keep editing</Button>
-                    <Button onClick={handleConfirmDiscard} color="error" data-testid="discard-button">
-                        Discard
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </>
-    )
+      <Dialog open={confirmDiscard} onClose={() => setConfirmDiscard(false)}>
+        <DialogTitle>Discard new piece?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Your changes have not been saved. If you leave now, your new piece
+            will not be created.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDiscard(false)}>Keep editing</Button>
+          <Button
+            onClick={handleConfirmDiscard}
+            color="error"
+            data-testid="discard-button"
+          >
+            Discard
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
 }
