@@ -564,7 +564,7 @@ function RecordList({
   );
 }
 
-export default function AdminManualSquareCropToolPage() {
+export default function GlazeImportToolPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cropStageRef = useRef<HTMLDivElement | null>(null);
   const ocrStageRef = useRef<HTMLDivElement | null>(null);
@@ -683,7 +683,7 @@ export default function AdminManualSquareCropToolPage() {
     return () => clearTimeout(timer);
     // cropKey is intentionally used as the sole dependency: only the crop
     // geometry (not ocrRegion or other fields) should trigger a preview rebuild.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [cropKey]);
 
   useEffect(() => {

@@ -153,7 +153,7 @@ export default function GlobalEntryPicker({
         params,
       );
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [open, filters, globalName],
     { enabled: open },
   );

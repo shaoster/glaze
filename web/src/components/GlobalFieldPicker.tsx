@@ -164,7 +164,7 @@ export default function GlobalFieldPicker({
       if (af !== bf) return af ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [entries, isFavoritable, localFavorites]);
 
   // Display strings: public entries whose name also appears as a private entry

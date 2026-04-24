@@ -117,14 +117,14 @@ export default function CloudinaryImage({
   const imageRef = useRef<HTMLImageElement | null>(null);
   const advancedImageRef = useRef<AdvancedImage | null>(null);
 
-  // Reset loading state when the image source changes. Doing this during render
-  // (rather than in a useEffect) avoids a superfluous second render: React
-  // processes the setState call synchronously as part of the current render and
-  // re-runs the component once instead of paint → effect → re-paint.
-  const prevKeyRef = useRef(`${url}__${cloudinary_public_id}__${context}`);
+  // Reset loading state when the image source changes. Storing the previous key
+  // in state (not a ref) is the React-documented pattern for deriving state from
+  // props during render — refs must not be read during render.
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   const currentKey = `${url}__${cloudinary_public_id}__${context}`;
-  if (prevKeyRef.current !== currentKey) {
-    prevKeyRef.current = currentKey;
+  const [prevKey, setPrevKey] = useState(currentKey);
+  if (prevKey !== currentKey) {
+    setPrevKey(currentKey);
     setIsLoading(true);
   }
 

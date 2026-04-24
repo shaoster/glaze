@@ -7,11 +7,11 @@ vi.mock("@common/api", () => ({
   signCloudinaryWidgetParams: vi.fn(),
 }));
 
-import AdminManualSquareCropToolPage from "../../pages/AdminManualSquareCropToolPage";
+import GlazeImportToolPage from "../../pages/GlazeImportToolPage";
 
-describe("AdminManualSquareCropToolPage", () => {
+describe("GlazeImportToolPage", () => {
   it("renders the tabbed workflow headings", () => {
-    render(<AdminManualSquareCropToolPage />);
+    render(<GlazeImportToolPage />);
 
     expect(
       screen.getByRole("heading", { name: "Glaze Import Tool" }),

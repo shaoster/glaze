@@ -39,7 +39,7 @@ vi.mock("./components/GlazeCombinationGallery", () => ({
   default: () => <div>Glaze Gallery Content</div>,
 }));
 
-vi.mock("./pages/AdminManualSquareCropToolPage", () => ({
+vi.mock("./pages/GlazeImportToolPage", () => ({
   default: () => <div>Glaze Import Tool Page</div>,
 }));
 

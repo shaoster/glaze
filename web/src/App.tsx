@@ -54,8 +54,8 @@ const LandingPage = lazy(() => import("./pages/LandingPage"));
 const PieceListPage = lazy(() => import("./pages/PieceListPage"));
 const PieceDetailPage = lazy(() => import("./pages/PieceDetailPage"));
 const AnalyzePage = lazy(() => import("./pages/AnalyzePage"));
-const AdminManualSquareCropToolPage = lazy(
-  () => import("./pages/AdminManualSquareCropToolPage"),
+const GlazeImportToolPage = lazy(
+  () => import("./pages/GlazeImportToolPage"),
 );
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
@@ -548,7 +548,7 @@ function AuthenticatedApp({
               path="/tools/glaze-import"
               element={
                 currentUser.is_staff ? (
-                  <AdminManualSquareCropToolPage />
+                  <GlazeImportToolPage />
                 ) : (
                   <Navigate to="/" replace />
                 )

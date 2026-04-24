@@ -164,6 +164,12 @@ Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`
 | `gz_test_backend` | Run Django API tests only (`pytest api/`). |
 | `gz_test_web` | Run web tests only (`npm test`). |
 
+### Linting and type-checking
+
+| Command | Description |
+|---|---|
+| `gz_lint` | Run all linters and type-checkers in parallel: `ruff check + format --check`, `mypy`, `eslint`, and `tsc --noEmit`. Exits non-zero if any fails. |
+
 ### Build
 
 | Command | Description |

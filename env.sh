@@ -213,6 +213,27 @@ gz_test() {
     return $(( common_exit | backend_exit | web_exit ))
 }
 
+gz_lint() {
+    local ruff_exit mypy_exit eslint_exit tsc_exit
+    (
+        source "$GLAZE_ROOT/.venv/bin/activate"
+        cd "$GLAZE_ROOT"
+        ruff check . && ruff format --check .
+    ) & local ruff_pid=$!
+    (
+        source "$GLAZE_ROOT/.venv/bin/activate"
+        cd "$GLAZE_ROOT"
+        mypy .
+    ) & local mypy_pid=$!
+    (cd "$GLAZE_ROOT/web" && npm run lint) & local eslint_pid=$!
+    (cd "$GLAZE_ROOT/web" && npx tsc --noEmit) & local tsc_pid=$!
+    wait $ruff_pid;   ruff_exit=$?
+    wait $mypy_pid;   mypy_exit=$?
+    wait $eslint_pid; eslint_exit=$?
+    wait $tsc_pid;    tsc_exit=$?
+    return $(( ruff_exit | mypy_exit | eslint_exit | tsc_exit ))
+}
+
 gz_build() {
     _gz_ensure_node
     gz_gentypes || return $?
