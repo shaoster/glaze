@@ -21,6 +21,33 @@ In a new environment, always run `source env.sh` and `gz_setup` before trying to
 
 ---
 
+## Shell environment for interactive and agent use
+
+Two scripts handle environment bootstrap:
+
+| Script | Purpose |
+|---|---|
+| [`env.sh`](../../env.sh) | Interactive shells: sources `~/.bashrc`, delegates to `env-agent.sh`, then defines all `gz_*` helpers. Used as `bash --rcfile` by the VS Code/Cursor terminal profile. |
+| [`env-agent.sh`](../../env-agent.sh) | Lightweight, silent bootstrap for non-interactive shells: activates `.venv` if present, loads `.env.local` vars, exports `BASH_ENV` so child processes inherit the same setup. |
+
+`env.sh` sources `env-agent.sh` — the venv activation and env-var loading logic live in exactly one place.
+
+### VS Code / Cursor integrated terminal
+
+[`.vscode/settings.json`](../../.vscode/settings.json) configures a `glaze` terminal profile that runs `bash --rcfile env.sh`. New terminals automatically get the full interactive environment (venv active, `gz_*` functions, `.env.local` loaded) without any manual `source` step.
+
+`python.terminal.activateEnvironment` is disabled so VS Code does not double-activate the venv on top of what `env.sh` already did.
+
+### Claude Code
+
+[`.claude/settings.json`](../../.claude/settings.json) sets `BASH_ENV=/path/to/env-agent.sh`. Every `bash -c "..."` command Claude Code runs sources `env-agent.sh` first, so `python`, `pytest`, `npm`, and `.env.local` vars are all available without a manual activation step.
+
+### Codex and other agents
+
+`env-agent.sh` exports `BASH_ENV` pointing at itself, so any agent process spawned from a shell that has already sourced `env.sh` (e.g. a VS Code terminal) automatically propagates the bootstrap to its own subshells. No per-tool config is needed for Codex or similar CLI agents launched from the integrated terminal.
+
+---
+
 ## Environment variables
 
 All vars are optional. The app runs without any of them; each missing group degrades gracefully.

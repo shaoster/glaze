@@ -1,4 +1,7 @@
 {
+  "env": {
+    "BASH_ENV": "/home/phil/code/glaze/env-agent.sh"
+  },
   "hooks": {
     "preToolUse": ["rtk"]
   }

@@ -1,7 +1,16 @@
 # Glaze development helpers — source this file, don't run it directly.
 # Usage: source env.sh
+# Also used as bash --rcfile by VS Code terminal profiles.
+
+# When used as --rcfile, ~/.bashrc is not loaded automatically — do it first.
+[[ -f ~/.bashrc ]] && source ~/.bashrc
 
 GLAZE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Bootstrap: venv activation, .env.local loading, BASH_ENV export.
+# env-agent.sh is also the entry point for non-interactive agent subshells.
+source "$GLAZE_ROOT/env-agent.sh"
+
 _GLAZE_PIDS="$GLAZE_ROOT/.dev-pids"
 _GLAZE_LOGS="$GLAZE_ROOT/.dev-logs"
 mkdir -p "$_GLAZE_PIDS" "$_GLAZE_LOGS"
@@ -343,8 +352,4 @@ gz_help() {
 
 # ---------------------------------------------------------------------------
 
-echo "Glaze dev helpers loaded."
-_gz_load_local_env
-for entry in "${_GZ_SHORTCUTS[@]}"; do
-    echo "  $entry"
-done
+echo "Glaze ready — run 'gz_help' for shortcuts, 'gz_setup' for first-time install."

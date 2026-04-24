@@ -96,6 +96,10 @@ Source the file to load all shortcuts into your shell:
 source env.sh
 ```
 
+**VS Code / Cursor:** the repo ships a terminal profile in [`.vscode/settings.json`](.vscode/settings.json) that automatically sources `env.sh` in every new integrated terminal — no manual step needed. The venv is activated and `gz_*` helpers are available from the moment the terminal opens.
+
+**AI coding agents (Claude Code, Codex, Cursor agent):** a companion script [`env-agent.sh`](env-agent.sh) provides a silent, lightweight bootstrap (venv activation + `.env.local` loading) for non-interactive shells. Claude Code picks it up via `.claude/settings.json`; Codex and other agents inherit it through `BASH_ENV` when launched from an `env.sh`-sourced terminal. See [`docs/agents/dev.md`](docs/agents/dev.md) for details.
+
 ### Local secrets and config (git-safe)
 Keep local-only settings in `.env.local` files; they are gitignored by default:
 
