@@ -361,6 +361,39 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 
 ---
 
+## Glaze Import Tool (Admin)
+
+Staff users have access to a browser-based bulk import workflow at `/tools/glaze-import`. It is the canonical way to seed the public `GlazeType` and `GlazeCombination` libraries from physical test-tile photographs. The tool is a five-to-six step tabbed flow:
+
+| Tab | Purpose |
+|-----|---------|
+| **1. Upload** | Bulk-upload source images from disk (JPEG/PNG) or via the Cloudinary widget (HEIC/HEIF conversion). Each image becomes an independent record. |
+| **2. Crop** | Draw a rotatable square crop box over each image. The box may extend beyond the image bounds; overflow becomes transparent in the output. Crop geometry is debounced so the live preview updates only after 200 ms of inactivity. |
+| **3. OCR** | Optionally draw a rotatable OCR region bounding box on the crop preview. Running OCR on all records at once feeds Tesseract.js with a domain word list (runs, caution, food safe, 1st, 2nd, glaze) and then parses the result with two heuristics applied in order: (1) structured-line detection (`/[I1]st Glaze[:;]/` → `first_glaze`, `/[2=Z]nd Glaze[:;]/` → `second_glaze`) and (2) a token-split fallback that looks for common combo separators (`!`, `/`, `&`, `+`, `over`). CAUTION RUNS detection sets `runs: true`; NOT FOOD SAFE detection sets `is_food_safe: false`. |
+| **4. Review** | Per-record editable form: name, kind (`glaze_type` / `glaze_combination`), first/second glaze fields (hidden for types), `runs?`, and `food safe?` selects. For combinations, the name field is auto-computed as `<first>!<second>` and is read-only. Records must be checked as reviewed before import. |
+| **5. Import** | Sends all reviewed records and their compressed crop images (WebP ≤ 2000 px, 0.85 quality) to `POST /api/admin/manual-square-crop-import/`. A per-record progress list shows Build → Upload → Done for each file. Import results include admin links to every created or matched object. |
+| **6. Reconcile** *(conditional)* | Appears only when the import skipped duplicates. Shows the scraped fields for each skipped record alongside an "Open in Admin" link to the existing record, and a resolved checkbox checklist. |
+
+### Backend import endpoint
+
+`POST /api/admin/manual-square-crop-import/` — staff only (`is_staff`). Accepts a `multipart/form-data` body:
+- `payload` — JSON string `{ records: ManualSquareCropImportRecordPayload[] }` (see `frontend_common/src/api.ts` for the shape).
+- `crop_image__<client_id>` — one WebP file per record.
+
+The endpoint is implemented in `api/manual_tile_imports.py`. For each `glaze_type` record it creates a public `GlazeType` (and a matching single-layer `GlazeCombination`) and uploads the crop to Cloudinary. For each `glaze_combination` record it resolves the two referenced public `GlazeType` rows by name, creates a public `GlazeCombination`, and sets the ordered layers. **`runs` and `is_food_safe` from `parsed_fields` are written to both `GlazeType` and `GlazeCombination` on creation.** Existing public records with the same name are reported as `skipped_duplicate` (not updated).
+
+### OCR parsing conventions
+
+- Structured lines take priority: a line matching `/^[I1l]st\s+[Gg]laze\s*[:;]\s*(.+)/` is the first glaze; `/^[2=Z]nd\s+[Gg]laze\s*[:;]/` is the second. The character classes handle common OCR confusions (`I`/`1`/`l` for `1`, `=`/`Z` for `2`, `;` for `:`).
+- If no structured lines are found, the longest non-annotation line is used. Tokens split on `!`, `/`, `&`, `+`, `over` determine whether the result is a combination (≥ 2 tokens) or a single type.
+- Annotation lines matching `CAUTION.*RUNS` or `NOT FOOD SAFE` are stripped from the name and used to set `runs`/`is_food_safe` in `parsed_fields`.
+
+### Protected files for this feature
+
+`api/manual_tile_imports.py` and `web/src/pages/AdminManualSquareCropToolPage.tsx` are the two primary implementation files. `api/tests/test_manual_square_crop_import.py` must be kept in sync with any import-logic changes.
+
+---
+
 ## GitHub: Scope Limits & Definition of Done (Glaze-specific)
 
 These extend the generic GitHub interactions guide with Glaze-specific protected files and DoD checks.

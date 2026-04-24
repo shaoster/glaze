@@ -28,6 +28,7 @@ import {
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import LogoutIcon from '@mui/icons-material/Logout'
+import CropFreeIcon from '@mui/icons-material/CropFree'
 import { alpha, ThemeProvider, createTheme } from '@mui/material/styles'
 
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
@@ -40,6 +41,7 @@ const LandingPage = lazy(() => import('./pages/LandingPage'))
 const PieceListPage = lazy(() => import('./pages/PieceListPage'))
 const PieceDetailPage = lazy(() => import('./pages/PieceDetailPage'))
 const AnalyzePage = lazy(() => import('./pages/AnalyzePage'))
+const AdminManualSquareCropToolPage = lazy(() => import('./pages/AdminManualSquareCropToolPage'))
 const AboutPage = lazy(() => import('./pages/AboutPage'))
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
 
@@ -385,6 +387,16 @@ function AppShell({
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
+          {currentUser.is_staff ? (
+            <MenuItem
+              component={Link}
+              to="/tools/glaze-import"
+              onClick={() => setMenuAnchor(null)}
+            >
+              <ListItemIcon><CropFreeIcon fontSize="small" /></ListItemIcon>
+              Glaze Import Tool
+            </MenuItem>
+          ) : null}
           <MenuItem onClick={() => { setMenuAnchor(null); onLogout() }}>
             <ListItemIcon><LogoutIcon fontSize="small" /></ListItemIcon>
             Log out
@@ -417,6 +429,14 @@ function AuthenticatedApp({
               <Route path="analyze" element={<AnalyzePage />} />
             </Route>
             <Route path="/pieces/:id" element={<PieceDetailPage />} />
+            <Route
+              path="/tools/glaze-import"
+              element={
+                currentUser.is_staff
+                  ? <AdminManualSquareCropToolPage />
+                  : <Navigate to="/" replace />
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>,
         ),

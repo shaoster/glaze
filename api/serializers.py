@@ -522,6 +522,7 @@ class AuthUserSerializer(serializers.Serializer):
     email = serializers.EmailField(read_only=True)
     first_name = serializers.CharField(read_only=True, allow_blank=True)
     last_name = serializers.CharField(read_only=True, allow_blank=True)
+    is_staff = serializers.BooleanField(read_only=True)
     openid_subject = serializers.SerializerMethodField()
     profile_image_url = serializers.SerializerMethodField()
 

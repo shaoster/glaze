@@ -21,6 +21,7 @@ export type AuthUser = {
     email: string
     first_name: string
     last_name: string
+    is_staff: boolean
     openid_subject: string
     profile_image_url: string
 }
@@ -337,4 +338,53 @@ export async function signCloudinaryWidgetParams(paramsToSign: Record<string, un
         params_to_sign: paramsToSign,
     })
     return data.signature
+}
+
+export type ManualSquareCropImportRecordPayload = {
+    client_id: string
+    filename: string
+    reviewed: boolean
+    parsed_fields: {
+        name: string
+        kind: 'glaze_type' | 'glaze_combination'
+        first_glaze: string
+        second_glaze: string
+        runs: boolean | null
+        is_food_safe: boolean | null
+    }
+}
+
+export type ManualSquareCropImportResponse = {
+    results: Array<{
+        client_id: string
+        filename: string
+        kind: string
+        name: string
+        status: 'created' | 'skipped_duplicate' | 'error'
+        reason: string | null
+        object_id: string | null
+        image_url: string | null
+    }>
+    summary: {
+        created_glaze_types: number
+        created_glaze_combinations: number
+        skipped_duplicates: number
+        errors: number
+    }
+}
+
+export async function importManualSquareCropRecords(
+    records: ManualSquareCropImportRecordPayload[],
+    cropFiles: Record<string, File>
+): Promise<ManualSquareCropImportResponse> {
+    const form = new FormData()
+    form.append('payload', JSON.stringify({ records }))
+    for (const record of records) {
+        const file = cropFiles[record.client_id]
+        if (file) {
+            form.append(`crop_image__${record.client_id}`, file, file.name)
+        }
+    }
+    const { data } = await client.post<ManualSquareCropImportResponse>('admin/manual-square-crop-import/', form)
+    return data
 }

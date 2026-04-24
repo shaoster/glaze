@@ -5,6 +5,7 @@ from .workflow import get_global_model_and_field, get_global_names
 
 urlpatterns = [
     path('analysis/glaze-combination-images/', views.glaze_combination_images, name='analysis-glaze-combination-images'),
+    path('admin/manual-square-crop-import/', views.admin_manual_square_crop_import, name='admin-manual-square-crop-import'),
     path('auth/csrf/', views.csrf, name='auth-csrf'),
     path('auth/login/', views.auth_login, name='auth-login'),
     path('auth/logout/', views.auth_logout, name='auth-logout'),
