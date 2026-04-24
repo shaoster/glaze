@@ -10,15 +10,7 @@ from django.db import transaction
 from django.utils.text import slugify
 
 from .models import GlazeCombination, GlazeCombinationLayer, GlazeType
-
-_SHARED_GLAZE_FIELDS = (
-    'test_tile_image',
-    'is_food_safe',
-    'runs',
-    'highlights_grooves',
-    'is_different_on_white_and_brown_clay',
-    'apply_thin',
-)
+from .workflow import sync_glaze_type_singleton_combination
 
 
 def _configure_cloudinary() -> None:
@@ -45,23 +37,6 @@ def _upload_file(uploaded_file, *, kind: str, filename: str, folder: str) -> dic
         resource_type='image',
         folder=folder,
     )
-
-
-def _ensure_single_layer_combination(glaze_type: GlazeType) -> GlazeCombination:
-    combo_props = {field: getattr(glaze_type, field) for field in _SHARED_GLAZE_FIELDS}
-    combo, _ = GlazeCombination.objects.get_or_create(
-        user=None,
-        name=glaze_type.name,
-        defaults=combo_props,
-    )
-    for field, value in combo_props.items():
-        setattr(combo, field, value)
-    combo.save(update_fields=list(_SHARED_GLAZE_FIELDS))
-    layers = list(combo.layers.select_related('glaze_type').order_by('order'))
-    if len(layers) != 1 or layers[0].glaze_type_id != glaze_type.id:
-        combo.layers.all().delete()
-        GlazeCombinationLayer.objects.create(combination=combo, glaze_type=glaze_type, order=0)
-    return combo
 
 
 def _ensure_combination_layers(combo: GlazeCombination, glaze_types: list[GlazeType]) -> None:
@@ -120,7 +95,7 @@ def import_manual_tile_records(records: list[dict], uploaded_files: dict[str, ob
             runs=parsed.get('runs'),
             is_food_safe=parsed.get('is_food_safe'),
         )
-        _ensure_single_layer_combination(glaze_type)
+        sync_glaze_type_singleton_combination(glaze_type)
         return _result_payload(record, status='created', object_id=str(glaze_type.pk), image_url=glaze_type.test_tile_image)
 
     def import_glaze_combination(record: dict) -> dict:
