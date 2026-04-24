@@ -10,7 +10,7 @@ from django.db import transaction
 from django.utils.text import slugify
 
 from .models import GlazeCombination, GlazeCombinationLayer, GlazeType
-from .workflow import sync_glaze_type_singleton_combination
+from .utils import sync_glaze_type_singleton_combination
 
 
 def _configure_cloudinary() -> None:

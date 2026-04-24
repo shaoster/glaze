@@ -15,7 +15,8 @@ from import_export.admin import ExportMixin
 
 from .models import FiringTemperature, GlazeCombination, GlazeCombinationLayer, GlazeMethod, GlazeType, Piece, PieceState, UserProfile
 from .serializers import PieceStateSerializer
-from .workflow import get_image_fields_for_global_model, get_public_global_models, sync_glaze_type_singleton_combination
+from .utils import sync_glaze_type_singleton_combination
+from .workflow import get_image_fields_for_global_model, get_public_global_models
 
 
 class GlazeAdminSite(admin.AdminSite):
