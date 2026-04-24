@@ -120,6 +120,16 @@ jobs:
           flags: backend
           fail_ci_if_error: false
 
+      - name: Generate OpenAPI schema
+        run: python manage.py spectacular --format openapi-json --file openapi.json
+
+      - name: Upload OpenAPI schema
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-schema
+          path: openapi.json
+          retention-days: 1
+
   python-quality:
     name: Python (ruff + mypy)
     needs: preflight
@@ -148,16 +158,11 @@ jobs:
 
   web:
     name: Web (test + build + lint)
-    needs: preflight
+    needs: [preflight, backend]
     if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-          cache: pip
 
       - uses: actions/setup-node@v5
         with:
@@ -165,19 +170,18 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt
-
       - name: Install Node dependencies
         working-directory: web
         run: npm ci
 
+      - name: Download OpenAPI schema
+        uses: actions/download-artifact@v4
+        with:
+          name: openapi-schema
+
       - name: Generate TypeScript types
-        run: |
-          schema_path="$(mktemp "${TMPDIR:-/tmp}/glaze-openapi.XXXXXX.json")"
-          python manage.py spectacular --format openapi-json --file "$schema_path"
-          cd web && GLAZE_SCHEMA_SOURCE="$schema_path" npm run generate-types
-          rm -f "$schema_path"
+        working-directory: web
+        run: GLAZE_SCHEMA_SOURCE="../openapi.json" npm run generate-types
 
       - name: Test, build, and lint in parallel
         working-directory: web
