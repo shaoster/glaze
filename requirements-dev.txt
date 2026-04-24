@@ -1,5 +1,4 @@
 -r requirements.txt
-black==26.3.1
 django-stubs[compatible-mypy]==6.0.2
 djangorestframework-stubs[compatible-mypy]==3.16.9
 pytest==9.0.3
