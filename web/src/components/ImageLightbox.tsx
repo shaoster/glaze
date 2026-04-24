@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { Box, Button, CircularProgress, IconButton, Modal, Typography } from '@mui/material'
 import type { CaptionedImage } from '@common/types'
 import CloudinaryImage from './CloudinaryImage'
@@ -9,9 +9,10 @@ type ImageLightboxProps = {
     onClose: () => void
     currentThumbnailUrl?: string
     onSetAsThumbnail?: (image: CaptionedImage) => Promise<void>
+    footerActions?: React.ReactNode
 }
 
-export default function ImageLightbox({ images, initialIndex, onClose, currentThumbnailUrl, onSetAsThumbnail }: ImageLightboxProps) {
+export default function ImageLightbox({ images, initialIndex, onClose, currentThumbnailUrl, onSetAsThumbnail, footerActions }: ImageLightboxProps) {
     const [index, setIndex] = useState(initialIndex)
     const [settingThumbnail, setSettingThumbnail] = useState(false)
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
@@ -90,6 +91,11 @@ export default function ImageLightbox({ images, initialIndex, onClose, currentTh
                         >
                             {isCurrentThumbnail ? 'Current thumbnail' : settingThumbnail ? 'Setting…' : 'Set as thumbnail'}
                         </Button>
+                    </Box>
+                )}
+                {footerActions && (
+                    <Box onClick={(e) => e.stopPropagation()}>
+                        {footerActions}
                     </Box>
                 )}
                 {!isTouchDevice && images.length > 1 && (

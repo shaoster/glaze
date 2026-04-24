@@ -9,12 +9,14 @@
  * Each card header shows the combination name, a test-tile thumbnail if
  * available, and a chip for each constituent glaze type.
  * The card body is a horizontally scrollable row of CloudinaryImage
- * thumbnails. Hovering a thumbnail shows the piece name and state; clicking
- * navigates to /pieces/<id>.
+ * thumbnails. Clicking any thumbnail opens an ImageLightbox; piece thumbnails
+ * include a "Go to the Piece" button in the lightbox footer.
  */
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
     Box,
+    Button,
     Card,
     CardContent,
     CardHeader,
@@ -25,18 +27,123 @@ import {
     Typography,
 } from '@mui/material'
 import CloudinaryImage from './CloudinaryImage'
+import ImageLightbox from './ImageLightbox'
 import { fetchGlazeCombinationImages } from '@common/api'
-import type { GlazeCombinationImageEntry } from '@common/types'
+import type { CaptionedImage, GlazeCombinationEntry, GlazeCombinationImageEntry } from '@common/types'
 import { formatState } from '@common/types'
 import { useAsync } from '../util/useAsync'
 
 const EMPTY_STATE_MESSAGE =
     'No images yet — add images to pieces that use a glaze combination to see them here.'
 
+type PieceEntry = GlazeCombinationImageEntry['pieces'][number]
+
+type LightboxState =
+    | { kind: 'tile'; images: CaptionedImage[]; initialIndex: 0 }
+    | { kind: 'piece'; images: CaptionedImage[]; initialIndex: number; pieceId: string }
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+interface TileAvatarButtonProps {
+    url: string
+    name: string
+    onClick: (url: string, name: string) => void
+}
+
+function TileAvatarButton({ url, name, onClick }: TileAvatarButtonProps) {
+    return (
+        <Box
+            component="button"
+            onClick={() => onClick(url, name)}
+            sx={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex' }}
+            aria-label={`View test tile for ${name}`}
+        >
+            <CloudinaryImage url={url} context="thumbnail" alt={name} />
+        </Box>
+    )
+}
+
+interface PieceImageButtonProps {
+    piece: PieceEntry
+    img: CaptionedImage
+    imgIdx: number
+    onClick: (piece: PieceEntry, imgIdx: number) => void
+}
+
+function PieceImageButton({ piece, img, imgIdx, onClick }: PieceImageButtonProps) {
+    return (
+        <Tooltip title={`${piece.name} — ${formatState(piece.state)}`} placement="top">
+            <Box
+                component="button"
+                onClick={() => onClick(piece, imgIdx)}
+                sx={{ flexShrink: 0, display: 'inline-flex', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                aria-label={`${piece.name} — ${formatState(piece.state)}`}
+            >
+                <CloudinaryImage
+                    url={img.url}
+                    cloudinary_public_id={img.cloudinary_public_id}
+                    alt={`${piece.name} — ${formatState(piece.state)}`}
+                    context="preview"
+                />
+            </Box>
+        </Tooltip>
+    )
+}
+
+interface ComboCardProps {
+    combo: GlazeCombinationEntry
+    pieces: PieceEntry[]
+    onTileClick: (url: string, name: string) => void
+    onPieceImageClick: (piece: PieceEntry, imgIdx: number) => void
+}
+
+function ComboCard({ combo, pieces, onTileClick, onPieceImageClick }: ComboCardProps) {
+    return (
+        <Card variant="outlined">
+            <CardHeader
+                avatar={combo.test_tile_image
+                    ? <TileAvatarButton url={combo.test_tile_image} name={combo.name ?? ''} onClick={onTileClick} />
+                    : null}
+                title={<Typography variant="subtitle1" fontWeight="bold">{combo.name}</Typography>}
+                subheader={
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                        {combo.glaze_types.map((gt) => (
+                            <Chip key={gt.id} label={gt.name} size="small" variant="outlined" />
+                        ))}
+                    </Box>
+                }
+            />
+            <CardContent sx={{ pt: 0 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'row', overflowX: 'auto', gap: 1, pb: 1 }}>
+                    {pieces.map((piece) =>
+                        piece.images.map((img, imgIdx) => (
+                            <PieceImageButton
+                                key={`${piece.id}-${imgIdx}`}
+                                piece={piece}
+                                img={img}
+                                imgIdx={imgIdx}
+                                onClick={onPieceImageClick}
+                            />
+                        ))
+                    )}
+                </Box>
+            </CardContent>
+        </Card>
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Root component
+// ---------------------------------------------------------------------------
+
 export default function GlazeCombinationGallery() {
     const { data: entries, loading, error } = useAsync<GlazeCombinationImageEntry[]>(
         fetchGlazeCombinationImages,
     )
+    const [lightbox, setLightbox] = useState<LightboxState | null>(null)
+    const navigate = useNavigate()
 
     if (loading) {
         return (
@@ -58,82 +165,50 @@ export default function GlazeCombinationGallery() {
         )
     }
 
+    function handleTileClick(url: string, name: string) {
+        setLightbox({
+            kind: 'tile',
+            initialIndex: 0,
+            images: [{ url, caption: name, created: new Date(), cloudinary_public_id: null }],
+        })
+    }
+
+    function handlePieceImageClick(piece: PieceEntry, imgIdx: number) {
+        setLightbox({ kind: 'piece', images: piece.images, initialIndex: imgIdx, pieceId: piece.id })
+    }
+
     return (
-        <Stack spacing={2}>
-            {entries.map((entry) => {
-                const { glaze_combination: combo, pieces } = entry
-                return (
-                    <Card key={combo.id} variant="outlined">
-                        <CardHeader
-                            avatar={
-                                combo.test_tile_image ? (
-                                    <CloudinaryImage
-                                        url={combo.test_tile_image}
-                                        context="thumbnail"
-                                        alt={combo.name}
-                                    />
-                                ) : null
-                            }
-                            title={
-                                <Typography variant="subtitle1" fontWeight="bold">
-                                    {combo.name}
-                                </Typography>
-                            }
-                            subheader={
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                                    {combo.glaze_types.map((gt) => (
-                                        <Chip
-                                            key={gt.id}
-                                            label={gt.name}
-                                            size="small"
-                                            variant="outlined"
-                                        />
-                                    ))}
-                                </Box>
-                            }
-                        />
-                        <CardContent sx={{ pt: 0 }}>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    overflowX: 'auto',
-                                    gap: 1,
-                                    pb: 1,
-                                }}
+        <>
+            <Stack spacing={2}>
+                {entries.map(({ glaze_combination: combo, pieces }) => (
+                    <ComboCard
+                        key={combo.id}
+                        combo={combo}
+                        pieces={pieces}
+                        onTileClick={handleTileClick}
+                        onPieceImageClick={handlePieceImageClick}
+                    />
+                ))}
+            </Stack>
+            {lightbox && (
+                <ImageLightbox
+                    images={lightbox.images}
+                    initialIndex={lightbox.initialIndex}
+                    onClose={() => setLightbox(null)}
+                    footerActions={
+                        lightbox.kind === 'piece' ? (
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => navigate(`/pieces/${lightbox.pieceId}`, { state: { fromGallery: true } })}
+                                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
                             >
-                                {pieces.map((piece) =>
-                                    piece.images.map((img, imgIdx) => (
-                                        <Tooltip
-                                            key={`${piece.id}-${imgIdx}`}
-                                            title={`${piece.name} — ${formatState(piece.state)}`}
-                                            placement="top"
-                                        >
-                                            <Box
-                                                component={Link}
-                                                to={`/pieces/${piece.id}`}
-                                                sx={{
-                                                    flexShrink: 0,
-                                                    display: 'inline-flex',
-                                                    textDecoration: 'none',
-                                                }}
-                                                aria-label={`${piece.name} — ${formatState(piece.state)}`}
-                                            >
-                                                <CloudinaryImage
-                                                    url={img.url}
-                                                    cloudinary_public_id={img.cloudinary_public_id}
-                                                    alt={`${piece.name} — ${formatState(piece.state)}`}
-                                                    context="preview"
-                                                />
-                                            </Box>
-                                        </Tooltip>
-                                    ))
-                                )}
-                            </Box>
-                        </CardContent>
-                    </Card>
-                )
-            })}
-        </Stack>
+                                Go to the Piece
+                            </Button>
+                        ) : undefined
+                    }
+                />
+            )}
+        </>
     )
 }

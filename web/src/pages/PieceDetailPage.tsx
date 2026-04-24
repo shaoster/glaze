@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Box, Button, CircularProgress, Typography } from '@mui/material'
 import { fetchPiece } from '@common/api'
 import { useAsync } from '../util/useAsync'
@@ -8,6 +8,8 @@ import type { PieceDetail } from '@common/types'
 export default function PieceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const fromGallery = (location.state as { fromGallery?: boolean } | null)?.fromGallery === true
   // id is always defined — this component is only rendered via the /pieces/:id route
   const { data: piece, loading, error, setData: setPiece } = useAsync<PieceDetail>(
     () => fetchPiece(id!),
@@ -17,8 +19,12 @@ export default function PieceDetailPage() {
   return (
     <>
       <Box sx={{ mb: 2, textAlign: 'left' }}>
-        <Button variant="text" onClick={() => navigate('/')} sx={{ px: 0 }}>
-          ← Back to Pieces
+        <Button
+          variant="text"
+          onClick={() => navigate(fromGallery ? '/analyze' : '/')}
+          sx={{ px: 0 }}
+        >
+          {fromGallery ? '← Back to Gallery' : '← Back to Pieces'}
         </Button>
       </Box>
       {loading && (

@@ -62,6 +62,7 @@ This is a Single Page Application (SPA). Routing is handled client-side via Reac
   }) { ... }
   ```
 - Use `memo` to prevent unnecessary re-renders of pure components that receive stable props. Pair with `useMemo` for expensive derived values and `useCallback` for stable callback references — but don't memoize indiscriminately; profile first.
+- **Maximum JSX nesting depth of 4.** If a component's JSX tree would exceed 4 levels of element nesting, extract the deeper subtree into a named child component with typed props. This also sidesteps TypeScript narrowing limitations: instead of narrowing a `string | undefined` inside a callback nested in a ternary branch, pass the already-narrowed value as a `string` prop to a child component.
 
 ## Custom hooks
 
