@@ -9,7 +9,7 @@ type ImageLightboxProps = {
     onClose: () => void
     currentThumbnailUrl?: string
     onSetAsThumbnail?: (image: CaptionedImage) => Promise<void>
-    footerActions?: React.ReactNode
+    footerActions?: (index: number) => React.ReactNode
 }
 
 export default function ImageLightbox({ images, initialIndex, onClose, currentThumbnailUrl, onSetAsThumbnail, footerActions }: ImageLightboxProps) {
@@ -95,7 +95,7 @@ export default function ImageLightbox({ images, initialIndex, onClose, currentTh
                 )}
                 {footerActions && (
                     <Box onClick={(e) => e.stopPropagation()}>
-                        {footerActions}
+                        {footerActions(index)}
                     </Box>
                 )}
                 {!isTouchDevice && images.length > 1 && (

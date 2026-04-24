@@ -9,8 +9,9 @@
  * Each card header shows the combination name, a test-tile thumbnail if
  * available, and a chip for each constituent glaze type.
  * The card body is a horizontally scrollable row of CloudinaryImage
- * thumbnails. Clicking any thumbnail opens an ImageLightbox; piece thumbnails
- * include a "Go to the Piece" button in the lightbox footer.
+ * thumbnails. Clicking any thumbnail opens an ImageLightbox that shows all
+ * images for the combination across every piece; the footer "Go to the Piece"
+ * button reflects whichever piece owns the currently-displayed image.
  */
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -38,9 +39,16 @@ const EMPTY_STATE_MESSAGE =
 
 type PieceEntry = GlazeCombinationImageEntry['pieces'][number]
 
+// A CaptionedImage tagged with the piece it came from.
+interface GalleryImage extends CaptionedImage {
+    pieceId: string
+    pieceName: string
+    pieceState: string
+}
+
 type LightboxState =
     | { kind: 'tile'; images: CaptionedImage[]; initialIndex: 0 }
-    | { kind: 'piece'; images: CaptionedImage[]; initialIndex: number; pieceId: string }
+    | { kind: 'piece'; images: GalleryImage[]; initialIndex: number }
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -66,25 +74,24 @@ function TileAvatarButton({ url, name, onClick }: TileAvatarButtonProps) {
 }
 
 interface PieceImageButtonProps {
-    piece: PieceEntry
     img: CaptionedImage
-    imgIdx: number
-    onClick: (piece: PieceEntry, imgIdx: number) => void
+    label: string
+    onClick: () => void
 }
 
-function PieceImageButton({ piece, img, imgIdx, onClick }: PieceImageButtonProps) {
+function PieceImageButton({ img, label, onClick }: PieceImageButtonProps) {
     return (
-        <Tooltip title={`${piece.name} — ${formatState(piece.state)}`} placement="top">
+        <Tooltip title={label} placement="top">
             <Box
                 component="button"
-                onClick={() => onClick(piece, imgIdx)}
+                onClick={onClick}
                 sx={{ flexShrink: 0, display: 'inline-flex', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                aria-label={`${piece.name} — ${formatState(piece.state)}`}
+                aria-label={label}
             >
                 <CloudinaryImage
                     url={img.url}
                     cloudinary_public_id={img.cloudinary_public_id}
-                    alt={`${piece.name} — ${formatState(piece.state)}`}
+                    alt={label}
                     context="preview"
                 />
             </Box>
@@ -96,10 +103,19 @@ interface ComboCardProps {
     combo: GlazeCombinationEntry
     pieces: PieceEntry[]
     onTileClick: (url: string, name: string) => void
-    onPieceImageClick: (piece: PieceEntry, imgIdx: number) => void
+    onPieceImageClick: (images: GalleryImage[], idx: number) => void
 }
 
 function ComboCard({ combo, pieces, onTileClick, onPieceImageClick }: ComboCardProps) {
+    const galleryImages: GalleryImage[] = pieces.flatMap((piece) =>
+        piece.images.map((img) => ({
+            ...img,
+            pieceId: piece.id,
+            pieceName: piece.name,
+            pieceState: piece.state,
+        }))
+    )
+
     return (
         <Card variant="outlined">
             <CardHeader
@@ -117,17 +133,14 @@ function ComboCard({ combo, pieces, onTileClick, onPieceImageClick }: ComboCardP
             />
             <CardContent sx={{ pt: 0 }}>
                 <Box sx={{ display: 'flex', flexDirection: 'row', overflowX: 'auto', gap: 1, pb: 1 }}>
-                    {pieces.map((piece) =>
-                        piece.images.map((img, imgIdx) => (
-                            <PieceImageButton
-                                key={`${piece.id}-${imgIdx}`}
-                                piece={piece}
-                                img={img}
-                                imgIdx={imgIdx}
-                                onClick={onPieceImageClick}
-                            />
-                        ))
-                    )}
+                    {galleryImages.map((gi, idx) => (
+                        <PieceImageButton
+                            key={`${gi.pieceId}-${idx}`}
+                            img={gi}
+                            label={`${gi.pieceName} — ${formatState(gi.pieceState)}`}
+                            onClick={() => onPieceImageClick(galleryImages, idx)}
+                        />
+                    ))}
                 </Box>
             </CardContent>
         </Card>
@@ -173,8 +186,8 @@ export default function GlazeCombinationGallery() {
         })
     }
 
-    function handlePieceImageClick(piece: PieceEntry, imgIdx: number) {
-        setLightbox({ kind: 'piece', images: piece.images, initialIndex: imgIdx, pieceId: piece.id })
+    function handlePieceImageClick(images: GalleryImage[], idx: number) {
+        setLightbox({ kind: 'piece', images, initialIndex: idx })
     }
 
     return (
@@ -195,18 +208,18 @@ export default function GlazeCombinationGallery() {
                     images={lightbox.images}
                     initialIndex={lightbox.initialIndex}
                     onClose={() => setLightbox(null)}
-                    footerActions={
-                        lightbox.kind === 'piece' ? (
+                    footerActions={lightbox.kind === 'piece'
+                        ? (i) => (
                             <Button
                                 size="small"
                                 variant="outlined"
-                                onClick={() => navigate(`/pieces/${lightbox.pieceId}`, { state: { fromGallery: true } })}
+                                onClick={() => navigate(`/pieces/${lightbox.images[i].pieceId}`, { state: { fromGallery: true } })}
                                 sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
                             >
                                 Go to the Piece
                             </Button>
-                        ) : undefined
-                    }
+                        )
+                        : undefined}
                 />
             )}
         </>

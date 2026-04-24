@@ -14,15 +14,17 @@ vi.mock('../CloudinaryImage', () => ({
 }))
 
 // Stub out ImageLightbox to keep lightbox tests simple.
+// footerActions is a function of the current index; the stub calls it with 0.
 vi.mock('../ImageLightbox', () => ({
-    default: ({ images, footerActions, onClose }: {
+    default: ({ images, initialIndex, footerActions, onClose }: {
         images: { url: string }[]
-        footerActions?: React.ReactNode
+        initialIndex: number
+        footerActions?: (index: number) => React.ReactNode
         onClose: () => void
     }) => (
         <div data-testid="lightbox">
-            <img src={images[0].url} alt="lightbox-image" />
-            {footerActions}
+            <img src={images[initialIndex ?? 0].url} alt="lightbox-image" />
+            {footerActions?.(initialIndex ?? 0)}
             <button onClick={onClose}>Close</button>
         </div>
     ),
@@ -213,27 +215,28 @@ describe('GlazeCombinationGallery', () => {
     })
 
     describe('with multiple pieces and images', () => {
+        const multiEntry: GlazeCombinationImageEntry = {
+            ...MOCK_COMBO_ENTRY,
+            pieces: [
+                {
+                    id: 'piece-1',
+                    name: 'Mug',
+                    state: 'glaze_fired',
+                    images: [
+                        { ...MOCK_IMAGE, url: 'https://example.com/mug.jpg' },
+                        { ...MOCK_IMAGE, url: 'https://example.com/mug2.jpg' },
+                    ],
+                },
+                {
+                    id: 'piece-2',
+                    name: 'Bowl',
+                    state: 'completed',
+                    images: [{ ...MOCK_IMAGE, url: 'https://example.com/bowl.jpg' }],
+                },
+            ],
+        }
+
         it('renders thumbnails for each image across all pieces', async () => {
-            const multiEntry: GlazeCombinationImageEntry = {
-                ...MOCK_COMBO_ENTRY,
-                pieces: [
-                    {
-                        id: 'piece-1',
-                        name: 'Mug',
-                        state: 'glaze_fired',
-                        images: [
-                            { ...MOCK_IMAGE, url: 'https://example.com/mug.jpg' },
-                            { ...MOCK_IMAGE, url: 'https://example.com/mug2.jpg' },
-                        ],
-                    },
-                    {
-                        id: 'piece-2',
-                        name: 'Bowl',
-                        state: 'completed',
-                        images: [{ ...MOCK_IMAGE, url: 'https://example.com/bowl.jpg' }],
-                    },
-                ],
-            }
             vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue([multiEntry])
             renderGallery()
             await waitFor(() => {
@@ -241,6 +244,30 @@ describe('GlazeCombinationGallery', () => {
                     img.getAttribute('src')?.includes('example.com')
                 )).toHaveLength(3) // tile img absent, 2 mug + 1 bowl
             })
+        })
+
+        it('opens the combination-wide gallery starting at the clicked image', async () => {
+            vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue([multiEntry])
+            renderGallery()
+            // Click the bowl image (index 2 in the flat gallery)
+            await waitFor(() => screen.getByRole('button', { name: /Bowl/i }))
+            await userEvent.click(screen.getByRole('button', { name: /Bowl/i }))
+            await waitFor(() => {
+                const lightboxImg = screen.getByAltText('lightbox-image')
+                expect(lightboxImg).toHaveAttribute('src', 'https://example.com/bowl.jpg')
+            })
+        })
+
+        it('Go to the Piece navigates to the piece that owns the current image', async () => {
+            vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue([multiEntry])
+            renderGallery()
+            await waitFor(() => screen.getByRole('button', { name: /Bowl/i }))
+            await userEvent.click(screen.getByRole('button', { name: /Bowl/i }))
+            await waitFor(() => screen.getByTestId('lightbox'))
+            await userEvent.click(screen.getByRole('button', { name: /Go to the Piece/i }))
+            await waitFor(() =>
+                expect(screen.getByTestId('piece-detail')).toBeInTheDocument()
+            )
         })
     })
 
