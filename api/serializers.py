@@ -38,7 +38,7 @@ choices worth knowing about:
 - Serialization of wire dates — all ``DateTimeField`` instances are handled
   automatically by DRF; the ``Wire<T>`` mapping is a frontend concern only.
 """
-from typing import Any, cast
+from typing import Any
 
 from django.apps import apps
 from django.contrib.auth import get_user_model

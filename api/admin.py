@@ -14,11 +14,7 @@ from django.utils.html import format_html
 from import_export import fields, resources
 from import_export.admin import ExportMixin
 
-from api.model_factories import GlobalModel
-
-from typing import TYPE_CHECKING
-
-from .models import ( # type: ignore[attr-defined]
+from .models import (  # type: ignore[attr-defined]
     FiringTemperature,
     GlazeCombination,
     GlazeCombinationLayer,
@@ -346,7 +342,7 @@ class GlazeCombinationAdmin(SortableAdminBase, PublicLibraryAdmin):
         'highlights_grooves',
         'is_different_on_white_and_brown_clay',
         'is_public_entry',
-    ) 
+    )
     list_filter = (
         'firing_temperature',
         'is_food_safe',

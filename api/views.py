@@ -2,7 +2,6 @@ import hashlib
 import json
 import os
 from collections import defaultdict
-from typing import Optional, cast
 
 from django.apps import apps
 from django.conf import settings

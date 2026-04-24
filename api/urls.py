@@ -1,4 +1,3 @@
-from typing import Any
 
 from django.urls import path
 
@@ -38,7 +37,7 @@ urlpatterns = [
 # derived from _FAVORITES_REGISTRY — non-favoritable types simply have no route,
 # so requests to them return 404 rather than 405.
 for _global_name in get_global_names():
-    # Ignoring the reassignment type error since they're placeholders. 
+    # Ignoring the reassignment type error since they're placeholders.
     _model_cls, _, _ = get_global_model_and_field(_global_name) # type: ignore[assignment]
 
     urlpatterns.append(path(
