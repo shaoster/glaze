@@ -179,6 +179,10 @@ These supplement the generic Django/DRF conventions.
 
 All API endpoints are registered in `backend/urls.py`.
 
+**Module boundaries — what goes in `api/workflow.py` vs. `api/utils.py`:**
+- `api/workflow.py` is reserved strictly for helpers that read from the workflow state machine (`workflow.yml`) — state lookups, successor queries, globals-map queries, field-definition resolution, and JSON Schema generation. Do not add domain helpers unrelated to the state machine here, even if both `admin.py` and another module need them.
+- `api/utils.py` holds shared business-logic helpers that span multiple api modules but have nothing to do with the workflow state machine (e.g. `sync_glaze_type_singleton_combination`). When a new helper is needed by more than one api module and it is not a workflow-state-machine concept, put it in `api/utils.py`.
+
 **Production environment variables** — `settings.py` gates dev/prod behavior on `IS_PRODUCTION = bool(os.environ.get('PRODUCTION', ''))`. The full env var reference:
 
 | Setting | Env var | Dev behavior | Prod behavior |
