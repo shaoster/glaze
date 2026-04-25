@@ -552,18 +552,16 @@ describe("PieceDetail", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "Edit tags" }));
       await userEvent.click(screen.getByRole("button", { name: "New" }));
-      fireEvent.change(screen.getByLabelText("Tag name"), {
-        target: { value: "For Sale" },
-      });
+      await userEvent.type(screen.getByLabelText("Tag name"), "For Sale");
       await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
       expect(api.updatePiece).not.toHaveBeenCalled();
-      expect(screen.getByText("For Sale")).toBeInTheDocument();
-      await waitFor(() =>
+      await waitFor(() => {
+        expect(screen.getByText("For Sale")).toBeInTheDocument();
         expect(
           screen.getByRole("button", { name: "Save tags" }),
-        ).toBeInTheDocument(),
-      );
+        ).toBeInTheDocument();
+      });
     });
   });
 });
