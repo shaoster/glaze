@@ -67,8 +67,8 @@ jobs:
             );
             core.setOutput('skip_main', match ? 'true' : 'false');
 
-  build-and-test:
-    name: Build and test
+  test:
+    name: Test
     needs: preflight
     if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
     runs-on: ubuntu-latest
@@ -108,8 +108,73 @@ jobs:
       - name: Run all tests
         run: bazel test --config=ci //...
 
+  lint:
+    name: Lint
+    needs: preflight
+    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Bazelisk
+        uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Cache Bazel outputs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel
+          key: bazel-${{ runner.os }}-${{ needs.preflight.outputs.artifact_key }}
+          restore-keys: |
+            bazel-${{ runner.os }}-
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install -r requirements-dev.txt -q
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Node dependencies
+        run: npm ci --prefix web
+
       - name: Run all linters
         run: bazel build --config=ci --config=lint //...
+
+  coverage:
+    name: Coverage
+    needs: preflight
+    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install -r requirements-dev.txt -q
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Node dependencies
+        run: npm ci --prefix web
 
       # Coverage runs outside Bazel until bazel coverage is wired up for
       # pytest and vitest — see https://github.com/shaoster/glaze/issues/159
@@ -128,8 +193,8 @@ jobs:
 
   record-fingerprint:
     name: Record successful fingerprint
-    needs: [preflight, build-and-test]
-    if: ${{ github.event_name == 'pull_request' && needs.build-and-test.result == 'success' }}
+    needs: [preflight, test, lint, coverage]
+    if: ${{ github.event_name == 'pull_request' && needs.test.result == 'success' && needs.lint.result == 'success' && needs.coverage.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Write fingerprint marker
