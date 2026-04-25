@@ -1,10 +1,10 @@
 module(name = "glaze", version = "0.0.0")
 
-bazel_dep(name = "rules_python", version = "0.40.0")
+bazel_dep(name = "rules_python", version = "1.1.0")
 bazel_dep(name = "aspect_rules_js", version = "2.1.0")
 bazel_dep(name = "rules_nodejs", version = "6.7.4")
-bazel_dep(name = "aspect_rules_lint", version = "1.2.2")
-bazel_dep(name = "bazel_skylib", version = "1.8.1")
+bazel_dep(name = "aspect_rules_lint", version = "2.5.0")
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
 
 # ── Python toolchain ──────────────────────────────────────────────────────────
 
@@ -40,3 +40,8 @@ npm.npm_translate_lock(
     verify_node_modules_ignored = "//:.bazelignore",
 )
 use_repo(npm, "npm")
+
+# ── mypy type stubs (auto-generated from requirements.txt) ────────────────────
+# Generates @pip_types//:types.bzl — a map from pip package name to its
+# py_type_library target — so mypy_aspect can provide stub deps automatically.
+

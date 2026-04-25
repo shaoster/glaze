@@ -28,6 +28,13 @@ js_library(
 # generated-types.ts is produced above and excluded from the glob.
 
 js_library(
+    name = "frontend_common_tests",
+    srcs = glob(["src/**/*.test.ts", "src/**/*.test.tsx"]),
+    deps = [":frontend_common_lib"],
+    visibility = ["//visibility:public"],
+)
+
+js_library(
     name = "frontend_common_lib",
     srcs = glob(
         [
