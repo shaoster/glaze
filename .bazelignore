@@ -1,0 +1,7 @@
+web/node_modules
+.venv
+mobile
+.dev-logs
+.dev-pids
+web/dist
+staticfiles

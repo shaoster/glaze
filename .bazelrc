@@ -1,0 +1,26 @@
+# ── Common ────────────────────────────────────────────────────────────────────
+common --enable_bzlmod
+build --incompatible_enable_cc_toolchain_resolution
+
+# Show test errors inline rather than requiring a separate log fetch.
+test --test_output=errors
+test --test_summary=terse
+
+# ── Lint (bazel build --config=lint //...) ────────────────────────────────────
+# Applies ruff, mypy, and eslint as aspects over all py_library / js_library
+# targets. Results are cached per-file: only files touched since the last run
+# are re-checked.
+build:lint --aspects //:lint.bzl%ruff_aspect
+build:lint --aspects //:lint.bzl%mypy_aspect
+build:lint --aspects //:lint.bzl%eslint_aspect
+build:lint --aspects //:lint.bzl%tsc_aspect
+build:lint --output_groups=+rules_lint_human
+build:lint --keep_going
+
+# ── CI ────────────────────────────────────────────────────────────────────────
+# Cache Bazel outputs between CI runs using GitHub Actions cache as the
+# backend. Set BAZEL_REMOTE_CACHE_URL in the repository's action secrets to
+# enable a proper remote cache instead.
+build:ci --announce_rc
+build:ci --show_timestamps
+test:ci  --test_output=all

@@ -1,0 +1,27 @@
+load("@rules_python//python:defs.bzl", "py_test")
+load("@pip//:requirements.bzl", "requirement")
+
+# Validates workflow.yml against workflow.schema.yml — both structurally
+# (jsonschema) and semantically (referential integrity). Depends only on the
+# workflow files and the dev venv; intentionally isolated from api/ and backend/.
+
+py_test(
+    name = "common_test",
+    size = "small",
+    srcs = glob(["**/*.py"]) + ["//tools:pytest_main.py"],
+    main = "//tools:pytest_main.py",
+    args = ["tests/"],
+    data = [
+        "//:workflow_files",
+        "//:pytest_ini",
+    ],
+    deps = [
+        requirement("pytest"),
+        requirement("pytest-env"),
+        requirement("jsonschema"),
+        requirement("jsonschema-specifications"),
+        requirement("pyyaml"),
+        requirement("referencing"),
+    ],
+    env = {"DJANGO_SETTINGS_MODULE": "backend.test_settings"},
+)

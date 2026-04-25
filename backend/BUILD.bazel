@@ -1,0 +1,34 @@
+load("@rules_python//python:defs.bzl", "py_library")
+load("@pip//:requirements.bzl", "requirement")
+
+# Django project settings, URL conf, WSGI/ASGI entry points.
+# Tracked as a separate target from //api so that changes here (rare) are
+# distinguished from API-layer changes in Bazel's dependency graph.
+# api/* depends on this; nothing else should.
+
+py_library(
+    name = "backend_lib",
+    srcs = glob(["*.py"]),
+    data = ["//:workflow_files"],
+    deps = [
+        requirement("django"),
+        requirement("djangorestframework"),
+        requirement("django-cors-headers"),
+        requirement("drf-spectacular"),
+        requirement("dj-database-url"),
+        requirement("whitenoise"),
+        requirement("cloudinary"),
+        requirement("google-auth"),
+        requirement("requests"),
+        requirement("pyyaml"),
+        requirement("django-admin-sortable2"),
+        requirement("jsonschema"),
+        requirement("jsonschema-specifications"),
+        requirement("referencing"),
+        requirement("pillow-heif"),
+        requirement("Pillow"),
+        requirement("psycopg2-binary"),
+        requirement("django-import-export"),
+    ],
+    visibility = ["//visibility:public"],
+)

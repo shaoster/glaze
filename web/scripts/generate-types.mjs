@@ -16,11 +16,25 @@ import { resolve } from "path";
 import { pathToFileURL } from "url";
 import { writeFileSync } from "fs";
 
-const schemaSource = process.env.GLAZE_SCHEMA_SOURCE;
+// Bazel passes paths as positional args relative to execroot/_main.
+// BAZEL_BINDIR is always set in Bazel actions; use it to anchor back to execroot.
+// For local `npm run generate-types`, fall back to env vars / defaults.
+const [,, argSchema, argOutput] = process.argv;
+function resolvePath(p) {
+  if (!p || p.startsWith("/")) return p;
+  const bazelBindir = process.env.BAZEL_BINDIR;
+  // BAZEL_BINDIR is e.g. "bazel-out/k8-fastbuild/bin" — 3 levels deep from execroot
+  const execroot = bazelBindir
+    ? resolve(process.cwd(), "../".repeat(bazelBindir.split("/").length))
+    : process.cwd();
+  return resolve(execroot, p);
+}
+const schemaSource = argSchema ?? process.env.GLAZE_SCHEMA_SOURCE;
 const SCHEMA_SOURCE = schemaSource
-  ? pathToFileURL(resolve(process.cwd(), schemaSource))
+  ? pathToFileURL(resolvePath(schemaSource))
   : new URL("http://localhost:8080/api/schema/?format=json");
-const OUTPUT_PATH = "../frontend_common/src/generated-types.ts";
+const OUTPUT_PATH =
+  resolvePath(argOutput) ?? process.env.GLAZE_OUTPUT_PATH ?? "../frontend_common/src/generated-types.ts";
 
 const HEADER = `\
 /**

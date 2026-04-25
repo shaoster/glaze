@@ -38,12 +38,11 @@ jobs:
         run: |
           tree="$(git rev-parse HEAD^{tree})"
           ci="$(sha256sum .github/workflows/ci.yml | cut -d' ' -f1)"
-          pydev="$(sha256sum requirements-dev.txt | cut -d' ' -f1)"
-          py="$(sha256sum requirements.txt | cut -d' ' -f1)"
-          node="$(sha256sum web/package-lock.json | cut -d' ' -f1)"
-          value="${tree}-${ci}-${pydev}-${py}-${node}"
+          bazel="$(sha256sum MODULE.bazel | cut -d' ' -f1)"
+          py="$(sha256sum requirements.txt requirements-dev.txt | sha256sum | cut -d' ' -f1)"
+          node="$(sha256sum web/pnpm-lock.yaml | cut -d' ' -f1)"
+          value="${tree}-${ci}-${bazel}-${py}-${node}"
           artifact_key="$(printf '%s' "$value" | sha256sum | cut -d' ' -f1)"
-
           echo "value=$value" >> "$GITHUB_OUTPUT"
           echo "artifact_key=$artifact_key" >> "$GITHUB_OUTPUT"
 
@@ -58,156 +57,54 @@ jobs:
               core.setOutput('skip_main', 'false');
               return;
             }
-
             const artifactName = `ci-fingerprint-${process.env.ARTIFACT_KEY}`;
             const artifacts = await github.paginate(
               github.rest.actions.listArtifactsForRepo,
-              {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                per_page: 100,
-              }
+              { owner: context.repo.owner, repo: context.repo.repo, per_page: 100 }
             );
-
             const match = artifacts.find(
               artifact => artifact.name === artifactName && !artifact.expired
             );
-
             core.setOutput('skip_main', match ? 'true' : 'false');
 
-  common:
-    name: Common (workflow schema)
+  build-and-test:
+    name: Build and test
     needs: preflight
     if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v6
+      - name: Install Bazelisk
+        uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Cache Bazel outputs
+        uses: actions/cache@v4
         with:
-          python-version: '3.12'
-          cache: pip
+          path: ~/.cache/bazel
+          key: bazel-${{ runner.os }}-${{ needs.preflight.outputs.artifact_key }}
+          restore-keys: |
+            bazel-${{ runner.os }}-
 
-      - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+      - name: Run all tests
+        run: bazel test --config=ci //...
 
-      - name: Run tests
-        run: pytest tests/
-
-  backend:
-    name: Backend (pytest + coverage)
-    needs: preflight
-    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements-dev.txt
-
-      - name: Run tests with coverage
-        run: pytest api/ --cov=api --cov-report=lcov:coverage/lcov.info --cov-report=term-missing
+      - name: Run all linters
+        run: bazel build --config=ci --config=lint //...
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          files: coverage/lcov.info
-          flags: backend
-          fail_ci_if_error: false
-
-      - name: Generate OpenAPI schema
-        run: python manage.py spectacular --format openapi-json --file openapi.json
-
-      - name: Upload OpenAPI schema
-        uses: actions/upload-artifact@v4
-        with:
-          name: openapi-schema
-          path: openapi.json
-          retention-days: 1
-
-  python-quality:
-    name: Python (ruff + mypy)
-    needs: preflight
-    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements-dev.txt
-
-      - name: Lint (ruff) and type-check (mypy) in parallel
-        run: |
-          ruff check . &
-          RUFF_PID=$!
-          mypy . &
-          MYPY_PID=$!
-          wait $RUFF_PID; RUFF_EXIT=$?
-          wait $MYPY_PID; MYPY_EXIT=$?
-          exit $(( RUFF_EXIT | MYPY_EXIT ))
-
-  web:
-    name: Web (test + build + lint)
-    needs: [preflight, backend]
-    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install Node dependencies
-        working-directory: web
-        run: npm ci
-
-      - name: Download OpenAPI schema
-        uses: actions/download-artifact@v4
-        with:
-          name: openapi-schema
-
-      - name: Generate TypeScript types
-        working-directory: web
-        run: GLAZE_SCHEMA_SOURCE="../openapi.json" npm run generate-types
-
-      - name: Test, build, and lint in parallel
-        working-directory: web
-        run: |
-          npm run test -- --coverage &
-          TEST_PID=$!
-          npm run build &
-          BUILD_PID=$!
-          npm run lint &
-          LINT_PID=$!
-          wait $TEST_PID; TEST_EXIT=$?
-          wait $BUILD_PID; BUILD_EXIT=$?
-          wait $LINT_PID; LINT_EXIT=$?
-          exit $(( TEST_EXIT | BUILD_EXIT | LINT_EXIT ))
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: web/coverage/lcov.info
-          flags: frontend
+          files: |
+            coverage/lcov.info
+            web/coverage/lcov.info
+          flags: backend,frontend
           fail_ci_if_error: false
 
   record-fingerprint:
     name: Record successful fingerprint
-    needs: [preflight, common, backend, python-quality, web]
-    if: ${{ github.event_name == 'pull_request' && needs.common.result == 'success' && needs.backend.result == 'success' && needs.python-quality.result == 'success' && needs.web.result == 'success' }}
+    needs: [preflight, build-and-test]
+    if: ${{ github.event_name == 'pull_request' && needs.build-and-test.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Write fingerprint marker

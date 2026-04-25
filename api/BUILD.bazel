@@ -1,0 +1,57 @@
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
+load("@pip//:requirements.bzl", "requirement")
+
+# ── API library ───────────────────────────────────────────────────────────────
+# All non-test, non-migration source files. Depends on backend_lib (Django
+# settings/URL conf) and the workflow YAML files read at import time.
+
+py_library(
+    name = "api_lib",
+    srcs = glob(
+        ["**/*.py"],
+        exclude = [
+            "tests/**",
+            "migrations/**",
+            "**/test_*.py",
+        ],
+    ),
+    data = ["//:workflow_files"],
+    deps = [
+        "//backend:backend_lib",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Migrations are data, not importable library code: they're discovered and
+# applied by Django at runtime, not imported by application logic.
+filegroup(
+    name = "migrations",
+    srcs = glob(["migrations/**/*.py"]),
+    visibility = ["//visibility:public"],
+)
+
+# ── API tests ─────────────────────────────────────────────────────────────────
+# Depends on api_lib (which transitively includes backend_lib) and the dev
+# venv for pytest + pytest-django. Migrations and fixtures are runtime data.
+
+py_test(
+    name = "api_test",
+    size = "medium",
+    srcs = glob(["tests/**/*.py"]) + ["//tools:pytest_main.py"],
+    main = "//tools:pytest_main.py",
+    args = ["api/tests/"],
+    data = [
+        "//:workflow_files",
+        "//:fixtures",
+        "//:pytest_ini",
+        ":migrations",
+    ],
+    deps = [
+        ":api_lib",
+        requirement("pytest"),
+        requirement("pytest-django"),
+        requirement("pytest-env"),
+        requirement("pytest-cov"),
+    ],
+    env = {"DJANGO_SETTINGS_MODULE": "backend.test_settings"},
+)

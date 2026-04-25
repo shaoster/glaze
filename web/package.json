@@ -61,5 +61,8 @@
   },
   "overrides": {
     "glob": "^13"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": []
   }
 }

@@ -1,0 +1,29 @@
+load("@rules_python//python:defs.bzl", "py_binary")
+load("@pip//:requirements.bzl", "requirement")
+
+# ── Pytest runner ─────────────────────────────────────────────────────────────
+# Shared entry point for all py_test targets. Each test BUILD file lists this
+# as both a srcs entry and the main, then passes the test directory as an arg.
+
+exports_files(["pytest_main.py"])
+
+# ── OpenAPI schema generator ──────────────────────────────────────────────────
+# py_binary used as a genrule tool by //web:openapi_schema.
+# Runs manage.py spectacular in a minimal Django environment (no real DB).
+
+py_binary(
+    name = "generate_schema",
+    srcs = ["generate_schema.py"],
+    data = ["//:workflow_files"],
+    deps = [
+        "//api:api_lib",
+        "//backend:backend_lib",
+        requirement("django"),
+        requirement("djangorestframework"),
+        requirement("drf-spectacular"),
+        requirement("pyyaml"),
+        requirement("google-auth"),
+        requirement("requests"),
+    ],
+    visibility = ["//visibility:public"],
+)

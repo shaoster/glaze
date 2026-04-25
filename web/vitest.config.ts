@@ -5,6 +5,11 @@ import path from "node:path";
 export default defineConfig({
   plugins: [yaml()],
   resolve: {
+    // In the Bazel sandbox every source file is a symlink whose target lives
+    // outside the sandbox directory.  Prevent vitest from following symlinks
+    // to the execroot (which isn't mounted in the sandbox) when constructing
+    // /@fs/ module URLs.
+    preserveSymlinks: true,
     alias: [
       {
         find: /^@common\/(.*)/,

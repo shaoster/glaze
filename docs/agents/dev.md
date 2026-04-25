@@ -46,6 +46,22 @@ Two scripts handle environment bootstrap:
 
 `env-agent.sh` exports `BASH_ENV` pointing at itself, so any agent process spawned from a shell that has already sourced `env.sh` (e.g. a VS Code terminal) automatically propagates the bootstrap to its own subshells. No per-tool config is needed for Codex or similar CLI agents launched from the integrated terminal.
 
+### Working directory discipline
+
+Always run `git` commands from the repo root. When a command must run from a subdirectory, wrap it in a subshell so the caller's working directory is unchanged:
+
+```bash
+# ✅ correct — shell stays at repo root after this line
+(cd web && npx pnpm install)
+git add web/pnpm-lock.yaml
+
+# ❌ incorrect — shell is now inside web/, breaking the git add
+cd web && npx pnpm install
+git add web/pnpm-lock.yaml   # fails: no web/web/pnpm-lock.yaml
+```
+
+`git add` paths are relative to the current working directory, not the repo root, so keeping all `git` invocations at the root avoids silent path mistakes.
+
 ---
 
 ## Skills
