@@ -7,13 +7,12 @@ test --test_output=errors
 test --test_summary=terse
 
 # ── Lint (bazel build --config=lint //...) ────────────────────────────────────
-# Applies ruff, mypy, and eslint as aspects over all py_library / js_library
-# targets. Results are cached per-file: only files touched since the last run
-# are re-checked.
+# ruff and eslint run as aspects: only files changed since the last run are
+# re-checked. mypy runs as //api:api_mypy (tagged "lint"); tsc runs as
+# //web:tsc_check (tagged "lint"). Both are covered by `bazel build //...`
+# when --config=lint is active.
 build:lint --aspects //:lint.bzl%ruff_aspect
-build:lint --aspects //:lint.bzl%mypy_aspect
 build:lint --aspects //:lint.bzl%eslint_aspect
-build:lint --aspects //:lint.bzl%tsc_aspect
 build:lint --output_groups=+rules_lint_human
 build:lint --keep_going
 

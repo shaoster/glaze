@@ -205,24 +205,37 @@ cd web
 npm run generate-types
 ```
 
-## Testing
-`gz_test` is the local, all-suite helper that runs the common, backend, and web tests on your machine (it is recommended to run this before opening a PR); GitHub Actions runs the same set of suites centrally for each push/PR. Each suite groups tests that verify a specific layer of the app—see the detailed list below for what they cover.
+## Testing and validation
+
+Tests and linters run via [Bazel](https://bazel.build/) — the same commands work locally and in CI.
 
 ```bash
-# All suites via shell helpers (recommended)
-gz_test               # common + backend + web in parallel
+# Run all tests (workflow, backend, web, mypy)
+bazel test //...
 
-# Common (workflow.yml validation)
-pytest tests/         # 28 tests
+# Run all linters (ruff, eslint, tsc, mypy)
+bazel build --config=lint //...
 
-# Backend
-pytest api/           # 62 tests across 10 files
+# Or via env.sh helpers (source env.sh first):
+gz_bazel_test    # bazel test //...
+gz_bazel_lint    # bazel build --config=lint //...
+```
 
-# Web
-cd web
-npm test              # single run (CI) — 101 tests across 6 files
-npm run test:watch    # watch mode
-npm run build         # same build command wrapped by gz_build
+**Before committing** — auto-fix Python formatting and fixable lint issues:
+
+```bash
+source env.sh && gz_format
+# equivalent to: ruff format . && ruff check --fix .
+```
+
+**For fast iteration** — run individual suites directly:
+
+```bash
+pytest tests/              # workflow schema validation
+pytest api/                # backend API tests
+bazel test //api:api_mypy  # mypy type-check (full Django plugin)
+cd web && npm test         # web component tests
+cd web && npm run test:watch  # watch mode
 ```
 
 ## Cloudinary image uploads (web)

@@ -5,7 +5,7 @@ load("@pip//:requirements.bzl", "requirement")
 # Shared entry point for all py_test targets. Each test BUILD file lists this
 # as both a srcs entry and the main, then passes the test directory as an arg.
 
-exports_files(["pytest_main.py"])
+exports_files(["pytest_main.py", "mypy_main.py"])
 
 # ── OpenAPI schema generator ──────────────────────────────────────────────────
 # py_binary used as a genrule tool by //web:openapi_schema.

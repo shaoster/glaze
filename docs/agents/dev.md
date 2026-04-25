@@ -103,70 +103,70 @@ All vars are optional. The app runs without any of them; each missing group degr
 
 ---
 
-## Testing
+## Testing and validation
 
-**All proposed changes must pass the full test suite before being submitted.**
+**All proposed changes must pass the full test suite and all linters before being submitted.**
 
-### Common (workflow validation)
+### CI-aligned validation (Bazel — matches what CI runs)
 
-```bash
-pip install -r requirements-dev.txt
-pytest tests/                          # run from the repo root
-```
-
-Tests live in [`tests/test_workflow.py`](../../tests/test_workflow.py). This suite validates `workflow.yml` both structurally (via `jsonschema` against `workflow.schema.yml`) and semantically (referential integrity checks that JSON Schema cannot express). Run this suite whenever `workflow.yml` or `workflow.schema.yml` is modified.
-
-### Backend
+Run these before opening or pushing to a PR:
 
 ```bash
-pip install -r requirements-dev.txt   # includes pytest, pytest-cov, and pytest-django
-pytest api/                            # run from the repo root
-pytest api/ --cov=api --cov-report=term-missing  # with coverage report
+# All tests (workflow, backend, web, mypy)
+bazel test //...
+
+# All linters: ruff, eslint, tsc, mypy (tagged "lint")
+bazel build --config=lint //...
 ```
 
-Tests live in [`api/tests/`](../../api/tests/). `pytest.ini` points pytest at `backend.settings` automatically — no extra configuration needed.
-
-### Python quality (ruff + mypy)
+Or via the `env.sh` helpers:
 
 ```bash
-pip install -r requirements-dev.txt
-ruff check .          # lint
-mypy .                # type-check (config in mypy.ini)
+source env.sh
+gz_bazel_test    # bazel test //...
+gz_bazel_lint    # bazel build --config=lint //...
 ```
 
-`ruff.toml` configures ruff; `mypy.ini` configures mypy with django-stubs and djangorestframework-stubs. Migrations and test directories are excluded from strict mypy checks.
-
-### Web
+### Auto-fix before committing
 
 ```bash
-cd web
-npm install
-npm test          # single run (used in CI)
-npm run test:watch  # watch mode for development
-npm run build       # CI build command: tsc -b && vite build
+# Reformat Python files and apply ruff auto-fixes
+source env.sh && gz_format
+# equivalent to:
+ruff format .
+ruff check --fix .
 ```
 
-Tests live in two places:
-- [`web/src/components/__tests__/`](../../web/src/components/__tests__/) — component tests (jsdom + Testing Library)
-- [`frontend_common/src/workflow.test.ts`](../../frontend_common/src/workflow.test.ts) — unit tests for `workflow.ts` helpers (picked up by the web vitest config via an explicit `include` glob)
+Run from the repo root with the venv active. There is no Bazel-integrated auto-fix step.
 
-The test environment is jsdom; setup file is [`web/src/test-setup.ts`](../../web/src/test-setup.ts).
-
-### Web — type-check
+### Individual suites (fast iteration during development)
 
 ```bash
-cd web
-npx tsc --noEmit      # standalone type-check without emitting files
+# Workflow schema validation
+pytest tests/
+
+# Backend API tests (granular targets available: //api:api_workflow_test, etc.)
+pytest api/                            # or: bazel test //api:api_test
+
+# Backend mypy (with Django plugin — runs full app initialization)
+bazel test //api:api_mypy
+
+# Web component tests
+cd web && npm test                     # or: bazel test //web:web_test
+cd web && npm run test:watch           # watch mode
+
+# Web type-check
+cd web && npx tsc --noEmit
+
+# Web lint
+cd web && npm run lint
 ```
 
-`npm run build` also type-checks (via `tsc -b`), but `--noEmit` is faster for an isolated check during development.
-
-### Web — lint
-
-```bash
-cd web
-npm run lint          # ESLint via eslint.config.js
-```
+Tests live in:
+- [`tests/test_workflow.py`](../../tests/test_workflow.py) — workflow schema/integrity validation
+- [`api/tests/`](../../api/tests/) — Django API tests (6 granular Bazel targets per concern)
+- [`web/src/components/__tests__/`](../../web/src/components/__tests__/) — React component tests (12 granular Bazel targets per component)
+- [`frontend_common/src/workflow.test.ts`](../../frontend_common/src/workflow.test.ts) — `workflow.ts` helper unit tests
 
 ### Web build helper
 
@@ -175,7 +175,7 @@ source env.sh
 gz_build
 ```
 
-`gz_build` is the local helper for the same frontend build command used by the CI `web` job that also pre-generates types.
+`gz_build` pre-generates TypeScript types then runs `tsc -b && vite build`.
 
 ### Production build
 
@@ -183,24 +183,23 @@ gz_build
 ./build.sh
 ```
 
-`build.sh` runs the full production pipeline: installs Python deps, starts Django temporarily to generate TypeScript types from the live OpenAPI schema, builds the React frontend (`npm run build`), runs `collectstatic`, and applies migrations. It must pass before a PR is merged.
+`build.sh` runs the full production pipeline: installs Python deps, starts Django temporarily to generate TypeScript types, builds the React frontend, runs `collectstatic`, and applies migrations.
 
 ### CI
 
-GitHub Actions runs the following jobs in parallel on every push and pull request — see [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). A PR should not be merged if any job is red.
+GitHub Actions runs on every push and pull request — see [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). A PR should not be merged if any job is red.
 
-| Job | What it runs |
+| Step | What it runs |
 |---|---|
-| `common` | `pytest tests/` — workflow schema validation |
-| `backend` | `pytest api/ --cov` — backend tests + coverage upload to Codecov |
-| `python-quality` | `ruff check .` and `mypy .` in parallel — linting and type-checking |
-| `web` | `npm ci` once, then `npm test --coverage`, `npm run build`, and `npm run lint` in parallel — frontend tests + coverage upload + build + lint |
+| Tests | `bazel test //...` — all test suites |
+| Linters | `bazel build --config=lint //...` — ruff, eslint, tsc, mypy |
+| Coverage | `pytest api/ tests/ --cov` + `npm test --coverage` — feeds Codecov (separate from Bazel until [#159](https://github.com/shaoster/glaze/issues/159) is resolved) |
 
-Coverage reports are uploaded to [Codecov](https://codecov.io) with `backend` and `frontend` flags. Codecov posts a summary comment on each PR.
+Coverage reports are uploaded to [Codecov](https://codecov.io). Codecov posts a summary comment on each PR.
 
 ### What to test
 
-- Any change to `workflow.yml` or `workflow.schema.yml` → verify `pytest tests/` passes.
+- Any change to `workflow.yml` or `workflow.schema.yml` → verify `bazel test //tests:...` passes.
 - Every new API endpoint or serializer change → add or update a test under `api/tests/`.
 - Every new or modified React component → add or update a test in `web/src/components/__tests__/`.
 - Every new or modified `workflow.ts` helper → add or update a test in `frontend_common/src/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture.

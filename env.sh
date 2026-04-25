@@ -213,6 +213,26 @@ gz_test() {
     return $(( common_exit | backend_exit | web_exit ))
 }
 
+# CI-aligned: run all tests via Bazel (same as CI).
+gz_bazel_test() {
+    (cd "$GLAZE_ROOT" && bazel test //...)
+}
+
+# CI-aligned: run ruff, eslint, tsc, and mypy via Bazel (same as CI).
+gz_bazel_lint() {
+    (cd "$GLAZE_ROOT" && bazel build --config=lint //...)
+}
+
+# Auto-fix: reformat Python files and apply ruff auto-fixes in one step.
+gz_format() {
+    (
+        source "$GLAZE_ROOT/.venv/bin/activate"
+        cd "$GLAZE_ROOT"
+        ruff format .
+        ruff check --fix .
+    )
+}
+
 gz_lint() {
     local ruff_exit mypy_exit eslint_exit tsc_exit
     (
@@ -353,10 +373,13 @@ _GZ_SHORTCUTS=(
     "gz_prod <cmd>     — run any manage.py subcommand on production (requires GLAZE_PROD_HOST in .env.local)"
     "gz_prod_shell     — Django shell on production"
     "gz_prod_dbshell   — database shell on production"
-    "gz_test           — run all test suites in parallel"
+    "gz_test           — run all test suites in parallel (pytest + npm)"
     "gz_test_common    — run workflow schema/integrity tests (pytest tests/)"
     "gz_test_backend   — run Django API tests (pytest api/)"
     "gz_test_web       — run the web tests only"
+    "gz_bazel_test     — run all tests via Bazel (CI-aligned, includes mypy)"
+    "gz_bazel_lint     — run all linters via Bazel: ruff, eslint, tsc, mypy"
+    "gz_format         — auto-fix: ruff format + ruff check --fix (Python)"
     "gz_build          — run the CI-aligned web build (tsc -b && vite build)"
     "gz_gentypes       — regenerate shared TypeScript types"
     "gz_start/stop     — start or stop backend + web"

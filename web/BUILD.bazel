@@ -9,6 +9,11 @@ load("@npm//web:eslint/package_json.bzl", eslint_pkg = "bin")
 # and js_run_binary targets can resolve imports at build time.
 npm_link_all_packages(name = "node_modules")
 
+exports_files(["eslint.config.js"])
+
+# Public eslint binary used by the lint aspect in //:lint.bzl
+eslint_pkg.eslint_binary(name = "eslint_bin", visibility = ["//visibility:public"])
+
 # ── Step 1: OpenAPI JSON schema ───────────────────────────────────────────────
 # Runs manage.py spectacular via the Python genrule tool.
 # Output: openapi.json
@@ -80,23 +85,359 @@ js_library(
     visibility = ["//visibility:public"],
 )
 
-# ── Web tests ─────────────────────────────────────────────────────────────────
-# vitest run — re-runs only when web_lib inputs (src files, generated types,
-# or node_modules) change.
+# ── Component source libraries ────────────────────────────────────────────────
+# Fine-grained js_library targets for test isolation: each test target depends
+# only on the components it exercises, so changing one component does not
+# invalidate unrelated test targets.
+#
+# Dependency relationships mirror the actual import graph so Bazel tracks
+# changes correctly. web_lib (used for build) remains the authoritative
+# all-sources target; these are testing-only slices of the same source tree.
 
-vitest_pkg.vitest_test(
-    name = "web_test",
-    data = [
-        ":web_lib",
+# Config files needed by every test target (tsconfig, package.json, etc.)
+js_library(
+    name = "web_test_configs",
+    srcs = [
+        "tsconfig.json",
+        "tsconfig.app.json",
+        "tsconfig.node.json",
+        "tsconfig.test.json",
+        "package.json",
         "vitest.config.ts",
         "src/test-setup.ts",
-    ] + glob(["src/**/*.test.ts", "src/**/*.test.tsx"]) + [
+        "src/yaml.d.ts",
+        "src/cloudinary-widget.d.ts",
+    ],
+    deps = [":node_modules"],
+)
+
+# Leaf components: no local component deps.
+js_library(
+    name = "primitive_src",
+    srcs = [
+        "src/components/StateChip.tsx",
+        "src/components/ErrorBoundary.tsx",
+        "src/components/TagChip.tsx",
+        "src/components/tagPalette.ts",
+        "src/components/globalFieldPickerUtils.ts",
+        "src/components/thumbnailConstants.ts",
+        "src/util/useAsync.ts",
+    ],
+    deps = [
+        ":node_modules",
         "//frontend_common:frontend_common_lib",
         "//frontend_common:generated_types",
     ],
-    args = ["run"],
+)
+
+js_library(
+    name = "cloudinary_image_src",
+    srcs = ["src/components/CloudinaryImage.tsx"],
+    deps = [
+        ":node_modules",
+        "//frontend_common:generated_types",
+    ],
+)
+
+js_library(
+    name = "image_lightbox_src",
+    srcs = ["src/components/ImageLightbox.tsx"],
+    deps = [
+        ":cloudinary_image_src",
+        ":node_modules",
+    ],
+)
+
+# Tag components: TagAutocomplete and TagChipList depend on TagChip; CreateTagDialog depends on tagPalette.
+js_library(
+    name = "tag_src",
+    srcs = [
+        "src/components/TagAutocomplete.tsx",
+        "src/components/TagChipList.tsx",
+        "src/components/CreateTagDialog.tsx",
+    ],
+    deps = [
+        ":primitive_src",
+        ":node_modules",
+        "//frontend_common:frontend_common_lib",
+        "//frontend_common:generated_types",
+    ],
+)
+
+# Picker components: GlobalFieldPicker depends on globalFieldPickerUtils; GlobalEntryPicker depends on CloudinaryImage.
+js_library(
+    name = "global_picker_src",
+    srcs = [
+        "src/components/GlobalFieldPicker.tsx",
+        "src/components/GlobalEntryPicker.tsx",
+    ],
+    deps = [
+        ":primitive_src",
+        ":cloudinary_image_src",
+        ":node_modules",
+        "//frontend_common:frontend_common_lib",
+        "//frontend_common:generated_types",
+    ],
+)
+
+js_library(
+    name = "glaze_gallery_src",
+    srcs = ["src/components/GlazeCombinationGallery.tsx"],
+    deps = [
+        ":cloudinary_image_src",
+        ":image_lightbox_src",
+        ":primitive_src",
+        ":node_modules",
+        "//frontend_common:frontend_common_lib",
+        "//frontend_common:generated_types",
+    ],
+)
+
+js_library(
+    name = "new_piece_dialog_src",
+    srcs = ["src/components/NewPieceDialog.tsx"],
+    deps = [
+        ":primitive_src",
+        ":global_picker_src",
+        ":node_modules",
+        "//frontend_common:frontend_common_lib",
+        "//frontend_common:generated_types",
+    ],
+)
+
+js_library(
+    name = "piece_list_src",
+    srcs = ["src/components/PieceList.tsx"],
+    deps = [
+        ":primitive_src",
+        ":cloudinary_image_src",
+        ":tag_src",
+        ":node_modules",
+        "//frontend_common:frontend_common_lib",
+        "//frontend_common:generated_types",
+    ],
+)
+
+js_library(
+    name = "workflow_state_src",
+    srcs = ["src/components/WorkflowState.tsx"],
+    deps = [
+        ":image_lightbox_src",
+        ":cloudinary_image_src",
+        ":global_picker_src",
+        ":node_modules",
+        "//frontend_common:frontend_common_lib",
+        "//frontend_common:generated_types",
+    ],
+)
+
+js_library(
+    name = "piece_detail_src",
+    srcs = ["src/components/PieceDetail.tsx"],
+    deps = [
+        ":primitive_src",
+        ":image_lightbox_src",
+        ":cloudinary_image_src",
+        ":tag_src",
+        ":workflow_state_src",
+        ":node_modules",
+        "//frontend_common:frontend_common_lib",
+        "//frontend_common:generated_types",
+    ],
+)
+
+# GlazeImportToolPage has no local component dependencies.
+js_library(
+    name = "glaze_import_src",
+    srcs = ["src/pages/GlazeImportToolPage.tsx"],
+    deps = [
+        ":node_modules",
+        "//frontend_common:frontend_common_lib",
+        "//frontend_common:generated_types",
+    ],
+)
+
+# ── Granular web test targets ─────────────────────────────────────────────────
+# Each target runs a focused subset of tests and depends only on the components
+# it exercises.  A change to an isolated component re-runs only the relevant
+# target(s) rather than the full suite.
+
+vitest_pkg.vitest_test(
+    name = "web_primitive_test",
+    data = [
+        ":web_test_configs",
+        ":primitive_src",
+        "src/components/__tests__/StateChip.test.tsx",
+        "src/components/__tests__/ErrorBoundary.test.tsx",
+    ],
+    args = [
+        "run",
+        "src/components/__tests__/StateChip.test.tsx",
+        "src/components/__tests__/ErrorBoundary.test.tsx",
+    ],
     chdir = package_name(),
     tags = ["ibazel_notify_changes"],
+)
+
+vitest_pkg.vitest_test(
+    name = "web_cloudinary_image_test",
+    data = [
+        ":web_test_configs",
+        ":cloudinary_image_src",
+        "src/components/__tests__/CloudinaryImage.test.tsx",
+    ],
+    args = ["run", "src/components/__tests__/CloudinaryImage.test.tsx"],
+    chdir = package_name(),
+    tags = ["ibazel_notify_changes"],
+)
+
+vitest_pkg.vitest_test(
+    name = "web_image_lightbox_test",
+    data = [
+        ":web_test_configs",
+        ":image_lightbox_src",
+        "src/components/__tests__/ImageLightbox.test.tsx",
+    ],
+    args = ["run", "src/components/__tests__/ImageLightbox.test.tsx"],
+    chdir = package_name(),
+    tags = ["ibazel_notify_changes"],
+)
+
+vitest_pkg.vitest_test(
+    name = "web_tag_test",
+    data = [
+        ":web_test_configs",
+        ":tag_src",
+        "src/components/__tests__/TagComponents.test.tsx",
+    ],
+    args = ["run", "src/components/__tests__/TagComponents.test.tsx"],
+    chdir = package_name(),
+    tags = ["ibazel_notify_changes"],
+)
+
+vitest_pkg.vitest_test(
+    name = "web_picker_test",
+    data = [
+        ":web_test_configs",
+        ":global_picker_src",
+        "src/components/__tests__/GlobalFieldPicker.test.tsx",
+        "src/components/__tests__/GlobalEntryPicker.test.tsx",
+    ],
+    args = [
+        "run",
+        "src/components/__tests__/GlobalFieldPicker.test.tsx",
+        "src/components/__tests__/GlobalEntryPicker.test.tsx",
+    ],
+    chdir = package_name(),
+    tags = ["ibazel_notify_changes"],
+)
+
+vitest_pkg.vitest_test(
+    name = "web_glaze_gallery_test",
+    data = [
+        ":web_test_configs",
+        ":glaze_gallery_src",
+        "src/components/__tests__/GlazeCombinationGallery.test.tsx",
+    ],
+    args = ["run", "src/components/__tests__/GlazeCombinationGallery.test.tsx"],
+    chdir = package_name(),
+    tags = ["ibazel_notify_changes"],
+)
+
+vitest_pkg.vitest_test(
+    name = "web_new_piece_dialog_test",
+    data = [
+        ":web_test_configs",
+        ":new_piece_dialog_src",
+        "src/components/__tests__/NewPieceDialog.test.tsx",
+    ],
+    args = ["run", "src/components/__tests__/NewPieceDialog.test.tsx"],
+    chdir = package_name(),
+    tags = ["ibazel_notify_changes"],
+)
+
+vitest_pkg.vitest_test(
+    name = "web_piece_list_test",
+    data = [
+        ":web_test_configs",
+        ":piece_list_src",
+        "src/components/__tests__/PieceList.test.tsx",
+    ],
+    args = ["run", "src/components/__tests__/PieceList.test.tsx"],
+    chdir = package_name(),
+    tags = ["ibazel_notify_changes"],
+)
+
+vitest_pkg.vitest_test(
+    name = "web_workflow_state_test",
+    data = [
+        ":web_test_configs",
+        ":workflow_state_src",
+        "src/components/__tests__/WorkflowState.test.tsx",
+    ],
+    args = ["run", "src/components/__tests__/WorkflowState.test.tsx"],
+    chdir = package_name(),
+    tags = ["ibazel_notify_changes"],
+)
+
+vitest_pkg.vitest_test(
+    name = "web_piece_detail_test",
+    data = [
+        ":web_test_configs",
+        ":piece_detail_src",
+        "src/components/__tests__/PieceDetail.test.tsx",
+    ],
+    args = ["run", "src/components/__tests__/PieceDetail.test.tsx"],
+    chdir = package_name(),
+    tags = ["ibazel_notify_changes"],
+)
+
+vitest_pkg.vitest_test(
+    name = "web_glaze_import_test",
+    data = [
+        ":web_test_configs",
+        ":glaze_import_src",
+        "src/components/__tests__/GlazeImportToolPage.test.tsx",
+    ],
+    args = ["run", "src/components/__tests__/GlazeImportToolPage.test.tsx"],
+    chdir = package_name(),
+    tags = ["ibazel_notify_changes"],
+)
+
+vitest_pkg.vitest_test(
+    name = "web_workflow_common_test",
+    data = [
+        ":web_test_configs",
+        "//frontend_common:frontend_common_lib",
+        "//frontend_common:frontend_common_tests",
+        "//frontend_common:generated_types",
+        ":node_modules",
+    ],
+    args = ["run", "workflow.test"],
+    chdir = package_name(),
+    tags = ["ibazel_notify_changes"],
+)
+
+# ── Web test suite ────────────────────────────────────────────────────────────
+# Aggregate target: `bazel test //web:web_test` runs all web tests.
+# Individual targets above run only when their inputs change.
+
+test_suite(
+    name = "web_test",
+    tests = [
+        ":web_primitive_test",
+        ":web_cloudinary_image_test",
+        ":web_image_lightbox_test",
+        ":web_tag_test",
+        ":web_picker_test",
+        ":web_glaze_gallery_test",
+        ":web_new_piece_dialog_test",
+        ":web_piece_list_test",
+        ":web_workflow_state_test",
+        ":web_piece_detail_test",
+        ":web_glaze_import_test",
+        ":web_workflow_common_test",
+    ],
 )
 
 # ── Web build ─────────────────────────────────────────────────────────────────

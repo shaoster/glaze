@@ -30,28 +30,197 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-# ── API tests ─────────────────────────────────────────────────────────────────
-# Depends on api_lib (which transitively includes backend_lib) and the dev
-# venv for pytest + pytest-django. Migrations and fixtures are runtime data.
+# ── Shared test infrastructure ────────────────────────────────────────────────
+
+_TEST_DEPS = [
+    ":api_lib",
+    requirement("pytest"),
+    requirement("pytest-django"),
+    requirement("pytest-env"),
+    requirement("pytest-cov"),
+]
+
+_TEST_DATA = [
+    "//:workflow_files",
+    "//:fixtures",
+    "//:pytest_ini",
+    ":migrations",
+]
+
+_TEST_ENV = {"DJANGO_SETTINGS_MODULE": "backend.test_settings"}
+
+_CONFTEST = [
+    "tests/__init__.py",
+    "tests/conftest.py",
+    "//tools:pytest_main.py",
+]
+
+# ── Granular API test targets ─────────────────────────────────────────────────
+# Each target covers a coherent slice of the API so that changing one file
+# only re-runs the tests that could be affected.
 
 py_test(
-    name = "api_test",
+    name = "api_workflow_test",
     size = "medium",
-    srcs = glob(["tests/**/*.py"]) + ["//tools:pytest_main.py"],
-    main = "//tools:pytest_main.py",
-    args = ["api/tests/"],
-    data = [
-        "//:workflow_files",
-        "//:fixtures",
-        "//:pytest_ini",
-        ":migrations",
+    srcs = _CONFTEST + [
+        "tests/test_workflow_helpers.py",
+        "tests/test_workflow_globals.py",
+        "tests/test_additional_fields.py",
     ],
+    main = "//tools:pytest_main.py",
+    args = [
+        "api/tests/test_workflow_helpers.py",
+        "api/tests/test_workflow_globals.py",
+        "api/tests/test_additional_fields.py",
+    ],
+    data = _TEST_DATA,
+    deps = _TEST_DEPS,
+    env = _TEST_ENV,
+)
+
+py_test(
+    name = "api_model_test",
+    size = "medium",
+    srcs = _CONFTEST + [
+        "tests/test_model_factory.py",
+        "tests/test_globals.py",
+        "tests/test_utils.py",
+    ],
+    main = "//tools:pytest_main.py",
+    args = [
+        "api/tests/test_model_factory.py",
+        "api/tests/test_globals.py",
+        "api/tests/test_utils.py",
+    ],
+    data = _TEST_DATA,
+    deps = _TEST_DEPS,
+    env = _TEST_ENV,
+)
+
+py_test(
+    name = "api_piece_test",
+    size = "medium",
+    srcs = _CONFTEST + [
+        "tests/test_pieces_create.py",
+        "tests/test_pieces_list.py",
+        "tests/test_piece_detail.py",
+        "tests/test_piece_states.py",
+        "tests/test_patch_current_state.py",
+        "tests/test_sealed_state.py",
+        "tests/test_analysis.py",
+    ],
+    main = "//tools:pytest_main.py",
+    args = [
+        "api/tests/test_pieces_create.py",
+        "api/tests/test_pieces_list.py",
+        "api/tests/test_piece_detail.py",
+        "api/tests/test_piece_states.py",
+        "api/tests/test_patch_current_state.py",
+        "api/tests/test_sealed_state.py",
+        "api/tests/test_analysis.py",
+    ],
+    data = _TEST_DATA,
+    deps = _TEST_DEPS,
+    env = _TEST_ENV,
+)
+
+py_test(
+    name = "api_auth_test",
+    size = "medium",
+    srcs = _CONFTEST + [
+        "tests/test_auth.py",
+    ],
+    main = "//tools:pytest_main.py",
+    args = ["api/tests/test_auth.py"],
+    data = _TEST_DATA,
+    deps = _TEST_DEPS,
+    env = _TEST_ENV,
+)
+
+py_test(
+    name = "api_glaze_test",
+    size = "medium",
+    srcs = _CONFTEST + [
+        "tests/test_glaze_combination.py",
+        "tests/test_glaze_combination_admin.py",
+        "tests/test_glaze_combination_picker.py",
+        "tests/test_manual_square_crop_import.py",
+        "tests/test_public_library.py",
+        "tests/test_public_library_commands.py",
+    ],
+    main = "//tools:pytest_main.py",
+    args = [
+        "api/tests/test_glaze_combination.py",
+        "api/tests/test_glaze_combination_admin.py",
+        "api/tests/test_glaze_combination_picker.py",
+        "api/tests/test_manual_square_crop_import.py",
+        "api/tests/test_public_library.py",
+        "api/tests/test_public_library_commands.py",
+    ],
+    data = _TEST_DATA,
+    deps = _TEST_DEPS,
+    env = _TEST_ENV,
+)
+
+py_test(
+    name = "api_admin_test",
+    size = "medium",
+    srcs = _CONFTEST + [
+        "tests/test_admin_exports.py",
+        "tests/test_cloudinary_image_widget.py",
+        "tests/test_cloudinary_upload_signature.py",
+    ],
+    main = "//tools:pytest_main.py",
+    args = [
+        "api/tests/test_admin_exports.py",
+        "api/tests/test_cloudinary_image_widget.py",
+        "api/tests/test_cloudinary_upload_signature.py",
+    ],
+    data = _TEST_DATA,
+    deps = _TEST_DEPS,
+    env = _TEST_ENV,
+)
+
+# ── mypy type-check ───────────────────────────────────────────────────────────
+# Runs mypy over all of api/ with the full django + DRF plugins enabled.
+# Runs as a single target (coarser than per-library) because mypy_django_plugin
+# requires full Django app initialization, which isn't available in per-target
+# Bazel sandboxes. TODO: revisit with rules_mypy once resolved — see
+# https://github.com/shaoster/glaze/issues/157
+
+py_test(
+    name = "api_mypy",
+    size = "medium",
+    srcs = ["//tools:mypy_main.py"],
+    main = "//tools:mypy_main.py",
+    args = ["api/"],
+    legacy_create_init = False,
+    data = ["//:mypy.ini", "//:workflow_files"],
     deps = [
         ":api_lib",
-        requirement("pytest"),
-        requirement("pytest-django"),
-        requirement("pytest-env"),
-        requirement("pytest-cov"),
+        requirement("mypy"),
+        requirement("mypy-extensions"),
+        requirement("django-stubs"),
+        requirement("django-stubs-ext"),
+        requirement("djangorestframework-stubs"),
+        requirement("types-requests"),
     ],
-    env = {"DJANGO_SETTINGS_MODULE": "backend.test_settings"},
+    env = {"DJANGO_SETTINGS_MODULE": "backend.settings"},
+    tags = ["lint"],
+)
+
+# ── API test suite ────────────────────────────────────────────────────────────
+# Aggregate target: `bazel test //api:api_test` runs all API tests.
+# Individual targets above run only when their inputs change.
+
+test_suite(
+    name = "api_test",
+    tests = [
+        ":api_workflow_test",
+        ":api_model_test",
+        ":api_piece_test",
+        ":api_auth_test",
+        ":api_glaze_test",
+        ":api_admin_test",
+    ],
 )
