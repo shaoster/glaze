@@ -552,7 +552,9 @@ describe("PieceDetail", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "Edit tags" }));
       await userEvent.click(screen.getByRole("button", { name: "New" }));
-      await userEvent.type(screen.getByLabelText("Tag name"), "For Sale");
+      fireEvent.change(screen.getByLabelText("Tag name"), {
+        target: { value: "For Sale" },
+      });
       await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
       expect(api.updatePiece).not.toHaveBeenCalled();
