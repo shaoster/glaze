@@ -536,11 +536,13 @@ describe("PieceDetail", () => {
           tags: ["gift"],
         }),
       );
-      expect(
-        screen.getByText(
-          "Failed to attach the selected tag. Please check your connection and try again.",
-        ),
-      ).toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          screen.getByText(
+            "Failed to attach the selected tag. Please check your connection and try again.",
+          ),
+        ).toBeInTheDocument(),
+      );
     });
 
     it("shows a descriptive error and keeps the dialog open when the tag name already exists", async () => {
