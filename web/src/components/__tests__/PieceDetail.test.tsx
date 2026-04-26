@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import userEvent from "@testing-library/user-event";
 import {
   act,
   render,
@@ -7,11 +8,28 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceDetail from "../PieceDetail";
 import type { PieceDetail as PieceDetailType, PieceState } from "@common/types";
 import * as api from "@common/api";
+
+// Zero-duration theme so MUI Dialog/Fade animations complete in the next tick
+// rather than after their default 225–300ms CSS transition timeouts.
+const TEST_THEME = createTheme({
+  transitions: {
+    create: () => "none",
+    duration: {
+      shortest: 0,
+      shorter: 0,
+      short: 0,
+      standard: 0,
+      complex: 0,
+      enteringScreen: 0,
+      leavingScreen: 0,
+    },
+  },
+});
 
 vi.mock("@common/api", () => ({
   fetchGlobalEntries: vi.fn().mockResolvedValue([]),
@@ -69,7 +87,11 @@ async function renderPieceDetail(
     { initialEntries: ["/pieces/piece-id-1"] },
   );
   await act(async () => {
-    render(<RouterProvider router={router} />);
+    render(
+      <ThemeProvider theme={TEST_THEME}>
+        <RouterProvider router={router} />
+      </ThemeProvider>,
+    );
   });
 }
 
@@ -157,7 +179,7 @@ describe("PieceDetail", () => {
     );
     fireEvent.click(screen.getByRole("option", { name: "Studio 7" }));
     await waitFor(() => expect(input).toHaveValue("Studio 7"));
-    await userEvent.click(screen.getByTestId("save-button"));
+    fireEvent.click(screen.getByTestId("save-button"));
     await waitFor(() =>
       expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
         current_location: "Studio 7",
@@ -242,10 +264,9 @@ describe("PieceDetail", () => {
     await renderPieceDetail();
     fireEvent.click(screen.getByRole("button", { name: "Throwing" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    // MUI Dialog exit animation is a macro-task; use waitFor to let it complete.
     await waitFor(() =>
-      expect(
-        screen.queryByText(/Confirm State Transition/i),
-      ).not.toBeInTheDocument(),
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
   });
 
@@ -342,11 +363,9 @@ describe("PieceDetail", () => {
       await renderPieceDetail();
       fireEvent.click(screen.getByRole("button", { name: "Edit piece name" }));
       fireEvent.click(screen.getByRole("button", { name: "Cancel name edit" }));
-      await waitFor(() =>
-        expect(
-          screen.queryByRole("textbox", { name: "Piece name" }),
-        ).not.toBeInTheDocument(),
-      );
+      expect(
+        screen.queryByRole("textbox", { name: "Piece name" }),
+      ).not.toBeInTheDocument();
       expect(screen.getByText("Test Bowl")).toBeInTheDocument();
     });
 
@@ -355,11 +374,9 @@ describe("PieceDetail", () => {
       fireEvent.click(screen.getByRole("button", { name: "Edit piece name" }));
       const input = screen.getByRole("textbox", { name: "Piece name" });
       fireEvent.keyDown(input, { key: "Escape" });
-      await waitFor(() =>
-        expect(
-          screen.queryByRole("textbox", { name: "Piece name" }),
-        ).not.toBeInTheDocument(),
-      );
+      expect(
+        screen.queryByRole("textbox", { name: "Piece name" }),
+      ).not.toBeInTheDocument();
     });
 
     it("save button calls updatePiece with new name", async () => {
@@ -370,7 +387,7 @@ describe("PieceDetail", () => {
       fireEvent.click(screen.getByRole("button", { name: "Edit piece name" }));
       const input = screen.getByRole("textbox", { name: "Piece name" });
       fireEvent.change(input, { target: { value: "New Vase" } });
-      await userEvent.click(screen.getByRole("button", { name: "Save name" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save name" }));
       await waitFor(() =>
         expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
           name: "New Vase",
@@ -411,12 +428,10 @@ describe("PieceDetail", () => {
       await renderPieceDetail();
       fireEvent.click(screen.getByRole("button", { name: "Edit piece name" }));
       // Name input starts as 'Test Bowl' and we do not change it
-      await userEvent.click(screen.getByRole("button", { name: "Save name" }));
-      await waitFor(() =>
-        expect(
-          screen.queryByRole("textbox", { name: "Piece name" }),
-        ).not.toBeInTheDocument(),
-      );
+      fireEvent.click(screen.getByRole("button", { name: "Save name" }));
+      expect(
+        screen.queryByRole("textbox", { name: "Piece name" }),
+      ).not.toBeInTheDocument();
       expect(api.updatePiece).not.toHaveBeenCalled();
     });
   });
@@ -439,7 +454,7 @@ describe("PieceDetail", () => {
     it("shows the tag editor when the edit button is pressed", async () => {
       await renderPieceDetail();
 
-      await userEvent.click(screen.getByRole("button", { name: "Edit tags" }));
+      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
 
       expect(screen.getByLabelText("Tags")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "New" })).toBeInTheDocument();
@@ -448,20 +463,35 @@ describe("PieceDetail", () => {
       ).toBeInTheDocument();
     });
 
-    it("does not save tag changes until Save is pressed", async () => {
+    it("fetched tags are selectable in the autocomplete dropdown", async () => {
       vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
         { id: "gift", name: "Gift", isPublic: false, color: "#2A9D8F" },
       ]);
 
       await renderPieceDetail();
 
-      await userEvent.click(screen.getByRole("button", { name: "Edit tags" }));
-      await userEvent.click(screen.getByLabelText("Tags"));
-      await userEvent.click(screen.getByRole("option", { name: "Gift" }));
+      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
+      fireEvent.mouseDown(screen.getByLabelText("Tags"));
+      await waitFor(() => screen.getByRole("option", { name: "Gift" }));
+      fireEvent.click(screen.getByRole("option", { name: "Gift" }));
+
+      // Draft chip appears; Save not yet called
+      expect(screen.getByRole("button", { name: "Save tags" })).toBeInTheDocument();
+      expect(api.updatePiece).not.toHaveBeenCalled();
+    });
+
+    it("does not save tag changes until Save is pressed", async () => {
+      const piece = makePiece({
+        tags: [{ id: "gift", name: "Gift", color: "#2A9D8F" }],
+      });
+
+      await renderPieceDetail(piece);
+
+      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
 
       expect(api.updatePiece).not.toHaveBeenCalled();
 
-      await userEvent.click(screen.getByRole("button", { name: "Save tags" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save tags" }));
 
       await waitFor(() =>
         expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
@@ -471,20 +501,18 @@ describe("PieceDetail", () => {
     });
 
     it("returns to the chip list after a successful tag save", async () => {
+      const piece = makePiece({
+        tags: [{ id: "gift", name: "Gift", color: "#2A9D8F" }],
+      });
       const updated = makePiece({
         tags: [{ id: "gift", name: "Gift", color: "#2A9D8F" }],
       });
-      vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
-        { id: "gift", name: "Gift", isPublic: false, color: "#2A9D8F" },
-      ]);
       vi.mocked(api.updatePiece).mockResolvedValue(updated);
 
-      await renderPieceDetail();
+      await renderPieceDetail(piece);
 
-      await userEvent.click(screen.getByRole("button", { name: "Edit tags" }));
-      await userEvent.click(screen.getByLabelText("Tags"));
-      await userEvent.click(screen.getByRole("option", { name: "Gift" }));
-      await userEvent.click(screen.getByRole("button", { name: "Save tags" }));
+      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save tags" }));
 
       await waitFor(() =>
         expect(screen.queryByLabelText("Tags")).not.toBeInTheDocument(),
@@ -493,17 +521,15 @@ describe("PieceDetail", () => {
     });
 
     it("shows a self-closing snackbar when saving selected tags fails", async () => {
-      vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
-        { id: "gift", name: "Gift", isPublic: false, color: "#2A9D8F" },
-      ]);
+      const piece = makePiece({
+        tags: [{ id: "gift", name: "Gift", color: "#2A9D8F" }],
+      });
       vi.mocked(api.updatePiece).mockRejectedValue(new Error("Network error"));
 
-      await renderPieceDetail();
+      await renderPieceDetail(piece);
 
-      await userEvent.click(screen.getByRole("button", { name: "Edit tags" }));
-      await userEvent.click(screen.getByLabelText("Tags"));
-      await userEvent.click(screen.getByRole("option", { name: "Gift" }));
-      await userEvent.click(screen.getByRole("button", { name: "Save tags" }));
+      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save tags" }));
 
       await waitFor(() =>
         expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
@@ -524,12 +550,12 @@ describe("PieceDetail", () => {
 
       await renderPieceDetail();
 
-      await userEvent.click(screen.getByRole("button", { name: "Edit tags" }));
-      await userEvent.click(screen.getByRole("button", { name: "New" }));
+      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
+      fireEvent.click(screen.getByRole("button", { name: "New" }));
       fireEvent.change(screen.getByLabelText("Tag name"), {
         target: { value: "gift" },
       });
-      await userEvent.click(screen.getByRole("button", { name: "Create" }));
+      fireEvent.click(screen.getByRole("button", { name: "Create" }));
 
       expect(api.createTagEntry).not.toHaveBeenCalled();
       const dialog = screen.getByRole("dialog", { name: "Create Tag" });
@@ -550,20 +576,20 @@ describe("PieceDetail", () => {
 
       await renderPieceDetail();
 
-      await userEvent.click(screen.getByRole("button", { name: "Edit tags" }));
-      await userEvent.click(screen.getByRole("button", { name: "New" }));
+      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
+      fireEvent.click(screen.getByRole("button", { name: "New" }));
       fireEvent.change(screen.getByLabelText("Tag name"), {
         target: { value: "For Sale" },
       });
       await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
-      expect(api.updatePiece).not.toHaveBeenCalled();
-      expect(screen.getByText("For Sale")).toBeInTheDocument();
-      await waitFor(() =>
+      await waitFor(() => {
+        expect(screen.getByText("For Sale")).toBeInTheDocument();
         expect(
           screen.getByRole("button", { name: "Save tags" }),
-        ).toBeInTheDocument(),
-      );
+        ).toBeInTheDocument();
+      });
+      expect(api.updatePiece).not.toHaveBeenCalled();
     });
   });
 });

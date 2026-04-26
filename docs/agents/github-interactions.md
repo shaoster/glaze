@@ -64,10 +64,8 @@ Before opening or pushing to a PR, verify every item:
 - Add the appropriate `Co-authored-by:` tag to commits (e.g. `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`). Include the model version when possible.
 - Every commit should have a short descriptive title with detailed bullets in the body explaining what was done and why.
 - If a PR includes refactoring alongside functional changes, describe both clearly in the commit and PR body.
-- All test suites pass (gz_test_web, gz_test_backend, gz_test_common).
-- Python linting passes: `ruff check .`
-- Python type-checking passes: `mypy .`
-- Frontend linting passes: `cd web && npm run lint`
+- All test suites pass: `bazel test //...`
+- All linters pass: `bazel build --config=lint //...`
 - The build succeeds (gz_build).
 - PR body contains "Closes #<N>" linking to the originating issue.
 - PR title is concise (under 70 characters).
@@ -85,10 +83,9 @@ Project-specific definition-of-done checks (e.g. serializer/type alignment, work
 
 When running in a github action, or in any remote sandboxed environment, first `source env.sh && gz_setup` to set up the test environment.
 
-To run frontend tests, use `gz_test_web`.
-To run backend tests, use `gz_test_backend`.
-To run the common tests, use `gz_test_common`. 
-To ensure build correctness, use `gz_build`. 
+To run all tests, use `bazel test //...` (or `gz_bazel_test`).
+To run all linters, use `bazel build --config=lint //...` (or `gz_bazel_lint`).
+To ensure build correctness, use `gz_build`.
 
 ### Avoid PATs — use `GITHUB_TOKEN` and `workflow_run`
 

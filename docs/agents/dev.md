@@ -141,25 +141,24 @@ Run from the repo root with the venv active. There is no Bazel-integrated auto-f
 
 ### Individual suites (fast iteration during development)
 
+Prefer Bazel targets — they match CI exactly and benefit from incremental caching:
+
 ```bash
 # Workflow schema validation
-pytest tests/
+bazel test //tests:...                 # or: pytest tests/
 
-# Backend API tests (granular targets available: //api:api_workflow_test, etc.)
-pytest api/                            # or: bazel test //api:api_test
+# Backend API tests (many granular targets: //api:api_workflow_test, etc.)
+bazel test //api:api_test              # or: pytest api/
 
 # Backend mypy (with Django plugin — runs full app initialization)
 bazel test //api:api_mypy
 
 # Web component tests
-cd web && npm test                     # or: bazel test //web:web_test
-cd web && npm run test:watch           # watch mode
+bazel test //web:web_test              # or: cd web && npm test
+cd web && npm run test:watch           # watch mode (no Bazel equivalent)
 
-# Web type-check
-cd web && npx tsc --noEmit
-
-# Web lint
-cd web && npm run lint
+# Web type-check + lint (both covered by the lint target)
+bazel build --config=lint //web/...   # or: cd web && npx tsc --noEmit && npm run lint
 ```
 
 Tests live in:
@@ -187,13 +186,13 @@ gz_build
 
 ### CI
 
-GitHub Actions runs on every push and pull request — see [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). A PR should not be merged if any job is red.
+GitHub Actions runs three parallel jobs on every push and pull request — see [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). A PR should not be merged if any job is red.
 
-| Step | What it runs |
+| Job | What it runs |
 |---|---|
-| Tests | `bazel test //...` — all test suites |
-| Linters | `bazel build --config=lint //...` — ruff, eslint, tsc, mypy |
-| Coverage | `pytest api/ tests/ --cov` + `npm test --coverage` — feeds Codecov (separate from Bazel until [#159](https://github.com/shaoster/glaze/issues/159) is resolved) |
+| `test` | `bazel test --config=ci //...` — all test suites |
+| `lint` | `bazel build --config=ci --config=lint //...` — ruff, eslint, tsc, mypy |
+| `coverage` | `pytest api/ tests/ --cov` + `npm test --coverage` — feeds Codecov (separate from Bazel until [#159](https://github.com/shaoster/glaze/issues/159) is resolved) |
 
 Coverage reports are uploaded to [Codecov](https://codecov.io). Codecov posts a summary comment on each PR.
 
