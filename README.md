@@ -8,22 +8,24 @@ PotterDoc is the external product name for this app. The repository, internal co
 A pottery workflow tracking application. Log pieces and record state transitions as work moves through throwing, bisque firing, glazing, and finishing.
 
 ## For new developers
-This guide assumes you already know the tools listed below and are familiar with [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) and [abstraction](https://en.wikipedia.org/wiki/Abstraction_(computer_science)) as design principles; if any term is unfamiliar, click the linked docs to catch up quickly.
+
+This guide assumes you already know the tools listed below and are familiar with [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) and [abstraction](<https://en.wikipedia.org/wiki/Abstraction_(computer_science)>) as design principles; if any term is unfamiliar, click the linked docs to catch up quickly.
 
 - **[Django](https://www.djangoproject.com/)** is the Python web framework that owns the backend (`backend/`, `api/`). [Separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) keeps unrelated responsibilities apart so each layer stays simpler to reason about—for example, [`api/models.py`](api/models.py) defines the data schema, [`api/serializers.py`](api/serializers.py) translates between ORM objects and JSON payloads, and [`api/views.py`](api/views.py) wires those serializers into `/api/...` endpoints that enforce workflow rules from [`workflow.yml`](workflow.yml). That split keeps the REST API (powered by Django REST Framework, DRF) resilient even when one layer needs to change, while returning consistent data/validation to all clients.
 - **[React](https://react.dev/)** (web/src/) renders the SPA (Single Page Application) and consumes shared types/API helpers from [`frontend_common/src/types.ts`](frontend_common/src/types.ts) and [`frontend_common/src/api.ts`](frontend_common/src/api.ts). React follows a component-based paradigm where functions or classes receive props (inputs) and return HTML that the browser can render.
 - **[Vite](https://vitejs.dev/)** (web tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our web workbench, serves as the underlying runner for `npm test`, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
 - **[Material UI](https://mui.com/)** supplies the component library used everywhere in the UI for forms, dialogs, buttons, and layout.
 - **[Axios](https://axios-http.com/)** is the HTTP client library we use in the web to talk to REST APIs; it keeps things simple by handling the details of sending and receiving JSON so the UI code does not have to repeat that work. Benefits of Axios over raw `fetch` include centralized configuration of base URLs and headers, automatic JSON parsing/serialization, and built-in hooks for handling errors, cancellations, and retries. In this project that means [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx) can rely on helpers like `updateCurrentState`/`updatePiece` instead of duplicating URLs or JSON logic, and we have a single place for surfaces errors before they hit the UI.
-- A **[client library](https://en.wikipedia.org/wiki/Library_(computing))** is a reusable set of functions that wraps low-level protocols (like HTTP) so developers can interact with remote services using clean function calls, in their programming language of choice, instead of handling bytes, headers, or parsing manually.
+- A **[client library](<https://en.wikipedia.org/wiki/Library_(computing)>)** is a reusable set of functions that wraps low-level protocols (like HTTP) so developers can interact with remote services using clean function calls, in their programming language of choice, instead of handling bytes, headers, or parsing manually.
 
 ## Motivation
 
 While the UI is similar at a surface level to other craft journaling applications, the main differences are under the hood:
-   - Customizable, potentially non-linear workflows. For some pieces you'll carve first, for others you'll slip first. For others, there might be multiple rounds of each.
-   - Opinionated data model with immutable stage data for your piece's unique journey and your growth-minded journey as a potter. You can't change the past, so keep moving forward. (Administrative bulk data cleaning is still allowed!)
-   - Data normalization around every piece's history for richer and more reliable single piece and multi-piece analysis.
-   - Systematically answer questions like "How many pieces do I lose in the firing stage by glaze type?" or "How often do I ruin a piece during trimming?"
+
+- Customizable, potentially non-linear workflows. For some pieces you'll carve first, for others you'll slip first. For others, there might be multiple rounds of each.
+- Opinionated data model with immutable stage data for your piece's unique journey and your growth-minded journey as a potter. You can't change the past, so keep moving forward. (Administrative bulk data cleaning is still allowed!)
+- Data normalization around every piece's history for richer and more reliable single piece and multi-piece analysis.
+- Systematically answer questions like "How many pieces do I lose in the firing stage by glaze type?" or "How often do I ruin a piece during trimming?"
 
 ## Authentication and Data Isolation
 
@@ -46,17 +48,19 @@ PotterDoc supports Google Sign-In using OAuth 2.0 with OpenID Connect. The flow 
 1. **Frontend**: The web app uses `@react-oauth/google` to display a Google Sign-In button when `VITE_GOOGLE_CLIENT_ID` is configured.
 2. **Google Authentication**: User clicks the button, Google handles authentication and returns a JWT credential.
 3. **Backend Verification**: The frontend sends the JWT to `POST /api/auth/google/`, where Django verifies the token with Google's servers using `google-auth`.
-4. **User Creation/Login**: 
+4. **User Creation/Login**:
    - If the Google subject ID exists in `UserProfile.openid_subject`, the existing user is logged in.
    - If not, the system looks for an existing user with the same email address (graceful migration from email/password accounts).
    - If no user exists, a new account is created with an unusable password (Google-only account).
 5. **Profile Sync**: User profile information (name, picture) is updated from Google on each login.
 
 **Environment Variables Required:**
+
 - `GOOGLE_OAUTH_CLIENT_ID`: Your Google OAuth client ID from Google Cloud Console
 - `VITE_GOOGLE_CLIENT_ID`: Same client ID, exposed to the frontend (must match backend)
 
 **Google Cloud Setup:**
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create/select a project
 3. Enable the Google+ API
@@ -72,6 +76,7 @@ Per-user data isolation rules:
 - Global reference entries are user-scoped; names are unique per user (for example, two users can both have a `Location` named "Kiln A" without colliding).
 
 ## React components
+
 The web UI is organized around a small set of React components in [`web/src/components/`](web/src/components/). Each component owns a distinct slice of product behavior:
 
 - [`NewPieceDialog.tsx`](web/src/components/NewPieceDialog.tsx): Creates a new piece from the list page, including name entry, optional notes, location selection/creation, curated thumbnail picking, save validation, and discard-confirmation when the form is dirty.
@@ -82,6 +87,7 @@ The web UI is organized around a small set of React components in [`web/src/comp
 - [`ImageLightbox.tsx`](web/src/components/ImageLightbox.tsx): Shows piece images in a full-screen modal with captions plus desktop button navigation and touch swipe navigation for browsing multiple images.
 
 ## Quick start
+
 This section is for folks who just want to fire up the whole stack quickly and start poking around the app.
 
 ```bash
@@ -91,6 +97,7 @@ gz_start    # starts backend (port 8080) and web (Vite port), press Ctrl+C to st
 ```
 
 ## Development helpers (`env.sh`)
+
 Use these shortcuts once you've sourced `env.sh`; they wrap common CLI sequences so you can focus on implementing features instead of hunting for the right flags. The `env.sh` script sets up Python/Node paths, loads useful aliases (`gz_setup`, `gz_start`, etc.), and keeps environment-specific tweaks (like log rotation and virtualenv activation) centralized, so every developer runs commands against the same configuration without manually sourcing multiple files.
 
 Source the file to load all shortcuts into your shell:
@@ -104,6 +111,7 @@ source env.sh
 **AI coding agents (Claude Code, Codex, Cursor agent):** a companion script [`env-agent.sh`](env-agent.sh) provides a silent, lightweight bootstrap (venv activation + `.env.local` loading) for non-interactive shells. Claude Code picks it up via `.claude/settings.json`; Codex and other agents inherit it through `BASH_ENV` when launched from an `env.sh`-sourced terminal. See [`docs/agents/dev.md`](docs/agents/dev.md) for details.
 
 ### Local secrets and config (git-safe)
+
 Keep local-only settings in `.env.local` files; they are gitignored by default:
 
 - `.env.local` (repo-wide defaults)
@@ -120,71 +128,73 @@ cp mobile/.env.example mobile/.env.local
 ```
 
 The app runs without any credentials — both optional services degrade gracefully when unconfigured:
+
 - **Cloudinary** (image uploads): see [Cloudinary image uploads](#cloudinary-image-uploads-web) for how to get credentials and which vars to set.
 - **Google OAuth** (sign-in button): see [Google OAuth](#google-oauth-web) for how to create a client ID and which vars to set.
 
 ### Setup
 
-| Command | Description |
-|---|---|
+| Command    | Description                                                                                                             |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `gz_setup` | First-time setup: creates `.venv`, installs Python + Node deps, runs DB migrations. Installs Node via nvm if not found. |
 
 ### Servers
 
-| Command | Description |
-|---|---|
-| `gz_start` | Start backend and web, join in the foreground. Ctrl+C stops both. Rotates old logs before starting. |
-| `gz_stop` | Stop both servers. |
-| `gz_status` | Show whether backend and web are running. |
-| `gz_backend` | Start the Django backend on port 8080 (backgrounded). |
-| `gz_web` | Start the Vite dev server (backgrounded). Prints the local URL once ready. |
-| `gz_logs [backend\|web]` | Tail logs. Omit argument to tail both. |
+| Command                  | Description                                                                                         |
+| ------------------------ | --------------------------------------------------------------------------------------------------- |
+| `gz_start`               | Start backend and web, join in the foreground. Ctrl+C stops both. Rotates old logs before starting. |
+| `gz_stop`                | Stop both servers.                                                                                  |
+| `gz_status`              | Show whether backend and web are running.                                                           |
+| `gz_backend`             | Start the Django backend on port 8080 (backgrounded).                                               |
+| `gz_web`                 | Start the Vite dev server (backgrounded). Prints the local URL once ready.                          |
+| `gz_logs [backend\|web]` | Tail logs. Omit argument to tail both.                                                              |
 
 Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`.
 
 ### Django management
 
-| Command | Description |
-|---|---|
+| Command                   | Description                     |
+| ------------------------- | ------------------------------- |
 | `gz_manage <cmd> [args…]` | Run any `manage.py` subcommand. |
-| `gz_migrate` | `manage.py migrate` |
-| `gz_makemigrations` | `manage.py makemigrations` |
-| `gz_shell` | Django interactive shell |
-| `gz_dbshell` | Raw database shell (SQLite) |
-| `gz_showmigrations` | `manage.py showmigrations` |
-| `gz_dump_public_library` | `manage.py dump_public_library` |
-| `gz_load_public_library` | `manage.py load_public_library` |
+| `gz_migrate`              | `manage.py migrate`             |
+| `gz_makemigrations`       | `manage.py makemigrations`      |
+| `gz_shell`                | Django interactive shell        |
+| `gz_dbshell`              | Raw database shell (SQLite)     |
+| `gz_showmigrations`       | `manage.py showmigrations`      |
+| `gz_dump_public_library`  | `manage.py dump_public_library` |
+| `gz_load_public_library`  | `manage.py load_public_library` |
 
 ### Testing
 
-| Command | Description |
-|---|---|
-| `gz_test` | Run all tests via Bazel (`bazel test --test_output=errors //...`) — CI-aligned, incremental. |
-| `gz_test_common` | Run workflow schema/integrity tests only (`pytest tests/`). |
-| `gz_test_backend` | Run Django API tests only (`pytest api/`). |
-| `gz_test_web` | Run web tests only (`npm test`). |
+| Command           | Description                                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| `gz_test`         | Run all tests via Bazel (`bazel test --test_output=errors //...`) — CI-aligned, incremental. |
+| `gz_test_common`  | Run workflow schema/integrity tests only (`pytest tests/`).                                  |
+| `gz_test_backend` | Run Django API tests only (`pytest api/`).                                                   |
+| `gz_test_web`     | Run web tests only (`npm test`).                                                             |
 
 ### Linting and type-checking
 
-| Command | Description |
-|---|---|
+| Command   | Description                                                                 |
+| --------- | --------------------------------------------------------------------------- |
 | `gz_lint` | Run all linters via Bazel (`bazel build --config=lint //...`) — CI-aligned. |
 
 ### Build
 
-| Command | Description |
-|---|---|
+| Command    | Description                                                                                                                             |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `gz_build` | Run the same frontend build command used in CI (`gz_gentypes` then `cd web && npm run build`, which expands to `tsc -b && vite build`). |
 
 ### Type generation
 
-| Command | Description |
-|---|---|
+| Command       | Description                                                                                                                                                                              |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `gz_gentypes` | Regenerate [`frontend_common/src/generated-types.ts`](frontend_common/src/generated-types.ts) from the live OpenAPI schema. Starts the backend temporarily if it is not already running. |
 
 Run `gz_help` to print the full list of shortcuts at any time.
 
 ## Manual setup (without `env.sh`)
+
 If you prefer to install dependencies and run servers yourself, follow these explicit commands instead of relying on the helper script.
 
 ```bash
@@ -239,6 +249,7 @@ cd web && npm run test:watch  # watch mode (no Bazel equivalent)
 ```
 
 ## Cloudinary image uploads (web)
+
 Images attached to piece states are uploaded via the [Cloudinary Upload Widget](https://cloudinary.com/documentation/upload_widget) using backend-signed uploads — `CLOUDINARY_API_SECRET` never reaches the browser.
 
 Set these in `.env.local` before starting Django:
@@ -251,6 +262,7 @@ export CLOUDINARY_UPLOAD_FOLDER=glaze   # optional; images are placed in this fo
 ```
 
 **How it works:**
+
 1. `WorkflowState` calls `GET /api/uploads/cloudinary/widget-config/` to retrieve the cloud name, API key, and optional folder.
 2. The Cloudinary Upload Widget opens in the browser. For each upload, the widget calls `POST /api/uploads/cloudinary/widget-signature/` to get a server-signed signature.
 3. On success, the widget returns a `secure_url` and `public_id`. These are stored alongside the image in the `CaptionedImage` record.
@@ -259,6 +271,7 @@ export CLOUDINARY_UPLOAD_FOLDER=glaze   # optional; images are placed in this fo
 Cloudinary is optional — if the env vars are not set, the config endpoint returns 503 and the UI falls back to URL-paste mode.
 
 ## Google OAuth (web)
+
 PotterDoc supports Google Sign-In using OAuth 2.0 with OpenID Connect. To enable the Google sign-in button in the web UI:
 
 1. **Create Google OAuth credentials:**
@@ -294,6 +307,7 @@ PotterDoc supports Docker Compose (self-hosted on any VPS/droplet).
 The repo ships a [`Dockerfile`](Dockerfile) and [`docker-compose.yml`](docker-compose.yml) for self-hosting on a single VPS (e.g. DigitalOcean, Hetzner, Linode).
 
 **Architecture:**
+
 - `web` — Gunicorn serving Django + the Vite-built frontend via WhiteNoise on port 8000
 - `db` — Postgres 17 with a named volume for persistence
 
@@ -339,18 +353,18 @@ docker compose up -d
 
 **Environment variables** (set in `.env` on the droplet):
 
-| Variable | Required | Description |
-|---|---|---|
-| `SECRET_KEY` | Yes | Django secret key — generate with `python -c "import secrets; print(secrets.token_urlsafe(50))"` |
-| `POSTGRES_PASSWORD` | Yes | Password for the Postgres `glaze` user |
-| `ALLOWED_HOST` | Yes | Hostname of the droplet, e.g. `myapp.example.com` |
-| `APP_ORIGIN` | Yes | Full origin URL, e.g. `https://myapp.example.com` |
-| `GOOGLE_OAUTH_CLIENT_ID` | No | Backend runtime verification of Google JWTs |
-| `CLOUDINARY_CLOUD_NAME` | No | Enable Cloudinary image uploads |
-| `CLOUDINARY_API_KEY` | No | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | No | Cloudinary API secret |
-| `CLOUDINARY_UPLOAD_FOLDER` | No | Cloudinary folder for uploaded images |
-| `CLOUDINARY_UPLOAD_PRESET` | No | Cloudinary upload preset (passed to the Upload Widget as `uploadPreset`) |
+| Variable                   | Required | Description                                                                                      |
+| -------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
+| `SECRET_KEY`               | Yes      | Django secret key — generate with `python -c "import secrets; print(secrets.token_urlsafe(50))"` |
+| `POSTGRES_PASSWORD`        | Yes      | Password for the Postgres `glaze` user                                                           |
+| `ALLOWED_HOST`             | Yes      | Hostname of the droplet, e.g. `myapp.example.com`                                                |
+| `APP_ORIGIN`               | Yes      | Full origin URL, e.g. `https://myapp.example.com`                                                |
+| `GOOGLE_OAUTH_CLIENT_ID`   | No       | Backend runtime verification of Google JWTs                                                      |
+| `CLOUDINARY_CLOUD_NAME`    | No       | Enable Cloudinary image uploads                                                                  |
+| `CLOUDINARY_API_KEY`       | No       | Cloudinary API key                                                                               |
+| `CLOUDINARY_API_SECRET`    | No       | Cloudinary API secret                                                                            |
+| `CLOUDINARY_UPLOAD_FOLDER` | No       | Cloudinary folder for uploaded images                                                            |
+| `CLOUDINARY_UPLOAD_PRESET` | No       | Cloudinary upload preset (passed to the Upload Widget as `uploadPreset`)                         |
 
 Note: `VITE_GOOGLE_CLIENT_ID` is **not** set here — it is baked into the JS bundle at CI build time via the GitHub Actions secret.
 
@@ -365,6 +379,7 @@ Note: `VITE_GOOGLE_CLIENT_ID` is **not** set here — it is baked into the JS bu
 [`setup-nginx.sh`](setup-nginx.sh) installs Nginx and Certbot on the droplet, copies [`nginx/glaze.conf`](nginx/glaze.conf) with your domain substituted in, opens ports 80/443 in the firewall, and runs `certbot --nginx` to provision a Let's Encrypt cert. Certbot rewrites the Nginx config in-place to add TLS and sets up automatic renewal via a systemd timer.
 
 **Prerequisites:**
+
 - A domain with a DNS A record pointing at the droplet's IP (must be propagated before running Certbot)
 - `ufw` active on the droplet (`ufw enable`)
 
@@ -375,6 +390,7 @@ Note: `VITE_GOOGLE_CLIENT_ID` is **not** set here — it is baked into the JS bu
 If you don't have a public domain, or want the app private to your devices, use Tailscale instead. The app gets a valid HTTPS cert for its `*.ts.net` MagicDNS hostname and is only reachable from devices on your Tailscale network.
 
 **Before running the script:**
+
 1. Enable **HTTPS Certificates** and **MagicDNS** in the [Tailscale admin console](https://login.tailscale.com/admin/dns)
 2. Generate an auth key at [Tailscale admin → Keys](https://login.tailscale.com/admin/settings/keys)
 3. Install Tailscale on your local machine/devices so they can reach the droplet
@@ -421,13 +437,13 @@ After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` fr
 
 Agent and contributor documentation lives in [`docs/agents/`](docs/agents/) and is split across five files so that the generic stack guides can be reused in other projects. [`AGENTS.md`](AGENTS.md) at the repo root is a slim wrapper that imports all five via `@` directives.
 
-| File | Contents |
-|---|---|
-| [`docs/agents/glaze-domain.md`](docs/agents/glaze-domain.md) | Everything specific to this project: workflow state machine, `additional_fields` DSL, data model, key constraints, and Glaze-specific conventions layered on top of each stack (Django model patterns, frontend module aliases, component inventory, Cloudinary/OAuth flows, protected files, project-specific definition-of-done checks). **Add content here** when it is specific to Glaze's domain, data model, or architecture. |
-| [`docs/agents/django-drf-python.md`](docs/agents/django-drf-python.md) | Generic Django + DRF conventions reusable in any project: serializer rules, CORS, session auth, user-isolation patterns, test approach. **Add content here** only if it applies to Django/DRF projects in general, with no Glaze-specific models or endpoints. |
-| [`docs/agents/typescript-react-vite.md`](docs/agents/typescript-react-vite.md) | Generic React + TypeScript + Vite conventions reusable in any project: MUI usage, strict TS rules, theming tokens, Axios usage, async test patterns. **Add content here** only if it applies to React/TS/Vite projects in general, with no Glaze-specific components or data pipelines. |
-| [`docs/agents/github-interactions.md`](docs/agents/github-interactions.md) | Generic GitHub agent conventions reusable in any project: `--body-file` pattern, branch naming, scope-limit categories, PR ownership labels, definition-of-done checklist. **Add content here** only if it applies to any GitHub-hosted project. |
-| [`docs/agents/dev.md`](docs/agents/dev.md) | Glaze-specific development setup and test commands: starting the backend and web, all three test suites, CI, and per-layer "what to test" checklists. **Add content here** for setup steps, test commands, or CI details specific to this repo. |
+| File                                                                           | Contents                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`docs/agents/glaze-domain.md`](docs/agents/glaze-domain.md)                   | Everything specific to this project: workflow state machine, `additional_fields` DSL, data model, key constraints, and Glaze-specific conventions layered on top of each stack (Django model patterns, frontend module aliases, component inventory, Cloudinary/OAuth flows, protected files, project-specific definition-of-done checks). **Add content here** when it is specific to Glaze's domain, data model, or architecture. |
+| [`docs/agents/django-drf-python.md`](docs/agents/django-drf-python.md)         | Generic Django + DRF conventions reusable in any project: serializer rules, CORS, session auth, user-isolation patterns, test approach. **Add content here** only if it applies to Django/DRF projects in general, with no Glaze-specific models or endpoints.                                                                                                                                                                      |
+| [`docs/agents/typescript-react-vite.md`](docs/agents/typescript-react-vite.md) | Generic React + TypeScript + Vite conventions reusable in any project: MUI usage, strict TS rules, theming tokens, Axios usage, async test patterns. **Add content here** only if it applies to React/TS/Vite projects in general, with no Glaze-specific components or data pipelines.                                                                                                                                             |
+| [`docs/agents/github-interactions.md`](docs/agents/github-interactions.md)     | Generic GitHub agent conventions reusable in any project: `--body-file` pattern, branch naming, scope-limit categories, PR ownership labels, definition-of-done checklist. **Add content here** only if it applies to any GitHub-hosted project.                                                                                                                                                                                    |
+| [`docs/agents/dev.md`](docs/agents/dev.md)                                     | Glaze-specific development setup and test commands: starting the backend and web, all three test suites, CI, and per-layer "what to test" checklists. **Add content here** for setup steps, test commands, or CI details specific to this repo.                                                                                                                                                                                     |
 
 ## Vibe coding / Contributing
 
@@ -447,6 +463,7 @@ Glaze uses Claude agents to handle issues and PR feedback autonomously. You don'
 ### Request changes on a PR → get a new commit
 
 When you submit a **pull request review** with **"Request changes"**:
+
 - Claude reads your review summary and all inline comments.
 - It implements the requested changes, runs the full test suite, and pushes a new commit to the PR branch.
 - It then posts a comment summarising what was changed and how each piece of feedback was addressed.
@@ -491,7 +508,6 @@ docker-entrypoint.sh       Container startup: migrate then exec Gunicorn
 deploy.sh                  One-command deploy to a remote droplet via SSH
 .env.production.example    Template for droplet secrets (copy to .env)
 render.yaml                Render Blueprint for managed PaaS deployment
-build.sh                   Build script used by Render and the Docker builder stage
 ```
 
 The workflow state machine and all valid transitions are defined in [`workflow.yml`](workflow.yml). Both the backend and web derive state names and transition rules from this file — nothing is hardcoded elsewhere.
@@ -518,27 +534,29 @@ Example snippets from `workflow.yml`:
       type: number
       description: Weight of clay before throwing.
 ```
-(*Inline field: renders as a numeric input.)
+
+(\*Inline field: renders as a numeric input.)
 
 ```yaml
-  - id: trimmed
-    additional_fields:
-      pre_trim_weight_grams:
-        $ref: "wheel_thrown.clay_weight_grams"
+- id: trimmed
+  additional_fields:
+    pre_trim_weight_grams:
+      $ref: "wheel_thrown.clay_weight_grams"
 ```
-(*State ref: carries the earlier measurement forward.)
+
+(\*State ref: carries the earlier measurement forward.)
 
 ```yaml
-  - id: wheel_thrown
-    additional_fields:
-      clay_body:
-        $ref: "@clay_body.name"
-        can_create: true
+- id: wheel_thrown
+  additional_fields:
+    clay_body:
+      $ref: "@clay_body.name"
+      can_create: true
 ```
-(*Global ref: renders an Autocomplete tied to the `clay_body` global, with inline creation.)
+
+(\*Global ref: renders an Autocomplete tied to the `clay_body` global, with inline creation.)
 
 [`workflow.schema.yml`](workflow.schema.yml) enforces structural rules with JSON Schema (Draft 2020-12); [`tests/test_workflow.py`](tests/test_workflow.py) enforces semantic and referential integrity rules, including verifying that every declared global and its fields match the corresponding Django model in `api/models.py`.
-
 
 ## Using the App
 
@@ -657,9 +675,9 @@ If any records are skipped as duplicates, a **6. Reconcile** tab appears with th
 
 ### What the import creates
 
-| Record kind | Created objects |
-|-------------|----------------|
-| `glaze_type` | Public `GlazeType` + a matching single-layer public `GlazeCombination` |
+| Record kind         | Created objects                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `glaze_type`        | Public `GlazeType` + a matching single-layer public `GlazeCombination`                                                    |
 | `glaze_combination` | Public `GlazeCombination` with two ordered layers (both referenced `GlazeType` rows must already exist as public records) |
 
 `runs` and `is_food_safe` parsed from OCR are written to both `GlazeType` and `GlazeCombination` on creation.

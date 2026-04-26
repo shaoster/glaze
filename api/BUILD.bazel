@@ -1,5 +1,5 @@
-load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("@pip//:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
 
 # ── API library ───────────────────────────────────────────────────────────────
 # All non-test, non-migration source files. Depends on backend_lib (Django
@@ -16,10 +16,10 @@ py_library(
         ],
     ),
     data = ["//:workflow_files"],
+    visibility = ["//visibility:public"],
     deps = [
         "//backend:backend_lib",
     ],
-    visibility = ["//visibility:public"],
 )
 
 # Migrations are data, not importable library code: they're discovered and
@@ -63,53 +63,52 @@ py_test(
     name = "api_workflow_test",
     size = "medium",
     srcs = _CONFTEST + [
-        "tests/test_workflow_helpers.py",
-        "tests/test_workflow_globals.py",
         "tests/test_additional_fields.py",
+        "tests/test_workflow_globals.py",
+        "tests/test_workflow_helpers.py",
     ],
-    main = "//tools:pytest_main.py",
     args = [
         "api/tests/test_workflow_helpers.py",
         "api/tests/test_workflow_globals.py",
         "api/tests/test_additional_fields.py",
     ],
     data = _TEST_DATA,
-    deps = _TEST_DEPS,
     env = _TEST_ENV,
+    main = "//tools:pytest_main.py",
+    deps = _TEST_DEPS,
 )
 
 py_test(
     name = "api_model_test",
     size = "medium",
     srcs = _CONFTEST + [
-        "tests/test_model_factory.py",
         "tests/test_globals.py",
+        "tests/test_model_factory.py",
         "tests/test_utils.py",
     ],
-    main = "//tools:pytest_main.py",
     args = [
         "api/tests/test_model_factory.py",
         "api/tests/test_globals.py",
         "api/tests/test_utils.py",
     ],
     data = _TEST_DATA,
-    deps = _TEST_DEPS,
     env = _TEST_ENV,
+    main = "//tools:pytest_main.py",
+    deps = _TEST_DEPS,
 )
 
 py_test(
     name = "api_piece_test",
     size = "medium",
     srcs = _CONFTEST + [
-        "tests/test_pieces_create.py",
-        "tests/test_pieces_list.py",
+        "tests/test_analysis.py",
+        "tests/test_patch_current_state.py",
         "tests/test_piece_detail.py",
         "tests/test_piece_states.py",
-        "tests/test_patch_current_state.py",
+        "tests/test_pieces_create.py",
+        "tests/test_pieces_list.py",
         "tests/test_sealed_state.py",
-        "tests/test_analysis.py",
     ],
-    main = "//tools:pytest_main.py",
     args = [
         "api/tests/test_pieces_create.py",
         "api/tests/test_pieces_list.py",
@@ -120,8 +119,9 @@ py_test(
         "api/tests/test_analysis.py",
     ],
     data = _TEST_DATA,
-    deps = _TEST_DEPS,
     env = _TEST_ENV,
+    main = "//tools:pytest_main.py",
+    deps = _TEST_DEPS,
 )
 
 py_test(
@@ -130,11 +130,11 @@ py_test(
     srcs = _CONFTEST + [
         "tests/test_auth.py",
     ],
-    main = "//tools:pytest_main.py",
     args = ["api/tests/test_auth.py"],
     data = _TEST_DATA,
-    deps = _TEST_DEPS,
     env = _TEST_ENV,
+    main = "//tools:pytest_main.py",
+    deps = _TEST_DEPS,
 )
 
 py_test(
@@ -148,7 +148,6 @@ py_test(
         "tests/test_public_library.py",
         "tests/test_public_library_commands.py",
     ],
-    main = "//tools:pytest_main.py",
     args = [
         "api/tests/test_glaze_combination.py",
         "api/tests/test_glaze_combination_admin.py",
@@ -158,8 +157,9 @@ py_test(
         "api/tests/test_public_library_commands.py",
     ],
     data = _TEST_DATA,
-    deps = _TEST_DEPS,
     env = _TEST_ENV,
+    main = "//tools:pytest_main.py",
+    deps = _TEST_DEPS,
 )
 
 py_test(
@@ -170,15 +170,15 @@ py_test(
         "tests/test_cloudinary_image_widget.py",
         "tests/test_cloudinary_upload_signature.py",
     ],
-    main = "//tools:pytest_main.py",
     args = [
         "api/tests/test_admin_exports.py",
         "api/tests/test_cloudinary_image_widget.py",
         "api/tests/test_cloudinary_upload_signature.py",
     ],
     data = _TEST_DATA,
-    deps = _TEST_DEPS,
     env = _TEST_ENV,
+    main = "//tools:pytest_main.py",
+    deps = _TEST_DEPS,
 )
 
 # ── mypy type-check ───────────────────────────────────────────────────────────
@@ -192,10 +192,18 @@ py_test(
     name = "api_mypy",
     size = "medium",
     srcs = ["//tools:mypy_main.py"],
-    main = "//tools:mypy_main.py",
     args = ["api/"],
+    data = [
+        "//:mypy.ini",
+        "//:workflow_files",
+    ],
+    env = {"DJANGO_SETTINGS_MODULE": "backend.settings"},
     legacy_create_init = False,
-    data = ["//:mypy.ini", "//:workflow_files"],
+    main = "//tools:mypy_main.py",
+    tags = [
+        "lint",
+        "no-coverage",
+    ],
     deps = [
         ":api_lib",
         requirement("mypy"),
@@ -205,8 +213,6 @@ py_test(
         requirement("djangorestframework-stubs"),
         requirement("types-requests"),
     ],
-    env = {"DJANGO_SETTINGS_MODULE": "backend.settings"},
-    tags = ["lint"],
 )
 
 # ── API test suite ────────────────────────────────────────────────────────────
@@ -216,11 +222,11 @@ py_test(
 test_suite(
     name = "api_test",
     tests = [
-        ":api_workflow_test",
-        ":api_model_test",
-        ":api_piece_test",
+        ":api_admin_test",
         ":api_auth_test",
         ":api_glaze_test",
-        ":api_admin_test",
+        ":api_model_test",
+        ":api_piece_test",
+        ":api_workflow_test",
     ],
 )

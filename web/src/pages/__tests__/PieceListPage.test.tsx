@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import PieceListPage from "../PieceListPage";
-import type { PieceDetail, PieceSummary } from "@common/types";
+import type { PieceDetail, PieceSummary } from "../../util/types";
 
 const mockUseAsync = vi.fn();
 

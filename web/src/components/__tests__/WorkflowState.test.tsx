@@ -8,11 +8,11 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import WorkflowState from "../WorkflowState";
-import type { PieceState, PieceDetail } from "@common/types";
-import * as api from "@common/api";
+import type { PieceState, PieceDetail } from "../..//types";
+import * as api from "../../util/api";
 
 // Mock the api module
-vi.mock("@common/api", () => ({
+vi.mock("../../util/api", () => ({
   fetchGlobalEntries: vi.fn().mockResolvedValue([]),
   fetchGlobalEntriesWithFilters: vi.fn().mockResolvedValue([]),
   updateCurrentState: vi.fn(),

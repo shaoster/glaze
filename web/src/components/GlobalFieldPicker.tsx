@@ -9,8 +9,8 @@ import {
   fetchGlobalEntries,
   toggleGlobalEntryFavorite,
   type GlobalEntry,
-} from "@common/api";
-import { getGlobalDisplayField, isFavoritableGlobal } from "@common/workflow";
+} from "../util/api";
+import { getGlobalDisplayField, isFavoritableGlobal } from "../util/workflow";
 import { useAsync } from "../util/useAsync";
 import {
   buildCreateOption,
@@ -164,7 +164,6 @@ export default function GlobalFieldPicker({
       if (af !== bf) return af ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
-     
   }, [entries, isFavoritable, localFavorites]);
 
   // Display strings: public entries whose name also appears as a private entry

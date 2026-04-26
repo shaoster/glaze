@@ -3,10 +3,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceDetailPage from "../PieceDetailPage";
-import * as api from "@common/api";
-import type { PieceDetail } from "@common/types";
+import * as api from "../../util/api";
+import type { PieceDetail } from "../../util/types";
 
-vi.mock("@common/api", async (importOriginal) => {
+vi.mock("../../util/api", async (importOriginal) => {
   const actual = await importOriginal<typeof api>();
   return {
     ...actual,
@@ -87,7 +87,9 @@ describe("PieceDetailPage", () => {
   it("fetches the piece using the route id", async () => {
     renderPage({ id: "piece-42" });
 
-    await waitFor(() => expect(api.fetchPiece).toHaveBeenCalledWith("piece-42"));
+    await waitFor(() =>
+      expect(api.fetchPiece).toHaveBeenCalledWith("piece-42"),
+    );
   });
 
   it("renders the piece detail component after the piece loads", async () => {

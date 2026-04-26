@@ -6,3 +6,4 @@ mobile
 web/dist
 staticfiles
 .claude
+bazel-*

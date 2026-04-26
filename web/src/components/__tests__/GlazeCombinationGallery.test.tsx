@@ -3,8 +3,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import GlazeCombinationGallery from "../GlazeCombinationGallery";
-import * as api from "@common/api";
-import type { GlazeCombinationImageEntry } from "@common/types";
+import * as api from "../../util/api";
+import type { GlazeCombinationImageEntry } from "../..//types";
 
 // Stub out CloudinaryImage to avoid Cloudinary SDK internals in unit tests.
 vi.mock("../CloudinaryImage", () => ({
@@ -35,7 +35,7 @@ vi.mock("../ImageLightbox", () => ({
   ),
 }));
 
-vi.mock("@common/api", async (importOriginal) => {
+vi.mock("../../util/api", async (importOriginal) => {
   const actual = await importOriginal<typeof api>();
   return {
     ...actual,

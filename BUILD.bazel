@@ -1,6 +1,14 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 
-exports_files(["ruff.toml", "mypy.ini"])
+exports_files([
+    "ruff.toml",
+    "mypy.ini",
+])
+
+config_setting(
+    name = "is_coverage_build",
+    values = {"collect_code_coverage": "true"},
+)
 
 # ── Workflow YAML source files ────────────────────────────────────────────────
 # All Python and JS targets that read workflow.yml at runtime declare this as
@@ -9,8 +17,8 @@ exports_files(["ruff.toml", "mypy.ini"])
 filegroup(
     name = "workflow_files",
     srcs = [
-        "workflow.yml",
         "workflow.schema.yml",
+        "workflow.yml",
     ],
     visibility = ["//visibility:public"],
 )

@@ -45,7 +45,7 @@ import {
   signCloudinaryWidgetParams,
   type CloudinaryWidgetConfig,
   type ManualSquareCropImportResponse,
-} from "@common/api";
+} from "../util/api";
 import {
   clampOcrRegion,
   defaultOcrRegion,
@@ -218,7 +218,14 @@ async function ocrRegionFromLabel(
     });
   }
   const { data } = ctx.getImageData(0, 0, N2, N2);
-  return ocrRegionFromLabelData(data, N1, N2, labelRect, crop.size, textDarkThreshold);
+  return ocrRegionFromLabelData(
+    data,
+    N1,
+    N2,
+    labelRect,
+    crop.size,
+    textDarkThreshold,
+  );
 }
 
 // Convenience wrapper: run both phases and return the OCR region.
@@ -229,7 +236,11 @@ async function detectOcrRegion(
   textDarkThreshold = DETECT_OCR_TEXT_DARK_THRESHOLD,
 ): Promise<{ ocrRegion: OcrRegion; labelRect: LabelRect | null }> {
   try {
-    const { labelRect } = await detectLabelRect(image, crop, labelWhiteThreshold);
+    const { labelRect } = await detectLabelRect(
+      image,
+      crop,
+      labelWhiteThreshold,
+    );
     const ocrRegion = labelRect
       ? await ocrRegionFromLabel(image, crop, labelRect, textDarkThreshold)
       : defaultOcrRegion(crop.size);
@@ -276,7 +287,6 @@ function clampCrop(
     size,
   };
 }
-
 
 function rotatePt(x: number, y: number, angleDeg: number): [number, number] {
   const rad = (angleDeg * Math.PI) / 180;
@@ -764,7 +774,6 @@ export default function GlazeImportToolPage() {
     return () => clearTimeout(timer);
     // cropKey is intentionally used as the sole dependency: only the crop
     // geometry (not ocrRegion or other fields) should trigger a preview rebuild.
-     
   }, [cropKey]);
 
   useEffect(() => {
@@ -1025,15 +1034,21 @@ export default function GlazeImportToolPage() {
           },
           crop: clampCrop(
             { width: image.naturalWidth, height: image.naturalHeight },
-            defaultCrop({ width: image.naturalWidth, height: image.naturalHeight }),
+            defaultCrop({
+              width: image.naturalWidth,
+              height: image.naturalHeight,
+            }),
           ),
-          ...await detectOcrRegion(
+          ...(await detectOcrRegion(
             image,
             clampCrop(
               { width: image.naturalWidth, height: image.naturalHeight },
-              defaultCrop({ width: image.naturalWidth, height: image.naturalHeight }),
+              defaultCrop({
+                width: image.naturalWidth,
+                height: image.naturalHeight,
+              }),
             ),
-          ),
+          )),
           parsedFields: {
             name: "",
             kind: "glaze_type",
@@ -1167,7 +1182,7 @@ export default function GlazeImportToolPage() {
               filename,
               dimensions: cloudinaryDimensions,
               crop: cloudinaryCrop,
-              ...await detectOcrRegion(image, cloudinaryCrop),
+              ...(await detectOcrRegion(image, cloudinaryCrop)),
               parsedFields: {
                 name: "",
                 kind: "glaze_type",
@@ -1709,10 +1724,10 @@ export default function GlazeImportToolPage() {
       {activeTab === TAB_CROP ? (
         <Stack spacing={2}>
           <Alert severity="info">
-            Each image starts with a default crop covering the full image.
-            Drag the white box to adjust the crop region. The crop square can
-            extend beyond the image bounds; any overflow becomes transparent in
-            the final crop.
+            Each image starts with a default crop covering the full image. Drag
+            the white box to adjust the crop region. The crop square can extend
+            beyond the image bounds; any overflow becomes transparent in the
+            final crop.
           </Alert>
           <Box
             sx={{

@@ -12,33 +12,21 @@ export default defineConfig({
     preserveSymlinks: true,
     alias: [
       {
-        find: /^@common\/(.*)/,
-        replacement: path.resolve(__dirname, "../frontend_common/src/$1"),
-      },
-      {
         find: "axios",
         replacement: path.resolve(__dirname, "node_modules/axios"),
       },
     ],
   },
-  server: {
-    fs: {
-      allow: [".."],
-    },
-  },
   test: {
     setupFiles: ["./src/test-setup.ts"],
     globals: true,
     environment: "jsdom",
-    include: [
-      "src/**/*.{test,spec}.{ts,tsx}",
-      "../frontend_common/src/**/*.test.ts",
-    ],
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov", "html"],
       reportsDirectory: "./coverage",
-      include: ["src/**/*.{ts,tsx}", "../frontend_common/src/**/*.ts"],
+      include: ["src/**/*.{ts,tsx}"],
       exclude: ["src/test-setup.ts", "**/*.d.ts", "**/generated-types.ts"],
     },
   },

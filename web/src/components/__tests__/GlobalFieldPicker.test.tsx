@@ -12,18 +12,18 @@ import GlobalFieldPicker, {
   type GlobalFieldPickerProps,
 } from "../GlobalFieldPicker";
 import { stripPublicSuffix } from "../globalFieldPickerUtils";
-import * as api from "@common/api";
-import type { GlobalEntry } from "@common/api";
+import * as api from "../../util/api";
+import type { GlobalEntry } from "../../util/api";
 
-vi.mock("@common/api", () => ({
+vi.mock("../../util/api", () => ({
   fetchGlobalEntries: vi.fn().mockResolvedValue([]),
   createGlobalEntry: vi.fn(),
   toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Only glaze_combination is favoritable in workflow.yml
-vi.mock("@common/workflow", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@common/workflow")>();
+vi.mock("../..//workflow", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../..//workflow")>();
   return {
     ...actual,
     isFavoritableGlobal: (name: string) => name === "glaze_combination",

@@ -24,7 +24,6 @@ export default defineConfig({
     // the repo root upward (not web/node_modules). Pin axios to web's install.
     alias: {
       axios: path.resolve(root, "node_modules/axios"),
-      "@common": path.resolve(root, "../frontend_common/src"),
     },
   },
   plugins: [yaml(), react(), babel({ presets: [reactCompilerPreset()] })],

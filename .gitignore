@@ -76,9 +76,6 @@ web/.vite
 .codex
 .codex/
 
-# Auto-generated from OpenAPI schema via `cd web && npm run generate-types`
-frontend_common/src/generated-types.ts
-
 # Flask stuff:
 instance/
 .webassets-cache

@@ -9,11 +9,11 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { fetchPieces } from "@common/api";
+import { fetchPieces } from "../util/api";
 import { useAsync } from "../util/useAsync";
 import NewPieceDialog from "../components/NewPieceDialog";
 import PieceList from "../components/PieceList";
-import type { PieceDetail, PieceSummary } from "@common/types";
+import type { PieceDetail, PieceSummary } from "../util/types";
 
 export default function PieceListPage() {
   const {

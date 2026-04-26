@@ -7,7 +7,7 @@ import {
   Modal,
   Typography,
 } from "@mui/material";
-import type { CaptionedImage } from "@common/types";
+import type { CaptionedImage } from "../util/types";
 import CloudinaryImage from "./CloudinaryImage";
 
 type ImageLightboxProps = {

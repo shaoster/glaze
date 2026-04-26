@@ -45,18 +45,16 @@ import {
   loginWithGoogle,
   logoutUser,
   registerWithEmail,
-} from "@common/api";
+} from "./util/api";
 import { useAsync } from "./util/useAsync";
 import ErrorBoundary from "./components/ErrorBoundary";
-import type { AuthUser } from "@common/api";
+import type { AuthUser } from "./util/api";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const PieceListPage = lazy(() => import("./pages/PieceListPage"));
 const PieceDetailPage = lazy(() => import("./pages/PieceDetailPage"));
 const AnalyzePage = lazy(() => import("./pages/AnalyzePage"));
-const GlazeImportToolPage = lazy(
-  () => import("./pages/GlazeImportToolPage"),
-);
+const GlazeImportToolPage = lazy(() => import("./pages/GlazeImportToolPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 

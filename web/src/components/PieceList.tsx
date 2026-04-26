@@ -18,13 +18,13 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import type { PieceSummary, TagEntry } from "@common/types";
+import type { PieceSummary, TagEntry } from "../util/types";
 import {
   formatState,
   getStateDescription,
   isTerminalState,
   SUCCESSORS,
-} from "@common/types";
+} from "../util/types";
 import CloudinaryImage from "./CloudinaryImage";
 import StateChip from "./StateChip";
 import TagAutocomplete from "./TagAutocomplete";

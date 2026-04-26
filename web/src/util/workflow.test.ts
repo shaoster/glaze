@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 
 // Snapshot-style fixture based on the current workflow.yml shape and names.
 // It is still local to this test, so the suite remains decoupled from file edits.
-vi.mock("../../workflow.yml", () => ({
+vi.mock("../../../workflow.yml", () => ({
   default: {
     version: "0.0.2",
     globals: {
