@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -22,6 +23,7 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  Slider,
   Stack,
   Tab,
   Tabs,
@@ -44,21 +46,20 @@ import {
   type CloudinaryWidgetConfig,
   type ManualSquareCropImportResponse,
 } from "@common/api";
-
-type CropSquare = {
-  x: number; // axis-aligned top-left in source pixels (rotation is around the center)
-  y: number;
-  size: number;
-  rotation: number; // degrees clockwise
-};
-
-type OcrRegion = {
-  x: number; // axis-aligned top-left within the crop image (rotation around center)
-  y: number;
-  width: number;
-  height: number;
-  rotation: number; // degrees clockwise
-};
+import {
+  clampOcrRegion,
+  defaultOcrRegion,
+  detectLabelRectFromData,
+  ocrRegionFromLabelData,
+  DETECT_OCR_ANALYSIS_SIZE,
+  DETECT_OCR_TEXT_ANALYSIS_SIZE,
+  DETECT_OCR_LABEL_WHITE_THRESHOLD,
+  DETECT_OCR_TEXT_DARK_THRESHOLD,
+  MIN_OCR_REGION_SIZE,
+  type CropSquare,
+  type OcrRegion,
+  type LabelRect,
+} from "./ocrDetection";
 
 type ParsedFields = {
   name: string;
@@ -78,6 +79,10 @@ type OcrSuggestion = {
   confidence: number | null;
 };
 
+// Grid-space coordinates of the white label rectangle found by Kadane 2D,
+// stored per-record so phase 2 (text bbox) can be re-run independently.
+type LabelRect = { r1: number; r2: number; c1: number; c2: number };
+
 type UploadedRecord = {
   id: string;
   file: File | null;
@@ -85,6 +90,7 @@ type UploadedRecord = {
   filename: string;
   dimensions: { width: number; height: number };
   crop: CropSquare | null;
+  detectedLabelRect: LabelRect | null;
   ocrRegion: OcrRegion | null;
   parsedFields: ParsedFields;
   ocrSuggestion: OcrSuggestion | null;
@@ -123,7 +129,6 @@ type UploadProgressEntry = {
 };
 
 const MIN_CROP_SIZE = 96;
-const MIN_OCR_REGION_SIZE = 16;
 const COMBO_NAME_SEPARATOR = "!";
 const TAB_UPLOAD = 0;
 const TAB_CROP = 1;
@@ -169,16 +174,69 @@ function defaultCrop(dimensions: {
   };
 }
 
-function defaultOcrRegion(cropSize: number): OcrRegion {
-  const width = Math.round(cropSize * 0.7);
-  const height = Math.round(cropSize * 0.25);
-  return {
-    x: Math.round((cropSize - width) / 2),
-    y: Math.round((cropSize - height) / 2),
-    width,
-    height,
-    rotation: 0,
-  };
+// Canvas wrapper for phase 1: render the crop at analysis resolution and run
+// detectLabelRectFromData on the resulting pixels.
+async function detectLabelRect(
+  image: HTMLImageElement,
+  crop: CropSquare,
+  labelWhiteThreshold = DETECT_OCR_LABEL_WHITE_THRESHOLD,
+): Promise<{ labelRect: LabelRect | null }> {
+  const N = DETECT_OCR_ANALYSIS_SIZE;
+  const canvas = renderCropToCanvas(image, crop, N);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return { labelRect: null };
+  const { data } = ctx.getImageData(0, 0, N, N);
+  return { labelRect: detectLabelRectFromData(data, N, labelWhiteThreshold) };
+}
+
+// Canvas wrapper for phase 2: render the crop at high resolution and run
+// ocrRegionFromLabelData on the resulting pixels.
+async function ocrRegionFromLabel(
+  image: HTMLImageElement,
+  crop: CropSquare,
+  labelRect: LabelRect,
+  textDarkThreshold = DETECT_OCR_TEXT_DARK_THRESHOLD,
+): Promise<OcrRegion> {
+  const N1 = DETECT_OCR_ANALYSIS_SIZE;
+  const N2 = DETECT_OCR_TEXT_ANALYSIS_SIZE;
+  const canvas = renderCropToCanvas(image, crop, N2);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    // Fallback: return full label rect mapped to crop coords.
+    const upscale = N2 / N1;
+    const lc1 = Math.floor(labelRect.c1 * upscale);
+    const lc2 = Math.ceil((labelRect.c2 + 1) * upscale) - 1;
+    const lr1 = Math.floor(labelRect.r1 * upscale);
+    const lr2 = Math.ceil((labelRect.r2 + 1) * upscale) - 1;
+    const s = crop.size / N2;
+    return clampOcrRegion(crop.size, {
+      x: Math.round(lc1 * s),
+      y: Math.round(lr1 * s),
+      width: Math.round((lc2 - lc1 + 1) * s),
+      height: Math.round((lr2 - lr1 + 1) * s),
+      rotation: 0,
+    });
+  }
+  const { data } = ctx.getImageData(0, 0, N2, N2);
+  return ocrRegionFromLabelData(data, N1, N2, labelRect, crop.size, textDarkThreshold);
+}
+
+// Convenience wrapper: run both phases and return the OCR region.
+async function detectOcrRegion(
+  image: HTMLImageElement,
+  crop: CropSquare,
+  labelWhiteThreshold = DETECT_OCR_LABEL_WHITE_THRESHOLD,
+  textDarkThreshold = DETECT_OCR_TEXT_DARK_THRESHOLD,
+): Promise<{ ocrRegion: OcrRegion; labelRect: LabelRect | null }> {
+  try {
+    const { labelRect } = await detectLabelRect(image, crop, labelWhiteThreshold);
+    const ocrRegion = labelRect
+      ? await ocrRegionFromLabel(image, crop, labelRect, textDarkThreshold)
+      : defaultOcrRegion(crop.size);
+    return { ocrRegion, labelRect };
+  } catch {
+    return { ocrRegion: defaultOcrRegion(crop.size), labelRect: null };
+  }
 }
 
 function getOverflowPadding(dimensions: { width: number; height: number }) {
@@ -219,23 +277,6 @@ function clampCrop(
   };
 }
 
-function clampOcrRegion(cropSize: number, region: OcrRegion): OcrRegion {
-  const width = Math.max(
-    MIN_OCR_REGION_SIZE,
-    Math.min(Math.round(region.width), cropSize),
-  );
-  const height = Math.max(
-    MIN_OCR_REGION_SIZE,
-    Math.min(Math.round(region.height), cropSize),
-  );
-  return {
-    ...region,
-    x: Math.max(0, Math.min(Math.round(region.x), cropSize - width)),
-    y: Math.max(0, Math.min(Math.round(region.y), cropSize - height)),
-    width,
-    height,
-  };
-}
 
 function rotatePt(x: number, y: number, angleDeg: number): [number, number] {
   const rad = (angleDeg * Math.PI) / 180;
@@ -298,9 +339,11 @@ function detectFoodSafeFromOcrText(text: string): false | null {
 }
 
 // Matches "1st Glaze: ..." lines, tolerating OCR confusions: I/1 and :/;
-const STRUCTURED_FIRST_RE = /^[I1l]st\s+[Gg]laze\s*[:;]\s*(.+)/;
+// Also matches spaceless forms like "IstGlaze:" that OCR sometimes produces.
+const STRUCTURED_FIRST_RE = /^[I1l]st\s*[Gg]laze\s*[:;]\s*(.+)/;
 // Matches "2nd Glaze: ..." lines, tolerating OCR confusions: 2/= and :/;
-const STRUCTURED_SECOND_RE = /^[2=Z]nd\s+[Gg]laze\s*[:;]\s*(.+)/;
+// Also matches spaceless forms like "2ndGlaze:" that OCR sometimes produces.
+const STRUCTURED_SECOND_RE = /^[2=Z]nd\s*[Gg]laze\s*[:;]\s*(.+)/;
 
 function parseOcrSuggestion(
   text: string,
@@ -438,6 +481,28 @@ async function buildCropFile(record: UploadedRecord): Promise<File> {
   return new File([blob], `${safeStem}.webp`, { type: "image/webp" });
 }
 
+// Rotation offsets (degrees) tried in order; the attempt with the highest
+// Tesseract confidence score wins.
+const OCR_ROTATION_OFFSETS = [0, 1, 2, -1, -2];
+
+function rotateCanvasBy(
+  canvas: HTMLCanvasElement,
+  angleDeg: number,
+): HTMLCanvasElement {
+  if (angleDeg === 0) return canvas;
+  const rotated = document.createElement("canvas");
+  rotated.width = canvas.width;
+  rotated.height = canvas.height;
+  const ctx = rotated.getContext("2d");
+  if (!ctx) return canvas;
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate((angleDeg * Math.PI) / 180);
+  ctx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+  ctx.restore();
+  return rotated;
+}
+
 async function runOcrOnRecord(
   record: UploadedRecord,
 ): Promise<{ text: string; confidence: number }> {
@@ -466,12 +531,22 @@ async function runOcrOnRecord(
     ocrCanvas = cropCanvas;
   }
 
+  // Try each rotation offset and keep the result with the highest confidence.
   const worker = await createWorker("eng");
   await worker.writeText("user-words.txt", TESSERACT_USER_WORDS);
   await worker.setParameters({ user_words: "user-words.txt" });
-  const result = await worker.recognize(ocrCanvas);
+  let bestText = "";
+  let bestConfidence = -1;
+  for (const offset of OCR_ROTATION_OFFSETS) {
+    const rotated = rotateCanvasBy(ocrCanvas, offset);
+    const result = await worker.recognize(rotated);
+    if (result.data.confidence > bestConfidence) {
+      bestConfidence = result.data.confidence;
+      bestText = result.data.text;
+    }
+  }
   await worker.terminate();
-  return { text: result.data.text, confidence: result.data.confidence };
+  return { text: bestText, confidence: bestConfidence };
 }
 
 function RecordList({
@@ -585,6 +660,12 @@ export default function GlazeImportToolPage() {
     null,
   );
   const [ocrRunning, setOcrRunning] = useState(false);
+  const [labelWhiteThreshold, setLabelWhiteThreshold] = useState(
+    DETECT_OCR_LABEL_WHITE_THRESHOLD,
+  );
+  const [textDarkThreshold, setTextDarkThreshold] = useState(
+    DETECT_OCR_TEXT_DARK_THRESHOLD,
+  );
   const [importRunning, setImportRunning] = useState(false);
   const [importResult, setImportResult] =
     useState<ManualSquareCropImportResponse | null>(null);
@@ -942,8 +1023,17 @@ export default function GlazeImportToolPage() {
             width: image.naturalWidth,
             height: image.naturalHeight,
           },
-          crop: null,
-          ocrRegion: null,
+          crop: clampCrop(
+            { width: image.naturalWidth, height: image.naturalHeight },
+            defaultCrop({ width: image.naturalWidth, height: image.naturalHeight }),
+          ),
+          ...await detectOcrRegion(
+            image,
+            clampCrop(
+              { width: image.naturalWidth, height: image.naturalHeight },
+              defaultCrop({ width: image.naturalWidth, height: image.naturalHeight }),
+            ),
+          ),
           parsedFields: {
             name: "",
             kind: "glaze_type",
@@ -1062,17 +1152,22 @@ export default function GlazeImportToolPage() {
           try {
             const jpgUrl = buildCloudinaryJpgUrl(config, publicId);
             const image = await loadImageElement(jpgUrl);
+            const cloudinaryDimensions = {
+              width: image.naturalWidth,
+              height: image.naturalHeight,
+            };
+            const cloudinaryCrop = clampCrop(
+              cloudinaryDimensions,
+              defaultCrop(cloudinaryDimensions),
+            );
             const record: UploadedRecord = {
               id: createRecordId(),
               file: null,
               sourceUrl: jpgUrl,
               filename,
-              dimensions: {
-                width: image.naturalWidth,
-                height: image.naturalHeight,
-              },
-              crop: null,
-              ocrRegion: null,
+              dimensions: cloudinaryDimensions,
+              crop: cloudinaryCrop,
+              ...await detectOcrRegion(image, cloudinaryCrop),
               parsedFields: {
                 name: "",
                 kind: "glaze_type",
@@ -1153,39 +1248,30 @@ export default function GlazeImportToolPage() {
     );
   }
 
-  function createCropForSelected() {
-    if (!selectedRecord) return;
-    updateSelectedRecord((record) => ({
-      ...record,
-      crop: clampCrop(record.dimensions, defaultCrop(record.dimensions)),
-      reviewed: false,
-    }));
-  }
-
   function resetCropForSelected() {
     if (!selectedRecord) return;
-    updateSelectedRecord((record) => ({
-      ...record,
-      crop: null,
-      ocrRegion: null,
-      reviewed: false,
-      ocrSuggestion: null,
-      ocrStatus: "idle",
-      ocrError: null,
-    }));
-  }
-
-  function createOcrRegionForSelected() {
-    if (!selectedRecord || !selectedCrop) return;
-    updateSelectedRecord((record) => ({
-      ...record,
-      ocrRegion: defaultOcrRegion(selectedCrop.size),
-    }));
+    updateSelectedRecord((record) => {
+      const crop = clampCrop(record.dimensions, defaultCrop(record.dimensions));
+      return {
+        ...record,
+        crop,
+        ocrRegion: defaultOcrRegion(crop.size),
+        detectedLabelRect: null,
+        reviewed: false,
+        ocrSuggestion: null,
+        ocrStatus: "idle",
+        ocrError: null,
+      };
+    });
   }
 
   function resetOcrRegionForSelected() {
-    if (!selectedRecord) return;
-    updateSelectedRecord((record) => ({ ...record, ocrRegion: null }));
+    if (!selectedRecord || !selectedRecord.crop) return;
+    updateSelectedRecord((record) => ({
+      ...record,
+      ocrRegion: defaultOcrRegion(record.crop!.size),
+      detectedLabelRect: null,
+    }));
   }
 
   function startCropDrag(
@@ -1300,6 +1386,62 @@ export default function GlazeImportToolPage() {
     setSelectedRecordId(null);
     setActiveTab(TAB_REVIEW);
   }
+
+  // Slider 1 callback: re-run Kadane 2D (phase 1) then clamp text (phase 2).
+  const redetectLabelRects = useCallback(async () => {
+    for (const record of recordsRef.current) {
+      if (!record.crop) continue;
+      const image = await loadImageElement(record.sourceUrl);
+      const crop = clampCrop(record.dimensions, record.crop);
+      const { ocrRegion, labelRect } = await detectOcrRegion(
+        image,
+        crop,
+        labelWhiteThreshold,
+        textDarkThreshold,
+      );
+      setRecords((current) =>
+        current.map((item) =>
+          item.id === record.id
+            ? { ...item, ocrRegion, detectedLabelRect: labelRect }
+            : item,
+        ),
+      );
+    }
+  }, [labelWhiteThreshold, textDarkThreshold]);
+
+  // Slider 2 callback: skip Kadane 2D, re-clamp text within the cached label rect.
+  const redetectTextRegions = useCallback(async () => {
+    for (const record of recordsRef.current) {
+      if (!record.crop || !record.detectedLabelRect) continue;
+      const image = await loadImageElement(record.sourceUrl);
+      const crop = clampCrop(record.dimensions, record.crop);
+      const ocrRegion = await ocrRegionFromLabel(
+        image,
+        crop,
+        record.detectedLabelRect,
+        textDarkThreshold,
+      );
+      setRecords((current) =>
+        current.map((item) =>
+          item.id === record.id ? { ...item, ocrRegion } : item,
+        ),
+      );
+    }
+  }, [labelWhiteThreshold, textDarkThreshold]);
+
+  // Debounced auto-redetect: slider 1 re-runs both phases.
+  useEffect(() => {
+    if (activeTab !== TAB_OCR || recordsRef.current.length === 0) return;
+    const timer = setTimeout(() => void redetectLabelRects(), 400);
+    return () => clearTimeout(timer);
+  }, [activeTab, redetectLabelRects]);
+
+  // Debounced auto-redetect: slider 2 re-runs only phase 2.
+  useEffect(() => {
+    if (activeTab !== TAB_OCR || recordsRef.current.length === 0) return;
+    const timer = setTimeout(() => void redetectTextRegions(), 400);
+    return () => clearTimeout(timer);
+  }, [activeTab, redetectTextRegions]);
 
   async function runImport() {
     if (!allReviewed) return;
@@ -1567,7 +1709,8 @@ export default function GlazeImportToolPage() {
       {activeTab === TAB_CROP ? (
         <Stack spacing={2}>
           <Alert severity="info">
-            Use the record browser to choose an image. The crop square can
+            Each image starts with a default crop covering the full image.
+            Drag the white box to adjust the crop region. The crop square can
             extend beyond the image bounds; any overflow becomes transparent in
             the final crop.
           </Alert>
@@ -1606,17 +1749,11 @@ export default function GlazeImportToolPage() {
                     </Stack>
                     <Stack direction="row" spacing={1} flexWrap="wrap">
                       <Button
-                        variant="contained"
-                        onClick={createCropForSelected}
-                      >
-                        {selectedRecord.crop ? "Recenter Crop" : "Create Crop"}
-                      </Button>
-                      <Button
                         variant="outlined"
                         onClick={resetCropForSelected}
                         disabled={!selectedRecord.crop}
                       >
-                        Clear Crop
+                        Reset Crop
                       </Button>
                       {allCropped ? (
                         <Button
@@ -1848,10 +1985,50 @@ export default function GlazeImportToolPage() {
       {activeTab === TAB_OCR ? (
         <Stack spacing={2}>
           <Alert severity="info">
-            For each record, drag the yellow box to select the region containing
-            the text label. OCR will only run on the selected region. Leave no
-            region set to run on the full crop.
+            Each record starts with a default OCR region covering the center of
+            the crop. Drag the yellow box to adjust the region containing the
+            text label. OCR runs only on the selected region.
           </Alert>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={3}>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" gutterBottom>
+                Label sensitivity: {labelWhiteThreshold.toFixed(2)}
+              </Typography>
+              <Slider
+                min={0.5}
+                max={0.98}
+                step={0.01}
+                value={labelWhiteThreshold}
+                onChange={(_, v) => setLabelWhiteThreshold(v as number)}
+                size="small"
+              />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" gutterBottom>
+                Text sensitivity: {(0.2 + 0.85 - textDarkThreshold).toFixed(2)}
+              </Typography>
+              <Slider
+                min={0.2}
+                max={0.85}
+                step={0.01}
+                value={0.2 + 0.85 - textDarkThreshold}
+                onChange={(_, v) =>
+                  setTextDarkThreshold(0.2 + 0.85 - (v as number))
+                }
+                size="small"
+              />
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "flex-end", pb: 0.5 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                disabled={!allCropped || ocrRunning}
+                onClick={() => void redetectLabelRects()}
+              >
+                Re-detect All Regions
+              </Button>
+            </Box>
+          </Stack>
           <Box
             sx={{
               display: "grid",
@@ -1893,22 +2070,11 @@ export default function GlazeImportToolPage() {
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={createOcrRegionForSelected}
-                      disabled={!selectedCrop}
+                      onClick={resetOcrRegionForSelected}
+                      disabled={!selectedRecord.ocrRegion}
                     >
-                      {selectedRecord.ocrRegion
-                        ? "Reset Region"
-                        : "Add OCR Region"}
+                      Reset OCR Region
                     </Button>
-                    {selectedRecord.ocrRegion ? (
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={resetOcrRegionForSelected}
-                      >
-                        Remove Region
-                      </Button>
-                    ) : null}
                   </Stack>
                   {cropPreviewLoading ? (
                     <CircularProgress

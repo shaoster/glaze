@@ -208,9 +208,6 @@ describe("GlazeImportToolPage", () => {
 
     await screen.findByText("oribe.png");
     await userEvent.click(screen.getByText("oribe.png"));
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Create Crop" }),
-    );
 
     await waitFor(() =>
       expect(
@@ -249,9 +246,6 @@ describe("GlazeImportToolPage", () => {
 
     await screen.findByText("combo.png");
     await userEvent.click(screen.getByText("combo.png"));
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Create Crop" }),
-    );
     await userEvent.click(
       await screen.findByRole("button", { name: "Continue To OCR" }),
     );
@@ -332,9 +326,6 @@ describe("GlazeImportToolPage", () => {
 
     await screen.findByText("ash-blue.png");
     await userEvent.click(screen.getByText("ash-blue.png"));
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Create Crop" }),
-    );
     await userEvent.click(
       await screen.findByRole("button", { name: "Continue To OCR" }),
     );
