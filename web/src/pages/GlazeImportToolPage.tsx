@@ -942,8 +942,16 @@ export default function GlazeImportToolPage() {
             width: image.naturalWidth,
             height: image.naturalHeight,
           },
-          crop: null,
-          ocrRegion: null,
+          crop: clampCrop(
+            { width: image.naturalWidth, height: image.naturalHeight },
+            defaultCrop({ width: image.naturalWidth, height: image.naturalHeight }),
+          ),
+          ocrRegion: defaultOcrRegion(
+            clampCrop(
+              { width: image.naturalWidth, height: image.naturalHeight },
+              defaultCrop({ width: image.naturalWidth, height: image.naturalHeight }),
+            ).size,
+          ),
           parsedFields: {
             name: "",
             kind: "glaze_type",
@@ -1062,17 +1070,22 @@ export default function GlazeImportToolPage() {
           try {
             const jpgUrl = buildCloudinaryJpgUrl(config, publicId);
             const image = await loadImageElement(jpgUrl);
+            const cloudinaryDimensions = {
+              width: image.naturalWidth,
+              height: image.naturalHeight,
+            };
+            const cloudinaryCrop = clampCrop(
+              cloudinaryDimensions,
+              defaultCrop(cloudinaryDimensions),
+            );
             const record: UploadedRecord = {
               id: createRecordId(),
               file: null,
               sourceUrl: jpgUrl,
               filename,
-              dimensions: {
-                width: image.naturalWidth,
-                height: image.naturalHeight,
-              },
-              crop: null,
-              ocrRegion: null,
+              dimensions: cloudinaryDimensions,
+              crop: cloudinaryCrop,
+              ocrRegion: defaultOcrRegion(cloudinaryCrop.size),
               parsedFields: {
                 name: "",
                 kind: "glaze_type",
@@ -1153,39 +1166,28 @@ export default function GlazeImportToolPage() {
     );
   }
 
-  function createCropForSelected() {
-    if (!selectedRecord) return;
-    updateSelectedRecord((record) => ({
-      ...record,
-      crop: clampCrop(record.dimensions, defaultCrop(record.dimensions)),
-      reviewed: false,
-    }));
-  }
-
   function resetCropForSelected() {
     if (!selectedRecord) return;
-    updateSelectedRecord((record) => ({
-      ...record,
-      crop: null,
-      ocrRegion: null,
-      reviewed: false,
-      ocrSuggestion: null,
-      ocrStatus: "idle",
-      ocrError: null,
-    }));
-  }
-
-  function createOcrRegionForSelected() {
-    if (!selectedRecord || !selectedCrop) return;
-    updateSelectedRecord((record) => ({
-      ...record,
-      ocrRegion: defaultOcrRegion(selectedCrop.size),
-    }));
+    updateSelectedRecord((record) => {
+      const crop = clampCrop(record.dimensions, defaultCrop(record.dimensions));
+      return {
+        ...record,
+        crop,
+        ocrRegion: defaultOcrRegion(crop.size),
+        reviewed: false,
+        ocrSuggestion: null,
+        ocrStatus: "idle",
+        ocrError: null,
+      };
+    });
   }
 
   function resetOcrRegionForSelected() {
-    if (!selectedRecord) return;
-    updateSelectedRecord((record) => ({ ...record, ocrRegion: null }));
+    if (!selectedRecord || !selectedRecord.crop) return;
+    updateSelectedRecord((record) => ({
+      ...record,
+      ocrRegion: defaultOcrRegion(record.crop!.size),
+    }));
   }
 
   function startCropDrag(
@@ -1567,7 +1569,8 @@ export default function GlazeImportToolPage() {
       {activeTab === TAB_CROP ? (
         <Stack spacing={2}>
           <Alert severity="info">
-            Use the record browser to choose an image. The crop square can
+            Each image starts with a default crop covering the full image.
+            Drag the white box to adjust the crop region. The crop square can
             extend beyond the image bounds; any overflow becomes transparent in
             the final crop.
           </Alert>
@@ -1606,17 +1609,11 @@ export default function GlazeImportToolPage() {
                     </Stack>
                     <Stack direction="row" spacing={1} flexWrap="wrap">
                       <Button
-                        variant="contained"
-                        onClick={createCropForSelected}
-                      >
-                        {selectedRecord.crop ? "Recenter Crop" : "Create Crop"}
-                      </Button>
-                      <Button
                         variant="outlined"
                         onClick={resetCropForSelected}
                         disabled={!selectedRecord.crop}
                       >
-                        Clear Crop
+                        Reset Crop
                       </Button>
                       {allCropped ? (
                         <Button
@@ -1848,9 +1845,9 @@ export default function GlazeImportToolPage() {
       {activeTab === TAB_OCR ? (
         <Stack spacing={2}>
           <Alert severity="info">
-            For each record, drag the yellow box to select the region containing
-            the text label. OCR will only run on the selected region. Leave no
-            region set to run on the full crop.
+            Each record starts with a default OCR region covering the center of
+            the crop. Drag the yellow box to adjust the region containing the
+            text label. OCR runs only on the selected region.
           </Alert>
           <Box
             sx={{
@@ -1893,22 +1890,11 @@ export default function GlazeImportToolPage() {
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={createOcrRegionForSelected}
-                      disabled={!selectedCrop}
+                      onClick={resetOcrRegionForSelected}
+                      disabled={!selectedRecord.ocrRegion}
                     >
-                      {selectedRecord.ocrRegion
-                        ? "Reset Region"
-                        : "Add OCR Region"}
+                      Reset OCR Region
                     </Button>
-                    {selectedRecord.ocrRegion ? (
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={resetOcrRegionForSelected}
-                      >
-                        Remove Region
-                      </Button>
-                    ) : null}
                   </Stack>
                   {cropPreviewLoading ? (
                     <CircularProgress
