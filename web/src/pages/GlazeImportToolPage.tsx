@@ -46,21 +46,20 @@ import {
   type CloudinaryWidgetConfig,
   type ManualSquareCropImportResponse,
 } from "@common/api";
-
-type CropSquare = {
-  x: number; // axis-aligned top-left in source pixels (rotation is around the center)
-  y: number;
-  size: number;
-  rotation: number; // degrees clockwise
-};
-
-type OcrRegion = {
-  x: number; // axis-aligned top-left within the crop image (rotation around center)
-  y: number;
-  width: number;
-  height: number;
-  rotation: number; // degrees clockwise
-};
+import {
+  clampOcrRegion,
+  defaultOcrRegion,
+  detectLabelRectFromData,
+  ocrRegionFromLabelData,
+  DETECT_OCR_ANALYSIS_SIZE,
+  DETECT_OCR_TEXT_ANALYSIS_SIZE,
+  DETECT_OCR_LABEL_WHITE_THRESHOLD,
+  DETECT_OCR_TEXT_DARK_THRESHOLD,
+  MIN_OCR_REGION_SIZE,
+  type CropSquare,
+  type OcrRegion,
+  type LabelRect,
+} from "./ocrDetection";
 
 type ParsedFields = {
   name: string;
@@ -130,7 +129,6 @@ type UploadProgressEntry = {
 };
 
 const MIN_CROP_SIZE = 96;
-const MIN_OCR_REGION_SIZE = 16;
 const COMBO_NAME_SEPARATOR = "!";
 const TAB_UPLOAD = 0;
 const TAB_CROP = 1;
@@ -176,57 +174,8 @@ function defaultCrop(dimensions: {
   };
 }
 
-function defaultOcrRegion(cropSize: number): OcrRegion {
-  const width = Math.round(cropSize * 0.7);
-  const height = Math.round(cropSize * 0.25);
-  // Place the region in the bottom third so it matches where labels appear.
-  const y = Math.round(cropSize * (2 / 3));
-  return {
-    x: Math.round((cropSize - width) / 2),
-    y,
-    width,
-    height,
-    rotation: 0,
-  };
-}
-
-// Resolution used for phase 1 (Kadane 2D label detection).
-const DETECT_OCR_ANALYSIS_SIZE = 128;
-
-// Resolution used for phase 2 (text bbox clamping). Higher resolution means
-// red/coloured text stays visually distinct from the label background instead
-// of bleeding in after JPEG downsampling.
-const DETECT_OCR_TEXT_ANALYSIS_SIZE = 512;
-
-// Phase 1 threshold: pixels at or above this luminance score positive for
-// Kadane 2D. Labels are often light pink/salmon (~0.80), so this needs to be
-// below that. Wood/clay backgrounds sit around 0.55–0.65, leaving a safe gap.
-const DETECT_OCR_LABEL_WHITE_THRESHOLD = 0.75;
-
-// Phase 2 threshold: within the detected label, pixels darker than this count
-// as ink. 0.50 catches coloured text (e.g. red "CAUTION: RUNS" ~0.45) while
-// avoiding most light-grey noise in the label background.
-const DETECT_OCR_TEXT_DARK_THRESHOLD = 0.5;
-
-// Reward for each white pixel when scoring candidate rectangles.
-const DETECT_OCR_WHITE_SCORE = 1;
-
-// Penalty for each non-white pixel (kept smaller so a mostly-white label
-// region with a little text still beats a clay-colored background region).
-const DETECT_OCR_NONWHITE_PENALTY = -0.4;
-
-// Padding (in analysis pixels) added around the detected text before
-// mapping back to crop coordinates.
-const DETECT_OCR_TEXT_PAD = 3;
-
-// A candidate white-label rectangle must span at least this fraction of
-// the analysis grid in each dimension; smaller rectangles are likely noise.
-const DETECT_OCR_MIN_LABEL_FRACTION = 0.1;
-
-// Phase 1: render the crop at analysis resolution, build the luminance and
-// saturation grids, and run Kadane 2D in the bottom third to find the white
-// label rectangle.  Returns { labelRect, bright, sat } so phase 2 can be
-// re-run independently without re-rendering the canvas.
+// Canvas wrapper for phase 1: render the crop at analysis resolution and run
+// detectLabelRectFromData on the resulting pixels.
 async function detectLabelRect(
   image: HTMLImageElement,
   crop: CropSquare,
@@ -236,138 +185,40 @@ async function detectLabelRect(
   const canvas = renderCropToCanvas(image, crop, N);
   const ctx = canvas.getContext("2d");
   if (!ctx) return { labelRect: null };
-
   const { data } = ctx.getImageData(0, 0, N, N);
-  const score = new Float32Array(N * N);
-  for (let i = 0; i < N * N; i++) {
-    const r = data[i * 4] / 255;
-    const g = data[i * 4 + 1] / 255;
-    const b = data[i * 4 + 2] / 255;
-    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-    score[i] =
-      lum >= labelWhiteThreshold
-        ? DETECT_OCR_WHITE_SCORE
-        : DETECT_OCR_NONWHITE_PENALTY;
-  }
-
-  // Restrict the search to the bottom third of the crop.
-  const rowSearchStart = Math.floor((N * 2) / 3);
-
-  // Kadane 2D within [rowSearchStart, N).
-  let bestTotal = 0;
-  let r1Best = rowSearchStart,
-    r2Best = N - 1,
-    c1Best = 0,
-    c2Best = N - 1;
-  let foundLabel = false;
-
-  const colSum = new Float32Array(N);
-  for (let r1 = rowSearchStart; r1 < N; r1++) {
-    colSum.fill(0);
-    for (let r2 = r1; r2 < N; r2++) {
-      const rowOffset = r2 * N;
-      for (let c = 0; c < N; c++) colSum[c] += score[rowOffset + c];
-      let curTotal = 0;
-      let curC1 = 0;
-      for (let c = 0; c < N; c++) {
-        if (curTotal <= 0) {
-          curTotal = 0;
-          curC1 = c;
-        }
-        curTotal += colSum[c];
-        if (curTotal > bestTotal) {
-          bestTotal = curTotal;
-          r1Best = r1;
-          r2Best = r2;
-          c1Best = curC1;
-          c2Best = c;
-          foundLabel = true;
-        }
-      }
-    }
-  }
-
-  if (
-    !foundLabel ||
-    r2Best - r1Best < N * DETECT_OCR_MIN_LABEL_FRACTION ||
-    c2Best - c1Best < N * DETECT_OCR_MIN_LABEL_FRACTION
-  ) {
-    return { labelRect: null };
-  }
-
-  return { labelRect: { r1: r1Best, r2: r2Best, c1: c1Best, c2: c2Best } };
+  return { labelRect: detectLabelRectFromData(data, N, labelWhiteThreshold) };
 }
 
-// Phase 2: re-render the crop at higher resolution, extract just the label
-// rect, and find the tight bounding box of ink pixels in that clean bitmap.
-// Using DETECT_OCR_TEXT_ANALYSIS_SIZE instead of DETECT_OCR_ANALYSIS_SIZE
-// keeps red/coloured text visually distinct from the label background.
+// Canvas wrapper for phase 2: render the crop at high resolution and run
+// ocrRegionFromLabelData on the resulting pixels.
 async function ocrRegionFromLabel(
   image: HTMLImageElement,
   crop: CropSquare,
   labelRect: LabelRect,
   textDarkThreshold = DETECT_OCR_TEXT_DARK_THRESHOLD,
 ): Promise<OcrRegion> {
-  const N1 = DETECT_OCR_ANALYSIS_SIZE;      // phase-1 grid size (128)
-  const N2 = DETECT_OCR_TEXT_ANALYSIS_SIZE; // phase-2 grid size (512)
-  const upscale = N2 / N1;                  // 4×
-
-  // Map label rect from phase-1 grid coords to phase-2 grid coords.
-  const { r1, r2, c1, c2 } = labelRect;
-  const lr1 = Math.floor(r1 * upscale);
-  const lr2 = Math.ceil((r2 + 1) * upscale) - 1;
-  const lc1 = Math.floor(c1 * upscale);
-  const lc2 = Math.ceil((c2 + 1) * upscale) - 1;
-
+  const N1 = DETECT_OCR_ANALYSIS_SIZE;
+  const N2 = DETECT_OCR_TEXT_ANALYSIS_SIZE;
   const canvas = renderCropToCanvas(image, crop, N2);
   const ctx = canvas.getContext("2d");
-  const cropToOcr = crop.size / N2; // scale from phase-2 grid back to crop pixels
-
-  // Fallback region in crop coords (full label rect).
-  const fallback = (): OcrRegion =>
-    clampOcrRegion(crop.size, {
-      x: Math.round(lc1 * cropToOcr),
-      y: Math.round(lr1 * cropToOcr),
-      width: Math.round((lc2 - lc1 + 1) * cropToOcr),
-      height: Math.round((lr2 - lr1 + 1) * cropToOcr),
+  if (!ctx) {
+    // Fallback: return full label rect mapped to crop coords.
+    const upscale = N2 / N1;
+    const lc1 = Math.floor(labelRect.c1 * upscale);
+    const lc2 = Math.ceil((labelRect.c2 + 1) * upscale) - 1;
+    const lr1 = Math.floor(labelRect.r1 * upscale);
+    const lr2 = Math.ceil((labelRect.r2 + 1) * upscale) - 1;
+    const s = crop.size / N2;
+    return clampOcrRegion(crop.size, {
+      x: Math.round(lc1 * s),
+      y: Math.round(lr1 * s),
+      width: Math.round((lc2 - lc1 + 1) * s),
+      height: Math.round((lr2 - lr1 + 1) * s),
       rotation: 0,
     });
-
-  if (!ctx) return fallback();
-
-  const { data } = ctx.getImageData(0, 0, N2, N2);
-  let tMinX = lc2, tMaxX = lc1, tMinY = lr2, tMaxY = lr1;
-  let foundText = false;
-
-  for (let y = lr1; y <= lr2; y++) {
-    for (let x = lc1; x <= lc2; x++) {
-      const i = (y * N2 + x) * 4;
-      const lum =
-        (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
-      if (lum < textDarkThreshold) {
-        if (x < tMinX) tMinX = x;
-        if (x > tMaxX) tMaxX = x;
-        if (y < tMinY) tMinY = y;
-        if (y > tMaxY) tMaxY = y;
-        foundText = true;
-      }
-    }
   }
-
-  if (!foundText) return fallback();
-
-  const pad = DETECT_OCR_TEXT_PAD * upscale;
-  return clampOcrRegion(crop.size, {
-    x: Math.round(Math.max(lc1, tMinX - pad) * cropToOcr),
-    y: Math.round(Math.max(lr1, tMinY - pad) * cropToOcr),
-    width: Math.round(
-      (Math.min(lc2, tMaxX + pad) - Math.max(lc1, tMinX - pad) + 1) * cropToOcr,
-    ),
-    height: Math.round(
-      (Math.min(lr2, tMaxY + pad) - Math.max(lr1, tMinY - pad) + 1) * cropToOcr,
-    ),
-    rotation: 0,
-  });
+  const { data } = ctx.getImageData(0, 0, N2, N2);
+  return ocrRegionFromLabelData(data, N1, N2, labelRect, crop.size, textDarkThreshold);
 }
 
 // Convenience wrapper: run both phases and return the OCR region.
@@ -426,23 +277,6 @@ function clampCrop(
   };
 }
 
-function clampOcrRegion(cropSize: number, region: OcrRegion): OcrRegion {
-  const width = Math.max(
-    MIN_OCR_REGION_SIZE,
-    Math.min(Math.round(region.width), cropSize),
-  );
-  const height = Math.max(
-    MIN_OCR_REGION_SIZE,
-    Math.min(Math.round(region.height), cropSize),
-  );
-  return {
-    ...region,
-    x: Math.max(0, Math.min(Math.round(region.x), cropSize - width)),
-    y: Math.max(0, Math.min(Math.round(region.y), cropSize - height)),
-    width,
-    height,
-  };
-}
 
 function rotatePt(x: number, y: number, angleDeg: number): [number, number] {
   const rad = (angleDeg * Math.PI) / 180;
@@ -2158,7 +1992,7 @@ export default function GlazeImportToolPage() {
           <Stack direction={{ xs: "column", sm: "row" }} spacing={3}>
             <Box sx={{ flex: 1 }}>
               <Typography variant="body2" gutterBottom>
-                White threshold: {labelWhiteThreshold.toFixed(2)}
+                Label sensitivity: {labelWhiteThreshold.toFixed(2)}
               </Typography>
               <Slider
                 min={0.5}
@@ -2171,14 +2005,16 @@ export default function GlazeImportToolPage() {
             </Box>
             <Box sx={{ flex: 1 }}>
               <Typography variant="body2" gutterBottom>
-                Text threshold: {textDarkThreshold.toFixed(2)}
+                Text sensitivity: {(0.2 + 0.85 - textDarkThreshold).toFixed(2)}
               </Typography>
               <Slider
                 min={0.2}
                 max={0.85}
                 step={0.01}
-                value={textDarkThreshold}
-                onChange={(_, v) => setTextDarkThreshold(v as number)}
+                value={0.2 + 0.85 - textDarkThreshold}
+                onChange={(_, v) =>
+                  setTextDarkThreshold(0.2 + 0.85 - (v as number))
+                }
                 size="small"
               />
             </Box>

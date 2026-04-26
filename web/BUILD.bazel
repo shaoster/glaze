@@ -246,11 +246,19 @@ js_library(
     ],
 )
 
-# GlazeImportToolPage has no local component dependencies.
+# ocrDetection.ts is the pure-logic module shared by GlazeImportToolPage and its unit tests.
+js_library(
+    name = "ocr_detection_src",
+    srcs = ["src/pages/ocrDetection.ts"],
+    deps = [":node_modules"],
+)
+
+# GlazeImportToolPage depends on the extracted ocrDetection module.
 js_library(
     name = "glaze_import_src",
     srcs = ["src/pages/GlazeImportToolPage.tsx"],
     deps = [
+        ":ocr_detection_src",
         ":node_modules",
         "//frontend_common:frontend_common_lib",
         "//frontend_common:generated_types",
@@ -405,6 +413,21 @@ vitest_pkg.vitest_test(
 )
 
 vitest_pkg.vitest_test(
+    name = "web_ocr_detection_test",
+    data = [
+        ":web_test_configs",
+        ":ocr_detection_src",
+        "src/pages/__tests__/ocrDetection.test.ts",
+        "public/test-images/test-tile-label.png",
+        "public/test-images/test-tile-no-label.png",
+        "public/test-images/test-tile-blank-label.png",
+    ],
+    args = ["run", "src/pages/__tests__/ocrDetection.test.ts"],
+    chdir = package_name(),
+    tags = ["ibazel_notify_changes"],
+)
+
+vitest_pkg.vitest_test(
     name = "web_workflow_common_test",
     data = [
         ":web_test_configs",
@@ -436,6 +459,7 @@ test_suite(
         ":web_workflow_state_test",
         ":web_piece_detail_test",
         ":web_glaze_import_test",
+        ":web_ocr_detection_test",
         ":web_workflow_common_test",
     ],
 )
