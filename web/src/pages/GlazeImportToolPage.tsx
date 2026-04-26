@@ -1427,7 +1427,7 @@ export default function GlazeImportToolPage() {
         ),
       );
     }
-  }, [labelWhiteThreshold, textDarkThreshold]);
+  }, [textDarkThreshold]);
 
   // Debounced auto-redetect: slider 1 re-runs both phases.
   useEffect(() => {

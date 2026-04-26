@@ -159,8 +159,7 @@ Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`
 
 | Command | Description |
 |---|---|
-| `gz_bazel_test` | Run all tests via Bazel (`bazel test //...`) — CI-aligned, incremental. |
-| `gz_test` | Run all three test suites (common, backend, web) in parallel via pytest/npm. |
+| `gz_test` | Run all tests via Bazel (`bazel test --test_output=errors //...`) — CI-aligned, incremental. |
 | `gz_test_common` | Run workflow schema/integrity tests only (`pytest tests/`). |
 | `gz_test_backend` | Run Django API tests only (`pytest api/`). |
 | `gz_test_web` | Run web tests only (`npm test`). |
@@ -169,8 +168,7 @@ Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`
 
 | Command | Description |
 |---|---|
-| `gz_bazel_lint` | Run all linters via Bazel (`bazel build --config=lint //...`) — CI-aligned. |
-| `gz_lint` | Run all linters and type-checkers in parallel: `ruff check + format --check`, `mypy`, `eslint`, and `tsc --noEmit`. Exits non-zero if any fails. |
+| `gz_lint` | Run all linters via Bazel (`bazel build --config=lint //...`) — CI-aligned. |
 
 ### Build
 
@@ -219,8 +217,8 @@ bazel test //...
 bazel build --config=lint //...
 
 # Or via env.sh helpers (source env.sh first):
-gz_bazel_test    # bazel test //...
-gz_bazel_lint    # bazel build --config=lint //...
+gz_test          # bazel test --test_output=errors //...
+gz_lint          # bazel build --config=lint //...
 ```
 
 **Before committing** — auto-fix Python formatting and fixable lint issues:

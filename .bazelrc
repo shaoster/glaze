@@ -1,18 +1,23 @@
 # ── Common ────────────────────────────────────────────────────────────────────
 common --enable_bzlmod
 build --incompatible_enable_cc_toolchain_resolution
+build --disk_cache=~/.cache/bazel-disk-cache
+build --reuse_sandbox_directories
 
 # Show test errors inline rather than requiring a separate log fetch.
 test --test_output=errors
 test --test_summary=terse
+test --disk_cache=~/.cache/bazel-disk-cache
+test --reuse_sandbox_directories
+
 
 # ── Lint (bazel build --config=lint //...) ────────────────────────────────────
-# ruff and eslint run as aspects: only files changed since the last run are
-# re-checked. mypy runs as //api:api_mypy (tagged "lint"); tsc runs as
-# //web:tsc_check (tagged "lint"). Both are covered by `bazel build //...`
-# when --config=lint is active.
+# ruff runs as an aspect over py_library targets (incremental).
+# eslint runs as //web:eslint_check (standalone, tagged "lint") — the aspect
+#   form does not correctly apply to js_library targets.
+# mypy runs as //api:api_mypy (tagged "lint").
+# tsc runs as //web:tsc_check (tagged "lint").
 build:lint --aspects //:lint.bzl%ruff_aspect
-build:lint --aspects //:lint.bzl%eslint_aspect
 build:lint --output_groups=+rules_lint_human
 build:lint --keep_going
 

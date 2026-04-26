@@ -54,7 +54,7 @@ js_binary(
 
 vite_pkg.vite(name = "vite_run", srcs = [":web_lib"], out_dirs = ["dist"], args = ["build"], chdir = package_name())
 typescript_pkg.tsc(name = "tsc_run", srcs = [":web_lib"], stdout = "tsc_check.log", args = ["--noEmit"], chdir = package_name(), tags = ["lint"])
-eslint_pkg.eslint(name = "eslint_run", srcs = [":web_lib", "eslint.config.js"], stdout = "eslint_check.log", args = ["."], chdir = package_name(), tags = ["lint"])
+eslint_pkg.eslint(name = "eslint_run", srcs = [":web_lib", "eslint.config.js"], stdout = "eslint_check.log", args = [".", "--max-warnings=0"], chdir = package_name(), tags = ["lint"])
 
 # ── Web source library ────────────────────────────────────────────────────────
 
