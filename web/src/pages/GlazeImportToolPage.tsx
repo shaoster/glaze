@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -79,6 +80,10 @@ type OcrSuggestion = {
   confidence: number | null;
 };
 
+// Grid-space coordinates of the white label rectangle found by Kadane 2D,
+// stored per-record so phase 2 (text bbox) can be re-run independently.
+type LabelRect = { r1: number; r2: number; c1: number; c2: number };
+
 type UploadedRecord = {
   id: string;
   file: File | null;
@@ -86,6 +91,7 @@ type UploadedRecord = {
   filename: string;
   dimensions: { width: number; height: number };
   crop: CropSquare | null;
+  detectedLabelRect: LabelRect | null;
   ocrRegion: OcrRegion | null;
   parsedFields: ParsedFields;
   ocrSuggestion: OcrSuggestion | null;
@@ -213,42 +219,21 @@ const DETECT_OCR_TEXT_PAD = 3;
 // the analysis grid in each dimension; smaller rectangles are likely noise.
 const DETECT_OCR_MIN_LABEL_FRACTION = 0.1;
 
-async function detectOcrRegion(
+// Phase 1: render the crop at analysis resolution, build the luminance grid,
+// and run Kadane 2D in the bottom third to find the white label rectangle.
+// Returns { labelRect, bright } so phase 2 can be re-run independently.
+async function detectLabelRect(
   image: HTMLImageElement,
   crop: CropSquare,
   labelWhiteThreshold = DETECT_OCR_LABEL_WHITE_THRESHOLD,
-  textDarkThreshold = DETECT_OCR_TEXT_DARK_THRESHOLD,
-): Promise<OcrRegion> {
-  try {
-    return await detectOcrRegionUnsafe(
-      image,
-      crop,
-      labelWhiteThreshold,
-      textDarkThreshold,
-    );
-  } catch {
-    return defaultOcrRegion(crop.size);
-  }
-}
-
-async function detectOcrRegionUnsafe(
-  image: HTMLImageElement,
-  crop: CropSquare,
-  labelWhiteThreshold = DETECT_OCR_LABEL_WHITE_THRESHOLD,
-  textDarkThreshold = DETECT_OCR_TEXT_DARK_THRESHOLD,
-): Promise<OcrRegion> {
+): Promise<{ labelRect: LabelRect | null; bright: Float32Array }> {
   const N = DETECT_OCR_ANALYSIS_SIZE;
   const canvas = renderCropToCanvas(image, crop, N);
   const ctx = canvas.getContext("2d");
-  if (!ctx) return defaultOcrRegion(crop.size);
+  const bright = new Float32Array(N * N);
+  if (!ctx) return { labelRect: null, bright };
 
   const { data } = ctx.getImageData(0, 0, N, N);
-
-  // Phase 1: build a score grid using a high white threshold so only clearly
-  // white pixels score positive — this gives Kadane 2D a clean signal for the
-  // label rectangle boundary.
-  // Phase 2 (text bounding box) uses DETECT_OCR_TEXT_DARK_THRESHOLD separately.
-  const bright = new Float32Array(N * N);
   const score = new Float32Array(N * N);
   for (let i = 0; i < N * N; i++) {
     const r = data[i * 4];
@@ -262,18 +247,15 @@ async function detectOcrRegionUnsafe(
         : DETECT_OCR_NONWHITE_PENALTY;
   }
 
-  // Restrict the search to the bottom third of the crop — labels are written
-  // there; ignoring the upper portion prevents unrelated light regions from
-  // being matched.
+  // Restrict the search to the bottom third of the crop.
   const rowSearchStart = Math.floor((N * 2) / 3);
 
-  // Kadane 2D: find the axis-aligned rectangle with the maximum total score,
-  // searching only within rows [rowSearchStart, N).
+  // Kadane 2D within [rowSearchStart, N).
   let bestTotal = 0;
-  let labelR1 = rowSearchStart,
-    labelR2 = N - 1,
-    labelC1 = 0,
-    labelC2 = N - 1;
+  let r1Best = rowSearchStart,
+    r2Best = N - 1,
+    c1Best = 0,
+    c2Best = N - 1;
   let foundLabel = false;
 
   const colSum = new Float32Array(N);
@@ -282,8 +264,6 @@ async function detectOcrRegionUnsafe(
     for (let r2 = r1; r2 < N; r2++) {
       const rowOffset = r2 * N;
       for (let c = 0; c < N; c++) colSum[c] += score[rowOffset + c];
-
-      // 1-D Kadane on colSum to find the best column span.
       let curTotal = 0;
       let curC1 = 0;
       for (let c = 0; c < N; c++) {
@@ -294,10 +274,10 @@ async function detectOcrRegionUnsafe(
         curTotal += colSum[c];
         if (curTotal > bestTotal) {
           bestTotal = curTotal;
-          labelR1 = r1;
-          labelR2 = r2;
-          labelC1 = curC1;
-          labelC2 = c;
+          r1Best = r1;
+          r2Best = r2;
+          c1Best = curC1;
+          c2Best = c;
           foundLabel = true;
         }
       }
@@ -306,22 +286,36 @@ async function detectOcrRegionUnsafe(
 
   if (
     !foundLabel ||
-    labelR2 - labelR1 < N * DETECT_OCR_MIN_LABEL_FRACTION ||
-    labelC2 - labelC1 < N * DETECT_OCR_MIN_LABEL_FRACTION
+    r2Best - r1Best < N * DETECT_OCR_MIN_LABEL_FRACTION ||
+    c2Best - c1Best < N * DETECT_OCR_MIN_LABEL_FRACTION
   ) {
-    return defaultOcrRegion(crop.size);
+    return { labelRect: null, bright };
   }
 
-  // Within the detected label rectangle, find the tight bounding box of dark
-  // (ink/text) pixels.
-  let tMinX = labelC2,
-    tMaxX = labelC1,
-    tMinY = labelR2,
-    tMaxY = labelR1;
+  return {
+    labelRect: { r1: r1Best, r2: r2Best, c1: c1Best, c2: c2Best },
+    bright,
+  };
+}
+
+// Phase 2: given a cached label rect and luminance grid, find the tight
+// bounding box of dark (ink/text) pixels and return it as an OcrRegion.
+function ocrRegionFromLabel(
+  bright: Float32Array,
+  labelRect: LabelRect,
+  cropSize: number,
+  textDarkThreshold = DETECT_OCR_TEXT_DARK_THRESHOLD,
+): OcrRegion {
+  const N = DETECT_OCR_ANALYSIS_SIZE;
+  const { r1, r2, c1, c2 } = labelRect;
+  let tMinX = c2,
+    tMaxX = c1,
+    tMinY = r2,
+    tMaxY = r1;
   let foundText = false;
 
-  for (let y = labelR1; y <= labelR2; y++) {
-    for (let x = labelC1; x <= labelC2; x++) {
+  for (let y = r1; y <= r2; y++) {
+    for (let x = c1; x <= c2; x++) {
       if (bright[y * N + x] < textDarkThreshold) {
         if (x < tMinX) tMinX = x;
         if (x > tMaxX) tMaxX = x;
@@ -332,33 +326,48 @@ async function detectOcrRegionUnsafe(
     }
   }
 
+  const scale = cropSize / N;
   if (!foundText) {
-    // White label present but no dark text — fall back to label bounds.
-    const scale = crop.size / N;
-    return clampOcrRegion(crop.size, {
-      x: Math.round(labelC1 * scale),
-      y: Math.round(labelR1 * scale),
-      width: Math.round((labelC2 - labelC1 + 1) * scale),
-      height: Math.round((labelR2 - labelR1 + 1) * scale),
+    // Label found but no dark pixels at this threshold — show the label rect.
+    return clampOcrRegion(cropSize, {
+      x: Math.round(c1 * scale),
+      y: Math.round(r1 * scale),
+      width: Math.round((c2 - c1 + 1) * scale),
+      height: Math.round((r2 - r1 + 1) * scale),
       rotation: 0,
     });
   }
 
-  // Expand by a small padding, clamped to the label rectangle.
   const pad = DETECT_OCR_TEXT_PAD;
-  const rxMin = Math.max(labelC1, tMinX - pad);
-  const rxMax = Math.min(labelC2, tMaxX + pad);
-  const ryMin = Math.max(labelR1, tMinY - pad);
-  const ryMax = Math.min(labelR2, tMaxY + pad);
-
-  const scale = crop.size / N;
-  return clampOcrRegion(crop.size, {
-    x: Math.round(rxMin * scale),
-    y: Math.round(ryMin * scale),
-    width: Math.round((rxMax - rxMin + 1) * scale),
-    height: Math.round((ryMax - ryMin + 1) * scale),
+  return clampOcrRegion(cropSize, {
+    x: Math.round(Math.max(c1, tMinX - pad) * scale),
+    y: Math.round(Math.max(r1, tMinY - pad) * scale),
+    width: Math.round((Math.min(c2, tMaxX + pad) - Math.max(c1, tMinX - pad) + 1) * scale),
+    height: Math.round((Math.min(r2, tMaxY + pad) - Math.max(r1, tMinY - pad) + 1) * scale),
     rotation: 0,
   });
+}
+
+// Convenience wrapper: run both phases and return the OCR region.
+async function detectOcrRegion(
+  image: HTMLImageElement,
+  crop: CropSquare,
+  labelWhiteThreshold = DETECT_OCR_LABEL_WHITE_THRESHOLD,
+  textDarkThreshold = DETECT_OCR_TEXT_DARK_THRESHOLD,
+): Promise<{ ocrRegion: OcrRegion; labelRect: LabelRect | null }> {
+  try {
+    const { labelRect, bright } = await detectLabelRect(
+      image,
+      crop,
+      labelWhiteThreshold,
+    );
+    const ocrRegion = labelRect
+      ? ocrRegionFromLabel(bright, labelRect, crop.size, textDarkThreshold)
+      : defaultOcrRegion(crop.size);
+    return { ocrRegion, labelRect };
+  } catch {
+    return { ocrRegion: defaultOcrRegion(crop.size), labelRect: null };
+  }
 }
 
 function getOverflowPadding(dimensions: { width: number; height: number }) {
@@ -1166,7 +1175,7 @@ export default function GlazeImportToolPage() {
             { width: image.naturalWidth, height: image.naturalHeight },
             defaultCrop({ width: image.naturalWidth, height: image.naturalHeight }),
           ),
-          ocrRegion: await detectOcrRegion(
+          ...await detectOcrRegion(
             image,
             clampCrop(
               { width: image.naturalWidth, height: image.naturalHeight },
@@ -1306,7 +1315,7 @@ export default function GlazeImportToolPage() {
               filename,
               dimensions: cloudinaryDimensions,
               crop: cloudinaryCrop,
-              ocrRegion: await detectOcrRegion(image, cloudinaryCrop),
+              ...await detectOcrRegion(image, cloudinaryCrop),
               parsedFields: {
                 name: "",
                 kind: "glaze_type",
@@ -1395,6 +1404,7 @@ export default function GlazeImportToolPage() {
         ...record,
         crop,
         ocrRegion: defaultOcrRegion(crop.size),
+        detectedLabelRect: null,
         reviewed: false,
         ocrSuggestion: null,
         ocrStatus: "idle",
@@ -1408,6 +1418,7 @@ export default function GlazeImportToolPage() {
     updateSelectedRecord((record) => ({
       ...record,
       ocrRegion: defaultOcrRegion(record.crop!.size),
+      detectedLabelRect: null,
     }));
   }
 
@@ -1524,15 +1535,39 @@ export default function GlazeImportToolPage() {
     setActiveTab(TAB_REVIEW);
   }
 
-  async function redetectAllOcrRegions() {
-    for (const record of records) {
+  // Slider 1 callback: re-run Kadane 2D (phase 1) then clamp text (phase 2).
+  const redetectLabelRects = useCallback(async () => {
+    for (const record of recordsRef.current) {
       if (!record.crop) continue;
       const image = await loadImageElement(record.sourceUrl);
       const crop = clampCrop(record.dimensions, record.crop);
-      const ocrRegion = await detectOcrRegion(
+      const { ocrRegion, labelRect } = await detectOcrRegion(
         image,
         crop,
         labelWhiteThreshold,
+        textDarkThreshold,
+      );
+      setRecords((current) =>
+        current.map((item) =>
+          item.id === record.id
+            ? { ...item, ocrRegion, detectedLabelRect: labelRect }
+            : item,
+        ),
+      );
+    }
+  }, [labelWhiteThreshold, textDarkThreshold]);
+
+  // Slider 2 callback: skip Kadane 2D, re-clamp text within the cached label rect.
+  const redetectTextRegions = useCallback(async () => {
+    for (const record of recordsRef.current) {
+      if (!record.crop || !record.detectedLabelRect) continue;
+      const image = await loadImageElement(record.sourceUrl);
+      const crop = clampCrop(record.dimensions, record.crop);
+      const { bright } = await detectLabelRect(image, crop, labelWhiteThreshold);
+      const ocrRegion = ocrRegionFromLabel(
+        bright,
+        record.detectedLabelRect,
+        crop.size,
         textDarkThreshold,
       );
       setRecords((current) =>
@@ -1541,7 +1576,21 @@ export default function GlazeImportToolPage() {
         ),
       );
     }
-  }
+  }, [labelWhiteThreshold, textDarkThreshold]);
+
+  // Debounced auto-redetect: slider 1 re-runs both phases.
+  useEffect(() => {
+    if (activeTab !== TAB_OCR || recordsRef.current.length === 0) return;
+    const timer = setTimeout(() => void redetectLabelRects(), 400);
+    return () => clearTimeout(timer);
+  }, [activeTab, redetectLabelRects]);
+
+  // Debounced auto-redetect: slider 2 re-runs only phase 2.
+  useEffect(() => {
+    if (activeTab !== TAB_OCR || recordsRef.current.length === 0) return;
+    const timer = setTimeout(() => void redetectTextRegions(), 400);
+    return () => clearTimeout(timer);
+  }, [activeTab, redetectTextRegions]);
 
   async function runImport() {
     if (!allReviewed) return;
@@ -2121,7 +2170,7 @@ export default function GlazeImportToolPage() {
                 variant="outlined"
                 size="small"
                 disabled={!allCropped || ocrRunning}
-                onClick={() => void redetectAllOcrRegions()}
+                onClick={() => void redetectLabelRects()}
               >
                 Re-detect All Regions
               </Button>
