@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import userEvent from "@testing-library/user-event";
 import {
   act,
   render,
@@ -580,15 +581,15 @@ describe("PieceDetail", () => {
       fireEvent.change(screen.getByLabelText("Tag name"), {
         target: { value: "For Sale" },
       });
-      fireEvent.click(screen.getByRole("button", { name: "Create" }));
+      await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
-      expect(api.updatePiece).not.toHaveBeenCalled();
       await waitFor(() => {
         expect(screen.getByText("For Sale")).toBeInTheDocument();
         expect(
           screen.getByRole("button", { name: "Save tags" }),
         ).toBeInTheDocument();
       });
+      expect(api.updatePiece).not.toHaveBeenCalled();
     });
   });
 });
