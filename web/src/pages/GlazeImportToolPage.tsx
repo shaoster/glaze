@@ -22,6 +22,7 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  Slider,
   Stack,
   Tab,
   Tabs,
@@ -172,9 +173,11 @@ function defaultCrop(dimensions: {
 function defaultOcrRegion(cropSize: number): OcrRegion {
   const width = Math.round(cropSize * 0.7);
   const height = Math.round(cropSize * 0.25);
+  // Place the region in the bottom third so it matches where labels appear.
+  const y = Math.round(cropSize * (2 / 3));
   return {
     x: Math.round((cropSize - width) / 2),
-    y: Math.round((cropSize - height) / 2),
+    y,
     width,
     height,
     rotation: 0,
@@ -185,11 +188,15 @@ function defaultOcrRegion(cropSize: number): OcrRegion {
 // small enough that the pixel loops finish well under 1 ms.
 const DETECT_OCR_ANALYSIS_SIZE = 128;
 
-// Pixels brighter than this fraction are treated as "white label" pixels.
-const DETECT_OCR_WHITE_THRESHOLD = 0.82;
+// Phase 1 threshold: pixels at or above this luminance score positive for
+// Kadane 2D. Labels are often light pink/salmon (~0.80), so this needs to be
+// below that. Wood/clay backgrounds sit around 0.55–0.65, leaving a safe gap.
+const DETECT_OCR_LABEL_WHITE_THRESHOLD = 0.75;
 
-// Pixels darker than this fraction are treated as ink/text.
-const DETECT_OCR_DARK_THRESHOLD = 0.5;
+// Phase 2 threshold: within the detected label, pixels darker than this count
+// as ink. 0.50 catches coloured text (e.g. red "CAUTION: RUNS" ~0.45) while
+// avoiding most light-grey noise in the label background.
+const DETECT_OCR_TEXT_DARK_THRESHOLD = 0.5;
 
 // Reward for each white pixel when scoring candidate rectangles.
 const DETECT_OCR_WHITE_SCORE = 1;
@@ -209,9 +216,16 @@ const DETECT_OCR_MIN_LABEL_FRACTION = 0.1;
 async function detectOcrRegion(
   image: HTMLImageElement,
   crop: CropSquare,
+  labelWhiteThreshold = DETECT_OCR_LABEL_WHITE_THRESHOLD,
+  textDarkThreshold = DETECT_OCR_TEXT_DARK_THRESHOLD,
 ): Promise<OcrRegion> {
   try {
-    return await detectOcrRegionUnsafe(image, crop);
+    return await detectOcrRegionUnsafe(
+      image,
+      crop,
+      labelWhiteThreshold,
+      textDarkThreshold,
+    );
   } catch {
     return defaultOcrRegion(crop.size);
   }
@@ -220,6 +234,8 @@ async function detectOcrRegion(
 async function detectOcrRegionUnsafe(
   image: HTMLImageElement,
   crop: CropSquare,
+  labelWhiteThreshold = DETECT_OCR_LABEL_WHITE_THRESHOLD,
+  textDarkThreshold = DETECT_OCR_TEXT_DARK_THRESHOLD,
 ): Promise<OcrRegion> {
   const N = DETECT_OCR_ANALYSIS_SIZE;
   const canvas = renderCropToCanvas(image, crop, N);
@@ -228,7 +244,10 @@ async function detectOcrRegionUnsafe(
 
   const { data } = ctx.getImageData(0, 0, N, N);
 
-  // Build a flat brightness grid and a score grid.
+  // Phase 1: build a score grid using a high white threshold so only clearly
+  // white pixels score positive — this gives Kadane 2D a clean signal for the
+  // label rectangle boundary.
+  // Phase 2 (text bounding box) uses DETECT_OCR_TEXT_DARK_THRESHOLD separately.
   const bright = new Float32Array(N * N);
   const score = new Float32Array(N * N);
   for (let i = 0; i < N * N; i++) {
@@ -238,25 +257,29 @@ async function detectOcrRegionUnsafe(
     const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     bright[i] = lum;
     score[i] =
-      lum >= DETECT_OCR_WHITE_THRESHOLD
+      lum >= labelWhiteThreshold
         ? DETECT_OCR_WHITE_SCORE
         : DETECT_OCR_NONWHITE_PENALTY;
   }
 
-  // Kadane 2D: find the axis-aligned rectangle with the maximum total score.
-  // This locates the white label sticker.
-  let bestTotal = 0; // require positive score (actual white region)
-  let labelR1 = 0,
+  // Restrict the search to the bottom third of the crop — labels are written
+  // there; ignoring the upper portion prevents unrelated light regions from
+  // being matched.
+  const rowSearchStart = Math.floor((N * 2) / 3);
+
+  // Kadane 2D: find the axis-aligned rectangle with the maximum total score,
+  // searching only within rows [rowSearchStart, N).
+  let bestTotal = 0;
+  let labelR1 = rowSearchStart,
     labelR2 = N - 1,
     labelC1 = 0,
     labelC2 = N - 1;
   let foundLabel = false;
 
   const colSum = new Float32Array(N);
-  for (let r1 = 0; r1 < N; r1++) {
+  for (let r1 = rowSearchStart; r1 < N; r1++) {
     colSum.fill(0);
     for (let r2 = r1; r2 < N; r2++) {
-      // Accumulate this row into colSum.
       const rowOffset = r2 * N;
       for (let c = 0; c < N; c++) colSum[c] += score[rowOffset + c];
 
@@ -299,7 +322,7 @@ async function detectOcrRegionUnsafe(
 
   for (let y = labelR1; y <= labelR2; y++) {
     for (let x = labelC1; x <= labelC2; x++) {
-      if (bright[y * N + x] < DETECT_OCR_DARK_THRESHOLD) {
+      if (bright[y * N + x] < textDarkThreshold) {
         if (x < tMinX) tMinX = x;
         if (x > tMaxX) tMaxX = x;
         if (y < tMinY) tMinY = y;
@@ -455,9 +478,11 @@ function detectFoodSafeFromOcrText(text: string): false | null {
 }
 
 // Matches "1st Glaze: ..." lines, tolerating OCR confusions: I/1 and :/;
-const STRUCTURED_FIRST_RE = /^[I1l]st\s+[Gg]laze\s*[:;]\s*(.+)/;
+// Also matches spaceless forms like "IstGlaze:" that OCR sometimes produces.
+const STRUCTURED_FIRST_RE = /^[I1l]st\s*[Gg]laze\s*[:;]\s*(.+)/;
 // Matches "2nd Glaze: ..." lines, tolerating OCR confusions: 2/= and :/;
-const STRUCTURED_SECOND_RE = /^[2=Z]nd\s+[Gg]laze\s*[:;]\s*(.+)/;
+// Also matches spaceless forms like "2ndGlaze:" that OCR sometimes produces.
+const STRUCTURED_SECOND_RE = /^[2=Z]nd\s*[Gg]laze\s*[:;]\s*(.+)/;
 
 function parseOcrSuggestion(
   text: string,
@@ -595,6 +620,28 @@ async function buildCropFile(record: UploadedRecord): Promise<File> {
   return new File([blob], `${safeStem}.webp`, { type: "image/webp" });
 }
 
+// Rotation offsets (degrees) tried in order; the attempt with the highest
+// Tesseract confidence score wins.
+const OCR_ROTATION_OFFSETS = [0, 1, 2, -1, -2];
+
+function rotateCanvasBy(
+  canvas: HTMLCanvasElement,
+  angleDeg: number,
+): HTMLCanvasElement {
+  if (angleDeg === 0) return canvas;
+  const rotated = document.createElement("canvas");
+  rotated.width = canvas.width;
+  rotated.height = canvas.height;
+  const ctx = rotated.getContext("2d");
+  if (!ctx) return canvas;
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate((angleDeg * Math.PI) / 180);
+  ctx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+  ctx.restore();
+  return rotated;
+}
+
 async function runOcrOnRecord(
   record: UploadedRecord,
 ): Promise<{ text: string; confidence: number }> {
@@ -623,12 +670,22 @@ async function runOcrOnRecord(
     ocrCanvas = cropCanvas;
   }
 
+  // Try each rotation offset and keep the result with the highest confidence.
   const worker = await createWorker("eng");
   await worker.writeText("user-words.txt", TESSERACT_USER_WORDS);
   await worker.setParameters({ user_words: "user-words.txt" });
-  const result = await worker.recognize(ocrCanvas);
+  let bestText = "";
+  let bestConfidence = -1;
+  for (const offset of OCR_ROTATION_OFFSETS) {
+    const rotated = rotateCanvasBy(ocrCanvas, offset);
+    const result = await worker.recognize(rotated);
+    if (result.data.confidence > bestConfidence) {
+      bestConfidence = result.data.confidence;
+      bestText = result.data.text;
+    }
+  }
   await worker.terminate();
-  return { text: result.data.text, confidence: result.data.confidence };
+  return { text: bestText, confidence: bestConfidence };
 }
 
 function RecordList({
@@ -742,6 +799,12 @@ export default function GlazeImportToolPage() {
     null,
   );
   const [ocrRunning, setOcrRunning] = useState(false);
+  const [labelWhiteThreshold, setLabelWhiteThreshold] = useState(
+    DETECT_OCR_LABEL_WHITE_THRESHOLD,
+  );
+  const [textDarkThreshold, setTextDarkThreshold] = useState(
+    DETECT_OCR_TEXT_DARK_THRESHOLD,
+  );
   const [importRunning, setImportRunning] = useState(false);
   const [importResult, setImportResult] =
     useState<ManualSquareCropImportResponse | null>(null);
@@ -1461,6 +1524,25 @@ export default function GlazeImportToolPage() {
     setActiveTab(TAB_REVIEW);
   }
 
+  async function redetectAllOcrRegions() {
+    for (const record of records) {
+      if (!record.crop) continue;
+      const image = await loadImageElement(record.sourceUrl);
+      const crop = clampCrop(record.dimensions, record.crop);
+      const ocrRegion = await detectOcrRegion(
+        image,
+        crop,
+        labelWhiteThreshold,
+        textDarkThreshold,
+      );
+      setRecords((current) =>
+        current.map((item) =>
+          item.id === record.id ? { ...item, ocrRegion } : item,
+        ),
+      );
+    }
+  }
+
   async function runImport() {
     if (!allReviewed) return;
     setImportRunning(true);
@@ -2007,6 +2089,44 @@ export default function GlazeImportToolPage() {
             the crop. Drag the yellow box to adjust the region containing the
             text label. OCR runs only on the selected region.
           </Alert>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={3}>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" gutterBottom>
+                White threshold: {labelWhiteThreshold.toFixed(2)}
+              </Typography>
+              <Slider
+                min={0.5}
+                max={0.98}
+                step={0.01}
+                value={labelWhiteThreshold}
+                onChange={(_, v) => setLabelWhiteThreshold(v as number)}
+                size="small"
+              />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" gutterBottom>
+                Text threshold: {textDarkThreshold.toFixed(2)}
+              </Typography>
+              <Slider
+                min={0.2}
+                max={0.85}
+                step={0.01}
+                value={textDarkThreshold}
+                onChange={(_, v) => setTextDarkThreshold(v as number)}
+                size="small"
+              />
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "flex-end", pb: 0.5 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                disabled={!allCropped || ocrRunning}
+                onClick={() => void redetectAllOcrRegions()}
+              >
+                Re-detect All Regions
+              </Button>
+            </Box>
+          </Stack>
           <Box
             sx={{
               display: "grid",
