@@ -181,6 +181,163 @@ function defaultOcrRegion(cropSize: number): OcrRegion {
   };
 }
 
+// Resolution used for the analysis pass — large enough for accuracy,
+// small enough that the pixel loops finish well under 1 ms.
+const DETECT_OCR_ANALYSIS_SIZE = 128;
+
+// Pixels brighter than this fraction are treated as "white label" pixels.
+const DETECT_OCR_WHITE_THRESHOLD = 0.82;
+
+// Pixels darker than this fraction are treated as ink/text.
+const DETECT_OCR_DARK_THRESHOLD = 0.5;
+
+// Reward for each white pixel when scoring candidate rectangles.
+const DETECT_OCR_WHITE_SCORE = 1;
+
+// Penalty for each non-white pixel (kept smaller so a mostly-white label
+// region with a little text still beats a clay-colored background region).
+const DETECT_OCR_NONWHITE_PENALTY = -0.4;
+
+// Padding (in analysis pixels) added around the detected text before
+// mapping back to crop coordinates.
+const DETECT_OCR_TEXT_PAD = 3;
+
+// A candidate white-label rectangle must span at least this fraction of
+// the analysis grid in each dimension; smaller rectangles are likely noise.
+const DETECT_OCR_MIN_LABEL_FRACTION = 0.1;
+
+async function detectOcrRegion(
+  image: HTMLImageElement,
+  crop: CropSquare,
+): Promise<OcrRegion> {
+  try {
+    return await detectOcrRegionUnsafe(image, crop);
+  } catch {
+    return defaultOcrRegion(crop.size);
+  }
+}
+
+async function detectOcrRegionUnsafe(
+  image: HTMLImageElement,
+  crop: CropSquare,
+): Promise<OcrRegion> {
+  const N = DETECT_OCR_ANALYSIS_SIZE;
+  const canvas = renderCropToCanvas(image, crop, N);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return defaultOcrRegion(crop.size);
+
+  const { data } = ctx.getImageData(0, 0, N, N);
+
+  // Build a flat brightness grid and a score grid.
+  const bright = new Float32Array(N * N);
+  const score = new Float32Array(N * N);
+  for (let i = 0; i < N * N; i++) {
+    const r = data[i * 4];
+    const g = data[i * 4 + 1];
+    const b = data[i * 4 + 2];
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    bright[i] = lum;
+    score[i] =
+      lum >= DETECT_OCR_WHITE_THRESHOLD
+        ? DETECT_OCR_WHITE_SCORE
+        : DETECT_OCR_NONWHITE_PENALTY;
+  }
+
+  // Kadane 2D: find the axis-aligned rectangle with the maximum total score.
+  // This locates the white label sticker.
+  let bestTotal = 0; // require positive score (actual white region)
+  let labelR1 = 0,
+    labelR2 = N - 1,
+    labelC1 = 0,
+    labelC2 = N - 1;
+  let foundLabel = false;
+
+  const colSum = new Float32Array(N);
+  for (let r1 = 0; r1 < N; r1++) {
+    colSum.fill(0);
+    for (let r2 = r1; r2 < N; r2++) {
+      // Accumulate this row into colSum.
+      const rowOffset = r2 * N;
+      for (let c = 0; c < N; c++) colSum[c] += score[rowOffset + c];
+
+      // 1-D Kadane on colSum to find the best column span.
+      let curTotal = 0;
+      let curC1 = 0;
+      for (let c = 0; c < N; c++) {
+        if (curTotal <= 0) {
+          curTotal = 0;
+          curC1 = c;
+        }
+        curTotal += colSum[c];
+        if (curTotal > bestTotal) {
+          bestTotal = curTotal;
+          labelR1 = r1;
+          labelR2 = r2;
+          labelC1 = curC1;
+          labelC2 = c;
+          foundLabel = true;
+        }
+      }
+    }
+  }
+
+  if (
+    !foundLabel ||
+    labelR2 - labelR1 < N * DETECT_OCR_MIN_LABEL_FRACTION ||
+    labelC2 - labelC1 < N * DETECT_OCR_MIN_LABEL_FRACTION
+  ) {
+    return defaultOcrRegion(crop.size);
+  }
+
+  // Within the detected label rectangle, find the tight bounding box of dark
+  // (ink/text) pixels.
+  let tMinX = labelC2,
+    tMaxX = labelC1,
+    tMinY = labelR2,
+    tMaxY = labelR1;
+  let foundText = false;
+
+  for (let y = labelR1; y <= labelR2; y++) {
+    for (let x = labelC1; x <= labelC2; x++) {
+      if (bright[y * N + x] < DETECT_OCR_DARK_THRESHOLD) {
+        if (x < tMinX) tMinX = x;
+        if (x > tMaxX) tMaxX = x;
+        if (y < tMinY) tMinY = y;
+        if (y > tMaxY) tMaxY = y;
+        foundText = true;
+      }
+    }
+  }
+
+  if (!foundText) {
+    // White label present but no dark text — fall back to label bounds.
+    const scale = crop.size / N;
+    return clampOcrRegion(crop.size, {
+      x: Math.round(labelC1 * scale),
+      y: Math.round(labelR1 * scale),
+      width: Math.round((labelC2 - labelC1 + 1) * scale),
+      height: Math.round((labelR2 - labelR1 + 1) * scale),
+      rotation: 0,
+    });
+  }
+
+  // Expand by a small padding, clamped to the label rectangle.
+  const pad = DETECT_OCR_TEXT_PAD;
+  const rxMin = Math.max(labelC1, tMinX - pad);
+  const rxMax = Math.min(labelC2, tMaxX + pad);
+  const ryMin = Math.max(labelR1, tMinY - pad);
+  const ryMax = Math.min(labelR2, tMaxY + pad);
+
+  const scale = crop.size / N;
+  return clampOcrRegion(crop.size, {
+    x: Math.round(rxMin * scale),
+    y: Math.round(ryMin * scale),
+    width: Math.round((rxMax - rxMin + 1) * scale),
+    height: Math.round((ryMax - ryMin + 1) * scale),
+    rotation: 0,
+  });
+}
+
 function getOverflowPadding(dimensions: { width: number; height: number }) {
   return Math.max(dimensions.width, dimensions.height);
 }
@@ -946,11 +1103,12 @@ export default function GlazeImportToolPage() {
             { width: image.naturalWidth, height: image.naturalHeight },
             defaultCrop({ width: image.naturalWidth, height: image.naturalHeight }),
           ),
-          ocrRegion: defaultOcrRegion(
+          ocrRegion: await detectOcrRegion(
+            image,
             clampCrop(
               { width: image.naturalWidth, height: image.naturalHeight },
               defaultCrop({ width: image.naturalWidth, height: image.naturalHeight }),
-            ).size,
+            ),
           ),
           parsedFields: {
             name: "",
@@ -1085,7 +1243,7 @@ export default function GlazeImportToolPage() {
               filename,
               dimensions: cloudinaryDimensions,
               crop: cloudinaryCrop,
-              ocrRegion: defaultOcrRegion(cloudinaryCrop.size),
+              ocrRegion: await detectOcrRegion(image, cloudinaryCrop),
               parsedFields: {
                 name: "",
                 kind: "glaze_type",
