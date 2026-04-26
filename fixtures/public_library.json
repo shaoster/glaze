@@ -19,10 +19,10 @@
       "name": "Albany Blue Slip",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988117/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": false,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
     }
   },
@@ -32,11 +32,11 @@
       "name": "Albany Green Slip",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988116/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
-      "apply_thin": null
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": false,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": true
     }
   },
   {
@@ -45,11 +45,24 @@
       "name": "Albany Manganese Slip",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": false,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
+      "name": "Amber",
+      "short_description": "",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
     }
   },
   {
@@ -58,10 +71,10 @@
       "name": "Breakthrough Blue",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": false,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
     }
   },
@@ -71,10 +84,10 @@
       "name": "Breakthrough White",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988119/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
     }
   },
@@ -97,11 +110,11 @@
       "name": "Choy",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
-      "apply_thin": null
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": false
     }
   },
   {
@@ -110,11 +123,11 @@
       "name": "Clear Crackle",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
-      "apply_thin": null
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": true
     }
   },
   {
@@ -123,10 +136,10 @@
       "name": "Cobalt Blue Green",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
     }
   },
@@ -136,11 +149,24 @@
       "name": "Cornwall",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988114/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
-      "apply_thin": null
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
+      "name": "Creamy Red",
+      "short_description": "",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776823398/glaze_public/zotiqbcrfmdfxtty2wmv.heic",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": true
     }
   },
   {
@@ -149,10 +175,10 @@
       "name": "Dragon Green",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_food_safe": false,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
     }
   },
@@ -163,10 +189,10 @@
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528.webp",
       "is_food_safe": true,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
-      "apply_thin": null
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": false
     }
   },
   {
@@ -175,11 +201,11 @@
       "name": "French Green",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988122/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
-      "apply_thin": null
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
     }
   },
   {
@@ -188,10 +214,88 @@
       "name": "Gloss White",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039.webp",
-      "is_food_safe": null,
-      "runs": null,
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
+      "name": "Ismael's Clear",
+      "short_description": "",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6.webp",
+      "is_food_safe": true,
+      "runs": false,
       "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": true
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
+      "name": "Oribe",
+      "short_description": "",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152844/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
+      "name": "Pharsalia",
+      "short_description": "",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
+      "name": "Pussywillow",
+      "short_description": "",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152848/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
+      "name": "Ragnar's Blue",
+      "short_description": "",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152847/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f.webp",
+      "is_food_safe": false,
+      "runs": true,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
+      "name": "Silky Black",
+      "short_description": "",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9.webp",
+      "is_food_safe": false,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
     }
   },
@@ -201,10 +305,62 @@
       "name": "Turquoise",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a.webp",
-      "is_food_safe": null,
-      "runs": null,
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
+      "name": "Volcanic Ash",
+      "short_description": "",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304349/glaze_public/eyy9whpmb5wajybtfk3p.heic",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
+      "name": "Wild Hare Fur",
+      "short_description": "",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304189/glaze_public/jvrmpfxkjjhniqpqzqrs.heic",
+      "is_food_safe": true,
+      "runs": false,
       "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
+      "name": "Xavier Green",
+      "short_description": "",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152845/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
+      "name": "Yellow Orange",
+      "short_description": "",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11.webp",
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
       "apply_thin": null
     }
   },
@@ -214,10 +370,10 @@
       "name": "Albany Blue Slip",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988117/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": false,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
     }
   },
@@ -227,11 +383,11 @@
       "name": "Albany Green Slip",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988116/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
-      "apply_thin": null
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": false,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": true
     }
   },
   {
@@ -240,11 +396,24 @@
       "name": "Albany Manganese Slip",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": false,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Amber",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
     }
   },
   {
@@ -253,10 +422,10 @@
       "name": "Breakthrough Blue",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": false,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
     }
   },
@@ -266,10 +435,10 @@
       "name": "Breakthrough White",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988119/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
     }
   },
@@ -289,14 +458,27 @@
   {
     "model": "api.glazecombination",
     "fields": {
+      "name": "Celadon!Volcanic Ash",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304417/glaze_public/j3gz35q5fecp48ncy2qp.heic",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": false,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
       "name": "Choy",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
-      "apply_thin": null
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": false
     }
   },
   {
@@ -305,11 +487,11 @@
       "name": "Clear Crackle",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
-      "apply_thin": null
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": true
     }
   },
   {
@@ -318,10 +500,10 @@
       "name": "Cobalt Blue Green",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
     }
   },
@@ -331,11 +513,24 @@
       "name": "Cornwall",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988114/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
-      "apply_thin": null
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Creamy Red",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776823398/glaze_public/zotiqbcrfmdfxtty2wmv.heic",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": true
     }
   },
   {
@@ -344,10 +539,10 @@
       "name": "Dragon Green",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_food_safe": false,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
     }
   },
@@ -358,10 +553,10 @@
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528.webp",
       "is_food_safe": true,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
-      "apply_thin": null
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": false
     }
   },
   {
@@ -383,11 +578,11 @@
       "name": "French Green",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988122/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c.webp",
-      "is_food_safe": null,
-      "runs": null,
-      "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
-      "apply_thin": null
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
     }
   },
   {
@@ -396,10 +591,88 @@
       "name": "Gloss White",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039.webp",
-      "is_food_safe": null,
-      "runs": null,
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Ismael's Clear",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6.webp",
+      "is_food_safe": true,
+      "runs": false,
       "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": true
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Oribe",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152844/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Pharsalia",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Pussywillow",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152848/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Ragnar's Blue",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152847/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f.webp",
+      "is_food_safe": false,
+      "runs": true,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Silky Black",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9.webp",
+      "is_food_safe": false,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
       "apply_thin": null
     }
   },
@@ -409,10 +682,75 @@
       "name": "Turquoise",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a.webp",
-      "is_food_safe": null,
-      "runs": null,
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Volcanic Ash",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304349/glaze_public/eyy9whpmb5wajybtfk3p.heic",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Wild Hare Fur",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304189/glaze_public/jvrmpfxkjjhniqpqzqrs.heic",
+      "is_food_safe": true,
+      "runs": false,
       "highlights_grooves": null,
-      "is_different_on_white_and_brown_clay": null,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Wild Hare Fur!Celadon",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304417/glaze_public/j3gz35q5fecp48ncy2qp.heic",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": false,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Xavier Green",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152845/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": false,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Yellow Orange",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11.webp",
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
       "apply_thin": null
     }
   }
