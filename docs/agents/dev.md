@@ -113,18 +113,10 @@ Run these before opening or pushing to a PR:
 
 ```bash
 # All tests (workflow, backend, web, mypy)
-bazel test //...
+rtk bazel test //...
 
 # All linters: ruff, eslint, tsc, mypy (tagged "lint")
-bazel build --config=lint //...
-```
-
-Or via the `env.sh` helpers:
-
-```bash
-source env.sh
-gz_bazel_test    # bazel test //...
-gz_bazel_lint    # bazel build --config=lint //...
+rtk bazel build --config=lint //...
 ```
 
 ### Auto-fix before committing
@@ -145,20 +137,20 @@ Prefer Bazel targets — they match CI exactly and benefit from incremental cach
 
 ```bash
 # Workflow schema validation
-bazel test //tests:...                 # or: pytest tests/
+rtk bazel test //tests:...
 
 # Backend API tests (many granular targets: //api:api_workflow_test, etc.)
-bazel test //api:api_test              # or: pytest api/
+rtk bazel test //api:api_test
 
 # Backend mypy (with Django plugin — runs full app initialization)
-bazel test //api:api_mypy
+rtk bazel test //api:api_mypy
 
 # Web component tests
-bazel test //web:web_test              # or: cd web && npm test
+rtk bazel test //web:web_test
 cd web && npm run test:watch           # watch mode (no Bazel equivalent)
 
 # Web type-check + lint (both covered by the lint target)
-bazel build --config=lint //web/...   # or: cd web && npx tsc --noEmit && npm run lint
+rtk bazel build --config=lint //web/...
 ```
 
 Tests live in:
@@ -198,20 +190,17 @@ Coverage reports are uploaded to [Codecov](https://codecov.io). Codecov posts a 
 
 ### What to test
 
-- Any change to `workflow.yml` or `workflow.schema.yml` → verify `bazel test //tests:...` passes.
-- Every new API endpoint or serializer change → add or update a test under `api/tests/`.
-- Every new or modified React component → add or update a test in `web/src/components/__tests__/`.
-- Every new or modified `workflow.ts` helper → add or update a test in `frontend_common/src/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture.
-- Every new or modified `api/workflow.py` helper → add or update a test in `api/tests/test_workflow_helpers.py`, patching `_STATE_MAP` / `_GLOBALS_MAP` via `monkeypatch`.
+Run `rtk bazel test //...` — it discovers and runs all affected tests automatically.
 
 ## Token Efficiency
 In addition to the environment's RTK rules, make sure you use the `rtk` prefixed equivalents to common commands:
 
 For example:
-Instead of `pip`, run `gtk pip`. Also:
+Instead of `pip`, run `rtk pip`. Also:
 - cat -> rtk read
 - ls -> rtk ls
 - grep -> rtk grep
 - gh -> rtk gh
 - git -> rtk git
 - npx tsc -> rtk tsc
+- bazel -> rtk bazel
