@@ -1,2 +1,5 @@
+// @ts-nocheck
 import "@testing-library/jest-dom";
-window.getComputedStyle = () => ({ getPropertyValue: () => undefined });
+window.getComputedStyle = () => ({
+  getPropertyValue: () => "mocked",
+});
