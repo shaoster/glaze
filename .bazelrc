@@ -26,4 +26,4 @@ build:lint --keep_going
 # enable a proper remote cache instead.
 build:ci --announce_rc
 build:ci --show_timestamps
-common:ci --test_output=full
+common:ci --test_output=all
