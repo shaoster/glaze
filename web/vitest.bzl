@@ -21,7 +21,6 @@ def vitest_test(name, srcs, deps, **kwargs):
     args = ["run"] + srcs
 
     # Use the user-provided chdir.
-    chdir = kwargs.get("chdir", native.package_name())
     kwargs.pop("chdir", None)
     vitest_pkg.vitest_test(
         name = name,
@@ -29,7 +28,7 @@ def vitest_test(name, srcs, deps, **kwargs):
             "//:is_coverage_build": args + ["--coverage"],
             "//conditions:default": args,
         }),
-        chdir = chdir,
+        chdir = native.package_name(),
         data = data,
         **kwargs
     )

@@ -1,19 +1,16 @@
 # ── Common ────────────────────────────────────────────────────────────────────
 common --enable_bzlmod
 build --incompatible_enable_cc_toolchain_resolution
-build --reuse_sandbox_directories
 
 
 # Show test errors inline rather than requiring a separate log fetch.
 test --test_output=errors
 test --test_summary=terse
-test --reuse_sandbox_directories
 
 
 # Coverage exclude tags
 coverage --test_tag_filters=-no-coverage
 coverage --test_summary=terse
-coverage --reuse_sandbox_directories
 
 
 # ── Lint (bazel build --config=lint //...) ────────────────────────────────────

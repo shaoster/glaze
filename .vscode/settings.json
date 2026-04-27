@@ -17,5 +17,9 @@
   },
   "mypy-type-checker.args": [
     "--config-file=${workspaceFolder}/mypy.ini"
-  ]
+  ],
+  "coverage-gutters.coverageBaseDir": "bazel-out/_coverage/",
+  "coverage-gutters.coverageFileNames": [
+    "_coverage_report.dat",
+  ],
 }
