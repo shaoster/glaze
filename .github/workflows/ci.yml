@@ -78,66 +78,22 @@ jobs:
       - name: Install Bazelisk
         uses: bazelbuild/setup-bazelisk@v3
 
-      - name: Cache Bazel outputs
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/bazel
-          key: bazel-${{ runner.os }}-${{ needs.preflight.outputs.artifact_key }}
-          restore-keys: |
-            bazel-${{ runner.os }}-
-
-      - name: Run all tests
-        run: bazel test --config=ci //...
-
       - name: Run all linters
         run: bazel build --config=ci --config=lint //...
 
-  # Coverage runs outside Bazel until bazel coverage is wired up for
-  # pytest and vitest — see https://github.com/shaoster/glaze/issues/159
-  coverage:
-    name: Coverage
-    needs: preflight
-    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Install Python dependencies
-        run: pip install -r requirements-dev.txt -q
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install Node dependencies
-        run: npm ci --prefix web
-
-      - name: Backend coverage
-        run: pytest api/ tests/ --cov=api --cov-report=lcov:coverage/lcov.info -q
-
-      - name: Web coverage
-        run: npm test --prefix web -- --coverage --reporter=dot
+      - name: Run all tests
+        run: bazel coverage --config=ci --combined_report=lcov //...
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          files: coverage/lcov.info,web/coverage/lcov.info
+          files: bazel-out/_coverage/_coverage_report.dat
           flags: backend,frontend
           fail_ci_if_error: false
-
   record-fingerprint:
     name: Record successful fingerprint
-    needs: [preflight, test, coverage]
-    if: ${{ github.event_name == 'pull_request' && needs.test.result == 'success' && needs.coverage.result == 'success' }}
+    needs: [preflight, test]
+    if: ${{ github.event_name == 'pull_request' && needs.test.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Write fingerprint marker

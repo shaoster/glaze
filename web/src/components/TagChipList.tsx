@@ -1,7 +1,7 @@
 import Box from "@mui/material/Box";
 
 import TagChip from "./TagChip";
-import type { TagEntry } from "@common/types";
+import type { TagEntry } from "../util/types";
 
 interface TagChipListProps {
   tags: TagEntry[];

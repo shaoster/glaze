@@ -15,20 +15,20 @@ import {
 } from "@mui/material";
 import ImageLightbox from "./ImageLightbox";
 import CloudinaryImage from "./CloudinaryImage";
-import type { PieceDetail, PieceState } from "@common/types";
+import type { PieceDetail, PieceState } from "../util/types";
 import {
   fetchCloudinaryWidgetConfig,
   signCloudinaryWidgetParams,
   updateCurrentState,
   updatePiece,
-} from "@common/api";
+} from "../util/api";
 import {
   type ResolvedAdditionalField,
   formatWorkflowFieldLabel,
   getAdditionalFieldDefinitions,
   getGlobalPickerFilters,
   getGlobalThumbnailField,
-} from "@common/workflow";
+} from "../util/workflow";
 import GlobalFieldPicker from "./GlobalFieldPicker";
 import GlobalEntryPicker from "./GlobalEntryPicker";
 
@@ -38,7 +38,7 @@ type WorkflowStateProps = {
   onSaved: (updated: PieceDetail) => void;
   onDirtyChange?: (dirty: boolean) => void;
   currentLocation?: string;
-  currentThumbnail?: import("@common/types").Thumbnail | null;
+  currentThumbnail?: import("../util/types").Thumbnail | null;
 };
 
 type ImageEntry = {

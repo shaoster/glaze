@@ -25,9 +25,9 @@ In a new environment, always run `source env.sh` and `gz_setup` before trying to
 
 Two scripts handle environment bootstrap:
 
-| Script | Purpose |
-|---|---|
-| [`env.sh`](../../env.sh) | Interactive shells: sources `~/.bashrc`, delegates to `env-agent.sh`, then defines all `gz_*` helpers. Used as `bash --rcfile` by the VS Code/Cursor terminal profile. |
+| Script                               | Purpose                                                                                                                                                                        |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`env.sh`](../../env.sh)             | Interactive shells: sources `~/.bashrc`, delegates to `env-agent.sh`, then defines all `gz_*` helpers. Used as `bash --rcfile` by the VS Code/Cursor terminal profile.         |
 | [`env-agent.sh`](../../env-agent.sh) | Lightweight, silent bootstrap for non-interactive shells: activates `.venv` if present, loads `.env.local` vars, exports `BASH_ENV` so child processes inherit the same setup. |
 
 `env.sh` sources `env-agent.sh` — the venv activation and env-var loading logic live in exactly one place.
@@ -68,9 +68,9 @@ git add web/pnpm-lock.yaml   # fails: no web/web/pnpm-lock.yaml
 
 Reusable agent skills live in [`.agents/skills/`](../../.agents/skills/). Each skill is a folder containing a `SKILL.md` file.
 
-| Agent | How skills are loaded |
-|---|---|
-| Codex | Reads `.agents/skills/` natively — no setup needed |
+| Agent       | How skills are loaded                                                                                                |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| Codex       | Reads `.agents/skills/` natively — no setup needed                                                                   |
 | Claude Code | Reads `.claude/<name>.md`; each skill has a git-tracked symlink there pointing into `.agents/skills/<name>/SKILL.md` |
 
 ### Adding a new skill
@@ -87,18 +87,18 @@ All vars are optional. The app runs without any of them; each missing group degr
 
 **`.env.local`** (loaded by `source env.sh`, read by Django):
 
-| Variable | Absent behavior |
-|---|---|
-| `CLOUDINARY_CLOUD_NAME` | `/api/uploads/cloudinary/widget-config/` returns 503; UI falls back to URL-paste mode |
-| `CLOUDINARY_API_KEY` | same as above |
-| `CLOUDINARY_API_SECRET` | same as above |
-| `CLOUDINARY_UPLOAD_FOLDER` | uploads go to the root of the Cloudinary account (optional) |
-| `GOOGLE_OAUTH_CLIENT_ID` | `POST /api/auth/google/` is non-functional; email/password login still works |
+| Variable                   | Absent behavior                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------- |
+| `CLOUDINARY_CLOUD_NAME`    | `/api/uploads/cloudinary/widget-config/` returns 503; UI falls back to URL-paste mode |
+| `CLOUDINARY_API_KEY`       | same as above                                                                         |
+| `CLOUDINARY_API_SECRET`    | same as above                                                                         |
+| `CLOUDINARY_UPLOAD_FOLDER` | uploads go to the root of the Cloudinary account (optional)                           |
+| `GOOGLE_OAUTH_CLIENT_ID`   | `POST /api/auth/google/` is non-functional; email/password login still works          |
 
 **`web/.env.local`** (read by Vite, injected into the frontend bundle):
 
-| Variable | Absent behavior |
-|---|---|
+| Variable                | Absent behavior                                                            |
+| ----------------------- | -------------------------------------------------------------------------- |
 | `VITE_GOOGLE_CLIENT_ID` | Google Sign-In button is not rendered; must match `GOOGLE_OAUTH_CLIENT_ID` |
 
 ---
@@ -154,6 +154,7 @@ rtk bazel build --config=lint //web/...
 ```
 
 Tests live in:
+
 - [`tests/test_workflow.py`](../../tests/test_workflow.py) — workflow schema/integrity validation
 - [`api/tests/`](../../api/tests/) — Django API tests (6 granular Bazel targets per concern)
 - [`web/src/components/__tests__/`](../../web/src/components/__tests__/) — React component tests (12 granular Bazel targets per component)
@@ -168,22 +169,14 @@ gz_build
 
 `gz_build` pre-generates TypeScript types then runs `tsc -b && vite build`.
 
-### Production build
-
-```bash
-./build.sh
-```
-
-`build.sh` runs the full production pipeline: installs Python deps, starts Django temporarily to generate TypeScript types, builds the React frontend, runs `collectstatic`, and applies migrations.
-
 ### CI
 
 GitHub Actions runs three parallel jobs on every push and pull request — see [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). A PR should not be merged if any job is red.
 
-| Job | What it runs |
-|---|---|
-| `test` | `bazel test --config=ci //...` — all test suites |
-| `lint` | `bazel build --config=ci --config=lint //...` — ruff, eslint, tsc, mypy |
+| Job        | What it runs                                                                                                                                                    |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test`     | `bazel test --config=ci //...` — all test suites                                                                                                                |
+| `lint`     | `bazel build --config=ci --config=lint //...` — ruff, eslint, tsc, mypy                                                                                         |
 | `coverage` | `pytest api/ tests/ --cov` + `npm test --coverage` — feeds Codecov (separate from Bazel until [#159](https://github.com/shaoster/glaze/issues/159) is resolved) |
 
 Coverage reports are uploaded to [Codecov](https://codecov.io). Codecov posts a summary comment on each PR.
@@ -193,10 +186,12 @@ Coverage reports are uploaded to [Codecov](https://codecov.io). Codecov posts a 
 Run `rtk bazel test //...` — it discovers and runs all affected tests automatically.
 
 ## Token Efficiency
+
 In addition to the environment's RTK rules, make sure you use the `rtk` prefixed equivalents to common commands:
 
 For example:
 Instead of `pip`, run `rtk pip`. Also:
+
 - cat -> rtk read
 - ls -> rtk ls
 - grep -> rtk grep

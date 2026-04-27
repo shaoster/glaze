@@ -1,5 +1,5 @@
 import type { components } from "./generated-types";
-import workflow from "../../workflow.yml";
+import workflow from "../../../workflow.yml";
 export {
   formatState,
   getStateDescription,

@@ -295,7 +295,7 @@ gz_logs() {    # gz_logs [backend|web]  — defaults to both
 # ---------------------------------------------------------------------------
 
 gz_gentypes() {
-    local generated_path="$GLAZE_ROOT/frontend_common/src/generated-types.ts"
+    local generated_path="$GLAZE_ROOT/web/src/util/generated-types.ts"
     local schema_path
     schema_path="$(mktemp "${TMPDIR:-/tmp}/glaze-openapi.XXXXXX.json")" || return 1
 

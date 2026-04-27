@@ -3,7 +3,7 @@ import TextField from "@mui/material/TextField";
 import type { SxProps, Theme } from "@mui/material/styles";
 
 import TagChip from "./TagChip";
-import type { TagEntry } from "@common/types";
+import type { TagEntry } from "../util/types";
 
 interface TagAutocompleteProps {
   label: string;

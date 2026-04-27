@@ -9,10 +9,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import NewPieceDialog from "../NewPieceDialog";
 import { CURATED_THUMBNAILS } from "../thumbnailConstants";
-import * as api from "@common/api";
-import type { PieceDetail } from "@common/types";
+import * as api from "../../util/api";
+import type { PieceDetail } from "../..//types";
 
-vi.mock("@common/api", () => ({
+vi.mock("../../util/api", () => ({
   createPiece: vi.fn(),
   fetchGlobalEntries: vi.fn().mockResolvedValue([]),
   createGlobalEntry: vi.fn(),

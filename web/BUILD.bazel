@@ -1,9 +1,9 @@
-load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary", "js_test")
+load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary")
 load("@npm//:defs.bzl", "npm_link_all_packages")
-load("@npm//web:vite/package_json.bzl", vite_pkg = "bin")
-load("@npm//web:vitest/package_json.bzl", vitest_pkg = "bin")
-load("@npm//web:typescript/package_json.bzl", typescript_pkg = "bin")
 load("@npm//web:eslint/package_json.bzl", eslint_pkg = "bin")
+load("@npm//web:typescript/package_json.bzl", typescript_pkg = "bin")
+load("@npm//web:vite/package_json.bzl", vite_pkg = "bin")
+load(":vitest.bzl", "vitest_test")
 
 # Link all npm packages into this package's node_modules so that js_binary
 # and js_run_binary targets can resolve imports at build time.
@@ -12,7 +12,10 @@ npm_link_all_packages(name = "node_modules")
 exports_files(["eslint.config.js"])
 
 # Public eslint binary used by the lint aspect in //:lint.bzl
-eslint_pkg.eslint_binary(name = "eslint_bin", visibility = ["//visibility:public"])
+eslint_pkg.eslint_binary(
+    name = "eslint_bin",
+    visibility = ["//visibility:public"],
+)
 
 # ── Step 1: OpenAPI JSON schema ───────────────────────────────────────────────
 # Runs manage.py spectacular via the Python genrule tool.
@@ -24,26 +27,8 @@ eslint_pkg.eslint_binary(name = "eslint_bin", visibility = ["//visibility:public
 genrule(
     name = "openapi_schema",
     outs = ["openapi.json"],
-    tools = ["//tools:generate_schema"],
     cmd = "$(execpath //tools:generate_schema) $@",
-    visibility = ["//visibility:public"],
-)
-
-# ── Step 2: TypeScript generated types ───────────────────────────────────────
-# Runs generate-types.mjs with the openapi.json as input.
-# Output: generated-types.ts written to frontend_common/src/.
-#
-# Cache behaviour: re-runs only when openapi.json content changes — so a
-# backend change that doesn't affect the public API surface leaves this output
-# (and all web targets downstream) with a cache hit.
-
-js_binary(
-    name = "generate_types_bin",
-    entry_point = "scripts/generate-types.mjs",
-    data = [
-        ":node_modules/openapi-typescript",
-        ":node_modules/typescript",
-    ],
+    tools = ["//tools:generate_schema"],
     visibility = ["//visibility:public"],
 )
 
@@ -52,9 +37,86 @@ js_binary(
 # These macros create the js_binary + entry_point wiring via directory_path
 # so the Node toolchain is resolved correctly and node is on PATH.
 
-vite_pkg.vite(name = "vite_run", srcs = [":web_lib"], out_dirs = ["dist"], args = ["build"], chdir = package_name())
-typescript_pkg.tsc(name = "tsc_run", srcs = [":web_lib"], stdout = "tsc_check.log", args = ["--noEmit"], chdir = package_name(), tags = ["lint"])
-eslint_pkg.eslint(name = "eslint_run", srcs = [":web_lib", "eslint.config.js"], stdout = "eslint_check.log", args = [".", "--max-warnings=0"], chdir = package_name(), tags = ["lint"])
+vite_pkg.vite(
+    name = "vite_run",
+    srcs = [":web_lib"],
+    args = ["build"],
+    chdir = package_name(),
+    out_dirs = ["dist"],
+)
+
+typescript_pkg.tsc(
+    name = "tsc_run",
+    srcs = [":web_lib"],
+    args = ["--noEmit"],
+    chdir = package_name(),
+    stdout = "tsc_check.log",
+    tags = ["lint"],
+)
+
+eslint_pkg.eslint(
+    name = "eslint_run",
+    srcs = [
+        "eslint.config.js",
+        ":web_lib",
+    ],
+    args = [
+        ".",
+        "--max-warnings=0",
+    ],
+    chdir = package_name(),
+    stdout = "eslint_check.log",
+    tags = ["lint"],
+)
+
+# ── TypeScript generated types ────────────────────────────────────────────────
+# Runs generate-types.mjs with openapi.json as input.
+# Declared here (not in //web) because Bazel forbids outs with up-level '..'
+# references — outputs must live within the declaring package.
+#
+# Cache behaviour: re-runs only when openapi.json content changes.
+
+js_binary(
+    name = "generate_types_bin",
+    data = [
+        ":node_modules/openapi-typescript",
+        ":node_modules/typescript",
+    ],
+    entry_point = "scripts/generate-types.mjs",
+)
+
+js_run_binary(
+    name = "generated_types_gen",
+    srcs = ["//web:openapi_schema"],
+    outs = ["src/generated-types.ts"],
+    args = [
+        "$(execpath //web:openapi_schema)",
+        "$(execpath src/generated-types.ts)",
+    ],
+    tool = "//web:generate_types_bin",
+)
+
+js_library(
+    name = "generated_types",
+    srcs = [":generated_types_gen"],
+    visibility = ["//visibility:public"],
+)
+
+# ── Common utils library ──────────────────────────────────────────────────────
+
+js_library(
+    name = "util_lib",
+    srcs = glob(
+        [
+            "src/util/**/*.ts",
+        ],
+        exclude = [
+            "src/util/**/*.test.ts",
+            "src/util/generated-types.ts",  # genrule output
+        ],
+    ),
+    deps = ["//:workflow_js"],
+)
 
 # ── Web source library ────────────────────────────────────────────────────────
 
@@ -69,20 +131,22 @@ js_library(
             "*.json",
             "*.config.*",
             "*.ts",
-            "index.html",
             "public/**",
         ],
         exclude = [
+            "src/util/**/*.ts",
             "src/**/*.test.ts",
             "src/**/*.test.tsx",
         ],
-    ),
-    deps = [
-        ":node_modules",
-        "//frontend_common:frontend_common_lib",
-        "//frontend_common:generated_types",
+    ) + [
+        "index.html",
     ],
     visibility = ["//visibility:public"],
+    deps = [
+        ":generated_types",
+        ":node_modules",
+        ":util_lib",
+    ],
 )
 
 # ── Component source libraries ────────────────────────────────────────────────
@@ -98,16 +162,17 @@ js_library(
 js_library(
     name = "web_test_configs",
     srcs = [
-        "tsconfig.json",
-        "tsconfig.app.json",
-        "tsconfig.node.json",
-        "tsconfig.test.json",
         "package.json",
-        "vitest.config.ts",
+        "src/cloudinary-widget.d.ts",
         "src/test-setup.ts",
         "src/yaml.d.ts",
-        "src/cloudinary-widget.d.ts",
+        "tsconfig.app.json",
+        "tsconfig.json",
+        "tsconfig.node.json",
+        "tsconfig.test.json",
+        "vitest.config.ts",
     ],
+    visibility = ["//visibility:public"],
     deps = [":node_modules"],
 )
 
@@ -115,18 +180,18 @@ js_library(
 js_library(
     name = "primitive_src",
     srcs = [
-        "src/components/StateChip.tsx",
         "src/components/ErrorBoundary.tsx",
+        "src/components/StateChip.tsx",
         "src/components/TagChip.tsx",
-        "src/components/tagPalette.ts",
         "src/components/globalFieldPickerUtils.ts",
+        "src/components/tagPalette.ts",
         "src/components/thumbnailConstants.ts",
         "src/util/useAsync.ts",
     ],
     deps = [
+        ":generated_types",
         ":node_modules",
-        "//frontend_common:frontend_common_lib",
-        "//frontend_common:generated_types",
+        ":util_lib",
     ],
 )
 
@@ -134,8 +199,8 @@ js_library(
     name = "cloudinary_image_src",
     srcs = ["src/components/CloudinaryImage.tsx"],
     deps = [
+        ":generated_types",
         ":node_modules",
-        "//frontend_common:generated_types",
     ],
 )
 
@@ -152,15 +217,15 @@ js_library(
 js_library(
     name = "tag_src",
     srcs = [
+        "src/components/CreateTagDialog.tsx",
         "src/components/TagAutocomplete.tsx",
         "src/components/TagChipList.tsx",
-        "src/components/CreateTagDialog.tsx",
     ],
     deps = [
-        ":primitive_src",
+        ":generated_types",
         ":node_modules",
-        "//frontend_common:frontend_common_lib",
-        "//frontend_common:generated_types",
+        ":primitive_src",
+        ":util_lib",
     ],
 )
 
@@ -168,15 +233,15 @@ js_library(
 js_library(
     name = "global_picker_src",
     srcs = [
-        "src/components/GlobalFieldPicker.tsx",
         "src/components/GlobalEntryPicker.tsx",
+        "src/components/GlobalFieldPicker.tsx",
     ],
     deps = [
-        ":primitive_src",
         ":cloudinary_image_src",
+        ":generated_types",
         ":node_modules",
-        "//frontend_common:frontend_common_lib",
-        "//frontend_common:generated_types",
+        ":primitive_src",
+        ":util_lib",
     ],
 )
 
@@ -185,11 +250,11 @@ js_library(
     srcs = ["src/components/GlazeCombinationGallery.tsx"],
     deps = [
         ":cloudinary_image_src",
+        ":generated_types",
         ":image_lightbox_src",
-        ":primitive_src",
         ":node_modules",
-        "//frontend_common:frontend_common_lib",
-        "//frontend_common:generated_types",
+        ":primitive_src",
+        ":util_lib",
     ],
 )
 
@@ -197,11 +262,11 @@ js_library(
     name = "new_piece_dialog_src",
     srcs = ["src/components/NewPieceDialog.tsx"],
     deps = [
-        ":primitive_src",
+        ":generated_types",
         ":global_picker_src",
         ":node_modules",
-        "//frontend_common:frontend_common_lib",
-        "//frontend_common:generated_types",
+        ":primitive_src",
+        ":util_lib",
     ],
 )
 
@@ -209,12 +274,21 @@ js_library(
     name = "piece_list_src",
     srcs = ["src/components/PieceList.tsx"],
     deps = [
-        ":primitive_src",
         ":cloudinary_image_src",
-        ":tag_src",
+        ":generated_types",
         ":node_modules",
-        "//frontend_common:frontend_common_lib",
-        "//frontend_common:generated_types",
+        ":primitive_src",
+        ":tag_src",
+        ":util_lib",
+    ],
+)
+
+js_library(
+    name = "piece_list_page_src",
+    srcs = ["src/pages/PieceListPage.tsx"],
+    deps = [
+        ":new_piece_dialog_src",
+        ":piece_list_src",
     ],
 )
 
@@ -222,12 +296,12 @@ js_library(
     name = "workflow_state_src",
     srcs = ["src/components/WorkflowState.tsx"],
     deps = [
-        ":image_lightbox_src",
         ":cloudinary_image_src",
+        ":generated_types",
         ":global_picker_src",
+        ":image_lightbox_src",
         ":node_modules",
-        "//frontend_common:frontend_common_lib",
-        "//frontend_common:generated_types",
+        ":util_lib",
     ],
 )
 
@@ -235,14 +309,22 @@ js_library(
     name = "piece_detail_src",
     srcs = ["src/components/PieceDetail.tsx"],
     deps = [
-        ":primitive_src",
-        ":image_lightbox_src",
         ":cloudinary_image_src",
-        ":tag_src",
-        ":workflow_state_src",
+        ":generated_types",
+        ":image_lightbox_src",
         ":node_modules",
-        "//frontend_common:frontend_common_lib",
-        "//frontend_common:generated_types",
+        ":primitive_src",
+        ":tag_src",
+        ":util_lib",
+        ":workflow_state_src",
+    ],
+)
+
+js_library(
+    name = "piece_detail_page_src",
+    srcs = ["src/pages/PieceDetailPage.tsx"],
+    deps = [
+        ":piece_detail_src",
     ],
 )
 
@@ -258,10 +340,10 @@ js_library(
     name = "glaze_import_src",
     srcs = ["src/pages/GlazeImportToolPage.tsx"],
     deps = [
-        ":ocr_detection_src",
+        ":generated_types",
         ":node_modules",
-        "//frontend_common:frontend_common_lib",
-        "//frontend_common:generated_types",
+        ":ocr_detection_src",
+        ":util_lib",
     ],
 )
 
@@ -270,175 +352,174 @@ js_library(
 # it exercises.  A change to an isolated component re-runs only the relevant
 # target(s) rather than the full suite.
 
-vitest_pkg.vitest_test(
+vitest_test(
     name = "web_primitive_test",
-    data = [
-        ":web_test_configs",
-        ":primitive_src",
-        "src/components/__tests__/StateChip.test.tsx",
+    srcs = [
         "src/components/__tests__/ErrorBoundary.test.tsx",
-    ],
-    args = [
-        "run",
         "src/components/__tests__/StateChip.test.tsx",
-        "src/components/__tests__/ErrorBoundary.test.tsx",
     ],
-    chdir = package_name(),
     tags = ["ibazel_notify_changes"],
+    deps = [
+        ":primitive_src",
+    ],
 )
 
-vitest_pkg.vitest_test(
+vitest_test(
     name = "web_cloudinary_image_test",
-    data = [
-        ":web_test_configs",
-        ":cloudinary_image_src",
+    srcs = [
         "src/components/__tests__/CloudinaryImage.test.tsx",
     ],
-    args = ["run", "src/components/__tests__/CloudinaryImage.test.tsx"],
-    chdir = package_name(),
     tags = ["ibazel_notify_changes"],
+    deps = [
+        ":cloudinary_image_src",
+    ],
 )
 
-vitest_pkg.vitest_test(
+vitest_test(
     name = "web_image_lightbox_test",
-    data = [
-        ":web_test_configs",
-        ":image_lightbox_src",
+    srcs = [
         "src/components/__tests__/ImageLightbox.test.tsx",
     ],
-    args = ["run", "src/components/__tests__/ImageLightbox.test.tsx"],
-    chdir = package_name(),
     tags = ["ibazel_notify_changes"],
+    deps = [
+        ":image_lightbox_src",
+    ],
 )
 
-vitest_pkg.vitest_test(
+vitest_test(
     name = "web_tag_test",
-    data = [
-        ":web_test_configs",
-        ":tag_src",
+    srcs = [
         "src/components/__tests__/TagComponents.test.tsx",
     ],
-    args = ["run", "src/components/__tests__/TagComponents.test.tsx"],
-    chdir = package_name(),
     tags = ["ibazel_notify_changes"],
+    deps = [
+        ":tag_src",
+    ],
 )
 
-vitest_pkg.vitest_test(
+vitest_test(
     name = "web_picker_test",
-    data = [
-        ":web_test_configs",
-        ":global_picker_src",
-        "src/components/__tests__/GlobalFieldPicker.test.tsx",
+    srcs = [
         "src/components/__tests__/GlobalEntryPicker.test.tsx",
-    ],
-    args = [
-        "run",
         "src/components/__tests__/GlobalFieldPicker.test.tsx",
-        "src/components/__tests__/GlobalEntryPicker.test.tsx",
     ],
-    chdir = package_name(),
     tags = ["ibazel_notify_changes"],
+    deps = [
+        ":global_picker_src",
+    ],
 )
 
-vitest_pkg.vitest_test(
+vitest_test(
     name = "web_glaze_gallery_test",
-    data = [
-        ":web_test_configs",
-        ":glaze_gallery_src",
+    srcs = [
         "src/components/__tests__/GlazeCombinationGallery.test.tsx",
     ],
-    args = ["run", "src/components/__tests__/GlazeCombinationGallery.test.tsx"],
-    chdir = package_name(),
     tags = ["ibazel_notify_changes"],
+    deps = [
+        ":glaze_gallery_src",
+    ],
 )
 
-vitest_pkg.vitest_test(
+vitest_test(
     name = "web_new_piece_dialog_test",
-    data = [
-        ":web_test_configs",
-        ":new_piece_dialog_src",
+    srcs = [
         "src/components/__tests__/NewPieceDialog.test.tsx",
     ],
-    args = ["run", "src/components/__tests__/NewPieceDialog.test.tsx"],
-    chdir = package_name(),
     tags = ["ibazel_notify_changes"],
+    deps = [
+        ":new_piece_dialog_src",
+    ],
 )
 
-vitest_pkg.vitest_test(
+vitest_test(
     name = "web_piece_list_test",
-    data = [
-        ":web_test_configs",
-        ":piece_list_src",
+    srcs = [
         "src/components/__tests__/PieceList.test.tsx",
     ],
-    args = ["run", "src/components/__tests__/PieceList.test.tsx"],
-    chdir = package_name(),
     tags = ["ibazel_notify_changes"],
+    deps = [
+        ":piece_list_src",
+    ],
 )
 
-vitest_pkg.vitest_test(
+vitest_test(
     name = "web_workflow_state_test",
-    data = [
-        ":web_test_configs",
-        ":workflow_state_src",
+    srcs = [
         "src/components/__tests__/WorkflowState.test.tsx",
     ],
-    args = ["run", "src/components/__tests__/WorkflowState.test.tsx"],
-    chdir = package_name(),
     tags = ["ibazel_notify_changes"],
+    deps = [
+        ":workflow_state_src",
+    ],
 )
 
-vitest_pkg.vitest_test(
+vitest_test(
     name = "web_piece_detail_test",
-    data = [
-        ":web_test_configs",
-        ":piece_detail_src",
+    srcs = [
         "src/components/__tests__/PieceDetail.test.tsx",
     ],
-    args = ["run", "src/components/__tests__/PieceDetail.test.tsx"],
-    chdir = package_name(),
     tags = ["ibazel_notify_changes"],
-)
-
-vitest_pkg.vitest_test(
-    name = "web_glaze_import_test",
-    data = [
-        ":web_test_configs",
-        ":glaze_import_src",
-        "src/components/__tests__/GlazeImportToolPage.test.tsx",
+    deps = [
+        ":piece_detail_src",
     ],
-    args = ["run", "src/components/__tests__/GlazeImportToolPage.test.tsx"],
-    chdir = package_name(),
-    tags = ["ibazel_notify_changes"],
 )
 
-vitest_pkg.vitest_test(
+vitest_test(
+    name = "web_piece_detail_page_test",
+    srcs = [
+        "src/pages/__tests__/PieceDetailPage.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":piece_detail_page_src",
+    ],
+)
+
+vitest_test(
+    name = "web_piece_list_page_test",
+    srcs = [
+        "src/pages/__tests__/PieceListPage.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":piece_list_page_src",
+    ],
+)
+
+vitest_test(
+    name = "web_glaze_import_test",
+    srcs = [
+        "src/pages/__tests__/GlazeImportToolPage.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":glaze_import_src",
+    ],
+)
+
+vitest_test(
     name = "web_ocr_detection_test",
-    data = [
-        ":web_test_configs",
-        ":ocr_detection_src",
+    srcs = [
         "src/pages/__tests__/ocrDetection.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        "public/test-images/test-tile-blank-label.png",
         "public/test-images/test-tile-label.png",
         "public/test-images/test-tile-no-label.png",
-        "public/test-images/test-tile-blank-label.png",
+        ":ocr_detection_src",
     ],
-    args = ["run", "src/pages/__tests__/ocrDetection.test.ts"],
-    chdir = package_name(),
-    tags = ["ibazel_notify_changes"],
 )
 
-vitest_pkg.vitest_test(
-    name = "web_workflow_common_test",
-    data = [
-        ":web_test_configs",
-        "//frontend_common:frontend_common_lib",
-        "//frontend_common:frontend_common_tests",
-        "//frontend_common:generated_types",
-        ":node_modules",
+vitest_test(
+    name = "workflow_test",
+    srcs = [
+        "src/util/workflow.test.ts",
     ],
-    args = ["run", "workflow.test"],
-    chdir = package_name(),
     tags = ["ibazel_notify_changes"],
+    deps = [
+        ":util_lib",
+    ],
 )
 
 # ── Web test suite ────────────────────────────────────────────────────────────
@@ -448,19 +529,20 @@ vitest_pkg.vitest_test(
 test_suite(
     name = "web_test",
     tests = [
-        ":web_primitive_test",
         ":web_cloudinary_image_test",
-        ":web_image_lightbox_test",
-        ":web_tag_test",
-        ":web_picker_test",
         ":web_glaze_gallery_test",
-        ":web_new_piece_dialog_test",
-        ":web_piece_list_test",
-        ":web_workflow_state_test",
-        ":web_piece_detail_test",
         ":web_glaze_import_test",
+        ":web_image_lightbox_test",
+        ":web_new_piece_dialog_test",
         ":web_ocr_detection_test",
-        ":web_workflow_common_test",
+        ":web_picker_test",
+        ":web_piece_detail_page_test",
+        ":web_piece_detail_test",
+        ":web_piece_list_page_test",
+        ":web_piece_list_test",
+        ":web_primitive_test",
+        ":web_tag_test",
+        ":workflow_test",
     ],
 )
 

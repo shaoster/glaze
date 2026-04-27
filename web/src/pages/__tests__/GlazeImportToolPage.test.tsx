@@ -2,22 +2,22 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@common/api", () => ({
+import GlazeImportToolPage from "../GlazeImportToolPage";
+import {
+  fetchCloudinaryWidgetConfig,
+  importManualSquareCropRecords,
+} from "../../util/api";
+
+vi.mock("../../util/api", () => ({
   fetchCloudinaryWidgetConfig: vi.fn(),
   importManualSquareCropRecords: vi.fn(),
   signCloudinaryWidgetParams: vi.fn(),
 }));
+import { createWorker } from "tesseract.js";
 
 vi.mock("tesseract.js", () => ({
   createWorker: vi.fn(),
 }));
-
-import GlazeImportToolPage from "../../pages/GlazeImportToolPage";
-import {
-  fetchCloudinaryWidgetConfig,
-  importManualSquareCropRecords,
-} from "@common/api";
-import { createWorker } from "tesseract.js";
 
 class MockImage {
   onload: null | (() => void) = null;
@@ -83,11 +83,16 @@ describe("GlazeImportToolPage", () => {
     const input = container.querySelector('input[type="file"]');
     expect(input).not.toBeNull();
 
-    const file = new File(["image-bytes"], "celadon.png", { type: "image/png" });
+    const file = new File(["image-bytes"], "celadon.png", {
+      type: "image/png",
+    });
     fireEvent.change(input!, { target: { files: [file] } });
 
     await waitFor(() => {
-      expect(screen.getByRole("tab", { name: "2. Crop" })).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByRole("tab", { name: "2. Crop" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
     });
     await waitFor(() => {
       expect(screen.getByText("celadon.png")).toBeInTheDocument();
@@ -124,7 +129,9 @@ describe("GlazeImportToolPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Cloudinary upload widget is not available in this browser."),
+        screen.getByText(
+          "Cloudinary upload widget is not available in this browser.",
+        ),
       ).toBeInTheDocument();
     });
   });
@@ -175,7 +182,9 @@ describe("GlazeImportToolPage", () => {
   it("lets the user continue from upload back into crop after files exist", async () => {
     const { container } = render(<GlazeImportToolPage />);
     const input = container.querySelector('input[type="file"]');
-    const file = new File(["image-bytes"], "tenmoku.png", { type: "image/png" });
+    const file = new File(["image-bytes"], "tenmoku.png", {
+      type: "image/png",
+    });
 
     fireEvent.change(input!, { target: { files: [file] } });
 
@@ -215,7 +224,9 @@ describe("GlazeImportToolPage", () => {
       ).toBeInTheDocument(),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Continue To OCR" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Continue To OCR" }),
+    );
 
     await waitFor(() =>
       expect(screen.getByRole("tab", { name: "3. OCR" })).toHaveAttribute(
@@ -320,7 +331,9 @@ describe("GlazeImportToolPage", () => {
 
     const { container } = render(<GlazeImportToolPage />);
     const input = container.querySelector('input[type="file"]');
-    const file = new File(["image-bytes"], "ash-blue.png", { type: "image/png" });
+    const file = new File(["image-bytes"], "ash-blue.png", {
+      type: "image/png",
+    });
 
     fireEvent.change(input!, { target: { files: [file] } });
 

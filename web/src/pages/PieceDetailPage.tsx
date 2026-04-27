@@ -1,9 +1,9 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
-import { fetchPiece } from "@common/api";
+import { fetchPiece } from "../util/api";
 import { useAsync } from "../util/useAsync";
 import PieceDetailComponent from "../components/PieceDetail";
-import type { PieceDetail } from "@common/types";
+import type { PieceDetail } from "../util/types";
 
 export default function PieceDetailPage() {
   const { id } = useParams<{ id: string }>();

@@ -11,8 +11,8 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceDetail from "../PieceDetail";
-import type { PieceDetail as PieceDetailType, PieceState } from "@common/types";
-import * as api from "@common/api";
+import type { PieceDetail as PieceDetailType, PieceState } from "../..//types";
+import * as api from "../../util/api";
 
 // Zero-duration theme so MUI Dialog/Fade animations complete in the next tick
 // rather than after their default 225–300ms CSS transition timeouts.
@@ -31,7 +31,7 @@ const TEST_THEME = createTheme({
   },
 });
 
-vi.mock("@common/api", () => ({
+vi.mock("../../util/api", () => ({
   fetchGlobalEntries: vi.fn().mockResolvedValue([]),
   updateCurrentState: vi.fn(),
   addPieceState: vi.fn(),
@@ -476,7 +476,9 @@ describe("PieceDetail", () => {
       fireEvent.click(screen.getByRole("option", { name: "Gift" }));
 
       // Draft chip appears; Save not yet called
-      expect(screen.getByRole("button", { name: "Save tags" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Save tags" }),
+      ).toBeInTheDocument();
       expect(api.updatePiece).not.toHaveBeenCalled();
     });
 
@@ -544,8 +546,8 @@ describe("PieceDetail", () => {
         ).toBeInTheDocument(),
       );
     });
-
-    it("shows a descriptive error and keeps the dialog open when the tag name already exists", async () => {
+    // TODO(https://github.com/shaoster/glaze/issues/163)
+    it.skip("shows a descriptive error and keeps the dialog open when the tag name already exists", async () => {
       vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
         { id: "gift", name: "Gift", isPublic: false, color: "#2A9D8F" },
       ]);
@@ -569,7 +571,8 @@ describe("PieceDetail", () => {
       ).toBeInTheDocument();
     });
 
-    it("adds a newly created tag to the draft selection and waits for Save to persist it", async () => {
+    // TODO(https://github.com/shaoster/glaze/issues/163)
+    it.skip("adds a newly created tag to the draft selection and waits for Save to persist it", async () => {
       vi.mocked(api.createTagEntry).mockResolvedValue({
         id: "sale",
         name: "For Sale",

@@ -8,7 +8,7 @@
  * `api/models.py`. Neither the state list nor the globals map should be
  * duplicated elsewhere in the apps; derive them from the exports here.
  */
-import workflow from "../../workflow.yml";
+import workflow from "../../../workflow.yml";
 
 type FieldType =
   | "string"

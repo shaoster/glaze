@@ -23,7 +23,7 @@ import {
   fetchGlobalEntries,
   fetchGlobalEntriesWithFilters,
   toggleGlobalEntryFavorite,
-} from "@common/api";
+} from "../util/api";
 import {
   formatWorkflowFieldLabel,
   getFilterableFields,
@@ -31,7 +31,7 @@ import {
   getGlobalThumbnailField,
   isFavoritableGlobal,
   type GlobalPickerFilter,
-} from "@common/workflow";
+} from "../util/workflow";
 import CloudinaryImage from "./CloudinaryImage";
 
 export interface GlobalEntryPickerProps {
@@ -153,7 +153,7 @@ export default function GlobalEntryPicker({
         params,
       );
     },
-     
+
     [open, filters, globalName],
     { enabled: open },
   );

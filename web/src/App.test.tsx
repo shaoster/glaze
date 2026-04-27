@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // Mock the module before importing App
-vi.mock("@common/api", () => ({
+vi.mock("./util/api", () => ({
   fetchCurrentUser: vi.fn().mockResolvedValue(null),
   loginWithGoogle: vi.fn(),
   loginWithEmail: vi.fn(),
@@ -44,11 +44,7 @@ vi.mock("./pages/GlazeImportToolPage", () => ({
 }));
 
 // Now import App and the mocked api
-import {
-  fetchCurrentUser,
-  loginWithEmail,
-  logoutUser,
-} from "@common/api";
+import { fetchCurrentUser, loginWithEmail, logoutUser } from "./util/api";
 import App from "./App";
 
 const MOCK_USER = {

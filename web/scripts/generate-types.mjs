@@ -34,7 +34,7 @@ const SCHEMA_SOURCE = schemaSource
   ? pathToFileURL(resolvePath(schemaSource))
   : new URL("http://localhost:8080/api/schema/?format=json");
 const OUTPUT_PATH =
-  resolvePath(argOutput) ?? process.env.GLAZE_OUTPUT_PATH ?? "../frontend_common/src/generated-types.ts";
+  resolvePath(argOutput) ?? process.env.GLAZE_OUTPUT_PATH ?? "src/util/generated-types.ts";
 
 const HEADER = `\
 /**

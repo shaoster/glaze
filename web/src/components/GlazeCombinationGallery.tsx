@@ -29,13 +29,13 @@ import {
 } from "@mui/material";
 import CloudinaryImage from "./CloudinaryImage";
 import ImageLightbox from "./ImageLightbox";
-import { fetchGlazeCombinationImages } from "@common/api";
+import { fetchGlazeCombinationImages } from "../util/api";
 import type {
   CaptionedImage,
   GlazeCombinationEntry,
   GlazeCombinationImageEntry,
-} from "@common/types";
-import { formatState } from "@common/types";
+} from "../util/types";
+import { formatState } from "../util/types";
 import { useAsync } from "../util/useAsync";
 
 const EMPTY_STATE_MESSAGE =

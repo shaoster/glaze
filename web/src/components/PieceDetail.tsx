@@ -27,19 +27,19 @@ import type {
   CaptionedImage,
   PieceDetail as PieceDetailType,
   TagEntry,
-} from "@common/types";
+} from "../util/types";
 import {
   formatState,
   getStateDescription,
   isTerminalState,
   SUCCESSORS,
-} from "@common/types";
+} from "../util/types";
 import {
   addPieceState,
   createTagEntry,
   fetchGlobalEntries,
   updatePiece,
-} from "@common/api";
+} from "../util/api";
 import ImageLightbox from "./ImageLightbox";
 import CloudinaryImage from "./CloudinaryImage";
 import StateChip from "./StateChip";

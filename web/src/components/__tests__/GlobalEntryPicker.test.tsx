@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import GlobalEntryPicker from "../GlobalEntryPicker";
-import * as api from "@common/api";
-import type { GlazeCombinationEntry } from "@common/api";
+import * as api from "../../util/api";
+import type { GlazeCombinationEntry } from "../../util/api";
 
-vi.mock("@common/api", () => ({
+vi.mock("../../util/api", () => ({
   fetchGlobalEntriesWithFilters: vi.fn(),
   fetchGlobalEntries: vi.fn(),
   toggleGlobalEntryFavorite: vi.fn(),

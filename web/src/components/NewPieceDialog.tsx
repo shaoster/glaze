@@ -11,8 +11,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { createPiece } from "@common/api";
-import type { PieceDetail } from "@common/types";
+import { createPiece } from "../util/api";
+import type { PieceDetail } from "../util/types";
 import GlobalFieldPicker from "./GlobalFieldPicker";
 import { DEFAULT_THUMBNAIL, CURATED_THUMBNAILS } from "./thumbnailConstants";
 

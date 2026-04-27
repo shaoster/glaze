@@ -1,14 +1,16 @@
 # ── Common ────────────────────────────────────────────────────────────────────
 common --enable_bzlmod
 build --incompatible_enable_cc_toolchain_resolution
-build --disk_cache=~/.cache/bazel-disk-cache
-build --reuse_sandbox_directories
+
 
 # Show test errors inline rather than requiring a separate log fetch.
 test --test_output=errors
 test --test_summary=terse
-test --disk_cache=~/.cache/bazel-disk-cache
-test --reuse_sandbox_directories
+
+
+# Coverage exclude tags
+coverage --test_tag_filters=-no-coverage
+coverage --test_summary=terse
 
 
 # ── Lint (bazel build --config=lint //...) ────────────────────────────────────
@@ -28,3 +30,5 @@ build:lint --keep_going
 build:ci --announce_rc
 build:ci --show_timestamps
 test:ci  --test_output=all
+coverage:ci  --test_output=all
+
