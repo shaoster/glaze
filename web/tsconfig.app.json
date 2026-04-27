@@ -32,5 +32,10 @@
   "include": [
     "src",
   ],
-  "exclude": ["**/*.test.ts", "**/*.test.tsx", "node_modules"]
+  "exclude": [
+    "src/test-setup.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "node_modules"
+  ]
 }
