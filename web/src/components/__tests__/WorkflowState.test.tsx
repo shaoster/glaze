@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import WorkflowState from "../WorkflowState";
-import type { PieceState, PieceDetail } from "../..//types";
+import type { PieceState, PieceDetail } from "../../util/types";
 import * as api from "../../util/api";
 
 // Mock the api module

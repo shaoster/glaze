@@ -23,7 +23,7 @@ vi.mock("../../util/api", () => ({
 
 // Only glaze_combination is favoritable in workflow.yml
 vi.mock("../..//workflow", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../..//workflow")>();
+  const actual = await importOriginal<typeof import("../../util/workflow")>();
   return {
     ...actual,
     isFavoritableGlobal: (name: string) => name === "glaze_combination",

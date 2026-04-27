@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import GlazeCombinationGallery from "../GlazeCombinationGallery";
 import * as api from "../../util/api";
-import type { GlazeCombinationImageEntry } from "../..//types";
+import type { GlazeCombinationImageEntry } from "../../util/types";
 
 // Stub out CloudinaryImage to avoid Cloudinary SDK internals in unit tests.
 vi.mock("../CloudinaryImage", () => ({

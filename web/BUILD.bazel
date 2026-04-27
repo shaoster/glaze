@@ -47,9 +47,15 @@ vite_pkg.vite(
 
 typescript_pkg.tsc(
     name = "tsc_run",
-    srcs = [":web_lib"],
-    args = ["--noEmit"],
-    chdir = package_name(),
+    srcs = [
+        ":tsconfig.node.json",
+        ":web_lib",
+    ],
+    args = [
+        "--noEmit",
+        "--project",
+        "$(location :tsconfig.node.json)",
+    ],
     stdout = "tsc_check.log",
     tags = ["lint"],
 )
@@ -88,10 +94,10 @@ js_binary(
 js_run_binary(
     name = "generated_types_gen",
     srcs = ["//web:openapi_schema"],
-    outs = ["src/generated-types.ts"],
+    outs = ["src/util/generated-types.ts"],
     args = [
         "$(execpath //web:openapi_schema)",
-        "$(execpath src/generated-types.ts)",
+        "$(execpath src/util/generated-types.ts)",
     ],
     tool = "//web:generate_types_bin",
 )
@@ -115,7 +121,10 @@ js_library(
             "src/util/generated-types.ts",  # genrule output
         ],
     ),
-    deps = ["//:workflow_js"],
+    deps = [
+        ":generated_types",
+        "//:workflow_js",
+    ],
 )
 
 # ── Web source library ────────────────────────────────────────────────────────
@@ -146,6 +155,7 @@ js_library(
         ":generated_types",
         ":node_modules",
         ":util_lib",
+        "//:workflow_js",
     ],
 )
 

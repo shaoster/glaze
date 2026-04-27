@@ -10,7 +10,7 @@ import userEvent from "@testing-library/user-event";
 import NewPieceDialog from "../NewPieceDialog";
 import { CURATED_THUMBNAILS } from "../thumbnailConstants";
 import * as api from "../../util/api";
-import type { PieceDetail } from "../..//types";
+import type { PieceDetail } from "../../util/types";
 
 vi.mock("../../util/api", () => ({
   createPiece: vi.fn(),

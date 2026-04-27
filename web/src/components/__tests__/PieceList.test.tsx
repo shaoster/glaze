@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceList from "../PieceList";
-import type { PieceSummary } from "../..//types";
+import type { PieceSummary } from "../../util/types";
 
 vi.mock("../CloudinaryImage", () => ({
   default: ({ url, alt }: { url: string; alt?: string }) => (

@@ -151,7 +151,10 @@ describe("GlazeImportToolPage", () => {
             },
           });
         },
+        close: () => {},
+        destroy: () => {},
       })),
+      openUploadWidget: vi.fn(),
     };
     vi.mocked(fetchCloudinaryWidgetConfig).mockResolvedValue({
       cloud_name: "demo-cloud",
@@ -170,7 +173,7 @@ describe("GlazeImportToolPage", () => {
     await waitFor(() => {
       expect(screen.getByText("ash-blue.jpg")).toBeInTheDocument();
     });
-    expect(window.cloudinary.createUploadWidget).toHaveBeenCalled();
+    expect(window.cloudinary?.createUploadWidget).toHaveBeenCalled();
   });
 
   it("shows that no records have been uploaded yet on first render", () => {
@@ -279,10 +282,13 @@ describe("GlazeImportToolPage", () => {
   it("shows an error when the Cloudinary widget callback fails", async () => {
     window.cloudinary = {
       createUploadWidget: vi.fn((_options, callback) => ({
-        open: () => {
+        open: vi.fn(() => {
           callback(new Error("upload failed"), null);
-        },
+        }),
+        close: () => {},
+        destroy: () => {},
       })),
+      openUploadWidget: vi.fn(),
     };
     vi.mocked(fetchCloudinaryWidgetConfig).mockResolvedValue({
       cloud_name: "demo-cloud",
@@ -318,6 +324,7 @@ describe("GlazeImportToolPage", () => {
       },
       results: [
         {
+          image_url: "example.com/image.png",
           client_id: "mock-client-id",
           filename: "ash-blue.png",
           name: "Ash Blue",

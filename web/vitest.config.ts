@@ -1,6 +1,13 @@
 import { defineConfig } from "vitest/config";
 import yaml from "@rollup/plugin-yaml";
-import path from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "url";
+
+// Path to the directory containing this file
+// This is necessary to run in bazel runfiles dirs where this file needs to
+// be passed by arg to a vitest invocation.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default defineConfig({
   plugins: [yaml()],
@@ -13,7 +20,7 @@ export default defineConfig({
     alias: [
       {
         find: "axios",
-        replacement: path.resolve(__dirname, "node_modules/axios"),
+        replacement: resolve(__dirname, "node_modules/axios"),
       },
     ],
   },

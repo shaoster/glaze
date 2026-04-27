@@ -11,7 +11,10 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceDetail from "../PieceDetail";
-import type { PieceDetail as PieceDetailType, PieceState } from "../..//types";
+import type {
+  PieceDetail as PieceDetailType,
+  PieceState,
+} from "../../util/types";
 import * as api from "../../util/api";
 
 // Zero-duration theme so MUI Dialog/Fade animations complete in the next tick

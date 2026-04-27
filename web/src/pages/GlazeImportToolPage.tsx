@@ -79,10 +79,6 @@ type OcrSuggestion = {
   confidence: number | null;
 };
 
-// Grid-space coordinates of the white label rectangle found by Kadane 2D,
-// stored per-record so phase 2 (text bbox) can be re-run independently.
-type LabelRect = { r1: number; r2: number; c1: number; c2: number };
-
 type UploadedRecord = {
   id: string;
   file: File | null;
@@ -90,7 +86,7 @@ type UploadedRecord = {
   filename: string;
   dimensions: { width: number; height: number };
   crop: CropSquare | null;
-  detectedLabelRect: LabelRect | null;
+  detectedLabelRect?: LabelRect | null;
   ocrRegion: OcrRegion | null;
   parsedFields: ParsedFields;
   ocrSuggestion: OcrSuggestion | null;

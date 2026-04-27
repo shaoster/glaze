@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ImageLightbox from "../ImageLightbox";
-import type { CaptionedImage } from "../..//types";
+import type { CaptionedImage } from "../../util/types";
 
 function makeImage(url: string, caption = ""): CaptionedImage {
   return { url, caption, created: new Date("2024-01-15T10:00:00Z") };
