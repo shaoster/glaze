@@ -203,11 +203,11 @@ export default function CloudinaryImage({
     if (context === "lightbox") {
       const vw =
         typeof window !== "undefined"
-          ? Math.round(window.innerWidth * 0.9)
+          ? Math.round(window.innerWidth * window.devicePixelRatio * 0.9)
           : 1200;
       const vh =
         typeof window !== "undefined"
-          ? Math.round(window.innerHeight * 0.8)
+          ? Math.round(window.innerHeight * window.devicePixelRatio * 0.8)
           : 900;
       img.resize(fit().width(vw).height(vh));
     } else {
