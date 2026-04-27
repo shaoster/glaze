@@ -30,7 +30,7 @@ build:lint --keep_going
 
 # Use sandboxing in remote CI, both because the stakes are higher and the setup
 # costs are lower compared to WSL.
-common:ci --spawn_strategy=linux-sandbox
+common:ci --spawn_strategy=sandboxed
 
 build:ci --announce_rc
 build:ci --show_timestamps
