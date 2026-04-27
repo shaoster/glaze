@@ -78,7 +78,10 @@ jobs:
       - name: Run all linters
         run: bazel build --config=ci --config=lint //...
 
-      - name: Run all tests
+      - name: Run uncovered tests
+        run: bazel test --test_tag_filters=+no-coverage //...
+
+      - name: Run all covered tests
         run: bazel coverage --config=ci --combined_report=lcov //...
 
       - name: Upload coverage to Codecov
