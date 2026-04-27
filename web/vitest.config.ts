@@ -29,8 +29,15 @@ export default defineConfig({
     globals: true,
     environment: "happy-dom",
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    reporters: ["default", "junit"],
+    outputFile: {
+      junit: process.env.XML_OUTPUT_FILE || "./test.xml",
+    },
     coverage: {
       provider: "v8",
+      // For bazel coverage in a non-sandbox directory, we have to set clean to false
+      // or else we will nuke bazel's test outputs.
+      clean: process.env.COVERAGE_DIR ? false : true,
       // TODO(#165): Upstream something to obviate this hack
       //
       // This is a pretty elaborate workaround to integrate with bazel's coverage

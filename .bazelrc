@@ -1,11 +1,8 @@
 # ── Common ────────────────────────────────────────────────────────────────────
 common --enable_bzlmod
-common --reuse_sandbox_directories
-common --sandbox_tmpfs_path=/tmp
-# Local hack. We're not doing anything interesting enough to justify the 5x
-# overhead of spawning dummy sandboxes.
+#common --experimental_merged_skyframe_analysis_execution
 common --spawn_strategy=local
-common --test_output=all
+common --test_output=streamed
 
 build --incompatible_enable_cc_toolchain_resolution
 
@@ -29,5 +26,4 @@ build:lint --keep_going
 # enable a proper remote cache instead.
 build:ci --announce_rc
 build:ci --show_timestamps
-
-
+common:ci --test_output=full
