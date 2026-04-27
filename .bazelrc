@@ -27,11 +27,6 @@ build:lint --keep_going
 # Cache Bazel outputs between CI runs using GitHub Actions cache as the
 # backend. Set BAZEL_REMOTE_CACHE_URL in the repository's action secrets to
 # enable a proper remote cache instead.
-
-# Use sandboxing in remote CI, both because the stakes are higher and the setup
-# costs are lower compared to WSL.
-common:ci --spawn_strategy=sandboxed
-
 build:ci --announce_rc
 build:ci --show_timestamps
 
