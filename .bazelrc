@@ -1,16 +1,16 @@
 # ── Common ────────────────────────────────────────────────────────────────────
 common --enable_bzlmod
+common --reuse_sandbox_directories
+common --sandbox_tmpfs_path=/tmp
+# Local hack. We're not doing anything interesting enough to justify the 5x
+# overhead of spawning dummy sandboxes.
+common --spawn_strategy=local
+common --test_output=all
+
 build --incompatible_enable_cc_toolchain_resolution
-
-
-# Show test errors inline rather than requiring a separate log fetch.
-test --test_output=errors
-test --test_summary=terse
-
 
 # Coverage exclude tags
 coverage --test_tag_filters=-no-coverage
-coverage --test_summary=terse
 
 
 # ── Lint (bazel build --config=lint //...) ────────────────────────────────────
@@ -27,8 +27,12 @@ build:lint --keep_going
 # Cache Bazel outputs between CI runs using GitHub Actions cache as the
 # backend. Set BAZEL_REMOTE_CACHE_URL in the repository's action secrets to
 # enable a proper remote cache instead.
+
+# Use sandboxing in remote CI, both because the stakes are higher and the setup
+# costs are lower compared to WSL.
+common:ci --spawn_strategy=linux-sandbox
+
 build:ci --announce_rc
 build:ci --show_timestamps
-test:ci  --test_output=all
-coverage:ci  --test_output=all
+
 

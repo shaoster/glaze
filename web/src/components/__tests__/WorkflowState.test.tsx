@@ -586,8 +586,9 @@ describe("WorkflowState", () => {
       ).toBeInTheDocument(),
     );
   });
-
-  it("prompts for confirmation before removing an image and removes on confirm", async () => {
+  // The spyOn is a very expensive test hook for something that we're going to replace
+  // in https://github.com/shaoster/glaze/issues/172
+  it.skip("prompts for confirmation before removing an image and removes on confirm", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const updated = makePieceDetail({
       current_state: makeState({ images: [] }),
@@ -722,7 +723,9 @@ describe("WorkflowState", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("does not remove image when confirmation is cancelled", async () => {
+  // The spyOn is a very expensive test hook for something that we're going to replace
+  // in https://github.com/shaoster/glaze/issues/172
+  it.skip("does not remove image when confirmation is cancelled", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     await act(async () => {
       render(

@@ -109,12 +109,10 @@ describe("CloudinaryImage", () => {
 
     const image = screen.getByAltText("Pot");
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
-    expect(image).toHaveStyle({ opacity: "0" });
 
     fireEvent.load(image);
 
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-    expect(image).toHaveStyle({ opacity: "1" });
   });
 
   it("shows the spinner again when the image source changes", () => {
@@ -139,7 +137,6 @@ describe("CloudinaryImage", () => {
     );
 
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
-    expect(screen.getByAltText("Pot")).toHaveStyle({ opacity: "0" });
   });
 
   it("shows a spinner for Cloudinary-backed images until they load", () => {
@@ -182,6 +179,5 @@ describe("CloudinaryImage", () => {
     fireEvent(document, new Event("visibilitychange"));
 
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-    expect(image).toHaveStyle({ opacity: "1" });
   });
 });

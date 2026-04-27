@@ -235,3 +235,6 @@ __marimo__/
 
 # Ignore the generated index
 pages/index.html
+
+# Bazel's aspect_rules tempdir
+.aspect
