@@ -130,40 +130,17 @@ describe("PieceDetail", () => {
     expect(screen.getByText("Current location")).toBeInTheDocument();
   });
 
-  it("creates a new current location through the dialog", async () => {
-    const updated = makePiece({ current_location: "Studio K" });
-    vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
-    vi.mocked(api.createGlobalEntry).mockResolvedValue({
-      id: "new-id",
-      name: "Studio K",
-      isPublic: false,
-    });
-    vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
-    vi.mocked(api.updatePiece).mockResolvedValue(updated);
-    const onPieceUpdated = vi.fn();
-    await renderPieceDetail(undefined, onPieceUpdated);
+  it("keeps current location browse-only when create is not enabled by workflow metadata", async () => {
+    await renderPieceDetail();
     await userEvent.click(
       screen.getByRole("button", { name: "Browse Current location" }),
     );
-    await userEvent.click(screen.getByRole("tab", { name: "Create" }));
-    await userEvent.type(
-      screen.getByRole("textbox", { name: "Location" }),
-      "Studio K",
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
-    await waitFor(() =>
-      expect(api.createGlobalEntry).toHaveBeenCalledWith(
-        "location",
-        { field: "name", value: "Studio K" },
-      ),
-    );
-    await waitFor(() => expect(screen.getByText("Studio K")).toBeInTheDocument());
-    await waitFor(() =>
-      expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
-        current_location: "Studio K",
-      }),
-    );
-    await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(updated));
+    expect(
+      screen.queryByRole("tab", { name: "Create" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Create Location" }),
+    ).not.toBeInTheDocument();
   });
 
   it("saves location updates when confirmed", async () => {

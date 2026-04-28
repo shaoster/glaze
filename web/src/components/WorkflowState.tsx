@@ -481,7 +481,6 @@ export default function WorkflowState({
         label="Current location"
         value={currentLocation}
         onSelect={(entry) => setCurrentLocation(entry?.name ?? "")}
-        canCreate
       />
 
       {additionalFieldDefs.length > 0 && (

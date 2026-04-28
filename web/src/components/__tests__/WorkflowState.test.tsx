@@ -277,11 +277,9 @@ describe("WorkflowState", () => {
     });
     vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
     vi.mocked(api.updatePiece).mockResolvedValue(updated);
-    let resolveCreate!: (value: api.GlobalEntry) => void;
-    const createPromise = new Promise<api.GlobalEntry>((resolve) => {
-      resolveCreate = resolve;
-    });
-    vi.mocked(api.createGlobalEntry).mockReturnValue(createPromise);
+    vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
+      { id: "shelf-z", name: "Shelf Z", isPublic: false },
+    ]);
     render(
       <WorkflowState
         {...defaultProps}
@@ -292,25 +290,11 @@ describe("WorkflowState", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Browse Current location" }),
     );
-    await userEvent.click(screen.getByRole("tab", { name: "Create" }));
-    await userEvent.type(
-      screen.getByRole("textbox", { name: "Location" }),
-      "New Shelf",
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
-    await waitFor(() =>
-      expect(api.createGlobalEntry).toHaveBeenCalledWith(
-        "location",
-        { field: "name", value: "New Shelf" },
-      ),
-    );
-    await act(async () =>
-      resolveCreate({ id: "new-id", name: "New Shelf", isPublic: false }),
-    );
-    await waitFor(() => expect(screen.getByText("New Shelf")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Shelf Z")).toBeInTheDocument());
+    await userEvent.click(screen.getByText("Shelf Z"));
     await waitFor(() =>
       expect(api.updatePiece).toHaveBeenCalledWith("test-piece-id", {
-        current_location: "New Shelf",
+        current_location: "Shelf Z",
       }),
     );
   });

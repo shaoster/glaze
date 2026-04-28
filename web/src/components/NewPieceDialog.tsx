@@ -120,7 +120,6 @@ export default function NewPieceDialog({
             label="Location"
             value={location}
             onSelect={(entry) => setLocation(entry?.name ?? "")}
-            canCreate
             sx={{ mb: 2 }}
           />
           <Typography variant="subtitle2" gutterBottom>

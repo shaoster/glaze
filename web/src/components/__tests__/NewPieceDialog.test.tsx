@@ -78,29 +78,17 @@ describe("NewPieceDialog", () => {
       expect(screen.getByTestId("notes-input")).toBeInTheDocument();
     });
 
-    it("lets you create a new location option", async () => {
-      vi.mocked(api.createGlobalEntry).mockResolvedValue({
-        id: "new-id",
-        name: "Studio K",
-        isPublic: false,
-      });
+    it("keeps location browse-only when create is not enabled by workflow metadata", async () => {
       render(<NewPieceDialog {...defaultProps} />);
       await userEvent.click(
         screen.getByRole("button", { name: "Browse Location" }),
       );
-      await userEvent.click(screen.getByRole("tab", { name: "Create" }));
-      await userEvent.type(
-        screen.getByRole("textbox", { name: "Location" }),
-        "Studio K",
-      );
-      await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
-      await waitFor(() =>
-        expect(api.createGlobalEntry).toHaveBeenCalledWith(
-          "location",
-          { field: "name", value: "Studio K" },
-        ),
-      );
-      await waitFor(() => expect(screen.getByText("Studio K")).toBeInTheDocument());
+      expect(
+        screen.queryByRole("tab", { name: "Create" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Create Location" }),
+      ).not.toBeInTheDocument();
     });
 
     it("renders the location field", async () => {
