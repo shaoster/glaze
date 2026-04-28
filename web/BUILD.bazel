@@ -304,7 +304,11 @@ js_library(
 
 js_library(
     name = "workflow_state_src",
-    srcs = ["src/components/WorkflowState.tsx"],
+    srcs = [
+        "src/components/AutosaveStatus.tsx",
+        "src/components/WorkflowState.tsx",
+        "src/components/useAutosave.ts",
+    ],
     deps = [
         ":cloudinary_image_src",
         ":generated_types",
@@ -552,6 +556,7 @@ test_suite(
         ":web_piece_list_test",
         ":web_primitive_test",
         ":web_tag_test",
+        ":web_workflow_state_test",
         ":workflow_test",
     ],
 )

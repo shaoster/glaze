@@ -135,6 +135,15 @@ Run from the repo root with the venv active. There is no Bazel-integrated auto-f
 
 Prefer Bazel targets — they match CI exactly and benefit from incremental caching:
 
+Before running a granular Bazel test after adding or importing new source files,
+check that the target's source slice includes the new dependencies. Use
+`rtk bazel query 'labels(srcs, <library-target>)'` (for example,
+`rtk bazel query 'labels(srcs, //web:workflow_state_src)'`) to inspect the
+files currently included, then add any missing component files or helper modules
+to the appropriate `BUILD.bazel` `js_library` before rerunning the test. Use
+`rtk bazel query 'deps(<test-target>)'` only when the relevant source library is
+not obvious.
+
 ```bash
 # Workflow schema validation
 rtk bazel test //tests:...

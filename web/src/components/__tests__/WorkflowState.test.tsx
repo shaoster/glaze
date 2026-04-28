@@ -75,6 +75,7 @@ const defaultProps = {
   pieceId: "test-piece-id",
   onSaved: vi.fn(),
   onDirtyChange: vi.fn(),
+  autosaveDelayMs: 0,
 };
 
 const noop = () => {};
@@ -304,8 +305,6 @@ describe("WorkflowState", () => {
       resolveCreate({ id: "new-id", name: "New Shelf", isPublic: false }),
     );
     await waitFor(() => expect(input).toHaveValue("New Shelf"));
-    expect(api.updatePiece).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByTestId("save-button"));
     await waitFor(() =>
       expect(api.updatePiece).toHaveBeenCalledWith("test-piece-id", {
         current_location: "New Shelf",
@@ -313,18 +312,20 @@ describe("WorkflowState", () => {
     );
   });
 
-  it("renders a Save button", async () => {
+  it("renders an autosave status", async () => {
     await act(async () => {
       render(<WorkflowState {...defaultProps} />);
     });
-    expect(screen.getByTestId("save-button")).toBeInTheDocument();
+    expect(screen.getByTestId("autosave-status")).toHaveTextContent(
+      "All changes saved",
+    );
   });
 
-  it("Save button is disabled when no changes", async () => {
+  it("does not save when there are no changes", async () => {
     await act(async () => {
       render(<WorkflowState {...defaultProps} />);
     });
-    expect(screen.getByTestId("save-button")).toBeDisabled();
+    expect(api.updateCurrentState).not.toHaveBeenCalled();
   });
 
   it("shows notes from pieceState", async () => {
@@ -339,31 +340,37 @@ describe("WorkflowState", () => {
     expect(screen.getByLabelText("Notes")).toHaveValue("Some notes");
   });
 
-  it("Save button enabled after editing notes", async () => {
+  it("shows pending autosave after editing notes", async () => {
     await act(async () => {
       render(<WorkflowState {...defaultProps} />);
     });
     fireEvent.change(screen.getByLabelText("Notes"), {
       target: { value: "New notes" },
     });
-    expect(screen.getByTestId("save-button")).not.toBeDisabled();
+    expect(screen.getByTestId("autosave-status")).toHaveTextContent(
+      "Saving soon",
+    );
   });
 
-  it("shows unsaved indicator after editing", async () => {
+  it("shows autosave activity after editing", async () => {
     await act(async () => {
       render(<WorkflowState {...defaultProps} />);
     });
     fireEvent.change(screen.getByLabelText("Notes"), {
       target: { value: "Changed" },
     });
-    expect(screen.getByTestId("unsaved-indicator")).toBeInTheDocument();
+    expect(screen.getByTestId("autosave-status")).toHaveTextContent(
+      "Saving soon",
+    );
   });
 
-  it("no unsaved indicator when not dirty", async () => {
+  it("shows saved status when not dirty", async () => {
     await act(async () => {
       render(<WorkflowState {...defaultProps} />);
     });
-    expect(screen.queryByTestId("unsaved-indicator")).not.toBeInTheDocument();
+    expect(screen.getByTestId("autosave-status")).toHaveTextContent(
+      "All changes saved",
+    );
   });
 
   it("calls onSaved after successful save", async () => {
@@ -374,7 +381,6 @@ describe("WorkflowState", () => {
     fireEvent.change(screen.getByLabelText("Notes"), {
       target: { value: "New notes" },
     });
-    fireEvent.click(screen.getByTestId("save-button"));
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(updated));
   });
 
@@ -386,10 +392,9 @@ describe("WorkflowState", () => {
     fireEvent.change(screen.getByLabelText("Notes"), {
       target: { value: "New notes" },
     });
-    fireEvent.click(screen.getByTestId("save-button"));
     await waitFor(() =>
       expect(
-        screen.getByText("Failed to save. Please try again."),
+        screen.getByText("Autosave failed. Your changes are still here."),
       ).toBeInTheDocument(),
     );
   });
@@ -402,14 +407,14 @@ describe("WorkflowState", () => {
     fireEvent.change(screen.getByLabelText("Notes"), {
       target: { value: "Dirty notes" },
     });
-    fireEvent.click(screen.getByTestId("save-button"));
     await waitFor(() =>
       expect(
-        screen.getByText("Failed to save. Please try again."),
+        screen.getByText("Autosave failed. Your changes are still here."),
       ).toBeInTheDocument(),
     );
-    expect(screen.getByTestId("unsaved-indicator")).toBeInTheDocument();
-    expect(screen.getByTestId("save-button")).not.toBeDisabled();
+    expect(screen.getByTestId("autosave-status")).toHaveTextContent(
+      "Autosave failed",
+    );
   });
 
   it("remains dirty when piece API fails during save", async () => {
@@ -429,14 +434,14 @@ describe("WorkflowState", () => {
     );
     fireEvent.click(screen.getByRole("option", { name: "Shelf Z" }));
     await waitFor(() => expect(input).toHaveValue("Shelf Z"));
-    await userEvent.click(screen.getByTestId("save-button"));
     await waitFor(() =>
       expect(
-        screen.getByText("Failed to save. Please try again."),
+        screen.getByText("Autosave failed. Your changes are still here."),
       ).toBeInTheDocument(),
     );
-    expect(screen.getByTestId("unsaved-indicator")).toBeInTheDocument();
-    expect(screen.getByTestId("save-button")).not.toBeDisabled();
+    expect(screen.getByTestId("autosave-status")).toHaveTextContent(
+      "Autosave failed",
+    );
     expect(api.updatePiece).toHaveBeenCalledWith("test-piece-id", {
       current_location: "Shelf Z",
     });
