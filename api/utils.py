@@ -111,31 +111,17 @@ def bootstrap_dev_user(user) -> None:
 
 def _seed_dev_pieces(user) -> None:
     """Create a few representative pieces for a newly bootstrapped dev user."""
-    from .models import (  # noqa: PLC0415
-        ClayBody,
-        FiringTemperature,
-        GlazeType,
-        Piece,
-    )
+    from .models import ClayBody, GlazeCombination, GlazeType, Piece  # noqa: PLC0415
 
     clay_body, _ = ClayBody.objects.get_or_create(
-        user=None,
+        user=user,
         name="Brown Stoneware",
         defaults={
             "short_description": "Reliable mid-fire stoneware for local dev demos."
         },
     )
-    firing_temperature, _ = FiringTemperature.objects.get_or_create(
-        user=None,
-        name="Cone 6 Oxidation",
-        defaults={
-            "cone": "6",
-            "temperature_c": 1222,
-            "atmosphere": "Oxidation",
-        },
-    )
     glaze_type, _ = GlazeType.objects.get_or_create(
-        user=None,
+        user=user,
         name="Floating Blue",
         defaults={
             "short_description": "Sample glaze for bootstrapped dev data.",
@@ -147,11 +133,13 @@ def _seed_dev_pieces(user) -> None:
             "apply_thin": False,
         },
     )
-    sync_glaze_type_singleton_combination(glaze_type)
+    glaze_combination, _ = GlazeCombination.get_or_create_with_components(
+        user=user,
+        glaze_types=[glaze_type],
+    )
 
-    from .models import GlazeCombination, Location  # noqa: PLC0415
+    from .models import Location  # noqa: PLC0415
 
-    glaze_combination = GlazeCombination.objects.get(user=None, name=glaze_type.name)
     bisque_kiln, _ = Location.objects.get_or_create(user=user, name="Bisque Kiln")
     glaze_kiln, _ = Location.objects.get_or_create(user=user, name="Glaze Kiln")
 
