@@ -223,6 +223,17 @@ js_library(
     ],
 )
 
+js_library(
+    name = "autosave_src",
+    srcs = [
+        "src/components/AutosaveStatus.tsx",
+        "src/components/useAutosave.ts",
+    ],
+    deps = [
+        ":node_modules",
+    ],
+)
+
 # Tag components: TagAutocomplete and TagChipList depend on TagChip; CreateTagDialog depends on tagPalette.
 js_library(
     name = "tag_src",
@@ -247,6 +258,7 @@ js_library(
         "src/components/GlobalFieldPicker.tsx",
     ],
     deps = [
+        ":autosave_src",
         ":cloudinary_image_src",
         ":generated_types",
         ":node_modules",
@@ -305,11 +317,10 @@ js_library(
 js_library(
     name = "workflow_state_src",
     srcs = [
-        "src/components/AutosaveStatus.tsx",
         "src/components/WorkflowState.tsx",
-        "src/components/useAutosave.ts",
     ],
     deps = [
+        ":autosave_src",
         ":cloudinary_image_src",
         ":generated_types",
         ":global_picker_src",

@@ -33,6 +33,8 @@ import {
   type GlobalPickerFilter,
 } from "../util/workflow";
 import CloudinaryImage from "./CloudinaryImage";
+import AutosaveStatus from "./AutosaveStatus";
+import type { AutosaveStatus as AutosaveStatusValue } from "./useAutosave";
 
 export interface GlobalEntryPickerProps {
   globalName: string;
@@ -122,6 +124,9 @@ export default function GlobalEntryPicker({
     Record<string, NamedRef[]>
   >({});
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<AutosaveStatusValue>("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   // Fetch autocomplete options for each related-filter global when the dialog opens.
   useEffect(() => {
@@ -189,6 +194,8 @@ export default function GlobalEntryPicker({
 
   async function handleToggleFavorite(entry: GenericGlobalEntry) {
     setTogglingId(entry.id);
+    setSaveStatus("saving");
+    setSaveError(null);
     try {
       await toggleGlobalEntryFavorite(globalName, entry.id, !entry.is_favorite);
       setEntries((prev) =>
@@ -196,6 +203,11 @@ export default function GlobalEntryPicker({
           e.id === entry.id ? { ...e, is_favorite: !e.is_favorite } : e,
         ),
       );
+      setLastSavedAt(new Date());
+      setSaveStatus("saved");
+    } catch {
+      setSaveError("Failed to update favorite. Please try again.");
+      setSaveStatus("error");
     } finally {
       setTogglingId(null);
     }
@@ -488,6 +500,13 @@ export default function GlobalEntryPicker({
         )}
       </DialogContent>
       <DialogActions>
+        {saveStatus !== "idle" && (
+          <AutosaveStatus
+            status={saveStatus}
+            error={saveError}
+            lastSavedAt={lastSavedAt}
+          />
+        )}
         <Button onClick={handleClose}>Cancel</Button>
       </DialogActions>
     </Dialog>

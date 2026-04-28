@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Autocomplete, { createFilterOptions } from "@mui/material/Autocomplete";
-import { CircularProgress, IconButton, TextField } from "@mui/material";
+import { Box, CircularProgress, IconButton, TextField } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
@@ -17,6 +17,8 @@ import {
   parseCreateOption,
   stripPublicSuffix,
 } from "./globalFieldPickerUtils";
+import AutosaveStatus from "./AutosaveStatus";
+import type { AutosaveStatus as AutosaveStatusValue } from "./useAutosave";
 
 // Pre-built filter; module-level to avoid reconstruction on every render.
 const FILTER = createFilterOptions<string>();
@@ -106,6 +108,8 @@ export default function GlobalFieldPicker({
   const isFavoritable = isFavoritableGlobal(globalName);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<AutosaveStatusValue>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   // Tracks what is shown in the text field while the user is typing.
   // Separate from `value` so that partially-typed text is never committed.
   const [inputValue, setInputValue] = useState(value);
@@ -184,9 +188,16 @@ export default function GlobalFieldPicker({
     if (!selectedEntry || togglingFavorite) return;
     const newFav = !getEffectiveFavorite(selectedEntry);
     setTogglingFavorite(true);
+    setSaveStatus("saving");
+    setError(null);
     try {
       await toggleGlobalEntryFavorite(globalName, selectedEntry.id, newFav);
       setLocalFavorites((prev) => ({ ...prev, [selectedEntry.id]: newFav }));
+      setLastSavedAt(new Date());
+      setSaveStatus("saved");
+    } catch {
+      setError("Failed to update favorite. Please try again.");
+      setSaveStatus("error");
     } finally {
       setTogglingFavorite(false);
     }
@@ -194,6 +205,8 @@ export default function GlobalFieldPicker({
 
   async function handleChange(displayOption: string | null) {
     if (!displayOption) {
+      setSaveStatus("idle");
+      setError(null);
       onChange("");
       onSelectEntry?.(null);
       return;
@@ -201,6 +214,7 @@ export default function GlobalFieldPicker({
     const createValue = parseCreateOption(displayOption);
     if (createValue) {
       setCreating(true);
+      setSaveStatus("saving");
       setError(null);
       try {
         const created = await createGlobalEntry(
@@ -219,10 +233,13 @@ export default function GlobalFieldPicker({
         }
         onChange(created.name);
         onSelectEntry?.(created);
+        setLastSavedAt(new Date());
+        setSaveStatus("saved");
         // Newly created entries are never auto-favorited; the user
         // hasn't expressed a preference yet.
       } catch {
         setError(`Failed to create ${label.toLowerCase()}. Please try again.`);
+        setSaveStatus("error");
       } finally {
         setCreating(false);
       }
@@ -230,6 +247,8 @@ export default function GlobalFieldPicker({
     }
     // Strip display suffix before emitting the raw name.
     const rawName = stripPublicSuffix(displayOption);
+    setSaveStatus("idle");
+    setError(null);
     onChange(rawName);
     if (onSelectEntry) {
       const entry = entries.find((e) => e.name === rawName) ?? null;
@@ -243,7 +262,8 @@ export default function GlobalFieldPicker({
     : false;
 
   return (
-    <Autocomplete
+    <Box sx={sx}>
+      <Autocomplete
       freeSolo={canCreate}
       options={displayOptions}
       inputValue={inputValue}
@@ -277,8 +297,7 @@ export default function GlobalFieldPicker({
           {...params}
           label={label}
           fullWidth
-          sx={sx}
-          helperText={error ?? fetchError ?? helperText ?? ""}
+          helperText={fetchError ?? (error ? undefined : helperText) ?? ""}
           error={Boolean(error) || Boolean(fetchError)}
           required={required}
           slotProps={{
@@ -315,6 +334,14 @@ export default function GlobalFieldPicker({
           }}
         />
       )}
-    />
+      />
+      {saveStatus !== "idle" && (
+        <AutosaveStatus
+          status={saveStatus}
+          error={error}
+          lastSavedAt={lastSavedAt}
+        />
+      )}
+    </Box>
   );
 }
