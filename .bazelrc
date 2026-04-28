@@ -3,6 +3,7 @@ common --enable_bzlmod
 common --experimental_merged_skyframe_analysis_execution
 common --spawn_strategy=local
 build --incompatible_enable_cc_toolchain_resolution
+build --nobuild_runfile_links
 
 # Coverage exclude tags
 coverage --test_tag_filters=-no-coverage
