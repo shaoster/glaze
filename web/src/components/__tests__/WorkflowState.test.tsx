@@ -270,7 +270,7 @@ describe("WorkflowState", () => {
     );
   });
 
-  it("does not update current_location until save is pressed", async () => {
+  it("updates current_location after selecting a browse result", async () => {
     const updated = makePieceDetail({
       current_state: makeState({ notes: "new" }),
       current_location: "Shelf B",
@@ -858,6 +858,20 @@ describe("WorkflowState", () => {
           screen.getByText("Browse Glaze Combinations"),
         ).toBeInTheDocument(),
       );
+    });
+
+    it("keeps glaze combination browse-only when can_create is not set", async () => {
+      const glazedState = makeState({ state: "glazed", additional_fields: {} });
+      render(<WorkflowState {...defaultProps} pieceState={glazedState} />);
+      await userEvent.click(
+        screen.getByRole("button", { name: "Browse Glaze Combination" }),
+      );
+      expect(
+        screen.queryByRole("tab", { name: "Create" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Create Glaze Combination" }),
+      ).not.toBeInTheDocument();
     });
   });
 });

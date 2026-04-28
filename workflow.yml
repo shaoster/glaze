@@ -368,7 +368,6 @@ states:
       glaze_combination:
         $ref: "@glaze_combination.name"
         description: The glaze combination applied (one or more layers).
-        can_create: true
 
   - id: submitted_to_glaze_fire
     visible: true
