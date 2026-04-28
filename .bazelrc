@@ -2,8 +2,6 @@
 common --enable_bzlmod
 #common --experimental_merged_skyframe_analysis_execution
 common --spawn_strategy=local
-common --test_output=streamed
-
 build --incompatible_enable_cc_toolchain_resolution
 
 # Coverage exclude tags
