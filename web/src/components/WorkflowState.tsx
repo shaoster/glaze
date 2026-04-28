@@ -3,7 +3,6 @@ import { useTheme } from "@mui/material";
 import {
   Box,
   Button,
-  Chip,
   CircularProgress,
   IconButton,
   List,
@@ -26,11 +25,9 @@ import {
   type ResolvedAdditionalField,
   formatWorkflowFieldLabel,
   getAdditionalFieldDefinitions,
-  getGlobalPickerFilters,
-  getGlobalThumbnailField,
 } from "../util/workflow";
-import GlobalFieldPicker from "./GlobalFieldPicker";
-import GlobalEntryPicker from "./GlobalEntryPicker";
+import { entryNameOrEmpty, normalizeOptionalText, undefinedIfBlank } from "../util/optionalValues";
+import GlobalEntryField from "./GlobalEntryField";
 import AutosaveStatus from "./AutosaveStatus";
 import { useAutosave } from "./useAutosave";
 
@@ -175,6 +172,7 @@ export default function WorkflowState({
   currentThumbnail,
   autosaveDelayMs,
 }: WorkflowStateProps) {
+  const normalizedCurrentLocationProp = normalizeOptionalText(currentLocationProp);
   const [notes, setNotes] = useState(pieceState.notes);
   const [images, setImages] = useState<ImageEntry[]>(stateImages(pieceState));
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -183,7 +181,9 @@ export default function WorkflowState({
     null,
   );
   const [editingCaptionValue, setEditingCaptionValue] = useState("");
-  const [currentLocation, setCurrentLocation] = useState(currentLocationProp);
+  const [currentLocation, setCurrentLocation] = useState(
+    normalizedCurrentLocationProp,
+  );
   const additionalFieldDefs = useMemo(
     () => getAdditionalFieldDefinitions(pieceState.state),
     [pieceState.state],
@@ -230,7 +230,8 @@ export default function WorkflowState({
   const additionalFieldsDirty =
     JSON.stringify(normalizedAdditionalFields) !==
     JSON.stringify(normalizedBaseAdditionalFields);
-  const locationDirty = currentLocation.trim() !== currentLocationProp.trim();
+  const locationDirty =
+    currentLocation.trim() !== normalizedCurrentLocationProp.trim();
 
   const theme = useTheme();
 
@@ -253,17 +254,16 @@ export default function WorkflowState({
     setImages(stateImages(pieceState));
     setAdditionalFieldInputs(baseAdditionalFieldInputs);
     setGlobalRefPks(baseGlobalRefPks);
-    setCurrentLocation(currentLocationProp);
+    setCurrentLocation(normalizedCurrentLocationProp);
   }, [
     pieceState,
     baseAdditionalFieldInputs,
     baseGlobalRefPks,
-    currentLocationProp,
+    normalizedCurrentLocationProp,
   ]);
 
   const [savingImage, setSavingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
-  const [pickerGlobalName, setPickerGlobalName] = useState<string | null>(null);
 
   const isDirty =
     notes !== pieceState.notes || additionalFieldsDirty || locationDirty;
@@ -282,7 +282,7 @@ export default function WorkflowState({
     let finalResult = result;
     if (locationDirty) {
       finalResult = await updatePiece(pieceId, {
-        current_location: currentLocation.trim() || undefined,
+        current_location: undefinedIfBlank(currentLocation),
       });
     }
     onSaved(finalResult);
@@ -481,12 +481,11 @@ export default function WorkflowState({
         fullWidth
       />
 
-      <GlobalFieldPicker
+      <GlobalEntryField
         globalName="location"
         label="Current location"
         value={currentLocation}
-        onChange={setCurrentLocation}
-        canCreate
+        onSelect={(entry) => setCurrentLocation(entryNameOrEmpty(entry))}
       />
 
       {additionalFieldDefs.length > 0 && (
@@ -528,107 +527,31 @@ export default function WorkflowState({
                 );
               }
               if (field.isGlobalRef && field.globalName) {
-                const hasThumbnail =
-                  getGlobalThumbnailField(field.globalName) !== null;
-                if (hasThumbnail) {
-                  // Thumbnail-backed globals use GlobalEntryPicker exclusively.
-                  // The field renders as a chip (selected value) + Browse/Change
-                  // button. Free typing is not supported — the user must go
-                  // through the picker to avoid split-brain between entry paths.
-                  return (
-                    <Box key={field.name}>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: "block", mb: 0.5 }}
-                      >
-                        {label}
-                        {field.required && " *"}
-                      </Typography>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          gap: 1,
-                          alignItems: "center",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        {value && (
-                          <Chip
-                            label={value}
-                            onDelete={() => {
-                              handleAdditionalFieldChange(field.name, "");
-                              setGlobalRefPks((prev) =>
-                                Object.fromEntries(
-                                  Object.entries(prev).filter(
-                                    ([k]) => k !== field.name,
-                                  ),
-                                ),
-                              );
-                            }}
-                          />
-                        )}
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() =>
-                            setPickerGlobalName(field.globalName ?? null)
-                          }
-                          sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
-                        >
-                          {value ? "Change…" : "Browse…"}
-                        </Button>
-                      </Box>
-                      {helperText && (
-                        <Typography variant="caption" color="text.secondary">
-                          {helperText}
-                        </Typography>
-                      )}
-                    </Box>
-                  );
-                }
-                const hasBrowse =
-                  getGlobalPickerFilters(field.globalName).length > 0;
                 return (
-                  <Box
+                  <GlobalEntryField
                     key={field.name}
-                    sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
-                  >
-                    <GlobalFieldPicker
-                      globalName={field.globalName}
-                      label={label}
-                      value={value}
-                      onChange={(val) =>
-                        handleAdditionalFieldChange(field.name, val)
-                      }
-                      onSelectEntry={(entry) =>
-                        setGlobalRefPks((prev) =>
-                          entry
-                            ? { ...prev, [field.name]: entry.id }
-                            : Object.fromEntries(
-                                Object.entries(prev).filter(
-                                  ([k]) => k !== field.name,
-                                ),
+                    globalName={field.globalName}
+                    label={label}
+                    value={value}
+                    onSelect={(entry) => {
+                      handleAdditionalFieldChange(
+                        field.name,
+                        entryNameOrEmpty(entry),
+                      );
+                      setGlobalRefPks((prev) =>
+                        entry
+                          ? { ...prev, [field.name]: entry.id }
+                          : Object.fromEntries(
+                              Object.entries(prev).filter(
+                                ([key]) => key !== field.name,
                               ),
-                        )
-                      }
-                      canCreate={Boolean(field.canCreate)}
-                      helperText={helperText}
-                      required={field.required}
-                      sx={{ flex: 1 }}
-                    />
-                    {hasBrowse && (
-                      <Button
-                        variant="outlined"
-                        onClick={() =>
-                          setPickerGlobalName(field.globalName ?? null)
-                        }
-                        sx={{ mt: "1px", whiteSpace: "nowrap", flexShrink: 0 }}
-                      >
-                        Browse
-                      </Button>
-                    )}
-                  </Box>
+                            ),
+                      );
+                    }}
+                    canCreate={Boolean(field.canCreate)}
+                    helperText={helperText}
+                    required={field.required}
+                  />
                 );
               }
               if (field.enum?.length) {
@@ -853,23 +776,6 @@ export default function WorkflowState({
         />
       )}
 
-      {/* Global entry picker — opened for any global field with a Browse button */}
-      {pickerGlobalName !== null && (
-        <GlobalEntryPicker
-          globalName={pickerGlobalName}
-          open={true}
-          onClose={() => setPickerGlobalName(null)}
-          onSelect={(entry) => {
-            const field = additionalFieldDefs.find(
-              (f) => f.globalName === pickerGlobalName,
-            );
-            if (field) {
-              handleAdditionalFieldChange(field.name, entry.name);
-              setGlobalRefPks((prev) => ({ ...prev, [field.name]: entry.id }));
-            }
-          }}
-        />
-      )}
     </Box>
   );
 }

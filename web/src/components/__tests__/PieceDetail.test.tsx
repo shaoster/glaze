@@ -17,6 +17,89 @@ import type {
 } from "../../util/types";
 import * as api from "../../util/api";
 
+const { mockWorkflow } = vi.hoisted(() => ({
+  mockWorkflow: {
+    version: "test",
+    globals: {
+      location: {
+        model: "Location",
+        fields: {
+          name: { type: "string" },
+        },
+      },
+    },
+    states: [
+      {
+        id: "designed",
+        visible: true,
+        friendly_name: "Designing",
+        description: "Design phase.",
+        successors: ["wheel_thrown", "handbuilt"],
+      },
+      {
+        id: "wheel_thrown",
+        visible: true,
+        friendly_name: "Throwing",
+        description: "Wheel-thrown.",
+        successors: ["trimmed", "recycled"],
+      },
+      {
+        id: "handbuilt",
+        visible: true,
+        friendly_name: "Handbuilding",
+        description: "Handbuilt.",
+        successors: ["recycled"],
+      },
+      {
+        id: "trimmed",
+        visible: true,
+        friendly_name: "Trimming",
+        description: "Trimmed.",
+        successors: ["recycled"],
+      },
+      {
+        id: "glaze_fired",
+        visible: true,
+        friendly_name: "Touching Up",
+        description: "Glaze fired.",
+        successors: ["sanded", "completed", "recycled"],
+      },
+      {
+        id: "sanded",
+        visible: true,
+        friendly_name: "Sanding",
+        description: "Sanding.",
+        successors: ["completed", "recycled"],
+      },
+      {
+        id: "glazed",
+        visible: true,
+        friendly_name: "Glazing",
+        description: "Glazing.",
+        successors: ["glaze_fired", "recycled"],
+      },
+      {
+        id: "completed",
+        visible: true,
+        friendly_name: "Completed",
+        description: "Completed.",
+        terminal: true,
+      },
+      {
+        id: "recycled",
+        visible: true,
+        friendly_name: "Recycled",
+        description: "Recycled.",
+        terminal: true,
+      },
+    ],
+  },
+}));
+
+vi.mock("../../../workflow.yml", () => ({
+  default: mockWorkflow,
+}));
+
 // Zero-duration theme so MUI Dialog/Fade animations complete in the next tick
 // rather than after their default 225–300ms CSS transition timeouts.
 const TEST_THEME = createTheme({
@@ -36,11 +119,13 @@ const TEST_THEME = createTheme({
 
 vi.mock("../../util/api", () => ({
   fetchGlobalEntries: vi.fn().mockResolvedValue([]),
+  fetchGlobalEntriesWithFilters: vi.fn().mockResolvedValue([]),
   updateCurrentState: vi.fn(),
   addPieceState: vi.fn(),
   updatePiece: vi.fn(),
   createTagEntry: vi.fn(),
   createGlobalEntry: vi.fn(),
+  toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),
   hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
   uploadImageToCloudinary: vi.fn(),
 }));
@@ -101,6 +186,7 @@ async function renderPieceDetail(
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
+  vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([]);
 });
 
 describe("PieceDetail", () => {
@@ -122,65 +208,41 @@ describe("PieceDetail", () => {
     ).toBe(true);
   });
 
-  it("renders current location input", async () => {
+  it("renders current location controls", async () => {
     await renderPieceDetail();
-    expect(screen.getByLabelText("Current location")).toBeInTheDocument();
+    expect(screen.getByText("Current location")).toBeInTheDocument();
   });
 
-  it("creates a new current location through the autocomplete", async () => {
-    const updated = makePiece({ current_location: "Studio K" });
-    vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
-    vi.mocked(api.createGlobalEntry).mockResolvedValue({
-      id: "new-id",
-      name: "Studio K",
-      isPublic: false,
-    });
-    vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
-    vi.mocked(api.updatePiece).mockResolvedValue(updated);
-    const onPieceUpdated = vi.fn();
-    await renderPieceDetail(undefined, onPieceUpdated);
-    const input = screen.getByLabelText("Current location");
-    fireEvent.change(input, { target: { value: "Studio K" } });
-    await waitFor(() =>
-      expect(
-        screen.getByRole("option", { name: 'Create "Studio K"' }),
-      ).toBeInTheDocument(),
+  it("keeps current location browse-only when create is not enabled by workflow metadata", async () => {
+    await renderPieceDetail();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Browse Current location" }),
     );
-    fireEvent.click(screen.getByRole("option", { name: 'Create "Studio K"' }));
-    await waitFor(() =>
-      expect(api.createGlobalEntry).toHaveBeenCalledWith(
-        "location",
-        "name",
-        "Studio K",
-      ),
-    );
-    await waitFor(() => expect(input).toHaveValue("Studio K"));
-    await waitFor(() =>
-      expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
-        current_location: "Studio K",
-      }),
-    );
-    await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(updated));
+    expect(
+      screen.queryByRole("tab", { name: "Create" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Create Location" }),
+    ).not.toBeInTheDocument();
   });
 
   it("saves location updates when confirmed", async () => {
     const updated = makePiece({ current_location: "Studio 7" });
-    vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
+    vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
       { id: "1", name: "Studio 7", isPublic: false },
     ]);
     vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
     vi.mocked(api.updatePiece).mockResolvedValue(updated);
     const onPieceUpdated = vi.fn();
     await renderPieceDetail(undefined, onPieceUpdated);
-    const input = screen.getByLabelText("Current location");
-    fireEvent.change(input, { target: { value: "Studio 7" } });
-    await waitFor(() =>
-      expect(
-        screen.getByRole("option", { name: "Studio 7" }),
-      ).toBeInTheDocument(),
+    await userEvent.click(
+      screen.getByRole("button", { name: "Browse Current location" }),
     );
-    fireEvent.click(screen.getByRole("option", { name: "Studio 7" }));
-    await waitFor(() => expect(input).toHaveValue("Studio 7"));
+    await waitFor(() =>
+      expect(screen.getByText("Studio 7")).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByText("Studio 7"));
+    await waitFor(() => expect(screen.getByText("Studio 7")).toBeInTheDocument());
     await waitFor(() =>
       expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
         current_location: "Studio 7",

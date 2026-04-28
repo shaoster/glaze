@@ -13,7 +13,8 @@ import {
 } from "@mui/material";
 import { createPiece } from "../util/api";
 import type { PieceDetail } from "../util/types";
-import GlobalFieldPicker from "./GlobalFieldPicker";
+import { entryNameOrEmpty, undefinedIfBlank } from "../util/optionalValues";
+import GlobalEntryField from "./GlobalEntryField";
 import { DEFAULT_THUMBNAIL, CURATED_THUMBNAILS } from "./thumbnailConstants";
 
 const MAX_NOTES_LENGTH = 300;
@@ -73,7 +74,7 @@ export default function NewPieceDialog({
         name: name.trim(),
         thumbnail: selectedThumbnail ?? "",
         notes: notes || undefined,
-        current_location: location.trim() || undefined,
+        current_location: undefinedIfBlank(location),
       });
       resetState();
       onClose();
@@ -115,12 +116,11 @@ export default function NewPieceDialog({
             slotProps={{ htmlInput: { "data-testid": "notes-input" } }}
             sx={{ mb: 2 }}
           />
-          <GlobalFieldPicker
+          <GlobalEntryField
             globalName="location"
             label="Location"
             value={location}
-            onChange={setLocation}
-            canCreate
+            onSelect={(entry) => setLocation(entryNameOrEmpty(entry))}
             sx={{ mb: 2 }}
           />
           <Typography variant="subtitle2" gutterBottom>
