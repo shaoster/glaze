@@ -107,6 +107,7 @@ def _state(state_id, **overrides):
         "id": state_id,
         "visible": True,
         "friendly_name": state_id.title(),
+        "past_friendly_name": state_id.title(),
         "description": f"{state_id} description",
     }
     state.update(overrides)
@@ -173,7 +174,18 @@ class TestSchemaValidation:
         bad = {
             "version": "1.0.0",
             "states": [
-                {"id": "a", "visible": True, "description": "desc", "successors": ["b"]},
+                {"id": "a", "visible": True, "past_friendly_name": "A", "description": "desc", "successors": ["b"]},
+                _state("b", terminal=True),
+            ],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
+    def test_missing_past_friendly_name_fails(self, schema):
+        bad = {
+            "version": "1.0.0",
+            "states": [
+                {"id": "a", "visible": True, "friendly_name": "A", "description": "desc", "successors": ["b"]},
                 _state("b", terminal=True),
             ],
         }
@@ -184,7 +196,7 @@ class TestSchemaValidation:
         bad = {
             "version": "1.0.0",
             "states": [
-                {"id": "a", "visible": True, "friendly_name": "A", "successors": ["b"]},
+                {"id": "a", "visible": True, "friendly_name": "A", "past_friendly_name": "A", "successors": ["b"]},
                 _state("b", terminal=True),
             ],
         }

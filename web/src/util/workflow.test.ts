@@ -62,6 +62,7 @@ vi.mock("../../../workflow.yml", () => ({
         id: "designed",
         visible: true,
         friendly_name: "Designing",
+        past_friendly_name: "Designed",
         description: "Dreaming it up.",
         successors: ["wheel_thrown", "handbuilt"],
       },
@@ -69,6 +70,7 @@ vi.mock("../../../workflow.yml", () => ({
         id: "wheel_thrown",
         visible: true,
         friendly_name: "Throwing",
+        past_friendly_name: "Thrown",
         description: "Fresh off the wheel.",
         successors: ["trimmed", "recycled"],
         fields: {
@@ -86,6 +88,7 @@ vi.mock("../../../workflow.yml", () => ({
         id: "submitted_to_bisque_fire",
         visible: true,
         friendly_name: "Queued → Bisque",
+        past_friendly_name: "Bisque Fired",
         description: "Waiting on the kiln...",
         successors: ["bisque_fired", "recycled"],
         fields: {
@@ -99,6 +102,7 @@ vi.mock("../../../workflow.yml", () => ({
         id: "trimmed",
         visible: true,
         friendly_name: "Trimming",
+        past_friendly_name: "Trimmed",
         description: "Ready for surface work.",
         successors: ["submitted_to_bisque_fire", "recycled"],
         fields: {
@@ -115,6 +119,7 @@ vi.mock("../../../workflow.yml", () => ({
         id: "bisque_fired",
         visible: true,
         friendly_name: "Planning → Glaze",
+        past_friendly_name: "Glaze Planned",
         description: "Done with the first firing!",
         successors: ["glazed", "recycled"],
         fields: {
@@ -131,6 +136,7 @@ vi.mock("../../../workflow.yml", () => ({
         id: "glaze_fired",
         visible: true,
         friendly_name: "Touching Up",
+        past_friendly_name: "Touched Up",
         description: "Final cleanup stretch.",
         successors: ["completed", "recycled"],
         fields: {
@@ -146,6 +152,7 @@ vi.mock("../../../workflow.yml", () => ({
         id: "recycled",
         visible: true,
         friendly_name: "Recycled",
+        past_friendly_name: "Recycled",
         description: "Oops! Next time.",
         terminal: true,
       },
@@ -155,6 +162,7 @@ vi.mock("../../../workflow.yml", () => ({
 
 import {
   formatState,
+  formatPastState,
   formatWorkflowFieldLabel,
   getStateDescription,
   getAdditionalFieldDefinitions,
@@ -184,6 +192,21 @@ describe("formatState", () => {
 
   it("returns an empty string for an unknown state instead of synthesizing a fallback", () => {
     expect(formatState("unknown_state")).toBe("");
+  });
+});
+
+describe("formatPastState", () => {
+  it("uses the workflow-authored past_friendly_name for history display", () => {
+    expect(formatPastState("submitted_to_bisque_fire")).toBe("Bisque Fired");
+  });
+
+  it("returns a distinct label from formatState for states with different past names", () => {
+    expect(formatPastState("bisque_fired")).toBe("Glaze Planned");
+    expect(formatState("bisque_fired")).toBe("Planning → Glaze");
+  });
+
+  it("returns an empty string for an unknown state", () => {
+    expect(formatPastState("unknown_state")).toBe("");
   });
 });
 

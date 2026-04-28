@@ -30,6 +30,7 @@ import type {
 } from "../util/types";
 import {
   formatState,
+  formatPastState,
   getStateDescription,
   isTerminalState,
   SUCCESSORS,
@@ -598,7 +599,7 @@ export default function PieceDetail({
                         }}
                       >
                         <ListItemText
-                          primary={formatState(ps.state)}
+                          primary={formatPastState(ps.state)}
                           secondary={`${ps.created.toLocaleString()}${ps.notes ? " — " + ps.notes : ""}`}
                           slotProps={{
                             primary: { sx: { color: "text.primary" } },

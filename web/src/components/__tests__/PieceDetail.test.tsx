@@ -326,7 +326,7 @@ describe("PieceDetail", () => {
     });
     await renderPieceDetail(piece);
     fireEvent.click(screen.getByRole("button", { name: /show history/i }));
-    expect(screen.getByText("Designing")).toBeInTheDocument();
+    expect(screen.getByText("Designed")).toBeInTheDocument();
   });
 
   it("no history panel when piece has only one state", async () => {
