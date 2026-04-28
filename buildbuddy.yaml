@@ -1,5 +1,7 @@
 actions:
-  - name: "Test all targets"
+  - name: "PR Validation"
+    # The node we need for our environment requires glibc 2.28+
+    container_image: "ubuntu-24.04"
     triggers:
       pull_request:
         branches:

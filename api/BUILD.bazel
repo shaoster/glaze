@@ -38,6 +38,7 @@ _TEST_DEPS = [
     requirement("pytest-django"),
     requirement("pytest-env"),
     requirement("pytest-cov"),
+    requirement("tzdata"),
 ]
 
 _TEST_DATA = [
