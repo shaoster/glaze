@@ -20,4 +20,3 @@ flags:
   frontend:
     paths:
       - web/src/
-      - frontend_common/src/

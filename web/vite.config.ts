@@ -20,8 +20,6 @@ const root = isVitest ? __dirname : fs.realpathSync(__dirname);
 export default defineConfig({
   root,
   resolve: {
-    // frontend_common is outside web/, so bare imports inside it resolve from
-    // the repo root upward (not web/node_modules). Pin axios to web's install.
     alias: {
       axios: path.resolve(root, "node_modules/axios"),
     },

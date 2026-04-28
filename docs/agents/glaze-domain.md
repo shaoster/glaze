@@ -134,7 +134,7 @@ Each state in [`workflow.yml`](../../workflow.yml) must declare a `friendly_name
 
 ## Data Model
 
-These types are defined in [`frontend_common/src/types.ts`](../../frontend_common/src/types.ts) and mirror what the backend API should produce.
+These types are defined in [`web/src/util/types.ts`](../../web/src/util/types.ts) and mirror what the backend API should produce.
 
 **`PieceSummary`** — used in list views
 
@@ -288,11 +288,11 @@ Name uniqueness for public globals is enforced with two conditional DB constrain
 
 These supplement the generic TypeScript/React/Vite conventions.
 
-**Shared module alias:** Import shared types, API helpers, and workflow utilities using the `./util` path alias (`./util/types`, `./util/api`, `./util/workflow`) — never use relative `../../../frontend_common/src/...` paths. The alias resolves to `frontend_common/src/` and is configured in each app's tsconfig `paths` and bundler config. Note: This shared module cannot take direct dependencies on React, since React is only imported from `../../web/src/...`.
+**Module paths:** Import types, API helpers, and workflow utilities from the `./util` directory (`./util/types`, `./util/api`, `./util/workflow`). These live in `web/src/util/` and must not take direct dependencies on React.
 
 **State names and transitions:** Come from `workflow.yml` via the constants in `./util/types` (`STATES`, `SUCCESSORS`) — do not hardcode them in components.
 
-**HTTP calls:** All go through [`frontend_common/src/api.ts`](../../frontend_common/src/api.ts) (imported as `./util/api`). This is the single place where wire types (ISO date strings, etc.) are mapped to domain types. Components must never perform their own serialization or deserialization.
+**HTTP calls:** All go through [`web/src/util/api.ts`](../../web/src/util/api.ts) (imported as `./util/api`). This is the single place where wire types (ISO date strings, etc.) are mapped to domain types. Components must never perform their own serialization or deserialization.
 
 **Data-fetching pattern (`useAsync`):** Any component that loads data from the API on mount or when a dependency changes must use the `useAsync` hook from `../../web/src/util/useAsync`. Do not inline `useState` + `useEffect` + `.catch` + `.finally` for loading/error/data state management — use `useAsync` instead. It handles the cancellation flag, error normalization, and exposes `setData` for optimistic local mutations.
 
@@ -324,7 +324,7 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 **Shared UI extraction:** Treat route-level and detail/list container components such as `PieceDetail.tsx` and `PieceList.tsx` as orchestration layers, not homes for duplicated presentational subtrees. When a feature introduces the same UI concept in multiple places, extract a reusable component in `web/src/components/` rather than keeping separate inline implementations in each parent. If a new feature adds more than a small self-contained JSX block to one of these containers, prefer a named child component with typed props.
 
 **Workflow config interface (`workflow.ts`):**
-[`frontend_common/src/workflow.ts`](../../frontend_common/src/workflow.ts) loads `workflow.yml` at build time and exposes typed helpers — do not duplicate state or globals data elsewhere.
+[`web/src/util/workflow.ts`](../../web/src/util/workflow.ts) loads `workflow.yml` at build time and exposes typed helpers — do not duplicate state or globals data elsewhere.
 
 - `getAdditionalFieldDefinitions(stateId)` — resolves per-state additional field definitions into a form-ready structure; used by `WorkflowState` to render dynamic fields.
 - `getGlobalDisplayField(globalName)` — returns the display field name for a globals entry; used by `GlobalFieldPicker` to determine which field to write on create.
@@ -332,11 +332,11 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 
 **Type generation pipeline:**
 
-- [`frontend_common/src/generated-types.ts`](../../frontend_common/src/generated-types.ts) is auto-generated — do not edit by hand. It is gitignored.
+- [`web/src/util/generated-types.ts`](../../web/src/util/generated-types.ts) is auto-generated — do not edit by hand. It is gitignored.
 - Generation is driven by [`web/scripts/generate-types.mjs`](../../web/scripts/generate-types.mjs), which calls the `openapi-typescript` programmatic API with a `transform` that converts `format: date-time` fields to `Date`. Run `npm run generate-types` with Django on port 8080.
-- [`frontend_common/src/types.ts`](../../frontend_common/src/types.ts) derives domain types from `generated-types.ts` via intersection (no `Omit<>`). It also holds the `STATES` array and `SUCCESSORS` map from `workflow.yml`.
-- **When adding a new API field:** update the Django serializer → run `npm run generate-types` → update `frontend_common/src/types.ts` if semantic narrowing is needed → update mappers in `frontend_common/src/api.ts`.
-- [`frontend_common/src/api.ts`](../../frontend_common/src/api.ts) uses the `Wire<T>` generic to type raw Axios responses (dates as strings). Mappers convert `Wire<T>` → domain `T`. This is the only file that should contain deserialization logic.
+- [`web/src/util/types.ts`](../../web/src/util/types.ts) derives domain types from `generated-types.ts` via intersection (no `Omit<>`). It also holds the `STATES` array and `SUCCESSORS` map from `workflow.yml`.
+- **When adding a new API field:** update the Django serializer → run `npm run generate-types` → update `web/src/util/types.ts` if semantic narrowing is needed → update mappers in `web/src/util/api.ts`.
+- [`web/src/util/api.ts`](../../web/src/util/api.ts) uses the `Wire<T>` generic to type raw Axios responses (dates as strings). Mappers convert `Wire<T>` → domain `T`. This is the only file that should contain deserialization logic.
 - The OpenAPI schema is at `http://localhost:8080/api/schema/` and Swagger UI at `http://localhost:8080/api/schema/swagger/`.
 
 **Thumbnails:**
@@ -401,7 +401,8 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 **Frontend testing — Glaze-specific guidance:**
 
 - Every new or modified React component → add or update a test in `web/src/components/__tests__/`.
-- Every new or modified `workflow.ts` helper → add or update a test in `frontend_common/src/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture. Never import `workflow.yml` directly in a test — always mock it.
+- Every new or modified `workflow.ts` helper → add or update a test in `web/src/util/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture. Never import `workflow.yml` directly in a test — always mock it.
+- Every new or modified `api.ts` function → add or update a test in `web/src/util/__tests__/api.test.ts`, mocking axios via `vi.mock`.
 - Component tests that involve typing into a controlled MUI Autocomplete must use a stateful wrapper (see `Controlled` in `GlobalFieldPicker.test.tsx`).
 
 ---
@@ -423,7 +424,7 @@ Staff users have access to a browser-based bulk import workflow at `/tools/glaze
 
 `POST /api/admin/manual-square-crop-import/` — staff only (`is_staff`). Accepts a `multipart/form-data` body:
 
-- `payload` — JSON string `{ records: ManualSquareCropImportRecordPayload[] }` (see `frontend_common/src/api.ts` for the shape).
+- `payload` — JSON string `{ records: ManualSquareCropImportRecordPayload[] }` (see `web/src/util/api.ts` for the shape).
 - `crop_image__<client_id>` — one WebP file per record.
 
 The endpoint is implemented in `api/manual_tile_imports.py`. For each `glaze_type` record it creates a public `GlazeType` (and a matching single-layer `GlazeCombination`) and uploads the crop to Cloudinary. For each `glaze_combination` record it resolves the two referenced public `GlazeType` rows by name, creates a public `GlazeCombination`, and sets the ordered layers. **`runs` and `is_food_safe` from `parsed_fields` are written to both `GlazeType` and `GlazeCombination` on creation.** Existing public records with the same name are reported as `skipped_duplicate` (not updated).
@@ -458,7 +459,7 @@ These extend the generic GitHub interactions guide with Glaze-specific protected
 - All tests pass: `bazel test //...`
 - All linters pass (ruff, eslint, tsc, mypy): `bazel build --config=lint //...`
 - Auto-fix Python formatting and fixable lint issues before committing: `ruff format . && ruff check --fix .`
-- Serializer output matches the TypeScript types in [`frontend_common/src/types.ts`](../../frontend_common/src/types.ts)
+- Serializer output matches the TypeScript types in [`web/src/util/types.ts`](../../web/src/util/types.ts)
 - State names and transitions are derived from [`workflow.yml`](../../workflow.yml), not hardcoded
 - If `AGENTS.md` was modified, check whether [`README.md`](../../README.md) needs a corresponding update
 - If conventions or constraints change during PR work, append those changes to the relevant file under `docs/agents/` in a follow-up commit
