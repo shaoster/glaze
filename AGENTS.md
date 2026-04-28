@@ -13,6 +13,7 @@
 ## Git Worktree Policy
 
 When asked to work on a PR or implement a feature branch, always create a git worktree first using the `EnterWorktree` tool rather than modifying the current branch directly. Ask before proceeding if worktree creation would be inappropriate (e.g. the user explicitly wants to work on the current branch).
+Prefer repo-local worktree roots over system temp directories: use `.agent-worktrees/` under the repo so the worktree stays near the shared repo bootstrap, secrets fallback, and editable files without colliding with tool-reserved paths like `.codex`.
 
 ## Instruction Priority
 

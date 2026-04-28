@@ -43,6 +43,7 @@ from .serializers import (
     PieceUpdateSerializer,
     RegisterSerializer,
 )
+from .utils import bootstrap_dev_user
 from .workflow import (
     get_glaze_image_qualifying_states,
     get_global_model_and_field,
@@ -64,22 +65,22 @@ def _apply_global_filters(qs, model_cls, request):
     - ``m2m_id``: ?param=id1,id2,... → successive filters so ALL ids must match
     - ``fk_id``: ?param=<pk> → exact FK match (filter(**{lookup: pk}))
     """
-    filterable = getattr(model_cls, 'filterable_fields', {})
+    filterable = getattr(model_cls, "filterable_fields", {})
     for lookup, meta in filterable.items():
-        param = meta.get('param', lookup)
-        filter_type = meta.get('type', 'boolean')
-        raw = request.query_params.get(param, '').strip()
+        param = meta.get("param", lookup)
+        filter_type = meta.get("type", "boolean")
+        raw = request.query_params.get(param, "").strip()
         if not raw:
             continue
-        if filter_type == 'boolean':
-            if raw.lower() == 'true':
+        if filter_type == "boolean":
+            if raw.lower() == "true":
                 qs = qs.filter(**{lookup: True})
-            elif raw.lower() == 'false':
+            elif raw.lower() == "false":
                 qs = qs.filter(**{lookup: False})
-        elif filter_type == 'm2m_id':
-            for pk in (s.strip() for s in raw.split(',') if s.strip()):
+        elif filter_type == "m2m_id":
+            for pk in (s.strip() for s in raw.split(",") if s.strip()):
                 qs = qs.filter(**{lookup: pk})
-        elif filter_type == 'fk_id':
+        elif filter_type == "fk_id":
             qs = qs.filter(**{lookup: raw})
     return qs
 
@@ -92,31 +93,35 @@ _FAVORITES_REGISTRY = {
 
 
 def _piece_queryset(request: Request):
-    return Piece.objects.prefetch_related('states', 'tag_links__tag').filter(user=request.user)  # type: ignore[misc]
+    return Piece.objects.prefetch_related("states", "tag_links__tag").filter(
+        user=request.user
+    )  # type: ignore[misc]
 
 
 @extend_schema(
-    methods=['GET'],
+    methods=["GET"],
     responses={200: PieceSummarySerializer(many=True)},
 )
 @extend_schema(
-    methods=['POST'],
+    methods=["POST"],
     request=PieceCreateSerializer,
     responses={201: PieceDetailSerializer},
 )
-@api_view(['GET', 'POST'])
+@api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def pieces(request: Request) -> Response:
-    if request.method == 'GET':
+    if request.method == "GET":
         qs = _piece_queryset(request)
-        raw_tag_ids = request.query_params.get('tag_ids', '').strip()
+        raw_tag_ids = request.query_params.get("tag_ids", "").strip()
         if raw_tag_ids:
-            for tag_id in (item.strip() for item in raw_tag_ids.split(',') if item.strip()):
+            for tag_id in (
+                item.strip() for item in raw_tag_ids.split(",") if item.strip()
+            ):
                 qs = qs.filter(tag_links__tag_id=tag_id)
             qs = qs.distinct()
         return Response(PieceSummarySerializer(qs, many=True).data)
 
-    serializer = PieceCreateSerializer(data=request.data, context={'request': request})
+    serializer = PieceCreateSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
     piece = serializer.save()
     return Response(PieceDetailSerializer(piece).data, status=status.HTTP_201_CREATED)
@@ -124,16 +129,18 @@ def pieces(request: Request) -> Response:
 
 @extend_schema(responses={200: PieceDetailSerializer})
 @extend_schema(
-    methods=['PATCH'],
+    methods=["PATCH"],
     request=PieceUpdateSerializer,
     responses={200: PieceDetailSerializer},
 )
-@api_view(['GET', 'PATCH'])
+@api_view(["GET", "PATCH"])
 @permission_classes([IsAuthenticated])
 def piece_detail(request: Request, piece_id: str) -> Response:
     piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
-    if request.method == 'PATCH':
-        serializer = PieceUpdateSerializer(data=request.data, context={'request': request})
+    if request.method == "PATCH":
+        serializer = PieceUpdateSerializer(
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         serializer.update(piece, serializer.validated_data)
         piece.refresh_from_db()
@@ -144,11 +151,11 @@ def piece_detail(request: Request, piece_id: str) -> Response:
     request=PieceStateCreateSerializer,
     responses={201: PieceDetailSerializer},
 )
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def piece_states(request: Request, piece_id: str) -> Response:
     piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
-    serializer = PieceStateCreateSerializer(data=request.data, context={'piece': piece})
+    serializer = PieceStateCreateSerializer(data=request.data, context={"piece": piece})
     serializer.is_valid(raise_exception=True)
     serializer.save()
     # Reload to pick up updated last_modified on current_state
@@ -157,17 +164,19 @@ def piece_states(request: Request, piece_id: str) -> Response:
 
 
 @extend_schema(
-    methods=['PATCH'],
+    methods=["PATCH"],
     request=PieceStateUpdateSerializer,
     responses={200: PieceDetailSerializer},
 )
-@api_view(['PATCH'])
+@api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
 def piece_current_state(request: Request, piece_id: str) -> Response:
     piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
     current = piece.current_state
     if current is None:
-        return Response({'detail': 'Piece has no states.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"detail": "Piece has no states."}, status=status.HTTP_404_NOT_FOUND
+        )
     serializer = PieceStateUpdateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     serializer.update(current, serializer.validated_data)
@@ -175,25 +184,24 @@ def piece_current_state(request: Request, piece_id: str) -> Response:
     return Response(PieceDetailSerializer(piece).data)
 
 
-
 _GLOBAL_ENTRY_SCHEMA = {
-    'type': 'object',
-    'properties': {
-        'id': {'type': 'string'},
-        'name': {'type': 'string'},
-        'is_public': {'type': 'boolean'},
+    "type": "object",
+    "properties": {
+        "id": {"type": "string"},
+        "name": {"type": "string"},
+        "is_public": {"type": "boolean"},
     },
-    'required': ['id', 'name', 'is_public'],
+    "required": ["id", "name", "is_public"],
 }
 
 _GLOBAL_CREATE_REQUEST_SCHEMA = {
-    'application/json': {
-        'type': 'object',
-        'properties': {
-            'field': {'type': 'string'},
-            'value': {'type': 'string'},
+    "application/json": {
+        "type": "object",
+        "properties": {
+            "field": {"type": "string"},
+            "value": {"type": "string"},
         },
-        'required': ['field', 'value'],
+        "required": ["field", "value"],
     }
 }
 
@@ -208,10 +216,12 @@ def _global_entries_impl(request: Request, global_name: str) -> Response:
     model_cls, fields, display_field = get_global_model_and_field(global_name)
     has_public_library = is_public_global(global_name)
 
-    if request.method == 'GET':
+    if request.method == "GET":
         if has_public_library:
             # Return both the user's private objects and all public objects (user IS NULL).
-            base_qs = model_cls.objects.filter(Q(user=request.user) | Q(user__isnull=True))
+            base_qs = model_cls.objects.filter(
+                Q(user=request.user) | Q(user__isnull=True)
+            )
         else:
             base_qs = model_cls.objects.filter(user=request.user)
 
@@ -222,13 +232,17 @@ def _global_entries_impl(request: Request, global_name: str) -> Response:
         entry_serializer_cls = _GLOBAL_ENTRY_SERIALIZERS.get(model_cls)
         if entry_serializer_cls is not None:
             fav_model = _FAVORITES_REGISTRY.get(model_cls)
-            favorite_ids = fav_model.get_favorite_ids_for(request.user) if fav_model else set()
-            objects = list(base_qs.prefetch_related('layers__glaze_type').order_by('name'))
+            favorite_ids = (
+                fav_model.get_favorite_ids_for(request.user) if fav_model else set()
+            )
+            objects = list(
+                base_qs.prefetch_related("layers__glaze_type").order_by("name")
+            )
             return Response(
                 entry_serializer_cls(
                     objects,
                     many=True,
-                    context={'request': request, 'favorite_ids': favorite_ids},
+                    context={"request": request, "favorite_ids": favorite_ids},
                 ).data
             )
 
@@ -237,21 +251,21 @@ def _global_entries_impl(request: Request, global_name: str) -> Response:
         # loading and stringify the value; otherwise use only() for efficiency.
         try:
             display_field_meta = model_cls._meta.get_field(display_field)
-            display_is_relation = getattr(display_field_meta, 'is_relation', False)
+            display_is_relation = getattr(display_field_meta, "is_relation", False)
         except Exception:
             display_is_relation = False
 
         if display_is_relation:
             objects = base_qs.select_related(display_field).order_by(display_field)
         else:
-            objects = base_qs.only('pk', display_field).order_by(display_field)
+            objects = base_qs.only("pk", display_field).order_by(display_field)
 
         return Response(
             [
                 {
-                    'id': str(obj.pk),
-                    'name': str(getattr(obj, display_field)),
-                    'is_public': obj.user_id is None,
+                    "id": str(obj.pk),
+                    "name": str(getattr(obj, display_field)),
+                    "is_public": obj.user_id is None,
                 }
                 for obj in objects
             ]
@@ -259,61 +273,77 @@ def _global_entries_impl(request: Request, global_name: str) -> Response:
 
     if not is_private_global(global_name):
         return Response(
-            {'detail': 'Private instances of this type are not supported.'},
+            {"detail": "Private instances of this type are not supported."},
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
     # Models with ordered M2M relations declare get_or_create_from_ordered_pks.
-    if hasattr(model_cls, 'get_or_create_from_ordered_pks'):
-        pks = request.data.get('layers')
+    if hasattr(model_cls, "get_or_create_from_ordered_pks"):
+        pks = request.data.get("layers")
         if not pks or not isinstance(pks, list):
             return Response(
-                {'detail': 'layers must be a non-empty list of PKs.'},
+                {"detail": "layers must be a non-empty list of PKs."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         try:
-            obj, created = model_cls.get_or_create_from_ordered_pks(user=request.user, pks=pks)
+            obj, created = model_cls.get_or_create_from_ordered_pks(
+                user=request.user, pks=pks
+            )
         except ValueError as exc:
-            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
         return Response(
-            {'id': str(obj.pk), 'name': obj.name, 'is_public': obj.user_id is None},
+            {"id": str(obj.pk), "name": obj.name, "is_public": obj.user_id is None},
             status=status_code,
         )
 
-    field = request.data.get('field')
-    value = request.data.get('value')
-    values = request.data.get('values')
+    field = request.data.get("field")
+    value = request.data.get("value")
+    values = request.data.get("values")
     if values is not None and not isinstance(values, dict):
-        return Response({'detail': 'values must be an object.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "values must be an object."}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     payload = dict(values or {})
     if field:
         if field not in fields:
-            return Response({'detail': 'Invalid field'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Invalid field"}, status=status.HTTP_400_BAD_REQUEST
+            )
         payload[field] = value
 
     allowed_fields = {
-        field_name for field_name, field_def in fields.items()
-        if '$ref' not in field_def
+        field_name
+        for field_name, field_def in fields.items()
+        if "$ref" not in field_def
     }
     unknown_fields = sorted(set(payload) - allowed_fields)
     if unknown_fields:
-        return Response({'detail': f'Invalid field: {unknown_fields[0]}'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": f"Invalid field: {unknown_fields[0]}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     if not payload.get(display_field):
-        return Response({'detail': 'Value is required'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "Value is required"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
-    lookup = {'user': request.user, display_field: payload[display_field]}
+    lookup = {"user": request.user, display_field: payload[display_field]}
     defaults = {key: val for key, val in payload.items() if key != display_field}
     obj, created = model_cls.objects.get_or_create(**lookup, defaults=defaults)
     status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
     entry_serializer_cls = _GLOBAL_ENTRY_SERIALIZERS.get(model_cls)
     if entry_serializer_cls is not None:
         return Response(
-            entry_serializer_cls(obj, context={'request': request, 'favorite_ids': set()}).data,
+            entry_serializer_cls(
+                obj, context={"request": request, "favorite_ids": set()}
+            ).data,
             status=status_code,
         )
-    return Response({'id': str(obj.pk), 'name': getattr(obj, display_field)}, status=status_code)
+    return Response(
+        {"id": str(obj.pk), "name": getattr(obj, display_field)}, status=status_code
+    )
 
 
 def make_global_entry_view(global_name: str):
@@ -331,26 +361,28 @@ def make_global_entry_view(global_name: str):
     get_responses: dict = (
         {200: entry_serializer_cls(many=True)}
         if entry_serializer_cls is not None
-        else {200: {'type': 'array', 'items': _GLOBAL_ENTRY_SCHEMA}}
+        else {200: {"type": "array", "items": _GLOBAL_ENTRY_SCHEMA}}
     )
 
-    @extend_schema(responses=get_responses, methods=['GET'])
+    @extend_schema(responses=get_responses, methods=["GET"])
     @extend_schema(
         request=_GLOBAL_CREATE_REQUEST_SCHEMA,
         responses={200: _GLOBAL_ENTRY_SCHEMA, 201: _GLOBAL_ENTRY_SCHEMA},
-        methods=['POST'],
+        methods=["POST"],
     )
-    @api_view(['GET', 'POST'])
+    @api_view(["GET", "POST"])
     @permission_classes([IsAuthenticated])
     def view(request: Request) -> Response:
         return _global_entries_impl(request, global_name)
 
-    view.__name__ = f'global_entries_{global_name}'  # type: ignore[attr-defined]
-    view.__qualname__ = f'global_entries_{global_name}'  # type: ignore[attr-defined]
+    view.__name__ = f"global_entries_{global_name}"  # type: ignore[attr-defined]
+    view.__qualname__ = f"global_entries_{global_name}"  # type: ignore[attr-defined]
     return view
 
 
-def _global_entry_favorite_impl(request: Request, model_cls, fav_model_cls, pk: str) -> Response:
+def _global_entry_favorite_impl(
+    request: Request, model_cls, fav_model_cls, pk: str
+) -> Response:
     """Core implementation for POST/DELETE /api/globals/<global_name>/<pk>/favorite/.
 
     model_cls is the global's Django model; fav_model_cls is its Favorite* model.
@@ -362,7 +394,7 @@ def _global_entry_favorite_impl(request: Request, model_cls, fav_model_cls, pk: 
         return Response(status=status.HTTP_404_NOT_FOUND)
 
     fk_field = fav_model_cls.global_fk_field
-    if request.method == 'POST':
+    if request.method == "POST":
         fav_model_cls.objects.get_or_create(user=request.user, **{fk_field: obj})
     else:
         fav_model_cls.objects.filter(user=request.user, **{fk_field: obj}).delete()
@@ -380,15 +412,15 @@ def make_global_entry_favorite_view(global_name: str):
     model_cls, _, _ = get_global_model_and_field(global_name)
     fav_model_cls = _FAVORITES_REGISTRY[model_cls]
 
-    @extend_schema(methods=['POST'], request=None, responses={204: None, 404: None})
-    @extend_schema(methods=['DELETE'], request=None, responses={204: None, 404: None})
-    @api_view(['POST', 'DELETE'])
+    @extend_schema(methods=["POST"], request=None, responses={204: None, 404: None})
+    @extend_schema(methods=["DELETE"], request=None, responses={204: None, 404: None})
+    @api_view(["POST", "DELETE"])
     @permission_classes([IsAuthenticated])
     def view(request: Request, pk: str) -> Response:
         return _global_entry_favorite_impl(request, model_cls, fav_model_cls, pk)
 
-    view.__name__ = f'global_entry_favorite_{global_name}'  # type: ignore[attr-defined]
-    view.__qualname__ = f'global_entry_favorite_{global_name}'  # type: ignore[attr-defined]
+    view.__name__ = f"global_entry_favorite_{global_name}"  # type: ignore[attr-defined]
+    view.__qualname__ = f"global_entry_favorite_{global_name}"  # type: ignore[attr-defined]
     return view
 
 
@@ -396,107 +428,115 @@ def make_global_entry_favorite_view(global_name: str):
     request=None,
     responses={
         200: {
-            'type': 'object',
-            'properties': {
-                'cloud_name': {'type': 'string'},
-                'api_key': {'type': 'string'},
-                'folder': {'type': 'string'},
+            "type": "object",
+            "properties": {
+                "cloud_name": {"type": "string"},
+                "api_key": {"type": "string"},
+                "folder": {"type": "string"},
             },
-            'required': ['cloud_name', 'api_key'],
+            "required": ["cloud_name", "api_key"],
         }
     },
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def cloudinary_widget_config(request: Request) -> Response:
     """Return Cloudinary config needed to initialize the Upload Widget."""
-    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
-    api_key = os.environ.get('CLOUDINARY_API_KEY')
-    folder = os.environ.get('CLOUDINARY_UPLOAD_FOLDER', '').strip()
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME")
+    api_key = os.environ.get("CLOUDINARY_API_KEY")
+    folder = os.environ.get("CLOUDINARY_UPLOAD_FOLDER", "").strip()
 
     if not cloud_name or not api_key:
         return Response(
-            {'detail': 'Cloudinary is not configured on the server.'},
+            {"detail": "Cloudinary is not configured on the server."},
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    payload: dict[str, str] = {'cloud_name': cloud_name, 'api_key': api_key}
+    payload: dict[str, str] = {"cloud_name": cloud_name, "api_key": api_key}
     if folder:
-        payload['folder'] = folder
-    preset = os.environ.get('CLOUDINARY_UPLOAD_PRESET', '').strip()
+        payload["folder"] = folder
+    preset = os.environ.get("CLOUDINARY_UPLOAD_PRESET", "").strip()
     if preset:
-        payload['upload_preset'] = preset
+        payload["upload_preset"] = preset
     return Response(payload)
 
 
 @extend_schema(
     request={
-        'application/json': {
-            'type': 'object',
-            'properties': {'params_to_sign': {'type': 'object'}},
-            'required': ['params_to_sign'],
+        "application/json": {
+            "type": "object",
+            "properties": {"params_to_sign": {"type": "object"}},
+            "required": ["params_to_sign"],
         }
     },
     responses={
         200: {
-            'type': 'object',
-            'properties': {'signature': {'type': 'string'}},
-            'required': ['signature'],
+            "type": "object",
+            "properties": {"signature": {"type": "string"}},
+            "required": ["signature"],
         }
     },
 )
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def cloudinary_widget_sign(request: Request) -> Response:
     """Sign the params_to_sign dict provided by the Cloudinary Upload Widget."""
-    api_secret = os.environ.get('CLOUDINARY_API_SECRET')
+    api_secret = os.environ.get("CLOUDINARY_API_SECRET")
     if not api_secret:
         return Response(
-            {'detail': 'Cloudinary is not configured on the server.'},
+            {"detail": "Cloudinary is not configured on the server."},
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    params_to_sign = request.data.get('params_to_sign', {})
+    params_to_sign = request.data.get("params_to_sign", {})
     if not isinstance(params_to_sign, dict):
-        return Response({'detail': 'params_to_sign must be an object.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "params_to_sign must be an object."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     # Cloudinary signature format: sorted key=value pairs joined by '&',
     # then append the API secret and SHA1-hash the result.
-    signing_string = '&'.join(
-        f'{key}={params_to_sign[key]}' for key in sorted(params_to_sign.keys())
+    signing_string = "&".join(
+        f"{key}={params_to_sign[key]}" for key in sorted(params_to_sign.keys())
     )
-    signature = hashlib.sha1(f'{signing_string}{api_secret}'.encode('utf-8')).hexdigest()
-    return Response({'signature': signature})
+    signature = hashlib.sha1(
+        f"{signing_string}{api_secret}".encode("utf-8")
+    ).hexdigest()
+    return Response({"signature": signature})
 
 
 @extend_schema(request=None, responses={204: None})
 @ensure_csrf_cookie
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def csrf(request: Request) -> Response:
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @extend_schema(request=LoginSerializer, responses={200: AuthUserSerializer})
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def auth_login(request: Request) -> Response:
     serializer = LoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    email = serializer.validated_data['email']
-    password = serializer.validated_data['password']
+    email = serializer.validated_data["email"]
+    password = serializer.validated_data["password"]
     user_model = get_user_model()
     matched = user_model.objects.filter(email__iexact=email).first()
     auth_username = matched.username if matched else email
     user = authenticate(request=request, username=auth_username, password=password)
     if user is None:
-        return Response({'detail': 'Invalid email or password.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "Invalid email or password."}, status=status.HTTP_400_BAD_REQUEST
+        )
+    bootstrap_dev_user(user)
     login(request, user)
     return Response(AuthUserSerializer(user).data)
 
 
 @extend_schema(request=None, responses={204: None})
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def auth_logout(request: Request) -> Response:
     logout(request)
@@ -504,26 +544,26 @@ def auth_logout(request: Request) -> Response:
 
 
 @extend_schema(request=None, responses={200: AuthUserSerializer, 401: None})
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def auth_me(request: Request) -> Response:
     return Response(AuthUserSerializer(request.user).data)
 
 
 @extend_schema(request=GoogleAuthSerializer, responses={200: AuthUserSerializer})
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def auth_google(request: Request) -> Response:
     client_id = settings.GOOGLE_OAUTH_CLIENT_ID
     if not client_id:
         return Response(
-            {'detail': 'Google sign-in is not configured on this server.'},
+            {"detail": "Google sign-in is not configured on this server."},
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
     serializer = GoogleAuthSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    credential = serializer.validated_data['credential']
+    credential = serializer.validated_data["credential"]
 
     try:
         idinfo = google_id_token.verify_oauth2_token(
@@ -531,19 +571,26 @@ def auth_google(request: Request) -> Response:
         )
     except ValueError as e:
         import logging
-        logging.getLogger(__name__).error('Google token verification failed: %s', e)
-        return Response({'detail': 'Invalid Google credential.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    google_sub = idinfo['sub']
-    email = idinfo.get('email', '')
-    first_name = idinfo.get('given_name', '')
-    last_name = idinfo.get('family_name', '')
-    picture = idinfo.get('picture', '')
+        logging.getLogger(__name__).error("Google token verification failed: %s", e)
+        return Response(
+            {"detail": "Invalid Google credential."}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    google_sub = idinfo["sub"]
+    email = idinfo.get("email", "")
+    first_name = idinfo.get("given_name", "")
+    last_name = idinfo.get("family_name", "")
+    picture = idinfo.get("picture", "")
 
     User = get_user_model()
 
     # Look up by Google subject first (handles email changes gracefully).
-    profile = UserProfile.objects.filter(openid_subject=google_sub).select_related('user').first()
+    profile = (
+        UserProfile.objects.filter(openid_subject=google_sub)
+        .select_related("user")
+        .first()
+    )
     if profile:
         user = profile.user
         # Refresh display name and picture in case they changed.
@@ -556,7 +603,11 @@ def auth_google(request: Request) -> Response:
     else:
         # Fall back to matching by email so existing email/password accounts
         # can sign in via Google without creating a duplicate.
-        existing_profile = UserProfile.objects.filter(user__email__iexact=email).select_related('user').first()
+        existing_profile = (
+            UserProfile.objects.filter(user__email__iexact=email)
+            .select_related("user")
+            .first()
+        )
         found_user = existing_profile.user if existing_profile else None
         if found_user is None:
             user = User.objects.create_user(
@@ -576,15 +627,16 @@ def auth_google(request: Request) -> Response:
         profile.profile_image_url = picture
         profile.save()
 
+    bootstrap_dev_user(user)
     login(request, user)
     return Response(AuthUserSerializer(user).data)
 
 
 @extend_schema(
-    methods=['GET'],
+    methods=["GET"],
     responses={200: GlazeCombinationImageEntrySerializer(many=True)},
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def glaze_combination_images(request: Request) -> Response:
     """Return images from pieces grouped by the glaze combination applied.
@@ -600,21 +652,20 @@ def glaze_combination_images(request: Request) -> Response:
     qualifying = get_glaze_image_qualifying_states()
 
     # Resolve the GlazeCombination junction model generated at import time.
-    GlazeCombinationRef = apps.get_model('api', 'PieceStateGlazeCombinationRef')
+    GlazeCombinationRef = apps.get_model("api", "PieceStateGlazeCombinationRef")
 
     # Collect all (piece_id → combo_id) mappings for this user's pieces.
     # A piece may appear in multiple refs (glazed + glaze_fired both carry the
     # combo forward), so deduplicate by piece — same combo in each case.
     refs = (
-        GlazeCombinationRef.objects
-        .filter(piece_state__piece__user=request.user)
-        .values('piece_state__piece_id', 'glaze_combination_id')
+        GlazeCombinationRef.objects.filter(piece_state__piece__user=request.user)
+        .values("piece_state__piece_id", "glaze_combination_id")
         .distinct()
     )
     piece_to_combo: dict = {}
     for ref in refs:
-        piece_id = ref['piece_state__piece_id']
-        combo_id = ref['glaze_combination_id']
+        piece_id = ref["piece_state__piece_id"]
+        combo_id = ref["glaze_combination_id"]
         piece_to_combo[piece_id] = combo_id
 
     if not piece_to_combo:
@@ -622,14 +673,13 @@ def glaze_combination_images(request: Request) -> Response:
 
     # Fetch qualifying PieceState records that have at least one image.
     qualifying_ps = (
-        PieceState.objects
-        .filter(
+        PieceState.objects.filter(
             piece_id__in=piece_to_combo.keys(),
             piece__user=request.user,  # type: ignore[misc]
             state__in=qualifying,
         )
-        .select_related('piece')
-        .order_by('-last_modified')
+        .select_related("piece")
+        .order_by("-last_modified")
     )
 
     # Group images and state by piece — collect all images across qualifying states.
@@ -640,19 +690,19 @@ def glaze_combination_images(request: Request) -> Response:
         pid = ps.piece_id
         if pid not in piece_data:
             piece_data[pid] = {
-                'id': str(pid),
-                'name': ps.piece.name,
-                'state': ps.state,
-                'images': list(ps.images),
-                'last_modified': ps.last_modified,
+                "id": str(pid),
+                "name": ps.piece.name,
+                "state": ps.state,
+                "images": list(ps.images),
+                "last_modified": ps.last_modified,
             }
         else:
             # Additional qualifying state for the same piece: extend images;
             # keep state pointing at the most recently modified qualifying state.
-            if ps.last_modified > piece_data[pid]['last_modified']:
-                piece_data[pid]['state'] = ps.state
-                piece_data[pid]['last_modified'] = ps.last_modified
-            piece_data[pid]['images'].extend(ps.images)
+            if ps.last_modified > piece_data[pid]["last_modified"]:
+                piece_data[pid]["state"] = ps.state
+                piece_data[pid]["last_modified"] = ps.last_modified
+            piece_data[pid]["images"].extend(ps.images)
 
     # Group pieces by combo.
     combo_pieces: dict = defaultdict(list)
@@ -663,27 +713,25 @@ def glaze_combination_images(request: Request) -> Response:
 
     # Sort pieces within each combo by last_modified descending.
     for combo_id in combo_pieces:
-        combo_pieces[combo_id].sort(key=lambda d: d['last_modified'], reverse=True)
+        combo_pieces[combo_id].sort(key=lambda d: d["last_modified"], reverse=True)
 
     # Sort combos by the most-recently-modified qualifying piece.
     def _combo_latest(combo_id):
         pieces = combo_pieces.get(combo_id, [])
         if not pieces:
             return None
-        return max(d['last_modified'] for d in pieces)
+        return max(d["last_modified"] for d in pieces)
 
     sorted_combo_ids = sorted(combo_pieces.keys(), key=_combo_latest, reverse=True)
 
     # Bulk-fetch GlazeCombination objects for serialization.
-    combos_qs = (
-        GlazeCombination.objects
-        .filter(pk__in=sorted_combo_ids)
-        .prefetch_related('layers__glaze_type', 'firing_temperature')
-    )
+    combos_qs = GlazeCombination.objects.filter(
+        pk__in=sorted_combo_ids
+    ).prefetch_related("layers__glaze_type", "firing_temperature")
     combo_by_id = {c.pk: c for c in combos_qs}
 
     favorite_ids = FavoriteGlazeCombination.get_favorite_ids_for(request.user)
-    ctx = {'request': request, 'favorite_ids': favorite_ids}
+    ctx = {"request": request, "favorite_ids": favorite_ids}
 
     result = []
     for combo_id in sorted_combo_ids:
@@ -692,20 +740,22 @@ def glaze_combination_images(request: Request) -> Response:
             continue
         pieces_payload = [
             {
-                'id': d['id'],
-                'name': d['name'],
-                'state': d['state'],
-                'images': d['images'],
+                "id": d["id"],
+                "name": d["name"],
+                "state": d["state"],
+                "images": d["images"],
             }
             for d in combo_pieces[combo_id]
         ]
-        result.append({
-            # Pass the model instance so the nested GlazeCombinationEntrySerializer
-            # can serialize it properly (it expects obj.pk, obj.layers, etc.).
-            # Context (favorite_ids) propagates from the top-level serializer.
-            'glaze_combination': combo,
-            'pieces': pieces_payload,
-        })
+        result.append(
+            {
+                # Pass the model instance so the nested GlazeCombinationEntrySerializer
+                # can serialize it properly (it expects obj.pk, obj.layers, etc.).
+                # Context (favorite_ids) propagates from the top-level serializer.
+                "glaze_combination": combo,
+                "pieces": pieces_payload,
+            }
+        )
 
     return Response(
         GlazeCombinationImageEntrySerializer(result, many=True, context=ctx).data
@@ -713,59 +763,81 @@ def glaze_combination_images(request: Request) -> Response:
 
 
 @extend_schema(request=RegisterSerializer, responses={201: AuthUserSerializer})
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def auth_register(request: Request) -> Response:
     serializer = RegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user_model = get_user_model()
-    if user_model.objects.filter(email__iexact=serializer.validated_data['email']).exists():
-        return Response({'email': ['A user with this email already exists.']}, status=status.HTTP_400_BAD_REQUEST)
+    if user_model.objects.filter(
+        email__iexact=serializer.validated_data["email"]
+    ).exists():
+        return Response(
+            {"email": ["A user with this email already exists."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     user = serializer.save()
+    bootstrap_dev_user(user)
     login(request, user)
     return Response(AuthUserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(
-    request={'multipart/form-data': {
-        'type': 'object',
-        'properties': {
-            'payload': {'type': 'string'},
-        },
-        'required': ['payload'],
-    }},
-    responses={200: {'type': 'object'}},
+    request={
+        "multipart/form-data": {
+            "type": "object",
+            "properties": {
+                "payload": {"type": "string"},
+            },
+            "required": ["payload"],
+        }
+    },
+    responses={200: {"type": "object"}},
 )
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([IsAdminUser])
 @parser_classes([MultiPartParser, FormParser])
 def admin_manual_square_crop_import(request: Request) -> Response:
-    payload_raw = request.data.get('payload', '')
+    payload_raw = request.data.get("payload", "")
     if not payload_raw:
-        return Response({'detail': 'payload is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "payload is required."}, status=status.HTTP_400_BAD_REQUEST
+        )
     try:
         payload = json.loads(payload_raw)
     except json.JSONDecodeError:
-        return Response({'detail': 'payload must be valid JSON.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "payload must be valid JSON."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    records = payload.get('records')
+    records = payload.get("records")
     if not isinstance(records, list) or not records:
-        return Response({'detail': 'payload.records must be a non-empty list.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "payload.records must be a non-empty list."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    if any(not record.get('reviewed') for record in records):
-        return Response({'detail': 'All records must be reviewed before import.'}, status=status.HTTP_400_BAD_REQUEST)
+    if any(not record.get("reviewed") for record in records):
+        return Response(
+            {"detail": "All records must be reviewed before import."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     uploaded_files = {}
     for record in records:
-        client_id = record.get('client_id', '')
+        client_id = record.get("client_id", "")
         if not client_id:
-            return Response({'detail': 'Each record must include client_id.'}, status=status.HTTP_400_BAD_REQUEST)
-        file_obj = request.FILES.get(f'crop_image__{client_id}')
+            return Response(
+                {"detail": "Each record must include client_id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        file_obj = request.FILES.get(f"crop_image__{client_id}")
         if file_obj is not None:
             uploaded_files[client_id] = file_obj
 
     try:
         result = import_manual_tile_records(records, uploaded_files)
     except ValueError as exc:
-        return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(result)

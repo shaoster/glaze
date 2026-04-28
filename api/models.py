@@ -216,10 +216,12 @@ class UserProfile(models.Model):
 # These names are injected into the module namespace by _register_globals().
 # Typed as Any so mypy allows arbitrary attribute access and type annotation use.
 if TYPE_CHECKING:
+    ClayBody: Any
     FiringTemperature: Any
     GlazeCombination: Any
     GlazeCombinationLayer: Any
     FavoriteGlazeCombination: Any
     GlazeType: Any
+    GlazeMethod: Any
     Location: Any
     Tag: Any

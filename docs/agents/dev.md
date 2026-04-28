@@ -18,6 +18,7 @@ npm run dev
 
 See [`env.sh`](../../env.sh) for shell helpers (`gz_setup`, `gz_start`, etc.) that wrap these commands.
 In a new environment, always run `source env.sh` and `gz_setup` before trying to do anything else.
+`gz_setup` reuses the main checkout's `.venv` and `web/node_modules` by default when invoked from a repo-local worktree. Use `gz_setup --isolated` (or `GLAZE_SETUP_ISOLATED=1 gz_setup`) when a branch needs its own dependency environment, such as when changing Python requirements or Node packages.
 
 ---
 
@@ -45,6 +46,22 @@ Two scripts handle environment bootstrap:
 ### Codex and other agents
 
 `env-agent.sh` exports `BASH_ENV` pointing at itself, so any agent process spawned from a shell that has already sourced `env.sh` (e.g. a VS Code terminal) automatically propagates the bootstrap to its own subshells. No per-tool config is needed for Codex or similar CLI agents launched from the integrated terminal.
+
+### Agent worktree location
+
+Keep agent-created worktrees inside the repository instead of under `/tmp` or another system temp directory:
+
+- Shared worktree root: `.agent-worktrees/<agent>/<branch-or-task>`
+- Claude example: `.agent-worktrees/claude/<branch-or-task>`
+- Codex example: `.agent-worktrees/codex/<branch-or-task>`
+
+Keep repo-local agent configuration out of `.codex`, which may be reserved by the local Codex installation. Prefer:
+
+- Codex-specific local config: `.agent-config/codex/`
+- Shared agent assets and instructions: `.agents/`
+
+This keeps worktrees close to the repo-local bootstrap, makes cleanup easier, and avoids temp-directory permission/path surprises. `env-agent.sh` resolves the active git worktree root from the current working directory, then falls back to the main checkout's `.env.local` files and `.venv` when the worktree does not have its own copies yet, so repo-local worktrees inherit the normal dev setup without manually copying secrets first.
+When you do want a truly separate dependency environment inside the worktree, run `gz_setup --isolated` to replace any shared `.venv` or `web/node_modules` symlinks with local worktree-specific installs.
 
 ### Working directory discipline
 
