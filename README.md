@@ -12,7 +12,7 @@ A pottery workflow tracking application. Log pieces and record state transitions
 This guide assumes you already know the tools listed below and are familiar with [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) and [abstraction](<https://en.wikipedia.org/wiki/Abstraction_(computer_science)>) as design principles; if any term is unfamiliar, click the linked docs to catch up quickly.
 
 - **[Django](https://www.djangoproject.com/)** is the Python web framework that owns the backend (`backend/`, `api/`). [Separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) keeps unrelated responsibilities apart so each layer stays simpler to reason about—for example, [`api/models.py`](api/models.py) defines the data schema, [`api/serializers.py`](api/serializers.py) translates between ORM objects and JSON payloads, and [`api/views.py`](api/views.py) wires those serializers into `/api/...` endpoints that enforce workflow rules from [`workflow.yml`](workflow.yml). That split keeps the REST API (powered by Django REST Framework, DRF) resilient even when one layer needs to change, while returning consistent data/validation to all clients.
-- **[React](https://react.dev/)** (web/src/) renders the SPA (Single Page Application) and consumes shared types/API helpers from [`frontend_common/src/types.ts`](frontend_common/src/types.ts) and [`frontend_common/src/api.ts`](frontend_common/src/api.ts). React follows a component-based paradigm where functions or classes receive props (inputs) and return HTML that the browser can render.
+- **[React](https://react.dev/)** (web/src/) renders the SPA (Single Page Application) and consumes shared types/API helpers from [`web/src/util/types.ts`](web/src/util/types.ts) and [`web/src/util/api.ts`](web/src/util/api.ts). React follows a component-based paradigm where functions or classes receive props (inputs) and return HTML that the browser can render.
 - **[Vite](https://vitejs.dev/)** (web tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our web workbench, serves as the underlying runner for `npm test`, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
 - **[Material UI](https://mui.com/)** supplies the component library used everywhere in the UI for forms, dialogs, buttons, and layout.
 - **[Axios](https://axios-http.com/)** is the HTTP client library we use in the web to talk to REST APIs; it keeps things simple by handling the details of sending and receiving JSON so the UI code does not have to repeat that work. Benefits of Axios over raw `fetch` include centralized configuration of base URLs and headers, automatic JSON parsing/serialization, and built-in hooks for handling errors, cancellations, and retries. In this project that means [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx) can rely on helpers like `updateCurrentState`/`updatePiece` instead of duplicating URLs or JSON logic, and we have a single place for surfaces errors before they hit the UI.
@@ -116,15 +116,13 @@ Keep local-only settings in `.env.local` files; they are gitignored by default:
 
 - `.env.local` (repo-wide defaults)
 - `web/.env.local` (web-only overrides)
-- `mobile/.env.local` (mobile-only overrides)
 
-`source env.sh` automatically loads all three (in that order) so you can inject Cloudinary/API config without committing secrets.
+`source env.sh` automatically loads both (in that order) so you can inject Cloudinary/API config without committing secrets.
 Use the checked-in templates:
 
 ```bash
 cp .env.example .env.local
 cp web/.env.example web/.env.local
-cp mobile/.env.example mobile/.env.local
 ```
 
 The app runs without any credentials — both optional services degrade gracefully when unconfigured:
@@ -189,7 +187,7 @@ Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`
 
 | Command       | Description                                                                                                                                                                              |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gz_gentypes` | Regenerate [`frontend_common/src/generated-types.ts`](frontend_common/src/generated-types.ts) from the live OpenAPI schema. Starts the backend temporarily if it is not already running. |
+| `gz_gentypes` | Regenerate [`web/src/util/generated-types.ts`](web/src/util/generated-types.ts) from the live OpenAPI schema. Starts the backend temporarily if it is not already running. |
 
 Run `gz_help` to print the full list of shortcuts at any time.
 
@@ -423,10 +421,11 @@ After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` fr
 | [`test_globals.py`](api/tests/test_globals.py) | `GlobalModel` registry invariants (parameterised over all registered models): `name` field presence, user immutability, workflow consistency; `GET/POST /api/globals/<name>/` list and create |
 | [`test_glaze_combination.py`](api/tests/test_glaze_combination.py) | `GlazeCombination` computed `name` field, public/private FK constraint, `GlazeType.name` separator validation, API GET/POST |
 
-**Web** (`web/src/` and `frontend_common/src/`):
+**Web** (`web/src/`):
 | File | What it covers |
 |---|---|
-| [`frontend_common/src/workflow.test.ts`](frontend_common/src/workflow.test.ts) | `formatWorkflowFieldLabel`, `getGlobalDisplayField`, `getAdditionalFieldDefinitions` (inline, state ref, global ref) — decoupled from real `workflow.yml` via `vi.mock` |
+| [`web/src/util/workflow.test.ts`](web/src/util/workflow.test.ts) | `formatWorkflowFieldLabel`, `getGlobalDisplayField`, `getAdditionalFieldDefinitions` (inline, state ref, global ref) — decoupled from real `workflow.yml` via `vi.mock` |
+| [`web/src/util/__tests__/api.test.ts`](web/src/util/__tests__/api.test.ts) | HTTP functions (fetchPieces, fetchPiece, createPiece, transitions, globals, auth) — axios mocked via `vi.mock` |
 | [`__tests__/GlobalFieldPicker.test.tsx`](web/src/components/__tests__/GlobalFieldPicker.test.tsx) | Rendering, internal fetch, provided options, create sentinel, inline creation (success/error), selecting existing |
 | [`__tests__/PieceList.test.tsx`](web/src/components/__tests__/PieceList.test.tsx) | Column headers, empty state, per-row data, links |
 | [`__tests__/NewPieceDialog.test.tsx`](web/src/components/__tests__/NewPieceDialog.test.tsx) | Rendering, name/notes/location/thumbnail, save/cancel behavior |
@@ -490,14 +489,13 @@ Claude will read the comment, make the change, and push it to the branch.
 backend/          Django project settings, root URL config
 api/              Models, serializers, views, tests
   model_factories.py  Auto-generates GlobalModel subclasses from workflow.yml
-frontend_common/
-  src/
-    generated-types.ts  Auto-generated OpenAPI types (gitignored)
-    types.ts            Shared domain types/constants for web + mobile
-    api.ts              Shared HTTP calls; wire-type → domain-type mapping
-    workflow.ts         Shared workflow helpers from workflow.yml
 web/
   src/
+    util/
+      generated-types.ts  Auto-generated OpenAPI types (gitignored)
+      types.ts            Domain types/constants derived from generated-types.ts
+      api.ts              HTTP calls; wire-type → domain-type mapping
+      workflow.ts         Workflow helpers loaded from workflow.yml
     components/         React components
     App.tsx             Root component with MUI dark theme
 workflow.yml               Source of truth for piece states and valid transitions
@@ -519,7 +517,7 @@ The workflow state machine and all valid transitions are defined in [`workflow.y
 
 ### Authoring `additional_fields`
 
-When you add an `additional_fields` entry to a state in `workflow.yml`, the web automatically renders the inputs for you inside the `WorkflowState` component. Inline JSON primitives, state references, and global references are all interpreted through the helper utilities in [`frontend_common/src/workflow.ts`](frontend_common/src/workflow.ts) (`getAdditionalFieldDefinitions`, `formatWorkflowFieldLabel`, etc.) so the DSL does not need to be mentioned elsewhere in the code.
+When you add an `additional_fields` entry to a state in `workflow.yml`, the web automatically renders the inputs for you inside the `WorkflowState` component. Inline JSON primitives, state references, and global references are all interpreted through the helper utilities in [`web/src/util/workflow.ts`](web/src/util/workflow.ts) (`getAdditionalFieldDefinitions`, `formatWorkflowFieldLabel`, etc.) so the DSL does not need to be mentioned elsewhere in the code.
 
 1. **Inline fields** (give the field a `type`, optional `description`, `required`, and/or `enum`). They render as `TextField`s—numbers as numeric inputs, booleans as selects with `True`/`False`, enums as dropdowns—directly below Notes and above the image list.
 2. **State refs** (`$ref: "ancestor_state.field_name"`) carry a value forward from a reachable ancestor state; they render the referenced value while still allowing edits and backend validation just like inline fields.

@@ -185,7 +185,8 @@ Tests live in:
 - [`tests/test_workflow.py`](../../tests/test_workflow.py) — workflow schema/integrity validation
 - [`api/tests/`](../../api/tests/) — Django API tests (6 granular Bazel targets per concern)
 - [`web/src/components/__tests__/`](../../web/src/components/__tests__/) — React component tests (12 granular Bazel targets per component)
-- [`frontend_common/src/workflow.test.ts`](../../frontend_common/src/workflow.test.ts) — `workflow.ts` helper unit tests
+- [`web/src/util/workflow.test.ts`](../../web/src/util/workflow.test.ts) — `workflow.ts` helper unit tests
+- [`web/src/util/__tests__/api.test.ts`](../../web/src/util/__tests__/api.test.ts) — `api.ts` unit tests (axios mocked)
 
 ### Web build helper
 
