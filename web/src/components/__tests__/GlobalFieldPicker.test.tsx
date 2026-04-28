@@ -62,6 +62,7 @@ function Controlled(props: Partial<GlobalFieldPickerProps>) {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
+  vi.mocked(api.toggleGlobalEntryFavorite).mockResolvedValue(undefined);
 });
 
 describe("GlobalFieldPicker", () => {
@@ -268,6 +269,29 @@ describe("GlobalFieldPicker", () => {
       );
       await waitFor(() =>
         expect(screen.getByLabelText("Location")).toHaveValue("New Studio"),
+      );
+    });
+
+    it("shows saved status after creating an entry", async () => {
+      vi.mocked(api.createGlobalEntry).mockResolvedValue({
+        id: "new-id",
+        name: "New Studio",
+        isPublic: false,
+      });
+      render(<Controlled canCreate />);
+      await userEvent.type(screen.getByLabelText("Location"), "New Studio");
+      await waitFor(() =>
+        expect(
+          screen.getByRole("option", { name: 'Create "New Studio"' }),
+        ).toBeInTheDocument(),
+      );
+      fireEvent.click(
+        screen.getByRole("option", { name: 'Create "New Studio"' }),
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("autosave-status")).toHaveTextContent(
+          "Saved",
+        ),
       );
     });
 
@@ -538,6 +562,45 @@ describe("GlobalFieldPicker", () => {
           "glaze_combination",
           "id-Iron Red",
           true,
+        ),
+      );
+    });
+
+    it("shows saved status after toggling favorite", async () => {
+      await act(async () => {
+        render(
+          <GlobalFieldPicker
+            {...favoritableProps}
+            value="Iron Red"
+            options={[entry("Iron Red", false, false)]}
+          />,
+        );
+      });
+      await userEvent.click(screen.getByLabelText("Add to favorites"));
+      await waitFor(() =>
+        expect(screen.getByTestId("autosave-status")).toHaveTextContent(
+          "Saved",
+        ),
+      );
+    });
+
+    it("shows autosave status when favorite update fails", async () => {
+      vi.mocked(api.toggleGlobalEntryFavorite).mockRejectedValue(
+        new Error("Network error"),
+      );
+      await act(async () => {
+        render(
+          <GlobalFieldPicker
+            {...favoritableProps}
+            value="Iron Red"
+            options={[entry("Iron Red", false, false)]}
+          />,
+        );
+      });
+      await userEvent.click(screen.getByLabelText("Add to favorites"));
+      await waitFor(() =>
+        expect(screen.getByTestId("autosave-status")).toHaveTextContent(
+          "Failed to update favorite. Please try again.",
         ),
       );
     });

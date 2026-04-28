@@ -368,6 +368,8 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         global_ref_pks: dict[str, str] = {}
         for field_name, value in incoming.items():
             if field_name in global_ref_fields:
+                if value in (None, ''):
+                    continue
                 global_ref_pks[field_name] = str(value)
             else:
                 inline_fields[field_name] = value
@@ -412,12 +414,24 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         return piece_state
 
 
-def _write_global_ref_rows(piece_state: PieceState, global_ref_fields: dict[str, str], global_ref_pks: dict[str, str]) -> None:
+def _write_global_ref_rows(
+    piece_state: PieceState,
+    global_ref_fields: dict[str, str],
+    global_ref_pks: dict[str, str],
+    clear_fields: set[str] | None = None,
+) -> None:
     """Create or update junction table rows for global ref fields.
 
     ``global_ref_pks`` maps field_name → PK string supplied by the client.
     Raises ``serializers.ValidationError`` if a supplied PK does not exist.
     """
+    clear_fields = clear_fields or set()
+    for field_name in clear_fields:
+        global_name = global_ref_fields[field_name]
+        config = get_global_config(global_name)
+        ref_model_cls = apps.get_model('api', f'PieceState{config["model"]}Ref')
+        ref_model_cls.objects.filter(piece_state=piece_state, field_name=field_name).delete()
+
     for field_name, pk_str in global_ref_pks.items():
         global_name = global_ref_fields[field_name]
         config = get_global_config(global_name)
@@ -467,8 +481,12 @@ class PieceStateUpdateSerializer(serializers.Serializer):
             # Separate incoming dict into inline fields and global-ref PKs.
             inline_fields: dict = {}
             global_ref_pks: dict[str, str] = {}
+            clear_global_ref_fields: set[str] = set()
             for field_name, value in incoming.items():
                 if field_name in global_ref_fields:
+                    if value in (None, ''):
+                        clear_global_ref_fields.add(field_name)
+                        continue
                     global_ref_pks[field_name] = str(value)
                 else:
                     inline_fields[field_name] = value
@@ -478,7 +496,7 @@ class PieceStateUpdateSerializer(serializers.Serializer):
                 instance.save()
             except ValueError as exc:
                 raise serializers.ValidationError({'additional_fields': str(exc)}) from exc
-            _write_global_ref_rows(instance, global_ref_fields, global_ref_pks)
+            _write_global_ref_rows(instance, global_ref_fields, global_ref_pks, clear_global_ref_fields)
         else:
             try:
                 instance.save()

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "@mui/material";
 import {
   Box,
@@ -31,6 +31,8 @@ import {
 } from "../util/workflow";
 import GlobalFieldPicker from "./GlobalFieldPicker";
 import GlobalEntryPicker from "./GlobalEntryPicker";
+import AutosaveStatus from "./AutosaveStatus";
+import { useAutosave } from "./useAutosave";
 
 type WorkflowStateProps = {
   pieceState: PieceState;
@@ -39,6 +41,7 @@ type WorkflowStateProps = {
   onDirtyChange?: (dirty: boolean) => void;
   currentLocation?: string;
   currentThumbnail?: import("../util/types").Thumbnail | null;
+  autosaveDelayMs?: number;
 };
 
 type ImageEntry = {
@@ -111,12 +114,12 @@ function normalizeAdditionalFieldPayload(
   defs: ResolvedAdditionalField[],
   inputs: AdditionalFieldInputMap,
   globalRefPks: GlobalRefPkMap,
-): Record<string, string | number | boolean> {
-  const payload: Record<string, string | number | boolean> = {};
+): Record<string, string | number | boolean | null> {
+  const payload: Record<string, string | number | boolean | null> = {};
   defs.forEach((def) => {
     if (def.isGlobalRef) {
       const pk = globalRefPks[def.name];
-      if (pk) payload[def.name] = pk;
+      payload[def.name] = pk || null;
       return;
     }
     const raw = inputs[def.name];
@@ -170,6 +173,7 @@ export default function WorkflowState({
   onDirtyChange,
   currentLocation: currentLocationProp = "",
   currentThumbnail,
+  autosaveDelayMs,
 }: WorkflowStateProps) {
   const [notes, setNotes] = useState(pieceState.notes);
   const [images, setImages] = useState<ImageEntry[]>(stateImages(pieceState));
@@ -179,8 +183,6 @@ export default function WorkflowState({
     null,
   );
   const [editingCaptionValue, setEditingCaptionValue] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [currentLocation, setCurrentLocation] = useState(currentLocationProp);
   const additionalFieldDefs = useMemo(
     () => getAdditionalFieldDefinitions(pieceState.state),
@@ -270,30 +272,46 @@ export default function WorkflowState({
     onDirtyChange?.(isDirty);
   }, [isDirty, onDirtyChange]);
 
-  async function handleSave() {
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const payload = {
-        notes,
-        images, // always in sync with server after each image operation
-        additional_fields: normalizedAdditionalFields,
-      };
-      const result = await updateCurrentState(pieceId, payload);
-      let finalResult = result;
-      if (locationDirty) {
-        const updated = await updatePiece(pieceId, {
-          current_location: currentLocation.trim() || undefined,
-        });
-        finalResult = updated;
-      }
-      onSaved(finalResult);
-    } catch {
-      setSaveError("Failed to save. Please try again.");
-    } finally {
-      setSaving(false);
+  const saveWorkflowState = useCallback(async () => {
+    const payload = {
+      notes,
+      images, // always in sync with server after each image operation
+      additional_fields: normalizedAdditionalFields,
+    };
+    const result = await updateCurrentState(pieceId, payload);
+    let finalResult = result;
+    if (locationDirty) {
+      finalResult = await updatePiece(pieceId, {
+        current_location: currentLocation.trim() || undefined,
+      });
     }
-  }
+    onSaved(finalResult);
+  }, [
+    currentLocation,
+    images,
+    locationDirty,
+    normalizedAdditionalFields,
+    notes,
+    onSaved,
+    pieceId,
+  ]);
+  const autosaveKey = useMemo(
+    () =>
+      JSON.stringify({
+        notes,
+        images,
+        additional_fields: normalizedAdditionalFields,
+        current_location: currentLocation.trim(),
+      }),
+    [currentLocation, images, normalizedAdditionalFields, notes],
+  );
+
+  const autosave = useAutosave({
+    dirty: isDirty,
+    saveKey: autosaveKey,
+    save: saveWorkflowState,
+    delayMs: autosaveDelayMs,
+  });
 
   async function removeImage(index: number) {
     if (!window.confirm("Remove this image?")) return;
@@ -695,35 +713,11 @@ export default function WorkflowState({
         </Box>
       )}
 
-      {/* Save controls */}
-      {saveError && (
-        <Typography color="error" variant="body2">
-          {saveError}
-        </Typography>
-      )}
-      <Box sx={{ display: "flex", alignItems: "center" }}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSave}
-          disabled={saving || !isDirty}
-          data-testid="save-button"
-          startIcon={
-            saving ? <CircularProgress size={16} color="inherit" /> : undefined
-          }
-        >
-          Save
-        </Button>
-        {isDirty && (
-          <Typography
-            variant="body2"
-            sx={{ color: "warning.main" }}
-            data-testid="unsaved-indicator"
-          >
-            Unsaved changes
-          </Typography>
-        )}
-      </Box>
+      <AutosaveStatus
+        status={autosave.status}
+        error={autosave.error}
+        lastSavedAt={autosave.lastSavedAt}
+      />
       {/* Images */}
       <Box>
         {images.length > 0 && (

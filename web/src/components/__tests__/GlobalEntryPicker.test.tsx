@@ -192,6 +192,35 @@ describe("GlobalEntryPicker (glaze_combination)", () => {
       );
     });
 
+    it("shows saved status after favoriting", async () => {
+      render(<GlobalEntryPicker {...defaultProps} />);
+      await waitFor(() =>
+        expect(screen.getByLabelText("Add to favorites")).toBeInTheDocument(),
+      );
+      await userEvent.click(screen.getByLabelText("Add to favorites"));
+      await waitFor(() =>
+        expect(screen.getByTestId("autosave-status")).toHaveTextContent(
+          "Saved",
+        ),
+      );
+    });
+
+    it("shows autosave status when favorite update fails", async () => {
+      vi.mocked(api.toggleGlobalEntryFavorite).mockRejectedValue(
+        new Error("Network error"),
+      );
+      render(<GlobalEntryPicker {...defaultProps} />);
+      await waitFor(() =>
+        expect(screen.getByLabelText("Add to favorites")).toBeInTheDocument(),
+      );
+      await userEvent.click(screen.getByLabelText("Add to favorites"));
+      await waitFor(() =>
+        expect(screen.getByTestId("autosave-status")).toHaveTextContent(
+          "Failed to update favorite. Please try again.",
+        ),
+      );
+    });
+
     it("calls toggleGlobalEntryFavorite with false when unfavoriting", async () => {
       vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
         makeCombo({ is_favorite: true }),

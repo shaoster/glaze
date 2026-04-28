@@ -155,7 +155,6 @@ describe("PieceDetail", () => {
       ),
     );
     await waitFor(() => expect(input).toHaveValue("Studio K"));
-    fireEvent.click(screen.getByTestId("save-button"));
     await waitFor(() =>
       expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
         current_location: "Studio K",
@@ -182,7 +181,6 @@ describe("PieceDetail", () => {
     );
     fireEvent.click(screen.getByRole("option", { name: "Studio 7" }));
     await waitFor(() => expect(input).toHaveValue("Studio 7"));
-    fireEvent.click(screen.getByTestId("save-button"));
     await waitFor(() =>
       expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
         current_location: "Studio 7",
