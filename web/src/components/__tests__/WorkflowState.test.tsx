@@ -11,6 +11,148 @@ import WorkflowState from "../WorkflowState";
 import type { PieceState, PieceDetail } from "../../util/types";
 import * as api from "../../util/api";
 
+const { mockWorkflow } = vi.hoisted(() => ({
+  mockWorkflow: {
+    version: "test",
+    globals: {
+      location: {
+        model: "Location",
+        fields: {
+          name: { type: "string" },
+        },
+      },
+      clay_body: {
+        model: "ClayBody",
+        fields: {
+          name: { type: "string" },
+        },
+      },
+      glaze_type: {
+        model: "GlazeType",
+        fields: {
+          name: { type: "string" },
+        },
+      },
+      glaze_combination: {
+        model: "GlazeCombination",
+        fields: {
+          name: { type: "string" },
+          preview_image: { type: "image", use_as_thumbnail: true },
+        },
+        compose_from: {
+          glaze_types: {
+            global: "glaze_type",
+            ordered: true,
+            filter_label: "Contains glaze types (all must match)",
+          },
+        },
+      },
+    },
+    states: [
+      {
+        id: "designed",
+        visible: true,
+        friendly_name: "Designing",
+        description: "Design phase.",
+        successors: ["wheel_thrown", "handbuilt"],
+      },
+      {
+        id: "wheel_thrown",
+        visible: true,
+        friendly_name: "Throwing",
+        description: "Wheel-thrown.",
+        successors: ["trimmed", "recycled"],
+        fields: {
+          clay_weight_grams: { type: "number" },
+          clay_body: {
+            $ref: "@clay_body.name",
+            can_create: true,
+          },
+        },
+      },
+      {
+        id: "handbuilt",
+        visible: true,
+        friendly_name: "Handbuilding",
+        description: "Handbuilt.",
+        successors: ["recycled"],
+      },
+      {
+        id: "trimmed",
+        visible: true,
+        friendly_name: "Trimming",
+        description: "Trimmed.",
+        successors: ["recycled", "submitted_to_bisque_fire"],
+        fields: {
+          trimmed_weight_grams: { type: "number" },
+          pre_trim_weight_grams: { $ref: "wheel_thrown.clay_weight_grams" },
+        },
+      },
+      {
+        id: "submitted_to_bisque_fire",
+        visible: true,
+        friendly_name: "Queued → Bisque",
+        description: "Queued for bisque.",
+        successors: ["bisque_fired", "recycled"],
+        fields: {
+          kiln_location: {
+            $ref: "@location.name",
+            can_create: true,
+          },
+        },
+      },
+      {
+        id: "bisque_fired",
+        visible: true,
+        friendly_name: "Planning → Glaze",
+        description: "Bisque fired.",
+        successors: ["glazed", "recycled"],
+        fields: {
+          kiln_temperature_c: { type: "integer" },
+          cone: { type: "string", enum: ["04", "05"] },
+        },
+      },
+      {
+        id: "glazed",
+        visible: true,
+        friendly_name: "Glazing",
+        description: "Glazing.",
+        successors: ["glaze_fired", "recycled"],
+        fields: {
+          glaze_combination: {
+            $ref: "@glaze_combination.name",
+          },
+        },
+      },
+      {
+        id: "glaze_fired",
+        visible: true,
+        friendly_name: "Touching Up",
+        description: "Glaze fired.",
+        successors: ["completed", "recycled"],
+      },
+      {
+        id: "completed",
+        visible: true,
+        friendly_name: "Completed",
+        description: "Completed.",
+        terminal: true,
+      },
+      {
+        id: "recycled",
+        visible: true,
+        friendly_name: "Recycled",
+        description: "Recycled.",
+        terminal: true,
+      },
+    ],
+  },
+}));
+
+vi.mock("../../../workflow.yml", () => ({
+  default: mockWorkflow,
+}));
+
 // Mock the api module
 vi.mock("../../util/api", () => ({
   fetchGlobalEntries: vi.fn().mockResolvedValue([]),

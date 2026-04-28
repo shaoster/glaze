@@ -17,6 +17,89 @@ import type {
 } from "../../util/types";
 import * as api from "../../util/api";
 
+const { mockWorkflow } = vi.hoisted(() => ({
+  mockWorkflow: {
+    version: "test",
+    globals: {
+      location: {
+        model: "Location",
+        fields: {
+          name: { type: "string" },
+        },
+      },
+    },
+    states: [
+      {
+        id: "designed",
+        visible: true,
+        friendly_name: "Designing",
+        description: "Design phase.",
+        successors: ["wheel_thrown", "handbuilt"],
+      },
+      {
+        id: "wheel_thrown",
+        visible: true,
+        friendly_name: "Throwing",
+        description: "Wheel-thrown.",
+        successors: ["trimmed", "recycled"],
+      },
+      {
+        id: "handbuilt",
+        visible: true,
+        friendly_name: "Handbuilding",
+        description: "Handbuilt.",
+        successors: ["recycled"],
+      },
+      {
+        id: "trimmed",
+        visible: true,
+        friendly_name: "Trimming",
+        description: "Trimmed.",
+        successors: ["recycled"],
+      },
+      {
+        id: "glaze_fired",
+        visible: true,
+        friendly_name: "Touching Up",
+        description: "Glaze fired.",
+        successors: ["sanded", "completed", "recycled"],
+      },
+      {
+        id: "sanded",
+        visible: true,
+        friendly_name: "Sanding",
+        description: "Sanding.",
+        successors: ["completed", "recycled"],
+      },
+      {
+        id: "glazed",
+        visible: true,
+        friendly_name: "Glazing",
+        description: "Glazing.",
+        successors: ["glaze_fired", "recycled"],
+      },
+      {
+        id: "completed",
+        visible: true,
+        friendly_name: "Completed",
+        description: "Completed.",
+        terminal: true,
+      },
+      {
+        id: "recycled",
+        visible: true,
+        friendly_name: "Recycled",
+        description: "Recycled.",
+        terminal: true,
+      },
+    ],
+  },
+}));
+
+vi.mock("../../../workflow.yml", () => ({
+  default: mockWorkflow,
+}));
+
 // Zero-duration theme so MUI Dialog/Fade animations complete in the next tick
 // rather than after their default 225–300ms CSS transition timeouts.
 const TEST_THEME = createTheme({
