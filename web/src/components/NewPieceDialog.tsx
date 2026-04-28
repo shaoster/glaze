@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { createPiece } from "../util/api";
 import type { PieceDetail } from "../util/types";
-import GlobalFieldPicker from "./GlobalFieldPicker";
+import GlobalEntryField from "./GlobalEntryField";
 import { DEFAULT_THUMBNAIL, CURATED_THUMBNAILS } from "./thumbnailConstants";
 
 const MAX_NOTES_LENGTH = 300;
@@ -115,11 +115,11 @@ export default function NewPieceDialog({
             slotProps={{ htmlInput: { "data-testid": "notes-input" } }}
             sx={{ mb: 2 }}
           />
-          <GlobalFieldPicker
+          <GlobalEntryField
             globalName="location"
             label="Location"
             value={location}
-            onChange={setLocation}
+            onSelect={(entry) => setLocation(entry?.name ?? "")}
             canCreate
             sx={{ mb: 2 }}
           />

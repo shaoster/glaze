@@ -15,7 +15,9 @@ import type { PieceDetail } from "../../util/types";
 vi.mock("../../util/api", () => ({
   createPiece: vi.fn(),
   fetchGlobalEntries: vi.fn().mockResolvedValue([]),
+  fetchGlobalEntriesWithFilters: vi.fn().mockResolvedValue([]),
   createGlobalEntry: vi.fn(),
+  toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),
 }));
 
 function makePieceDetail(): PieceDetail {
@@ -50,6 +52,7 @@ const defaultProps = {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
+  vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([]);
 });
 
 describe("NewPieceDialog", () => {
@@ -82,38 +85,44 @@ describe("NewPieceDialog", () => {
         isPublic: false,
       });
       render(<NewPieceDialog {...defaultProps} />);
-      const locationInput = screen.getByLabelText("Location");
-      fireEvent.change(locationInput, { target: { value: "Studio K" } });
-      await waitFor(() =>
-        expect(
-          screen.getByRole("option", { name: 'Create "Studio K"' }),
-        ).toBeInTheDocument(),
+      await userEvent.click(
+        screen.getByRole("button", { name: "Browse Location" }),
       );
-      fireEvent.click(
-        screen.getByRole("option", { name: 'Create "Studio K"' }),
+      await userEvent.click(screen.getByRole("tab", { name: "Create" }));
+      await userEvent.type(
+        screen.getByRole("textbox", { name: "Location" }),
+        "Studio K",
       );
+      await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
       await waitFor(() =>
         expect(api.createGlobalEntry).toHaveBeenCalledWith(
           "location",
-          "name",
-          "Studio K",
+          { field: "name", value: "Studio K" },
         ),
       );
-      await waitFor(() => expect(locationInput).toHaveValue("Studio K"));
+      await waitFor(() => expect(screen.getByText("Studio K")).toBeInTheDocument());
     });
 
     it("renders the location field", async () => {
       await act(async () => {
         render(<NewPieceDialog {...defaultProps} />);
       });
-      expect(screen.getByLabelText("Location")).toBeInTheDocument();
+      expect(screen.getByText("Location")).toBeInTheDocument();
     });
 
-    it("fetches location suggestions", async () => {
+    it("fetches location browse entries when the picker opens", async () => {
       await act(async () => {
         render(<NewPieceDialog {...defaultProps} />);
       });
-      expect(api.fetchGlobalEntries).toHaveBeenCalledWith("location");
+      await userEvent.click(
+        screen.getByRole("button", { name: "Browse Location" }),
+      );
+      await waitFor(() =>
+        expect(api.fetchGlobalEntriesWithFilters).toHaveBeenCalledWith(
+          "location",
+          {},
+        ),
+      );
     });
 
     it("shows curated thumbnail images by default", async () => {
@@ -256,22 +265,18 @@ describe("NewPieceDialog", () => {
 
     it("sends location when provided", async () => {
       vi.mocked(api.createPiece).mockResolvedValue(makePieceDetail());
-      vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
+      vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
         { id: "1", name: "Studio 7", isPublic: false },
       ]);
       render(<NewPieceDialog {...defaultProps} />);
-      fireEvent.change(screen.getByLabelText("Location"), {
-        target: { value: "Studio 7" },
-      });
-      await waitFor(() =>
-        expect(
-          screen.getByRole("option", { name: "Studio 7" }),
-        ).toBeInTheDocument(),
+      await userEvent.click(
+        screen.getByRole("button", { name: "Browse Location" }),
       );
-      fireEvent.click(screen.getByRole("option", { name: "Studio 7" }));
       await waitFor(() =>
-        expect(screen.getByLabelText("Location")).toHaveValue("Studio 7"),
+        expect(screen.getByText("Studio 7")).toBeInTheDocument(),
       );
+      await userEvent.click(screen.getByText("Studio 7"));
+      await waitFor(() => expect(screen.getByText("Studio 7")).toBeInTheDocument());
       fireEvent.change(screen.getByTestId("name-input"), {
         target: { value: "Bowl" },
       });

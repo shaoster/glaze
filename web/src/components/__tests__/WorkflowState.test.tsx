@@ -202,7 +202,7 @@ describe("WorkflowState", () => {
   });
 
   it("lets you choose an existing global reference option", async () => {
-    vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
+    vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
       { id: "loc1", name: "Kiln A", isPublic: false },
     ]);
     const globalState = makeState({
@@ -210,15 +210,14 @@ describe("WorkflowState", () => {
       additional_fields: { kiln_location: "" },
     });
     render(<WorkflowState {...defaultProps} pieceState={globalState} />);
-    const input = screen.getByLabelText("Kiln Location");
-    await userEvent.type(input, "Kiln");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("option", { name: "Kiln A" }),
-      ).toBeInTheDocument(),
+    await userEvent.click(
+      screen.getByRole("button", { name: "Browse Kiln Location" }),
     );
-    await userEvent.click(screen.getByRole("option", { name: "Kiln A" }));
-    expect(input).toHaveValue("Kiln A");
+    await waitFor(() =>
+      expect(screen.getByText("Kiln A")).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByText("Kiln A"));
+    expect(screen.getByText("Kiln A")).toBeInTheDocument();
   });
 
   it("allows creating a new global reference option", async () => {
@@ -233,26 +232,25 @@ describe("WorkflowState", () => {
       additional_fields: { kiln_location: "" },
     });
     render(<WorkflowState {...defaultProps} pieceState={globalState} />);
-    const input = screen.getByLabelText("Kiln Location");
-    await userEvent.type(input, "New Kiln");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("option", { name: 'Create "New Kiln"' }),
-      ).toBeInTheDocument(),
+    await userEvent.click(
+      screen.getByRole("button", { name: "Browse Kiln Location" }),
     );
-    fireEvent.click(screen.getByRole("option", { name: 'Create "New Kiln"' }));
-    expect(input).not.toHaveValue("New Kiln");
+    await userEvent.click(screen.getByRole("tab", { name: "Create" }));
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Location" }),
+      "New Kiln",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
     await waitFor(() =>
       expect(api.createGlobalEntry).toHaveBeenCalledWith(
         "location",
-        "name",
-        "New Kiln",
+        { field: "name", value: "New Kiln" },
       ),
     );
     await act(async () =>
       resolveCreate({ id: "new-id", name: "New Kiln", isPublic: false }),
     );
-    await waitFor(() => expect(input).toHaveValue("New Kiln"));
+    await waitFor(() => expect(screen.getByText("New Kiln")).toBeInTheDocument());
   });
 
   it("fetches global entries for createable global refs", async () => {
@@ -261,8 +259,14 @@ describe("WorkflowState", () => {
       additional_fields: { kiln_location: "" },
     });
     render(<WorkflowState {...defaultProps} pieceState={withGlobalRef} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Browse Kiln Location" }),
+    );
     await waitFor(() =>
-      expect(api.fetchGlobalEntries).toHaveBeenCalledWith("location"),
+      expect(api.fetchGlobalEntriesWithFilters).toHaveBeenCalledWith(
+        "location",
+        {},
+      ),
     );
   });
 
@@ -285,26 +289,25 @@ describe("WorkflowState", () => {
         pieceState={makeState({ notes: "Original" })}
       />,
     );
-    const input = screen.getByLabelText("Current location");
-    await userEvent.type(input, "New Shelf");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("option", { name: 'Create "New Shelf"' }),
-      ).toBeInTheDocument(),
+    await userEvent.click(
+      screen.getByRole("button", { name: "Browse Current location" }),
     );
-    fireEvent.click(screen.getByRole("option", { name: 'Create "New Shelf"' }));
-    expect(input).not.toHaveValue("New Shelf");
+    await userEvent.click(screen.getByRole("tab", { name: "Create" }));
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Location" }),
+      "New Shelf",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
     await waitFor(() =>
       expect(api.createGlobalEntry).toHaveBeenCalledWith(
         "location",
-        "name",
-        "New Shelf",
+        { field: "name", value: "New Shelf" },
       ),
     );
     await act(async () =>
       resolveCreate({ id: "new-id", name: "New Shelf", isPublic: false }),
     );
-    await waitFor(() => expect(input).toHaveValue("New Shelf"));
+    await waitFor(() => expect(screen.getByText("New Shelf")).toBeInTheDocument());
     await waitFor(() =>
       expect(api.updatePiece).toHaveBeenCalledWith("test-piece-id", {
         current_location: "New Shelf",
@@ -421,19 +424,18 @@ describe("WorkflowState", () => {
     const updated = makePieceDetail();
     vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
     vi.mocked(api.updatePiece).mockRejectedValue(new Error("Network error"));
-    vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
+    vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
       { id: "1", name: "Shelf Z", isPublic: false },
     ]);
     render(<WorkflowState {...defaultProps} currentLocation="" />);
-    const input = screen.getByLabelText("Current location");
-    await userEvent.type(input, "Shelf Z");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("option", { name: "Shelf Z" }),
-      ).toBeInTheDocument(),
+    await userEvent.click(
+      screen.getByRole("button", { name: "Browse Current location" }),
     );
-    fireEvent.click(screen.getByRole("option", { name: "Shelf Z" }));
-    await waitFor(() => expect(input).toHaveValue("Shelf Z"));
+    await waitFor(() =>
+      expect(screen.getByText("Shelf Z")).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByText("Shelf Z"));
+    await waitFor(() => expect(screen.getByText("Shelf Z")).toBeInTheDocument());
     await waitFor(() =>
       expect(
         screen.getByText("Autosave failed. Your changes are still here."),
@@ -780,7 +782,7 @@ describe("WorkflowState", () => {
         render(<WorkflowState {...defaultProps} pieceState={glazedState} />);
       });
       expect(
-        screen.getByRole("button", { name: "Browse…" }),
+        screen.getByRole("button", { name: "Browse Glaze Combination" }),
       ).toBeInTheDocument();
       // No text input with the field label — free typing is not supported
       expect(
@@ -800,7 +802,7 @@ describe("WorkflowState", () => {
       });
       expect(screen.getByText("Iron Red!Clear")).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "Change…" }),
+        screen.getByRole("button", { name: "Change Glaze Combination" }),
       ).toBeInTheDocument();
     });
 
@@ -847,7 +849,7 @@ describe("WorkflowState", () => {
         expect(screen.queryByText("Iron Red!Clear")).not.toBeInTheDocument(),
       );
       expect(
-        screen.getByRole("button", { name: "Browse…" }),
+        screen.getByRole("button", { name: "Browse Glaze Combination" }),
       ).toBeInTheDocument();
       await waitFor(() =>
         expect(api.updateCurrentState).toHaveBeenCalledWith(
@@ -861,10 +863,12 @@ describe("WorkflowState", () => {
       );
     });
 
-    it("opens GlobalEntryPicker when Browse button is clicked", async () => {
+    it("opens the browse dialog when Browse button is clicked", async () => {
       const glazedState = makeState({ state: "glazed", additional_fields: {} });
       render(<WorkflowState {...defaultProps} pieceState={glazedState} />);
-      await userEvent.click(screen.getByRole("button", { name: "Browse…" }));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Browse Glaze Combination" }),
+      );
       await waitFor(() =>
         expect(
           screen.getByText("Browse Glaze Combinations"),

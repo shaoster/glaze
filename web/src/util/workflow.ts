@@ -255,8 +255,8 @@ export function isTaggableGlobal(globalName: string): boolean {
 
 /**
  * Returns the display field name for a globals entry — `'name'` if declared,
- * otherwise the first declared field. Used by `GlobalFieldPicker` to determine
- * which field to write when creating a new instance via `createGlobalEntry`.
+ * otherwise the first declared field. Used by the global-entry creation dialog
+ * to determine which field to write when creating a new simple instance.
  * Mirrors the backend's `get_global_model_and_field` logic.
  */
 export function getGlobalDisplayField(globalName: string): string {

@@ -364,20 +364,21 @@ export async function toggleGlobalEntryFavorite(
   }
 }
 
+export type CreateGlobalEntryPayload =
+  | { field: string; value: string }
+  | { values: Record<string, unknown> }
+  | { layers: string[] };
+
 export async function createGlobalEntry(
   globalName: string,
-  field: string,
-  value: string,
+  payload: CreateGlobalEntryPayload,
 ): Promise<GlobalEntry> {
   const { data } = await client.post<{
     id: string;
     name: string;
-    is_public: boolean;
-  }>(`globals/${globalName}/`, {
-    field,
-    value,
-  });
-  return { id: data.id, name: data.name, isPublic: data.is_public };
+    is_public?: boolean;
+  }>(`globals/${globalName}/`, payload);
+  return { id: data.id, name: data.name, isPublic: data.is_public ?? false };
 }
 
 export async function createTagEntry(payload: {

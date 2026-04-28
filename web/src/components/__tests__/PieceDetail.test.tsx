@@ -36,11 +36,13 @@ const TEST_THEME = createTheme({
 
 vi.mock("../../util/api", () => ({
   fetchGlobalEntries: vi.fn().mockResolvedValue([]),
+  fetchGlobalEntriesWithFilters: vi.fn().mockResolvedValue([]),
   updateCurrentState: vi.fn(),
   addPieceState: vi.fn(),
   updatePiece: vi.fn(),
   createTagEntry: vi.fn(),
   createGlobalEntry: vi.fn(),
+  toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),
   hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
   uploadImageToCloudinary: vi.fn(),
 }));
@@ -101,6 +103,7 @@ async function renderPieceDetail(
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
+  vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([]);
 });
 
 describe("PieceDetail", () => {
@@ -122,12 +125,12 @@ describe("PieceDetail", () => {
     ).toBe(true);
   });
 
-  it("renders current location input", async () => {
+  it("renders current location controls", async () => {
     await renderPieceDetail();
-    expect(screen.getByLabelText("Current location")).toBeInTheDocument();
+    expect(screen.getByText("Current location")).toBeInTheDocument();
   });
 
-  it("creates a new current location through the autocomplete", async () => {
+  it("creates a new current location through the dialog", async () => {
     const updated = makePiece({ current_location: "Studio K" });
     vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
     vi.mocked(api.createGlobalEntry).mockResolvedValue({
@@ -139,22 +142,22 @@ describe("PieceDetail", () => {
     vi.mocked(api.updatePiece).mockResolvedValue(updated);
     const onPieceUpdated = vi.fn();
     await renderPieceDetail(undefined, onPieceUpdated);
-    const input = screen.getByLabelText("Current location");
-    fireEvent.change(input, { target: { value: "Studio K" } });
-    await waitFor(() =>
-      expect(
-        screen.getByRole("option", { name: 'Create "Studio K"' }),
-      ).toBeInTheDocument(),
+    await userEvent.click(
+      screen.getByRole("button", { name: "Browse Current location" }),
     );
-    fireEvent.click(screen.getByRole("option", { name: 'Create "Studio K"' }));
+    await userEvent.click(screen.getByRole("tab", { name: "Create" }));
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Location" }),
+      "Studio K",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
     await waitFor(() =>
       expect(api.createGlobalEntry).toHaveBeenCalledWith(
         "location",
-        "name",
-        "Studio K",
+        { field: "name", value: "Studio K" },
       ),
     );
-    await waitFor(() => expect(input).toHaveValue("Studio K"));
+    await waitFor(() => expect(screen.getByText("Studio K")).toBeInTheDocument());
     await waitFor(() =>
       expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
         current_location: "Studio K",
@@ -165,22 +168,21 @@ describe("PieceDetail", () => {
 
   it("saves location updates when confirmed", async () => {
     const updated = makePiece({ current_location: "Studio 7" });
-    vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
+    vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
       { id: "1", name: "Studio 7", isPublic: false },
     ]);
     vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
     vi.mocked(api.updatePiece).mockResolvedValue(updated);
     const onPieceUpdated = vi.fn();
     await renderPieceDetail(undefined, onPieceUpdated);
-    const input = screen.getByLabelText("Current location");
-    fireEvent.change(input, { target: { value: "Studio 7" } });
-    await waitFor(() =>
-      expect(
-        screen.getByRole("option", { name: "Studio 7" }),
-      ).toBeInTheDocument(),
+    await userEvent.click(
+      screen.getByRole("button", { name: "Browse Current location" }),
     );
-    fireEvent.click(screen.getByRole("option", { name: "Studio 7" }));
-    await waitFor(() => expect(input).toHaveValue("Studio 7"));
+    await waitFor(() =>
+      expect(screen.getByText("Studio 7")).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByText("Studio 7"));
+    await waitFor(() => expect(screen.getByText("Studio 7")).toBeInTheDocument());
     await waitFor(() =>
       expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
         current_location: "Studio 7",

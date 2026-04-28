@@ -65,6 +65,8 @@ eslint_pkg.eslint(
     srcs = [
         "eslint.config.js",
         ":web_lib",
+        ":web_test_configs",
+        ":web_test_files",
     ],
     args = [
         ".",
@@ -186,6 +188,15 @@ js_library(
     deps = [":node_modules"],
 )
 
+filegroup(
+    name = "web_test_files",
+    srcs = glob([
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+    ]),
+    visibility = ["//visibility:public"],
+)
+
 # Leaf components: no local component deps.
 js_library(
     name = "primitive_src",
@@ -193,7 +204,6 @@ js_library(
         "src/components/ErrorBoundary.tsx",
         "src/components/StateChip.tsx",
         "src/components/TagChip.tsx",
-        "src/components/globalFieldPickerUtils.ts",
         "src/components/tagPalette.ts",
         "src/components/thumbnailConstants.ts",
         "src/util/useAsync.ts",
@@ -250,12 +260,13 @@ js_library(
     ],
 )
 
-# Picker components: GlobalFieldPicker depends on globalFieldPickerUtils; GlobalEntryPicker depends on CloudinaryImage.
+# Picker components: GlobalEntryDialog provides the dialog flow; GlobalEntryField
+# is the chip + button wrapper used by forms.
 js_library(
     name = "global_picker_src",
     srcs = [
-        "src/components/GlobalEntryPicker.tsx",
-        "src/components/GlobalFieldPicker.tsx",
+        "src/components/GlobalEntryDialog.tsx",
+        "src/components/GlobalEntryField.tsx",
     ],
     deps = [
         ":autosave_src",
@@ -425,8 +436,7 @@ vitest_test(
 vitest_test(
     name = "web_picker_test",
     srcs = [
-        "src/components/__tests__/GlobalEntryPicker.test.tsx",
-        "src/components/__tests__/GlobalFieldPicker.test.tsx",
+        "src/components/__tests__/GlobalEntryDialog.test.tsx",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [
