@@ -7,3 +7,4 @@ web/dist
 staticfiles
 .claude
 bazel-*
+.agent-worktrees/
