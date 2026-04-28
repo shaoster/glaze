@@ -595,8 +595,8 @@ function RecordList({
           <Stack direction="row" spacing={0.5} flexShrink={0}>
             {!hideCropChip ? (
               <Chip
-                label={record.crop ? "cropped" : "uncropped"}
-                color={record.crop ? "success" : "error"}
+                label={record.cropped ? "cropped" : "uncropped"}
+                color={record.cropped ? "success" : "error"}
                 size="small"
               />
             ) : null}
