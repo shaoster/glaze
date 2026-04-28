@@ -380,6 +380,71 @@
   {
     "model": "api.glazecombination",
     "fields": {
+      "name": "Albany Blue Slip!Celadon",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334466/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143829-86d206b5.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Albany Blue Slip!Choy",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334463/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143837-92445703.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Albany Blue Slip!Cornwall",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334462/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143845-32ec039e.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Albany Blue Slip!French Green",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777329433/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143616-c93add06.webp",
+      "is_food_safe": null,
+      "runs": null,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Albany Blue Slip!Turquoise",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334468/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143635-9800dbcc.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
       "name": "Albany Green Slip",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988116/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0.webp",
@@ -388,6 +453,84 @@
       "highlights_grooves": false,
       "is_different_on_white_and_brown_clay": false,
       "apply_thin": true
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Albany Green Slip!Celadon",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334466/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143832-5a9d2a40.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Albany Green Slip!Choy",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334463/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143841-7c59b827.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Albany Green Slip!Creamy Red",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334462/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143848-2271612c.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Albany Green Slip!Gloss White",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334465/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143722-2-9189734a.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Albany Green Slip!Turquoise",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334467/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143640-00fc2556.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Albany Green Slip!Yellow Orange",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334464/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143637-f6d7a94f.webp",
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
     }
   },
   {
