@@ -820,6 +820,14 @@ describe("WorkflowState", () => {
     });
 
     it("clears the selected value when the chip cancel icon is clicked", async () => {
+      vi.mocked(api.updateCurrentState).mockResolvedValue(
+        makePieceDetail({
+          current_state: makeState({
+            state: "glazed",
+            additional_fields: {},
+          }),
+        }),
+      );
       const glazedState = makeState({
         state: "glazed",
         additional_fields: {
@@ -841,6 +849,16 @@ describe("WorkflowState", () => {
       expect(
         screen.getByRole("button", { name: "Browse…" }),
       ).toBeInTheDocument();
+      await waitFor(() =>
+        expect(api.updateCurrentState).toHaveBeenCalledWith(
+          "test-piece-id",
+          expect.objectContaining({
+            additional_fields: expect.objectContaining({
+              glaze_combination: null,
+            }),
+          }),
+        ),
+      );
     });
 
     it("opens GlobalEntryPicker when Browse button is clicked", async () => {

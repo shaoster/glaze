@@ -221,7 +221,7 @@ export type AddStatePayload = {
   state: State;
   notes?: string;
   images?: Wire<CaptionedImage>[];
-  additional_fields?: Record<string, string | number | boolean>;
+  additional_fields?: Record<string, string | number | boolean | null>;
 };
 
 export async function addPieceState(
@@ -242,7 +242,7 @@ export type UpdateStatePayload = {
     caption: string;
     cloudinary_public_id?: string | null;
   }>;
-  additional_fields?: Record<string, string | number | boolean>;
+  additional_fields?: Record<string, string | number | boolean | null>;
 };
 
 export async function updateCurrentState(

@@ -1,8 +1,9 @@
 import uuid
 
 import pytest
+from django.apps import apps
 
-from api.models import ENTRY_STATE, SUCCESSORS
+from api.models import ENTRY_STATE, SUCCESSORS, GlazeCombination, GlazeType
 
 # ---------------------------------------------------------------------------
 # PATCH /api/pieces/{id}/state/
@@ -113,6 +114,32 @@ class TestPatchCurrentState:
             format='json',
         )
         assert response.status_code == 400
+
+    def test_null_global_ref_additional_field_clears_junction_row(self, client, piece):
+        glaze = GlazeType.objects.create(user=None, name='Iron Red')
+        combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[glaze])
+        state = piece.current_state
+        state.state = 'glazed'
+        state.save()
+        ref_model = apps.get_model('api', 'PieceStateGlazeCombinationRef')
+        ref_model.objects.create(
+            piece_state=state,
+            field_name='glaze_combination',
+            glaze_combination=combo,
+        )
+
+        response = client.patch(
+            f'/api/pieces/{piece.id}/state/',
+            {'additional_fields': {'glaze_combination': None}},
+            format='json',
+        )
+
+        assert response.status_code == 200
+        assert 'glaze_combination' not in response.json()['current_state']['additional_fields']
+        assert not ref_model.objects.filter(
+            piece_state=state,
+            field_name='glaze_combination',
+        ).exists()
 
     def test_cannot_patch_past_state_via_endpoint(self, client, piece):
         """Transitioning seals the old state; PATCH endpoint targets the new current state."""

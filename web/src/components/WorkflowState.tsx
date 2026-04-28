@@ -114,12 +114,12 @@ function normalizeAdditionalFieldPayload(
   defs: ResolvedAdditionalField[],
   inputs: AdditionalFieldInputMap,
   globalRefPks: GlobalRefPkMap,
-): Record<string, string | number | boolean> {
-  const payload: Record<string, string | number | boolean> = {};
+): Record<string, string | number | boolean | null> {
+  const payload: Record<string, string | number | boolean | null> = {};
   defs.forEach((def) => {
     if (def.isGlobalRef) {
       const pk = globalRefPks[def.name];
-      if (pk) payload[def.name] = pk;
+      payload[def.name] = pk || null;
       return;
     }
     const raw = inputs[def.name];
