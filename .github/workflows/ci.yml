@@ -74,7 +74,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-
+      - name: Inject secret into ~/.bazelrc
+        run: |
+          echo "" >> .bazelrc
+          echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
       - name: Run all linters
         run: bazel build --config=ci --config=lint //...
 
