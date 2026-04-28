@@ -86,6 +86,7 @@ type UploadedRecord = {
   filename: string;
   dimensions: { width: number; height: number };
   crop: CropSquare | null;
+  cropped: boolean;
   detectedLabelRect?: LabelRect | null;
   ocrRegion: OcrRegion | null;
   parsedFields: ParsedFields;
@@ -868,6 +869,7 @@ export default function GlazeImportToolPage() {
             ? {
                 ...record,
                 crop: clampCrop(record.dimensions, nextCrop),
+                cropped: true,
                 reviewed: false,
               }
             : record,
@@ -1035,6 +1037,7 @@ export default function GlazeImportToolPage() {
               height: image.naturalHeight,
             }),
           ),
+          cropped: false,
           ...(await detectOcrRegion(
             image,
             clampCrop(
@@ -1178,6 +1181,7 @@ export default function GlazeImportToolPage() {
               filename,
               dimensions: cloudinaryDimensions,
               crop: cloudinaryCrop,
+              cropped: false,
               ...(await detectOcrRegion(image, cloudinaryCrop)),
               parsedFields: {
                 name: "",
@@ -1754,8 +1758,8 @@ export default function GlazeImportToolPage() {
                       </Button>
                       <Chip label={selectedRecord.filename} />
                       <Chip
-                        label={selectedRecord.crop ? "cropped" : "uncropped"}
-                        color={selectedRecord.crop ? "success" : "default"}
+                        label={selectedRecord.cropped ? "cropped" : "uncropped"}
+                        color={selectedRecord.cropped ? "success" : "default"}
                       />
                     </Stack>
                     <Stack direction="row" spacing={1} flexWrap="wrap">
