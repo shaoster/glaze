@@ -14,7 +14,6 @@ on:
       - ".idea/**"
       - "LICENSE"
       - "LICENSE.*"
-  pull_request:
 
 jobs:
   preflight:
