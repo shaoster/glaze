@@ -212,6 +212,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Google OAuth — set GOOGLE_OAUTH_CLIENT_ID in the environment to enable Google sign-in.
 GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "")
 
+# Development bootstrap helpers. Enabled by default in DEBUG to make freshly
+# created local worktrees usable immediately after first login, but fully
+# disabled in production.
+DEV_BOOTSTRAP_ENABLED = DEBUG and os.environ.get("GLAZE_DEV_BOOTSTRAP", "1") == "1"
+
 # Security settings
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"

@@ -2,123 +2,175 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
+from api.models import Piece
+
 
 @pytest.mark.django_db
 class TestAuthEndpoints:
     def test_register_creates_user_and_logs_in(self):
         client = APIClient()
         response = client.post(
-            '/api/auth/register/',
+            "/api/auth/register/",
             {
-                'email': 'newuser@example.com',
-                'password': 'password123',
-                'first_name': 'New',
-                'last_name': 'User',
+                "email": "newuser@example.com",
+                "password": "password123",
+                "first_name": "New",
+                "last_name": "User",
             },
-            format='json',
+            format="json",
         )
         assert response.status_code == 201
         data = response.json()
-        assert data['email'] == 'newuser@example.com'
-        assert data['is_staff'] is False
-        assert User.objects.filter(email='newuser@example.com').exists()
-        me_response = client.get('/api/auth/me/')
+        assert data["email"] == "newuser@example.com"
+        assert data["is_staff"] is False
+        assert User.objects.filter(email="newuser@example.com").exists()
+        me_response = client.get("/api/auth/me/")
         assert me_response.status_code == 200
-        assert me_response.json()['email'] == 'newuser@example.com'
+        assert me_response.json()["email"] == "newuser@example.com"
 
     def test_login_with_email(self):
         User.objects.create_user(
-            username='person@example.com',
-            email='person@example.com',
-            password='password123',
+            username="person@example.com",
+            email="person@example.com",
+            password="password123",
         )
         client = APIClient()
         response = client.post(
-            '/api/auth/login/',
-            {'email': 'person@example.com', 'password': 'password123'},
-            format='json',
+            "/api/auth/login/",
+            {"email": "person@example.com", "password": "password123"},
+            format="json",
         )
         assert response.status_code == 200
-        assert response.json()['email'] == 'person@example.com'
-        assert response.json()['is_staff'] is False
+        assert response.json()["email"] == "person@example.com"
+        assert response.json()["is_staff"] is False
 
     def test_login_rejects_invalid_password(self):
         User.objects.create_user(
-            username='person@example.com',
-            email='person@example.com',
-            password='password123',
+            username="person@example.com",
+            email="person@example.com",
+            password="password123",
         )
         client = APIClient()
         response = client.post(
-            '/api/auth/login/',
-            {'email': 'person@example.com', 'password': 'wrong-password'},
-            format='json',
+            "/api/auth/login/",
+            {"email": "person@example.com", "password": "wrong-password"},
+            format="json",
         )
         assert response.status_code == 400
-        assert response.json() == {'detail': 'Invalid email or password.'}
+        assert response.json() == {"detail": "Invalid email or password."}
 
     def test_logout_clears_session(self):
         user = User.objects.create(
-            username='logout@example.com',
-            email='logout@example.com',
+            username="logout@example.com",
+            email="logout@example.com",
         )
         client = APIClient()
         client.force_authenticate(user=user)
-        response = client.post('/api/auth/logout/', {}, format='json')
+        response = client.post("/api/auth/logout/", {}, format="json")
         assert response.status_code == 204
 
     def test_me_requires_auth(self):
         client = APIClient()
-        response = client.get('/api/auth/me/')
+        response = client.get("/api/auth/me/")
         assert response.status_code == 403
 
     def test_csrf_endpoint_returns_204(self):
         client = APIClient()
-        response = client.get('/api/auth/csrf/')
+        response = client.get("/api/auth/csrf/")
         assert response.status_code == 204
 
     def test_register_rejects_duplicate_email(self):
         User.objects.create_user(
-            username='existing@example.com',
-            email='existing@example.com',
-            password='password123',
+            username="existing@example.com",
+            email="existing@example.com",
+            password="password123",
         )
         client = APIClient()
         response = client.post(
-            '/api/auth/register/',
+            "/api/auth/register/",
             {
-                'email': 'existing@example.com',
-                'password': 'password123',
+                "email": "existing@example.com",
+                "password": "password123",
             },
-            format='json',
+            format="json",
         )
         assert response.status_code == 400
-        assert response.json() == {'email': ['A user with this email already exists.']}
+        assert response.json() == {"email": ["A user with this email already exists."]}
 
     def test_google_auth_returns_503_when_not_configured(self, settings):
-        settings.GOOGLE_OAUTH_CLIENT_ID = ''
+        settings.GOOGLE_OAUTH_CLIENT_ID = ""
         client = APIClient()
         response = client.post(
-            '/api/auth/google/',
-            {'credential': 'fake-token'},
-            format='json',
+            "/api/auth/google/",
+            {"credential": "fake-token"},
+            format="json",
         )
         assert response.status_code == 503
-        assert response.json() == {'detail': 'Google sign-in is not configured on this server.'}
+        assert response.json() == {
+            "detail": "Google sign-in is not configured on this server."
+        }
 
     def test_me_includes_staff_flag(self):
         user = User.objects.create(
-            username='admin@example.com',
-            email='admin@example.com',
+            username="admin@example.com",
+            email="admin@example.com",
             is_staff=True,
         )
         client = APIClient()
         client.force_authenticate(user=user)
-        response = client.get('/api/auth/me/')
+        response = client.get("/api/auth/me/")
         assert response.status_code == 200
-        assert response.json()['is_staff'] is True
+        assert response.json()["is_staff"] is True
 
     def test_data_endpoints_require_auth(self):
         client = APIClient()
-        response = client.get('/api/pieces/')
+        response = client.get("/api/pieces/")
         assert response.status_code == 403
+
+    def test_register_bootstraps_first_dev_user_when_enabled(self, settings):
+        settings.DEV_BOOTSTRAP_ENABLED = True
+
+        client = APIClient()
+        response = client.post(
+            "/api/auth/register/",
+            {
+                "email": "devadmin@example.com",
+                "password": "password123",
+                "first_name": "Dev",
+                "last_name": "Admin",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["is_staff"] is True
+
+        user = User.objects.get(email="devadmin@example.com")
+        assert user.is_staff is True
+        assert user.is_superuser is True
+        assert Piece.objects.filter(user=user).count() == 3
+
+    def test_login_bootstraps_existing_first_dev_user_when_enabled(self, settings):
+        settings.DEV_BOOTSTRAP_ENABLED = True
+
+        user = User.objects.create_user(
+            username="person@example.com",
+            email="person@example.com",
+            password="password123",
+        )
+
+        client = APIClient()
+        response = client.post(
+            "/api/auth/login/",
+            {"email": "person@example.com", "password": "password123"},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert response.json()["is_staff"] is True
+
+        user.refresh_from_db()
+        assert user.is_staff is True
+        assert user.is_superuser is True
+        assert Piece.objects.filter(user=user).exists()

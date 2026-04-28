@@ -14,7 +14,7 @@ from django.utils.html import format_html
 from import_export import fields, resources
 from import_export.admin import ExportMixin
 
-from .models import (  # type: ignore[attr-defined]
+from .models import (
     FiringTemperature,
     GlazeCombination,
     GlazeCombinationLayer,

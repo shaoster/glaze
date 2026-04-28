@@ -6,10 +6,42 @@
 [[ -n "$_GLAZE_AGENT_ENV_LOADED" ]] && return
 export _GLAZE_AGENT_ENV_LOADED=1
 
-GLAZE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_GLAZE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+_gz_detect_git_root() {
+    local cwd="${PWD:-$_GLAZE_SCRIPT_DIR}"
+    git -C "$cwd" rev-parse --show-toplevel 2>/dev/null
+}
+
+_gz_detect_shared_root() {
+    local git_root="$1"
+    local common_dir
+    common_dir="$(git -C "$git_root" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || return 1
+    cd "$common_dir/.." 2>/dev/null && pwd
+}
+
+GLAZE_ROOT="$(_gz_detect_git_root)"
+GLAZE_ROOT="${GLAZE_ROOT:-$_GLAZE_SCRIPT_DIR}"
+GLAZE_SHARED_ROOT="$(_gz_detect_shared_root "$GLAZE_ROOT")"
+GLAZE_SHARED_ROOT="${GLAZE_SHARED_ROOT:-$GLAZE_ROOT}"
+export GLAZE_ROOT GLAZE_SHARED_ROOT
+
+_gz_preferred_root_for() {
+    local rel="$1"
+    if [[ -e "$GLAZE_ROOT/$rel" ]]; then
+        printf '%s\n' "$GLAZE_ROOT"
+        return 0
+    fi
+    if [[ "$GLAZE_SHARED_ROOT" != "$GLAZE_ROOT" && -e "$GLAZE_SHARED_ROOT/$rel" ]]; then
+        printf '%s\n' "$GLAZE_SHARED_ROOT"
+        return 0
+    fi
+    printf '%s\n' "$GLAZE_ROOT"
+}
 
 # Activate venv if present
-[[ -f "$GLAZE_ROOT/.venv/bin/activate" ]] && source "$GLAZE_ROOT/.venv/bin/activate"
+_GLAZE_VENV_ROOT="$(_gz_preferred_root_for ".venv/bin/activate")"
+[[ -f "$_GLAZE_VENV_ROOT/.venv/bin/activate" ]] && source "$_GLAZE_VENV_ROOT/.venv/bin/activate"
 
 # Load local env vars
 _gz_load_env_file() {
@@ -20,10 +52,18 @@ _gz_load_env_file() {
     source "$path"
     set +a
 }
-_gz_load_env_file "$GLAZE_ROOT/.env.local"
-_gz_load_env_file "$GLAZE_ROOT/web/.env.local"
-_gz_load_env_file "$GLAZE_ROOT/mobile/.env.local"
+
+_gz_load_preferred_env_file() {
+    local rel="$1"
+    local preferred_root
+    preferred_root="$(_gz_preferred_root_for "$rel")"
+    _gz_load_env_file "$preferred_root/$rel"
+}
+
+_gz_load_preferred_env_file ".env.local"
+_gz_load_preferred_env_file "web/.env.local"
+_gz_load_preferred_env_file "mobile/.env.local"
 
 # Propagate to child processes so agents spawned from an interactive shell
 # (Codex, etc.) also get this bootstrap without per-tool config.
-export BASH_ENV="$GLAZE_ROOT/env-agent.sh"
+export BASH_ENV="$_GLAZE_SCRIPT_DIR/env-agent.sh"

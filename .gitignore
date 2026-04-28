@@ -75,6 +75,8 @@ web/.vite
 .dev-pids/
 .codex
 .codex/
+.agent-worktrees/
+.agent-config/
 
 # Flask stuff:
 instance/

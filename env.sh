@@ -5,11 +5,13 @@
 # When used as --rcfile, ~/.bashrc is not loaded automatically — do it first.
 [[ -f ~/.bashrc ]] && source ~/.bashrc
 
-GLAZE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_GLAZE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Bootstrap: venv activation, .env.local loading, BASH_ENV export.
 # env-agent.sh is also the entry point for non-interactive agent subshells.
-source "$GLAZE_ROOT/env-agent.sh"
+source "$_GLAZE_SCRIPT_DIR/env-agent.sh"
+GLAZE_ROOT="${GLAZE_ROOT:-$_GLAZE_SCRIPT_DIR}"
+GLAZE_SHARED_ROOT="${GLAZE_SHARED_ROOT:-$GLAZE_ROOT}"
 
 _GLAZE_PIDS="$GLAZE_ROOT/.dev-pids"
 _GLAZE_LOGS="$GLAZE_ROOT/.dev-logs"
@@ -55,6 +57,40 @@ _gz_rotate_log() {  # _gz_rotate_log <name>
     [[ -f "$logfile" ]] && mv "$logfile" "${logfile%.log}.$(date +%Y%m%dT%H%M%S).log"
 }
 
+_gz_preferred_root_for() {  # _gz_preferred_root_for <relative_path>
+    local rel="$1"
+    if [[ -e "$GLAZE_ROOT/$rel" ]]; then
+        printf '%s\n' "$GLAZE_ROOT"
+        return 0
+    fi
+    if [[ "$GLAZE_SHARED_ROOT" != "$GLAZE_ROOT" && -e "$GLAZE_SHARED_ROOT/$rel" ]]; then
+        printf '%s\n' "$GLAZE_SHARED_ROOT"
+        return 0
+    fi
+    printf '%s\n' "$GLAZE_ROOT"
+}
+
+_gz_venv_root() {
+    _gz_preferred_root_for ".venv/bin/activate"
+}
+
+_gz_remove_symlink_if_present() {  # _gz_remove_symlink_if_present <path>
+    local path="$1"
+    [[ -L "$path" ]] || return 1
+    rm "$path"
+    return 0
+}
+
+_gz_link_shared_dir_if_missing() {  # _gz_link_shared_dir_if_missing <relative_path>
+    local rel="$1"
+    local shared_path="$GLAZE_SHARED_ROOT/$rel"
+    local local_path="$GLAZE_ROOT/$rel"
+    [[ "$GLAZE_SHARED_ROOT" == "$GLAZE_ROOT" ]] && return 1
+    [[ -e "$local_path" || ! -e "$shared_path" ]] && return 1
+    mkdir -p "$(dirname "$local_path")"
+    ln -s "$shared_path" "$local_path"
+}
+
 _gz_ensure_node() {
     if command -v node &>/dev/null; then
         return 0
@@ -84,9 +120,15 @@ _gz_load_env_file() {  # _gz_load_env_file <path>
 }
 
 _gz_load_local_env() {
-    _gz_load_env_file "$GLAZE_ROOT/.env.local"
-    _gz_load_env_file "$GLAZE_ROOT/web/.env.local"
-    _gz_load_env_file "$GLAZE_ROOT/mobile/.env.local"
+    local root
+    root="$(_gz_preferred_root_for ".env.local")"
+    _gz_load_env_file "$root/.env.local"
+
+    root="$(_gz_preferred_root_for "web/.env.local")"
+    _gz_load_env_file "$root/web/.env.local"
+
+    root="$(_gz_preferred_root_for "mobile/.env.local")"
+    _gz_load_env_file "$root/mobile/.env.local"
 }
 
 # ---------------------------------------------------------------------------
@@ -119,7 +161,29 @@ gz_install_mcp_tools() {
 }
 
 gz_setup() {
+    local setup_mode="shared"
+    if [[ "${GLAZE_SETUP_ISOLATED:-0}" == "1" ]]; then
+        setup_mode="isolated"
+    fi
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --isolated)
+                setup_mode="isolated"
+                ;;
+            --shared)
+                setup_mode="shared"
+                ;;
+            *)
+                echo "Usage: gz_setup [--shared|--isolated]"
+                return 2
+                ;;
+        esac
+        shift
+    done
+
     echo "=== Glaze: setting up development environment ==="
+    echo "--- Setup mode: $setup_mode"
     # RTK
     if ! command -v rtk &>/dev/null; then
         echo "--- Installing RTK (for test optimizations and type generation)..."
@@ -128,12 +192,34 @@ gz_setup() {
     fi
 
     # Python venv
-    if [[ ! -d "$GLAZE_ROOT/.venv" ]]; then
-        echo "--- Creating virtual environment..."
-        rtk python3 -m venv "$GLAZE_ROOT/.venv"
+    if [[ "$setup_mode" == "isolated" ]]; then
+        if _gz_remove_symlink_if_present "$GLAZE_ROOT/.venv"; then
+            echo "--- Replacing shared .venv symlink with an isolated worktree virtual environment"
+        fi
+        if [[ ! -f "$GLAZE_ROOT/.venv/bin/activate" ]]; then
+            echo "--- Creating virtual environment..."
+            rtk python3 -m venv "$GLAZE_ROOT/.venv"
+        fi
+        source "$GLAZE_ROOT/.venv/bin/activate"
+        echo "--- Installing Python dependencies into the isolated worktree virtual environment..."
+    else
+        if [[ ! -f "$GLAZE_ROOT/.venv/bin/activate" ]]; then
+            if _gz_link_shared_dir_if_missing ".venv"; then
+                echo "--- Reusing shared virtual environment from $GLAZE_SHARED_ROOT/.venv"
+            elif [[ -f "$GLAZE_SHARED_ROOT/.venv/bin/activate" && "$GLAZE_SHARED_ROOT" != "$GLAZE_ROOT" ]]; then
+                echo "--- Reusing shared virtual environment from $GLAZE_SHARED_ROOT/.venv"
+            else
+                echo "--- Creating virtual environment..."
+                rtk python3 -m venv "$GLAZE_ROOT/.venv"
+            fi
+        fi
+        source "$(_gz_venv_root)/.venv/bin/activate"
+        if [[ "$(_gz_venv_root)" == "$GLAZE_SHARED_ROOT" && "$GLAZE_SHARED_ROOT" != "$GLAZE_ROOT" ]]; then
+            echo "--- Shared Python dependencies already available in $GLAZE_SHARED_ROOT/.venv"
+        else
+            echo "--- Installing Python dependencies..."
+        fi
     fi
-    source "$GLAZE_ROOT/.venv/bin/activate"
-    echo "--- Installing Python dependencies..."
     rtk pip install -r "$GLAZE_ROOT/requirements-dev.txt" -q
 
     # Database
@@ -142,7 +228,21 @@ gz_setup() {
 
     # Node + web deps
     _gz_ensure_node
-    echo "--- Installing web dependencies..."
+    if [[ "$setup_mode" == "isolated" ]]; then
+        if _gz_remove_symlink_if_present "$GLAZE_ROOT/web/node_modules"; then
+            echo "--- Replacing shared web/node_modules symlink with isolated worktree dependencies"
+        fi
+        echo "--- Installing web dependencies into the isolated worktree..."
+    else
+        if _gz_link_shared_dir_if_missing "web/node_modules"; then
+            echo "--- Reusing shared web/node_modules from $GLAZE_SHARED_ROOT/web/node_modules"
+        fi
+        if [[ -d "$GLAZE_ROOT/web/node_modules" ]]; then
+            echo "--- Web dependencies already available"
+        else
+            echo "--- Installing web dependencies..."
+        fi
+    fi
     (cd "$GLAZE_ROOT/web" && rtk npm install --silent)
 
     echo "=== Setup complete ==="
@@ -156,7 +256,7 @@ gz_setup() {
 
 gz_manage() {        # gz_manage <subcommand> [args…]
     (
-        source "$GLAZE_ROOT/.venv/bin/activate"
+        source "$(_gz_venv_root)/.venv/bin/activate"
         cd "$GLAZE_ROOT"
         python manage.py "$@"
     )
@@ -184,7 +284,7 @@ gz_prod_dbshell()    { gz_prod dbshell "$@"; }
 
 gz_test_common() {
     (
-        source "$GLAZE_ROOT/.venv/bin/activate"
+        source "$(_gz_venv_root)/.venv/bin/activate"
         cd "$GLAZE_ROOT"
         pytest tests/ "$@"
     )
@@ -192,7 +292,7 @@ gz_test_common() {
 
 gz_test_backend() {
     (
-        source "$GLAZE_ROOT/.venv/bin/activate"
+        source "$(_gz_venv_root)/.venv/bin/activate"
         cd "$GLAZE_ROOT"
         pytest api/ "$@"
     )
@@ -214,7 +314,7 @@ gz_lint() {
 # Auto-fix: reformat Python files and apply ruff auto-fixes in one step.
 gz_format() {
     (
-        source "$GLAZE_ROOT/.venv/bin/activate"
+        source "$(_gz_venv_root)/.venv/bin/activate"
         cd "$GLAZE_ROOT"
         ruff format .
         ruff check --fix .
@@ -232,8 +332,11 @@ gz_build() {
 # ---------------------------------------------------------------------------
 
 gz_backend() {
+    local venv_root env_root
+    venv_root="$(_gz_venv_root)"
+    env_root="$(_gz_preferred_root_for ".env.local")"
     _gz_start backend "$_GLAZE_LOGS/backend.log" \
-        bash -c "source '$GLAZE_ROOT/.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$GLAZE_ROOT/.env.local' ] && source '$GLAZE_ROOT/.env.local'; set +a && python manage.py load_public_library --skip-if-missing && python manage.py runserver 8080"
+        bash -c "source '$venv_root/.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$env_root/.env.local' ] && source '$env_root/.env.local'; set +a && python manage.py load_public_library --skip-if-missing && python manage.py runserver 8080"
 }
 
 gz_web() {
@@ -302,7 +405,7 @@ gz_gentypes() {
     _gz_ensure_node
     echo "Exporting OpenAPI schema..."
     (
-        source "$GLAZE_ROOT/.venv/bin/activate"
+        source "$(_gz_venv_root)/.venv/bin/activate"
         cd "$GLAZE_ROOT"
         python manage.py spectacular --format openapi-json --file "$schema_path"
     ) || {
@@ -328,7 +431,7 @@ gz_gentypes() {
 _GZ_SHORTCUTS=(
     "gz_help           — show this list of shortcuts"
     "gz_install_mcp_tools — install MCP tool dependencies (jq, curl, git, gh)"
-    "gz_setup          — first-time setup (venv, deps, migrations, node)"
+    "gz_setup [--isolated] — setup (shared reuse by default; --isolated for per-worktree deps)"
     "gz_manage <cmd>   — run any manage.py subcommand"
     "gz_migrate        — migrate"
     "gz_makemigrations — makemigrations"
