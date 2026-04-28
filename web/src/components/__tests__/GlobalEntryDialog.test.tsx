@@ -190,6 +190,58 @@ describe("GlobalEntryDialog", () => {
     );
   });
 
+  it("shows only favorite entries when Only favorites is toggled", async () => {
+    vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
+      makeCombo({ id: "fav", name: "Favorite Combo", is_favorite: true }),
+      makeCombo({ id: "other", name: "Other Combo", is_favorite: false }),
+    ]);
+
+    render(
+      <GlobalEntryDialog
+        globalName="glaze_combination"
+        open
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("Favorite Combo")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("Other Combo")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("switch", { name: "Only favorites" }));
+
+    expect(screen.getByText("Favorite Combo")).toBeInTheDocument();
+    expect(screen.queryByText("Other Combo")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("switch", { name: "Only favorites" }));
+
+    expect(screen.getByText("Favorite Combo")).toBeInTheDocument();
+    expect(screen.getByText("Other Combo")).toBeInTheDocument();
+  });
+
+  it("shows an error when browse entries fail to load", async () => {
+    vi.mocked(api.fetchGlobalEntriesWithFilters).mockRejectedValueOnce(
+      new Error("network"),
+    );
+
+    render(
+      <GlobalEntryDialog
+        globalName="glaze_combination"
+        open
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Failed to load entries. Please try again."),
+      ).toBeInTheDocument(),
+    );
+  });
+
   it("filters browse results after selecting a multi-select autocomplete option", async () => {
     render(
       <GlobalEntryDialog
@@ -274,6 +326,33 @@ describe("GlobalEntryDialog", () => {
     );
   });
 
+  it("filters browse results after toggling a boolean No checkbox", async () => {
+    render(
+      <GlobalEntryDialog
+        globalName="glaze_combination"
+        open
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    const runsControls = screen.getByText("Runs?").parentElement;
+    if (!runsControls) {
+      throw new Error("expected Runs? controls");
+    }
+
+    await userEvent.click(
+      within(runsControls).getByRole("checkbox", { name: "No" }),
+    );
+
+    await waitFor(() =>
+      expect(api.fetchGlobalEntriesWithFilters).toHaveBeenLastCalledWith(
+        "glaze_combination",
+        { runs: "false" },
+      ),
+    );
+  });
+
   it("creates a simple global entry from the create tab", async () => {
     const onSelect = vi.fn();
 
@@ -301,6 +380,34 @@ describe("GlobalEntryDialog", () => {
       }),
     );
     expect(onSelect).toHaveBeenCalledWith({ id: "created-id", name: "Studio K" });
+  });
+
+  it("shows an error when simple entry creation fails", async () => {
+    vi.mocked(api.createGlobalEntry).mockRejectedValueOnce(new Error("nope"));
+
+    render(
+      <GlobalEntryDialog
+        globalName="location"
+        open
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        canCreate
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("tab", { name: "Create" }));
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Location" }),
+      "Studio K",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Failed to create location."),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: "Create Location" })).toBeEnabled();
   });
 
   it("creates a composed entry from ordered layers", async () => {
@@ -346,6 +453,27 @@ describe("GlobalEntryDialog", () => {
       id: "combo-id",
       name: "Iron Red!Clear",
     });
+  });
+
+  it("disables removing the last glaze-combination layer row", async () => {
+    render(
+      <GlobalEntryDialog
+        globalName="glaze_combination"
+        open
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        canCreate
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("tab", { name: "Create" }));
+
+    const removeButton = screen.getByRole("button", { name: "Remove" });
+    expect(removeButton).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "Layer 1" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "Layer 2" }),
+    ).not.toBeInTheDocument();
   });
 
   it("removes a layer row before creating a composed entry", async () => {
