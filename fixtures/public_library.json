@@ -289,6 +289,19 @@
   {
     "model": "api.glazetype",
     "fields": {
+      "name": "Red Brown",
+      "short_description": "",
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
       "name": "Silky Black",
       "short_description": "",
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9.webp",
@@ -562,6 +575,149 @@
   {
     "model": "api.glazecombination",
     "fields": {
+      "name": "Amber!Celadon",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336845/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143922-77c875ba.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Amber!Creamy Red",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336846/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143927-27923e92.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Amber!Dragon Green",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336845/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143931-ea84d64d.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Amber!French Blue",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336844/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143941-68464664.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Amber!French Green",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336843/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143934-23acc3a3.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Amber!Gloss White",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336841/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143945-7934ecc5.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Amber!Pussywillow",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336842/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143953-994eefe3.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Amber!Red Brown",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143956-e7b3dca4.webp",
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Amber!Turquoise",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336840/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143959-5567b16c.webp",
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Amber!Wild Hare Fur",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336838/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144003-25b0011f.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Amber!Yellow Orange",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336836/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144005-dbe4f8e0.webp",
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
       "name": "Breakthrough Blue",
       "firing_temperature": null,
       "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28.webp",
@@ -622,6 +778,45 @@
       "highlights_grooves": true,
       "is_different_on_white_and_brown_clay": false,
       "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Choy!Amber",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336837/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144058-bd8a1b6a.webp",
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Choy!Celadon",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336835/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144101-7b631b97.webp",
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Choy!Cornwall",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336838/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144104-4aa50658.webp",
+      "is_food_safe": true,
+      "runs": true,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
     }
   },
   {
@@ -803,6 +998,19 @@
       "runs": true,
       "highlights_grooves": null,
       "is_different_on_white_and_brown_clay": false,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
+      "name": "Red Brown",
+      "firing_temperature": null,
+      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015.webp",
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
       "apply_thin": null
     }
   },
