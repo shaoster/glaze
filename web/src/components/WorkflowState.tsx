@@ -26,6 +26,7 @@ import {
   formatWorkflowFieldLabel,
   getAdditionalFieldDefinitions,
 } from "../util/workflow";
+import { entryNameOrEmpty, normalizeOptionalText, undefinedIfBlank } from "../util/optionalValues";
 import GlobalEntryField from "./GlobalEntryField";
 import AutosaveStatus from "./AutosaveStatus";
 import { useAutosave } from "./useAutosave";
@@ -171,6 +172,7 @@ export default function WorkflowState({
   currentThumbnail,
   autosaveDelayMs,
 }: WorkflowStateProps) {
+  const normalizedCurrentLocationProp = normalizeOptionalText(currentLocationProp);
   const [notes, setNotes] = useState(pieceState.notes);
   const [images, setImages] = useState<ImageEntry[]>(stateImages(pieceState));
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -179,7 +181,9 @@ export default function WorkflowState({
     null,
   );
   const [editingCaptionValue, setEditingCaptionValue] = useState("");
-  const [currentLocation, setCurrentLocation] = useState(currentLocationProp);
+  const [currentLocation, setCurrentLocation] = useState(
+    normalizedCurrentLocationProp,
+  );
   const additionalFieldDefs = useMemo(
     () => getAdditionalFieldDefinitions(pieceState.state),
     [pieceState.state],
@@ -226,7 +230,8 @@ export default function WorkflowState({
   const additionalFieldsDirty =
     JSON.stringify(normalizedAdditionalFields) !==
     JSON.stringify(normalizedBaseAdditionalFields);
-  const locationDirty = currentLocation.trim() !== currentLocationProp.trim();
+  const locationDirty =
+    currentLocation.trim() !== normalizedCurrentLocationProp.trim();
 
   const theme = useTheme();
 
@@ -249,12 +254,12 @@ export default function WorkflowState({
     setImages(stateImages(pieceState));
     setAdditionalFieldInputs(baseAdditionalFieldInputs);
     setGlobalRefPks(baseGlobalRefPks);
-    setCurrentLocation(currentLocationProp);
+    setCurrentLocation(normalizedCurrentLocationProp);
   }, [
     pieceState,
     baseAdditionalFieldInputs,
     baseGlobalRefPks,
-    currentLocationProp,
+    normalizedCurrentLocationProp,
   ]);
 
   const [savingImage, setSavingImage] = useState(false);
@@ -277,7 +282,7 @@ export default function WorkflowState({
     let finalResult = result;
     if (locationDirty) {
       finalResult = await updatePiece(pieceId, {
-        current_location: currentLocation.trim() || undefined,
+        current_location: undefinedIfBlank(currentLocation),
       });
     }
     onSaved(finalResult);
@@ -480,7 +485,7 @@ export default function WorkflowState({
         globalName="location"
         label="Current location"
         value={currentLocation}
-        onSelect={(entry) => setCurrentLocation(entry?.name ?? "")}
+        onSelect={(entry) => setCurrentLocation(entryNameOrEmpty(entry))}
       />
 
       {additionalFieldDefs.length > 0 && (
@@ -529,7 +534,10 @@ export default function WorkflowState({
                     label={label}
                     value={value}
                     onSelect={(entry) => {
-                      handleAdditionalFieldChange(field.name, entry?.name ?? "");
+                      handleAdditionalFieldChange(
+                        field.name,
+                        entryNameOrEmpty(entry),
+                      );
                       setGlobalRefPks((prev) =>
                         entry
                           ? { ...prev, [field.name]: entry.id }

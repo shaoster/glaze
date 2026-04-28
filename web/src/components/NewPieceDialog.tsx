@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { createPiece } from "../util/api";
 import type { PieceDetail } from "../util/types";
+import { entryNameOrEmpty, undefinedIfBlank } from "../util/optionalValues";
 import GlobalEntryField from "./GlobalEntryField";
 import { DEFAULT_THUMBNAIL, CURATED_THUMBNAILS } from "./thumbnailConstants";
 
@@ -73,7 +74,7 @@ export default function NewPieceDialog({
         name: name.trim(),
         thumbnail: selectedThumbnail ?? "",
         notes: notes || undefined,
-        current_location: location.trim() || undefined,
+        current_location: undefinedIfBlank(location),
       });
       resetState();
       onClose();
@@ -119,7 +120,7 @@ export default function NewPieceDialog({
             globalName="location"
             label="Location"
             value={location}
-            onSelect={(entry) => setLocation(entry?.name ?? "")}
+            onSelect={(entry) => setLocation(entryNameOrEmpty(entry))}
             sx={{ mb: 2 }}
           />
           <Typography variant="subtitle2" gutterBottom>

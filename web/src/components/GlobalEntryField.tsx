@@ -14,6 +14,8 @@ export interface GlobalEntryFieldProps {
   sx?: SxProps<Theme>;
 }
 
+// Keep global refs visually consistent across forms: a selected value becomes
+// a removable chip, and every edit path funnels through the shared dialog.
 export default function GlobalEntryField({
   globalName,
   label,

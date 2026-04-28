@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import GlobalEntryDialog from "../GlobalEntryDialog";
 import * as api from "../../util/api";
@@ -10,6 +10,54 @@ vi.mock("../../util/api", () => ({
   fetchGlobalEntries: vi.fn(),
   fetchGlobalEntriesWithFilters: vi.fn(),
   toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("../../util/workflow", () => ({
+  formatWorkflowFieldLabel: (value: string) =>
+    value
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" "),
+  getFilterableFields: (globalName: string) =>
+    globalName === "glaze_combination"
+      ? [
+          { name: "is_food_safe", type: "boolean", label: "Food safe?" },
+          { name: "runs", type: "boolean", label: "Runs?" },
+        ]
+      : [],
+  getGlobalComposeFrom: (globalName: string) =>
+    globalName === "glaze_combination"
+      ? {
+          glaze_types: {
+            global: "glaze_type",
+            ordered: true,
+            filter_label: "Contains glaze types (all must match)",
+          },
+        }
+      : undefined,
+  getGlobalDisplayField: () => "name",
+  getGlobalPickerFilters: (globalName: string) =>
+    globalName === "glaze_combination"
+      ? [
+          {
+            optionsGlobalName: "glaze_type",
+            label: "Contains glaze types (all must match)",
+            multiple: true,
+            paramKey: "glaze_type_ids",
+            entryKey: "glaze_types",
+          },
+          {
+            optionsGlobalName: "firing_temperature",
+            label: "Firing Temperature",
+            multiple: false,
+            paramKey: "firing_temperature_id",
+            entryKey: "firing_temperature",
+          },
+        ]
+      : [],
+  getGlobalThumbnailField: (globalName: string) =>
+    globalName === "glaze_combination" ? "test_tile_image" : null,
+  isFavoritableGlobal: (globalName: string) => globalName === "glaze_combination",
 }));
 
 vi.mock("../CloudinaryImage", () => ({
@@ -24,12 +72,12 @@ function makeCombo(
   return {
     id: "1",
     name: "Iron Red!Clear",
-    test_tile_image: "",
+    test_tile_image: "https://example.com/test-tile.jpg",
     is_food_safe: true,
     runs: false,
     highlights_grooves: null,
     is_different_on_white_and_brown_clay: null,
-    firing_temperature: null,
+    firing_temperature: { id: "ft1", name: "Cone 6" },
     is_public: true,
     is_favorite: false,
     glaze_types: [
@@ -48,6 +96,12 @@ beforeEach(() => {
       return Promise.resolve([
         { id: "gt1", name: "Iron Red", isPublic: true },
         { id: "gt2", name: "Clear", isPublic: true },
+      ]);
+    }
+    if (globalName === "firing_temperature") {
+      return Promise.resolve([
+        { id: "ft1", name: "Cone 6", isPublic: true },
+        { id: "ft2", name: "Low Fire", isPublic: true },
       ]);
     }
     return Promise.resolve([{ id: "loc1", name: "Studio K", isPublic: false }]);
@@ -106,6 +160,116 @@ describe("GlobalEntryDialog", () => {
         "glaze_combination",
         "1",
         true,
+      ),
+    );
+  });
+
+  it("shows an error when toggling favorites fails", async () => {
+    vi.mocked(api.toggleGlobalEntryFavorite).mockRejectedValueOnce(
+      new Error("nope"),
+    );
+
+    render(
+      <GlobalEntryDialog
+        globalName="glaze_combination"
+        open
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Add to favorites")).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByLabelText("Add to favorites"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Failed to update favorite. Please try again."),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("filters browse results after selecting a multi-select autocomplete option", async () => {
+    render(
+      <GlobalEntryDialog
+        globalName="glaze_combination"
+        open
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(api.fetchGlobalEntriesWithFilters).toHaveBeenCalledWith(
+        "glaze_combination",
+        {},
+      ),
+    );
+
+    await userEvent.type(
+      screen.getByRole("combobox", {
+        name: "Contains glaze types (all must match)",
+      }),
+      "Iron",
+    );
+    await userEvent.click(screen.getByRole("option", { name: "Iron Red" }));
+
+    await waitFor(() =>
+      expect(api.fetchGlobalEntriesWithFilters).toHaveBeenLastCalledWith(
+        "glaze_combination",
+        { glaze_type_ids: "gt1" },
+      ),
+    );
+  });
+
+  it("filters browse results after selecting a single-select autocomplete option", async () => {
+    render(
+      <GlobalEntryDialog
+        globalName="glaze_combination"
+        open
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    await userEvent.type(
+      screen.getByRole("combobox", { name: "Firing Temperature" }),
+      "Cone",
+    );
+    await userEvent.click(screen.getByRole("option", { name: "Cone 6" }));
+
+    await waitFor(() =>
+      expect(api.fetchGlobalEntriesWithFilters).toHaveBeenLastCalledWith(
+        "glaze_combination",
+        { firing_temperature_id: "ft1" },
+      ),
+    );
+  });
+
+  it("filters browse results after toggling a boolean checkbox", async () => {
+    render(
+      <GlobalEntryDialog
+        globalName="glaze_combination"
+        open
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    const foodSafeControls = screen.getByText("Food safe?").parentElement;
+    if (!foodSafeControls) {
+      throw new Error("expected Food safe? controls");
+    }
+
+    await userEvent.click(
+      within(foodSafeControls).getByRole("checkbox", { name: "Yes" }),
+    );
+
+    await waitFor(() =>
+      expect(api.fetchGlobalEntriesWithFilters).toHaveBeenLastCalledWith(
+        "glaze_combination",
+        { is_food_safe: "true" },
       ),
     );
   });
@@ -182,5 +346,48 @@ describe("GlobalEntryDialog", () => {
       id: "combo-id",
       name: "Iron Red!Clear",
     });
+  });
+
+  it("removes a layer row before creating a composed entry", async () => {
+    vi.mocked(api.createGlobalEntry).mockResolvedValue({
+      id: "combo-id",
+      name: "Iron Red",
+      isPublic: false,
+    });
+
+    render(
+      <GlobalEntryDialog
+        globalName="glaze_combination"
+        open
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        canCreate
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("tab", { name: "Create" }));
+    await userEvent.type(
+      screen.getByRole("combobox", { name: "Layer 1" }),
+      "Iron",
+    );
+    await userEvent.click(screen.getByRole("option", { name: "Iron Red" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add layer" }));
+    await userEvent.type(
+      screen.getByRole("combobox", { name: "Layer 2" }),
+      "Clear",
+    );
+    await userEvent.click(screen.getByRole("option", { name: "Clear" }));
+
+    const removeButtons = screen.getAllByRole("button", { name: "Remove" });
+    await userEvent.click(removeButtons[1]);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Create Glaze Combination" }),
+    );
+
+    await waitFor(() =>
+      expect(api.createGlobalEntry).toHaveBeenCalledWith("glaze_combination", {
+        layers: ["gt1"],
+      }),
+    );
   });
 });

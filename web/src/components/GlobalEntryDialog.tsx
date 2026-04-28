@@ -73,6 +73,8 @@ interface CreateLayerRow {
   value: NamedRef | null;
 }
 
+// Reset filters to their neutral values whenever the dialog closes so each
+// browse session starts from the same predictable state.
 function makeEmptyFilters(
   boolFieldNames: string[],
   relatedFilters: GlobalPickerFilter[],
@@ -86,6 +88,8 @@ function makeEmptyFilters(
   };
 }
 
+// Translate the browse UI state into the exact backend query params expected by
+// the generic globals endpoint, including CSV ids for multi-select filters.
 function buildParams(
   filters: FilterState,
   boolFieldNames: string[],
@@ -106,6 +110,8 @@ function buildParams(
       }
       continue;
     }
+    // Single-select related filters map to a lone `<field>_id` query param;
+    // this branch covers globals that reference one other global filterably.
     const single = val as NamedRef | null;
     if (single) {
       params[rf.paramKey] = single.id;
@@ -122,6 +128,8 @@ function createDisplayTitle(globalName: string): string {
   return `Browse ${formatWorkflowFieldLabel(globalName)}s`;
 }
 
+// One dialog handles both "pick an existing entry" and "create a new entry"
+// flows so every global-ref field can share the same behavior and tests.
 export default function GlobalEntryDialog({
   globalName,
   open,
@@ -240,6 +248,8 @@ export default function GlobalEntryDialog({
     ? layerRows.some((row) => row.value !== null)
     : createName.trim() !== "";
 
+  // Resetting create state on close prevents old layer selections or failed
+  // create attempts from leaking into the next time the dialog opens.
   function resetCreateState() {
     setCreateName("");
     setCreating(false);
@@ -255,6 +265,8 @@ export default function GlobalEntryDialog({
     onClose();
   }
 
+  // The paired Yes/No checkboxes behave like a tri-state filter:
+  // `true`, `false`, or "don't care" when both are cleared.
   function handleBoolFilter(field: string, checked: boolean, value: boolean) {
     setFilters((prev) => ({
       ...prev,
@@ -269,6 +281,8 @@ export default function GlobalEntryDialog({
     }));
   }
 
+  // Related global filters are stored separately from plain boolean toggles so
+  // we can feed them back into MUI Autocomplete as controlled values.
   function handleGlobalPickerFilter(
     paramKey: string,
     value: NamedRef[] | NamedRef | null,
@@ -279,6 +293,8 @@ export default function GlobalEntryDialog({
     }));
   }
 
+  // Favorites mutate in place instead of forcing a full refetch so the browse
+  // list stays responsive and keeps the user's current filter context intact.
   async function handleToggleFavorite(entry: GenericGlobalEntry) {
     setTogglingId(entry.id);
     setSaveStatus("saving");
@@ -307,6 +323,8 @@ export default function GlobalEntryDialog({
     handleClose();
   }
 
+  // Layer rows use stable keys so removing one row does not scramble the
+  // Autocomplete inputs the user has already filled in.
   function updateLayerRow(key: number, value: NamedRef | null) {
     setLayerRows((prev) =>
       prev.map((row) => (row.key === key ? { ...row, value } : row)),
@@ -320,6 +338,8 @@ export default function GlobalEntryDialog({
 
   function removeLayerRow(key: number) {
     setLayerRows((prev) => {
+      // Keep one empty row around so a composition-capable dialog never lands
+      // in a state with no visible input controls at all.
       if (prev.length === 1) {
         return [createEmptyLayerRow(key)];
       }
@@ -327,6 +347,8 @@ export default function GlobalEntryDialog({
     });
   }
 
+  // Creation reuses the same dialog close path as selection so the caller
+  // always receives a normalized `{ id, name }` object regardless of source.
   async function handleCreate() {
     if (!canSubmitCreate) return;
     setCreating(true);
@@ -349,6 +371,8 @@ export default function GlobalEntryDialog({
     }
   }
 
+  // Browse keeps filters and result list in one tab so the dialog stays useful
+  // on mobile without pushing the user through nested picker screens.
   function renderBrowseTab() {
     return (
       <>
@@ -600,6 +624,8 @@ export default function GlobalEntryDialog({
     );
   }
 
+  // The create tab supports both simple name-entry globals and ordered
+  // composition globals (currently glaze combinations) in one shared surface.
   function renderCreateTab() {
     return (
       <DialogContent sx={{ flex: 1, overflowY: "auto", pt: 2 }}>
