@@ -49,6 +49,7 @@ interface WorkflowStateDefinition {
   id: string;
   visible: boolean;
   friendly_name: string;
+  past_friendly_name: string;
   description: string;
   terminal?: boolean;
   successors?: string[];
@@ -107,6 +108,7 @@ export type ResolvedAdditionalField = {
 export interface WorkflowStateMetadata {
   id: string;
   friendlyName: string;
+  pastFriendlyName: string;
   description: string;
   isTerminal: boolean;
 }
@@ -294,12 +296,21 @@ export function formatWorkflowFieldLabel(fieldName: string): string {
 }
 
 /**
- * Converts a state ID into the shared display label used throughout the UI.
+ * Converts a state ID into the current/upcoming display label (e.g. "Glazing").
  * State labels are required in workflow.yml; this helper intentionally does not
  * synthesize a fallback label from the state ID.
  */
 export function formatState(stateId: string): string {
   return STATE_MAP.get(stateId)?.friendly_name ?? "";
+}
+
+/**
+ * Converts a state ID into the past-tense display label used in history views
+ * (e.g. "Glazed"). State labels are required in workflow.yml; this helper
+ * intentionally does not synthesize a fallback label from the state ID.
+ */
+export function formatPastState(stateId: string): string {
+  return STATE_MAP.get(stateId)?.past_friendly_name ?? "";
 }
 
 export function getStateDescription(stateId: string): string {
@@ -320,6 +331,7 @@ export function getStateMetadata(
   return {
     id: state.id,
     friendlyName: state.friendly_name,
+    pastFriendlyName: state.past_friendly_name,
     description: state.description,
     isTerminal: !!state.terminal,
   };

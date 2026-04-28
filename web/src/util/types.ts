@@ -2,6 +2,7 @@ import type { components } from "./generated-types";
 import workflow from "../../../workflow.yml";
 export {
   formatState,
+  formatPastState,
   getStateDescription,
   getStateMetadata,
   isTerminalState,
@@ -11,6 +12,7 @@ type WorkflowState = {
   id: string;
   visible: boolean;
   friendly_name: string;
+  past_friendly_name: string;
   description: string;
   successors?: string[];
   terminal?: boolean;

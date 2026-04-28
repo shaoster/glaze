@@ -179,7 +179,7 @@ $defs:
 
   state:
     type: object
-    required: [id, visible, friendly_name, description]
+    required: [id, visible, friendly_name, past_friendly_name, description]
     additionalProperties: false
     properties:
       id:
@@ -192,9 +192,15 @@ $defs:
       friendly_name:
         type: string
         description: |
-          Human-friendly label for this state, used by clients when displaying
-          workflow state names. This is required so every visible state label is
+          Human-friendly label for this state used when the state is current or
+          upcoming (e.g. "Glazing"). Required so every visible state label is
           authored explicitly in workflow.yml rather than synthesized from the ID.
+      past_friendly_name:
+        type: string
+        description: |
+          Human-friendly label for this state used when it appears in history
+          (e.g. "Glazed"). Required so the past tense label is authored explicitly
+          in workflow.yml rather than synthesized from the state ID.
       description:
         type: string
         description: |
