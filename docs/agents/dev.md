@@ -60,7 +60,8 @@ Keep repo-local agent configuration out of `.codex`, which may be reserved by th
 - Codex-specific local config: `.agent-config/codex/`
 - Shared agent assets and instructions: `.agents/`
 
-This keeps worktrees close to the repo-local bootstrap, makes cleanup easier, and avoids temp-directory permission/path surprises. `env-agent.sh` resolves the active git worktree root from the current working directory, then falls back to the main checkout's `.env.local` files and `.venv` when the worktree does not have its own copies yet, so repo-local worktrees inherit the normal dev setup without manually copying secrets first.
+This keeps worktrees close to the repo-local bootstrap, makes cleanup easier, and avoids temp-directory permission/path surprises. `env-agent.sh` resolves the active git worktree root from the current working directory, then falls back to the main checkout's `.env.local` files and `.venv` when the worktree does not have its own copies yet. Since `gz_start` selects an environment based on the resolved `.env` location, agents should symlink the untracked `$GLAZE_ROOT/.env.local` into the newly created worktree to ensure the worktree's code is being validate instead of the root repo's.
+
 When you do want a truly separate dependency environment inside the worktree, run `gz_setup --isolated` to replace any shared `.venv` or `web/node_modules` symlinks with local worktree-specific installs.
 
 ### Working directory discipline
