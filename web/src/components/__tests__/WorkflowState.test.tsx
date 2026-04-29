@@ -63,7 +63,7 @@ const { mockWorkflow } = vi.hoisted(() => ({
         description: "Wheel-thrown.",
         successors: ["trimmed", "recycled"],
         fields: {
-          clay_weight_grams: { type: "number" },
+          clay_weight_grams: { type: "number", label: "Clay Weight Lbs" },
           clay_body: {
             $ref: "@clay_body.name",
             can_create: true,
@@ -84,8 +84,11 @@ const { mockWorkflow } = vi.hoisted(() => ({
         description: "Trimmed.",
         successors: ["recycled", "submitted_to_bisque_fire"],
         fields: {
-          trimmed_weight_grams: { type: "number" },
-          pre_trim_weight_grams: { $ref: "wheel_thrown.clay_weight_grams" },
+          trimmed_weight_grams: { type: "number", label: "Trimmed Weight Lbs" },
+          pre_trim_weight_grams: {
+            $ref: "wheel_thrown.clay_weight_grams",
+            label: "Pre-trim Weight Lbs",
+          },
         },
       },
       {
@@ -339,8 +342,8 @@ describe("WorkflowState", () => {
     await act(async () => {
       render(<WorkflowState {...defaultProps} pieceState={trimmedState} />);
     });
-    expect(screen.getByLabelText("Trimmed Weight Grams")).toHaveValue(900);
-    expect(screen.getByLabelText("Pre Trim Weight Grams")).toHaveValue(1200);
+    expect(screen.getByLabelText("Trimmed Weight Lbs")).toHaveValue(900);
+    expect(screen.getByLabelText("Pre-trim Weight Lbs")).toHaveValue(1200);
   });
 
   it("renders state ref fields as disabled (read-only)", async () => {
@@ -351,7 +354,7 @@ describe("WorkflowState", () => {
     await act(async () => {
       render(<WorkflowState {...defaultProps} pieceState={trimmedState} />);
     });
-    expect(screen.getByLabelText("Pre Trim Weight Grams")).toBeDisabled();
+    expect(screen.getByLabelText("Pre-trim Weight Lbs")).toBeDisabled();
   });
 
   it("renders inline additional fields as editable", async () => {
@@ -362,7 +365,7 @@ describe("WorkflowState", () => {
     await act(async () => {
       render(<WorkflowState {...defaultProps} pieceState={trimmedState} />);
     });
-    expect(screen.getByLabelText("Trimmed Weight Grams")).not.toBeDisabled();
+    expect(screen.getByLabelText("Trimmed Weight Lbs")).not.toBeDisabled();
   });
 
   it("lets you choose an existing global reference option", async () => {
@@ -735,7 +738,7 @@ describe("WorkflowState", () => {
         />,
       );
     });
-    fireEvent.change(screen.getByLabelText("Trimmed Weight Grams"), {
+    fireEvent.change(screen.getByLabelText("Trimmed Weight Lbs"), {
       target: { value: "950" },
     });
     expect(onDirtyChange).toHaveBeenCalledWith(true);

@@ -33,12 +33,14 @@ interface StateRefFieldDef {
   $ref: string;
   description?: string;
   required?: boolean;
+  label?: string;
 }
 
 interface GlobalRefFieldDef {
   $ref: string;
   description?: string;
   required?: boolean;
+  label?: string;
   can_create?: boolean;
   filterable?: boolean;
 }
@@ -94,6 +96,7 @@ function toTitleWords(value: string): string {
 
 export type ResolvedAdditionalField = {
   name: string;
+  label: string;
   type: FieldType;
   description?: string;
   required: boolean;
@@ -353,6 +356,7 @@ function buildResolvedField(
     : [undefined, undefined];
   return {
     name,
+    label: fieldDef.label ?? inline.label ?? formatWorkflowFieldLabel(name),
     type: inline.type,
     description: fieldDef.description ?? inline.description,
     required: fieldDef.required ?? inline.required ?? false,

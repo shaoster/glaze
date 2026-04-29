@@ -76,6 +76,7 @@ vi.mock("../../../workflow.yml", () => ({
         fields: {
           clay_weight_grams: {
             type: "number",
+            label: "Clay Weight Lbs",
             description: "Weight of clay before trimming",
           },
           clay_body: {
@@ -96,6 +97,10 @@ vi.mock("../../../workflow.yml", () => ({
             $ref: "@location.name",
             can_create: true,
           },
+          firing_fee_usd: {
+            type: "number",
+            label: "Firing Fee (USD)",
+          },
         },
       },
       {
@@ -108,9 +113,11 @@ vi.mock("../../../workflow.yml", () => ({
         fields: {
           trimmed_weight_grams: {
             type: "number",
+            label: "Trimmed Weight Lbs",
           },
           pre_trim_weight_grams: {
             $ref: "wheel_thrown.clay_weight_grams",
+            label: "Pre-trim Weight Lbs",
             description: "Weight after trimming",
           },
         },
@@ -262,6 +269,7 @@ describe("getAdditionalFieldDefinitions", () => {
       const fields = getAdditionalFieldDefinitions("wheel_thrown");
       const f = fields.find((f) => f.name === "clay_weight_grams")!;
       expect(f.type).toBe("number");
+      expect(f.label).toBe("Clay Weight Lbs");
       expect(f.description).toBe("Weight of clay before trimming");
       expect(f.required).toBe(false);
       expect(f.isGlobalRef).toBe(false);
@@ -301,6 +309,7 @@ describe("getAdditionalFieldDefinitions", () => {
       const fields = getAdditionalFieldDefinitions("trimmed");
       const f = fields.find((f) => f.name === "pre_trim_weight_grams")!;
       expect(f.type).toBe("number");
+      expect(f.label).toBe("Pre-trim Weight Lbs");
     });
 
     it("uses the overridden description from the ref field", () => {
@@ -350,6 +359,13 @@ describe("getAdditionalFieldDefinitions", () => {
         false,
       );
     });
+  });
+
+  it("uses the workflow label for inline fields", () => {
+    const fields = getAdditionalFieldDefinitions("submitted_to_bisque_fire");
+    expect(fields.find((f) => f.name === "firing_fee_usd")!.label).toBe(
+      "Firing Fee (USD)",
+    );
   });
 });
 

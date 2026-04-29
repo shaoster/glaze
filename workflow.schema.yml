@@ -319,6 +319,12 @@ $defs:
       required:
         type: boolean
         description: Optional override of the referenced field's required flag.
+      label:
+        type: string
+        description: |
+          Optional override of the referenced field's UI label. If omitted,
+          consumers fall back to the referenced field's label or the field name
+          converted to title case.
 
   global_ref_field:
     type: object
@@ -341,6 +347,12 @@ $defs:
       required:
         type: boolean
         description: Optional override of the referenced field's required flag.
+      label:
+        type: string
+        description: |
+          Optional override of the referenced field's UI label. If omitted,
+          consumers fall back to the referenced field's label or the field name
+          converted to title case.
       can_create:
         type: boolean
         description: |

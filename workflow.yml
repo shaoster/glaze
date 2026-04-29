@@ -1,4 +1,4 @@
-version: "0.0.2"
+version: "0.0.3"
 
 # ---------------------------------------------------------------------------
 # Workflow state machine for Glaze.
@@ -262,7 +262,8 @@ states:
     fields:
       clay_weight_grams:
         type: number
-        description: Weight of clay on the scale before throwing, in grams.
+        label: Clay Weight Lbs
+        description: Weight of clay on the scale before throwing, in pounds.
       wall_thickness_mm:
         type: number
         description: Approximate wall thickness after throwing, in millimeters.
@@ -284,10 +285,12 @@ states:
     fields:
       trimmed_weight_grams:
         type: number
-        description: Weight after trimming; compare to pre_trim_weight_grams to gauge clay lost.
+        label: Trimmed Weight Lbs
+        description: Weight after trimming, in pounds; compare to pre_trim_weight_grams to gauge clay lost.
       pre_trim_weight_grams:
         $ref: "wheel_thrown.clay_weight_grams"
-        description: Clay weight recorded at throwing, carried forward for reference.
+        label: Pre-trim Weight Lbs
+        description: Clay weight recorded at throwing, in pounds, carried forward for reference.
 
   - id: handbuilt
     visible: true
@@ -338,6 +341,22 @@ states:
         $ref: "@location.name"
         description: Name of the kiln where this piece was submitted for bisque firing.
         can_create: true
+      length_in:
+        type: number
+        label: Length (in)
+        description: Length of the piece, in inches.
+      width_in:
+        type: number
+        label: Width (in)
+        description: Width of the piece, in inches.
+      height_in:
+        type: number
+        label: Height (in)
+        description: Height of the piece, in inches.
+      firing_fee_usd:
+        type: number
+        label: Firing Fee (USD)
+        description: Fee charged for bisque firing, in US dollars.
 
   - id: bisque_fired
     visible: true
