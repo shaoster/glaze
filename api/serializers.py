@@ -38,6 +38,7 @@ choices worth knowing about:
 - Serialization of wire dates — all ``DateTimeField`` instances are handled
   automatically by DRF; the ``Wire<T>`` mapping is a frontend concern only.
 """
+
 from typing import Any
 
 from django.apps import apps
@@ -68,11 +69,16 @@ from .workflow import (
 
 
 def _serialize_tags(model: models.Model, junction_name: str) -> list[dict[str, str]]:
-    tag_links = getattr(model, '_prefetched_objects_cache', {}).get('tag_links')
+    tag_links = getattr(model, "_prefetched_objects_cache", {}).get("tag_links")
     if tag_links is None:
-        tag_links = apps.get_model('api', junction_name).objects.select_related('tag').filter(piece=model).order_by('order', 'pk')
+        tag_links = (
+            apps.get_model("api", junction_name)
+            .objects.select_related("tag")
+            .filter(piece=model)
+            .order_by("order", "pk")
+        )
     return [
-        {'id': str(link.tag_id), 'name': link.tag.name, 'color': link.tag.color or ''}
+        {"id": str(link.tag_id), "name": link.tag.name, "color": link.tag.color or ""}
         for link in tag_links
     ]
 
@@ -80,37 +86,43 @@ def _serialize_tags(model: models.Model, junction_name: str) -> list[dict[str, s
 def add_tags(model_cls: type[models.Model]):
     def decorator(serializer_cls: type[serializers.Serializer]):
         cls_any: Any = serializer_cls
-        cls_any.Meta.fields.append('tags')
-        cls_any._declared_fields['tags'] = serializers.SerializerMethodField()
+        cls_any.Meta.fields.append("tags")
+        cls_any._declared_fields["tags"] = serializers.SerializerMethodField()
+
         @extend_schema_field(TagEntrySerializer(many=True))
         def get_tags(self, obj: models.Model):
-            return _serialize_tags(obj, f'{model_cls._meta.model_name}tag')
+            return _serialize_tags(obj, f"{model_cls._meta.model_name}tag")
+
         cls_any.get_tags = get_tags
         return serializer_cls
+
     return decorator
 
 
 class GlazeTypeRefSerializer(serializers.Serializer):
     """Minimal glaze type representation embedded in GlazeCombinationEntrySerializer."""
+
     id = serializers.UUIDField()
     name = serializers.CharField()
 
 
 class FiringTemperatureRefSerializer(serializers.ModelSerializer):
     """Minimal firing temperature representation embedded in GlazeCombinationEntrySerializer."""
+
     id = serializers.UUIDField()
 
     class Meta:
         model = FiringTemperature
-        fields = ['id', 'name', 'cone', 'temperature_c', 'atmosphere']
+        fields = ["id", "name", "cone", "temperature_c", "atmosphere"]
 
 
 class TagEntrySerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
+    is_public = serializers.SerializerMethodField()
 
     class Meta:
         model = Tag
-        fields = ['id', 'name', 'color']
+        fields = ["id", "name", "color", "is_public"]
 
     @extend_schema_field(serializers.CharField())
     def get_id(self, obj: Tag) -> str:
@@ -127,6 +139,7 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
 
     Requires ``favorite_ids`` (a ``set`` of PKs) in serializer context.
     """
+
     id = serializers.SerializerMethodField()
     is_public = serializers.SerializerMethodField()
     is_favorite = serializers.SerializerMethodField()
@@ -136,10 +149,17 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = GlazeCombination
         fields = [
-            'id', 'name', 'test_tile_image',
-            'is_food_safe', 'runs', 'highlights_grooves', 'is_different_on_white_and_brown_clay',
-            'firing_temperature',
-            'is_public', 'is_favorite', 'glaze_types',
+            "id",
+            "name",
+            "test_tile_image",
+            "is_food_safe",
+            "runs",
+            "highlights_grooves",
+            "is_different_on_white_and_brown_clay",
+            "firing_temperature",
+            "is_public",
+            "is_favorite",
+            "glaze_types",
         ]
 
     @extend_schema_field(serializers.CharField())
@@ -152,13 +172,13 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.BooleanField())
     def get_is_favorite(self, obj: GlazeCombination) -> bool:
-        return obj.pk in self.context.get('favorite_ids', set())
+        return obj.pk in self.context.get("favorite_ids", set())
 
     @extend_schema_field(GlazeTypeRefSerializer(many=True))
     def get_glaze_types(self, obj: GlazeCombination) -> list:
         return [
-            {'id': str(layer.glaze_type_id), 'name': layer.glaze_type.name}
-            for layer in obj.layers.select_related('glaze_type').all()
+            {"id": str(layer.glaze_type_id), "name": layer.glaze_type.name}
+            for layer in obj.layers.select_related("glaze_type").all()
         ]
 
 
@@ -170,6 +190,7 @@ class GlazeCombinationImagePieceSerializer(serializers.Serializer):
     ``'glaze_fired'``). ``images`` aggregates all images recorded across every
     qualifying state for that piece.
     """
+
     id = serializers.CharField()
     name = serializers.CharField()
     state = serializers.CharField()
@@ -182,15 +203,18 @@ class GlazeCombinationImageEntrySerializer(serializers.Serializer):
     Each entry groups a glaze combination with the pieces that used it and
     have images in at least one qualifying state.
     """
+
     glaze_combination = GlazeCombinationEntrySerializer()
     pieces = GlazeCombinationImagePieceSerializer(many=True)
 
 
 class CaptionedImageSerializer(serializers.Serializer):
     url = serializers.CharField()
-    caption = serializers.CharField(allow_blank=True, default='')
+    caption = serializers.CharField(allow_blank=True, default="")
     created = serializers.DateTimeField(required=False)
-    cloudinary_public_id = serializers.CharField(allow_blank=True, required=False, default=None, allow_null=True)
+    cloudinary_public_id = serializers.CharField(
+        allow_blank=True, required=False, default=None, allow_null=True
+    )
 
 
 class PieceStateSerializer(serializers.ModelSerializer):
@@ -201,10 +225,18 @@ class PieceStateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PieceState
-        fields = ['state', 'notes', 'created', 'last_modified', 'images',
-                  'additional_fields', 'previous_state', 'next_state']
+        fields = [
+            "state",
+            "notes",
+            "created",
+            "last_modified",
+            "images",
+            "additional_fields",
+            "previous_state",
+            "next_state",
+        ]
         extra_kwargs = {
-            'notes': {'required': True},
+            "notes": {"required": True},
         }
 
     @extend_schema_field(serializers.DictField())
@@ -218,36 +250,45 @@ class PieceStateSerializer(serializers.ModelSerializer):
         global_ref_fields = get_global_ref_fields_for_state(obj.state)
         for field_name, global_name in global_ref_fields.items():
             config = get_global_config(global_name)
-            ref_model = apps.get_model('api', f'PieceState{config["model"]}Ref')
+            ref_model = apps.get_model("api", f'PieceState{config["model"]}Ref')
             try:
                 ref_row = ref_model.objects.select_related(global_name).get(
                     piece_state=obj, field_name=field_name
                 )
                 global_obj = getattr(ref_row, global_name)
-                result[field_name] = {'id': str(global_obj.pk), 'name': global_obj.name}
+                result[field_name] = {"id": str(global_obj.pk), "name": global_obj.name}
             except ref_model.DoesNotExist:
                 pass
         return result
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_previous_state(self, obj: PieceState) -> str | None:
-        prev = obj.piece.states.filter(created__lt=obj.created).order_by('-created').first()
+        prev = (
+            obj.piece.states.filter(created__lt=obj.created)
+            .order_by("-created")
+            .first()
+        )
         return prev.state if prev else None
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_next_state(self, obj: PieceState) -> str | None:
-        nxt = obj.piece.states.filter(created__gt=obj.created).order_by('created').first()
+        nxt = (
+            obj.piece.states.filter(created__gt=obj.created).order_by("created").first()
+        )
         return nxt.state if nxt else None
 
 
 class StateSummarySerializer(serializers.Serializer):
     """Minimal state representation embedded in PieceSummary list responses."""
+
     state = serializers.CharField()
 
 
 class ThumbnailSerializer(serializers.Serializer):
     url = serializers.CharField()
-    cloudinary_public_id = serializers.CharField(allow_blank=True, allow_null=True, default=None)
+    cloudinary_public_id = serializers.CharField(
+        allow_blank=True, allow_null=True, default=None
+    )
 
 
 @add_tags(Piece)
@@ -260,14 +301,22 @@ class PieceSummarySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Piece
-        fields = ['id', 'name', 'created', 'last_modified', 'thumbnail', 'current_state', 'current_location']
+        fields = [
+            "id",
+            "name",
+            "created",
+            "last_modified",
+            "thumbnail",
+            "current_state",
+            "current_location",
+        ]
 
     @extend_schema_field(StateSummarySerializer)
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
         if cs is None:
-            raise ValueError(f'Piece {obj.id} has no states — data integrity error')
-        return {'state': cs.state}
+            raise ValueError(f"Piece {obj.id} has no states — data integrity error")
+        return {"state": cs.state}
 
     @extend_schema_field(serializers.CharField(allow_null=True, required=False))
     def get_current_location(self, obj: Piece) -> str | None:
@@ -279,13 +328,13 @@ class PieceDetailSerializer(PieceSummarySerializer):
     history = serializers.SerializerMethodField()
 
     class Meta(PieceSummarySerializer.Meta):
-        fields = PieceSummarySerializer.Meta.fields + ['history']
+        fields = PieceSummarySerializer.Meta.fields + ["history"]
 
     @extend_schema_field(PieceStateSerializer)
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
         if cs is None:
-            raise ValueError(f'Piece {obj.id} has no states — data integrity error')
+            raise ValueError(f"Piece {obj.id} has no states — data integrity error")
         return PieceStateSerializer(cs).data
 
     @extend_schema_field(PieceStateSerializer(many=True))
@@ -294,27 +343,44 @@ class PieceDetailSerializer(PieceSummarySerializer):
 
 
 class PieceCreateSerializer(serializers.ModelSerializer):
-    notes = serializers.CharField(required=False, default='', allow_blank=True, max_length=300)
-    current_location = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
+    notes = serializers.CharField(
+        required=False, default="", allow_blank=True, max_length=300
+    )
+    current_location = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, default=None
+    )
     # Accept a bare URL string from the curated SVG gallery; wrap it into the
     # {url, cloudinary_public_id} shape that Piece.thumbnail now stores.
     thumbnail = serializers.CharField(required=False, allow_blank=True, default=None)
 
     class Meta:
         model = Piece
-        fields = ['name', 'thumbnail', 'notes', 'current_location']
+        fields = ["name", "thumbnail", "notes", "current_location"]
 
     def create(self, validated_data: dict) -> Piece:
-        user = self.context['request'].user
-        notes = validated_data.pop('notes', '')
-        location_name = validated_data.pop('current_location', None)
+        user = self.context["request"].user
+        notes = validated_data.pop("notes", "")
+        location_name = validated_data.pop("current_location", None)
         location_obj = None
         if location_name:
-            location_obj, _ = Location.objects.get_or_create(user=user, name=location_name)
-        raw_thumbnail = validated_data.pop('thumbnail', None)
-        thumbnail = {'url': raw_thumbnail, 'cloudinary_public_id': None} if raw_thumbnail else None
-        piece = Piece.objects.create(user=user, thumbnail=thumbnail, **validated_data, current_location=location_obj)
-        PieceState.objects.create(user=user, piece=piece, state=ENTRY_STATE, notes=notes)
+            location_obj, _ = Location.objects.get_or_create(
+                user=user, name=location_name
+            )
+        raw_thumbnail = validated_data.pop("thumbnail", None)
+        thumbnail = (
+            {"url": raw_thumbnail, "cloudinary_public_id": None}
+            if raw_thumbnail
+            else None
+        )
+        piece = Piece.objects.create(
+            user=user,
+            thumbnail=thumbnail,
+            **validated_data,
+            current_location=location_obj,
+        )
+        PieceState.objects.create(
+            user=user, piece=piece, state=ENTRY_STATE, notes=notes
+        )
         return piece
 
 
@@ -325,15 +391,15 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PieceState
-        fields = ['state', 'notes', 'images', 'additional_fields']
+        fields = ["state", "notes", "images", "additional_fields"]
 
     def validate_additional_fields(self, value):
         if not isinstance(value, dict):
-            raise serializers.ValidationError('Must be a JSON object.')
+            raise serializers.ValidationError("Must be a JSON object.")
         return value
 
     def validate_state(self, value: str) -> str:
-        piece: Piece = self.context['piece']
+        piece: Piece = self.context["piece"]
         current = piece.current_state
         if current is not None:
             valid_next = SUCCESSORS.get(current.state, [])
@@ -346,29 +412,35 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: dict) -> PieceState:
         # Ensure all images have a created timestamp set by the backend.
-        images = validated_data.get('images', [])
+        images = validated_data.get("images", [])
         if images:
             processed: list[dict] = []
             for img in images:
-                created_val = img.get('created', timezone.now())
-                processed.append({
-                    'url': img['url'],
-                    'caption': img['caption'],
-                    'created': created_val.isoformat() if hasattr(created_val, 'isoformat') else str(created_val),
-                })
-            validated_data['images'] = processed
+                created_val = img.get("created", timezone.now())
+                processed.append(
+                    {
+                        "url": img["url"],
+                        "caption": img["caption"],
+                        "created": (
+                            created_val.isoformat()
+                            if hasattr(created_val, "isoformat")
+                            else str(created_val)
+                        ),
+                    }
+                )
+            validated_data["images"] = processed
 
-        new_state_id: str = validated_data['state']
-        piece: Piece = self.context['piece']
+        new_state_id: str = validated_data["state"]
+        piece: Piece = self.context["piece"]
         global_ref_fields = get_global_ref_fields_for_state(new_state_id)
-        incoming: dict = dict(validated_data.pop('additional_fields', {}))
+        incoming: dict = dict(validated_data.pop("additional_fields", {}))
 
         # Separate incoming payload into inline fields and global-ref PKs.
         inline_fields: dict = {}
         global_ref_pks: dict[str, str] = {}
         for field_name, value in incoming.items():
             if field_name in global_ref_fields:
-                if value in (None, ''):
+                if value in (None, ""):
                     continue
                 global_ref_pks[field_name] = str(value)
             else:
@@ -379,7 +451,9 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         # Global-ref state refs copy from the ancestor's junction row.
         state_refs = get_state_ref_fields(new_state_id)
         for field_name, (source_state_id, source_field_name) in state_refs.items():
-            ancestor = piece.states.filter(state=source_state_id).order_by('-created').first()
+            ancestor = (
+                piece.states.filter(state=source_state_id).order_by("-created").first()
+            )
             if ancestor is None:
                 continue
             if field_name in global_ref_fields:
@@ -387,19 +461,27 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
                     # Copy FK from the ancestor's junction table row.
                     src_global_name = global_ref_fields[field_name]
                     src_config = get_global_config(src_global_name)
-                    src_ref_model = apps.get_model('api', f'PieceState{src_config["model"]}Ref')
+                    src_ref_model = apps.get_model(
+                        "api", f'PieceState{src_config["model"]}Ref'
+                    )
                     try:
                         src_row = src_ref_model.objects.get(
                             piece_state=ancestor, field_name=source_field_name
                         )
-                        global_ref_pks[field_name] = str(getattr(src_row, f'{src_global_name}_id'))
+                        global_ref_pks[field_name] = str(
+                            getattr(src_row, f"{src_global_name}_id")
+                        )
                     except src_ref_model.DoesNotExist:
                         pass
             else:
-                if field_name not in inline_fields and source_field_name in (ancestor.additional_fields or {}):
-                    inline_fields[field_name] = ancestor.additional_fields[source_field_name]
+                if field_name not in inline_fields and source_field_name in (
+                    ancestor.additional_fields or {}
+                ):
+                    inline_fields[field_name] = ancestor.additional_fields[
+                        source_field_name
+                    ]
 
-        validated_data['additional_fields'] = inline_fields
+        validated_data["additional_fields"] = inline_fields
         try:
             piece_state = PieceState.objects.create(
                 user=piece.user,
@@ -407,7 +489,7 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
                 **validated_data,
             )
         except ValueError as exc:
-            raise serializers.ValidationError({'additional_fields': str(exc)}) from exc
+            raise serializers.ValidationError({"additional_fields": str(exc)}) from exc
 
         # Write junction rows for global ref fields.
         _write_global_ref_rows(piece_state, global_ref_fields, global_ref_pks)
@@ -429,19 +511,23 @@ def _write_global_ref_rows(
     for field_name in clear_fields:
         global_name = global_ref_fields[field_name]
         config = get_global_config(global_name)
-        ref_model_cls = apps.get_model('api', f'PieceState{config["model"]}Ref')
-        ref_model_cls.objects.filter(piece_state=piece_state, field_name=field_name).delete()
+        ref_model_cls = apps.get_model("api", f'PieceState{config["model"]}Ref')
+        ref_model_cls.objects.filter(
+            piece_state=piece_state, field_name=field_name
+        ).delete()
 
     for field_name, pk_str in global_ref_pks.items():
         global_name = global_ref_fields[field_name]
         config = get_global_config(global_name)
-        model_cls = apps.get_model('api', config['model'])
-        ref_model_cls = apps.get_model('api', f'PieceState{config["model"]}Ref')
+        model_cls = apps.get_model("api", config["model"])
+        ref_model_cls = apps.get_model("api", f'PieceState{config["model"]}Ref')
         try:
             global_obj = model_cls.objects.get(pk=pk_str)
         except (model_cls.DoesNotExist, ValueError):
             raise serializers.ValidationError(
-                {f'additional_fields.{field_name}': f'Invalid {global_name} id: {pk_str!r}'}
+                {
+                    f"additional_fields.{field_name}": f"Invalid {global_name} id: {pk_str!r}"
+                }
             )
         ref_model_cls.objects.update_or_create(
             piece_state=piece_state,
@@ -452,30 +538,37 @@ def _write_global_ref_rows(
 
 class PieceStateUpdateSerializer(serializers.Serializer):
     """Partial update of the current PieceState's editable fields."""
+
     notes = serializers.CharField(required=False, allow_blank=True)
     images = CaptionedImageSerializer(many=True, required=False)
     additional_fields = serializers.JSONField(required=False)
 
     def validate_additional_fields(self, value):
         if not isinstance(value, dict):
-            raise serializers.ValidationError('Must be a JSON object.')
+            raise serializers.ValidationError("Must be a JSON object.")
         return value
 
     def update(self, instance: PieceState, validated_data: dict) -> PieceState:
-        if 'notes' in validated_data:
-            instance.notes = validated_data['notes']
-        if 'images' in validated_data:
+        if "notes" in validated_data:
+            instance.notes = validated_data["notes"]
+        if "images" in validated_data:
             images_json = []
-            for img in validated_data['images']:
-                created_val = img.get('created', timezone.now())
-                images_json.append({
-                    'url': img['url'],
-                    'caption': img['caption'],
-                    'created': created_val.isoformat() if hasattr(created_val, 'isoformat') else str(created_val),
-                })
+            for img in validated_data["images"]:
+                created_val = img.get("created", timezone.now())
+                images_json.append(
+                    {
+                        "url": img["url"],
+                        "caption": img["caption"],
+                        "created": (
+                            created_val.isoformat()
+                            if hasattr(created_val, "isoformat")
+                            else str(created_val)
+                        ),
+                    }
+                )
             instance.images = images_json
-        if 'additional_fields' in validated_data:
-            incoming: dict = dict(validated_data['additional_fields'])
+        if "additional_fields" in validated_data:
+            incoming: dict = dict(validated_data["additional_fields"])
             global_ref_fields = get_global_ref_fields_for_state(instance.state)
 
             # Separate incoming dict into inline fields and global-ref PKs.
@@ -484,7 +577,7 @@ class PieceStateUpdateSerializer(serializers.Serializer):
             clear_global_ref_fields: set[str] = set()
             for field_name, value in incoming.items():
                 if field_name in global_ref_fields:
-                    if value in (None, ''):
+                    if value in (None, ""):
                         clear_global_ref_fields.add(field_name)
                         continue
                     global_ref_pks[field_name] = str(value)
@@ -495,54 +588,69 @@ class PieceStateUpdateSerializer(serializers.Serializer):
             try:
                 instance.save()
             except ValueError as exc:
-                raise serializers.ValidationError({'additional_fields': str(exc)}) from exc
-            _write_global_ref_rows(instance, global_ref_fields, global_ref_pks, clear_global_ref_fields)
+                raise serializers.ValidationError(
+                    {"additional_fields": str(exc)}
+                ) from exc
+            _write_global_ref_rows(
+                instance, global_ref_fields, global_ref_pks, clear_global_ref_fields
+            )
         else:
             try:
                 instance.save()
             except ValueError as exc:
-                raise serializers.ValidationError({'additional_fields': str(exc)}) from exc
+                raise serializers.ValidationError(
+                    {"additional_fields": str(exc)}
+                ) from exc
         return instance
 
 
 class PieceUpdateSerializer(serializers.Serializer):
     """Partial update of Piece fields."""
+
     name = serializers.CharField(required=False, max_length=255)
-    current_location = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
+    current_location = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, default=None
+    )
     thumbnail = ThumbnailSerializer(required=False, allow_null=True)
     tags = serializers.ListField(child=serializers.CharField(), required=False)
 
     def update(self, instance: Piece, validated_data: dict) -> Piece:
-        if 'name' in validated_data:
-            instance.name = validated_data['name']
-        if 'current_location' in validated_data:
-            location_name = validated_data['current_location']
+        if "name" in validated_data:
+            instance.name = validated_data["name"]
+        if "current_location" in validated_data:
+            location_name = validated_data["current_location"]
             if location_name:
-                user = self.context['request'].user
-                location_obj, _ = Location.objects.get_or_create(user=user, name=location_name)
+                user = self.context["request"].user
+                location_obj, _ = Location.objects.get_or_create(
+                    user=user, name=location_name
+                )
             else:
                 location_obj = None
             instance.current_location = location_obj
-        if 'thumbnail' in validated_data:
-            instance.thumbnail = validated_data['thumbnail']
+        if "thumbnail" in validated_data:
+            instance.thumbnail = validated_data["thumbnail"]
         instance.save()
-        if 'tags' in validated_data:
-            tag_ids = [str(tag_id) for tag_id in validated_data['tags']]
-            _replace_piece_tags(instance, self.context['request'].user, tag_ids)
+        if "tags" in validated_data:
+            tag_ids = [str(tag_id) for tag_id in validated_data["tags"]]
+            _replace_piece_tags(instance, self.context["request"].user, tag_ids)
         return instance
 
 
 def _replace_piece_tags(piece: Piece, user, tag_ids: list[str]) -> None:
-    tag_model = apps.get_model('api', 'Tag')
-    piece_tag_model = apps.get_model('api', 'PieceTag')
+    tag_model = apps.get_model("api", "Tag")
+    piece_tag_model = apps.get_model("api", "PieceTag")
     try:
-        tags = list(tag_model.objects.filter(user=user, pk__in=tag_ids).order_by('name'))
+        tags = list(
+            tag_model.objects.filter(user=user, pk__in=tag_ids).order_by("name")
+        )
     except (TypeError, ValueError) as exc:
-        raise serializers.ValidationError({'tags': [f'Invalid tag id: {tag_ids[0]!r}']}) from exc
+        raise serializers.ValidationError(
+            {"tags": [f"Invalid tag id: {tag_ids[0]!r}"]}
+        ) from exc
     tags_by_id = {str(tag.pk): tag for tag in tags}
     missing = [tag_id for tag_id in tag_ids if tag_id not in tags_by_id]
     if missing:
-        raise serializers.ValidationError({'tags': [f'Invalid tag id: {missing[0]!r}']})
+        raise serializers.ValidationError({"tags": [f"Invalid tag id: {missing[0]!r}"]})
 
     piece_tag_model.objects.filter(piece=piece).delete()
     for order, tag_id in enumerate(tag_ids):
@@ -560,13 +668,13 @@ class AuthUserSerializer(serializers.Serializer):
 
     @extend_schema_field(serializers.CharField(allow_blank=True))
     def get_openid_subject(self, obj) -> str:
-        profile = getattr(obj, 'profile', None)
-        return profile.openid_subject if profile else ''
+        profile = getattr(obj, "profile", None)
+        return profile.openid_subject if profile else ""
 
     @extend_schema_field(serializers.CharField(allow_blank=True))
     def get_profile_image_url(self, obj) -> str:
-        profile = getattr(obj, 'profile', None)
-        return profile.profile_image_url if profile else ''
+        profile = getattr(obj, "profile", None)
+        return profile.profile_image_url if profile else ""
 
 
 class GoogleAuthSerializer(serializers.Serializer):
@@ -587,11 +695,11 @@ class RegisterSerializer(serializers.Serializer):
     def create(self, validated_data: dict):
         user_model = get_user_model()
         user = user_model.objects.create_user(
-            username=validated_data['email'],
-            email=validated_data['email'],
-            password=validated_data['password'],
-            first_name=validated_data.get('first_name', ''),
-            last_name=validated_data.get('last_name', ''),
+            username=validated_data["email"],
+            email=validated_data["email"],
+            password=validated_data["password"],
+            first_name=validated_data.get("first_name", ""),
+            last_name=validated_data.get("last_name", ""),
         )
         UserProfile.objects.create(user=user)
         return user

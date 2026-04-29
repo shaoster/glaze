@@ -1,11 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import {
-  Box,
-  Button,
-  IconButton,
-  Snackbar,
-  Typography,
-} from "@mui/material";
+import { Box, Button, IconButton, Snackbar, Typography } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import type { PieceDetail, TagEntry } from "../util/types";
 import { createTagEntry, fetchGlobalEntries, updatePiece } from "../util/api";
@@ -32,10 +26,19 @@ function toTagEntry(entry: {
   color?: string | null;
   isPublic: boolean;
 }): TagEntry {
-  return { id: entry.id, name: entry.name, color: entry.color ?? "", is_public: entry.isPublic };
+  return {
+    id: entry.id,
+    name: entry.name,
+    color: entry.color ?? "",
+    is_public: entry.isPublic,
+  };
 }
 
-export default function TagManager({ pieceId, initialTags, onSaved }: TagManagerProps) {
+export default function TagManager({
+  pieceId,
+  initialTags,
+  onSaved,
+}: TagManagerProps) {
   const fetchTags = useCallback(() => fetchGlobalEntries("tag"), []);
   const { data: rawAvailableTags, error: tagsLoadError } = useAsync(fetchTags);
   const availableTags: TagEntry[] = (rawAvailableTags ?? []).map(toTagEntry);
@@ -45,7 +48,9 @@ export default function TagManager({ pieceId, initialTags, onSaved }: TagManager
   const [draftTags, setDraftTags] = useState<TagEntry[]>(initialTags);
   const [tagDialogOpen, setTagDialogOpen] = useState(false);
   const [newTagName, setNewTagName] = useState("");
-  const [newTagColor, setNewTagColor] = useState(pickDefaultTagColor(initialTags.length));
+  const [newTagColor, setNewTagColor] = useState(
+    pickDefaultTagColor(initialTags.length),
+  );
   const [tagSaving, setTagSaving] = useState(false);
   const [tagError, setTagError] = useState<string | null>(null);
   const [tagAttachSnackbarOpen, setTagAttachSnackbarOpen] = useState(false);
@@ -98,18 +103,23 @@ export default function TagManager({ pieceId, initialTags, onSaved }: TagManager
     setTagSaving(true);
     setTagError(null);
     try {
-      const created = await createTagEntry({ name: trimmed, color: newTagColor });
+      const created = await createTagEntry({
+        name: trimmed,
+        color: newTagColor,
+      });
       const createdTag: TagEntry = {
         id: created.id,
         name: created.name,
         color: created.color,
+        is_public: false, // New tags are private by default.
       };
       setDraftTags((prev) => [...prev, createdTag]);
       setTagDialogOpen(false);
       setNewTagName("");
       setNewTagColor(pickDefaultTagColor(trimmed.length));
     } catch (error) {
-      const status = (error as { response?: { status?: number } }).response?.status;
+      const status = (error as { response?: { status?: number } }).response
+        ?.status;
       if (status === 400) {
         setTagError(DUPLICATE_TAG_ERROR);
       } else {

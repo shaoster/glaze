@@ -98,6 +98,7 @@ function mapTagEntry(raw: Wire<TagEntry>): TagEntry {
     id: raw.id,
     name: raw.name,
     color: raw.color ?? "",
+    is_public: raw.is_public,
   };
 }
 
