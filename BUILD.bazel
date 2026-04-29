@@ -1,4 +1,6 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 
 exports_files([
     "ruff.toml",
@@ -51,4 +53,103 @@ alias(
     name = "ruff",
     actual = "@aspect_rules_lint//lint:ruff",
     visibility = ["//visibility:public"],
+)
+
+# ── OCI container image ───────────────────────────────────────────────────────
+#
+# bazel build //:image        — assemble the OCI image locally
+# bazel run   //:push         — push to ghcr.io/shaoster/glaze:<tag>
+#
+# Image layout (all under /app):
+#   /app/                      Django project root (manage.py, backend/, api/, etc.)
+#   /app/web/dist/             Vite-built SPA (served by WhiteNoise at URL root)
+#   /app/site-packages/        pip-installed runtime deps (added to PYTHONPATH)
+#
+# collectstatic runs at container startup (docker-entrypoint.sh) because it
+# needs files from pip-installed packages (e.g. DRF browsable API assets) that
+# land in site-packages, not in the image layers we control at build time.
+
+# pip deps layer — install runtime deps into /app/site-packages using the
+# Bazel-managed Python 3.12 toolchain. Tagged no-sandbox because pip needs
+# network access to download wheels.
+genrule(
+    name = "pip_layer_tar",
+    srcs = ["//:requirements.lock"],
+    outs = ["pip_layer.tar"],
+    cmd = """
+        set -e
+        dest=$$(mktemp -d)
+        $(PYTHON3) -m pip install \
+            --quiet \
+            --require-hashes \
+            --no-deps \
+            --prefix="$$dest" \
+            -r $(location //:requirements.lock)
+        # Flatten site-packages to /app/site-packages in the tarball.
+        sp=$$(find "$$dest" -type d -name site-packages | head -1)
+        mkdir -p "$$dest/app"
+        mv "$$sp" "$$dest/app/site-packages"
+        tar -C "$$dest" -cf $@ app/site-packages
+        rm -rf "$$dest"
+    """,
+    toolchains = ["@rules_python//python:current_py_toolchain"],
+    tags = ["no-sandbox"],
+)
+
+# Django source layer — everything the app needs at runtime except deps and dist.
+pkg_tar(
+    name = "app_src_tar",
+    srcs = [
+        "manage.py",
+        "workflow.yml",
+        "workflow.schema.yml",
+        "docker-entrypoint.sh",
+    ] + glob(
+        [
+            "backend/**/*.py",
+            "api/**/*.py",
+            "api/migrations/**",
+            "api/static/**",
+            "api/fixtures/**",
+            "fixtures/**",
+        ],
+        allow_empty = False,
+    ),
+    strip_prefix = ".",
+    package_dir = "/app",
+)
+
+# Vite frontend layer — web/dist produced by the Bazel vite build.
+pkg_tar(
+    name = "web_dist_tar",
+    srcs = ["//web:web_build"],
+    strip_prefix = "web/dist",
+    package_dir = "/app/web/dist",
+)
+
+oci_image(
+    name = "image",
+    base = "@python312_slim",
+    tars = [
+        ":pip_layer_tar",
+        ":app_src_tar",
+        ":web_dist_tar",
+    ],
+    env = {
+        "PYTHONPATH": "/app/site-packages",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONUNBUFFERED": "1",
+        "DJANGO_SETTINGS_MODULE": "backend.settings",
+    },
+    workdir = "/app",
+    entrypoint = ["/bin/bash", "/app/docker-entrypoint.sh"],
+    exposed_ports = ["8000/tcp"],
+)
+
+oci_push(
+    name = "push",
+    image = ":image",
+    repository = "ghcr.io/shaoster/glaze",
+    # Tag is set at push time via --tag flag or OCI_TAG env var.
+    # Example: bazel run //:push -- --tag $(git rev-parse --short HEAD)
 )

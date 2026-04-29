@@ -93,6 +93,39 @@ jobs:
           files: bazel-out/_coverage/_coverage_report.dat
           flags: backend,frontend
           fail_ci_if_error: false
+  publish:
+    name: Publish OCI image
+    needs: [preflight, test]
+    if: ${{ github.event_name == 'push' && needs.test.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Inject BuildBuddy API key into .bazelrc
+        run: |
+          echo "" >> .bazelrc
+          echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
+
+      - name: Write Vite env file
+        run: printf 'VITE_GOOGLE_CLIENT_ID=%s\n' '${{ secrets.VITE_GOOGLE_CLIENT_ID }}' > web/.env.local
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push OCI image
+        run: |
+          bazel run --config=ci //:push -- \
+            --tag latest \
+            --tag ${{ github.sha }}
+
   record-fingerprint:
     name: Record successful fingerprint
     needs: [preflight, test]
