@@ -104,17 +104,9 @@ pkg_tar(
         "workflow.yml",
         "workflow.schema.yml",
         "docker-entrypoint.sh",
-    ] + glob(
-        [
-            "backend/**/*.py",
-            "api/**/*.py",
-            "api/migrations/**",
-            "api/static/**",
-            "api/fixtures/**",
-            "fixtures/**",
-        ],
-        allow_empty = False,
-    ),
+        "//api:api_runtime_files",
+        "//backend:backend_runtime_files",
+    ] + glob(["fixtures/**"], allow_empty = True),
     strip_prefix = ".",
     package_dir = "/app",
 )
@@ -145,7 +137,6 @@ oci_image(
     # {STABLE_GIT_COMMIT} is substituted from tools/workspace_status.sh when
     # built with --stamp (CI uses `bazel run --stamp //:push`).
     labels = {"org.opencontainers.image.revision": "{STABLE_GIT_COMMIT}"},
-    stamp = -1,  # respect --stamp flag; no-op in local builds without --stamp
     workdir = "/app",
     entrypoint = ["/bin/bash", "/app/docker-entrypoint.sh"],
     exposed_ports = ["8000/tcp"],

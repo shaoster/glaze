@@ -30,6 +30,23 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+# All runtime files needed in the OCI image layer (source + migrations + static).
+filegroup(
+    name = "api_runtime_files",
+    srcs = glob(
+        [
+            "**/*.py",
+            "migrations/**",
+            "static/**",
+        ],
+        exclude = [
+            "tests/**",
+            "**/test_*.py",
+        ],
+    ),
+    visibility = ["//visibility:public"],
+)
+
 # ── Shared test infrastructure ────────────────────────────────────────────────
 
 _TEST_DEPS = [
