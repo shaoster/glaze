@@ -39,7 +39,7 @@ genrule(
 
 vite_pkg.vite(
     name = "vite_run",
-    srcs = [":web_lib"],
+    srcs = [":web_lib"] + glob([".env.*"], allow_empty = True),
     args = ["build"],
     chdir = package_name(),
     out_dirs = ["dist"],

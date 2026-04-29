@@ -32,3 +32,9 @@ py_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+filegroup(
+    name = "backend_runtime_files",
+    srcs = glob(["*.py"]),
+    visibility = ["//visibility:public"],
+)

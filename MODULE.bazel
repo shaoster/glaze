@@ -9,6 +9,8 @@ bazel_dep(name = "aspect_rules_ts", version = "3.8.8")
 bazel_dep(name = "rules_nodejs", version = "6.7.4")
 bazel_dep(name = "aspect_rules_lint", version = "2.5.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "rules_oci", version = "2.3.0")
+bazel_dep(name = "rules_pkg", version = "1.1.0")
 
 # ── Python toolchain ──────────────────────────────────────────────────────────
 
@@ -56,6 +58,17 @@ rules_ts_ext.deps(
     ts_version_from = "//web:package.json",
 )
 use_repo(rules_ts_ext, "npm_typescript")
+
+# ── OCI base image ───────────────────────────────────────────────────────────
+
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+oci.pull(
+    name = "python312_slim",
+    image = "index.docker.io/library/python",
+    digest = "sha256:46cb7cc2877e60fbd5e21a9ae6115c30ace7a077b9f8772da879e4590c18c2e3",
+    platforms = ["linux/amd64"],
+)
+use_repo(oci, "python312_slim")
 
 # ── mypy type stubs (auto-generated from requirements.txt) ────────────────────
 # Generates @pip_types//:types.bzl — a map from pip package name to its
