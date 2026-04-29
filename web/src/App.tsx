@@ -72,21 +72,106 @@ declare global {
 }
 
 const DARK_THEME = createTheme({
-  palette: { mode: "dark" },
+  palette: {
+    mode: "dark",
+    primary: {
+      main: "#c97a4d",
+      light: "#d59a71",
+      dark: "#8f5230",
+    },
+    secondary: {
+      main: "#8ca6a3",
+    },
+    background: {
+      default: "#211b19",
+      paper: "#2a2321",
+    },
+    text: {
+      primary: "#f3ebe1",
+      secondary: "#bbaea1",
+    },
+    divider: "rgba(255, 245, 235, 0.09)",
+    success: {
+      main: "#8eb89a",
+    },
+    warning: {
+      main: "#c97a4d",
+    },
+  },
+  typography: {
+    fontFamily: [
+      "Manrope",
+      "Avenir Next",
+      "Segoe UI",
+      "sans-serif",
+    ].join(","),
+    h1: { fontWeight: 650, letterSpacing: "-0.03em" },
+    h2: { fontWeight: 650, letterSpacing: "-0.03em" },
+    h3: { fontWeight: 620, letterSpacing: "-0.03em" },
+    h4: { fontWeight: 620, letterSpacing: "-0.025em" },
+    h5: { fontWeight: 610, letterSpacing: "-0.02em" },
+    h6: { fontWeight: 600, letterSpacing: "-0.015em" },
+    button: {
+      textTransform: "none",
+      fontWeight: 600,
+    },
+    caption: {
+      letterSpacing: "0.08em",
+    },
+  },
+  shape: {
+    borderRadius: 6,
+  },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          background:
+            "radial-gradient(circle at top, rgba(201,122,77,0.14) 0%, rgba(33,27,25,0) 34%), #211b19",
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: "none",
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          backgroundColor: alpha("#0f0b0a", 0.22),
+        },
+      },
+    },
     MuiButton: {
       variants: [
         {
           props: { variant: "contained" },
           style: ({ theme }) => ({
-            boxShadow: `0 8px 18px ${alpha(theme.palette.common.black, 0.35)}`,
+            boxShadow: `0 10px 24px ${alpha(theme.palette.common.black, 0.34)}`,
             border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
             "&:hover": {
-              boxShadow: `0 10px 22px ${alpha(theme.palette.common.black, 0.42)}`,
+              boxShadow: `0 14px 28px ${alpha(theme.palette.common.black, 0.4)}`,
             },
           }),
         },
       ],
+    },
+    MuiButtonBase: {
+      defaultProps: {
+        disableRipple: true,
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderRadius: 999,
+          backgroundColor: alpha(theme.palette.common.black, 0.18),
+          border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
+        }),
+      },
     },
   },
 });

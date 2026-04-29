@@ -100,10 +100,8 @@ export default function ImageLightbox({
             userSelect: "none",
           }}
         />
-        {image.caption && (
-          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.8)" }}>
-            {image.caption}
-          </Typography>
+        {footerActions && (
+          <Box onClick={(e) => e.stopPropagation()}>{footerActions(index)}</Box>
         )}
         {onSetAsThumbnail && (
           <Box onClick={(e) => e.stopPropagation()}>
@@ -126,9 +124,6 @@ export default function ImageLightbox({
                   : "Set as thumbnail"}
             </Button>
           </Box>
-        )}
-        {footerActions && (
-          <Box onClick={(e) => e.stopPropagation()}>{footerActions(index)}</Box>
         )}
         {!isTouchDevice && images.length > 1 && (
           <Box

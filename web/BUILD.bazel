@@ -237,6 +237,8 @@ js_library(
     name = "autosave_src",
     srcs = [
         "src/components/AutosaveStatus.tsx",
+        "src/components/PieceDetailSaveStatusContext.tsx",
+        "src/components/usePieceDetailSaveStatus.ts",
         "src/components/useAutosave.ts",
     ],
     deps = [
@@ -342,9 +344,21 @@ js_library(
 )
 
 js_library(
+    name = "piece_photo_gallery_src",
+    srcs = ["src/components/PiecePhotoGallery.tsx"],
+    deps = [
+        ":cloudinary_image_src",
+        ":generated_types",
+        ":image_lightbox_src",
+        ":node_modules",
+    ],
+)
+
+js_library(
     name = "tag_manager_src",
     srcs = ["src/components/TagManager.tsx"],
     deps = [
+        ":autosave_src",
         ":generated_types",
         ":node_modules",
         ":tag_src",
@@ -378,10 +392,12 @@ js_library(
     name = "piece_detail_src",
     srcs = ["src/components/PieceDetail.tsx"],
     deps = [
+        ":autosave_src",
         ":cloudinary_image_src",
         ":generated_types",
         ":node_modules",
         ":piece_history_src",
+        ":piece_photo_gallery_src",
         ":primitive_src",
         ":state_transition_src",
         ":tag_manager_src",
@@ -519,6 +535,17 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":workflow_state_src",
+    ],
+)
+
+vitest_test(
+    name = "web_piece_photo_gallery_test",
+    srcs = [
+        "src/components/__tests__/PiecePhotoGallery.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":piece_photo_gallery_src",
     ],
 )
 

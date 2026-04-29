@@ -8,7 +8,9 @@
  *
  * Context-specific sizing:
  *   thumbnail — 64×64 fill, used in image lists and history rows
+ *   gallery   — tile-sized fill, used in the Piece photo gallery grid
  *   lightbox  — constrained to 90 vw × 80 vh, for the full-screen viewer
+ *   detail    — fills the local container, for the PieceDetail hero image
  *   preview   — 64×64 fill, used for the upload preview before saving
  */
 import { Cloudinary } from "@cloudinary/url-gen";
@@ -86,7 +88,12 @@ function parseCloudinaryUrl(
 // Component
 // ---------------------------------------------------------------------------
 
-export type CloudinaryImageContext = "thumbnail" | "lightbox" | "preview";
+export type CloudinaryImageContext =
+  | "thumbnail"
+  | "gallery"
+  | "lightbox"
+  | "detail"
+  | "preview";
 
 export type CloudinaryImageProps = {
   /** Full delivery URL — always required as fallback. */
@@ -96,6 +103,8 @@ export type CloudinaryImageProps = {
   alt?: string;
   /** Rendering context determines the requested dimensions. */
   context: CloudinaryImageContext;
+  requestedWidth?: number;
+  requestedHeight?: number;
   style?: React.CSSProperties;
   className?: string;
   onLoad?: React.ReactEventHandler<HTMLImageElement>;
@@ -108,6 +117,8 @@ export default function CloudinaryImage({
   cloudinary_public_id,
   alt = "",
   context,
+  requestedWidth,
+  requestedHeight,
   style,
   className,
   onLoad,
@@ -167,6 +178,20 @@ export default function CloudinaryImage({
           maxWidth: LIGHTBOX_MAX_WIDTH,
           maxHeight: LIGHTBOX_MAX_HEIGHT,
         }
+      : context === "detail"
+        ? {
+            position: "relative",
+            display: "block",
+            width: "100%",
+            height: "100%",
+          }
+      : context === "gallery"
+        ? {
+            position: "relative",
+            display: "block",
+            width: "100%",
+            height: "100%",
+          }
       : {
           position: "relative",
           display: "inline-flex",
@@ -210,12 +235,26 @@ export default function CloudinaryImage({
           ? Math.round(window.innerHeight * window.devicePixelRatio * 0.8)
           : 900;
       img.resize(fit().width(vw).height(vh));
+    } else if (context === "detail") {
+      const vw =
+        typeof window !== "undefined"
+          ? Math.round(window.innerWidth * window.devicePixelRatio)
+          : 1400;
+      const vh =
+        typeof window !== "undefined"
+          ? Math.round(window.innerHeight * window.devicePixelRatio * 0.65)
+          : 1000;
+      img.resize(fit().width(vw).height(vh));
     } else {
-      // thumbnail or preview — 64×64 fill with auto gravity
+      const targetWidth =
+        context === "gallery" ? (requestedWidth ?? 320) : THUMBNAIL_SIZE;
+      const targetHeight =
+        context === "gallery" ? (requestedHeight ?? 240) : THUMBNAIL_SIZE;
+      // thumbnail, gallery, or preview — cropped fill with auto gravity
       img.resize(
         fill()
-          .width(THUMBNAIL_SIZE)
-          .height(THUMBNAIL_SIZE)
+          .width(targetWidth)
+          .height(targetHeight)
           .gravity(autoGravity()),
       );
     }

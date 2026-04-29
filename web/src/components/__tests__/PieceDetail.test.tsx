@@ -206,9 +206,45 @@ describe("PieceDetail", () => {
     ).toBe(true);
   });
 
+  it("counts all piece images in the hero chip and opens the gallery", async () => {
+    const designed = makeState({
+      state: "designed",
+      images: [
+        {
+          url: "http://example.com/one.jpg",
+          caption: "First image",
+          created: new Date("2024-01-15T10:00:00Z"),
+          cloudinary_public_id: null,
+        },
+      ],
+    });
+    const thrown = makeState({
+      state: "wheel_thrown",
+      images: [
+        {
+          url: "http://example.com/two.jpg",
+          caption: "Second image",
+          created: new Date("2024-01-16T10:00:00Z"),
+          cloudinary_public_id: null,
+        },
+      ],
+    });
+    await renderPieceDetail(
+      makePiece({
+        current_state: thrown,
+        history: [designed, thrown],
+      }),
+    );
+    await userEvent.click(screen.getAllByRole("button", { name: /2 photos/i })[0]);
+    expect(screen.getByLabelText("Piece photos")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /open piece photo/i })).toHaveLength(2);
+  });
+
   it("renders current location controls", async () => {
     await renderPieceDetail();
-    expect(screen.getByText("Current location")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Browse Current location" }),
+    ).toBeInTheDocument();
   });
 
   it("keeps current location browse-only when create is not enabled by workflow metadata", async () => {
@@ -240,7 +276,6 @@ describe("PieceDetail", () => {
       expect(screen.getByText("Studio 7")).toBeInTheDocument(),
     );
     await userEvent.click(screen.getByText("Studio 7"));
-    await waitFor(() => expect(screen.getByText("Studio 7")).toBeInTheDocument());
     await waitFor(() =>
       expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
         current_location: "Studio 7",
@@ -503,7 +538,7 @@ describe("PieceDetail", () => {
 
       expect(screen.getByText("Gift")).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "Edit tags" }),
+        screen.getByRole("button", { name: "Add or edit tags" }),
       ).toBeInTheDocument();
       expect(screen.queryByLabelText("Tags")).not.toBeInTheDocument();
     });
@@ -511,10 +546,15 @@ describe("PieceDetail", () => {
     it("shows the tag editor when the edit button is pressed", async () => {
       await renderPieceDetail();
 
-      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Add or edit tags" }),
+      );
 
       expect(screen.getByLabelText("Tags")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "New" })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Open" }));
+      expect(
+        screen.getByRole("option", { name: "+ New tag" }),
+      ).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Save tags" }),
       ).toBeInTheDocument();

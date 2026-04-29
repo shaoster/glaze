@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, render, screen, fireEvent } from "@testing-library/react";
 import PieceHistory from "../PieceHistory";
-import type { PieceState, CaptionedImage } from "../../util/types";
+import type { PieceState } from "../../util/types";
 
 vi.mock("../../../workflow.yml", () => ({
   default: {
@@ -28,34 +28,6 @@ vi.mock("../../../workflow.yml", () => ({
   },
 }));
 
-vi.mock("../CloudinaryImage", () => ({
-  default: ({ url, alt }: { url: string; alt: string }) => (
-    <img src={url} alt={alt} />
-  ),
-}));
-
-vi.mock("../ImageLightbox", () => ({
-  default: ({
-    onClose,
-    onSetAsThumbnail,
-    images,
-    initialIndex,
-  }: {
-    onClose: () => void;
-    onSetAsThumbnail: (img: CaptionedImage) => Promise<void>;
-    images: CaptionedImage[];
-    initialIndex: number;
-  }) => (
-    <div data-testid="lightbox">
-      <button onClick={onClose}>Close</button>
-      <button onClick={() => void onSetAsThumbnail(images[initialIndex])}>
-        Set as thumbnail
-      </button>
-      <span data-testid="lightbox-index">{initialIndex}</span>
-    </div>
-  ),
-}));
-
 function makeState(overrides: Partial<PieceState> = {}): PieceState {
   return {
     state: "designed",
@@ -79,7 +51,6 @@ describe("PieceHistory", () => {
     const { container } = render(
       <PieceHistory
         pastHistory={[]}
-        onSetAsThumbnail={vi.fn()}
       />,
     );
     expect(container).toBeEmptyDOMElement();
@@ -90,7 +61,6 @@ describe("PieceHistory", () => {
       render(
         <PieceHistory
           pastHistory={[makeState({ state: "designed" })]}
-          onSetAsThumbnail={vi.fn()}
         />,
       );
     });
@@ -107,7 +77,6 @@ describe("PieceHistory", () => {
             makeState({ state: "designed" }),
             makeState({ state: "wheel_thrown" }),
           ]}
-          onSetAsThumbnail={vi.fn()}
         />,
       );
     });
@@ -120,7 +89,6 @@ describe("PieceHistory", () => {
       render(
         <PieceHistory
           pastHistory={[makeState({ state: "designed" })]}
-          onSetAsThumbnail={vi.fn()}
         />,
       );
     });
@@ -135,7 +103,6 @@ describe("PieceHistory", () => {
       render(
         <PieceHistory
           pastHistory={[makeState({ state: "designed", notes: "Test note" })]}
-          onSetAsThumbnail={vi.fn()}
         />,
       );
     });
@@ -144,77 +111,30 @@ describe("PieceHistory", () => {
     expect(screen.getByText(/Test note/)).toBeInTheDocument();
   });
 
-  it("clicking a history image opens the lightbox at the correct index", async () => {
-    const img1: CaptionedImage = {
-      url: "http://example.com/img1.jpg",
-      caption: "First",
-      created: new Date(),
-      cloudinary_public_id: null,
-    };
-    const img2: CaptionedImage = {
-      url: "http://example.com/img2.jpg",
-      caption: "Second",
-      created: new Date(),
-      cloudinary_public_id: null,
-    };
+  it("does not render image thumbnails in the history list", async () => {
     await act(async () => {
       render(
         <PieceHistory
           pastHistory={[
-            makeState({ state: "designed", images: [img1] }),
-            makeState({ state: "wheel_thrown", images: [img2] }),
+            makeState({
+              state: "designed",
+              images: [
+                {
+                  url: "http://example.com/img1.jpg",
+                  caption: "First",
+                  created: new Date(),
+                  cloudinary_public_id: null,
+                },
+              ],
+            }),
           ]}
-          onSetAsThumbnail={vi.fn()}
         />,
       );
     });
     fireEvent.click(screen.getByRole("button", { name: /show history/i }));
-    fireEvent.click(screen.getByRole("button", { name: "View image 2" }));
-    expect(screen.getByTestId("lightbox")).toBeInTheDocument();
-    expect(screen.getByTestId("lightbox-index")).toHaveTextContent("1");
-  });
-
-  it("closing the lightbox hides it", async () => {
-    const img: CaptionedImage = {
-      url: "http://example.com/img.jpg",
-      caption: "",
-      created: new Date(),
-      cloudinary_public_id: null,
-    };
-    await act(async () => {
-      render(
-        <PieceHistory
-          pastHistory={[makeState({ state: "designed", images: [img] })]}
-          onSetAsThumbnail={vi.fn()}
-        />,
-      );
-    });
-    fireEvent.click(screen.getByRole("button", { name: /show history/i }));
-    fireEvent.click(screen.getByRole("button", { name: "View image 1" }));
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
-    expect(screen.queryByTestId("lightbox")).not.toBeInTheDocument();
-  });
-
-  it("setAsThumbnail calls the callback with the correct image", async () => {
-    const img: CaptionedImage = {
-      url: "http://example.com/thumb.jpg",
-      caption: "cap",
-      created: new Date(),
-      cloudinary_public_id: null,
-    };
-    const onSetAsThumbnail = vi.fn().mockResolvedValue(undefined);
-    await act(async () => {
-      render(
-        <PieceHistory
-          pastHistory={[makeState({ state: "designed", images: [img] })]}
-          currentThumbnailUrl="http://example.com/current.jpg"
-          onSetAsThumbnail={onSetAsThumbnail}
-        />,
-      );
-    });
-    fireEvent.click(screen.getByRole("button", { name: /show history/i }));
-    fireEvent.click(screen.getByRole("button", { name: "View image 1" }));
-    fireEvent.click(screen.getByRole("button", { name: "Set as thumbnail" }));
-    expect(onSetAsThumbnail).toHaveBeenCalledWith(img);
+    expect(
+      screen.queryByRole("button", { name: /view image/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("First")).not.toBeInTheDocument();
   });
 });

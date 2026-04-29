@@ -1,0 +1,381 @@
+import { useEffect, useState } from "react";
+import CloseIcon from "@mui/icons-material/Close";
+import PhotoLibraryOutlinedIcon from "@mui/icons-material/PhotoLibraryOutlined";
+import EditIcon from "@mui/icons-material/Edit";
+import {
+  alpha,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  IconButton,
+  TextField,
+  Tooltip,
+  Typography,
+  useTheme,
+} from "@mui/material";
+import type { CaptionedImage } from "../util/types";
+import CloudinaryImage from "./CloudinaryImage";
+import ImageLightbox from "./ImageLightbox";
+
+export type PiecePhotoGalleryImage = CaptionedImage & {
+  stateLabel: string;
+  editableCurrentStateIndex?: number | null;
+};
+
+type PiecePhotoGalleryProps = {
+  images: PiecePhotoGalleryImage[];
+  currentThumbnailUrl?: string;
+  onSetAsThumbnail: (image: CaptionedImage) => Promise<void>;
+  onSaveCaption?: (currentStateImageIndex: number, caption: string) => Promise<void>;
+  onDeleteImage?: (currentStateImageIndex: number) => Promise<void>;
+};
+
+export default function PiecePhotoGallery({
+  images,
+  currentThumbnailUrl,
+  onSetAsThumbnail,
+  onSaveCaption,
+  onDeleteImage,
+}: PiecePhotoGalleryProps) {
+  const theme = useTheme();
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [captionDraft, setCaptionDraft] = useState("");
+  const [captionEditing, setCaptionEditing] = useState(false);
+  const [captionSaving, setCaptionSaving] = useState(false);
+  const [captionSaveError, setCaptionSaveError] = useState<string | null>(null);
+  const [deleteDialogIndex, setDeleteDialogIndex] = useState<number | null>(null);
+  const [deleteSaving, setDeleteSaving] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window === "undefined" ? 768 : window.innerWidth,
+  );
+  const pixelRatio =
+    typeof window === "undefined" ? 1 : Math.max(window.devicePixelRatio || 1, 1);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    function syncWidth() {
+      setViewportWidth(window.innerWidth);
+    }
+    window.addEventListener("resize", syncWidth);
+    return () => window.removeEventListener("resize", syncWidth);
+  }, []);
+
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    setCaptionEditing(false);
+    setCaptionSaveError(null);
+    setCaptionDraft(images[lightboxIndex]?.caption ?? "");
+  }, [images, lightboxIndex]);
+
+  const photoCount = images.length;
+  const columns = viewportWidth < 600 ? 2 : 3;
+  const tileWidth = Math.max(
+    120,
+    Math.floor((Math.min(viewportWidth, 900) - 32 - (columns - 1) * 10) / columns),
+  );
+  const requestedWidth = Math.round(tileWidth * pixelRatio);
+  const requestedHeight = Math.round(tileWidth * 0.8 * pixelRatio);
+
+  const activeImage =
+    lightboxIndex !== null ? images[lightboxIndex] : null;
+  const editableCurrentStateIndex =
+    activeImage?.editableCurrentStateIndex ?? null;
+
+  async function handleSaveCaption() {
+    if (
+      lightboxIndex === null ||
+      editableCurrentStateIndex === null ||
+      !onSaveCaption
+    ) {
+      return;
+    }
+    setCaptionSaving(true);
+    setCaptionSaveError(null);
+    try {
+      await onSaveCaption(editableCurrentStateIndex, captionDraft);
+      setCaptionEditing(false);
+    } catch {
+      setCaptionSaveError("Failed to save caption. Please try again.");
+    } finally {
+      setCaptionSaving(false);
+    }
+  }
+
+  async function handleDeleteImage() {
+    if (deleteDialogIndex === null || !onDeleteImage) {
+      return;
+    }
+    const image = images[deleteDialogIndex];
+    const currentStateImageIndex = image?.editableCurrentStateIndex;
+    if (currentStateImageIndex === null || currentStateImageIndex === undefined) {
+      return;
+    }
+    setDeleteSaving(true);
+    try {
+      await onDeleteImage(currentStateImageIndex);
+      if (lightboxIndex === deleteDialogIndex) {
+        setLightboxIndex(null);
+      }
+      setDeleteDialogIndex(null);
+    } finally {
+      setDeleteSaving(false);
+    }
+  }
+
+  const triggerLabel = `${photoCount} photo${photoCount === 1 ? "" : "s"}`;
+
+  const canEditCaption =
+    editableCurrentStateIndex !== null && onSaveCaption !== undefined;
+
+  const footer = activeImage ? (
+    <Box sx={{ display: "grid", gap: 0.75, justifyItems: "center" }}>
+      {/* Caption editor — shown above state label */}
+      {captionEditing ? (
+        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <TextField
+            size="small"
+            value={captionDraft}
+            onChange={(event) => setCaptionDraft(event.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void handleSaveCaption();
+              if (e.key === "Escape") setCaptionEditing(false);
+            }}
+            autoFocus
+            slotProps={{
+              htmlInput: { "aria-label": "Edit photo caption" },
+            }}
+            sx={{
+              minWidth: 220,
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "rgba(255,255,255,0.08)",
+                color: "white",
+              },
+            }}
+          />
+          <Button
+            size="small"
+            variant="contained"
+            onClick={() => void handleSaveCaption()}
+            disabled={captionSaving}
+          >
+            {captionSaving ? "Saving…" : "Save"}
+          </Button>
+        </Box>
+      ) : activeImage.caption ? (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
+            {activeImage.caption}
+          </Typography>
+          {canEditCaption && (
+            <Tooltip title="Edit caption">
+              <IconButton
+                size="small"
+                onClick={() => setCaptionEditing(true)}
+                aria-label="Edit caption"
+                sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "white" } }}
+              >
+                <EditIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
+      ) : canEditCaption ? (
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<EditIcon fontSize="small" />}
+          onClick={() => { setCaptionDraft(""); setCaptionEditing(true); }}
+          sx={{ color: "white", borderColor: "rgba(255,255,255,0.35)" }}
+        >
+          Add caption
+        </Button>
+      ) : null}
+      {captionSaveError && (
+        <Typography variant="caption" sx={{ color: "error.light" }}>
+          {captionSaveError}
+        </Typography>
+      )}
+      {/* State label — below caption */}
+      <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.55)" }}>
+        {editableCurrentStateIndex !== null
+          ? "Added in current state"
+          : `Added in ${activeImage.stateLabel}`}
+      </Typography>
+    </Box>
+  ) : null;
+
+  return (
+    <>
+      <Box
+        component="button"
+        type="button"
+        onClick={() => photoCount > 0 && setGalleryOpen(true)}
+        disabled={photoCount === 0}
+        aria-label={triggerLabel}
+        sx={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 0.75,
+          px: 1.25,
+          py: 0.75,
+          borderRadius: 999,
+          backgroundColor: alpha(theme.palette.background.default, 0.56),
+          color: "text.secondary",
+          backdropFilter: "blur(8px)",
+          border: "1px solid",
+          borderColor: "divider",
+          cursor: photoCount > 0 ? "pointer" : "default",
+          opacity: photoCount > 0 ? 1 : 0.7,
+        }}
+      >
+        <PhotoLibraryOutlinedIcon sx={{ fontSize: 16 }} />
+        <Typography variant="caption">{triggerLabel}</Typography>
+      </Box>
+
+      <Dialog
+        open={galleryOpen}
+        onClose={() => setGalleryOpen(false)}
+        maxWidth="md"
+        fullWidth
+        aria-label="Piece photos"
+        PaperProps={{ sx: { height: "80vh", borderRadius: "8px" } }}
+      >
+        <DialogContent sx={{ p: 2 }}>
+          {images.length > 0 ? (
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "repeat(2, minmax(0, 1fr))",
+                  sm: "repeat(3, minmax(0, 1fr))",
+                },
+                gap: 1.25,
+              }}
+            >
+              {images.map((image, index) => (
+                <Box
+                  key={`${image.url}-${index}`}
+                  sx={{
+                    position: "relative",
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: "8px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <Box
+                    component="button"
+                    type="button"
+                    onClick={() => setLightboxIndex(index)}
+                    aria-label={`Open piece photo ${index + 1}`}
+                    sx={{
+                      p: 0,
+                      border: "none",
+                      width: "100%",
+                      background: "transparent",
+                      display: "block",
+                      lineHeight: 0,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Box sx={{ position: "relative", aspectRatio: "5 / 4" }}>
+                      <CloudinaryImage
+                        url={image.url}
+                        cloudinary_public_id={image.cloudinary_public_id}
+                        alt={image.caption || image.stateLabel}
+                        context="gallery"
+                        requestedWidth={requestedWidth}
+                        requestedHeight={requestedHeight}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                  {image.editableCurrentStateIndex !== null &&
+                    image.editableCurrentStateIndex !== undefined &&
+                    onDeleteImage && (
+                      <IconButton
+                        aria-label={`Delete piece photo ${index + 1}`}
+                        onClick={() => setDeleteDialogIndex(index)}
+                        size="small"
+                        sx={{
+                          position: "absolute",
+                          top: 8,
+                          right: 8,
+                          width: 28,
+                          height: 28,
+                          color: "common.white",
+                          backgroundColor: "rgba(0,0,0,0.52)",
+                          backdropFilter: "blur(6px)",
+                          "&:hover": {
+                            backgroundColor: "rgba(0,0,0,0.68)",
+                          },
+                        }}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              No images for this piece yet.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setGalleryOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {lightboxIndex !== null && (
+        <ImageLightbox
+          images={images}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          currentThumbnailUrl={currentThumbnailUrl}
+          onSetAsThumbnail={onSetAsThumbnail}
+          footerActions={() => footer}
+        />
+      )}
+
+      <Dialog
+        open={deleteDialogIndex !== null}
+        onClose={() => !deleteSaving && setDeleteDialogIndex(null)}
+      >
+        <DialogTitle>Remove Image</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Remove this image? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setDeleteDialogIndex(null)}
+            disabled={deleteSaving}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => void handleDeleteImage()}
+            color="error"
+            variant="contained"
+            disabled={deleteSaving}
+          >
+            Remove
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}

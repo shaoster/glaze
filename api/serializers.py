@@ -116,6 +116,7 @@ class FiringTemperatureRefSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "cone", "temperature_c", "atmosphere"]
 
 
+@global_entry_serializer(Tag)
 class TagEntrySerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     is_public = serializers.SerializerMethodField()

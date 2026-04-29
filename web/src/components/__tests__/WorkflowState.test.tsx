@@ -222,6 +222,15 @@ const defaultProps = {
 
 const noop = () => {};
 
+function setScreenWidth(width: number) {
+  Object.defineProperty(window, "innerWidth", {
+    configurable: true,
+    writable: true,
+    value: width,
+  });
+  window.dispatchEvent(new Event("resize"));
+}
+
 // Helper to simulate a successful Cloudinary Upload Widget upload.
 // The widget fires display-changed (shown) then success when open() is called.
 function setupUploadWidget(
@@ -271,7 +280,20 @@ function setupControllableWidget() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  setScreenWidth(1024);
   vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: query.includes("max-width:599.95px")
+      ? window.innerWidth <= 599
+      : false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
   // Reset window.cloudinary between tests
   window.cloudinary = undefined;
 });
@@ -412,42 +434,11 @@ describe("WorkflowState", () => {
     );
   });
 
-  it("updates current_location after selecting a browse result", async () => {
-    const updated = makePieceDetail({
-      current_state: makeState({ notes: "new" }),
-      current_location: "Shelf B",
-    });
-    vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
-    vi.mocked(api.updatePiece).mockResolvedValue(updated);
-    vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
-      { id: "shelf-z", name: "Shelf Z", isPublic: false },
-    ]);
-    render(
-      <WorkflowState
-        {...defaultProps}
-        onSaved={vi.fn()}
-        pieceState={makeState({ notes: "Original" })}
-      />,
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Browse Current location" }),
-    );
-    await waitFor(() => expect(screen.getByText("Shelf Z")).toBeInTheDocument());
-    await userEvent.click(screen.getByText("Shelf Z"));
-    await waitFor(() =>
-      expect(api.updatePiece).toHaveBeenCalledWith("test-piece-id", {
-        current_location: "Shelf Z",
-      }),
-    );
-  });
-
-  it("renders an autosave status", async () => {
+  it("keeps the floating autosave status hidden before any changes", async () => {
     await act(async () => {
       render(<WorkflowState {...defaultProps} />);
     });
-    expect(screen.getByTestId("autosave-status")).toHaveTextContent(
-      "All changes saved",
-    );
+    expect(screen.queryByTestId("autosave-status")).not.toBeInTheDocument();
   });
 
   it("does not save when there are no changes", async () => {
@@ -493,13 +484,11 @@ describe("WorkflowState", () => {
     );
   });
 
-  it("shows saved status when not dirty", async () => {
+  it("keeps the saved pill hidden when nothing has changed", async () => {
     await act(async () => {
       render(<WorkflowState {...defaultProps} />);
     });
-    expect(screen.getByTestId("autosave-status")).toHaveTextContent(
-      "All changes saved",
-    );
+    expect(screen.queryByTestId("autosave-status")).not.toBeInTheDocument();
   });
 
   it("calls onSaved after successful save", async () => {
@@ -546,35 +535,6 @@ describe("WorkflowState", () => {
     );
   });
 
-  it("remains dirty when piece API fails during save", async () => {
-    const updated = makePieceDetail();
-    vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
-    vi.mocked(api.updatePiece).mockRejectedValue(new Error("Network error"));
-    vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
-      { id: "1", name: "Shelf Z", isPublic: false },
-    ]);
-    render(<WorkflowState {...defaultProps} currentLocation="" />);
-    await userEvent.click(
-      screen.getByRole("button", { name: "Browse Current location" }),
-    );
-    await waitFor(() =>
-      expect(screen.getByText("Shelf Z")).toBeInTheDocument(),
-    );
-    await userEvent.click(screen.getByText("Shelf Z"));
-    await waitFor(() => expect(screen.getByText("Shelf Z")).toBeInTheDocument());
-    await waitFor(() =>
-      expect(
-        screen.getByText("Autosave failed. Your changes are still here."),
-      ).toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("autosave-status")).toHaveTextContent(
-      "Autosave failed",
-    );
-    expect(api.updatePiece).toHaveBeenCalledWith("test-piece-id", {
-      current_location: "Shelf Z",
-    });
-  });
-
   it("calls onDirtyChange with true when dirty", async () => {
     const onDirtyChange = vi.fn();
     await act(async () => {
@@ -614,6 +574,16 @@ describe("WorkflowState", () => {
     expect(
       screen.getByRole("button", { name: "Upload Image" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows a floating camera action on mobile layouts", async () => {
+    setScreenWidth(390);
+    await act(async () => {
+      render(<WorkflowState {...defaultProps} />);
+    });
+    const uploadAction = screen.getByRole("button", { name: "Upload Image" });
+    expect(uploadAction).toBeInTheDocument();
+    expect(uploadAction).toHaveClass("MuiFab-root");
   });
 
   it("successful widget upload immediately saves the image to state", async () => {
@@ -719,163 +689,7 @@ describe("WorkflowState", () => {
       ).toBeInTheDocument(),
     );
   });
-  it("clicking remove image opens the confirmation dialog", async () => {
-    render(
-      <WorkflowState
-        {...defaultProps}
-        pieceState={makeState({
-          images: [
-            {
-              url: "http://example.com/img.jpg",
-              caption: "To delete",
-              created: new Date(),
-            },
-          ],
-        })}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "remove image" }));
-    expect(screen.getByText("Remove Image")).toBeInTheDocument();
-    expect(screen.getByText(/Remove this image\? This action cannot be undone\./)).toBeInTheDocument();
-  });
-
-  it("cancelling the remove dialog does not remove the image", async () => {
-    render(
-      <WorkflowState
-        {...defaultProps}
-        pieceState={makeState({
-          images: [
-            {
-              url: "http://example.com/img.jpg",
-              caption: "Keep me",
-              created: new Date(),
-            },
-          ],
-        })}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "remove image" }));
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(api.updateCurrentState).not.toHaveBeenCalled();
-    await waitFor(() =>
-      expect(screen.queryByText("Remove Image")).not.toBeInTheDocument(),
-    );
-    expect(screen.getByText("Keep me")).toBeInTheDocument();
-  });
-
-  it("confirming image removal calls updateCurrentState without the image", async () => {
-    const updated = makePieceDetail({
-      current_state: makeState({ images: [] }),
-    });
-    vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
-    render(
-      <WorkflowState
-        {...defaultProps}
-        pieceState={makeState({
-          images: [
-            {
-              url: "http://example.com/img.jpg",
-              caption: "To delete",
-              created: new Date(),
-            },
-          ],
-        })}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "remove image" }));
-    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
-    await waitFor(() =>
-      expect(api.updateCurrentState).toHaveBeenCalledWith(
-        "test-piece-id",
-        expect.objectContaining({ images: [] }),
-      ),
-    );
-  });
-
-  it("clicking the pencil icon makes the caption editable", async () => {
-    await act(async () => {
-      render(
-        <WorkflowState
-          {...defaultProps}
-          pieceState={makeState({
-            images: [
-              {
-                url: "http://example.com/img.jpg",
-                caption: "My caption",
-                created: new Date(),
-              },
-            ],
-          })}
-        />,
-      );
-    });
-    fireEvent.click(screen.getByRole("button", { name: "edit caption" }));
-    expect(
-      screen.getByRole("textbox", { name: "Edit caption" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("My caption")).not.toBeInTheDocument();
-  });
-
-  it("persists caption change on blur and exits edit mode", async () => {
-    const updated = makePieceDetail();
-    vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
-    render(
-      <WorkflowState
-        {...defaultProps}
-        pieceState={makeState({
-          images: [
-            {
-              url: "http://example.com/img.jpg",
-              caption: "Old",
-              created: new Date(),
-            },
-          ],
-        })}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "edit caption" }));
-    const input = screen.getByRole("textbox", { name: "Edit caption" });
-    fireEvent.change(input, { target: { value: "New caption" } });
-    fireEvent.blur(input);
-    await waitFor(() =>
-      expect(api.updateCurrentState).toHaveBeenCalledWith(
-        "test-piece-id",
-        expect.objectContaining({
-          images: expect.arrayContaining([
-            expect.objectContaining({ caption: "New caption" }),
-          ]),
-        }),
-      ),
-    );
-    expect(
-      screen.queryByRole("textbox", { name: "Edit caption" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("skips server call when caption is unchanged on blur", async () => {
-    await act(async () => {
-      render(
-        <WorkflowState
-          {...defaultProps}
-          pieceState={makeState({
-            images: [
-              {
-                url: "http://example.com/img.jpg",
-                caption: "Same",
-                created: new Date(),
-              },
-            ],
-          })}
-        />,
-      );
-    });
-    fireEvent.click(screen.getByRole("button", { name: "edit caption" }));
-    const input = screen.getByRole("textbox", { name: "Edit caption" });
-    fireEvent.blur(input);
-    expect(api.updateCurrentState).not.toHaveBeenCalled();
-  });
-
-  it("pressing Escape exits edit mode without saving", async () => {
+  it("does not render uploaded image entries in the workflow section", async () => {
     await act(async () => {
       render(
         <WorkflowState
@@ -892,14 +706,9 @@ describe("WorkflowState", () => {
         />,
       );
     });
-    fireEvent.click(screen.getByRole("button", { name: "edit caption" }));
-    const input = screen.getByRole("textbox", { name: "Edit caption" });
-    fireEvent.change(input, { target: { value: "Changed" } });
-    fireEvent.keyDown(input, { key: "Escape" });
-    expect(api.updateCurrentState).not.toHaveBeenCalled();
-    expect(
-      screen.queryByRole("textbox", { name: "Edit caption" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Photo 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("Keep")).not.toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
   it("renders enum and number additional fields for bisque_fired state", async () => {

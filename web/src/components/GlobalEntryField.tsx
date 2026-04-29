@@ -11,6 +11,7 @@ export interface GlobalEntryFieldProps {
   helperText?: string;
   required?: boolean;
   canCreate?: boolean;
+  hideLabel?: boolean;
   sx?: SxProps<Theme>;
 }
 
@@ -24,20 +25,13 @@ export default function GlobalEntryField({
   helperText,
   required = false,
   canCreate = false,
+  hideLabel = false,
   sx,
 }: GlobalEntryFieldProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <Box sx={sx}>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ display: "block", mb: 0.5 }}
-      >
-        {label}
-        {required && " *"}
-      </Typography>
       <Box
         sx={{
           display: "flex",
@@ -46,6 +40,16 @@ export default function GlobalEntryField({
           flexWrap: "wrap",
         }}
       >
+        {!hideLabel && (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ flexShrink: 0 }}
+          >
+            {label}
+            {required && " *"}
+          </Typography>
+        )}
         {value && <Chip label={value} onDelete={() => onSelect(null)} />}
         <Button
           variant="outlined"
@@ -58,7 +62,11 @@ export default function GlobalEntryField({
         </Button>
       </Box>
       {helperText && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ display: "block", mt: 0.25, pl: 1, fontStyle: "italic", fontSize: "0.7rem" }}
+        >
           {helperText}
         </Typography>
       )}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ArrowOutwardIcon from "@mui/icons-material/ArrowOutward";
 import {
   Box,
   Button,
@@ -17,45 +18,94 @@ import {
   SUCCESSORS,
 } from "../util/types";
 
+// Fixed height for each successor chip row — must match the sx on the wrapper Box below.
+const SUCCESSOR_ROW_HEIGHT = 36;
+// Gap between rows — must match gap:1 (8px) on the successor flex column.
+const SUCCESSOR_ROW_GAP = 8;
+
 type StateBranchConnectorProps = {
   count: number;
 };
 
 function StateBranchConnector({ count }: StateBranchConnectorProps) {
   const connectorCount = Math.max(count, 1);
-  const height = connectorCount === 1 ? 24 : connectorCount * 28 - 4;
-  const centerY = height / 2;
-  const targetYs =
+  const chipHeight = SUCCESSOR_ROW_HEIGHT;
+  const chipGap = SUCCESSOR_ROW_GAP;
+  const height =
     connectorCount === 1
-      ? [centerY]
-      : Array.from({ length: connectorCount }, (_, index) => {
-          const start = 10;
-          const end = height - 10;
-          return start + ((end - start) * index) / (connectorCount - 1);
-        });
+      ? chipHeight
+      : connectorCount * chipHeight + (connectorCount - 1) * chipGap;
+
+  // Y center of each successor chip
+  const chipCenters = Array.from(
+    { length: connectorCount },
+    (_, i) => chipHeight / 2 + i * (chipHeight + chipGap),
+  );
+  const firstY = chipCenters[0];
+  const lastY = chipCenters[connectorCount - 1];
+  // Trunk x-position (left side, close to current chip)
+  const trunkX = 8;
 
   return (
     <Box
       component="svg"
       aria-hidden="true"
+      preserveAspectRatio="none"
       sx={(theme) => ({
-        width: 24,
+        flex: 1,
+        minWidth: 24,
         height,
-        flexShrink: 0,
+        alignSelf: "flex-start",
+        display: "block",
         overflow: "visible",
         "--line": theme.palette.divider,
       })}
-      viewBox={`0 0 24 ${height}`}
+      viewBox={`0 0 40 ${height}`}
     >
-      {targetYs.map((targetY) => (
+      {connectorCount === 1 ? (
+        // Single successor: straight horizontal line
         <path
-          key={targetY}
-          d={`M 0 ${centerY} Q 12 ${centerY} 24 ${targetY}`}
+          d={`M 0 ${firstY} H 40`}
           stroke="var(--line)"
           fill="none"
-          strokeWidth="1"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
         />
-      ))}
+      ) : (
+        <>
+          {/* Horizontal entry to trunk */}
+          <path
+            d={`M 0 ${firstY} H ${trunkX}`}
+            stroke="var(--line)"
+            fill="none"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+          {/* Vertical trunk */}
+          <path
+            d={`M ${trunkX} ${firstY} V ${lastY}`}
+            stroke="var(--line)"
+            fill="none"
+            strokeWidth="1.2"
+            strokeLinecap="square"
+            vectorEffect="non-scaling-stroke"
+          />
+          {/* Horizontal tick to each successor */}
+          {chipCenters.map((cy) => (
+            <path
+              key={cy}
+              d={`M ${trunkX} ${cy} H 40`}
+              stroke="var(--line)"
+              fill="none"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        </>
+      )}
     </Box>
   );
 }
@@ -117,44 +167,79 @@ export default function StateTransition({
       <Box
         aria-label="State flow"
         role="group"
-        sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1.25 }}
+        sx={{ mb: 0.75 }}
       >
-        <StateChip
-          state={currentStateName}
-          label={formatState(currentStateName)}
-          description={getStateDescription(currentStateName)}
-          variant="current"
-          isTerminal={isTerminalState(currentStateName)}
-          muted={hoveredSuccessor !== null}
-        />
-        {!isTerminal && <StateBranchConnector count={successors.length} />}
-        {!isTerminal && (
+        <Box sx={{ minWidth: 0, flex: 1 }}>
           <Box
             sx={{
               display: "flex",
-              flexDirection: "column",
               alignItems: "flex-start",
-              gap: 0.75,
+              // Gap only between current chip and connector; SVG is flush
+              // with the successor column so ticks reach the chip border.
+              gap: 0,
             }}
           >
-            {successors.map((next) => (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                minWidth: 0,
+                height: SUCCESSOR_ROW_HEIGHT,
+                mr: 1.5,
+              }}
+            >
               <StateChip
-                key={next}
-                state={next}
-                label={formatState(next)}
-                description={getStateDescription(next)}
-                variant="future"
-                isTerminal={isTerminalState(next)}
-                onClick={() => openDialog(next)}
-                disabled={disabled || transitioning}
-                onHoverStart={() => setHoveredSuccessor(next)}
-                onHoverEnd={() =>
-                  setHoveredSuccessor((value) => (value === next ? null : value))
-                }
+                state={currentStateName}
+                label={formatState(currentStateName)}
+                description={getStateDescription(currentStateName)}
+                variant="current"
+                isTerminal={isTerminalState(currentStateName)}
+                muted={hoveredSuccessor !== null}
               />
-            ))}
+            </Box>
+            {!isTerminal && <StateBranchConnector count={successors.length} />}
+            {!isTerminal && (
+              // pl provides the visual gap between the connector's right edge
+              // and each chip's left border. Row boxes are full-width so this
+              // gap is consistent regardless of individual chip width.
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: `${SUCCESSOR_ROW_GAP}px`,
+                  pl: "4px",
+                }}
+              >
+                {successors.map((next) => (
+                  <Box
+                    key={next}
+                    sx={{
+                      height: SUCCESSOR_ROW_HEIGHT,
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <StateChip
+                      state={next}
+                      label={formatState(next)}
+                      description={getStateDescription(next)}
+                      variant="future"
+                      isTerminal={isTerminalState(next)}
+                      onClick={() => openDialog(next)}
+                      disabled={disabled || transitioning}
+                      onHoverStart={() => setHoveredSuccessor(next)}
+                      onHoverEnd={() =>
+                        setHoveredSuccessor((value) =>
+                          value === next ? null : value,
+                        )
+                      }
+                    />
+                  </Box>
+                ))}
+              </Box>
+            )}
           </Box>
-        )}
+        </Box>
       </Box>
 
       {transitionError && (
@@ -196,6 +281,11 @@ export default function StateTransition({
             onClick={confirmTransition}
             variant="contained"
             color={pendingTransition === "recycled" ? "error" : "primary"}
+            endIcon={
+              pendingTransition === "recycled" ? undefined : (
+                <ArrowOutwardIcon fontSize="small" />
+              )
+            }
             disabled={transitioning}
           >
             Confirm
