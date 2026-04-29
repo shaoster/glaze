@@ -351,10 +351,12 @@ gz_deploy() {
     # Usage: gz_deploy [--no-push]
     # Reads GLAZE_PROD_HOST from .env.local (e.g. GLAZE_PROD_HOST=user@host).
     local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
+    local sha
+    sha=$(git -C "$GLAZE_ROOT" rev-parse HEAD) || return 1
     if [[ "${1:-}" != "--no-push" ]]; then
         gz_push --latest || return $?
     fi
-    "$GLAZE_ROOT/deploy.sh" "$host"
+    "$GLAZE_ROOT/deploy.sh" "$host" "$sha"
 }
 
 # ---------------------------------------------------------------------------

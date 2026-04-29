@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Deploy the latest image to a droplet running Docker Compose.
 #
-# Usage: ./deploy.sh user@host
+# Usage: ./deploy.sh user@host [commit-sha]
+#
+# commit-sha: the SHA to sync docker-compose.yml from. When omitted, the
+#             script reads org.opencontainers.image.revision from the image
+#             label (CI path). gz_deploy passes it explicitly (local path).
 #
 # Prerequisites on the droplet:
 #   - Docker + Docker Compose plugin installed
@@ -11,9 +15,10 @@
 #       docker login ghcr.io -u shaoster -p <PAT with read:packages>
 set -euo pipefail
 
-HOST=${1:?Usage: ./deploy.sh user@host}
+HOST=${1:?Usage: ./deploy.sh user@host [commit-sha]}
+KNOWN_SHA=${2:-}
 
-ssh "$HOST" bash <<'REMOTE'
+ssh "$HOST" bash <<REMOTE
 set -euo pipefail
 cd ~/glaze
 
@@ -21,25 +26,25 @@ echo "--- pulling latest image ---"
 docker compose pull
 
 echo "--- syncing docker-compose.yml to image commit ---"
-SHA=$(docker inspect ghcr.io/shaoster/glaze:latest \
-    --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')
-if [[ -z "$SHA" ]]; then
-    echo "WARNING: image has no revision label, docker-compose.yml not updated"
+SHA="${KNOWN_SHA}"
+if [[ -z "\$SHA" ]]; then
+    SHA=\$(docker inspect ghcr.io/shaoster/glaze:latest \
+        --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)
+fi
+if [[ -z "\$SHA" ]]; then
+    echo "WARNING: commit SHA unknown, docker-compose.yml not updated"
 else
-    echo "Image built from commit $SHA"
+    echo "Image built from commit \$SHA"
     curl -fsSL \
-        "https://raw.githubusercontent.com/shaoster/glaze/${SHA}/docker-compose.yml" \
+        "https://raw.githubusercontent.com/shaoster/glaze/\${SHA}/docker-compose.yml" \
         -o docker-compose.yml
 fi
 
 echo "--- restarting services ---"
-# Migrations run automatically in docker-entrypoint.sh on container start.
 docker compose up -d
 
 echo "--- pruning stopped containers and unused images ---"
-# Remove stopped containers (old versions) so their images become reclaimable.
 docker container prune -f
-# Remove dangling images (old pulled layers no longer tagged or referenced).
 docker image prune -f
 
 echo "--- deploy complete ---"

@@ -39,7 +39,7 @@ jobs:
           ssh-keyscan -H $(echo "${{ vars.DEPLOY_HOST }}" | cut -d@ -f2) >> ~/.ssh/known_hosts
 
       - name: Deploy
-        run: ./deploy.sh "${{ vars.DEPLOY_HOST }}"
+        run: ./deploy.sh "${{ vars.DEPLOY_HOST }}" "${{ env.DEPLOY_SHA }}"
 
       - name: Create GitHub Release
         env:
