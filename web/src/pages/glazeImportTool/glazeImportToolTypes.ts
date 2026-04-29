@@ -1,4 +1,4 @@
-import type { CropSquare, LabelRect, OcrRegion } from "./ocrDetection";
+import type { CropSquare, LabelRect, OcrRegion } from "../ocrDetection";
 
 export type ParsedFields = {
   name: string;

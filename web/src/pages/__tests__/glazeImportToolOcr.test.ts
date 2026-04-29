@@ -4,7 +4,7 @@ import {
   detectFoodSafeFromOcrText,
   detectRunsFromOcrText,
   parseOcrSuggestion,
-} from "../glazeImportToolOcr";
+} from "../glazeImportTool/glazeImportToolOcr";
 
 describe("glazeImportToolOcr", () => {
   it("parses structured glaze combinations", () => {

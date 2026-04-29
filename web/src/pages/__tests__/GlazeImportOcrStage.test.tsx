@@ -3,8 +3,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import GlazeImportOcrStage from "../GlazeImportOcrStage";
-import type { UploadedRecord } from "../glazeImportToolTypes";
+import GlazeImportOcrStage from "../glazeImportTool/GlazeImportOcrStage";
+import type { UploadedRecord } from "../glazeImportTool/glazeImportToolTypes";
 
 function makeRecord(
   overrides: Partial<UploadedRecord> = {},

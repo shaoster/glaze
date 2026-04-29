@@ -2,26 +2,15 @@ import {
   useEffect,
   useRef,
   useState,
-  type ChangeEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import {
-  Alert,
-  Box,
   Button,
-  Chip,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
-  FormControlLabel,
-  Checkbox,
-  LinearProgress,
-  List,
-  ListItemButton,
-  ListItemText,
   Stack,
   Tab,
   Tabs,
@@ -33,7 +22,6 @@ import TextSnippetIcon from "@mui/icons-material/TextSnippet";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import MergeIcon from "@mui/icons-material/MergeType";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { createWorker } from "tesseract.js";
 import {
   fetchCloudinaryWidgetConfig,
@@ -42,16 +30,19 @@ import {
   type CloudinaryWidgetConfig,
   type ManualSquareCropImportResponse,
 } from "../util/api";
-import GlazeImportOcrStage from "./GlazeImportOcrStage";
-import GlazeImportRecordList from "./GlazeImportRecordList";
-import GlazeImportReviewStage from "./GlazeImportReviewStage";
+import GlazeImportCropStage from "./glazeImportTool/GlazeImportCropStage";
+import GlazeImportImportStage from "./glazeImportTool/GlazeImportImportStage";
+import GlazeImportOcrStage from "./glazeImportTool/GlazeImportOcrStage";
+import GlazeImportReconcileStage from "./glazeImportTool/GlazeImportReconcileStage";
+import GlazeImportReviewStage from "./glazeImportTool/GlazeImportReviewStage";
+import GlazeImportUploadStage from "./glazeImportTool/GlazeImportUploadStage";
 import {
   DEFAULT_OCR_TUNING,
   DEFAULT_PARSED_FIELDS,
   detectFoodSafeFromOcrText,
   detectRunsFromOcrText,
   parseOcrSuggestion,
-} from "./glazeImportToolOcr";
+} from "./glazeImportTool/glazeImportToolOcr";
 import {
   clampOcrRegion,
   defaultOcrRegion,
@@ -66,7 +57,10 @@ import {
   type OcrRegion,
   type LabelRect,
 } from "./ocrDetection";
-import type { UploadedRecord, UploadProgressEntry } from "./glazeImportToolTypes";
+import type {
+  UploadedRecord,
+  UploadProgressEntry,
+} from "./glazeImportTool/glazeImportToolTypes";
 
 type CropDragState = {
   handle: "move" | "nw" | "ne" | "sw" | "se" | "rotate";
@@ -1306,405 +1300,47 @@ export default function GlazeImportToolPage() {
       </Tabs>
 
       {activeTab === TAB_UPLOAD ? (
-        <Stack spacing={2}>
-          <Alert severity="info">
-            Start by bulk uploading the source images. Each uploaded image
-            becomes its own record and starts uncropped.
-          </Alert>
-          <Alert severity="warning">
-            Browser-side upload works best for JPG and PNG. For `.heic` and
-            `.heif`, use `Upload Via Cloudinary` so Cloudinary can convert the
-            source before the crop tool loads it.
-          </Alert>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,.heic,.heif"
-            multiple
-            hidden
-            onChange={(event) => {
-              void handleFileSelection(event.target.files);
-              event.target.value = "";
-            }}
-          />
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <Button
-              variant="contained"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-            >
-              {uploading ? "Processing Images…" : "Bulk Upload Images"}
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => void startCloudinaryUpload()}
-              disabled={widgetUploading}
-            >
-              {widgetUploading
-                ? "Opening Cloudinary…"
-                : "Upload Via Cloudinary"}
-            </Button>
-            {records.length > 0 ? (
-              <Button variant="outlined" onClick={() => setActiveTab(TAB_CROP)}>
-                Continue To Crop
-              </Button>
-            ) : null}
-          </Stack>
-          {widgetError ? <Alert severity="error">{widgetError}</Alert> : null}
-          {uploadProgress.length > 0 ? (
-            <Stack spacing={1.5}>
-              <Typography variant="subtitle1">Upload Progress</Typography>
-              <List
-                sx={{
-                  border: (theme) => `1px solid ${theme.palette.divider}`,
-                  borderRadius: 3,
-                }}
-              >
-                {uploadProgress.map((entry) => (
-                  <Box key={entry.id} sx={{ px: 2, py: 1.5 }}>
-                    <Stack spacing={0.75}>
-                      <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        spacing={2}
-                      >
-                        <Typography variant="body2">
-                          {entry.filename}
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color={
-                            entry.status === "error"
-                              ? "error"
-                              : "text.secondary"
-                          }
-                        >
-                          {entry.status === "queued" ? "Queued" : null}
-                          {entry.status === "processing"
-                            ? "Reading metadata…"
-                            : null}
-                          {entry.status === "uploading"
-                            ? "Converting via Cloudinary…"
-                            : null}
-                          {entry.status === "ready" ? "Ready" : null}
-                          {entry.status === "error" ? "Error" : null}
-                        </Typography>
-                      </Stack>
-                      <LinearProgress
-                        variant="determinate"
-                        value={entry.progress}
-                        color={
-                          entry.status === "error"
-                            ? "error"
-                            : entry.status === "ready"
-                              ? "success"
-                              : "primary"
-                        }
-                      />
-                      {entry.error ? (
-                        <Typography variant="body2" color="error">
-                          {entry.error}
-                        </Typography>
-                      ) : null}
-                    </Stack>
-                  </Box>
-                ))}
-              </List>
-            </Stack>
-          ) : null}
-          {records.length > 0 ? (
-            <>
-              <Typography variant="subtitle1">Uploaded Records</Typography>
-              <GlazeImportRecordList
-                records={records}
-                selectedId={selectedRecordId}
-                onSelect={setSelectedRecordId}
-                onDelete={confirmDeleteRecord}
-                showReviewed
-              />
-            </>
-          ) : (
-            <Typography color="text.secondary">
-              No records uploaded yet.
-            </Typography>
-          )}
-        </Stack>
+        <GlazeImportUploadStage
+          fileInputRef={fileInputRef}
+          uploading={uploading}
+          widgetUploading={widgetUploading}
+          widgetError={widgetError}
+          uploadProgress={uploadProgress}
+          records={records}
+          selectedRecordId={selectedRecordId}
+          onFileSelection={(files) => {
+            void handleFileSelection(files);
+          }}
+          onStartCloudinaryUpload={() => {
+            void startCloudinaryUpload();
+          }}
+          onContinueToCrop={() => setActiveTab(TAB_CROP)}
+          onSelect={setSelectedRecordId}
+          onDelete={confirmDeleteRecord}
+        />
       ) : null}
 
       {activeTab === TAB_CROP ? (
-        <Stack spacing={2}>
-          <Alert severity="info">
-            Each image starts with a default crop covering the full image. Drag
-            the white box to adjust the crop region. The crop square can extend
-            beyond the image bounds; any overflow becomes transparent in the
-            final crop.
-          </Alert>
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 320px" },
-            }}
-          >
-            {selectedRecordId == null ? (
-              <GlazeImportRecordList
-                records={records}
-                selectedId={selectedRecordId}
-                onSelect={setSelectedRecordId}
-                onDelete={confirmDeleteRecord}
-              />
-            ) : (
-              <Stack spacing={2}>
-                {selectedRecord ? (
-                  <>
-                    <Stack direction="row" spacing={1} flexWrap="wrap">
-                      <Button
-                        onClick={(evt) => {
-                          setSelectedRecordId(null);
-                          evt.stopPropagation();
-                        }}
-                      >
-                        ← Back to Records
-                      </Button>
-                      <Chip label={selectedRecord.filename} />
-                      <Chip
-                        label={selectedRecord.cropped ? "cropped" : "uncropped"}
-                        color={selectedRecord.cropped ? "success" : "default"}
-                      />
-                    </Stack>
-                    <Stack direction="row" spacing={1} flexWrap="wrap">
-                      <Button
-                        variant="outlined"
-                        onClick={resetCropForSelected}
-                        disabled={!selectedRecord.crop}
-                      >
-                        Reset Crop
-                      </Button>
-                      {allCropped ? (
-                        <Button
-                          variant="outlined"
-                          onClick={() => setActiveTab(TAB_OCR)}
-                        >
-                          Continue To OCR
-                        </Button>
-                      ) : null}
-                    </Stack>
-                    <Box
-                      sx={{
-                        border: (theme) => `1px solid ${theme.palette.divider}`,
-                        borderRadius: 3,
-                        overflow: "auto",
-                        p: 2,
-                        bgcolor: "#181511",
-                      }}
-                    >
-                      <Box
-                        ref={cropStageRef}
-                        sx={{
-                          position: "relative",
-                          width: selectedStageWidth * selectedStageScale,
-                          height: selectedStageHeight * selectedStageScale,
-                          mx: "auto",
-                          touchAction: "none",
-                          backgroundImage:
-                            "linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.04) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.04) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.04) 75%)",
-                          backgroundSize: "24px 24px",
-                          backgroundPosition:
-                            "0 0, 0 12px, 12px -12px, -12px 0px",
-                        }}
-                      >
-                        <Box
-                          component="img"
-                          src={selectedRecord.sourceUrl}
-                          alt={selectedRecord.filename}
-                          sx={{
-                            position: "absolute",
-                            left: selectedPadding * selectedStageScale,
-                            top: selectedPadding * selectedStageScale,
-                            width:
-                              selectedRecord.dimensions.width *
-                              selectedStageScale,
-                            height:
-                              selectedRecord.dimensions.height *
-                              selectedStageScale,
-                            userSelect: "none",
-                            WebkitUserDrag: "none",
-                          }}
-                        />
-                        {selectedCrop ? (
-                          <Box
-                            onPointerDown={(
-                              event: ReactPointerEvent<HTMLDivElement>,
-                            ) => startCropDrag("move", event)}
-                            sx={{
-                              position: "absolute",
-                              left:
-                                (selectedCrop.x + selectedPadding) *
-                                selectedStageScale,
-                              top:
-                                (selectedCrop.y + selectedPadding) *
-                                selectedStageScale,
-                              width: selectedCrop.size * selectedStageScale,
-                              height: selectedCrop.size * selectedStageScale,
-                              transform: `rotate(${selectedCrop.rotation}deg)`,
-                              transformOrigin: "center",
-                              border: "2px solid white",
-                              boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.42)",
-                              cursor: "move",
-                              bgcolor: "rgba(255,255,255,0.08)",
-                              "&::before, &::after": {
-                                content: '""',
-                                position: "absolute",
-                                bgcolor: "rgba(255,255,255,0.72)",
-                              },
-                              "&::before": {
-                                left: "50%",
-                                top: 0,
-                                width: "1px",
-                                height: "100%",
-                                transform: "translateX(-50%)",
-                              },
-                              "&::after": {
-                                top: "50%",
-                                left: 0,
-                                width: "100%",
-                                height: "1px",
-                                transform: "translateY(-50%)",
-                              },
-                            }}
-                          >
-                            {/* Rotation handle — above the top-center edge, rotates with the box */}
-                            <Box
-                              onPointerDown={(
-                                event: ReactPointerEvent<HTMLDivElement>,
-                              ) => {
-                                event.stopPropagation();
-                                startCropDrag("rotate", event);
-                              }}
-                              sx={{
-                                position: "absolute",
-                                left: "50%",
-                                top: -30,
-                                transform: "translateX(-50%)",
-                                width: 16,
-                                height: 16,
-                                borderRadius: "50%",
-                                bgcolor: "#2196f3",
-                                border: "2px solid white",
-                                cursor: "grab",
-                                "&:active": { cursor: "grabbing" },
-                              }}
-                            />
-                            {(["nw", "ne", "sw", "se"] as const).map(
-                              (handle) => (
-                                <Box
-                                  key={handle}
-                                  onPointerDown={(
-                                    event: ReactPointerEvent<HTMLDivElement>,
-                                  ) => {
-                                    event.stopPropagation();
-                                    startCropDrag(handle, event);
-                                  }}
-                                  sx={{
-                                    position: "absolute",
-                                    width: 16,
-                                    height: 16,
-                                    borderRadius: "50%",
-                                    bgcolor: "white",
-                                    border: "2px solid #8f4e21",
-                                    ...(handle === "nw"
-                                      ? {
-                                          left: -8,
-                                          top: -8,
-                                          cursor: "nwse-resize",
-                                        }
-                                      : {}),
-                                    ...(handle === "ne"
-                                      ? {
-                                          right: -8,
-                                          top: -8,
-                                          cursor: "nesw-resize",
-                                        }
-                                      : {}),
-                                    ...(handle === "sw"
-                                      ? {
-                                          left: -8,
-                                          bottom: -8,
-                                          cursor: "nesw-resize",
-                                        }
-                                      : {}),
-                                    ...(handle === "se"
-                                      ? {
-                                          right: -8,
-                                          bottom: -8,
-                                          cursor: "nwse-resize",
-                                        }
-                                      : {}),
-                                  }}
-                                />
-                              ),
-                            )}
-                          </Box>
-                        ) : null}
-                      </Box>
-                    </Box>
-                  </>
-                ) : (
-                  <Typography color="text.secondary">
-                    Select a record to crop it.
-                  </Typography>
-                )}
-              </Stack>
-            )}
-            <Stack spacing={2}>
-              <Typography variant="subtitle1">Crop Preview</Typography>
-              <Box
-                sx={{
-                  border: (theme) => `1px solid ${theme.palette.divider}`,
-                  borderRadius: 3,
-                  aspectRatio: "1 / 1",
-                  overflow: "hidden",
-                  display: "grid",
-                  placeItems: "center",
-                  bgcolor: "rgba(255,255,255,0.06)",
-                }}
-              >
-                {cropPreviewLoading ? (
-                  <CircularProgress size={32} />
-                ) : cropPreviewUrl ? (
-                  <Box
-                    component="img"
-                    src={cropPreviewUrl}
-                    alt="Crop preview"
-                    sx={{ width: "100%", height: "100%", objectFit: "contain" }}
-                  />
-                ) : (
-                  <Typography
-                    color="text.secondary"
-                    sx={{ p: 2, textAlign: "center" }}
-                  >
-                    Create a crop to preview the transparency-safe square
-                    result.
-                  </Typography>
-                )}
-              </Box>
-              {selectedRecord ? (
-                <>
-                  <Typography variant="body2" color="text.secondary">
-                    Source: {selectedRecord.dimensions.width} ×{" "}
-                    {selectedRecord.dimensions.height}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Crop:{" "}
-                    {selectedCrop
-                      ? `${selectedCrop.x}, ${selectedCrop.y}, ${selectedCrop.size}`
-                      : "not set"}
-                  </Typography>
-                </>
-              ) : null}
-            </Stack>
-          </Box>
-        </Stack>
+        <GlazeImportCropStage
+          records={records}
+          selectedRecordId={selectedRecordId}
+          selectedRecord={selectedRecord}
+          selectedCrop={selectedCrop}
+          allCropped={allCropped}
+          cropPreviewLoading={cropPreviewLoading}
+          cropPreviewUrl={cropPreviewUrl}
+          cropStageRef={cropStageRef}
+          selectedPadding={selectedPadding}
+          selectedStageWidth={selectedStageWidth}
+          selectedStageHeight={selectedStageHeight}
+          selectedStageScale={selectedStageScale}
+          onSelect={setSelectedRecordId}
+          onDelete={confirmDeleteRecord}
+          onBackToRecords={() => setSelectedRecordId(null)}
+          onResetCrop={resetCropForSelected}
+          onContinueToOcr={() => setActiveTab(TAB_OCR)}
+          onStartCropDrag={startCropDrag}
+        />
       ) : null}
 
       {activeTab === TAB_OCR ? (
@@ -1752,266 +1388,34 @@ export default function GlazeImportToolPage() {
       ) : null}
 
       {activeTab === TAB_IMPORT ? (
-        <Stack spacing={2}>
-          <Alert severity="info">
-            Import creates new public glaze types and glaze combinations and
-            skips duplicates that already exist in the public library.
-          </Alert>
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={2}
-            alignItems={{ sm: "center" }}
-          >
-            <Button
-              variant="contained"
-              onClick={() => void runImport()}
-              disabled={!allReviewed || importRunning}
-            >
-              {importRunning ? "Importing…" : "Run Bulk Import"}
-            </Button>
-            {!allReviewed ? (
-              <Typography color="text.secondary">
-                Review every record before importing.
-              </Typography>
-            ) : null}
-            {importRunning ? <CircularProgress size={22} /> : null}
-          </Stack>
-          {importError ? <Alert severity="error">{importError}</Alert> : null}
-          {importBuildProgress.length > 0 ? (
-            <Stack spacing={1.5}>
-              <Typography variant="subtitle1">Build Progress</Typography>
-              <List
-                sx={{
-                  border: (theme) => `1px solid ${theme.palette.divider}`,
-                  borderRadius: 3,
-                }}
-              >
-                {importBuildProgress.map((entry) => (
-                  <Box key={entry.id} sx={{ px: 2, py: 1.5 }}>
-                    <Stack spacing={0.75}>
-                      <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        spacing={2}
-                      >
-                        <Typography variant="body2">
-                          {entry.filename}
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color={
-                            entry.status === "error"
-                              ? "error"
-                              : "text.secondary"
-                          }
-                        >
-                          {entry.status === "queued" ? "Queued" : null}
-                          {entry.status === "processing"
-                            ? "Building crop…"
-                            : null}
-                          {entry.status === "uploading" ? "Uploading…" : null}
-                          {entry.status === "ready" ? "Done" : null}
-                          {entry.status === "error" ? "Error" : null}
-                        </Typography>
-                      </Stack>
-                      <LinearProgress
-                        variant="determinate"
-                        value={entry.progress}
-                        color={
-                          entry.status === "error"
-                            ? "error"
-                            : entry.status === "ready"
-                              ? "success"
-                              : "primary"
-                        }
-                      />
-                      {entry.error ? (
-                        <Typography variant="body2" color="error">
-                          {entry.error}
-                        </Typography>
-                      ) : null}
-                    </Stack>
-                  </Box>
-                ))}
-              </List>
-            </Stack>
-          ) : null}
-          {importResult ? (
-            <Stack spacing={2}>
-              <Stack
-                direction="row"
-                spacing={1}
-                flexWrap="wrap"
-                alignItems="center"
-              >
-                <Chip
-                  color="success"
-                  label={`${importResult.summary.created_glaze_types} glaze types created`}
-                />
-                <Chip
-                  color="success"
-                  label={`${importResult.summary.created_glaze_combinations} combinations created`}
-                />
-                <Chip
-                  label={`${importResult.summary.skipped_duplicates} duplicates skipped`}
-                  color={hasDuplicates ? "warning" : "default"}
-                />
-                <Chip
-                  color={importResult.summary.errors ? "error" : "default"}
-                  label={`${importResult.summary.errors} errors`}
-                />
-                {hasDuplicates ? (
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => setActiveTab(TAB_RECONCILE)}
-                  >
-                    Reconcile Duplicates →
-                  </Button>
-                ) : null}
-              </Stack>
-              <List
-                sx={{
-                  border: (theme) => `1px solid ${theme.palette.divider}`,
-                  borderRadius: 3,
-                }}
-              >
-                {importResult.results.map((result) => {
-                  const adminPath = result.object_id
-                    ? `/admin/api/${result.kind.replace("_", "")}/${result.object_id}/change/`
-                    : null;
-                  return (
-                    <ListItemButton
-                      key={result.client_id}
-                      {...(adminPath
-                        ? {
-                            component: "a",
-                            href: adminPath,
-                            target: "_blank",
-                            rel: "noopener noreferrer",
-                          }
-                        : { disabled: true })}
-                    >
-                      <ListItemText
-                        primary={`${result.name || result.filename} — ${result.status}`}
-                        secondary={result.reason || result.kind}
-                      />
-                    </ListItemButton>
-                  );
-                })}
-              </List>
-            </Stack>
-          ) : null}
-        </Stack>
+        <GlazeImportImportStage
+          allReviewed={allReviewed}
+          importRunning={importRunning}
+          importError={importError}
+          importBuildProgress={importBuildProgress}
+          importResult={importResult}
+          hasDuplicates={hasDuplicates}
+          onRunImport={() => {
+            void runImport();
+          }}
+          onGoToReconcile={() => setActiveTab(TAB_RECONCILE)}
+        />
       ) : null}
 
       {activeTab === TAB_RECONCILE ? (
-        <Stack spacing={2}>
-          <Alert severity="info">
-            These records were skipped because an entry with the same name
-            already exists in the public library. Review the scraped data below,
-            open the existing record in the admin, and update it manually if
-            needed. Check each record as resolved when done.
-          </Alert>
-          <Typography variant="body2" color="text.secondary">
-            {reconciledIds.size} / {duplicateResults.length} resolved
-          </Typography>
-          <Stack spacing={2}>
-            {duplicateResults.map((result) => {
-              const sourceRecord = records.find(
-                (r) => r.id === result.client_id,
-              );
-              const adminPath = result.object_id
-                ? `/admin/api/${result.kind.replace("_", "")}/${result.object_id}/change/`
-                : null;
-              const isResolved = reconciledIds.has(result.client_id);
-              return (
-                <Box
-                  key={result.client_id}
-                  sx={{
-                    border: (theme) =>
-                      `1px solid ${isResolved ? theme.palette.success.main : theme.palette.divider}`,
-                    borderRadius: 2,
-                    p: 2,
-                    opacity: isResolved ? 0.6 : 1,
-                    transition: "opacity 0.15s, border-color 0.15s",
-                  }}
-                >
-                  <Stack spacing={1.5}>
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                      flexWrap="wrap"
-                    >
-                      <Typography variant="subtitle1" sx={{ flex: 1 }}>
-                        {result.name || result.filename}
-                      </Typography>
-                      <Chip label={result.kind} size="small" />
-                      {adminPath ? (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          href={adminPath}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          component="a"
-                          endIcon={<OpenInNewIcon fontSize="small" />}
-                        >
-                          Open in Admin
-                        </Button>
-                      ) : null}
-                    </Stack>
-                    {sourceRecord ? (
-                      <Box
-                        sx={{
-                          display: "grid",
-                          gridTemplateColumns:
-                            "repeat(auto-fill, minmax(160px, 1fr))",
-                          gap: 1,
-                        }}
-                      >
-                        {Object.entries(sourceRecord.parsedFields).map(
-                          ([key, value]) => (
-                            <Box key={key}>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                display="block"
-                              >
-                                {key.replace(/_/g, " ")}
-                              </Typography>
-                              <Typography variant="body2">
-                                {value === null ? "—" : String(value)}
-                              </Typography>
-                            </Box>
-                          ),
-                        )}
-                      </Box>
-                    ) : null}
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={isResolved}
-                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                            setReconciledIds((current) => {
-                              const next = new Set(current);
-                              if (event.target.checked)
-                                next.add(result.client_id);
-                              else next.delete(result.client_id);
-                              return next;
-                            })
-                          }
-                        />
-                      }
-                      label="Resolved"
-                    />
-                  </Stack>
-                </Box>
-              );
-            })}
-          </Stack>
-        </Stack>
+        <GlazeImportReconcileStage
+          duplicateResults={duplicateResults}
+          records={records}
+          reconciledIds={reconciledIds}
+          onToggleResolved={(clientId, checked) =>
+            setReconciledIds((current) => {
+              const next = new Set(current);
+              if (checked) next.add(clientId);
+              else next.delete(clientId);
+              return next;
+            })
+          }
+        />
       ) : null}
 
       <Dialog

@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import GlazeImportRecordList from "./GlazeImportRecordList";
 import type { UploadedRecord } from "./glazeImportToolTypes";
-import type { OcrRegion, CropSquare } from "./ocrDetection";
+import type { OcrRegion, CropSquare } from "../ocrDetection";
 
 interface GlazeImportOcrStageProps {
   records: UploadedRecord[];
