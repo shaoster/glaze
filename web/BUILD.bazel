@@ -424,7 +424,14 @@ js_library(
 # GlazeImportToolPage depends on the extracted ocrDetection module.
 js_library(
     name = "glaze_import_src",
-    srcs = ["src/pages/GlazeImportToolPage.tsx"],
+    srcs = [
+        "src/pages/GlazeImportOcrStage.tsx",
+        "src/pages/GlazeImportRecordList.tsx",
+        "src/pages/GlazeImportReviewStage.tsx",
+        "src/pages/GlazeImportToolPage.tsx",
+        "src/pages/glazeImportToolOcr.ts",
+        "src/pages/glazeImportToolTypes.ts",
+    ],
     deps = [
         ":generated_types",
         ":node_modules",
@@ -618,7 +625,10 @@ vitest_test(
 vitest_test(
     name = "web_glaze_import_test",
     srcs = [
+        "src/pages/__tests__/GlazeImportOcrStage.test.tsx",
+        "src/pages/__tests__/GlazeImportReviewStage.test.tsx",
         "src/pages/__tests__/GlazeImportToolPage.test.tsx",
+        "src/pages/__tests__/glazeImportToolOcr.test.ts",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [

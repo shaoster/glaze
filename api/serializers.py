@@ -163,6 +163,12 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
             "glaze_types",
         ]
 
+    @classmethod
+    def prepare_global_entry_queryset(cls, qs, display_field):
+        return qs.select_related('firing_temperature').prefetch_related(
+            'layers__glaze_type'
+        ).order_by(display_field)
+
     @extend_schema_field(serializers.CharField())
     def get_id(self, obj: GlazeCombination) -> str:
         return str(obj.pk)
@@ -311,6 +317,12 @@ class PieceSummarySerializer(serializers.ModelSerializer):
             "current_state",
             "current_location",
         ]
+
+    @classmethod
+    def prepare_global_entry_queryset(cls, qs, display_field):
+        return qs.select_related('current_location').prefetch_related(
+            'states', 'tag_links__tag'
+        ).order_by(display_field)
 
     @extend_schema_field(StateSummarySerializer)
     def get_current_state(self, obj: Piece) -> dict:

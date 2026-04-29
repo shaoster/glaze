@@ -263,10 +263,17 @@ describe("GlazeImportToolPage", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Continue To OCR" }),
     );
+    await userEvent.click((await screen.findAllByText("combo.png"))[0]);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Run OCR For All Records" }),
+      (await screen.findAllByRole("button", { name: "Run OCR" }))[0],
     );
 
+    await waitFor(() =>
+      expect(screen.getByText("Parsed as: Iron Red!Clear")).toBeInTheDocument(),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Continue To Review" }),
+    );
     await waitFor(() =>
       expect(screen.getByRole("tab", { name: "4. Review" })).toHaveAttribute(
         "aria-selected",
@@ -349,8 +356,15 @@ describe("GlazeImportToolPage", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Continue To OCR" }),
     );
+    await userEvent.click((await screen.findAllByText("ash-blue.png"))[0]);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Run OCR For All Records" }),
+      (await screen.findAllByRole("button", { name: "Run OCR" }))[0],
+    );
+    await waitFor(() =>
+      expect(screen.getByText("Parsed as: Ash Blue")).toBeInTheDocument(),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Continue To Review" }),
     );
     await waitFor(() =>
       expect(screen.getByRole("tab", { name: "4. Review" })).toHaveAttribute(
@@ -358,11 +372,9 @@ describe("GlazeImportToolPage", () => {
         "true",
       ),
     );
-    await userEvent.click(await screen.findByText("Ash Blue"));
+    await userEvent.click((await screen.findAllByText("Ash Blue"))[0]);
     await userEvent.click(
-      await screen.findByLabelText(
-        "This record has been reviewed and is ready for import.",
-      ),
+      await screen.findByRole("button", { name: "Mark reviewed for import" }),
     );
     await userEvent.click(
       await screen.findByRole("button", { name: "Continue To Import" }),

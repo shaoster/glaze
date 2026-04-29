@@ -235,15 +235,13 @@ def _global_entries_impl(request: Request, global_name: str) -> Response:
             favorite_ids = (
                 fav_model.get_favorite_ids_for(request.user) if fav_model else set()
             )
-
-            # TODO(187): Use a registry to delegate instead of hardcoding.
-            if model_cls == GlazeCombination:
-                objects = list(
-                    base_qs.prefetch_related("layers__glaze_type").order_by("name")
-                )
+            prepare_queryset = getattr(
+                entry_serializer_cls, 'prepare_global_entry_queryset', None
+            )
+            if callable(prepare_queryset):
+                objects = list(prepare_queryset(base_qs, display_field))
             else:
-                objects = base_qs.order_by(display_field)
-
+                objects = list(base_qs.order_by(display_field))
             return Response(
                 entry_serializer_cls(
                     objects,
