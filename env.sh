@@ -246,7 +246,7 @@ gz_setup() {
     (cd "$GLAZE_ROOT/web" && rtk npm install --silent)
 
     echo "=== Setup complete ==="
-    echo "    Run 'gz_gentypes' to regenerate TypeScript types (requires the backend)."
+    echo "    Run 'gz_gentypes' to regenerate TypeScript types via Bazel (no backend)."
     echo "    Run 'gz_start' to start both servers."
 }
 
@@ -322,9 +322,17 @@ gz_format() {
 }
 
 gz_build() {
-    _gz_ensure_node
-    gz_gentypes || return $?
-    (cd "$GLAZE_ROOT/web" && npm run build "$@")
+    # Full production build via Bazel (CI-aligned).
+    # Symlinks web/dist → bazel-bin/web/dist for easy inspection.
+    rtk bazel build //... || return $?
+    local dist_src="$GLAZE_ROOT/bazel-bin/web/dist"
+    local dist_link="$GLAZE_ROOT/web/dist"
+    if [[ ! -L "$dist_link" && -e "$dist_link" ]]; then
+        echo "gz_build: warning: $dist_link exists and is not a symlink; skipping link"
+    else
+        ln -sfn "$dist_src" "$dist_link"
+        echo "gz_build: web/dist → $dist_src"
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -398,34 +406,13 @@ gz_logs() {    # gz_logs [backend|web]  — defaults to both
 # ---------------------------------------------------------------------------
 
 gz_gentypes() {
-    local generated_path="$GLAZE_ROOT/web/src/util/generated-types.ts"
-    local schema_path
-    schema_path="$(mktemp "${TMPDIR:-/tmp}/glaze-openapi.XXXXXX.json")" || return 1
-
-    _gz_ensure_node
-    echo "Exporting OpenAPI schema..."
-    (
-        source "$(_gz_venv_root)/.venv/bin/activate"
-        cd "$GLAZE_ROOT"
-        python manage.py spectacular --format openapi-json --file "$schema_path"
-    ) || {
-        rm -f "$schema_path"
-        return 1
-    }
-
-    echo "Regenerating shared TypeScript types..."
-    (
-        cd "$GLAZE_ROOT/web" &&
-        GLAZE_SCHEMA_SOURCE="$schema_path" npm run generate-types
-    )
-    local exit_code=$?
-    rm -f "$schema_path"
-
-    if (( exit_code == 0 )) && [[ -f "$generated_path" ]]; then
-        echo "Generated: $generated_path"
-    fi
-
-    return $exit_code
+    # Regenerate generated-types.ts via Bazel, then symlink it into the source
+    # tree so the IDE and Vite dev server pick it up without a full build.
+    rtk bazel build //web:generated_types || return $?
+    local src="$GLAZE_ROOT/bazel-bin/web/src/util/generated-types.ts"
+    local dest="$GLAZE_ROOT/web/src/util/generated-types.ts"
+    ln -sfn "$src" "$dest"
+    echo "Generated: $dest → $src"
 }
 
 _GZ_SHORTCUTS=(
@@ -449,8 +436,8 @@ _GZ_SHORTCUTS=(
     "gz_test_web       — run the web tests only"
     "gz_lint           — run all linters via Bazel: ruff, eslint, tsc, mypy"
     "gz_format         — auto-fix: ruff format + ruff check --fix (Python)"
-    "gz_build          — run the CI-aligned web build (tsc -b && vite build)"
-    "gz_gentypes       — regenerate shared TypeScript types"
+    "gz_build          — full production build via Bazel (//...); symlinks web/dist"
+    "gz_gentypes       — regenerate TypeScript types via Bazel; symlinks into src/"
     "gz_start/stop     — start or stop backend + web"
     "gz_status         — show what services are running"
     "gz_logs [backend|web] — stream backend and/or web logs"

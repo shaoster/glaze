@@ -1,6 +1,7 @@
 # ── Common ────────────────────────────────────────────────────────────────────
 common --enable_bzlmod
 common --experimental_merged_skyframe_analysis_execution
+build --workspace_status_command=tools/workspace_status.sh
 common --spawn_strategy=local
 build --incompatible_enable_cc_toolchain_resolution
 

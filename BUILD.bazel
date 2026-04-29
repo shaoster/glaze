@@ -141,6 +141,11 @@ oci_image(
         "PYTHONUNBUFFERED": "1",
         "DJANGO_SETTINGS_MODULE": "backend.settings",
     },
+    # Stamp the commit SHA so deploy.sh can read it via `docker inspect`.
+    # {STABLE_GIT_COMMIT} is substituted from tools/workspace_status.sh when
+    # built with --stamp (CI uses `bazel run --stamp //:push`).
+    labels = {"org.opencontainers.image.revision": "{STABLE_GIT_COMMIT}"},
+    stamp = -1,  # respect --stamp flag; no-op in local builds without --stamp
     workdir = "/app",
     entrypoint = ["/bin/bash", "/app/docker-entrypoint.sh"],
     exposed_ports = ["8000/tcp"],
