@@ -8,7 +8,7 @@ import TagChip from "./TagChip";
 import type { TagEntry } from "../util/types";
 
 const CREATE_NEW_ID = "__create_new__";
-const CREATE_NEW_OPTION: TagEntry = { id: CREATE_NEW_ID, name: "+ New tag" };
+const CREATE_NEW_OPTION: TagEntry = { id: CREATE_NEW_ID, name: "+ New tag", is_public: false };
 
 interface TagAutocompleteProps {
   label: string;
