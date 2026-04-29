@@ -15,7 +15,7 @@ _MOCK_STATE_MAP = {
         'visible': True,
         'successors': ['recycled', 'trimmed'],
         'fields': {
-            'clay_weight_grams': {
+            'clay_weight_lbs': {
                 'type': 'number',
                 'description': 'Weight of clay on the scale before throwing, in grams.',
             },
@@ -31,11 +31,11 @@ _MOCK_STATE_MAP = {
         'visible': True,
         'successors': ['recycled', 'submitted_to_bisque_fire'],
         'fields': {
-            'trimmed_weight_grams': {
+            'trimmed_weight_lbs': {
                 'type': 'number',
             },
-            'pre_trim_weight_grams': {
-                '$ref': 'wheel_thrown.clay_weight_grams',
+            'pre_trim_weight_lbs': {
+                '$ref': 'wheel_thrown.clay_weight_lbs',
                 'description': 'Carried-forward pre-trim weight.',
             },
         },
@@ -169,7 +169,7 @@ def test_get_state_ref_fields_returns_state_refs_only(monkeypatch):
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
 
     assert workflow_module.get_state_ref_fields('trimmed') == {
-        'pre_trim_weight_grams': ('wheel_thrown', 'clay_weight_grams'),
+        'pre_trim_weight_lbs': ('wheel_thrown', 'clay_weight_lbs'),
     }
 
 

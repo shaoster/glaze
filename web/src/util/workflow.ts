@@ -291,7 +291,7 @@ export function getAdditionalFieldDefinitions(
 
 /**
  * Converts a snake_case DSL field name to a human-readable Title Case label
- * (e.g. `'clay_weight_grams'` → `'Clay Weight Grams'`). Used wherever
+ * (e.g. `'clay_weight_lbs'` → `'Clay Weight Lbs'`). Used wherever
  * additional field names are shown in the UI.
  */
 export function formatWorkflowFieldLabel(fieldName: string): string {

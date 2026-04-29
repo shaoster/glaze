@@ -61,7 +61,7 @@ const wirePieceState = {
   images: [wireImage],
   previous_state: null,
   next_state: null,
-  additional_fields: { clay_weight_grams: 500 },
+  additional_fields: { clay_weight_lbs: 500 },
 };
 
 const wirePieceSummary = {
@@ -128,7 +128,7 @@ describe("fetchPiece", () => {
     expect(result.current_state.created).toBeInstanceOf(Date);
     expect(result.current_state.images[0].created).toBeInstanceOf(Date);
     expect(result.current_state.additional_fields).toEqual({
-      clay_weight_grams: 500,
+      clay_weight_lbs: 500,
     });
     expect(result.history).toHaveLength(1);
   });

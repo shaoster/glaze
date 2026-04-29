@@ -63,7 +63,7 @@ const { mockWorkflow } = vi.hoisted(() => ({
         description: "Wheel-thrown.",
         successors: ["trimmed", "recycled"],
         fields: {
-          clay_weight_grams: { type: "number", label: "Clay Weight Lbs" },
+          clay_weight_lbs: { type: "number", label: "Clay Weight Lbs" },
           clay_body: {
             $ref: "@clay_body.name",
             can_create: true,
@@ -84,9 +84,9 @@ const { mockWorkflow } = vi.hoisted(() => ({
         description: "Trimmed.",
         successors: ["recycled", "submitted_to_bisque_fire"],
         fields: {
-          trimmed_weight_grams: { type: "number", label: "Trimmed Weight Lbs" },
-          pre_trim_weight_grams: {
-            $ref: "wheel_thrown.clay_weight_grams",
+          trimmed_weight_lbs: { type: "number", label: "Trimmed Weight Lbs" },
+          pre_trim_weight_lbs: {
+            $ref: "wheel_thrown.clay_weight_lbs",
             label: "Pre-trim Weight Lbs",
           },
         },
@@ -335,8 +335,8 @@ describe("WorkflowState", () => {
     const trimmedState = makeState({
       state: "trimmed",
       additional_fields: {
-        trimmed_weight_grams: 900,
-        pre_trim_weight_grams: 1200,
+        trimmed_weight_lbs: 900,
+        pre_trim_weight_lbs: 1200,
       },
     });
     await act(async () => {
@@ -349,7 +349,7 @@ describe("WorkflowState", () => {
   it("renders state ref fields as disabled (read-only)", async () => {
     const trimmedState = makeState({
       state: "trimmed",
-      additional_fields: { pre_trim_weight_grams: 1200 },
+      additional_fields: { pre_trim_weight_lbs: 1200 },
     });
     await act(async () => {
       render(<WorkflowState {...defaultProps} pieceState={trimmedState} />);
@@ -360,7 +360,7 @@ describe("WorkflowState", () => {
   it("renders inline additional fields as editable", async () => {
     const trimmedState = makeState({
       state: "trimmed",
-      additional_fields: { trimmed_weight_grams: 900 },
+      additional_fields: { trimmed_weight_lbs: 900 },
     });
     await act(async () => {
       render(<WorkflowState {...defaultProps} pieceState={trimmedState} />);
@@ -733,7 +733,7 @@ describe("WorkflowState", () => {
           onDirtyChange={onDirtyChange}
           pieceState={makeState({
             state: "trimmed",
-            additional_fields: { trimmed_weight_grams: 900 },
+            additional_fields: { trimmed_weight_lbs: 900 },
           })}
         />,
       );

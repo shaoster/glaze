@@ -74,7 +74,7 @@ vi.mock("../../../workflow.yml", () => ({
         description: "Fresh off the wheel.",
         successors: ["trimmed", "recycled"],
         fields: {
-          clay_weight_grams: {
+          clay_weight_lbs: {
             type: "number",
             label: "Clay Weight Lbs",
             description: "Weight of clay before trimming",
@@ -111,12 +111,12 @@ vi.mock("../../../workflow.yml", () => ({
         description: "Ready for surface work.",
         successors: ["submitted_to_bisque_fire", "recycled"],
         fields: {
-          trimmed_weight_grams: {
+          trimmed_weight_lbs: {
             type: "number",
             label: "Trimmed Weight Lbs",
           },
-          pre_trim_weight_grams: {
-            $ref: "wheel_thrown.clay_weight_grams",
+          pre_trim_weight_lbs: {
+            $ref: "wheel_thrown.clay_weight_lbs",
             label: "Pre-trim Weight Lbs",
             description: "Weight after trimming",
           },
@@ -186,8 +186,8 @@ describe("formatWorkflowFieldLabel", () => {
   });
 
   it("converts a multi-word snake_case name to Title Case", () => {
-    expect(formatWorkflowFieldLabel("clay_weight_grams")).toBe(
-      "Clay Weight Grams",
+    expect(formatWorkflowFieldLabel("clay_weight_lbs")).toBe(
+      "Clay Weight Lbs",
     );
   });
 });
@@ -267,7 +267,7 @@ describe("getAdditionalFieldDefinitions", () => {
   describe("inline fields", () => {
     it("resolves type, description, and required flag", () => {
       const fields = getAdditionalFieldDefinitions("wheel_thrown");
-      const f = fields.find((f) => f.name === "clay_weight_grams")!;
+      const f = fields.find((f) => f.name === "clay_weight_lbs")!;
       expect(f.type).toBe("number");
       expect(f.label).toBe("Clay Weight Lbs");
       expect(f.description).toBe("Weight of clay before trimming");
@@ -277,7 +277,7 @@ describe("getAdditionalFieldDefinitions", () => {
 
     it("defaults required to false when not declared", () => {
       const fields = getAdditionalFieldDefinitions("wheel_thrown");
-      const f = fields.find((f) => f.name === "clay_weight_grams")!;
+      const f = fields.find((f) => f.name === "clay_weight_lbs")!;
       expect(f.required).toBe(false);
     });
   });
@@ -307,28 +307,28 @@ describe("getAdditionalFieldDefinitions", () => {
   describe("state ref fields", () => {
     it("resolves the type from the referenced state field", () => {
       const fields = getAdditionalFieldDefinitions("trimmed");
-      const f = fields.find((f) => f.name === "pre_trim_weight_grams")!;
+      const f = fields.find((f) => f.name === "pre_trim_weight_lbs")!;
       expect(f.type).toBe("number");
       expect(f.label).toBe("Pre-trim Weight Lbs");
     });
 
     it("uses the overridden description from the ref field", () => {
       const fields = getAdditionalFieldDefinitions("trimmed");
-      const f = fields.find((f) => f.name === "pre_trim_weight_grams")!;
+      const f = fields.find((f) => f.name === "pre_trim_weight_lbs")!;
       expect(f.description).toBe("Weight after trimming");
     });
 
     it("is not marked as a global ref", () => {
       const fields = getAdditionalFieldDefinitions("trimmed");
       expect(
-        fields.find((f) => f.name === "pre_trim_weight_grams")!.isGlobalRef,
+        fields.find((f) => f.name === "pre_trim_weight_lbs")!.isGlobalRef,
       ).toBe(false);
     });
 
     it("is marked as a state ref", () => {
       const fields = getAdditionalFieldDefinitions("trimmed");
       expect(
-        fields.find((f) => f.name === "pre_trim_weight_grams")!.isStateRef,
+        fields.find((f) => f.name === "pre_trim_weight_lbs")!.isStateRef,
       ).toBe(true);
     });
 
@@ -347,7 +347,7 @@ describe("getAdditionalFieldDefinitions", () => {
     it("inline field has isStateRef false", () => {
       const fields = getAdditionalFieldDefinitions("wheel_thrown");
       expect(
-        fields.find((f) => f.name === "clay_weight_grams")!.isStateRef,
+        fields.find((f) => f.name === "clay_weight_lbs")!.isStateRef,
       ).toBe(false);
     });
   });
