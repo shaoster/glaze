@@ -335,6 +335,28 @@ gz_build() {
     fi
 }
 
+gz_push() {
+    # Build and push the OCI image to ghcr.io/shaoster/glaze.
+    # Usage: gz_push [--latest]
+    # Always tags with the current commit SHA; pass --latest to also tag :latest.
+    local sha
+    sha=$(git -C "$GLAZE_ROOT" rev-parse HEAD) || return 1
+    local tag_args=(--tag "$sha")
+    [[ "${1:-}" == "--latest" ]] && tag_args+=(--tag latest)
+    rtk bazel run --stamp //:push -- "${tag_args[@]}"
+}
+
+gz_deploy() {
+    # Push the current image and deploy it to the production droplet.
+    # Usage: gz_deploy [--no-push]
+    # Reads GLAZE_PROD_HOST from .env.local (e.g. GLAZE_PROD_HOST=user@host).
+    local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
+    if [[ "${1:-}" != "--no-push" ]]; then
+        gz_push --latest || return $?
+    fi
+    "$GLAZE_ROOT/deploy.sh" "$host"
+}
+
 # ---------------------------------------------------------------------------
 # Servers
 # ---------------------------------------------------------------------------
@@ -438,6 +460,8 @@ _GZ_SHORTCUTS=(
     "gz_format         — auto-fix: ruff format + ruff check --fix (Python)"
     "gz_build          — full production build via Bazel (//...); symlinks web/dist"
     "gz_gentypes       — regenerate TypeScript types via Bazel; symlinks into src/"
+    "gz_push [--latest]— build + push OCI image tagged with HEAD sha (and :latest)"
+    "gz_deploy [--no-push] — push image + deploy to GLAZE_PROD_HOST droplet"
     "gz_start/stop     — start or stop backend + web"
     "gz_status         — show what services are running"
     "gz_logs [backend|web] — stream backend and/or web logs"

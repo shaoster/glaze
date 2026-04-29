@@ -302,7 +302,7 @@ PotterDoc supports Docker Compose (self-hosted on any VPS/droplet).
 
 ### Docker Compose (self-hosted)
 
-The repo ships a [`Dockerfile`](Dockerfile) and [`docker-compose.yml`](docker-compose.yml) for self-hosting on a single VPS (e.g. DigitalOcean, Hetzner, Linode).
+The repo uses [`docker-compose.yml`](docker-compose.yml) for self-hosting on a single VPS (e.g. DigitalOcean, Hetzner, Linode). The container image is built by Bazel (`rules_oci`) — no Dockerfile needed.
 
 **Architecture:**
 
@@ -311,9 +311,9 @@ The repo ships a [`Dockerfile`](Dockerfile) and [`docker-compose.yml`](docker-co
 
 **How it works:**
 
-- Every push to `main` that passes all tests triggers a GitHub Actions `publish` job ([`ci.yml`](.github/workflows/ci.yml)) that builds the Docker image (with `VITE_GOOGLE_CLIENT_ID` baked in from a GitHub Actions secret) and pushes it to `ghcr.io/shaoster/glaze:latest`. On success, [`cd.yml`](.github/workflows/cd.yml) automatically deploys the new image to the droplet and creates a GitHub release marking the deployed SHA.
+- Every push to `main` that passes all tests triggers a `publish` job ([`ci.yml`](.github/workflows/ci.yml)) that builds the OCI image with Bazel (with `VITE_GOOGLE_CLIENT_ID` baked in from a GitHub Actions secret) and pushes it to `ghcr.io/shaoster/glaze:latest`. On success, [`cd.yml`](.github/workflows/cd.yml) automatically deploys the new image to the droplet and creates a GitHub release marking the deployed SHA.
 - The droplet never needs git, Node, or Python build tools — it just pulls the pre-built image.
-- Migrations run automatically inside the container on every start (via [`docker-entrypoint.sh`](docker-entrypoint.sh)).
+- Migrations and `collectstatic` run automatically inside the container on every start (via [`docker-entrypoint.sh`](docker-entrypoint.sh)).
 - Runtime secrets (`SECRET_KEY`, `DATABASE_URL`, `CLOUDINARY_*`, etc.) live only in `.env` on the droplet and are never part of the image.
 
 **One-time GitHub setup:**
@@ -344,10 +344,11 @@ docker compose up -d
 **Subsequent deploys** (from your local machine):
 
 ```bash
-./deploy.sh user@your-droplet
+# Add to .env.local:  GLAZE_PROD_HOST=user@your-droplet
+gz_deploy
 ```
 
-`deploy.sh` SSHes into the droplet, pulls the latest image from ghcr.io, and restarts the `web` service. No source code needed on the droplet.
+`gz_deploy` builds and pushes the OCI image (tagged with HEAD SHA and `:latest`), then SSHes into the droplet via [`deploy.sh`](deploy.sh) to pull the new image and restart the service. Pass `--no-push` to skip the build and redeploy the image already in the registry. No source code needed on the droplet.
 
 **Environment variables** (set in `.env` on the droplet):
 
@@ -500,10 +501,9 @@ web/
     App.tsx             Root component with MUI dark theme
 workflow.yml               Source of truth for piece states and valid transitions
 env.sh                     Development shell helpers
-Dockerfile                 Multi-stage build (builder + lean runtime image)
 docker-compose.yml         Production stack: web + Postgres
-docker-entrypoint.sh       Container startup: migrate then exec Gunicorn
-deploy.sh                  One-command deploy to a remote droplet via SSH
+docker-entrypoint.sh       Container startup: migrate, collectstatic, exec Gunicorn
+deploy.sh                  SSH deploy helper (called by gz_deploy)
 .env.production.example    Template for droplet secrets (copy to .env)
 render.yaml                Render Blueprint for managed PaaS deployment
 ```
