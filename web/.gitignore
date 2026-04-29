@@ -36,6 +36,7 @@ node_modules/
 
 # Coverage
 coverage
+test.xml
 
 # Generated files.
 src/util/generated-types.ts

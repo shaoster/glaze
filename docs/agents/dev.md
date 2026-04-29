@@ -162,6 +162,11 @@ to the appropriate `BUILD.bazel` `js_library` before rerunning the test. Use
 `rtk bazel query 'deps(<test-target>)'` only when the relevant source library is
 not obvious.
 
+This matters especially when a page is refactored into a page-local subfolder
+such as `web/src/pages/<PageName>/`: update the matching `js_library` `srcs`
+and the focused test target inputs at the same time, or Bazel may keep running
+against an incomplete source slice even though Vite-based local tests pass.
+
 ```bash
 # Workflow schema validation
 rtk bazel test //tests:...

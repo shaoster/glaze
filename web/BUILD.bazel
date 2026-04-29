@@ -429,10 +429,25 @@ js_library(
     deps = [":node_modules"],
 )
 
-# GlazeImportToolPage depends on the extracted ocrDetection module.
+# GlazeImportToolPage depends on the extracted glaze-import modules plus
+# ocrDetection shared logic.
 js_library(
     name = "glaze_import_src",
-    srcs = ["src/pages/GlazeImportToolPage.tsx"],
+    srcs = [
+        "src/pages/GlazeImportToolPage.tsx",
+        "src/pages/glazeImportTool/GlazeImportCropStage.tsx",
+        "src/pages/glazeImportTool/GlazeImportImportStage.tsx",
+        "src/pages/glazeImportTool/GlazeImportOcrStage.tsx",
+        "src/pages/glazeImportTool/GlazeImportProgressList.tsx",
+        "src/pages/glazeImportTool/GlazeImportRecordList.tsx",
+        "src/pages/glazeImportTool/GlazeImportReconcileStage.tsx",
+        "src/pages/glazeImportTool/GlazeImportReviewStage.tsx",
+        "src/pages/glazeImportTool/GlazeImportUploadStage.tsx",
+        "src/pages/glazeImportTool/glazeImportToolGeometry.ts",
+        "src/pages/glazeImportTool/glazeImportToolOcr.ts",
+        "src/pages/glazeImportTool/glazeImportToolProcessing.ts",
+        "src/pages/glazeImportTool/glazeImportToolTypes.ts",
+    ],
     deps = [
         ":generated_types",
         ":node_modules",
@@ -626,7 +641,14 @@ vitest_test(
 vitest_test(
     name = "web_glaze_import_test",
     srcs = [
+        "src/pages/__tests__/GlazeImportCropStage.test.tsx",
+        "src/pages/__tests__/GlazeImportImportStage.test.tsx",
+        "src/pages/__tests__/GlazeImportOcrStage.test.tsx",
+        "src/pages/__tests__/GlazeImportReconcileStage.test.tsx",
+        "src/pages/__tests__/GlazeImportReviewStage.test.tsx",
         "src/pages/__tests__/GlazeImportToolPage.test.tsx",
+        "src/pages/__tests__/GlazeImportUploadStage.test.tsx",
+        "src/pages/__tests__/glazeImportToolOcr.test.ts",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [
