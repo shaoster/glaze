@@ -347,10 +347,10 @@ function detectFoodSafeFromOcrText(text: string): false | null {
 
 // Matches "1st Glaze: ..." lines, tolerating OCR confusions: I/1 and :/;
 // Also matches spaceless forms like "IstGlaze:" that OCR sometimes produces.
-const STRUCTURED_FIRST_RE = /st\s*[Gg][lI1]aze\s*[:;]\s*(.+)/;
+const STRUCTURED_FIRST_RE = /st\s*[GgCcSs][lI1]aze\s*[:;]\s*(.+)/;
 // Matches "2nd Glaze: ..." lines, tolerating OCR confusions: 2/= and :/;
 // Also matches spaceless forms like "2ndGlaze:" that OCR sometimes produces.
-const STRUCTURED_SECOND_RE = /nd\s*[Gg][lI1]aze\s*[:;]\s*(.+)/;
+const STRUCTURED_SECOND_RE = /nd\s*[GgCcSs][lI1]aze\s*[:;]\s*(.+)/;
 
 function parseOcrSuggestion(
   text: string,
@@ -1053,8 +1053,8 @@ export default function GlazeImportToolPage() {
             kind: "glaze_type",
             first_glaze: "",
             second_glaze: "",
-            runs: null,
-            is_food_safe: null,
+            runs: false,
+            is_food_safe: true,
           },
           ocrSuggestion: null,
           reviewed: false,
@@ -1188,8 +1188,8 @@ export default function GlazeImportToolPage() {
                 kind: "glaze_type",
                 first_glaze: "",
                 second_glaze: "",
-                runs: null,
-                is_food_safe: null,
+                runs: false,
+                is_food_safe: true,
               },
               ocrSuggestion: null,
               reviewed: false,
