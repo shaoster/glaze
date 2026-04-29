@@ -66,13 +66,14 @@ export default function GlazeImportCropStage({
   useEffect(() => {
     if (!cropDragState || !selectedRecord || !selectedRecord.crop) return;
     const currentDrag = cropDragState;
+    const selectedRecordId = selectedRecord.id;
+    const selectedDimensions = selectedRecord.dimensions;
 
     function handlePointerMove(event: PointerEvent) {
       if (!cropStageRef.current) return;
       const rect = cropStageRef.current.getBoundingClientRect();
-      const padding = getViewportPadding(selectedRecord.dimensions);
-      const stageScale =
-        rect.width / (selectedRecord.dimensions.width + padding * 2);
+      const padding = getViewportPadding(selectedDimensions);
+      const stageScale = rect.width / (selectedDimensions.width + padding * 2);
       const sourceX = (event.clientX - rect.left) / stageScale - padding;
       const sourceY = (event.clientY - rect.top) / stageScale - padding;
 
@@ -123,7 +124,7 @@ export default function GlazeImportCropStage({
 
       setRecords((current) =>
         current.map((record) =>
-          record.id === selectedRecord.id
+          record.id === selectedRecordId
             ? {
                 ...record,
                 crop: clampCrop(record.dimensions, nextCrop),

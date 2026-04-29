@@ -99,6 +99,7 @@ export default function GlazeImportOcrStage({
     if (!ocrDragState || !selectedRecord || !selectedCrop) return;
     const currentDrag = ocrDragState;
     const cropSize = selectedCrop.size;
+    const selectedRecordId = selectedRecord.id;
 
     function handlePointerMove(event: PointerEvent) {
       if (!ocrStageRef.current) return;
@@ -161,7 +162,7 @@ export default function GlazeImportOcrStage({
 
       setRecords((current) =>
         current.map((record) =>
-          record.id === selectedRecord.id
+          record.id === selectedRecordId
             ? {
                 ...record,
                 ocrRegion: clampSelectedOcrRegion(selectedCrop, next),
@@ -191,9 +192,10 @@ export default function GlazeImportOcrStage({
 
   function updateSelectedRecord(updater: (record: UploadedRecord) => UploadedRecord) {
     if (!selectedRecord) return;
+    const selectedRecordId = selectedRecord.id;
     setRecords((current) =>
       current.map((record) =>
-        record.id === selectedRecord.id ? updater(record) : record,
+        record.id === selectedRecordId ? updater(record) : record,
       ),
     );
   }
