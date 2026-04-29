@@ -719,10 +719,51 @@ describe("WorkflowState", () => {
       ).toBeInTheDocument(),
     );
   });
-  // The spyOn is a very expensive test hook for something that we're going to replace
-  // in https://github.com/shaoster/glaze/issues/172
-  it.skip("prompts for confirmation before removing an image and removes on confirm", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+  it("clicking remove image opens the confirmation dialog", async () => {
+    render(
+      <WorkflowState
+        {...defaultProps}
+        pieceState={makeState({
+          images: [
+            {
+              url: "http://example.com/img.jpg",
+              caption: "To delete",
+              created: new Date(),
+            },
+          ],
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "remove image" }));
+    expect(screen.getByText("Remove Image")).toBeInTheDocument();
+    expect(screen.getByText(/Remove this image\? This action cannot be undone\./)).toBeInTheDocument();
+  });
+
+  it("cancelling the remove dialog does not remove the image", async () => {
+    render(
+      <WorkflowState
+        {...defaultProps}
+        pieceState={makeState({
+          images: [
+            {
+              url: "http://example.com/img.jpg",
+              caption: "Keep me",
+              created: new Date(),
+            },
+          ],
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "remove image" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(api.updateCurrentState).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.queryByText("Remove Image")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("Keep me")).toBeInTheDocument();
+  });
+
+  it("confirming image removal calls updateCurrentState without the image", async () => {
     const updated = makePieceDetail({
       current_state: makeState({ images: [] }),
     });
@@ -742,8 +783,13 @@ describe("WorkflowState", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "remove image" }));
-    expect(window.confirm).toHaveBeenCalledWith("Remove this image?");
-    await waitFor(() => expect(api.updateCurrentState).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await waitFor(() =>
+      expect(api.updateCurrentState).toHaveBeenCalledWith(
+        "test-piece-id",
+        expect.objectContaining({ images: [] }),
+      ),
+    );
   });
 
   it("clicking the pencil icon makes the caption editable", async () => {
@@ -856,28 +902,34 @@ describe("WorkflowState", () => {
     ).not.toBeInTheDocument();
   });
 
-  // The spyOn is a very expensive test hook for something that we're going to replace
-  // in https://github.com/shaoster/glaze/issues/172
-  it.skip("does not remove image when confirmation is cancelled", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(false);
+  it("renders enum and number additional fields for bisque_fired state", async () => {
+    vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
+    await act(async () => {
+      render(<WorkflowState {...defaultProps} pieceState={makeState({ state: "bisque_fired", additional_fields: {} })} />);
+    });
+    // cone is an enum field — verify select renders
+    const coneField = screen.getByLabelText("Cone");
+    expect(coneField).toBeInTheDocument();
+  });
+
+  it("handleFieldChange: edits to additional fields make the form dirty", async () => {
+    const onDirtyChange = vi.fn();
     await act(async () => {
       render(
         <WorkflowState
           {...defaultProps}
+          onDirtyChange={onDirtyChange}
           pieceState={makeState({
-            images: [
-              {
-                url: "http://example.com/img.jpg",
-                caption: "Keep me",
-                created: new Date(),
-              },
-            ],
+            state: "trimmed",
+            additional_fields: { trimmed_weight_grams: 900 },
           })}
         />,
       );
     });
-    fireEvent.click(screen.getByRole("button", { name: "remove image" }));
-    expect(screen.getByText("Keep me")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Trimmed Weight Grams"), {
+      target: { value: "950" },
+    });
+    expect(onDirtyChange).toHaveBeenCalledWith(true);
   });
 
   it("accepts any valid workflow state", async () => {

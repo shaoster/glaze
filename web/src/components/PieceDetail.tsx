@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
+import { useRef, useState } from "react";
 import {
   Alert,
   Box,
   Button,
-  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -12,10 +10,6 @@ import {
   DialogTitle,
   Divider,
   IconButton,
-  List,
-  ListItem,
-  ListItemText,
-  Snackbar,
   TextField,
   Typography,
 } from "@mui/material";
@@ -23,177 +17,37 @@ import EditIcon from "@mui/icons-material/Edit";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import { useBlocker } from "react-router-dom";
-import type {
-  CaptionedImage,
-  PieceDetail as PieceDetailType,
-  TagEntry,
-} from "../util/types";
-import {
-  formatState,
-  formatPastState,
-  getStateDescription,
-  isTerminalState,
-  SUCCESSORS,
-} from "../util/types";
-import {
-  addPieceState,
-  createTagEntry,
-  fetchGlobalEntries,
-  updatePiece,
-} from "../util/api";
-import ImageLightbox from "./ImageLightbox";
+import type { PieceDetail as PieceDetailType } from "../util/types";
+import { formatState, isTerminalState } from "../util/types";
+import { addPieceState, updatePiece } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
-import StateChip from "./StateChip";
 import WorkflowState from "./WorkflowState";
-import { pickDefaultTagColor } from "./tagPalette";
-import TagAutocomplete from "./TagAutocomplete";
-import CreateTagDialog from "./CreateTagDialog";
-import TagChipList from "./TagChipList";
-
-const DUPLICATE_TAG_ERROR =
-  "A tag with that name already exists. Choose the existing tag or enter a different name.";
-const TAG_ATTACH_SNACKBAR_ERROR =
-  "Failed to attach the selected tag. Please check your connection and try again.";
+import TagManager from "./TagManager";
+import StateTransition from "./StateTransition";
+import PieceHistory from "./PieceHistory";
 
 type PieceDetailProps = {
   piece: PieceDetailType;
   onPieceUpdated: (updated: PieceDetailType) => void;
 };
 
-function sortSuccessorsForDisplay(successors: string[]): string[] {
-  const standardSuccessors = successors.filter(
-    (state) => state !== "completed" && state !== "recycled",
-  );
-  const trailingSuccessors = successors.filter(
-    (state) => state === "completed" || state === "recycled",
-  );
-  trailingSuccessors.sort((left, right) => {
-    if (left === right) return 0;
-    if (left === "completed") return -1;
-    if (right === "completed") return 1;
-    return 0;
-  });
-  return [...standardSuccessors, ...trailingSuccessors];
-}
-
-type StateBranchConnectorProps = {
-  count: number;
-};
-
-function StateBranchConnector({ count }: StateBranchConnectorProps) {
-  const connectorCount = Math.max(count, 1);
-  const height = connectorCount === 1 ? 24 : connectorCount * 28 - 4;
-  const centerY = height / 2;
-  const targetYs =
-    connectorCount === 1
-      ? [centerY]
-      : Array.from({ length: connectorCount }, (_, index) => {
-          const start = 10;
-          const end = height - 10;
-          return start + ((end - start) * index) / (connectorCount - 1);
-        });
-
-  return (
-    <Box
-      component="svg"
-      aria-hidden="true"
-      sx={(theme) => ({
-        width: 24,
-        height,
-        flexShrink: 0,
-        overflow: "visible",
-        "--line": theme.palette.divider,
-      })}
-      viewBox={`0 0 24 ${height}`}
-    >
-      {targetYs.map((targetY) => (
-        <path
-          key={targetY}
-          d={`M 0 ${centerY} Q 12 ${centerY} 24 ${targetY}`}
-          stroke="var(--line)"
-          fill="none"
-          strokeWidth="1"
-        />
-      ))}
-    </Box>
-  );
-}
-
 export default function PieceDetail({
   piece,
   onPieceUpdated,
 }: PieceDetailProps) {
   const [isDirty, setIsDirty] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const [transitionDialogOpen, setTransitionDialogOpen] = useState(false);
-  const [pendingTransition, setPendingTransition] = useState<string | null>(
-    null,
-  );
   const [transitioning, setTransitioning] = useState(false);
   const [transitionError, setTransitionError] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(piece.name);
   const [nameSaving, setNameSaving] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
-  const [availableTags, setAvailableTags] = useState<TagEntry[]>([]);
-  const [selectedTags, setSelectedTags] = useState<TagEntry[]>(
-    piece.tags ?? [],
-  );
-  const [editingTags, setEditingTags] = useState(false);
-  const [draftTags, setDraftTags] = useState<TagEntry[]>(piece.tags ?? []);
-  const [tagDialogOpen, setTagDialogOpen] = useState(false);
-  const [newTagName, setNewTagName] = useState("");
-  const [newTagColor, setNewTagColor] = useState(
-    pickDefaultTagColor(piece.tags.length),
-  );
-  const [tagSaving, setTagSaving] = useState(false);
-  const [tagError, setTagError] = useState<string | null>(null);
-  const [tagAttachSnackbarOpen, setTagAttachSnackbarOpen] = useState(false);
-  const [hoveredSuccessor, setHoveredSuccessor] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const currentState = piece.current_state;
-  const successors = sortSuccessorsForDisplay(
-    SUCCESSORS[currentState.state] ?? [],
-  );
-  const isTerminal = successors.length === 0;
-  const pastHistory = piece.history.slice(0, -1); // all except current (last)
-  // Flat list of all images across all past states, in history order.
-  const allHistoryImages = useMemo<CaptionedImage[]>(
-    () => pastHistory.flatMap((ps) => ps.images),
-    [pastHistory],
-  );
+  const isTerminal = isTerminalState(currentState.state);
+  const pastHistory = piece.history.slice(0, -1);
 
-  // Block navigation when there are unsaved changes
   const blocker = useBlocker(isDirty);
-
-  useEffect(() => {
-    setSelectedTags(piece.tags ?? []);
-    setDraftTags(piece.tags ?? []);
-    setEditingTags(false);
-  }, [piece.tags]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetchGlobalEntries("tag")
-      .then((entries) => {
-        if (cancelled) return;
-        setAvailableTags(
-          entries.map((entry) => ({
-            id: entry.id,
-            name: entry.name,
-            color: entry.color ?? "",
-            is_public: entry.isPublic,
-          })),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) setTagError("Failed to load tags.");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   async function handleTransition(nextState: string) {
     setTransitioning(true);
@@ -208,26 +62,13 @@ export default function PieceDetail({
       setTransitionError("Failed to transition state. Please try again.");
     } finally {
       setTransitioning(false);
-      setTransitionDialogOpen(false);
     }
-  }
-
-  function openTransitionDialog(next: string) {
-    setPendingTransition(next);
-    setTransitionDialogOpen(true);
-  }
-
-  function closeTransitionDialog() {
-    setTransitionDialogOpen(false);
-    // pendingTransition is cleared in TransitionProps.onExited to avoid
-    // content changing during the dialog close animation.
   }
 
   function startEditingName() {
     setNameValue(piece.name);
     setNameError(null);
     setEditingName(true);
-    // Focus the input on the next tick after it mounts
     setTimeout(() => nameInputRef.current?.focus(), 0);
   }
 
@@ -257,76 +98,6 @@ export default function PieceDetail({
       setNameError("Failed to save name. Please try again.");
     } finally {
       setNameSaving(false);
-    }
-  }
-
-  function startEditingTags() {
-    setDraftTags(selectedTags);
-    setTagError(null);
-    setEditingTags(true);
-  }
-
-  async function saveTags(nextTags: TagEntry[]) {
-    setTagSaving(true);
-    try {
-      const updated = await updatePiece(piece.id, {
-        tags: nextTags.map((tag) => tag.id),
-      });
-      setSelectedTags(nextTags);
-      onPieceUpdated(updated);
-      setEditingTags(false);
-      return true;
-    } catch {
-      setDraftTags(selectedTags);
-      setTagAttachSnackbarOpen(true);
-      return false;
-    } finally {
-      setTagSaving(false);
-    }
-  }
-
-  async function createTag() {
-    const trimmed = newTagName.trim();
-    if (!trimmed) {
-      setTagError("Tag name cannot be empty.");
-      return;
-    }
-    const normalizedName = trimmed.toLocaleLowerCase();
-    if (
-      availableTags.some(
-        (tag) => tag.name.trim().toLocaleLowerCase() === normalizedName,
-      )
-    ) {
-      setTagError(DUPLICATE_TAG_ERROR);
-      return;
-    }
-    setTagSaving(true);
-    setTagError(null);
-    try {
-      const created = await createTagEntry({
-        name: trimmed,
-        color: newTagColor,
-      });
-      const createdTag = {
-        id: created.id,
-        name: created.name,
-        color: created.color,
-      };
-      setAvailableTags((prev) =>
-        [...prev, createdTag].sort((a, b) => a.name.localeCompare(b.name)),
-      );
-      setDraftTags((prev) => [...prev, createdTag]);
-      setTagDialogOpen(false);
-      setNewTagName("");
-      setNewTagColor(pickDefaultTagColor(trimmed.length));
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 400) {
-        setTagError(DUPLICATE_TAG_ERROR);
-        return;
-      }
-      setTagError("Failed to create tag. Please try again.");
-    } finally {
-      setTagSaving(false);
     }
   }
 
@@ -405,131 +176,21 @@ export default function PieceDetail({
               </Box>
             )}
           </Box>
-          <Box sx={{ flexBasis: "100%" }}>
-            {editingTags ? (
-              <Box sx={{ mb: 2 }}>
-                <Box
-                  sx={{
-                    display: "grid",
-                    gap: 1,
-                    gridTemplateColumns: {
-                      xs: "1fr",
-                      sm: "minmax(0, 1fr) auto",
-                    },
-                    alignItems: "start",
-                  }}
-                >
-                  <TagAutocomplete
-                    label="Tags"
-                    options={availableTags}
-                    value={draftTags}
-                    onChange={setDraftTags}
-                    disabled={tagSaving}
-                    sx={{ minWidth: 0 }}
-                  />
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => setTagDialogOpen(true)}
-                    disabled={tagSaving}
-                    sx={{ minWidth: { sm: 88 } }}
-                  >
-                    New
-                  </Button>
-                </Box>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={() => void saveTags(draftTags)}
-                  disabled={tagSaving}
-                  aria-label="Save tags"
-                  sx={{ mt: 1 }}
-                >
-                  Save
-                </Button>
-              </Box>
-            ) : (
-              <Box
-                sx={{
-                  mb: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                }}
-              >
-                {selectedTags.length > 0 ? (
-                  <TagChipList tags={selectedTags} />
-                ) : (
-                  <Typography
-                    variant="body2"
-                    sx={{ color: "text.secondary", mr: 0 }}
-                  >
-                    Add some tags!
-                  </Typography>
-                )}
-                <IconButton
-                  aria-label="Edit tags"
-                  onClick={startEditingTags}
-                  disabled={tagSaving}
-                  size="small"
-                  sx={{ color: "text.secondary" }}
-                >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            )}
-          </Box>
+          <TagManager
+            pieceId={piece.id}
+            initialTags={piece.tags ?? []}
+            onSaved={onPieceUpdated}
+          />
         </Box>
       </Box>
-      <Box
-        aria-label="State flow"
-        role="group"
-        sx={{
-          mb: 2,
-          display: "flex",
-          alignItems: "center",
-          gap: 1.25,
-        }}
-      >
-        <StateChip
-          state={currentState.state}
-          label={formatState(currentState.state)}
-          description={getStateDescription(currentState.state)}
-          variant="current"
-          isTerminal={isTerminalState(currentState.state)}
-          muted={hoveredSuccessor !== null}
-        />
-        {!isTerminal && <StateBranchConnector count={successors.length} />}
-        {!isTerminal && (
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              gap: 0.75,
-            }}
-          >
-            {successors.map((next) => (
-              <StateChip
-                key={next}
-                state={next}
-                label={formatState(next)}
-                description={getStateDescription(next)}
-                variant="future"
-                isTerminal={isTerminalState(next)}
-                onClick={() => openTransitionDialog(next)}
-                disabled={isDirty || transitioning}
-                onHoverStart={() => setHoveredSuccessor(next)}
-                onHoverEnd={() =>
-                  setHoveredSuccessor((value) =>
-                    value === next ? null : value,
-                  )
-                }
-              />
-            ))}
-          </Box>
-        )}
-      </Box>
+
+      <StateTransition
+        currentStateName={currentState.state}
+        disabled={isDirty}
+        transitioning={transitioning}
+        transitionError={transitionError}
+        onTransition={handleTransition}
+      />
 
       {/* Current state form */}
       <WorkflowState
@@ -540,192 +201,40 @@ export default function PieceDetail({
         onDirtyChange={setIsDirty}
         currentLocation={piece.current_location ?? ""}
         currentThumbnail={piece.thumbnail}
+        onSetAsThumbnail={async (image) => {
+          const updated = await updatePiece(piece.id, {
+            thumbnail: {
+              url: image.url,
+              cloudinary_public_id: image.cloudinary_public_id ?? null,
+            },
+          });
+          onPieceUpdated(updated);
+        }}
       />
 
       <Divider sx={{ my: 3 }} />
 
-      {/* State transitions */}
-      {isTerminal ? (
+      {isTerminal && (
         <Alert severity="info" sx={{ mb: 2 }}>
           This piece is in a terminal state (
           <strong>{formatState(currentState.state)}</strong>). No further
           transitions are possible.
         </Alert>
-      ) : (
-        <Box sx={{ mb: 2 }}>
-          {transitionError && (
-            <Typography color="error" variant="body2" sx={{ mb: 1 }}>
-              {transitionError}
-            </Typography>
-          )}
-          {isDirty && (
-            <Typography
-              variant="caption"
-              sx={{ color: "text.secondary", mt: 0.5, display: "block" }}
-            >
-              Save your changes before transitioning to a new state.
-            </Typography>
-          )}
-        </Box>
       )}
 
-      {/* History */}
-      {pastHistory.length > 0 && (
-        <Box>
-          <Button
-            variant="text"
-            onClick={() => setHistoryOpen((o) => !o)}
-            sx={{ mb: 1 }}
-          >
-            {historyOpen ? "Hide" : "Show"} history ({pastHistory.length} past
-            state{pastHistory.length !== 1 ? "s" : ""})
-          </Button>
-          <Collapse in={historyOpen}>
-            <List dense>
-              {
-                pastHistory.reduce<{
-                  offset: number;
-                  items: React.ReactNode[];
-                }>(
-                  ({ offset, items }, ps, i) => {
-                    const stateOffset = offset;
-                    items.push(
-                      <ListItem
-                        key={i}
-                        disableGutters
-                        sx={{
-                          flexDirection: "column",
-                          alignItems: "flex-start",
-                        }}
-                      >
-                        <ListItemText
-                          primary={formatPastState(ps.state)}
-                          secondary={`${ps.created.toLocaleString()}${ps.notes ? " — " + ps.notes : ""}`}
-                          slotProps={{
-                            primary: { sx: { color: "text.primary" } },
-                            secondary: { sx: { color: "text.secondary" } },
-                          }}
-                        />
-                        {ps.images.length > 0 && (
-                          <Box
-                            sx={{
-                              display: "flex",
-                              flexDirection: "row",
-                              flexWrap: "wrap",
-                              gap: 1,
-                              mt: 0.5,
-                            }}
-                          >
-                            {ps.images.map((img, j) => (
-                              <Box
-                                key={j}
-                                component="button"
-                                onClick={() =>
-                                  setLightboxIndex(stateOffset + j)
-                                }
-                                aria-label={`View image ${stateOffset + j + 1}`}
-                                sx={{
-                                  p: 0,
-                                  border: "none",
-                                  background: "none",
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  alignItems: "center",
-                                  maxWidth: 80,
-                                }}
-                              >
-                                <CloudinaryImage
-                                  url={img.url}
-                                  cloudinary_public_id={
-                                    img.cloudinary_public_id
-                                  }
-                                  alt={img.caption || ""}
-                                  context="thumbnail"
-                                  style={{
-                                    objectFit: "cover",
-                                    borderRadius: 4,
-                                  }}
-                                />
-                                {img.caption && (
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      color: "text.secondary",
-                                      textAlign: "center",
-                                      wordBreak: "break-word",
-                                    }}
-                                  >
-                                    {img.caption}
-                                  </Typography>
-                                )}
-                              </Box>
-                            ))}
-                          </Box>
-                        )}
-                      </ListItem>,
-                    );
-                    return { offset: offset + ps.images.length, items };
-                  },
-                  { offset: 0, items: [] },
-                ).items
-              }
-            </List>
-          </Collapse>
-          {lightboxIndex !== null && (
-            <ImageLightbox
-              images={allHistoryImages}
-              initialIndex={lightboxIndex}
-              onClose={() => setLightboxIndex(null)}
-              currentThumbnailUrl={piece.thumbnail?.url}
-              onSetAsThumbnail={async (image) => {
-                const updated = await updatePiece(piece.id, {
-                  thumbnail: {
-                    url: image.url,
-                    cloudinary_public_id: image.cloudinary_public_id ?? null,
-                  },
-                });
-                onPieceUpdated(updated);
-              }}
-            />
-          )}
-        </Box>
-      )}
-
-      {/* Transition confirmation dialog */}
-      <Dialog
-        open={transitionDialogOpen}
-        onClose={closeTransitionDialog}
-        TransitionProps={{ onExited: () => setPendingTransition(null) }}
-      >
-        <DialogTitle>Confirm State Transition</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Transition <strong>{formatState(currentState.state)}</strong> →{" "}
-            <strong>
-              {pendingTransition ? formatState(pendingTransition) : ""}
-            </strong>
-            ?
-            <br />
-            <br />
-            Once transitioned, the current state will be sealed and can no
-            longer be edited.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeTransitionDialog}>Cancel</Button>
-          <Button
-            onClick={() =>
-              pendingTransition && handleTransition(pendingTransition)
-            }
-            variant="contained"
-            color={pendingTransition === "recycled" ? "error" : "primary"}
-            disabled={transitioning}
-          >
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <PieceHistory
+        pastHistory={pastHistory}
+        currentThumbnailUrl={piece.thumbnail?.url}
+        onSetAsThumbnail={async (image) => {
+          const updated = await updatePiece(piece.id, {
+            thumbnail: {
+              url: image.url,
+              cloudinary_public_id: image.cloudinary_public_id ?? null,
+            },
+          });
+          onPieceUpdated(updated);
+        }}
+      />
 
       {/* Navigation blocker dialog */}
       <Dialog open={blocker.state === "blocked"}>
@@ -742,27 +251,6 @@ export default function PieceDetail({
           </Button>
         </DialogActions>
       </Dialog>
-
-      <CreateTagDialog
-        open={tagDialogOpen}
-        name={newTagName}
-        color={newTagColor}
-        error={tagError}
-        saving={tagSaving}
-        onClose={() => setTagDialogOpen(false)}
-        onNameChange={setNewTagName}
-        onColorChange={setNewTagColor}
-        onCreate={() => void createTag()}
-      />
-      <Snackbar
-        open={tagAttachSnackbarOpen}
-        autoHideDuration={4000}
-        onClose={(_event, reason) => {
-          if (reason === "clickaway") return;
-          setTagAttachSnackbarOpen(false);
-        }}
-        message={TAG_ATTACH_SNACKBAR_ERROR}
-      />
     </Box>
   );
 }
