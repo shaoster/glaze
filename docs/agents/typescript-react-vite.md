@@ -151,6 +151,10 @@ For tests that exercise react-router navigation, use playwright's browser tests.
 ### What to test
 
 - Every new or modified React component → add or update a test.
+- Mock at the boundary, not in the middle of the implementation. Prefer mocking network/API modules, browser-only APIs, router hooks, and heavyweight child components while keeping the component's own state and rendering logic real.
+- Keep mocks small and explicit. Return the minimum data needed for the scenario, reset mocks between tests, and prefer per-test setup over large shared mock state that can leak across cases.
+- Prefer fakes that preserve behavior over deep implementation mocks. For example, pass real props through a lightweight test wrapper or use a minimal in-memory stub instead of mocking every internal function call.
+- Do not write tests that primarily assert styling details such as class names, generated MUI markup, spacing, colors, or CSS implementation. Assert user-observable behavior, accessible state, and meaningful content instead; only check style when visual presentation is itself the requirement.
 - For Autocomplete components with controlled `inputValue`: use a stateful wrapper in tests because `inputValue={value}` with a mock `onChange: vi.fn()` means the component never sees typed text.
 - Workflow/config helpers loaded from a data file → mock the data file with a minimal fixture to decouple tests from real project data and enable edge-case coverage.
 
