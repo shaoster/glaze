@@ -1,7 +1,7 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary")
+load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@npm//web:eslint/package_json.bzl", eslint_pkg = "bin")
-load("@npm//web:typescript/package_json.bzl", typescript_pkg = "bin")
 load("@npm//web:vite/package_json.bzl", vite_pkg = "bin")
 load(":vitest.bzl", "vitest_test")
 
@@ -45,18 +45,26 @@ vite_pkg.vite(
     out_dirs = ["dist"],
 )
 
-typescript_pkg.tsc(
-    name = "tsc_run",
-    srcs = [
-        ":tsconfig.node.json",
-        ":web_lib",
-    ],
-    args = [
-        "--noEmit",
-        "--project",
-        "$(location :tsconfig.node.json)",
-    ],
-    stdout = "tsc_check.log",
+ts_project(
+    name = "tsc_typecheck",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+        ],
+        exclude = [
+            "src/**/*.test.ts",
+            "src/**/*.test.tsx",
+            "src/test-setup.ts",
+            "src/util/generated-types.ts",  # genrule output, added via srcs below
+        ],
+    ) + [":generated_types_gen"],
+    tsconfig = ":tsconfig.app.json",
+    declaration = False,
+    no_emit = True,
+    resolve_json_module = True,
+    ts_build_info_file = "node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    deps = [":node_modules"],
     tags = ["lint"],
 )
 
@@ -704,7 +712,7 @@ alias(
 
 alias(
     name = "tsc_check",
-    actual = ":tsc_run",
+    actual = ":tsc_typecheck",
     tags = ["lint"],
 )
 
