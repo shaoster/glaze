@@ -1,4 +1,4 @@
-version: "0.0.2"
+version: "0.0.3"
 
 # ---------------------------------------------------------------------------
 # Workflow state machine for Glaze.
@@ -24,7 +24,7 @@ version: "0.0.2"
 #
 #   Inline field — declares a new field directly on this state:
 #
-#     clay_weight_grams:
+#     clay_weight_lbs:
 #       type: number          # JSON primitive: string | number | integer |
 #                             #   boolean | array | object
 #       description: "..."    # optional, human-readable
@@ -35,8 +35,8 @@ version: "0.0.2"
 #
 #     State ref — carries a field forward from a reachable ancestor state of the same piece:
 #
-#       pre_trim_weight_grams:
-#         $ref: "wheel_thrown.clay_weight_grams"
+#       pre_trim_weight_lbs:
+#         $ref: "wheel_thrown.clay_weight_lbs"
 #         description: "..."    # optional override
 #         required: false       # optional override
 #
@@ -260,9 +260,10 @@ states:
       - recycled
       - trimmed
     fields:
-      clay_weight_grams:
+      clay_weight_lbs:
         type: number
-        description: Weight of clay on the scale before throwing, in grams.
+        label: Clay Weight Lbs
+        description: Weight of clay on the scale before throwing, in pounds.
       wall_thickness_mm:
         type: number
         description: Approximate wall thickness after throwing, in millimeters.
@@ -282,12 +283,14 @@ states:
       - carved
       - submitted_to_bisque_fire
     fields:
-      trimmed_weight_grams:
+      trimmed_weight_lbs:
         type: number
-        description: Weight after trimming; compare to pre_trim_weight_grams to gauge clay lost.
-      pre_trim_weight_grams:
-        $ref: "wheel_thrown.clay_weight_grams"
-        description: Clay weight recorded at throwing, carried forward for reference.
+        label: Trimmed Weight Lbs
+        description: Weight after trimming, in pounds; compare to pre_trim_weight_lbs to gauge clay lost.
+      pre_trim_weight_lbs:
+        $ref: "wheel_thrown.clay_weight_lbs"
+        label: Pre-trim Weight Lbs
+        description: Clay weight recorded at throwing, in pounds, carried forward for reference.
 
   - id: handbuilt
     visible: true
@@ -338,6 +341,22 @@ states:
         $ref: "@location.name"
         description: Name of the kiln where this piece was submitted for bisque firing.
         can_create: true
+      length_in:
+        type: number
+        label: Length (in)
+        description: Length of the piece, in inches.
+      width_in:
+        type: number
+        label: Width (in)
+        description: Width of the piece, in inches.
+      height_in:
+        type: number
+        label: Height (in)
+        description: Height of the piece, in inches.
+      firing_fee_usd:
+        type: number
+        label: Firing Fee (USD)
+        description: Fee charged for bisque firing, in US dollars.
 
   - id: bisque_fired
     visible: true

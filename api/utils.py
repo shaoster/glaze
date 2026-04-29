@@ -153,14 +153,14 @@ def _seed_dev_pieces(user) -> None:
         trimmed_piece,
         "wheel_thrown",
         notes="Opened and pulled on the wheel.",
-        additional_fields={"clay_weight_grams": 1250, "wall_thickness_mm": 7.5},
+        additional_fields={"clay_weight_lbs": 1250, "wall_thickness_mm": 7.5},
         global_refs={"clay_body": ("clay_body", clay_body)},
     )
     _create_piece_state(
         trimmed_piece,
         "trimmed",
         notes="Foot ring cleaned up and ready to dry.",
-        additional_fields={"trimmed_weight_grams": 980, "pre_trim_weight_grams": 1250},
+        additional_fields={"trimmed_weight_lbs": 980, "pre_trim_weight_lbs": 1250},
     )
 
     bisque_piece = Piece.objects.create(

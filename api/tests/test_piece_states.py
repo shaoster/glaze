@@ -87,16 +87,16 @@ class TestPieceStates:
             format='json',
         )
         assert response.status_code == 201
-        # clay_weight_grams was not recorded in wheel_thrown, so pre_trim_weight_grams
+        # clay_weight_lbs was not recorded in wheel_thrown, so pre_trim_weight_lbs
         # should not be auto-populated.
         assert response.json()['current_state']['additional_fields'] == {}
 
     def test_state_ref_fields_auto_populated_on_transition(self, client, piece):
-        # When wheel_thrown.clay_weight_grams is recorded, transitioning to trimmed
-        # should carry it forward into pre_trim_weight_grams automatically.
+        # When wheel_thrown.clay_weight_lbs is recorded, transitioning to trimmed
+        # should carry it forward into pre_trim_weight_lbs automatically.
         client.post(
             f'/api/pieces/{piece.id}/states/',
-            {'state': 'wheel_thrown', 'additional_fields': {'clay_weight_grams': 1000}},
+            {'state': 'wheel_thrown', 'additional_fields': {'clay_weight_lbs': 1000}},
             format='json',
         )
         response = client.post(
@@ -105,23 +105,23 @@ class TestPieceStates:
             format='json',
         )
         assert response.status_code == 201
-        assert response.json()['current_state']['additional_fields']['pre_trim_weight_grams'] == 1000
+        assert response.json()['current_state']['additional_fields']['pre_trim_weight_lbs'] == 1000
 
     def test_state_ref_client_value_not_overridden(self, client, piece):
         # If the client explicitly supplies a value for a state ref field, the
         # auto-population should not override it.
         client.post(
             f'/api/pieces/{piece.id}/states/',
-            {'state': 'wheel_thrown', 'additional_fields': {'clay_weight_grams': 1000}},
+            {'state': 'wheel_thrown', 'additional_fields': {'clay_weight_lbs': 1000}},
             format='json',
         )
         response = client.post(
             f'/api/pieces/{piece.id}/states/',
-            {'state': 'trimmed', 'additional_fields': {'pre_trim_weight_grams': 999}},
+            {'state': 'trimmed', 'additional_fields': {'pre_trim_weight_lbs': 999}},
             format='json',
         )
         assert response.status_code == 201
-        assert response.json()['current_state']['additional_fields']['pre_trim_weight_grams'] == 999
+        assert response.json()['current_state']['additional_fields']['pre_trim_weight_lbs'] == 999
 
     def test_piece_not_found(self, client, db):
         response = client.post(

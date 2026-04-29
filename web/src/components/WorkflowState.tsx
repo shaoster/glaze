@@ -20,7 +20,6 @@ import {
 } from "../util/api";
 import {
   type ResolvedAdditionalField,
-  formatWorkflowFieldLabel,
   getAdditionalFieldDefinitions,
 } from "../util/workflow";
 import { entryNameOrEmpty } from "../util/optionalValues";
@@ -507,7 +506,7 @@ export default function WorkflowState({
             {additionalFieldDefs.map((field) => {
               const value = additionalFieldInputs[field.name] ?? "";
               const helperText = field.description;
-              const label = formatWorkflowFieldLabel(field.name);
+              const label = field.label;
               if (field.isStateRef) {
                 return (
                   <TextField
