@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction } from "react";
 import { Alert, Box, Button, Divider, Stack, TextField, Typography } from "@mui/material";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import GlazeImportRecordList from "./GlazeImportRecordList";
@@ -7,32 +8,38 @@ import type { UploadedRecord } from "./glazeImportToolTypes";
 interface GlazeImportReviewStageProps {
   records: UploadedRecord[];
   selectedRecordId: string | null;
-  selectedRecord: UploadedRecord | null;
   cropPreviewLoading: boolean;
   cropPreviewUrl: string | null;
   allReviewed: boolean;
-  onSelect: (id: string) => void;
+  setRecords: Dispatch<SetStateAction<UploadedRecord[]>>;
+  setSelectedRecordId: (id: string | null) => void;
   onDelete: (id: string) => void;
-  onToggleReviewed: () => void;
   onContinueToImport: () => void;
-  onUpdateSelectedRecord: (
-    updater: (record: UploadedRecord) => UploadedRecord,
-  ) => void;
 }
 
 export default function GlazeImportReviewStage({
   records,
   selectedRecordId,
-  selectedRecord,
   cropPreviewLoading,
   cropPreviewUrl,
   allReviewed,
-  onSelect,
+  setRecords,
+  setSelectedRecordId,
   onDelete,
-  onToggleReviewed,
   onContinueToImport,
-  onUpdateSelectedRecord,
 }: GlazeImportReviewStageProps) {
+  const selectedRecord =
+    records.find((record) => record.id === selectedRecordId) ?? null;
+
+  function updateSelectedRecord(updater: (record: UploadedRecord) => UploadedRecord) {
+    if (!selectedRecord) return;
+    setRecords((current) =>
+      current.map((record) =>
+        record.id === selectedRecord.id ? updater(record) : record,
+      ),
+    );
+  }
+
   return (
     <Stack spacing={2}>
       <Alert severity="info">
@@ -49,7 +56,7 @@ export default function GlazeImportReviewStage({
         <GlazeImportRecordList
           records={records}
           selectedId={selectedRecordId}
-          onSelect={onSelect}
+          onSelect={setSelectedRecordId}
           onDelete={onDelete}
           showReviewed
         />
@@ -126,7 +133,7 @@ export default function GlazeImportReviewStage({
                     : undefined
                 }
                 onChange={(event) =>
-                  onUpdateSelectedRecord((record) => ({
+                  updateSelectedRecord((record) => ({
                     ...record,
                     parsedFields: {
                       ...record.parsedFields,
@@ -143,7 +150,7 @@ export default function GlazeImportReviewStage({
                 slotProps={{ select: { native: true } }}
                 value={selectedRecord.parsedFields.kind}
                 onChange={(event) =>
-                  onUpdateSelectedRecord((record) => {
+                  updateSelectedRecord((record) => {
                     const kind = event.target.value as UploadedRecord["parsedFields"]["kind"];
                     const name =
                       kind === "glaze_combination"
@@ -168,7 +175,7 @@ export default function GlazeImportReviewStage({
                   fullWidth
                   value={selectedRecord.parsedFields.first_glaze}
                   onChange={(event) =>
-                    onUpdateSelectedRecord((record) => {
+                    updateSelectedRecord((record) => {
                       const first_glaze = event.target.value;
                       const name = `${first_glaze}${COMBO_NAME_SEPARATOR}${record.parsedFields.second_glaze}`;
                       return {
@@ -188,7 +195,7 @@ export default function GlazeImportReviewStage({
                   fullWidth
                   value={selectedRecord.parsedFields.second_glaze}
                   onChange={(event) =>
-                    onUpdateSelectedRecord((record) => {
+                    updateSelectedRecord((record) => {
                       const second_glaze = event.target.value;
                       const name = `${record.parsedFields.first_glaze}${COMBO_NAME_SEPARATOR}${second_glaze}`;
                       return {
@@ -223,7 +230,7 @@ export default function GlazeImportReviewStage({
                   selectedRecord.parsedFields.runs === null ? "Not specified" : undefined
                 }
                 onChange={(event) =>
-                  onUpdateSelectedRecord((record) => ({
+                  updateSelectedRecord((record) => ({
                     ...record,
                     parsedFields: {
                       ...record.parsedFields,
@@ -259,7 +266,7 @@ export default function GlazeImportReviewStage({
                     : undefined
                 }
                 onChange={(event) =>
-                  onUpdateSelectedRecord((record) => ({
+                  updateSelectedRecord((record) => ({
                     ...record,
                     parsedFields: {
                       ...record.parsedFields,
@@ -282,7 +289,12 @@ export default function GlazeImportReviewStage({
               color={selectedRecord.reviewed ? "success" : "primary"}
               size="large"
               startIcon={<FactCheckIcon />}
-              onClick={onToggleReviewed}
+              onClick={() =>
+                updateSelectedRecord((record) => ({
+                  ...record,
+                  reviewed: !record.reviewed,
+                }))
+              }
               sx={{ alignSelf: "flex-start", minHeight: 52, px: 3 }}
             >
               {selectedRecord.reviewed

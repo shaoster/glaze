@@ -211,6 +211,26 @@ describe("GlazeImportToolPage", () => {
     );
   });
 
+  it("deletes an uploaded record after confirmation", async () => {
+    const { container } = render(<GlazeImportToolPage />);
+    const input = container.querySelector('input[type="file"]');
+    const file = new File(["image-bytes"], "delete-me.png", {
+      type: "image/png",
+    });
+
+    fireEvent.change(input!, { target: { files: [file] } });
+
+    await screen.findByText("delete-me.png");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete delete-me.png" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("delete-me.png")).not.toBeInTheDocument();
+    });
+  });
+
   it("supports creating a crop and continuing to OCR", async () => {
     const { container } = render(<GlazeImportToolPage />);
     const input = container.querySelector('input[type="file"]');

@@ -1,5 +1,11 @@
-import type { RefObject } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type PointerEvent as ReactPointerEvent,
+  type SetStateAction,
+} from "react";
 import {
   Alert,
   Box,
@@ -12,30 +18,42 @@ import {
 } from "@mui/material";
 import GlazeImportRecordList from "./GlazeImportRecordList";
 import type { UploadedRecord } from "./glazeImportToolTypes";
-import type { OcrRegion, CropSquare } from "../ocrDetection";
+import type { OcrRegion } from "../ocrDetection";
+import {
+  autoDetectOcrRegionForRecord,
+  runOcrOnRecord,
+} from "./glazeImportToolProcessing";
+import {
+  clampCrop,
+  clampSelectedOcrRegion,
+  rotatePt,
+} from "./glazeImportToolGeometry";
+import {
+  detectFoodSafeFromOcrText,
+  detectRunsFromOcrText,
+  parseOcrSuggestion,
+} from "./glazeImportToolOcr";
+
+const MIN_OCR_REGION_SIZE = 24;
+
+type OcrDragState = {
+  handle: "move" | "nw" | "ne" | "sw" | "se" | "rotate";
+  startRegion: OcrRegion;
+  anchorX: number;
+  anchorY: number;
+  startAngle: number;
+};
 
 interface GlazeImportOcrStageProps {
   records: UploadedRecord[];
   selectedRecordId: string | null;
-  selectedRecord: UploadedRecord | null;
-  selectedCrop: CropSquare | null;
-  selectedOcrRegion: OcrRegion | null;
   cropPreviewLoading: boolean;
   cropPreviewUrl: string | null;
-  ocrStageRef: RefObject<HTMLDivElement | null>;
-  ocrStageScale: number;
-  runningOcrRecordId: string | null;
-  onSelect: (id: string) => void;
+  setRecords: Dispatch<SetStateAction<UploadedRecord[]>>;
+  setSelectedRecordId: (id: string | null) => void;
   onDelete: (id: string) => void;
-  onAutoDetectRegion: () => void;
-  onRunOcr: (id: string) => void;
+  onClearImportResult: () => void;
   onContinueToReview: () => void;
-  onStartOcrDrag: (
-    handle: "move" | "nw" | "ne" | "sw" | "se" | "rotate",
-    event: ReactPointerEvent<HTMLDivElement>,
-  ) => void;
-  onUpdateSelectedLabelSensitivity: (value: number) => void;
-  onUpdateSelectedTextSensitivity: (value: number) => void;
 }
 
 function buildOcrSecondaryText(record: UploadedRecord) {
@@ -52,23 +70,238 @@ function buildOcrSecondaryText(record: UploadedRecord) {
 export default function GlazeImportOcrStage({
   records,
   selectedRecordId,
-  selectedRecord,
-  selectedCrop,
-  selectedOcrRegion,
   cropPreviewLoading,
   cropPreviewUrl,
-  ocrStageRef,
-  ocrStageScale,
-  runningOcrRecordId,
-  onSelect,
+  setRecords,
+  setSelectedRecordId,
   onDelete,
-  onAutoDetectRegion,
-  onRunOcr,
+  onClearImportResult,
   onContinueToReview,
-  onStartOcrDrag,
-  onUpdateSelectedLabelSensitivity,
-  onUpdateSelectedTextSensitivity,
 }: GlazeImportOcrStageProps) {
+  const ocrStageRef = useRef<HTMLDivElement | null>(null);
+  const [runningOcrRecordId, setRunningOcrRecordId] = useState<string | null>(null);
+  const [ocrDragState, setOcrDragState] = useState<OcrDragState | null>(null);
+  const selectedRecord =
+    records.find((record) => record.id === selectedRecordId) ?? null;
+  const selectedCrop = selectedRecord?.crop
+    ? clampCrop(selectedRecord.dimensions, selectedRecord.crop)
+    : null;
+  const selectedOcrRegion = clampSelectedOcrRegion(
+    selectedCrop,
+    selectedRecord?.ocrRegion,
+  );
+  const ocrStageDisplaySize = 360;
+  const ocrStageScale = selectedCrop
+    ? Math.min(1, ocrStageDisplaySize / selectedCrop.size)
+    : 1;
+
+  useEffect(() => {
+    if (!ocrDragState || !selectedRecord || !selectedCrop) return;
+    const currentDrag = ocrDragState;
+    const cropSize = selectedCrop.size;
+
+    function handlePointerMove(event: PointerEvent) {
+      if (!ocrStageRef.current) return;
+      const rect = ocrStageRef.current.getBoundingClientRect();
+      const scale = rect.width / cropSize;
+      const sourceX = (event.clientX - rect.left) / scale;
+      const sourceY = (event.clientY - rect.top) / scale;
+
+      const start = currentDrag.startRegion;
+      let next: OcrRegion = { ...start };
+      if (currentDrag.handle === "rotate") {
+        const currentAngle = Math.atan2(
+          sourceY - currentDrag.anchorY,
+          sourceX - currentDrag.anchorX,
+        );
+        const delta = ((currentAngle - currentDrag.startAngle) * 180) / Math.PI;
+        next = { ...start, rotation: start.rotation + delta };
+      } else if (currentDrag.handle === "move") {
+        next = {
+          ...start,
+          x: sourceX - currentDrag.anchorX,
+          y: sourceY - currentDrag.anchorY,
+        };
+      } else {
+        const fixedSignX =
+          currentDrag.handle === "nw" || currentDrag.handle === "sw" ? 1 : -1;
+        const fixedSignY =
+          currentDrag.handle === "nw" || currentDrag.handle === "ne" ? 1 : -1;
+        const cx = start.x + start.width / 2;
+        const cy = start.y + start.height / 2;
+        const [fRotX, fRotY] = rotatePt(
+          (fixedSignX * start.width) / 2,
+          (fixedSignY * start.height) / 2,
+          start.rotation,
+        );
+        const fixedX = cx + fRotX;
+        const fixedY = cy + fRotY;
+        const [localDx, localDy] = rotatePt(
+          sourceX - fixedX,
+          sourceY - fixedY,
+          -start.rotation,
+        );
+        const width = Math.max(Math.abs(localDx), MIN_OCR_REGION_SIZE);
+        const height = Math.max(Math.abs(localDy), MIN_OCR_REGION_SIZE);
+        const [newRotFx, newRotFy] = rotatePt(
+          (fixedSignX * width) / 2,
+          (fixedSignY * height) / 2,
+          start.rotation,
+        );
+        const newCx = fixedX - newRotFx;
+        const newCy = fixedY - newRotFy;
+        next = {
+          ...start,
+          x: newCx - width / 2,
+          y: newCy - height / 2,
+          width,
+          height,
+        };
+      }
+
+      setRecords((current) =>
+        current.map((record) =>
+          record.id === selectedRecord.id
+            ? {
+                ...record,
+                ocrRegion: clampSelectedOcrRegion(selectedCrop, next),
+                ocrSuggestion: null,
+                ocrStatus: "idle",
+                ocrError: null,
+                reviewed: false,
+              }
+            : record,
+        ),
+      );
+    }
+
+    function handlePointerUp() {
+      setOcrDragState(null);
+    }
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+    };
+  }, [ocrDragState, selectedCrop, selectedRecord, setRecords]);
+
+  function updateSelectedRecord(updater: (record: UploadedRecord) => UploadedRecord) {
+    if (!selectedRecord) return;
+    setRecords((current) =>
+      current.map((record) =>
+        record.id === selectedRecord.id ? updater(record) : record,
+      ),
+    );
+  }
+
+  async function handleAutoDetectRegion() {
+    if (!selectedRecord?.crop) return;
+    const { ocrRegion, labelRect } =
+      await autoDetectOcrRegionForRecord(selectedRecord);
+    updateSelectedRecord((record) => ({
+      ...record,
+      ocrRegion,
+      detectedLabelRect: labelRect,
+      ocrSuggestion: null,
+      ocrStatus: "idle",
+      ocrError: null,
+      reviewed: false,
+    }));
+  }
+
+  async function handleRunOcr(recordId: string) {
+    const record = records.find((item) => item.id === recordId);
+    if (!record?.crop) return;
+    setRunningOcrRecordId(recordId);
+    setSelectedRecordId(recordId);
+    onClearImportResult();
+    setRecords((current) =>
+      current.map((item) =>
+        item.id === recordId
+          ? { ...item, ocrStatus: "running", ocrError: null }
+          : item,
+      ),
+    );
+    try {
+      const result = await runOcrOnRecord(record);
+      const suggestion = parseOcrSuggestion(
+        result.text || "",
+        record.parsedFields.kind,
+      );
+      suggestion.confidence = Number.isFinite(result.confidence)
+        ? result.confidence
+        : null;
+      setRecords((current) =>
+        current.map((item) =>
+          item.id === recordId
+            ? {
+                ...item,
+                ocrSuggestion: suggestion,
+                ocrStatus: "done",
+                reviewed: false,
+                parsedFields: {
+                  name: suggestion.suggestedName,
+                  kind: suggestion.suggestedKind,
+                  first_glaze: suggestion.suggestedFirstGlaze,
+                  second_glaze: suggestion.suggestedSecondGlaze,
+                  runs:
+                    detectRunsFromOcrText(suggestion.rawText) ??
+                    item.parsedFields.runs,
+                  is_food_safe:
+                    detectFoodSafeFromOcrText(suggestion.rawText) ??
+                    item.parsedFields.is_food_safe,
+                },
+              }
+            : item,
+        ),
+      );
+    } catch (error) {
+      setRecords((current) =>
+        current.map((item) =>
+          item.id === recordId
+            ? {
+                ...item,
+                ocrStatus: "error",
+                ocrError:
+                  error instanceof Error ? error.message : String(error),
+                reviewed: false,
+              }
+            : item,
+        ),
+      );
+    } finally {
+      setRunningOcrRecordId((current) =>
+        current === recordId ? null : current,
+      );
+    }
+  }
+
+  function handleStartOcrDrag(
+    handle: OcrDragState["handle"],
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) {
+    if (!selectedRecord?.ocrRegion || !selectedCrop || !ocrStageRef.current) return;
+    const rect = ocrStageRef.current.getBoundingClientRect();
+    const scale = rect.width / selectedCrop.size;
+    const sourceX = (event.clientX - rect.left) / scale;
+    const sourceY = (event.clientY - rect.top) / scale;
+    const region = selectedRecord.ocrRegion;
+    const cx = region.x + region.width / 2;
+    const cy = region.y + region.height / 2;
+    setOcrDragState({
+      handle,
+      startRegion: region,
+      anchorX: handle === "move" ? sourceX - region.x : cx,
+      anchorY: handle === "move" ? sourceY - region.y : cy,
+      startAngle:
+        handle === "rotate" ? Math.atan2(sourceY - cy, sourceX - cx) : 0,
+    });
+  }
+
   return (
     <Stack spacing={2}>
       <Alert severity="info">
@@ -85,7 +318,7 @@ export default function GlazeImportOcrStage({
         <GlazeImportRecordList
           records={records}
           selectedId={selectedRecordId}
-          onSelect={onSelect}
+          onSelect={(id) => setSelectedRecordId(id)}
           onDelete={onDelete}
           hideCropChip
           getSecondaryText={buildOcrSecondaryText}
@@ -94,7 +327,7 @@ export default function GlazeImportOcrStage({
               variant="outlined"
               size="small"
               disabled={!record.crop || runningOcrRecordId !== null}
-              onClick={() => onRunOcr(record.id)}
+              onClick={() => void handleRunOcr(record.id)}
             >
               {record.ocrSuggestion ? "Re-run OCR" : "Run OCR"}
             </Button>
@@ -115,7 +348,14 @@ export default function GlazeImportOcrStage({
                     step={0.01}
                     value={selectedRecord.ocrTuning.labelWhiteThreshold}
                     onChange={(_, value) =>
-                      onUpdateSelectedLabelSensitivity(value as number)
+                      updateSelectedRecord((record) => ({
+                        ...record,
+                        ocrTuning: {
+                          ...record.ocrTuning,
+                          labelWhiteThreshold: value as number,
+                        },
+                        reviewed: false,
+                      }))
                     }
                     size="small"
                   />
@@ -135,9 +375,14 @@ export default function GlazeImportOcrStage({
                     step={0.01}
                     value={0.2 + 0.85 - selectedRecord.ocrTuning.textDarkThreshold}
                     onChange={(_, value) =>
-                      onUpdateSelectedTextSensitivity(
-                        0.2 + 0.85 - (value as number),
-                      )
+                      updateSelectedRecord((record) => ({
+                        ...record,
+                        ocrTuning: {
+                          ...record.ocrTuning,
+                          textDarkThreshold: 0.2 + 0.85 - (value as number),
+                        },
+                        reviewed: false,
+                      }))
                     }
                     size="small"
                   />
@@ -149,7 +394,7 @@ export default function GlazeImportOcrStage({
                   variant="outlined"
                   size="small"
                   disabled={!selectedRecord.crop}
-                  onClick={onAutoDetectRegion}
+                  onClick={() => void handleAutoDetectRegion()}
                 >
                   Auto-detect Region
                 </Button>
@@ -157,7 +402,7 @@ export default function GlazeImportOcrStage({
                   variant="contained"
                   size="small"
                   disabled={!selectedRecord.crop || runningOcrRecordId !== null}
-                  onClick={() => onRunOcr(selectedRecord.id)}
+                  onClick={() => void handleRunOcr(selectedRecord.id)}
                 >
                   {selectedRecord.ocrSuggestion ? "Re-run OCR" : "Run OCR"}
                 </Button>
@@ -201,7 +446,8 @@ export default function GlazeImportOcrStage({
                     />
                     {selectedOcrRegion ? (
                       <Box
-                        onPointerDown={(event) => onStartOcrDrag("move", event)}
+                        data-testid="ocr-selection"
+                        onPointerDown={(event) => handleStartOcrDrag("move", event)}
                         sx={{
                           position: "absolute",
                           left: selectedOcrRegion.x * ocrStageScale,
@@ -217,9 +463,10 @@ export default function GlazeImportOcrStage({
                         }}
                       >
                         <Box
+                          data-testid="ocr-handle-rotate"
                           onPointerDown={(event) => {
                             event.stopPropagation();
-                            onStartOcrDrag("rotate", event);
+                            handleStartOcrDrag("rotate", event);
                           }}
                           sx={{
                             position: "absolute",
@@ -238,9 +485,10 @@ export default function GlazeImportOcrStage({
                         {(["nw", "ne", "sw", "se"] as const).map((handle) => (
                           <Box
                             key={handle}
+                            data-testid={`ocr-handle-${handle}`}
                             onPointerDown={(event) => {
                               event.stopPropagation();
-                              onStartOcrDrag(handle, event);
+                              handleStartOcrDrag(handle, event);
                             }}
                             sx={{
                               position: "absolute",

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -45,24 +46,33 @@ function makeRecord(
 }
 
 describe("GlazeImportReviewStage", () => {
-  it("uses the larger review button instead of the tiny checkbox", async () => {
-    const onToggleReviewed = vi.fn();
+  function ReviewStageHarness() {
+    const [records, setRecords] = useState([makeRecord()]);
+    const [selectedRecordId, setSelectedRecordId] = useState<string | null>("rec-1");
+    const selected = records[0];
 
-    render(
-      <GlazeImportReviewStage
-        records={[makeRecord()]}
-        selectedRecordId="rec-1"
-        selectedRecord={makeRecord()}
-        cropPreviewLoading={false}
-        cropPreviewUrl="blob:preview"
-        allReviewed={false}
-        onSelect={vi.fn()}
-        onDelete={vi.fn()}
-        onToggleReviewed={onToggleReviewed}
-        onContinueToImport={vi.fn()}
-        onUpdateSelectedRecord={vi.fn()}
-      />,
+    return (
+      <>
+        <GlazeImportReviewStage
+          records={records}
+          selectedRecordId={selectedRecordId}
+          cropPreviewLoading={false}
+          cropPreviewUrl="blob:preview"
+          allReviewed={records.every((record) => record.reviewed)}
+          setRecords={setRecords}
+          setSelectedRecordId={setSelectedRecordId}
+          onDelete={vi.fn()}
+          onContinueToImport={vi.fn()}
+        />
+        <output data-testid="review-probe">
+          {`${selected.parsedFields.kind}|${selected.parsedFields.name}|${selected.parsedFields.first_glaze}|${selected.parsedFields.second_glaze}|${selected.reviewed}`}
+        </output>
+      </>
     );
+  }
+
+  it("updates parsed fields and uses the larger review button instead of the tiny checkbox", async () => {
+    render(<ReviewStageHarness />);
 
     expect(
       screen.queryByLabelText(
@@ -70,10 +80,29 @@ describe("GlazeImportReviewStage", () => {
       ),
     ).not.toBeInTheDocument();
 
+    await userEvent.clear(screen.getByLabelText("Parsed name"));
+    await userEvent.type(screen.getByLabelText("Parsed name"), "New Name");
+    expect(screen.getByTestId("review-probe")).toHaveTextContent(
+      "glaze_type|New Name|||false",
+    );
+
+    await userEvent.selectOptions(screen.getByLabelText("Parsed kind"), [
+      "glaze_combination",
+    ]);
+    expect(screen.getByTestId("review-probe")).toHaveTextContent(
+      "glaze_combination|!||",
+    );
+
+    await userEvent.type(screen.getByLabelText("Parsed 1st glaze"), "Iron Red");
+    await userEvent.type(screen.getByLabelText("Parsed 2nd glaze"), "Clear");
+    expect(screen.getByTestId("review-probe")).toHaveTextContent(
+      "glaze_combination|Iron Red!Clear|Iron Red|Clear|false",
+    );
+
     await userEvent.click(
       screen.getByRole("button", { name: "Mark reviewed for import" }),
     );
 
-    expect(onToggleReviewed).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("review-probe")).toHaveTextContent("true");
   });
 });

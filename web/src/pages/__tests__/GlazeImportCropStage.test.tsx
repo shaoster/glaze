@@ -1,5 +1,5 @@
-import { createRef } from "react";
-import { render, screen } from "@testing-library/react";
+import { useState } from "react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -36,27 +36,48 @@ function makeRecord(overrides: Partial<UploadedRecord> = {}): UploadedRecord {
 }
 
 describe("GlazeImportCropStage", () => {
+  function CropStageHarness() {
+    const [records, setRecords] = useState([makeRecord()]);
+    const [selectedRecordId, setSelectedRecordId] = useState<string | null>(
+      "record-1",
+    );
+    const selected = records[0];
+
+    return (
+      <>
+        <GlazeImportCropStage
+          records={records}
+          selectedRecordId={selectedRecordId}
+          allCropped={false}
+          cropPreviewLoading={false}
+          cropPreviewUrl="blob:preview"
+          setRecords={setRecords}
+          setSelectedRecordId={setSelectedRecordId}
+          onDelete={vi.fn()}
+          onContinueToOcr={vi.fn()}
+        />
+        <output data-testid="crop-probe">
+          {selected.crop
+            ? `${selected.crop.x},${selected.crop.y},${selected.crop.size}`
+            : "none"}
+        </output>
+        <output data-testid="selected-id">{selectedRecordId ?? "none"}</output>
+      </>
+    );
+  }
+
   it("shows the record list when no record is selected", () => {
     render(
       <GlazeImportCropStage
         records={[makeRecord()]}
         selectedRecordId={null}
-        selectedRecord={null}
-        selectedCrop={null}
         allCropped={false}
         cropPreviewLoading={false}
         cropPreviewUrl={null}
-        cropStageRef={createRef<HTMLDivElement>()}
-        selectedPadding={80}
-        selectedStageWidth={800}
-        selectedStageHeight={640}
-        selectedStageScale={1}
-        onSelect={vi.fn()}
+        setRecords={vi.fn()}
+        setSelectedRecordId={vi.fn()}
         onDelete={vi.fn()}
-        onBackToRecords={vi.fn()}
-        onResetCrop={vi.fn()}
         onContinueToOcr={vi.fn()}
-        onStartCropDrag={vi.fn()}
       />,
     );
 
@@ -64,39 +85,38 @@ describe("GlazeImportCropStage", () => {
     expect(screen.getByText("Create a crop to preview the transparency-safe square result.")).toBeInTheDocument();
   });
 
-  it("exposes crop actions for the selected record", async () => {
-    const onResetCrop = vi.fn();
-    const onContinueToOcr = vi.fn();
+  it("handles the back button and updates crop geometry through a handle drag", async () => {
+    Object.defineProperty(HTMLElement.prototype, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        left: 0,
+        top: 0,
+        width: 752,
+        height: 592,
+        right: 752,
+        bottom: 592,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+    });
 
-    const record = makeRecord();
-    render(
-      <GlazeImportCropStage
-        records={[record]}
-        selectedRecordId={record.id}
-        selectedRecord={record}
-        selectedCrop={record.crop}
-        allCropped
-        cropPreviewLoading={false}
-        cropPreviewUrl="blob:preview"
-        cropStageRef={createRef<HTMLDivElement>()}
-        selectedPadding={80}
-        selectedStageWidth={800}
-        selectedStageHeight={640}
-        selectedStageScale={1}
-        onSelect={vi.fn()}
-        onDelete={vi.fn()}
-        onBackToRecords={vi.fn()}
-        onResetCrop={onResetCrop}
-        onContinueToOcr={onContinueToOcr}
-        onStartCropDrag={vi.fn()}
-      />,
-    );
+    render(<CropStageHarness />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Reset Crop" }));
-    await userEvent.click(screen.getByRole("button", { name: "Continue To OCR" }));
+    expect(screen.getByTestId("selected-id")).toHaveTextContent("record-1");
+    await userEvent.click(screen.getByRole("button", { name: "← Back to Records" }));
+    expect(screen.getByTestId("selected-id")).toHaveTextContent("none");
 
-    expect(onResetCrop).toHaveBeenCalled();
-    expect(onContinueToOcr).toHaveBeenCalled();
-    expect(screen.getByText("Source: 640 × 480")).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Oribe"));
+    expect(screen.getByTestId("crop-probe")).toHaveTextContent("0,0,640");
+
+    fireEvent.pointerDown(screen.getByTestId("crop-handle-nw"), {
+      clientX: 56,
+      clientY: 56,
+    });
+    fireEvent.pointerMove(window, { clientX: 156, clientY: 156 });
+    fireEvent.pointerUp(window);
+
+    expect(screen.getByTestId("crop-probe")).toHaveTextContent("100,100,540");
   });
 });

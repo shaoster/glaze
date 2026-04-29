@@ -1,54 +1,201 @@
-import type { RefObject } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type Dispatch, type PointerEvent as ReactPointerEvent, type SetStateAction } from "react";
 import { Alert, Box, Button, Chip, CircularProgress, Stack, Typography } from "@mui/material";
 import GlazeImportRecordList from "./GlazeImportRecordList";
 import type { UploadedRecord } from "./glazeImportToolTypes";
 import type { CropSquare } from "../ocrDetection";
+import {
+  clampCrop,
+  defaultCrop,
+  defaultCropOcrRegion,
+  getViewportPadding,
+  MIN_CROP_SIZE,
+  rotatePt,
+} from "./glazeImportToolGeometry";
+
+type CropDragState = {
+  handle: "move" | "nw" | "ne" | "sw" | "se" | "rotate";
+  startCrop: CropSquare;
+  anchorX: number;
+  anchorY: number;
+  startAngle: number;
+};
 
 interface GlazeImportCropStageProps {
   records: UploadedRecord[];
   selectedRecordId: string | null;
-  selectedRecord: UploadedRecord | null;
-  selectedCrop: CropSquare | null;
   allCropped: boolean;
   cropPreviewLoading: boolean;
   cropPreviewUrl: string | null;
-  cropStageRef: RefObject<HTMLDivElement | null>;
-  selectedPadding: number;
-  selectedStageWidth: number;
-  selectedStageHeight: number;
-  selectedStageScale: number;
-  onSelect: (id: string) => void;
+  setRecords: Dispatch<SetStateAction<UploadedRecord[]>>;
+  setSelectedRecordId: (id: string | null) => void;
   onDelete: (id: string) => void;
-  onBackToRecords: () => void;
-  onResetCrop: () => void;
   onContinueToOcr: () => void;
-  onStartCropDrag: (
-    handle: "move" | "nw" | "ne" | "sw" | "se" | "rotate",
-    event: ReactPointerEvent<HTMLDivElement>,
-  ) => void;
 }
 
 export default function GlazeImportCropStage({
   records,
   selectedRecordId,
-  selectedRecord,
-  selectedCrop,
   allCropped,
   cropPreviewLoading,
   cropPreviewUrl,
-  cropStageRef,
-  selectedPadding,
-  selectedStageWidth,
-  selectedStageHeight,
-  selectedStageScale,
-  onSelect,
+  setRecords,
+  setSelectedRecordId,
   onDelete,
-  onBackToRecords,
-  onResetCrop,
   onContinueToOcr,
-  onStartCropDrag,
 }: GlazeImportCropStageProps) {
+  const cropStageRef = useRef<HTMLDivElement | null>(null);
+  const [cropDragState, setCropDragState] = useState<CropDragState | null>(null);
+  const selectedRecord =
+    records.find((record) => record.id === selectedRecordId) ?? null;
+  const selectedCrop = selectedRecord?.crop
+    ? clampCrop(selectedRecord.dimensions, selectedRecord.crop)
+    : null;
+  const selectedPadding = selectedRecord
+    ? getViewportPadding(selectedRecord.dimensions)
+    : 0;
+  const selectedStageWidth = selectedRecord
+    ? selectedRecord.dimensions.width + selectedPadding * 2
+    : 1;
+  const selectedStageHeight = selectedRecord
+    ? selectedRecord.dimensions.height + selectedPadding * 2
+    : 1;
+  const selectedStageScale = selectedRecord
+    ? Math.min(1, 760 / Math.max(selectedStageWidth, selectedStageHeight))
+    : 1;
+
+  useEffect(() => {
+    if (!cropDragState || !selectedRecord || !selectedRecord.crop) return;
+    const currentDrag = cropDragState;
+
+    function handlePointerMove(event: PointerEvent) {
+      if (!cropStageRef.current) return;
+      const rect = cropStageRef.current.getBoundingClientRect();
+      const padding = getViewportPadding(selectedRecord.dimensions);
+      const stageScale =
+        rect.width / (selectedRecord.dimensions.width + padding * 2);
+      const sourceX = (event.clientX - rect.left) / stageScale - padding;
+      const sourceY = (event.clientY - rect.top) / stageScale - padding;
+
+      const start = currentDrag.startCrop;
+      let nextCrop: CropSquare = { ...start };
+      if (currentDrag.handle === "rotate") {
+        const currentAngle = Math.atan2(
+          sourceY - currentDrag.anchorY,
+          sourceX - currentDrag.anchorX,
+        );
+        const delta = ((currentAngle - currentDrag.startAngle) * 180) / Math.PI;
+        nextCrop = { ...start, rotation: start.rotation + delta };
+      } else if (currentDrag.handle === "move") {
+        nextCrop = {
+          ...start,
+          x: sourceX - currentDrag.anchorX,
+          y: sourceY - currentDrag.anchorY,
+        };
+      } else {
+        const fixedSignX =
+          currentDrag.handle === "nw" || currentDrag.handle === "sw" ? 1 : -1;
+        const fixedSignY =
+          currentDrag.handle === "nw" || currentDrag.handle === "ne" ? 1 : -1;
+        const cx = start.x + start.size / 2;
+        const cy = start.y + start.size / 2;
+        const [fRotX, fRotY] = rotatePt(
+          (fixedSignX * start.size) / 2,
+          (fixedSignY * start.size) / 2,
+          start.rotation,
+        );
+        const fixedX = cx + fRotX;
+        const fixedY = cy + fRotY;
+        const [localDx, localDy] = rotatePt(
+          sourceX - fixedX,
+          sourceY - fixedY,
+          -start.rotation,
+        );
+        const size = Math.max(Math.abs(localDx), Math.abs(localDy), MIN_CROP_SIZE);
+        const [newRotFx, newRotFy] = rotatePt(
+          (fixedSignX * size) / 2,
+          (fixedSignY * size) / 2,
+          start.rotation,
+        );
+        const newCx = fixedX - newRotFx;
+        const newCy = fixedY - newRotFy;
+        nextCrop = { ...start, x: newCx - size / 2, y: newCy - size / 2, size };
+      }
+
+      setRecords((current) =>
+        current.map((record) =>
+          record.id === selectedRecord.id
+            ? {
+                ...record,
+                crop: clampCrop(record.dimensions, nextCrop),
+                cropped: true,
+                ocrSuggestion: null,
+                ocrStatus: "idle",
+                ocrError: null,
+                reviewed: false,
+              }
+            : record,
+        ),
+      );
+    }
+
+    function handlePointerUp() {
+      setCropDragState(null);
+    }
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+    };
+  }, [cropDragState, selectedRecord, setRecords]);
+
+  function handleResetCrop() {
+    if (!selectedRecord) return;
+    setRecords((current) =>
+      current.map((record) => {
+        if (record.id !== selectedRecord.id) return record;
+        const crop = clampCrop(record.dimensions, defaultCrop(record.dimensions));
+        return {
+          ...record,
+          crop,
+          ocrRegion: defaultCropOcrRegion(crop),
+          detectedLabelRect: null,
+          reviewed: false,
+          ocrSuggestion: null,
+          ocrStatus: "idle",
+          ocrError: null,
+        };
+      }),
+    );
+  }
+
+  function handleStartCropDrag(
+    handle: CropDragState["handle"],
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) {
+    if (!selectedRecord?.crop || !cropStageRef.current) return;
+    const rect = cropStageRef.current.getBoundingClientRect();
+    const padding = getViewportPadding(selectedRecord.dimensions);
+    const stageScale =
+      rect.width / (selectedRecord.dimensions.width + padding * 2);
+    const sourceX = (event.clientX - rect.left) / stageScale - padding;
+    const sourceY = (event.clientY - rect.top) / stageScale - padding;
+    const crop = selectedRecord.crop;
+    const cx = crop.x + crop.size / 2;
+    const cy = crop.y + crop.size / 2;
+    setCropDragState({
+      handle,
+      startCrop: crop,
+      anchorX: handle === "move" ? sourceX - crop.x : cx,
+      anchorY: handle === "move" ? sourceY - crop.y : cy,
+      startAngle:
+        handle === "rotate" ? Math.atan2(sourceY - cy, sourceX - cx) : 0,
+    });
+  }
+
   return (
     <Stack spacing={2}>
       <Alert severity="info">
@@ -67,7 +214,7 @@ export default function GlazeImportCropStage({
           <GlazeImportRecordList
             records={records}
             selectedId={selectedRecordId}
-            onSelect={onSelect}
+            onSelect={setSelectedRecordId}
             onDelete={onDelete}
           />
         ) : (
@@ -77,7 +224,7 @@ export default function GlazeImportCropStage({
                 <Stack direction="row" spacing={1} flexWrap="wrap">
                   <Button
                     onClick={(event) => {
-                      onBackToRecords();
+                      setSelectedRecordId(null);
                       event.stopPropagation();
                     }}
                   >
@@ -92,7 +239,7 @@ export default function GlazeImportCropStage({
                 <Stack direction="row" spacing={1} flexWrap="wrap">
                   <Button
                     variant="outlined"
-                    onClick={onResetCrop}
+                    onClick={handleResetCrop}
                     disabled={!selectedRecord.crop}
                   >
                     Reset Crop
@@ -144,7 +291,8 @@ export default function GlazeImportCropStage({
                     />
                     {selectedCrop ? (
                       <Box
-                        onPointerDown={(event) => onStartCropDrag("move", event)}
+                        data-testid="crop-selection"
+                        onPointerDown={(event) => handleStartCropDrag("move", event)}
                         sx={{
                           position: "absolute",
                           left: (selectedCrop.x + selectedPadding) * selectedStageScale,
@@ -179,9 +327,10 @@ export default function GlazeImportCropStage({
                         }}
                       >
                         <Box
+                          data-testid="crop-handle-rotate"
                           onPointerDown={(event) => {
                             event.stopPropagation();
-                            onStartCropDrag("rotate", event);
+                            handleStartCropDrag("rotate", event);
                           }}
                           sx={{
                             position: "absolute",
@@ -200,9 +349,10 @@ export default function GlazeImportCropStage({
                         {(["nw", "ne", "sw", "se"] as const).map((handle) => (
                           <Box
                             key={handle}
+                            data-testid={`crop-handle-${handle}`}
                             onPointerDown={(event) => {
                               event.stopPropagation();
-                              onStartCropDrag(handle, event);
+                              handleStartCropDrag(handle, event);
                             }}
                             sx={{
                               position: "absolute",

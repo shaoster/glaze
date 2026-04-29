@@ -435,7 +435,9 @@ js_library(
         "src/pages/glazeImportTool/GlazeImportReconcileStage.tsx",
         "src/pages/glazeImportTool/GlazeImportReviewStage.tsx",
         "src/pages/glazeImportTool/GlazeImportUploadStage.tsx",
+        "src/pages/glazeImportTool/glazeImportToolGeometry.ts",
         "src/pages/glazeImportTool/glazeImportToolOcr.ts",
+        "src/pages/glazeImportTool/glazeImportToolProcessing.ts",
         "src/pages/glazeImportTool/glazeImportToolTypes.ts",
     ],
     deps = [

@@ -84,6 +84,7 @@ export default function GlazeImportRecordList({
           <Button
             color="error"
             size="small"
+            aria-label={`Delete ${record.parsedFields.name || record.filename}`}
             onClick={(event) => {
               event.stopPropagation();
               onDelete(record.id);
