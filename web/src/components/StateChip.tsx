@@ -74,7 +74,7 @@ export default function StateChip({
   })();
 
   const chipSx: SxProps<Theme> = {
-    borderRadius: 999,
+    borderRadius: "6px",
     border: "1px solid",
     borderColor: outlineColor,
     display: "inline-flex",
@@ -97,14 +97,18 @@ export default function StateChip({
     boxShadow: "none",
     opacity: disabled ? 0.6 : 1,
     transition:
-      "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
+      "background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 180ms ease, box-shadow 180ms ease",
     ...(interactive
       ? {
           "&:hover": {
             backgroundColor: `color-mix(in oklab, ${baseColor} 16%, transparent)`,
             borderStyle: "solid",
+            boxShadow: `0 8px 22px color-mix(in oklab, ${baseColor} 20%, transparent)`,
             ".state-chip-dot": {
-              backgroundColor: baseColor,
+              "&::after": {
+                animationDuration: "1.2s",
+                opacity: 1,
+              },
             },
           },
         }
@@ -117,13 +121,41 @@ export default function StateChip({
         component="span"
         className="state-chip-dot"
         sx={{
+          position: "relative",
           width: 8,
           height: 8,
           borderRadius: "50%",
           border: `1.5px solid ${outlineColor}`,
           backgroundColor: dotFillColor,
+          overflow: "hidden",
           flexShrink: 0,
           transition: "background-color 120ms ease, border-color 120ms ease",
+          ...(interactive
+            ? {
+                backgroundColor: "transparent",
+                "&::after": {
+                  content: '""',
+                  position: "absolute",
+                  inset: 1,
+                  borderRadius: "50%",
+                  backgroundColor: baseColor,
+                  transformOrigin: "center",
+                  animation: disabled
+                    ? "none"
+                    : "stateChipDotPulse 2.1s ease-in-out infinite",
+                },
+                "@keyframes stateChipDotPulse": {
+                  "0%, 100%": {
+                    transform: "scale(0.28)",
+                    opacity: 0.18,
+                  },
+                  "50%": {
+                    transform: "scale(1)",
+                    opacity: 0.95,
+                  },
+                },
+              }
+            : {}),
         }}
       />
       <Box component="span">{label}</Box>

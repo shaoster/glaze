@@ -46,9 +46,9 @@ describe("ImageLightbox", () => {
       expect(img).toHaveAttribute("alt", "Second");
     });
 
-    it("shows caption when present", () => {
+    it("uses the caption as image alt text when present", () => {
       renderLightbox(ONE_IMAGE, 0);
-      expect(screen.getByText("First")).toBeInTheDocument();
+      expect(screen.getByRole("img")).toHaveAttribute("alt", "First");
     });
 
     it("does not show a caption element when caption is empty", () => {

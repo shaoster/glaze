@@ -7,6 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import TagManager from "../TagManager";
 import type { PieceDetail, TagEntry } from "../../util/types";
 import * as api from "../../util/api";
@@ -78,24 +79,36 @@ describe("TagManager", () => {
       renderTagManager([{ id: "gift", name: "Gift", color: "#2A9D8F" }]);
     });
     expect(screen.getByText("Gift")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Edit tags" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add or edit tags" }),
+    ).toBeInTheDocument();
     expect(screen.queryByLabelText("Tags")).not.toBeInTheDocument();
   });
 
-  it("shows placeholder text when no tags", async () => {
+  it("does not fetch tags until editing starts", async () => {
     await act(async () => {
       renderTagManager([]);
     });
-    expect(screen.getByText("Add some tags!")).toBeInTheDocument();
+    expect(api.fetchGlobalEntries).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add or edit tags" }));
+
+    await waitFor(() =>
+      expect(api.fetchGlobalEntries).toHaveBeenCalledWith("tag"),
+    );
+    expect(api.fetchGlobalEntries).toHaveBeenCalledTimes(1);
   });
 
   it("shows the tag editor when the edit button is pressed", async () => {
     await act(async () => {
       renderTagManager();
     });
-    fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add or edit tags" }),
+    );
     expect(screen.getByLabelText("Tags")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "New" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    expect(screen.getByRole("option", { name: "+ New tag" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save tags" })).toBeInTheDocument();
   });
 
@@ -106,7 +119,7 @@ describe("TagManager", () => {
     await act(async () => {
       renderTagManager();
     });
-    fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add or edit tags" }));
     fireEvent.mouseDown(screen.getByLabelText("Tags"));
     await waitFor(() => screen.getByRole("option", { name: "Gift" }));
     fireEvent.click(screen.getByRole("option", { name: "Gift" }));
@@ -118,7 +131,7 @@ describe("TagManager", () => {
     await act(async () => {
       renderTagManager([{ id: "gift", name: "Gift", color: "#2A9D8F" }]);
     });
-    fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add or edit tags" }));
     expect(api.updatePiece).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Save tags" }));
     await waitFor(() =>
@@ -135,7 +148,7 @@ describe("TagManager", () => {
     await act(async () => {
       renderTagManager([{ id: "gift", name: "Gift", color: "#2A9D8F" }]);
     });
-    fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add or edit tags" }));
     fireEvent.click(screen.getByRole("button", { name: "Save tags" }));
     await waitFor(() =>
       expect(screen.queryByLabelText("Tags")).not.toBeInTheDocument(),
@@ -148,7 +161,7 @@ describe("TagManager", () => {
     await act(async () => {
       renderTagManager([{ id: "gift", name: "Gift", color: "#2A9D8F" }]);
     });
-    fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add or edit tags" }));
     fireEvent.click(screen.getByRole("button", { name: "Save tags" }));
     await waitFor(() =>
       expect(
@@ -167,10 +180,13 @@ describe("TagManager", () => {
       renderTagManager();
     });
     // Wait for tags to load
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add or edit tags" }),
+    );
     await waitFor(() => expect(api.fetchGlobalEntries).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
-    fireEvent.click(screen.getByRole("button", { name: "New" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    await userEvent.click(screen.getByRole("option", { name: "+ New tag" }));
 
     fireEvent.change(screen.getByLabelText("Tag name"), {
       target: { value: "gift" },
@@ -197,8 +213,11 @@ describe("TagManager", () => {
       renderTagManager();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
-    fireEvent.click(screen.getByRole("button", { name: "New" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add or edit tags" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    await userEvent.click(screen.getByRole("option", { name: "+ New tag" }));
 
     fireEvent.change(screen.getByLabelText("Tag name"), {
       target: { value: "For Sale" },

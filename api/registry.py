@@ -29,7 +29,9 @@ def global_entry_serializer(model_cls: type[django_models.Model]):
         class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
             ...
     """
+
     def decorator(cls: type[serializers.Serializer]):
         _GLOBAL_ENTRY_SERIALIZERS[model_cls] = cls
         return cls
+
     return decorator

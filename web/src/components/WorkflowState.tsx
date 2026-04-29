@@ -1,41 +1,33 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTheme } from "@mui/material";
 import {
   Box,
   Button,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  IconButton,
-  List,
-  ListItem,
-  ListItemText,
+  Fab,
   MenuItem,
+  Portal,
   TextField,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import ImageLightbox from "./ImageLightbox";
-import CloudinaryImage from "./CloudinaryImage";
 import type { PieceDetail, PieceState } from "../util/types";
 import {
   fetchCloudinaryWidgetConfig,
   signCloudinaryWidgetParams,
   updateCurrentState,
-  updatePiece,
 } from "../util/api";
 import {
   type ResolvedAdditionalField,
   formatWorkflowFieldLabel,
   getAdditionalFieldDefinitions,
 } from "../util/workflow";
-import { entryNameOrEmpty, normalizeOptionalText, undefinedIfBlank } from "../util/optionalValues";
+import { entryNameOrEmpty } from "../util/optionalValues";
 import GlobalEntryField from "./GlobalEntryField";
 import AutosaveStatus from "./AutosaveStatus";
 import { useAutosave } from "./useAutosave";
+import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
 
 export type ImageEntry = {
   url: string;
@@ -48,9 +40,6 @@ type WorkflowStateProps = {
   pieceId: string;
   onSaved: (updated: PieceDetail) => void;
   onDirtyChange?: (dirty: boolean) => void;
-  currentLocation?: string;
-  currentThumbnail?: import("../util/types").Thumbnail | null;
-  onSetAsThumbnail?: (image: ImageEntry) => Promise<void>;
   autosaveDelayMs?: number;
 };
 
@@ -168,109 +157,6 @@ function stateImages(pieceState: PieceState): ImageEntry[] {
   }));
 }
 
-// ── ImageList ─────────────────────────────────────────────────────────────────
-
-type ImageListProps = {
-  images: ImageEntry[];
-  onRemove: (index: number) => void;
-  onViewLightbox: (index: number) => void;
-  onEditCaption: (index: number) => void;
-  editingCaptionIndex: number | null;
-  editingCaptionValue: string;
-  onCaptionValueChange: (value: string) => void;
-  onCaptionCommit: (index: number, value: string) => void;
-  onCaptionCancel: () => void;
-};
-
-function ImageList({
-  images,
-  onRemove,
-  onViewLightbox,
-  onEditCaption,
-  editingCaptionIndex,
-  editingCaptionValue,
-  onCaptionValueChange,
-  onCaptionCommit,
-  onCaptionCancel,
-}: ImageListProps) {
-  if (images.length === 0) return null;
-  return (
-    <List dense disablePadding>
-      {images.map((img, i) => (
-        <ListItem key={i} disableGutters>
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center", width: "100%" }}>
-            <IconButton
-              aria-label="remove image"
-              onClick={() => onRemove(i)}
-              size="small"
-            >
-              ✕
-            </IconButton>
-            <Box
-              component="button"
-              onClick={() => onViewLightbox(i)}
-              aria-label={`View image ${i + 1}`}
-              sx={{
-                p: 0,
-                border: "none",
-                background: "none",
-                cursor: "pointer",
-                borderRadius: 0.5,
-                display: "block",
-                flexShrink: 0,
-              }}
-            >
-              <CloudinaryImage
-                url={img.url}
-                cloudinary_public_id={img.cloudinary_public_id}
-                alt={img.caption || "Pottery image"}
-                context="thumbnail"
-                style={{ objectFit: "cover", borderRadius: 4, display: "block" }}
-              />
-            </Box>
-            {editingCaptionIndex === i ? (
-              <TextField
-                value={editingCaptionValue}
-                onChange={(e) => onCaptionValueChange(e.target.value)}
-                onBlur={() => onCaptionCommit(i, editingCaptionValue)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    onCaptionCommit(i, editingCaptionValue);
-                  }
-                  if (e.key === "Escape") {
-                    e.preventDefault();
-                    onCaptionCancel();
-                  }
-                }}
-                size="small"
-                autoFocus
-                sx={{ flex: 1 }}
-                slotProps={{ htmlInput: { "aria-label": "Edit caption" } }}
-              />
-            ) : (
-              <>
-                <ListItemText
-                  primary={img.caption || "(no caption)"}
-                  slotProps={{ primary: { sx: { color: "text.primary" } } }}
-                />
-                <IconButton
-                  aria-label="edit caption"
-                  onClick={() => onEditCaption(i)}
-                  size="small"
-                  sx={{ ml: "auto", flexShrink: 0 }}
-                >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              </>
-            )}
-          </Box>
-        </ListItem>
-      ))}
-    </List>
-  );
-}
-
 // ── ImageUploader ─────────────────────────────────────────────────────────────
 
 type ImageUploaderProps = {
@@ -278,6 +164,7 @@ type ImageUploaderProps = {
   widgetLoading: boolean;
   uploadError: string | null;
   imageError: string | null;
+  mobile: boolean;
   onUploadClick: () => void;
 };
 
@@ -286,32 +173,76 @@ function ImageUploader({
   widgetLoading,
   uploadError,
   imageError,
+  mobile,
   onUploadClick,
 }: ImageUploaderProps) {
+  const buttonDisabled = saving || widgetLoading;
+  const statusMessage = saving ? "Saving…" : "Upload Image";
+
   return (
     <Box>
-      <Button
-        variant="outlined"
-        size="small"
-        onClick={onUploadClick}
-        disabled={saving || widgetLoading}
-        startIcon={
-          saving ? <CircularProgress size={14} color="inherit" /> : undefined
-        }
-        sx={{ position: "relative", mt: 1 }}
-      >
-        <Box sx={{ opacity: widgetLoading ? 0 : 1 }}>
-          {saving ? "Saving…" : "Upload Image"}
-        </Box>
-        {widgetLoading && (
-          <CircularProgress
-            aria-hidden
-            size={14}
-            color="inherit"
-            sx={{ position: "absolute" }}
-          />
-        )}
-      </Button>
+      {mobile ? (
+        <Portal>
+          <Fab
+            color="primary"
+            aria-label="Upload Image"
+            onClick={onUploadClick}
+            disabled={buttonDisabled}
+            sx={{
+              position: "fixed",
+              right: 24,
+              bottom: 24,
+              zIndex: (theme) => theme.zIndex.speedDial,
+              boxShadow: (theme) => theme.shadows[8],
+            }}
+          >
+            {widgetLoading ? (
+              <CircularProgress aria-hidden size={20} color="inherit" />
+            ) : (
+              <PhotoCameraOutlinedIcon />
+            )}
+            <Box
+              component="span"
+              sx={{
+                position: "absolute",
+                width: 1,
+                height: 1,
+                p: 0,
+                m: -1,
+                overflow: "hidden",
+                clip: "rect(0 0 0 0)",
+                whiteSpace: "nowrap",
+                border: 0,
+              }}
+            >
+              {statusMessage}
+            </Box>
+          </Fab>
+        </Portal>
+      ) : (
+        <Portal container={() => document.getElementById("piece-upload-trigger")}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={onUploadClick}
+            disabled={buttonDisabled}
+            startIcon={
+              saving ? <CircularProgress size={14} color="inherit" /> : undefined
+            }
+            sx={{ position: "relative" }}
+          >
+            <Box sx={{ opacity: widgetLoading ? 0 : 1 }}>{statusMessage}</Box>
+            {widgetLoading && (
+              <CircularProgress
+                aria-hidden
+                size={14}
+                color="inherit"
+                sx={{ position: "absolute" }}
+              />
+            )}
+          </Button>
+        </Portal>
+      )}
       {(uploadError || imageError) && (
         <Typography color="error" variant="body2" sx={{ mt: 1 }}>
           {uploadError ?? imageError}
@@ -328,44 +259,34 @@ export default function WorkflowState({
   pieceId,
   onSaved,
   onDirtyChange,
-  currentLocation: currentLocationProp = "",
-  currentThumbnail,
-  onSetAsThumbnail: onSetAsThumbnailProp,
   autosaveDelayMs,
 }: WorkflowStateProps) {
-  const normalizedCurrentLocationProp = normalizeOptionalText(currentLocationProp);
   const [notes, setNotes] = useState(pieceState.notes);
   const [images, setImages] = useState<ImageEntry[]>(stateImages(pieceState));
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [widgetLoading, setWidgetLoading] = useState(false);
-  const [editingCaptionIndex, setEditingCaptionIndex] = useState<number | null>(null);
-  const [editingCaptionValue, setEditingCaptionValue] = useState("");
-  const [removeDialogIndex, setRemoveDialogIndex] = useState<number | null>(null);
-  const [currentLocation, setCurrentLocation] = useState(normalizedCurrentLocationProp);
   const additionalFieldDefs = useMemo(
     () => getAdditionalFieldDefinitions(pieceState.state),
     [pieceState.state],
   );
-  const baseAdditionalFieldInputs = useMemo(
-    () =>
-      buildAdditionalFieldInputMap(
+  const baseDraft = useMemo(() => {
+    const additionalFields = pieceState.additional_fields ?? {};
+    return {
+      notes: pieceState.notes,
+      images: stateImages(pieceState),
+      additionalFieldInputs: buildAdditionalFieldInputMap(
         additionalFieldDefs,
-        pieceState.additional_fields ?? {},
+        additionalFields,
       ),
-    [additionalFieldDefs, pieceState.additional_fields],
-  );
-  const baseGlobalRefPks = useMemo(
-    () =>
-      buildGlobalRefPkMap(
-        additionalFieldDefs,
-        pieceState.additional_fields ?? {},
-      ),
-    [additionalFieldDefs, pieceState.additional_fields],
-  );
+      globalRefPks: buildGlobalRefPkMap(additionalFieldDefs, additionalFields),
+    };
+  }, [additionalFieldDefs, pieceState]);
   const [additionalFieldInputs, setAdditionalFieldInputs] = useState(
-    baseAdditionalFieldInputs,
+    baseDraft.additionalFieldInputs,
   );
-  const [globalRefPks, setGlobalRefPks] = useState<GlobalRefPkMap>(baseGlobalRefPks);
+  const [globalRefPks, setGlobalRefPks] = useState<GlobalRefPkMap>(
+    baseDraft.globalRefPks,
+  );
   const normalizedAdditionalFields = useMemo(
     () =>
       normalizeAdditionalFieldPayload(
@@ -379,52 +300,29 @@ export default function WorkflowState({
     () =>
       normalizeAdditionalFieldPayload(
         additionalFieldDefs,
-        baseAdditionalFieldInputs,
-        baseGlobalRefPks,
+        baseDraft.additionalFieldInputs,
+        baseDraft.globalRefPks,
       ),
-    [additionalFieldDefs, baseAdditionalFieldInputs, baseGlobalRefPks],
+    [additionalFieldDefs, baseDraft],
   );
   const additionalFieldsDirty =
     JSON.stringify(normalizedAdditionalFields) !==
     JSON.stringify(normalizedBaseAdditionalFields);
-  const locationDirty =
-    currentLocation.trim() !== normalizedCurrentLocationProp.trim();
 
   const theme = useTheme();
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-
-  async function handleSetAsThumbnail(image: ImageEntry) {
-    if (onSetAsThumbnailProp) {
-      await onSetAsThumbnailProp(image);
-      return;
-    }
-    const updated = await updatePiece(pieceId, {
-      thumbnail: {
-        url: image.url,
-        cloudinary_public_id: image.cloudinary_public_id ?? null,
-      },
-    });
-    onSaved(updated);
-  }
+  const isMobileLayout = useMediaQuery(theme.breakpoints.down("sm"));
 
   useEffect(() => {
-    setNotes(pieceState.notes);
-    setImages(stateImages(pieceState));
-    setAdditionalFieldInputs(baseAdditionalFieldInputs);
-    setGlobalRefPks(baseGlobalRefPks);
-    setCurrentLocation(normalizedCurrentLocationProp);
-  }, [
-    pieceState,
-    baseAdditionalFieldInputs,
-    baseGlobalRefPks,
-    normalizedCurrentLocationProp,
-  ]);
+    setNotes(baseDraft.notes);
+    setImages(baseDraft.images);
+    setAdditionalFieldInputs(baseDraft.additionalFieldInputs);
+    setGlobalRefPks(baseDraft.globalRefPks);
+  }, [baseDraft]);
 
   const [savingImage, setSavingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
 
-  const isDirty =
-    notes !== pieceState.notes || additionalFieldsDirty || locationDirty;
+  const isDirty = notes !== pieceState.notes || additionalFieldsDirty;
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -437,17 +335,9 @@ export default function WorkflowState({
       additional_fields: normalizedAdditionalFields,
     };
     const result = await updateCurrentState(pieceId, payload);
-    let finalResult = result;
-    if (locationDirty) {
-      finalResult = await updatePiece(pieceId, {
-        current_location: undefinedIfBlank(currentLocation),
-      });
-    }
-    onSaved(finalResult);
+    onSaved(result);
   }, [
-    currentLocation,
     images,
-    locationDirty,
     normalizedAdditionalFields,
     notes,
     onSaved,
@@ -460,9 +350,8 @@ export default function WorkflowState({
         notes,
         images,
         additional_fields: normalizedAdditionalFields,
-        current_location: currentLocation.trim(),
       }),
-    [currentLocation, images, normalizedAdditionalFields, notes],
+    [images, normalizedAdditionalFields, notes],
   );
 
   const autosave = useAutosave({
@@ -471,63 +360,20 @@ export default function WorkflowState({
     save: saveWorkflowState,
     delayMs: autosaveDelayMs,
   });
+  const pieceDetailSaveStatus = usePieceDetailSaveStatus();
 
-  function openRemoveDialog(index: number) {
-    setRemoveDialogIndex(index);
-  }
-
-  function closeRemoveDialog() {
-    setRemoveDialogIndex(null);
-  }
-
-  async function confirmRemoveImage() {
-    if (removeDialogIndex === null) return;
-    const index = removeDialogIndex;
-    closeRemoveDialog();
-    const updatedImages = images.filter((_, i) => i !== index);
-    setSavingImage(true);
-    setImageError(null);
-    try {
-      const result = await updateCurrentState(pieceId, {
-        notes,
-        images: updatedImages,
-        additional_fields: normalizedAdditionalFields,
-      });
-      onSaved(result);
-    } catch {
-      setImageError("Failed to remove image. Please try again.");
-    } finally {
-      setSavingImage(false);
-    }
-  }
-
-  function startEditingCaption(index: number) {
-    setEditingCaptionIndex(index);
-    setEditingCaptionValue(images[index].caption);
-  }
-
-  async function commitCaptionEdit(index: number, value: string) {
-    setEditingCaptionIndex(null);
-    const newCaption = value.trim();
-    if (newCaption === images[index].caption) return;
-    const updatedImages = images.map((img, i) =>
-      i === index ? { ...img, caption: newCaption } : img,
-    );
-    setSavingImage(true);
-    setImageError(null);
-    try {
-      const result = await updateCurrentState(pieceId, {
-        notes,
-        images: updatedImages,
-        additional_fields: normalizedAdditionalFields,
-      });
-      onSaved(result);
-    } catch {
-      setImageError("Failed to save caption. Please try again.");
-    } finally {
-      setSavingImage(false);
-    }
-  }
+  useEffect(() => {
+    pieceDetailSaveStatus?.publishWorkflowStatus({
+      status: autosave.status,
+      error: autosave.error,
+      lastSavedAt: autosave.lastSavedAt,
+    });
+  }, [
+    autosave.error,
+    autosave.lastSavedAt,
+    autosave.status,
+    pieceDetailSaveStatus,
+  ]);
 
   async function handleUploadWidgetClick() {
     setUploadError(null);
@@ -649,22 +495,8 @@ export default function WorkflowState({
         slotProps={{ htmlInput: { maxLength: 2000 } }}
         fullWidth
       />
-
-      <GlobalEntryField
-        globalName="location"
-        label="Current location"
-        value={currentLocation}
-        onSelect={(entry) => setCurrentLocation(entryNameOrEmpty(entry))}
-      />
-
       {additionalFieldDefs.length > 0 && (
         <Box>
-          <Typography
-            variant="subtitle2"
-            sx={{ color: "text.secondary", mb: 1 }}
-          >
-            State details
-          </Typography>
           <Box
             sx={{
               display: "grid",
@@ -792,64 +624,23 @@ export default function WorkflowState({
         </Box>
       )}
 
-      <AutosaveStatus
-        status={autosave.status}
-        error={autosave.error}
-        lastSavedAt={autosave.lastSavedAt}
-      />
-
-      {/* Images */}
-      <Box>
-        <ImageList
-          images={images}
-          onRemove={openRemoveDialog}
-          onViewLightbox={setLightboxIndex}
-          onEditCaption={startEditingCaption}
-          editingCaptionIndex={editingCaptionIndex}
-          editingCaptionValue={editingCaptionValue}
-          onCaptionValueChange={setEditingCaptionValue}
-          onCaptionCommit={commitCaptionEdit}
-          onCaptionCancel={() => setEditingCaptionIndex(null)}
-        />
-        <ImageUploader
-          saving={savingImage}
-          widgetLoading={widgetLoading}
-          uploadError={uploadError}
-          imageError={imageError}
-          onUploadClick={handleUploadWidgetClick}
-        />
-      </Box>
-
-      {/* Remove image confirmation dialog */}
-      <Dialog open={removeDialogIndex !== null} onClose={closeRemoveDialog}>
-        <DialogTitle>Remove Image</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Remove this image? This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeRemoveDialog}>Cancel</Button>
-          <Button
-            onClick={() => void confirmRemoveImage()}
-            color="error"
-            variant="contained"
-          >
-            Remove
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Lightbox */}
-      {lightboxIndex !== null && (
-        <ImageLightbox
-          images={images}
-          initialIndex={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
-          currentThumbnailUrl={currentThumbnail?.url}
-          onSetAsThumbnail={handleSetAsThumbnail}
+      {!pieceDetailSaveStatus && (
+        <AutosaveStatus
+          status={autosave.status}
+          error={autosave.error}
+          lastSavedAt={autosave.lastSavedAt}
+          variant="floating"
         />
       )}
+
+      <ImageUploader
+        saving={savingImage}
+        widgetLoading={widgetLoading}
+        uploadError={uploadError}
+        imageError={imageError}
+        mobile={isMobileLayout}
+        onUploadClick={handleUploadWidgetClick}
+      />
     </Box>
   );
 }

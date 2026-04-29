@@ -235,9 +235,15 @@ def _global_entries_impl(request: Request, global_name: str) -> Response:
             favorite_ids = (
                 fav_model.get_favorite_ids_for(request.user) if fav_model else set()
             )
-            objects = list(
-                base_qs.prefetch_related("layers__glaze_type").order_by("name")
-            )
+
+            # TODO(187): Use a registry to delegate instead of hardcoding.
+            if model_cls == GlazeCombination:
+                objects = list(
+                    base_qs.prefetch_related("layers__glaze_type").order_by("name")
+                )
+            else:
+                objects = base_qs.order_by(display_field)
+
             return Response(
                 entry_serializer_cls(
                     objects,

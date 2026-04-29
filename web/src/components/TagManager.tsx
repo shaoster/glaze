@@ -1,6 +1,10 @@
 import { useState, useCallback, useEffect } from "react";
-import { Box, Button, IconButton, Snackbar, Typography } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
+import {
+  Box,
+  Button,
+  Snackbar,
+  Typography,
+} from "@mui/material";
 import type { PieceDetail, TagEntry } from "../util/types";
 import { createTagEntry, fetchGlobalEntries, updatePiece } from "../util/api";
 import { useAsync } from "../util/useAsync";
@@ -8,6 +12,7 @@ import TagAutocomplete from "./TagAutocomplete";
 import CreateTagDialog from "./CreateTagDialog";
 import TagChipList from "./TagChipList";
 import { pickDefaultTagColor } from "./tagPalette";
+import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
 
 const DUPLICATE_TAG_ERROR =
   "A tag with that name already exists. Choose the existing tag or enter a different name.";
@@ -40,7 +45,13 @@ export default function TagManager({
   onSaved,
 }: TagManagerProps) {
   const fetchTags = useCallback(() => fetchGlobalEntries("tag"), []);
-  const { data: rawAvailableTags, error: tagsLoadError } = useAsync(fetchTags);
+  const pieceDetailSaveStatus = usePieceDetailSaveStatus();
+  const [shouldLoadTags, setShouldLoadTags] = useState(false);
+  const {
+    data: rawAvailableTags,
+    error: tagsLoadError,
+    setData: setRawAvailableTags,
+  } = useAsync(fetchTags, [], { enabled: shouldLoadTags });
   const availableTags: TagEntry[] = (rawAvailableTags ?? []).map(toTagEntry);
 
   const [selectedTags, setSelectedTags] = useState<TagEntry[]>(initialTags);
@@ -63,6 +74,9 @@ export default function TagManager({
   }, [initialTags]);
 
   function startEditingTags() {
+    if (!shouldLoadTags) {
+      setShouldLoadTags(true);
+    }
     setDraftTags(selectedTags);
     setTagError(null);
     setEditingTags(true);
@@ -71,9 +85,13 @@ export default function TagManager({
   async function saveTags(nextTags: TagEntry[]) {
     setTagSaving(true);
     try {
-      const updated = await updatePiece(pieceId, {
-        tags: nextTags.map((tag) => tag.id),
-      });
+      const saveTagsRequest = () =>
+        updatePiece(pieceId, {
+          tags: nextTags.map((tag) => tag.id),
+        });
+      const updated = pieceDetailSaveStatus
+        ? await pieceDetailSaveStatus.runManualSave(saveTagsRequest)
+        : await saveTagsRequest();
       setSelectedTags(nextTags);
       onSaved(updated);
       setEditingTags(false);
@@ -107,6 +125,15 @@ export default function TagManager({
         name: trimmed,
         color: newTagColor,
       });
+      setRawAvailableTags((prev) => [
+        ...(prev ?? []),
+        {
+          id: created.id,
+          name: created.name,
+          color: created.color,
+          isPublic: false,
+        },
+      ]);
       const createdTag: TagEntry = {
         id: created.id,
         name: created.name,
@@ -139,32 +166,15 @@ export default function TagManager({
       )}
       {editingTags ? (
         <Box sx={{ mb: 2 }}>
-          <Box
-            sx={{
-              display: "grid",
-              gap: 1,
-              gridTemplateColumns: { xs: "1fr", sm: "minmax(0, 1fr) auto" },
-              alignItems: "start",
-            }}
-          >
-            <TagAutocomplete
-              label="Tags"
-              options={availableTags}
-              value={draftTags}
-              onChange={setDraftTags}
-              disabled={tagSaving}
-              sx={{ minWidth: 0 }}
-            />
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => setTagDialogOpen(true)}
-              disabled={tagSaving}
-              sx={{ minWidth: { sm: 88 } }}
-            >
-              New
-            </Button>
-          </Box>
+          <TagAutocomplete
+            label="Tags"
+            options={availableTags}
+            value={draftTags}
+            onChange={setDraftTags}
+            onCreateNew={() => setTagDialogOpen(true)}
+            disabled={tagSaving}
+            sx={{ minWidth: 0 }}
+          />
           <Button
             variant="contained"
             size="small"
@@ -179,28 +189,38 @@ export default function TagManager({
       ) : (
         <Box
           sx={{
-            mb: 2,
+            mb: 0.25,
             display: "flex",
             alignItems: "center",
             flexWrap: "wrap",
+            gap: 0.75,
           }}
         >
-          {selectedTags.length > 0 ? (
-            <TagChipList tags={selectedTags} />
-          ) : (
-            <Typography variant="body2" sx={{ color: "text.secondary", mr: 0 }}>
-              Add some tags!
-            </Typography>
-          )}
-          <IconButton
-            aria-label="Edit tags"
+          {selectedTags.length > 0 && <TagChipList tags={selectedTags} />}
+          <Box
+            component="button"
+            type="button"
             onClick={startEditingTags}
             disabled={tagSaving}
-            size="small"
-            sx={{ color: "text.secondary" }}
+            aria-label="Add or edit tags"
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.5,
+              px: 1,
+              py: 0.375,
+              background: "transparent",
+              border: "1px dashed",
+              borderColor: "divider",
+              borderRadius: "4px",
+              cursor: "pointer",
+              color: "text.secondary",
+              fontFamily: "inherit",
+              fontSize: "0.75rem",
+            }}
           >
-            <EditIcon fontSize="small" />
-          </IconButton>
+            + tag
+          </Box>
         </Box>
       )}
 
