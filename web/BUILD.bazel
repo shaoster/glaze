@@ -342,15 +342,49 @@ js_library(
 )
 
 js_library(
-    name = "piece_detail_src",
-    srcs = ["src/components/PieceDetail.tsx"],
+    name = "tag_manager_src",
+    srcs = ["src/components/TagManager.tsx"],
+    deps = [
+        ":generated_types",
+        ":node_modules",
+        ":tag_src",
+        ":util_lib",
+    ],
+)
+
+js_library(
+    name = "state_transition_src",
+    srcs = ["src/components/StateTransition.tsx"],
+    deps = [
+        ":node_modules",
+        ":primitive_src",
+        ":util_lib",
+    ],
+)
+
+js_library(
+    name = "piece_history_src",
+    srcs = ["src/components/PieceHistory.tsx"],
     deps = [
         ":cloudinary_image_src",
         ":generated_types",
         ":image_lightbox_src",
         ":node_modules",
+        ":util_lib",
+    ],
+)
+
+js_library(
+    name = "piece_detail_src",
+    srcs = ["src/components/PieceDetail.tsx"],
+    deps = [
+        ":cloudinary_image_src",
+        ":generated_types",
+        ":node_modules",
+        ":piece_history_src",
         ":primitive_src",
-        ":tag_src",
+        ":state_transition_src",
+        ":tag_manager_src",
         ":util_lib",
         ":workflow_state_src",
     ],
@@ -489,6 +523,39 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_tag_manager_test",
+    srcs = [
+        "src/components/__tests__/TagManager.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":tag_manager_src",
+    ],
+)
+
+vitest_test(
+    name = "web_state_transition_test",
+    srcs = [
+        "src/components/__tests__/StateTransition.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":state_transition_src",
+    ],
+)
+
+vitest_test(
+    name = "web_piece_history_test",
+    srcs = [
+        "src/components/__tests__/PieceHistory.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":piece_history_src",
+    ],
+)
+
+vitest_test(
     name = "web_piece_detail_test",
     srcs = [
         "src/components/__tests__/PieceDetail.test.tsx",
@@ -585,9 +652,12 @@ test_suite(
         ":web_picker_test",
         ":web_piece_detail_page_test",
         ":web_piece_detail_test",
+        ":web_piece_history_test",
         ":web_piece_list_page_test",
         ":web_piece_list_test",
         ":web_primitive_test",
+        ":web_state_transition_test",
+        ":web_tag_manager_test",
         ":web_tag_test",
         ":web_workflow_state_test",
         ":workflow_test",

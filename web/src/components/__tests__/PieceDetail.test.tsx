@@ -101,7 +101,6 @@ vi.mock("../../../workflow.yml", () => ({
 }));
 
 // Zero-duration theme so MUI Dialog/Fade animations complete in the next tick
-// rather than after their default 225–300ms CSS transition timeouts.
 const TEST_THEME = createTheme({
   transitions: {
     create: () => "none",
@@ -164,7 +163,6 @@ async function renderPieceDetail(
   piece = makePiece(),
   onPieceUpdated = vi.fn(),
 ) {
-  // Use createMemoryRouter (data router) so useBlocker works in tests
   const router = createMemoryRouter(
     [
       {
@@ -253,7 +251,6 @@ describe("PieceDetail", () => {
 
   it("renders successor state buttons for non-terminal state", async () => {
     await renderPieceDetail();
-    // 'designed' has successors: wheel_thrown, handbuilt
     const stateFlow = screen.getByRole("group", { name: "State flow" });
     expect(within(stateFlow).getByText("Designing")).toBeInTheDocument();
     expect(
@@ -318,7 +315,6 @@ describe("PieceDetail", () => {
   it("confirmation dialog shows from/to states", async () => {
     await renderPieceDetail();
     fireEvent.click(screen.getByRole("button", { name: "Throwing" }));
-    // The dialog body contains both state names (human-readable)
     expect(screen.getAllByText(/Designing/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Throwing/).length).toBeGreaterThan(0);
   });
@@ -327,7 +323,6 @@ describe("PieceDetail", () => {
     await renderPieceDetail();
     fireEvent.click(screen.getByRole("button", { name: "Throwing" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    // MUI Dialog exit animation is a macro-task; use waitFor to let it complete.
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
@@ -490,7 +485,6 @@ describe("PieceDetail", () => {
     it("does not call API if name is unchanged", async () => {
       await renderPieceDetail();
       fireEvent.click(screen.getByRole("button", { name: "Edit piece name" }));
-      // Name input starts as 'Test Bowl' and we do not change it
       fireEvent.click(screen.getByRole("button", { name: "Save name" }));
       expect(
         screen.queryByRole("textbox", { name: "Piece name" }),
@@ -499,7 +493,7 @@ describe("PieceDetail", () => {
     });
   });
 
-  describe("tag creation", () => {
+  describe("tag management", () => {
     it("shows tag chips with an edit button by default", async () => {
       await renderPieceDetail(
         makePiece({
@@ -524,140 +518,6 @@ describe("PieceDetail", () => {
       expect(
         screen.getByRole("button", { name: "Save tags" }),
       ).toBeInTheDocument();
-    });
-
-    it("fetched tags are selectable in the autocomplete dropdown", async () => {
-      vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
-        { id: "gift", name: "Gift", isPublic: false, color: "#2A9D8F" },
-      ]);
-
-      await renderPieceDetail();
-
-      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
-      fireEvent.mouseDown(screen.getByLabelText("Tags"));
-      await waitFor(() => screen.getByRole("option", { name: "Gift" }));
-      fireEvent.click(screen.getByRole("option", { name: "Gift" }));
-
-      // Draft chip appears; Save not yet called
-      expect(
-        screen.getByRole("button", { name: "Save tags" }),
-      ).toBeInTheDocument();
-      expect(api.updatePiece).not.toHaveBeenCalled();
-    });
-
-    it("does not save tag changes until Save is pressed", async () => {
-      const piece = makePiece({
-        tags: [{ id: "gift", name: "Gift", color: "#2A9D8F" }],
-      });
-
-      await renderPieceDetail(piece);
-
-      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
-
-      expect(api.updatePiece).not.toHaveBeenCalled();
-
-      fireEvent.click(screen.getByRole("button", { name: "Save tags" }));
-
-      await waitFor(() =>
-        expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
-          tags: ["gift"],
-        }),
-      );
-    });
-
-    it("returns to the chip list after a successful tag save", async () => {
-      const piece = makePiece({
-        tags: [{ id: "gift", name: "Gift", color: "#2A9D8F" }],
-      });
-      const updated = makePiece({
-        tags: [{ id: "gift", name: "Gift", color: "#2A9D8F" }],
-      });
-      vi.mocked(api.updatePiece).mockResolvedValue(updated);
-
-      await renderPieceDetail(piece);
-
-      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
-      fireEvent.click(screen.getByRole("button", { name: "Save tags" }));
-
-      await waitFor(() =>
-        expect(screen.queryByLabelText("Tags")).not.toBeInTheDocument(),
-      );
-      expect(screen.getByText("Gift")).toBeInTheDocument();
-    });
-
-    it("shows a self-closing snackbar when saving selected tags fails", async () => {
-      const piece = makePiece({
-        tags: [{ id: "gift", name: "Gift", color: "#2A9D8F" }],
-      });
-      vi.mocked(api.updatePiece).mockRejectedValue(new Error("Network error"));
-
-      await renderPieceDetail(piece);
-
-      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
-      fireEvent.click(screen.getByRole("button", { name: "Save tags" }));
-
-      await waitFor(() =>
-        expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
-          tags: ["gift"],
-        }),
-      );
-      await waitFor(() =>
-        expect(
-          screen.getByText(
-            "Failed to attach the selected tag. Please check your connection and try again.",
-          ),
-        ).toBeInTheDocument(),
-      );
-    });
-    // TODO(https://github.com/shaoster/glaze/issues/163)
-    it.skip("shows a descriptive error and keeps the dialog open when the tag name already exists", async () => {
-      vi.mocked(api.fetchGlobalEntries).mockResolvedValue([
-        { id: "gift", name: "Gift", isPublic: false, color: "#2A9D8F" },
-      ]);
-
-      await renderPieceDetail();
-
-      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
-      fireEvent.click(screen.getByRole("button", { name: "New" }));
-      fireEvent.change(screen.getByLabelText("Tag name"), {
-        target: { value: "gift" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Create" }));
-
-      expect(api.createTagEntry).not.toHaveBeenCalled();
-      const dialog = screen.getByRole("dialog", { name: "Create Tag" });
-      expect(dialog).toBeInTheDocument();
-      expect(
-        within(dialog).getByText(
-          "A tag with that name already exists. Choose the existing tag or enter a different name.",
-        ),
-      ).toBeInTheDocument();
-    });
-
-    // TODO(https://github.com/shaoster/glaze/issues/163)
-    it.skip("adds a newly created tag to the draft selection and waits for Save to persist it", async () => {
-      vi.mocked(api.createTagEntry).mockResolvedValue({
-        id: "sale",
-        name: "For Sale",
-        color: "#4FC3F7",
-      });
-
-      await renderPieceDetail();
-
-      fireEvent.click(screen.getByRole("button", { name: "Edit tags" }));
-      fireEvent.click(screen.getByRole("button", { name: "New" }));
-      fireEvent.change(screen.getByLabelText("Tag name"), {
-        target: { value: "For Sale" },
-      });
-      await userEvent.click(screen.getByRole("button", { name: "Create" }));
-
-      await waitFor(() => {
-        expect(screen.getByText("For Sale")).toBeInTheDocument();
-        expect(
-          screen.getByRole("button", { name: "Save tags" }),
-        ).toBeInTheDocument();
-      });
-      expect(api.updatePiece).not.toHaveBeenCalled();
     });
   });
 });

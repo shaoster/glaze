@@ -4,6 +4,11 @@ import {
   Box,
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   IconButton,
   List,
   ListItem,
@@ -12,6 +17,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
 import ImageLightbox from "./ImageLightbox";
 import CloudinaryImage from "./CloudinaryImage";
 import type { PieceDetail, PieceState } from "../util/types";
@@ -31,6 +37,12 @@ import GlobalEntryField from "./GlobalEntryField";
 import AutosaveStatus from "./AutosaveStatus";
 import { useAutosave } from "./useAutosave";
 
+export type ImageEntry = {
+  url: string;
+  caption: string;
+  cloudinary_public_id?: string | null;
+};
+
 type WorkflowStateProps = {
   pieceState: PieceState;
   pieceId: string;
@@ -38,18 +50,16 @@ type WorkflowStateProps = {
   onDirtyChange?: (dirty: boolean) => void;
   currentLocation?: string;
   currentThumbnail?: import("../util/types").Thumbnail | null;
+  onSetAsThumbnail?: (image: ImageEntry) => Promise<void>;
   autosaveDelayMs?: number;
-};
-
-type ImageEntry = {
-  url: string;
-  caption: string;
-  cloudinary_public_id?: string | null;
 };
 
 type AdditionalFieldInputMap = Record<string, string>;
 type GlobalRefPkMap = Record<string, string>;
 
+// Global-ref objects always carry an id and name. Any object without a name
+// is not a valid global ref value — treat it as empty so callers receive a
+// typed contract rather than a runtime fallback.
 function formatAdditionalFieldValue(
   value: unknown,
   type: ResolvedAdditionalField["type"],
@@ -57,16 +67,13 @@ function formatAdditionalFieldValue(
   if (value === null || value === undefined) {
     return "";
   }
-  // Global ref values arrive as {id, name} objects — show the name in the UI.
-  if (typeof value === "object" && "name" in (value as object)) {
-    return String((value as { name: unknown }).name);
-  }
   if (typeof value === "object") {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
+    const obj = value as Record<string, unknown>;
+    if (typeof obj.name === "string") {
+      return obj.name;
     }
+    // Objects without a name field are not representable as a string input.
+    return "";
   }
   if (type === "boolean") {
     return value ? "true" : "false";
@@ -119,10 +126,9 @@ function normalizeAdditionalFieldPayload(
       payload[def.name] = pk || null;
       return;
     }
-    const raw = inputs[def.name];
-    if (raw === undefined) {
-      return;
-    }
+    // buildAdditionalFieldInputMap initializes all def names, so `raw` is
+    // always a string here. Guard is defensive for future call sites.
+    const raw = inputs[def.name] ?? "";
     const trimmed = raw.trim();
     if (trimmed === "") {
       return;
@@ -142,10 +148,9 @@ function normalizeAdditionalFieldPayload(
       return;
     }
     if (def.type === "boolean") {
-      const normalized = trimmed.toLowerCase();
-      if (normalized === "true") {
+      if (trimmed === "true") {
         payload[def.name] = true;
-      } else if (normalized === "false") {
+      } else if (trimmed === "false") {
         payload[def.name] = false;
       }
       return;
@@ -163,6 +168,161 @@ function stateImages(pieceState: PieceState): ImageEntry[] {
   }));
 }
 
+// ── ImageList ─────────────────────────────────────────────────────────────────
+
+type ImageListProps = {
+  images: ImageEntry[];
+  onRemove: (index: number) => void;
+  onViewLightbox: (index: number) => void;
+  onEditCaption: (index: number) => void;
+  editingCaptionIndex: number | null;
+  editingCaptionValue: string;
+  onCaptionValueChange: (value: string) => void;
+  onCaptionCommit: (index: number, value: string) => void;
+  onCaptionCancel: () => void;
+};
+
+function ImageList({
+  images,
+  onRemove,
+  onViewLightbox,
+  onEditCaption,
+  editingCaptionIndex,
+  editingCaptionValue,
+  onCaptionValueChange,
+  onCaptionCommit,
+  onCaptionCancel,
+}: ImageListProps) {
+  if (images.length === 0) return null;
+  return (
+    <List dense disablePadding>
+      {images.map((img, i) => (
+        <ListItem key={i} disableGutters>
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center", width: "100%" }}>
+            <IconButton
+              aria-label="remove image"
+              onClick={() => onRemove(i)}
+              size="small"
+            >
+              ✕
+            </IconButton>
+            <Box
+              component="button"
+              onClick={() => onViewLightbox(i)}
+              aria-label={`View image ${i + 1}`}
+              sx={{
+                p: 0,
+                border: "none",
+                background: "none",
+                cursor: "pointer",
+                borderRadius: 0.5,
+                display: "block",
+                flexShrink: 0,
+              }}
+            >
+              <CloudinaryImage
+                url={img.url}
+                cloudinary_public_id={img.cloudinary_public_id}
+                alt={img.caption || "Pottery image"}
+                context="thumbnail"
+                style={{ objectFit: "cover", borderRadius: 4, display: "block" }}
+              />
+            </Box>
+            {editingCaptionIndex === i ? (
+              <TextField
+                value={editingCaptionValue}
+                onChange={(e) => onCaptionValueChange(e.target.value)}
+                onBlur={() => onCaptionCommit(i, editingCaptionValue)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onCaptionCommit(i, editingCaptionValue);
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    onCaptionCancel();
+                  }
+                }}
+                size="small"
+                autoFocus
+                sx={{ flex: 1 }}
+                slotProps={{ htmlInput: { "aria-label": "Edit caption" } }}
+              />
+            ) : (
+              <>
+                <ListItemText
+                  primary={img.caption || "(no caption)"}
+                  slotProps={{ primary: { sx: { color: "text.primary" } } }}
+                />
+                <IconButton
+                  aria-label="edit caption"
+                  onClick={() => onEditCaption(i)}
+                  size="small"
+                  sx={{ ml: "auto", flexShrink: 0 }}
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </>
+            )}
+          </Box>
+        </ListItem>
+      ))}
+    </List>
+  );
+}
+
+// ── ImageUploader ─────────────────────────────────────────────────────────────
+
+type ImageUploaderProps = {
+  saving: boolean;
+  widgetLoading: boolean;
+  uploadError: string | null;
+  imageError: string | null;
+  onUploadClick: () => void;
+};
+
+function ImageUploader({
+  saving,
+  widgetLoading,
+  uploadError,
+  imageError,
+  onUploadClick,
+}: ImageUploaderProps) {
+  return (
+    <Box>
+      <Button
+        variant="outlined"
+        size="small"
+        onClick={onUploadClick}
+        disabled={saving || widgetLoading}
+        startIcon={
+          saving ? <CircularProgress size={14} color="inherit" /> : undefined
+        }
+        sx={{ position: "relative", mt: 1 }}
+      >
+        <Box sx={{ opacity: widgetLoading ? 0 : 1 }}>
+          {saving ? "Saving…" : "Upload Image"}
+        </Box>
+        {widgetLoading && (
+          <CircularProgress
+            aria-hidden
+            size={14}
+            color="inherit"
+            sx={{ position: "absolute" }}
+          />
+        )}
+      </Button>
+      {(uploadError || imageError) && (
+        <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+          {uploadError ?? imageError}
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
+// ── WorkflowState ─────────────────────────────────────────────────────────────
+
 export default function WorkflowState({
   pieceState,
   pieceId,
@@ -170,6 +330,7 @@ export default function WorkflowState({
   onDirtyChange,
   currentLocation: currentLocationProp = "",
   currentThumbnail,
+  onSetAsThumbnail: onSetAsThumbnailProp,
   autosaveDelayMs,
 }: WorkflowStateProps) {
   const normalizedCurrentLocationProp = normalizeOptionalText(currentLocationProp);
@@ -177,13 +338,10 @@ export default function WorkflowState({
   const [images, setImages] = useState<ImageEntry[]>(stateImages(pieceState));
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [widgetLoading, setWidgetLoading] = useState(false);
-  const [editingCaptionIndex, setEditingCaptionIndex] = useState<number | null>(
-    null,
-  );
+  const [editingCaptionIndex, setEditingCaptionIndex] = useState<number | null>(null);
   const [editingCaptionValue, setEditingCaptionValue] = useState("");
-  const [currentLocation, setCurrentLocation] = useState(
-    normalizedCurrentLocationProp,
-  );
+  const [removeDialogIndex, setRemoveDialogIndex] = useState<number | null>(null);
+  const [currentLocation, setCurrentLocation] = useState(normalizedCurrentLocationProp);
   const additionalFieldDefs = useMemo(
     () => getAdditionalFieldDefinitions(pieceState.state),
     [pieceState.state],
@@ -207,8 +365,7 @@ export default function WorkflowState({
   const [additionalFieldInputs, setAdditionalFieldInputs] = useState(
     baseAdditionalFieldInputs,
   );
-  const [globalRefPks, setGlobalRefPks] =
-    useState<GlobalRefPkMap>(baseGlobalRefPks);
+  const [globalRefPks, setGlobalRefPks] = useState<GlobalRefPkMap>(baseGlobalRefPks);
   const normalizedAdditionalFields = useMemo(
     () =>
       normalizeAdditionalFieldPayload(
@@ -234,11 +391,13 @@ export default function WorkflowState({
     currentLocation.trim() !== normalizedCurrentLocationProp.trim();
 
   const theme = useTheme();
-
-  // Lightbox state
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   async function handleSetAsThumbnail(image: ImageEntry) {
+    if (onSetAsThumbnailProp) {
+      await onSetAsThumbnailProp(image);
+      return;
+    }
     const updated = await updatePiece(pieceId, {
       thumbnail: {
         url: image.url,
@@ -248,7 +407,6 @@ export default function WorkflowState({
     onSaved(updated);
   }
 
-  // Reset form when pieceState changes (e.g. after a state transition)
   useEffect(() => {
     setNotes(pieceState.notes);
     setImages(stateImages(pieceState));
@@ -275,7 +433,7 @@ export default function WorkflowState({
   const saveWorkflowState = useCallback(async () => {
     const payload = {
       notes,
-      images, // always in sync with server after each image operation
+      images,
       additional_fields: normalizedAdditionalFields,
     };
     const result = await updateCurrentState(pieceId, payload);
@@ -295,6 +453,7 @@ export default function WorkflowState({
     onSaved,
     pieceId,
   ]);
+
   const autosaveKey = useMemo(
     () =>
       JSON.stringify({
@@ -313,8 +472,18 @@ export default function WorkflowState({
     delayMs: autosaveDelayMs,
   });
 
-  async function removeImage(index: number) {
-    if (!window.confirm("Remove this image?")) return;
+  function openRemoveDialog(index: number) {
+    setRemoveDialogIndex(index);
+  }
+
+  function closeRemoveDialog() {
+    setRemoveDialogIndex(null);
+  }
+
+  async function confirmRemoveImage() {
+    if (removeDialogIndex === null) return;
+    const index = removeDialogIndex;
+    closeRemoveDialog();
     const updatedImages = images.filter((_, i) => i !== index);
     setSavingImage(true);
     setImageError(null);
@@ -457,7 +626,7 @@ export default function WorkflowState({
     uploadWidget?.open();
   }
 
-  function handleAdditionalFieldChange(name: string, value: string) {
+  function handleFieldChange(name: string, value: string) {
     setAdditionalFieldInputs((prev) => ({ ...prev, [name]: value }));
   }
 
@@ -508,8 +677,6 @@ export default function WorkflowState({
               const helperText = field.description;
               const label = formatWorkflowFieldLabel(field.name);
               if (field.isStateRef) {
-                // State ref fields carry a value forward from an ancestor
-                // state and must not be edited.
                 return (
                   <TextField
                     key={field.name}
@@ -534,10 +701,7 @@ export default function WorkflowState({
                     label={label}
                     value={value}
                     onSelect={(entry) => {
-                      handleAdditionalFieldChange(
-                        field.name,
-                        entryNameOrEmpty(entry),
-                      );
+                      handleFieldChange(field.name, entryNameOrEmpty(entry));
                       setGlobalRefPks((prev) =>
                         entry
                           ? { ...prev, [field.name]: entry.id }
@@ -561,9 +725,7 @@ export default function WorkflowState({
                     label={label}
                     select
                     value={value}
-                    onChange={(e) =>
-                      handleAdditionalFieldChange(field.name, e.target.value)
-                    }
+                    onChange={(e) => handleFieldChange(field.name, e.target.value)}
                     helperText={helperText}
                     required={field.required}
                     fullWidth
@@ -583,9 +745,7 @@ export default function WorkflowState({
                     label={label}
                     type="number"
                     value={value}
-                    onChange={(e) =>
-                      handleAdditionalFieldChange(field.name, e.target.value)
-                    }
+                    onChange={(e) => handleFieldChange(field.name, e.target.value)}
                     slotProps={{
                       htmlInput: {
                         inputMode:
@@ -606,9 +766,7 @@ export default function WorkflowState({
                     label={label}
                     select
                     value={value}
-                    onChange={(e) =>
-                      handleAdditionalFieldChange(field.name, e.target.value)
-                    }
+                    onChange={(e) => handleFieldChange(field.name, e.target.value)}
                     helperText={helperText}
                     required={field.required}
                     fullWidth
@@ -623,9 +781,7 @@ export default function WorkflowState({
                   key={field.name}
                   label={label}
                   value={value}
-                  onChange={(e) =>
-                    handleAdditionalFieldChange(field.name, e.target.value)
-                  }
+                  onChange={(e) => handleFieldChange(field.name, e.target.value)}
                   helperText={helperText}
                   required={field.required}
                   fullWidth
@@ -641,130 +797,49 @@ export default function WorkflowState({
         error={autosave.error}
         lastSavedAt={autosave.lastSavedAt}
       />
+
       {/* Images */}
       <Box>
-        {images.length > 0 && (
-          <List dense disablePadding>
-            {images.map((img, i) => (
-              <ListItem key={i} disableGutters>
-                <Box
-                  sx={{
-                    display: "flex",
-                    gap: 1,
-                    alignItems: "center",
-                    width: "100%",
-                  }}
-                >
-                  <IconButton
-                    aria-label="remove image"
-                    onClick={() => removeImage(i)}
-                    size="small"
-                  >
-                    ✕
-                  </IconButton>
-                  <Box
-                    component="button"
-                    onClick={() => setLightboxIndex(i)}
-                    aria-label={`View image ${i + 1}`}
-                    sx={{
-                      p: 0,
-                      border: "none",
-                      background: "none",
-                      cursor: "pointer",
-                      borderRadius: 0.5,
-                      display: "block",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <CloudinaryImage
-                      url={img.url}
-                      cloudinary_public_id={img.cloudinary_public_id}
-                      alt={img.caption || "Pottery image"}
-                      context="thumbnail"
-                      style={{
-                        objectFit: "cover",
-                        borderRadius: 4,
-                        display: "block",
-                      }}
-                    />
-                  </Box>
-                  {editingCaptionIndex === i ? (
-                    <TextField
-                      value={editingCaptionValue}
-                      onChange={(e) => setEditingCaptionValue(e.target.value)}
-                      onBlur={() => commitCaptionEdit(i, editingCaptionValue)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          commitCaptionEdit(i, editingCaptionValue);
-                        }
-                        if (e.key === "Escape") {
-                          e.preventDefault();
-                          setEditingCaptionIndex(null);
-                        }
-                      }}
-                      size="small"
-                      autoFocus
-                      sx={{ flex: 1 }}
-                      slotProps={{
-                        htmlInput: { "aria-label": "Edit caption" },
-                      }}
-                    />
-                  ) : (
-                    <>
-                      <ListItemText
-                        primary={img.caption || "(no caption)"}
-                        slotProps={{
-                          primary: { sx: { color: "text.primary" } },
-                        }}
-                      />
-                      <IconButton
-                        aria-label="edit caption"
-                        onClick={() => startEditingCaption(i)}
-                        size="small"
-                        sx={{ ml: "auto", flexShrink: 0 }}
-                      >
-                        ✏
-                      </IconButton>
-                    </>
-                  )}
-                </Box>
-              </ListItem>
-            ))}
-          </List>
-        )}
-        <Box>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleUploadWidgetClick}
-            disabled={savingImage || widgetLoading}
-            startIcon={
-              savingImage ? (
-                <CircularProgress size={14} color="inherit" />
-              ) : undefined
-            }
-            sx={{ position: "relative", mt: 1 }}
-          >
-            <Box sx={{ opacity: widgetLoading ? 0 : 1 }}>
-              {savingImage ? "Saving…" : "Upload Image"}
-            </Box>
-            {widgetLoading && (
-              <CircularProgress
-                aria-hidden
-                size={14}
-                color="inherit"
-                sx={{ position: "absolute" }}
-              />
-            )}
-          </Button>
-          {(uploadError || imageError) && (
-            <Typography color="error" variant="body2" sx={{ mt: 1 }}>
-              {uploadError ?? imageError}
-            </Typography>
-          )}
-        </Box>
+        <ImageList
+          images={images}
+          onRemove={openRemoveDialog}
+          onViewLightbox={setLightboxIndex}
+          onEditCaption={startEditingCaption}
+          editingCaptionIndex={editingCaptionIndex}
+          editingCaptionValue={editingCaptionValue}
+          onCaptionValueChange={setEditingCaptionValue}
+          onCaptionCommit={commitCaptionEdit}
+          onCaptionCancel={() => setEditingCaptionIndex(null)}
+        />
+        <ImageUploader
+          saving={savingImage}
+          widgetLoading={widgetLoading}
+          uploadError={uploadError}
+          imageError={imageError}
+          onUploadClick={handleUploadWidgetClick}
+        />
       </Box>
+
+      {/* Remove image confirmation dialog */}
+      <Dialog open={removeDialogIndex !== null} onClose={closeRemoveDialog}>
+        <DialogTitle>Remove Image</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Remove this image? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeRemoveDialog}>Cancel</Button>
+          <Button
+            onClick={() => void confirmRemoveImage()}
+            color="error"
+            variant="contained"
+          >
+            Remove
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Lightbox */}
       {lightboxIndex !== null && (
         <ImageLightbox
@@ -775,7 +850,6 @@ export default function WorkflowState({
           onSetAsThumbnail={handleSetAsThumbnail}
         />
       )}
-
     </Box>
   );
 }
