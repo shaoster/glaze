@@ -76,7 +76,7 @@ export default function PiecePhotoGalleryGrid({
               <CloudinaryImage
                 url={image.url}
                 cloudinary_public_id={image.cloudinary_public_id}
-                alt={image.caption || image.stateLabel}
+                alt={image.caption || "Piece photo"}
                 context="gallery"
                 requestedWidth={requestedWidth}
                 requestedHeight={requestedHeight}

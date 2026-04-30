@@ -157,6 +157,40 @@ describe("CloudinaryImage", () => {
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
 
+  it("renders and clears loading state for lightbox-context images", () => {
+    render(
+      <CloudinaryImage
+        url="https://example.com/lightbox.jpg"
+        alt="Lightbox image"
+        context="lightbox"
+      />,
+    );
+
+    const image = screen.getByAltText("Lightbox image");
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+
+    fireEvent.load(image);
+
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  it("renders and clears loading state for detail-context images", () => {
+    render(
+      <CloudinaryImage
+        url="https://example.com/detail.jpg"
+        alt="Detail image"
+        context="detail"
+      />,
+    );
+
+    const image = screen.getByAltText("Detail image");
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+
+    fireEvent.load(image);
+
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
   it("hides the spinner when the browser restores a cached image without a new load event", () => {
     render(
       <CloudinaryImage

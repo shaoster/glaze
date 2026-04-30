@@ -496,9 +496,11 @@ vitest_test(
     name = "web_image_lightbox_test",
     srcs = [
         "src/components/__tests__/ImageLightbox.test.tsx",
+        "src/components/__tests__/CloudinaryImage.test.tsx",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [
+        ":cloudinary_image_src",
         ":image_lightbox_src",
     ],
 )
@@ -572,7 +574,9 @@ vitest_test(
 vitest_test(
     name = "web_piece_photo_gallery_test",
     srcs = [
+        "src/components/__tests__/DeletePiecePhotoDialog.test.tsx",
         "src/components/__tests__/PiecePhotoGallery.test.tsx",
+        "src/components/__tests__/PiecePhotoGalleryGrid.test.tsx",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [
@@ -719,7 +723,6 @@ test_suite(
     name = "web_test",
     tests = [
         ":web_api_test",
-        ":web_cloudinary_image_test",
         ":web_glaze_gallery_test",
         ":web_glaze_import_test",
         ":web_image_lightbox_test",
