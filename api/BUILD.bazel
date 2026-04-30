@@ -110,6 +110,7 @@ py_test(
         "migrations/__init__.py",
         "migrations/0025_image_field_jsonfield.py",
         "migrations/0026_backfill_cloudinary_public_id.py",
+        "migrations/0027_backfill_cloud_name.py",
     ],
     args = [
         "api/tests/test_model_factory.py",
