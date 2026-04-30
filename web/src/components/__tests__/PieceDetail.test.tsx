@@ -169,6 +169,10 @@ async function renderPieceDetail(
         path: "/pieces/:id",
         element: <PieceDetail piece={piece} onPieceUpdated={onPieceUpdated} />,
       },
+      {
+        path: "/other",
+        element: <div>Elsewhere</div>,
+      },
     ],
     { initialEntries: ["/pieces/piece-id-1"] },
   );
@@ -179,6 +183,7 @@ async function renderPieceDetail(
       </ThemeProvider>,
     );
   });
+  return { router };
 }
 
 beforeEach(() => {
@@ -282,6 +287,28 @@ describe("PieceDetail", () => {
       }),
     );
     await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(updated));
+  });
+
+  it("shows an error when saving location fails", async () => {
+    vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
+      { id: "1", name: "Studio 7", isPublic: false },
+    ]);
+    vi.mocked(api.updatePiece).mockRejectedValue(new Error("Network error"));
+
+    await renderPieceDetail();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Browse Current location" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByText("Studio 7")).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByText("Studio 7"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Failed to save location. Please try again."),
+      ).toBeInTheDocument(),
+    );
   });
 
   it("renders successor state buttons for non-terminal state", async () => {
@@ -525,6 +552,62 @@ describe("PieceDetail", () => {
         screen.queryByRole("textbox", { name: "Piece name" }),
       ).not.toBeInTheDocument();
       expect(api.updatePiece).not.toHaveBeenCalled();
+    });
+
+    it("shows an error when saving the name fails", async () => {
+      vi.mocked(api.updatePiece).mockRejectedValue(new Error("Network error"));
+
+      await renderPieceDetail();
+      fireEvent.click(screen.getByRole("button", { name: "Edit piece name" }));
+      fireEvent.change(screen.getByRole("textbox", { name: "Piece name" }), {
+        target: { value: "Broken Save Bowl" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Save name" }));
+
+      await waitFor(() =>
+        expect(
+          screen.getByText("Failed to save name. Please try again."),
+        ).toBeInTheDocument(),
+      );
+      expect(
+        screen.getByRole("textbox", { name: "Piece name" }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("navigation blocker", () => {
+    it("lets the user stay on the page when blocked navigation is canceled", async () => {
+      const { router } = await renderPieceDetail();
+
+      fireEvent.change(screen.getByLabelText("Notes"), {
+        target: { value: "Unsaved notes" },
+      });
+      await act(async () => {
+        await router.navigate("/other");
+      });
+
+      expect(screen.getByText("Unsaved Changes")).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Stay" }));
+
+      expect(screen.queryByText("Elsewhere")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Notes")).toBeInTheDocument();
+    });
+
+    it("allows leaving after confirmation when there are unsaved changes", async () => {
+      const { router } = await renderPieceDetail();
+
+      fireEvent.change(screen.getByLabelText("Notes"), {
+        target: { value: "Unsaved notes" },
+      });
+      await act(async () => {
+        await router.navigate("/other");
+      });
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Leave without saving" }),
+      );
+
+      await waitFor(() => expect(screen.getByText("Elsewhere")).toBeInTheDocument());
     });
   });
 

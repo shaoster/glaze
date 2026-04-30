@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import ImageLightbox from "../ImageLightbox";
 import type { CaptionedImage } from "../../util/types";
 
@@ -18,6 +19,7 @@ function renderLightbox(
   images: CaptionedImage[],
   initialIndex = 0,
   onClose = vi.fn(),
+  onSetAsThumbnail?: (image: CaptionedImage) => Promise<void>,
 ) {
   return {
     onClose,
@@ -26,6 +28,7 @@ function renderLightbox(
         images={images}
         initialIndex={initialIndex}
         onClose={onClose}
+        onSetAsThumbnail={onSetAsThumbnail}
       />,
     ),
   };
@@ -158,6 +161,19 @@ describe("ImageLightbox", () => {
       const { onClose } = renderLightbox(THREE_IMAGES, 1);
       fireEvent.click(screen.getByRole("button", { name: /next image/i }));
       expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("calls onSetAsThumbnail with the active image", async () => {
+      const onSetAsThumbnail = vi.fn().mockResolvedValue(undefined);
+      renderLightbox(THREE_IMAGES, 1, vi.fn(), onSetAsThumbnail);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Set as thumbnail" }),
+      );
+
+      await waitFor(() =>
+        expect(onSetAsThumbnail).toHaveBeenCalledWith(THREE_IMAGES[1]),
+      );
     });
   });
 

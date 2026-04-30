@@ -27,6 +27,23 @@ const CLOUDINARY_HOSTNAME = "res.cloudinary.com";
 const THUMBNAIL_SIZE = 64;
 const LIGHTBOX_MAX_WIDTH = "90vw";
 const LIGHTBOX_MAX_HEIGHT = "80vh";
+const DEFAULT_VIEWPORT_WIDTH = 1200;
+const DEFAULT_VIEWPORT_HEIGHT = 900;
+const DEFAULT_DEVICE_PIXEL_RATIO = 1;
+
+type ViewportSnapshot = {
+  width: number;
+  height: number;
+  pixelRatio: number;
+};
+
+function getViewportSnapshot(): ViewportSnapshot {
+  return {
+    width: globalThis.window?.innerWidth ?? DEFAULT_VIEWPORT_WIDTH,
+    height: globalThis.window?.innerHeight ?? DEFAULT_VIEWPORT_HEIGHT,
+    pixelRatio: globalThis.window?.devicePixelRatio ?? DEFAULT_DEVICE_PIXEL_RATIO,
+  };
+}
 
 /**
  * Parse cloud_name and public_id from a Cloudinary delivery URL.
@@ -220,30 +237,19 @@ export default function CloudinaryImage({
   const cloudName = parsed?.cloudName ?? null;
   const publicId =
     (cloudinary_public_id?.trim() || null) ?? parsed?.publicId ?? null;
+  const viewport = getViewportSnapshot();
 
   if (cloudName && publicId) {
     const cld = new Cloudinary({ cloud: { cloudName } });
     const img = cld.image(publicId);
 
     if (context === "lightbox") {
-      const vw =
-        typeof window !== "undefined"
-          ? Math.round(window.innerWidth * window.devicePixelRatio * 0.9)
-          : 1200;
-      const vh =
-        typeof window !== "undefined"
-          ? Math.round(window.innerHeight * window.devicePixelRatio * 0.8)
-          : 900;
+      const vw = Math.round(viewport.width * viewport.pixelRatio * 0.9);
+      const vh = Math.round(viewport.height * viewport.pixelRatio * 0.8);
       img.resize(fit().width(vw).height(vh));
     } else if (context === "detail") {
-      const vw =
-        typeof window !== "undefined"
-          ? Math.round(window.innerWidth * window.devicePixelRatio)
-          : 1400;
-      const vh =
-        typeof window !== "undefined"
-          ? Math.round(window.innerHeight * window.devicePixelRatio * 0.65)
-          : 1000;
+      const vw = Math.round(viewport.width * viewport.pixelRatio);
+      const vh = Math.round(viewport.height * viewport.pixelRatio * 0.65);
       img.resize(fit().width(vw).height(vh));
     } else {
       const targetWidth =

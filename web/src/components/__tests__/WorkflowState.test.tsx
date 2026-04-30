@@ -113,6 +113,7 @@ const { mockWorkflow } = vi.hoisted(() => ({
         fields: {
           kiln_temperature_c: { type: "integer" },
           cone: { type: "string", enum: ["04", "05"] },
+          food_safe: { type: "boolean", label: "Food Safe" },
         },
       },
       {
@@ -320,7 +321,11 @@ describe("WorkflowState", () => {
   it("renders state-specific fields when the state defines additional_fields", async () => {
     const bisqueState = makeState({
       state: "bisque_fired",
-      additional_fields: { kiln_temperature_c: "1200", cone: "04" },
+      additional_fields: {
+        kiln_temperature_c: "1200",
+        cone: "04",
+        food_safe: true,
+      },
     });
     await act(async () => {
       render(<WorkflowState {...defaultProps} pieceState={bisqueState} />);
@@ -625,6 +630,25 @@ describe("WorkflowState", () => {
     await waitFor(() =>
       expect(
         screen.getByText("Upload failed. Please try again."),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("shows an error when the uploaded image cannot be saved to the piece state", async () => {
+    vi.mocked(api.updateCurrentState).mockRejectedValue(
+      new Error("Failed to save image"),
+    );
+    setupUploadWidget({
+      secure_url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+      public_id: "sample",
+    });
+    render(<WorkflowState {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Failed to save image. Please try again."),
       ).toBeInTheDocument(),
     );
   });

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import CloseIcon from "@mui/icons-material/Close";
-import PhotoLibraryOutlinedIcon from "@mui/icons-material/PhotoLibraryOutlined";
 import EditIcon from "@mui/icons-material/Edit";
+import PhotoLibraryOutlinedIcon from "@mui/icons-material/PhotoLibraryOutlined";
 import {
   alpha,
   Box,
@@ -9,37 +8,66 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogContentText,
-  DialogTitle,
   IconButton,
   TextField,
   Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
-import type { CaptionedImage } from "../util/types";
-import CloudinaryImage from "./CloudinaryImage";
+import type { CaptionedImage, PieceDetail } from "../util/types";
+import { updateCurrentState, updatePiece } from "../util/api";
+import DeletePiecePhotoDialog from "./DeletePiecePhotoDialog";
 import ImageLightbox from "./ImageLightbox";
+import PiecePhotoGalleryGrid from "./PiecePhotoGalleryGrid";
+import { normalizeFields } from "../util/normalizeWorkflowFields";
 
 export type PiecePhotoGalleryImage = CaptionedImage & {
   stateLabel: string;
-  editableCurrentStateIndex?: number | null;
+  editableCurrentStateIndex: number | null;
 };
+
+export type EditablePiecePhoto = Pick<
+  CaptionedImage,
+  "url" | "caption" | "cloudinary_public_id"
+>;
 
 type PiecePhotoGalleryProps = {
   images: PiecePhotoGalleryImage[];
+  pieceId?: string;
+  currentStateNotes?: string;
+  currentStateAdditionalFields?: Record<string, unknown>;
   currentThumbnailUrl?: string;
-  onSetAsThumbnail: (image: CaptionedImage) => Promise<void>;
-  onSaveCaption?: (currentStateImageIndex: number, caption: string) => Promise<void>;
-  onDeleteImage?: (currentStateImageIndex: number) => Promise<void>;
+  onPieceUpdated?: (updated: PieceDetail) => void;
+  updatePieceFn?: typeof updatePiece;
+  updateCurrentStateFn?: typeof updateCurrentState;
 };
+
+const DEFAULT_VIEWPORT_WIDTH = 768;
+const DEFAULT_PIXEL_RATIO = 1;
+
+function getBrowserViewportWidth(): number {
+  return globalThis.window?.innerWidth ?? DEFAULT_VIEWPORT_WIDTH;
+}
+
+function getBrowserPixelRatio(): number {
+  return Math.max(globalThis.window?.devicePixelRatio ?? DEFAULT_PIXEL_RATIO, 1);
+}
+
+function isEditableImage(
+  image: PiecePhotoGalleryImage,
+): image is PiecePhotoGalleryImage & { editableCurrentStateIndex: number } {
+  return image.editableCurrentStateIndex !== null;
+}
 
 export default function PiecePhotoGallery({
   images,
+  pieceId,
+  currentStateNotes,
+  currentStateAdditionalFields,
   currentThumbnailUrl,
-  onSetAsThumbnail,
-  onSaveCaption,
-  onDeleteImage,
+  onPieceUpdated,
+  updatePieceFn,
+  updateCurrentStateFn,
 }: PiecePhotoGalleryProps) {
   const theme = useTheme();
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -50,14 +78,10 @@ export default function PiecePhotoGallery({
   const [captionSaveError, setCaptionSaveError] = useState<string | null>(null);
   const [deleteDialogIndex, setDeleteDialogIndex] = useState<number | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
-  const [viewportWidth, setViewportWidth] = useState(
-    typeof window === "undefined" ? 768 : window.innerWidth,
-  );
-  const pixelRatio =
-    typeof window === "undefined" ? 1 : Math.max(window.devicePixelRatio || 1, 1);
+  const [viewportWidth, setViewportWidth] = useState(getBrowserViewportWidth);
+  const pixelRatio = getBrowserPixelRatio();
 
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
     function syncWidth() {
       setViewportWidth(window.innerWidth);
     }
@@ -85,19 +109,72 @@ export default function PiecePhotoGallery({
     lightboxIndex !== null ? images[lightboxIndex] : null;
   const editableCurrentStateIndex =
     activeImage?.editableCurrentStateIndex ?? null;
+  const editableCurrentStateImages = images
+    .filter(isEditableImage)
+    .sort((left, right) => left.editableCurrentStateIndex - right.editableCurrentStateIndex)
+    .map(({ url, caption, cloudinary_public_id }) => ({
+      url,
+      caption,
+      cloudinary_public_id: cloudinary_public_id ?? null,
+    }));
+
+  function stopEditingCaption() {
+    setCaptionEditing(false);
+    setCaptionSaveError(null);
+    setCaptionDraft(activeImage?.caption ?? "");
+  }
+
+  async function persistCurrentStateImages(nextImages: EditablePiecePhoto[]) {
+    if (
+      !pieceId ||
+      currentStateNotes === undefined ||
+      !onPieceUpdated ||
+      !updateCurrentStateFn
+    ) {
+      return;
+    }
+    const updated = await updateCurrentStateFn(pieceId, {
+      notes: currentStateNotes,
+      images: nextImages.map((image) => ({
+        url: image.url,
+        caption: image.caption,
+        cloudinary_public_id: image.cloudinary_public_id ?? null,
+      })),
+      additional_fields: normalizeFields(currentStateAdditionalFields ?? {}),
+    });
+    onPieceUpdated(updated);
+  }
+
+  async function handleSetThumbnail(image: CaptionedImage) {
+    if (!pieceId || !onPieceUpdated || !updatePieceFn) {
+      return;
+    }
+    const updated = await updatePieceFn(pieceId, {
+      thumbnail: {
+        url: image.url,
+        cloudinary_public_id: image.cloudinary_public_id ?? null,
+      },
+    });
+    onPieceUpdated(updated);
+  }
 
   async function handleSaveCaption() {
     if (
       lightboxIndex === null ||
       editableCurrentStateIndex === null ||
-      !onSaveCaption
+      !updateCurrentStateFn
     ) {
       return;
     }
     setCaptionSaving(true);
     setCaptionSaveError(null);
     try {
-      await onSaveCaption(editableCurrentStateIndex, captionDraft);
+      await persistCurrentStateImages(
+        editableCurrentStateImages.map((image, index) => ({
+          ...image,
+          caption: index === editableCurrentStateIndex ? captionDraft.trim() : image.caption,
+        })),
+      );
       setCaptionEditing(false);
     } catch {
       setCaptionSaveError("Failed to save caption. Please try again.");
@@ -107,17 +184,20 @@ export default function PiecePhotoGallery({
   }
 
   async function handleDeleteImage() {
-    if (deleteDialogIndex === null || !onDeleteImage) {
+    if (deleteDialogIndex === null || !updateCurrentStateFn) {
       return;
     }
     const image = images[deleteDialogIndex];
-    const currentStateImageIndex = image?.editableCurrentStateIndex;
-    if (currentStateImageIndex === null || currentStateImageIndex === undefined) {
+    if (!image || image.editableCurrentStateIndex === null) {
       return;
     }
     setDeleteSaving(true);
     try {
-      await onDeleteImage(currentStateImageIndex);
+      await persistCurrentStateImages(
+        editableCurrentStateImages.filter(
+          (_editableImage, index) => index !== image.editableCurrentStateIndex,
+        ),
+      );
       if (lightboxIndex === deleteDialogIndex) {
         setLightboxIndex(null);
       }
@@ -129,21 +209,30 @@ export default function PiecePhotoGallery({
 
   const triggerLabel = `${photoCount} photo${photoCount === 1 ? "" : "s"}`;
 
+  const canMutateCurrentStateImages =
+    pieceId !== undefined &&
+    currentStateNotes !== undefined &&
+    onPieceUpdated !== undefined &&
+    updateCurrentStateFn !== undefined;
+  const canSetThumbnail =
+    pieceId !== undefined &&
+    onPieceUpdated !== undefined &&
+    updatePieceFn !== undefined;
   const canEditCaption =
-    editableCurrentStateIndex !== null && onSaveCaption !== undefined;
+    editableCurrentStateIndex !== null &&
+    canMutateCurrentStateImages;
 
   const footer = activeImage ? (
     <Box sx={{ display: "grid", gap: 0.75, justifyItems: "center" }}>
-      {/* Caption editor — shown above state label */}
       {captionEditing ? (
         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
           <TextField
             size="small"
             value={captionDraft}
             onChange={(event) => setCaptionDraft(event.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void handleSaveCaption();
-              if (e.key === "Escape") setCaptionEditing(false);
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void handleSaveCaption();
+              if (event.key === "Escape") stopEditingCaption();
             }}
             autoFocus
             slotProps={{
@@ -165,12 +254,36 @@ export default function PiecePhotoGallery({
           >
             {captionSaving ? "Saving…" : "Save"}
           </Button>
+          <Button
+            size="small"
+            variant="text"
+            onClick={stopEditingCaption}
+            disabled={captionSaving}
+          >
+            Cancel
+          </Button>
         </Box>
       ) : activeImage.caption ? (
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => {
+              if (!canEditCaption) return;
+              setCaptionEditing(true);
+            }}
+            disabled={!canEditCaption}
+            sx={{
+              color: "rgba(255,255,255,0.85)",
+              textTransform: "none",
+              minWidth: 0,
+              p: 0,
+              lineHeight: 1.4,
+              "&:hover": { backgroundColor: "transparent", color: "white" },
+            }}
+          >
             {activeImage.caption}
-          </Typography>
+          </Button>
           {canEditCaption && (
             <Tooltip title="Edit caption">
               <IconButton
@@ -189,7 +302,10 @@ export default function PiecePhotoGallery({
           size="small"
           variant="outlined"
           startIcon={<EditIcon fontSize="small" />}
-          onClick={() => { setCaptionDraft(""); setCaptionEditing(true); }}
+          onClick={() => {
+            setCaptionDraft("");
+            setCaptionEditing(true);
+          }}
           sx={{ color: "white", borderColor: "rgba(255,255,255,0.35)" }}
         >
           Add caption
@@ -200,7 +316,6 @@ export default function PiecePhotoGallery({
           {captionSaveError}
         </Typography>
       )}
-      {/* State label — below caption */}
       <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.55)" }}>
         {editableCurrentStateIndex !== null
           ? "Added in current state"
@@ -246,92 +361,14 @@ export default function PiecePhotoGallery({
         PaperProps={{ sx: { height: "80vh", borderRadius: "8px" } }}
       >
         <DialogContent sx={{ p: 2 }}>
-          {images.length > 0 ? (
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: {
-                  xs: "repeat(2, minmax(0, 1fr))",
-                  sm: "repeat(3, minmax(0, 1fr))",
-                },
-                gap: 1.25,
-              }}
-            >
-              {images.map((image, index) => (
-                <Box
-                  key={`${image.url}-${index}`}
-                  sx={{
-                    position: "relative",
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: "8px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <Box
-                    component="button"
-                    type="button"
-                    onClick={() => setLightboxIndex(index)}
-                    aria-label={`Open piece photo ${index + 1}`}
-                    sx={{
-                      p: 0,
-                      border: "none",
-                      width: "100%",
-                      background: "transparent",
-                      display: "block",
-                      lineHeight: 0,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <Box sx={{ position: "relative", aspectRatio: "5 / 4" }}>
-                      <CloudinaryImage
-                        url={image.url}
-                        cloudinary_public_id={image.cloudinary_public_id}
-                        alt={image.caption || image.stateLabel}
-                        context="gallery"
-                        requestedWidth={requestedWidth}
-                        requestedHeight={requestedHeight}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          display: "block",
-                        }}
-                      />
-                    </Box>
-                  </Box>
-                  {image.editableCurrentStateIndex !== null &&
-                    image.editableCurrentStateIndex !== undefined &&
-                    onDeleteImage && (
-                      <IconButton
-                        aria-label={`Delete piece photo ${index + 1}`}
-                        onClick={() => setDeleteDialogIndex(index)}
-                        size="small"
-                        sx={{
-                          position: "absolute",
-                          top: 8,
-                          right: 8,
-                          width: 28,
-                          height: 28,
-                          color: "common.white",
-                          backgroundColor: "rgba(0,0,0,0.52)",
-                          backdropFilter: "blur(6px)",
-                          "&:hover": {
-                            backgroundColor: "rgba(0,0,0,0.68)",
-                          },
-                        }}
-                      >
-                        <CloseIcon fontSize="small" />
-                      </IconButton>
-                    )}
-                </Box>
-              ))}
-            </Box>
-          ) : (
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              No images for this piece yet.
-            </Typography>
-          )}
+          <PiecePhotoGalleryGrid
+            images={images}
+            requestedWidth={requestedWidth}
+            requestedHeight={requestedHeight}
+            canDeleteImages={canMutateCurrentStateImages}
+            onOpenImage={setLightboxIndex}
+            onRequestDelete={setDeleteDialogIndex}
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setGalleryOpen(false)}>Close</Button>
@@ -344,38 +381,17 @@ export default function PiecePhotoGallery({
           initialIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
           currentThumbnailUrl={currentThumbnailUrl}
-          onSetAsThumbnail={onSetAsThumbnail}
+          onSetAsThumbnail={canSetThumbnail ? handleSetThumbnail : undefined}
           footerActions={() => footer}
         />
       )}
 
-      <Dialog
+      <DeletePiecePhotoDialog
         open={deleteDialogIndex !== null}
-        onClose={() => !deleteSaving && setDeleteDialogIndex(null)}
-      >
-        <DialogTitle>Remove Image</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Remove this image? This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setDeleteDialogIndex(null)}
-            disabled={deleteSaving}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => void handleDeleteImage()}
-            color="error"
-            variant="contained"
-            disabled={deleteSaving}
-          >
-            Remove
-          </Button>
-        </DialogActions>
-      </Dialog>
+        deleting={deleteSaving}
+        onCancel={() => setDeleteDialogIndex(null)}
+        onConfirm={() => void handleDeleteImage()}
+      />
     </>
   );
 }

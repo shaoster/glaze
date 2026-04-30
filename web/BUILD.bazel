@@ -353,12 +353,17 @@ js_library(
 
 js_library(
     name = "piece_photo_gallery_src",
-    srcs = ["src/components/PiecePhotoGallery.tsx"],
+    srcs = [
+        "src/components/DeletePiecePhotoDialog.tsx",
+        "src/components/PiecePhotoGalleryGrid.tsx",
+        "src/components/PiecePhotoGallery.tsx",
+    ],
     deps = [
         ":cloudinary_image_src",
         ":generated_types",
         ":image_lightbox_src",
         ":node_modules",
+        ":util_lib",
     ],
 )
 
@@ -398,7 +403,10 @@ js_library(
 
 js_library(
     name = "piece_detail_src",
-    srcs = ["src/components/PieceDetail.tsx"],
+    srcs = [
+        "src/components/NavigationBlocker.tsx",
+        "src/components/PieceDetail.tsx",
+    ],
     deps = [
         ":autosave_src",
         ":cloudinary_image_src",
@@ -488,9 +496,11 @@ vitest_test(
     name = "web_image_lightbox_test",
     srcs = [
         "src/components/__tests__/ImageLightbox.test.tsx",
+        "src/components/__tests__/CloudinaryImage.test.tsx",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [
+        ":cloudinary_image_src",
         ":image_lightbox_src",
     ],
 )
@@ -564,7 +574,9 @@ vitest_test(
 vitest_test(
     name = "web_piece_photo_gallery_test",
     srcs = [
+        "src/components/__tests__/DeletePiecePhotoDialog.test.tsx",
         "src/components/__tests__/PiecePhotoGallery.test.tsx",
+        "src/components/__tests__/PiecePhotoGalleryGrid.test.tsx",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [
@@ -692,6 +704,17 @@ vitest_test(
     ],
 )
 
+vitest_test(
+    name = "web_normalize_workflow_fields_test",
+    srcs = [
+        "src/util/__tests__/normalizeWorkflowFields.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":util_lib",
+    ],
+)
+
 # ── Web test suite ────────────────────────────────────────────────────────────
 # Aggregate target: `bazel test //web:web_test` runs all web tests.
 # Individual targets above run only when their inputs change.
@@ -700,11 +723,11 @@ test_suite(
     name = "web_test",
     tests = [
         ":web_api_test",
-        ":web_cloudinary_image_test",
         ":web_glaze_gallery_test",
         ":web_glaze_import_test",
         ":web_image_lightbox_test",
         ":web_new_piece_dialog_test",
+        ":web_normalize_workflow_fields_test",
         ":web_ocr_detection_test",
         ":web_picker_test",
         ":web_piece_detail_page_test",
