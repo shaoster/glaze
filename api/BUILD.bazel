@@ -109,6 +109,7 @@ py_test(
         # it in srcs (not just data) so it is on the Python import path.
         "migrations/__init__.py",
         "migrations/0025_image_field_jsonfield.py",
+        "migrations/0026_backfill_cloudinary_public_id.py",
     ],
     args = [
         "api/tests/test_model_factory.py",

@@ -1,4 +1,4 @@
-"""Tests for migration 0025: image field CharField → JSONField.
+"""Tests for migrations 0025 and 0026: image field conversion and public_id backfill.
 
 Exercises the data-migration helper functions (url_to_json / json_to_url) in
 isolation so that broken edge-cases are caught without touching the real DB
@@ -18,9 +18,10 @@ import importlib
 import json
 
 from django.apps import apps as django_apps
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from api.models import GlazeCombination, GlazeType
+from api.models import GlazeCombination, GlazeType, Piece, PieceState
 
 # ---------------------------------------------------------------------------
 # Import the helper functions directly from the migration module.
@@ -192,3 +193,116 @@ class TestImageFieldStorageRoundTrip(TestCase):
         gt.refresh_from_db()
         assert gt.test_tile_image['cloudinary_public_id'] == EXPECTED_PUBLIC_ID
         assert gt.test_tile_image['cloud_name'] == EXPECTED_CLOUD_NAME
+
+
+# ---------------------------------------------------------------------------
+# Migration 0026: backfill cloudinary_public_id where null
+# ---------------------------------------------------------------------------
+
+_migration_0026 = importlib.import_module(
+    'api.migrations.0026_backfill_cloudinary_public_id'
+)
+_backfill = _migration_0026.backfill_public_ids
+_parse_public_id = _migration_0026._parse_cloudinary_public_id
+
+
+class TestParseCloudinaryPublicId:
+    """Unit tests for the public_id extractor in migration 0026."""
+
+    def test_extracts_public_id_without_version(self):
+        url = 'https://res.cloudinary.com/demo/image/upload/glaze_prod/tile.jpg'
+        assert _parse_public_id(url) == 'glaze_prod/tile'
+
+    def test_strips_version_segment(self):
+        url = 'https://res.cloudinary.com/demo/image/upload/v1776802576/glaze_prod/img.jpg'
+        assert _parse_public_id(url) == 'glaze_prod/img'
+
+    def test_skips_transform_segments(self):
+        url = 'https://res.cloudinary.com/demo/image/upload/f_auto/v123/folder/img.png'
+        assert _parse_public_id(url) == 'folder/img'
+
+    def test_heic_extension_stripped(self):
+        url = 'https://res.cloudinary.com/demo/image/upload/v1/glaze_prod/photo.heic'
+        assert _parse_public_id(url) == 'glaze_prod/photo'
+
+    def test_non_cloudinary_url_returns_none(self):
+        assert _parse_public_id('https://example.com/tile.jpg') is None
+
+    def test_empty_string_returns_none(self):
+        assert _parse_public_id('') is None
+
+    def test_svg_thumbnail_returns_none(self):
+        assert _parse_public_id('/thumbnails/mug.svg') is None
+
+
+class TestBackfillPublicIds(TestCase):
+    """Integration tests for the migration 0026 backfill function."""
+
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(username='test@test.com', password='pw')
+
+    def _make_schema_editor(self):
+        return _FakeSchemaEditor()
+
+    def test_backfills_null_public_id_in_piece_state_images(self):
+        url = 'https://res.cloudinary.com/mycloud/image/upload/v1776802576/glaze_prod/abc.jpg'
+        piece = Piece.objects.create(user=self.user, name='Test Piece')
+        ps = PieceState.objects.filter(piece=piece).order_by('created').first()
+        PieceState.objects.filter(pk=ps.pk).update(images=[
+            {'url': url, 'cloudinary_public_id': None, 'cloud_name': 'mycloud', 'caption': ''}
+        ])
+
+        _backfill(django_apps, self._make_schema_editor())
+
+        ps.refresh_from_db()
+        assert ps.images[0]['cloudinary_public_id'] == 'glaze_prod/abc'
+
+    def test_does_not_overwrite_existing_public_id(self):
+        piece = Piece.objects.create(user=self.user, name='Piece2')
+        ps = PieceState.objects.filter(piece=piece).order_by('created').first()
+        PieceState.objects.filter(pk=ps.pk).update(images=[
+            {'url': 'https://res.cloudinary.com/c/image/upload/v1/folder/img.jpg',
+             'cloudinary_public_id': 'explicit_id', 'cloud_name': 'c', 'caption': ''}
+        ])
+
+        _backfill(django_apps, self._make_schema_editor())
+
+        ps.refresh_from_db()
+        assert ps.images[0]['cloudinary_public_id'] == 'explicit_id'
+
+    def test_backfills_null_public_id_in_piece_thumbnail(self):
+        url = 'https://res.cloudinary.com/mycloud/image/upload/v1/glaze_prod/thumb.jpg'
+        piece = Piece.objects.create(user=self.user, name='Piece3')
+        Piece.objects.filter(pk=piece.pk).update(thumbnail={
+            'url': url, 'cloudinary_public_id': None, 'cloud_name': 'mycloud'
+        })
+
+        _backfill(django_apps, self._make_schema_editor())
+
+        piece.refresh_from_db()
+        assert piece.thumbnail['cloudinary_public_id'] == 'glaze_prod/thumb'
+
+    def test_backfills_null_public_id_in_glaze_type_image(self):
+        url = 'https://res.cloudinary.com/mycloud/image/upload/v1/glaze_prod/tile.jpg'
+        gt = GlazeType.objects.create(
+            user=None, name='BackfillTest',
+            test_tile_image={'url': url, 'cloudinary_public_id': None, 'cloud_name': 'mycloud'},
+        )
+
+        _backfill(django_apps, self._make_schema_editor())
+
+        gt.refresh_from_db()
+        assert gt.test_tile_image['cloudinary_public_id'] == 'glaze_prod/tile'
+
+    def test_heic_url_gets_correct_public_id(self):
+        url = 'https://res.cloudinary.com/mycloud/image/upload/v1/glaze_prod/photo.heic'
+        piece = Piece.objects.create(user=self.user, name='Piece4')
+        Piece.objects.filter(pk=piece.pk).update(thumbnail={
+            'url': url, 'cloudinary_public_id': None, 'cloud_name': 'mycloud'
+        })
+
+        _backfill(django_apps, self._make_schema_editor())
+
+        piece.refresh_from_db()
+        assert piece.thumbnail['cloudinary_public_id'] == 'glaze_prod/photo'
