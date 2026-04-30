@@ -344,7 +344,11 @@ class PieceDetailSerializer(PieceSummarySerializer):
 
 class PieceCreateSerializer(serializers.ModelSerializer):
     notes = serializers.CharField(
-        required=False, default="", allow_blank=True, max_length=300
+        required=False,
+        default="",
+        allow_blank=True,
+        max_length=300,
+        trim_whitespace=False,
     )
     current_location = serializers.CharField(
         required=False, allow_blank=True, allow_null=True, default=None
@@ -382,6 +386,7 @@ class PieceCreateSerializer(serializers.ModelSerializer):
 
 class PieceStateCreateSerializer(serializers.ModelSerializer):
     state = serializers.ChoiceField(choices=sorted(VALID_STATES))
+    notes = serializers.CharField(required=False, allow_blank=True, trim_whitespace=False)
     images = CaptionedImageSerializer(many=True, required=False, default=list)
     additional_fields = serializers.JSONField(required=False, default=dict)
 
@@ -535,7 +540,11 @@ def _write_global_ref_rows(
 class PieceStateUpdateSerializer(serializers.Serializer):
     """Partial update of the current PieceState's editable fields."""
 
-    notes = serializers.CharField(required=False, allow_blank=True)
+    notes = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        trim_whitespace=False,
+    )
     images = CaptionedImageSerializer(many=True, required=False)
     additional_fields = serializers.JSONField(required=False)
 

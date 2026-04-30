@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTheme } from "@mui/material";
 import {
@@ -44,6 +44,21 @@ type WorkflowStateProps = {
 
 type AdditionalFieldInputMap = Record<string, string>;
 type GlobalRefPkMap = Record<string, string>;
+type DraftState = {
+  notes: string;
+  images: ImageEntry[];
+  additionalFieldInputs: AdditionalFieldInputMap;
+  globalRefPks: GlobalRefPkMap;
+};
+type DraftAction =
+  | {
+      type: "hydrate";
+      nextBaseDraft: DraftState;
+      previousBaseDraft: DraftState;
+    }
+  | { type: "set_notes"; notes: string }
+  | { type: "set_additional_field"; name: string; value: string }
+  | { type: "set_global_ref_pks"; globalRefPks: GlobalRefPkMap };
 
 // Global-ref objects always carry an id and name. Any object without a name
 // is not a valid global ref value — treat it as empty so callers receive a
@@ -156,6 +171,51 @@ function stateImages(pieceState: PieceState): ImageEntry[] {
   }));
 }
 
+function draftsMatch<T>(currentValue: T, previousValue: T): boolean {
+  return JSON.stringify(currentValue) === JSON.stringify(previousValue);
+}
+
+function draftReducer(state: DraftState, action: DraftAction): DraftState {
+  switch (action.type) {
+    case "hydrate":
+      return {
+        notes:
+          state.notes === action.previousBaseDraft.notes
+            ? action.nextBaseDraft.notes
+            : state.notes,
+        images: draftsMatch(state.images, action.previousBaseDraft.images)
+          ? action.nextBaseDraft.images
+          : state.images,
+        additionalFieldInputs: draftsMatch(
+          state.additionalFieldInputs,
+          action.previousBaseDraft.additionalFieldInputs,
+        )
+          ? action.nextBaseDraft.additionalFieldInputs
+          : state.additionalFieldInputs,
+        globalRefPks: draftsMatch(
+          state.globalRefPks,
+          action.previousBaseDraft.globalRefPks,
+        )
+          ? action.nextBaseDraft.globalRefPks
+          : state.globalRefPks,
+      };
+    case "set_notes":
+      return { ...state, notes: action.notes };
+    case "set_additional_field":
+      return {
+        ...state,
+        additionalFieldInputs: {
+          ...state.additionalFieldInputs,
+          [action.name]: action.value,
+        },
+      };
+    case "set_global_ref_pks":
+      return { ...state, globalRefPks: action.globalRefPks };
+    default:
+      return state;
+  }
+}
+
 // ── ImageUploader ─────────────────────────────────────────────────────────────
 
 type ImageUploaderProps = {
@@ -260,8 +320,6 @@ export default function WorkflowState({
   onDirtyChange,
   autosaveDelayMs,
 }: WorkflowStateProps) {
-  const [notes, setNotes] = useState(pieceState.notes);
-  const [images, setImages] = useState<ImageEntry[]>(stateImages(pieceState));
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [widgetLoading, setWidgetLoading] = useState(false);
   const additionalFieldDefs = useMemo(
@@ -280,12 +338,9 @@ export default function WorkflowState({
       globalRefPks: buildGlobalRefPkMap(additionalFieldDefs, additionalFields),
     };
   }, [additionalFieldDefs, pieceState]);
-  const [additionalFieldInputs, setAdditionalFieldInputs] = useState(
-    baseDraft.additionalFieldInputs,
-  );
-  const [globalRefPks, setGlobalRefPks] = useState<GlobalRefPkMap>(
-    baseDraft.globalRefPks,
-  );
+  const [draft, dispatch] = useReducer(draftReducer, baseDraft);
+  const previousBaseDraftRef = useRef(baseDraft);
+  const { notes, images, additionalFieldInputs, globalRefPks } = draft;
   const normalizedAdditionalFields = useMemo(
     () =>
       normalizeAdditionalFieldPayload(
@@ -312,10 +367,15 @@ export default function WorkflowState({
   const isMobileLayout = useMediaQuery(theme.breakpoints.down("sm"));
 
   useEffect(() => {
-    setNotes(baseDraft.notes);
-    setImages(baseDraft.images);
-    setAdditionalFieldInputs(baseDraft.additionalFieldInputs);
-    setGlobalRefPks(baseDraft.globalRefPks);
+    if (previousBaseDraftRef.current === baseDraft) {
+      return;
+    }
+    dispatch({
+      type: "hydrate",
+      nextBaseDraft: baseDraft,
+      previousBaseDraft: previousBaseDraftRef.current,
+    });
+    previousBaseDraftRef.current = baseDraft;
   }, [baseDraft]);
 
   const [savingImage, setSavingImage] = useState(false);
@@ -472,7 +532,7 @@ export default function WorkflowState({
   }
 
   function handleFieldChange(name: string, value: string) {
-    setAdditionalFieldInputs((prev) => ({ ...prev, [name]: value }));
+    dispatch({ type: "set_additional_field", name, value });
   }
 
   return (
@@ -490,7 +550,7 @@ export default function WorkflowState({
         multiline
         minRows={3}
         value={notes}
-        onChange={(e) => setNotes(e.target.value)}
+        onChange={(e) => dispatch({ type: "set_notes", notes: e.target.value })}
         slotProps={{ htmlInput: { maxLength: 2000 } }}
         fullWidth
       />
@@ -533,15 +593,16 @@ export default function WorkflowState({
                     value={value}
                     onSelect={(entry) => {
                       handleFieldChange(field.name, entryNameOrEmpty(entry));
-                      setGlobalRefPks((prev) =>
-                        entry
-                          ? { ...prev, [field.name]: entry.id }
+                      dispatch({
+                        type: "set_global_ref_pks",
+                        globalRefPks: entry
+                          ? { ...globalRefPks, [field.name]: entry.id }
                           : Object.fromEntries(
-                              Object.entries(prev).filter(
+                              Object.entries(globalRefPks).filter(
                                 ([key]) => key !== field.name,
                               ),
                             ),
-                      );
+                      });
                     }}
                     canCreate={Boolean(field.canCreate)}
                     helperText={helperText}

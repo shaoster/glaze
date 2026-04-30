@@ -23,6 +23,15 @@ class TestPatchCurrentState:
         assert response.status_code == 200
         assert response.json()['current_state']['notes'] == 'Updated notes'
 
+    def test_update_notes_preserves_trailing_spaces(self, client, piece):
+        response = client.patch(
+            f'/api/pieces/{piece.id}/state/',
+            {'notes': 'Updated notes  '},
+            format='json',
+        )
+        assert response.status_code == 200
+        assert response.json()['current_state']['notes'] == 'Updated notes  '
+
     def test_update_images(self, client, piece):
         images = [{'url': 'http://example.com/img.jpg', 'caption': 'Test', 'created': '2024-01-01T00:00:00Z'}]
         response = client.patch(

@@ -513,9 +513,13 @@ function AppShell({
       maxWidth="lg"
       sx={{
         minHeight: "100dvh",
-        py: 2,
+        pt: {
+          xs: "max(12px, calc(env(safe-area-inset-top) + 8px))",
+          sm: 2,
+        },
+        pb: 2,
         px: {
-          xs: "max(16px, env(safe-area-inset-left))",
+          xs: "max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right))",
           sm: 3,
         },
       }}
@@ -556,6 +560,7 @@ function AppShell({
           label={displayName}
           color="primary"
           variant="outlined"
+          size="small"
           onClick={(e) => setMenuAnchor(e.currentTarget)}
           onDelete={(e) => setMenuAnchor(e.currentTarget)}
           deleteIcon={<ExpandMoreIcon />}

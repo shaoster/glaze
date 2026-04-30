@@ -11,6 +11,7 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceDetail from "../PieceDetail";
+import WorkflowState from "../WorkflowState";
 import type {
   PieceDetail as PieceDetailType,
   PieceState,
@@ -196,6 +197,38 @@ describe("PieceDetail", () => {
   it("renders piece name", async () => {
     await renderPieceDetail();
     expect(screen.getByText("Test Bowl")).toBeInTheDocument();
+  });
+
+  it("does not overwrite newer note drafts when stale piece state props arrive", async () => {
+    const onSaved = vi.fn();
+    const initialState = makeState({ notes: "Trim foot" });
+    const { rerender } = render(
+      <ThemeProvider theme={TEST_THEME}>
+        <WorkflowState
+          pieceState={initialState}
+          pieceId="piece-id-1"
+          onSaved={onSaved}
+          autosaveDelayMs={60_000}
+        />
+      </ThemeProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Notes"), {
+      target: { value: "Trim foot  " },
+    });
+
+    rerender(
+      <ThemeProvider theme={TEST_THEME}>
+        <WorkflowState
+          pieceState={makeState({ notes: "Trim foot " })}
+          pieceId="piece-id-1"
+          onSaved={onSaved}
+          autosaveDelayMs={60_000}
+        />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByLabelText("Notes")).toHaveValue("Trim foot  ");
   });
 
   it("renders current state label", async () => {

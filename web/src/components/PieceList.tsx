@@ -165,10 +165,11 @@ function SelectorPanel({
 
 type PieceListItemProps = {
   piece: PieceSummary;
+  activeTagIds: string[];
 };
 
 const PieceListItem = (props: PieceListItemProps) => {
-  const { piece } = props;
+  const { piece, activeTagIds } = props;
   const detailPath = `/pieces/${piece.id}`;
 
   return (
@@ -220,7 +221,11 @@ const PieceListItem = (props: PieceListItemProps) => {
               variant="current"
               isTerminal={isTerminalState(piece.current_state.state)}
             />
-            <TagChipList tags={piece.tags ?? []} />
+            <TagChipList
+              tags={piece.tags ?? []}
+              maxVisible={3}
+              alwaysVisibleTagIds={activeTagIds}
+            />
           </CardContent>
         </CardActionArea>
       </Card>
@@ -352,7 +357,11 @@ const PieceList = (props: PieceListingProps) => {
       </Box>
       <Grid container spacing={1} alignItems="stretch" role="rowgroup">
         {filteredPieces.map((piece) => (
-          <PieceListItem key={piece.id} piece={piece} />
+          <PieceListItem
+            key={piece.id}
+            piece={piece}
+            activeTagIds={activeTags.map((tag) => tag.id)}
+          />
         ))}
       </Grid>
     </>
