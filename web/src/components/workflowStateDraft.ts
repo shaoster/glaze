@@ -59,7 +59,7 @@ function extractGlobalRefPk(value: unknown): string | undefined {
   return undefined;
 }
 
-function buildAdditionalFieldInputMap(
+export function buildAdditionalFieldInputMap(
   defs: ResolvedAdditionalField[],
   values: Record<string, unknown>,
 ): AdditionalFieldInputMap {

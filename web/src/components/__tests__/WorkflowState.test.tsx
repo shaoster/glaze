@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import WorkflowState from "../WorkflowState";
 import type { ResolvedAdditionalField } from "../../util/workflow";
 import {
+  buildAdditionalFieldInputMap,
   buildDraftState,
   draftReducer,
   normalizeAdditionalFieldPayload,
@@ -330,6 +331,45 @@ describe("WorkflowState", () => {
     expect(draft.globalRefPks).toEqual({ kiln_location: "loc-1" });
   });
 
+  it("buildAdditionalFieldInputMap stringifies boolean values for boolean fields", () => {
+    const defs: ResolvedAdditionalField[] = [
+      {
+        name: "food_safe",
+        label: "Food Safe",
+        type: "boolean",
+        required: false,
+        isGlobalRef: false,
+        isStateRef: false,
+      },
+    ];
+    expect(
+      buildAdditionalFieldInputMap(defs, {
+        food_safe: true,
+      }),
+    ).toEqual({ food_safe: "true" });
+
+    expect(
+      buildAdditionalFieldInputMap(defs, {
+        food_safe: false,
+      }),
+    ).toEqual({ food_safe: "false" });
+  });
+
+  it("buildDraftState keeps a global ref label but omits missing or non-string ids", () => {
+    const draft = buildDraftState(
+      makeState({
+        state: "submitted_to_bisque_fire",
+        additional_fields: {
+          kiln_location: { id: 123, name: "Unsaved Kiln" },
+        } as PieceState["additional_fields"],
+      }),
+    );
+    expect(draft.additionalFieldInputs).toEqual(
+      expect.objectContaining({ kiln_location: "Unsaved Kiln" }),
+    );
+    expect(draft.globalRefPks).toEqual({});
+  });
+
   it("buildDraftState ignores non-string objects for inline fields", () => {
     const draft = buildDraftState(
       makeState({
@@ -375,6 +415,20 @@ describe("WorkflowState", () => {
         {},
       ),
     ).toEqual({ food_safe: false });
+  });
+
+  it("normalizeAdditionalFieldPayload tolerates sparse input maps", () => {
+    const defs: ResolvedAdditionalField[] = [
+      {
+        name: "notes_label",
+        label: "Notes Label",
+        type: "string",
+        required: false,
+        isGlobalRef: false,
+        isStateRef: false,
+      },
+    ];
+    expect(normalizeAdditionalFieldPayload(defs, {}, {})).toEqual({});
   });
 
   it("normalizeAdditionalFieldPayload drops NaN integers and numbers", () => {
