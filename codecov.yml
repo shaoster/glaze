@@ -14,11 +14,8 @@ comment:
   behavior: default
 
 flags:
-  backend:
+  code:
     paths:
       - api/
-    carryforward: true
-  frontend:
-    paths:
       - web/src/
     carryforward: true
