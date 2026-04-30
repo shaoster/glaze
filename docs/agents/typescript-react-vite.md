@@ -43,6 +43,11 @@ This is a Single Page Application (SPA). Routing is handled client-side via Reac
 ## Component patterns
 
 - Keep components small and focused on a single responsibility. Extract sub-concerns into child components or custom hooks.
+- Prefer "data down, actions up" boundaries. Parents should pass the data a child needs to render plus a narrow action interface for meaningful events (`onSave`, `onDelete`, `onSelect`, etc.), and children should call those actions instead of receiving large bundles of parent setters.
+- If several descendants need the same narrow action interface, a focused Context can be a good fit. Keep the Context surface small, document what owns the data, and avoid using Context as a dumping ground for unrelated mutable state.
+- Treat excessive parent-owned state passed into a child as a refactoring smell. If a child needs a long list of parent state values plus multiple parent setters to do its job, the boundary is likely fragile and the logic probably belongs lower in the tree or back in the parent.
+- Push data ownership and business logic as low in the tree as practical. Let parents focus on orchestration, routing, and cross-cutting concerns; let the lowest reasonable component own the stateful workflow it directly implements.
+- Completely stateless subtrees are excellent extraction candidates. If a subtree can be expressed as pure props-in/render-out UI, factoring it into a child component usually improves readability and testability without introducing a brittle ownership split.
 - When a page grows multiple page-specific child components or helper modules, prefer a dedicated page subfolder such as `web/src/pages/<PageName>/` instead of leaving every helper adjacent to the page file. Keep broadly reusable UI in `web/src/components/`; keep page-scoped pieces near the owning page.
 - When the same UI concept or JSX pattern appears in more than one place, extract a shared component instead of duplicating inline JSX. Treat repeated presentational structure as a refactoring trigger even if the first implementation started life inside a single screen component.
 - Always define a typed props interface; prefer explicit interfaces over inline object types for reusability and readability:
@@ -64,6 +69,7 @@ This is a Single Page Application (SPA). Routing is handled client-side via Reac
   ```
 - Use `memo` to prevent unnecessary re-renders of pure components that receive stable props. Pair with `useMemo` for expensive derived values and `useCallback` for stable callback references — but don't memoize indiscriminately; profile first.
 - **Maximum JSX nesting depth of 4.** If a component's JSX tree would exceed 4 levels of element nesting, extract the deeper subtree into a named child component with typed props. This also sidesteps TypeScript narrowing limitations: instead of narrowing a `string | undefined` inside a callback nested in a ternary branch, pass the already-narrowed value as a `string` prop to a child component.
+- Before splitting a large component, decide what the new boundary owns. Good splits usually create either a pure presentational subtree or a child that owns a coherent slice of state and business logic. Bad splits mostly move JSX into another file while still threading parent-owned state and setters through every layer.
 
 ## Custom hooks
 
