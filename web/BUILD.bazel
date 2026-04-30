@@ -339,6 +339,7 @@ js_library(
     name = "workflow_state_src",
     srcs = [
         "src/components/WorkflowState.tsx",
+        "src/components/workflowStateDraft.ts",
     ],
     deps = [
         ":autosave_src",

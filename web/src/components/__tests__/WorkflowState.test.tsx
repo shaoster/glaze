@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import WorkflowState from "../WorkflowState";
+import { buildDraftState, draftReducer } from "../workflowStateDraft";
 import type { PieceState, PieceDetail } from "../../util/types";
 import * as api from "../../util/api";
 
@@ -303,6 +304,36 @@ beforeEach(() => {
 });
 
 describe("WorkflowState", () => {
+  it("buildDraftState leaves additional field maps empty for states without additional fields", () => {
+    const draft = buildDraftState(makeState({ state: "designed" }));
+    expect(draft.additionalFieldInputs).toEqual({});
+    expect(draft.globalRefPks).toEqual({});
+  });
+
+  it("buildDraftState populates additional field maps for states with additional fields", () => {
+    const draft = buildDraftState(
+      makeState({
+        state: "submitted_to_bisque_fire",
+        additional_fields: {
+          kiln_location: { id: "loc-1", name: "Kiln A" },
+        },
+      }),
+    );
+    expect(draft.additionalFieldInputs).toEqual(
+      expect.objectContaining({ kiln_location: "Kiln A" }),
+    );
+    expect(draft.globalRefPks).toEqual({ kiln_location: "loc-1" });
+  });
+
+  it("draftReducer throws on an unhandled action", () => {
+    expect(() =>
+      draftReducer(
+        buildDraftState(makeState()),
+        { type: "not-real" } as never,
+      ),
+    ).toThrow("Unhandled DraftAction");
+  });
+
   it("renders without crashing", async () => {
     let container: HTMLElement;
     await act(async () => {
@@ -466,6 +497,21 @@ describe("WorkflowState", () => {
       );
     });
     expect(screen.getByLabelText("Notes")).toHaveValue("Some notes");
+  });
+
+  it("renders no additional field inputs for states without additional fields", async () => {
+    await act(async () => {
+      render(
+        <WorkflowState
+          {...defaultProps}
+          initialPieceState={makeState({ state: "designed" })}
+        />,
+      );
+    });
+    expect(screen.queryByLabelText("Kiln Location")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Trimmed Weight Lbs"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows pending autosave after editing notes", async () => {
