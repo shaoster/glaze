@@ -1,0 +1,8 @@
+coverage:
+  status:
+    patch:
+      default:
+        carryforward: true
+    project:
+      default:
+        carryforward: true
