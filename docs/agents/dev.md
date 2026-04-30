@@ -193,6 +193,8 @@ Tests live in:
 - [`web/src/util/workflow.test.ts`](../../web/src/util/workflow.test.ts) — `workflow.ts` helper unit tests
 - [`web/src/util/__tests__/api.test.ts`](../../web/src/util/__tests__/api.test.ts) — `api.ts` unit tests (axios mocked)
 
+**Keep tests in their domain-specific file.** Each Bazel target covers one coherent slice of the API so that only the relevant target re-runs when a file changes. When adding new tests, extend the existing file that already covers the same module or feature area (e.g. auth tests go in `test_auth.py`, glaze-import tests go in `test_manual_square_crop_import.py`). Do not create a new cross-cutting file — it ends up in a catch-all target that runs on every change and makes failures harder to locate.
+
 ### Web build helper
 
 ```bash

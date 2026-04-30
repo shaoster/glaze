@@ -9,6 +9,9 @@ Covers:
 - Public objects do not expose other users' private objects.
 """
 import pytest
+from django.contrib.admin.sites import AdminSite
+from django.contrib.auth.models import User
+from django.test import RequestFactory
 
 from api.models import ClayBody, GlazeType, Location
 
@@ -159,6 +162,72 @@ class TestPublicLibraryPost:
         )
         assert response.status_code == 405
         assert response.json() == {'detail': 'Private instances of this type are not supported.'}
+
+
+@pytest.mark.django_db
+class TestPublicLibraryAdmin:
+    """Smoke tests for PublicLibraryAdmin base class behavior."""
+
+    def test_list_view_returns_only_public_objects(self):
+        from django.test import Client as DjangoClient
+
+        superuser = User.objects.create_superuser(
+            username='superadmin@example.com',
+            email='superadmin@example.com',
+            password='password',
+        )
+        private_user = User.objects.create(username='private@example.com', email='private@example.com')
+        GlazeType.objects.create(user=None, name='PublicGlaze')
+        GlazeType.objects.create(user=private_user, name='PrivateGlaze')
+
+        c = DjangoClient()
+        c.force_login(superuser)
+        resp = c.get('/admin/api/glazetype/')
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert 'PublicGlaze' in content
+        assert 'PrivateGlaze' not in content
+
+    def test_save_model_forces_user_to_none(self):
+        from api.admin import PublicLibraryAdmin
+
+        superuser = User.objects.create_superuser(
+            username='su2@example.com', email='su2@example.com', password='password'
+        )
+        ma = PublicLibraryAdmin(GlazeType, AdminSite())
+        request = RequestFactory().post('/')
+        request.user = superuser
+
+        obj = GlazeType(user=superuser, name='WillBePublic')
+        ma.save_model(request, obj, type('FakeForm', (), {'cleaned_data': {}})(), change=False)
+        obj.refresh_from_db()
+        assert obj.user is None
+
+    def test_get_queryset_excludes_private_objects(self):
+        from api.admin import PublicLibraryAdmin
+
+        private_user = User.objects.create(username='priv2@example.com', email='priv2@example.com')
+        GlazeType.objects.create(user=None, name='PublicQ')
+        GlazeType.objects.create(user=private_user, name='PrivateQ')
+
+        superuser = User.objects.create_superuser(
+            username='su3@example.com', email='su3@example.com', password='password'
+        )
+        ma = PublicLibraryAdmin(GlazeType, AdminSite())
+        request = RequestFactory().get('/')
+        request.user = superuser
+
+        names = list(ma.get_queryset(request).values_list('name', flat=True))
+        assert 'PublicQ' in names
+        assert 'PrivateQ' not in names
+
+    def test_is_public_entry_display(self):
+        from api.admin import PublicLibraryAdmin
+
+        private_user = User.objects.create(username='priv3@example.com', email='priv3@example.com')
+        ma = PublicLibraryAdmin(GlazeType, AdminSite())
+        assert ma.is_public_entry(GlazeType(user=None, name='Pub')) is True
+        assert ma.is_public_entry(GlazeType(user=private_user, name='Priv')) is False
 
     def test_glaze_combination_post_requires_non_empty_layers(self, client):
         response = client.post(
