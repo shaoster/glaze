@@ -105,10 +105,6 @@ py_test(
         "tests/test_image_field_migration.py",
         "tests/test_model_factory.py",
         "tests/test_utils.py",
-        # The migration test imports directly from the migration module; include
-        # it in srcs (not just data) so it is on the Python import path.
-        "migrations/__init__.py",
-        "migrations/0025_image_field_jsonfield.py",
     ],
     args = [
         "api/tests/test_model_factory.py",

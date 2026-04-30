@@ -1,206 +1,28 @@
-"""Tests for migrations 0025–0027: image field conversion and Cloudinary backfills.
+"""Regression tests for Cloudinary URL parsing and image field storage.
 
-Exercises the data-migration helper functions (url_to_json / json_to_url) in
-isolation so that broken edge-cases are caught without touching the real DB
-schema.  We import the helpers directly from the migration module rather than
-running the migration through Django's executor, because:
-
-- The migration is already applied in CI (the test DB starts fully migrated).
-- Running the migration in reverse and forward again inside a test is fragile.
-- The helper functions are pure enough to unit-test directly.
-
-Migrations 0026 and 0027 have been reduced to no-ops (their backfills ran in
-all environments).  Their URL-parsing logic is preserved here as regression
-tests so the extraction rules are not silently broken in future.
+The data migrations that used these helpers (0025–0027) have been squashed
+into a single initial migration.  The URL-parsing logic is preserved here so
+the extraction rules are not silently broken in future.
 """
 
-import importlib
-import json
 import re
 from urllib.parse import urlparse
 
-from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from api.models import ENTRY_STATE, GlazeCombination, GlazeType, Piece, PieceState
-
-# ---------------------------------------------------------------------------
-# Import the helper functions directly from the migration module.
-# ---------------------------------------------------------------------------
-
-_migration = importlib.import_module('api.migrations.0025_image_field_jsonfield')
-_url_to_json = _migration.global_images_url_to_json
-_json_to_url = _migration.global_images_json_to_url
-_parse_cloudinary_url = _migration._parse_cloudinary_url
+from api.models import GlazeCombination, GlazeType, Piece, PieceState
 
 CLOUDINARY_URL = (
     'https://res.cloudinary.com/demo-cloud/image/upload'
     '/v1776304349/glaze-public/tile.heic'
 )
 EXPECTED_CLOUD_NAME = 'demo-cloud'
-EXPECTED_PUBLIC_ID = 'v1776304349/glaze-public/tile'
-
-
-class TestParseCloudinaryUrl:
-    def test_parses_cloud_name_and_public_id(self):
-        cloud_name, public_id = _parse_cloudinary_url(CLOUDINARY_URL)
-        assert cloud_name == EXPECTED_CLOUD_NAME
-        assert public_id == EXPECTED_PUBLIC_ID
-
-    def test_extracts_public_id_without_version_segment(self):
-        url = 'https://res.cloudinary.com/demo/image/upload/glaze-public/tile.jpg'
-        cloud_name, public_id = _parse_cloudinary_url(url)
-        assert cloud_name == 'demo'
-        assert public_id == 'glaze-public/tile'
-
-    def test_skips_transform_segments(self):
-        url = 'https://res.cloudinary.com/demo/image/upload/f_auto/w_100/glaze/tile.jpg'
-        _, public_id = _parse_cloudinary_url(url)
-        assert public_id == 'glaze/tile'
-
-    def test_skips_mixed_transforms_before_versioned_public_id(self):
-        url = 'https://res.cloudinary.com/demo/image/upload/f_auto/v123/folder/img.png'
-        _, public_id = _parse_cloudinary_url(url)
-        assert public_id == 'v123/folder/img'
-
-    def test_returns_none_tuple_for_non_cloudinary_url(self):
-        assert _parse_cloudinary_url('https://example.com/image.jpg') == (None, None)
-
-    def test_returns_none_tuple_for_empty_string(self):
-        assert _parse_cloudinary_url('') == (None, None)
-
-    def test_handles_no_folder_in_path(self):
-        url = 'https://res.cloudinary.com/demo/image/upload/tile.png'
-        _, public_id = _parse_cloudinary_url(url)
-        assert public_id == 'tile'
-
-
-class _FakeSchemaEditor:
-    """Minimal schema_editor stub that records SQL statements."""
-
-    def __init__(self):
-        self.statements: list[str] = []
-
-    def execute(self, sql: str, *args, **kwargs):
-        self.statements.append(sql)
-
-
-class TestUrlToJsonDataMigration(TestCase):
-    """Unit tests for url_to_json using real DB rows but isolated to the helper."""
-
-    def setUp(self):
-        self.schema_editor = _FakeSchemaEditor()
-
-    def test_url_string_converted_to_json_object(self):
-        """A legacy URL string is rewritten as {url, cloudinary_public_id}."""
-        gt = GlazeType.objects.create(user=None, name='Celadon', test_tile_image=None)
-        # Simulate legacy state: manually inject a plain URL string via raw update.
-        GlazeType.objects.filter(pk=gt.pk).update(test_tile_image=json.dumps(CLOUDINARY_URL))
-
-        # Reload and verify setup.
-        gt.refresh_from_db()
-        # The raw JSON string "https://..." starts with '"' not '{' after json.dumps.
-        # We need to set the VARCHAR column to the raw URL string — but since the
-        # migration already ran, the column is now JSONField.  We simulate the
-        # pre-migration state by directly writing a JSON-encoded URL string.
-        #
-        # Actually, test the helper's logic path: pass a plain string value through
-        # the helper via a direct DB row manipulation.  Since the column is already
-        # JSONField we test the helper via the model layer instead.
-        pass  # covered by end-to-end test below
-
-    def test_empty_strings_become_null_via_sql(self):
-        """url_to_json issues an UPDATE … SET test_tile_image = 'null' for empty rows."""
-        _url_to_json(django_apps, self.schema_editor)
-        sql_statements = ' '.join(self.schema_editor.statements)
-        assert 'api_glazetype' in sql_statements
-        assert 'api_glazecombination' in sql_statements
-        assert "'null'" in sql_statements
-
-    def test_json_to_url_on_dict_values(self):
-        """json_to_url correctly extracts URL from stored dict and clears None."""
-        combo = GlazeCombination.objects.create(
-            user=None,
-            name='Celadon!Shino',
-            test_tile_image={
-                'url': CLOUDINARY_URL,
-                'cloudinary_public_id': EXPECTED_PUBLIC_ID,
-                'cloud_name': EXPECTED_CLOUD_NAME,
-            },
-        )
-        _json_to_url(django_apps, self.schema_editor)
-        combo.refresh_from_db()
-        assert combo.test_tile_image == CLOUDINARY_URL
-
-    def test_json_to_url_converts_null_to_empty_string(self):
-        """json_to_url converts NULL images to empty strings (reverting to old default)."""
-        combo = GlazeCombination.objects.create(
-            user=None,
-            name='Iron!Red',
-            test_tile_image=None,
-        )
-        _json_to_url(django_apps, self.schema_editor)
-        combo.refresh_from_db()
-        assert combo.test_tile_image == ''
-
-
-class TestImageFieldStorageRoundTrip(TestCase):
-    """Integration tests verifying the model correctly stores/retrieves dict values."""
-
-    def test_dict_value_round_trips_through_orm(self):
-        image = {
-            'url': CLOUDINARY_URL,
-            'cloudinary_public_id': EXPECTED_PUBLIC_ID,
-            'cloud_name': EXPECTED_CLOUD_NAME,
-        }
-        gt = GlazeType.objects.create(user=None, name='Shino', test_tile_image=image)
-        gt.refresh_from_db()
-        assert gt.test_tile_image == image
-
-    def test_none_value_stored_as_null(self):
-        gt = GlazeType.objects.create(user=None, name='Tenmoku', test_tile_image=None)
-        gt.refresh_from_db()
-        assert gt.test_tile_image is None
-
-    def test_dict_missing_public_id_is_valid(self):
-        """Omitting cloudinary_public_id (optional field) is allowed."""
-        image = {'url': 'https://example.com/tile.jpg', 'cloudinary_public_id': None}
-        gt = GlazeType.objects.create(user=None, name='Ash', test_tile_image=image)
-        gt.refresh_from_db()
-        assert gt.test_tile_image == image
-
-    def test_glaze_combination_stores_dict_image(self):
-        image = {
-            'url': CLOUDINARY_URL,
-            'cloudinary_public_id': EXPECTED_PUBLIC_ID,
-            'cloud_name': EXPECTED_CLOUD_NAME,
-        }
-        combo = GlazeCombination.objects.create(
-            user=None,
-            name='Celadon!Shino',
-            test_tile_image=image,
-        )
-        combo.refresh_from_db()
-        assert combo.test_tile_image == image
-
-    def test_all_three_fields_accessible_after_roundtrip(self):
-        """After storing a dict, all three image fields are directly accessible."""
-        image = {
-            'url': CLOUDINARY_URL,
-            'cloudinary_public_id': EXPECTED_PUBLIC_ID,
-            'cloud_name': EXPECTED_CLOUD_NAME,
-        }
-        gt = GlazeType.objects.create(user=None, name='Chun Li', test_tile_image=image)
-        gt.refresh_from_db()
-        assert gt.test_tile_image['cloudinary_public_id'] == EXPECTED_PUBLIC_ID
-        assert gt.test_tile_image['cloud_name'] == EXPECTED_CLOUD_NAME
+EXPECTED_PUBLIC_ID = 'glaze-public/tile'
 
 
 # ---------------------------------------------------------------------------
-# URL-parsing helpers used by migrations 0026 and 0027.
-# The migration files are now no-ops (backfills already ran in all envs).
-# These helpers are preserved here as regression tests.
+# URL-parsing helpers (originally from migrations 0025–0027)
 # ---------------------------------------------------------------------------
 
 _CLOUDINARY_HOSTNAME = 'res.cloudinary.com'
@@ -245,9 +67,11 @@ def _parse_cloud_name(url: str) -> str | None:
     return parts[1] or None
 
 
-class TestParseCloudinaryPublicId:
-    """Regression tests for the public_id extraction logic from migration 0026."""
+# ---------------------------------------------------------------------------
+# URL parsing tests
+# ---------------------------------------------------------------------------
 
+class TestParseCloudinaryPublicId:
     def test_extracts_public_id_without_version(self):
         url = 'https://res.cloudinary.com/demo/image/upload/glaze_prod/tile.jpg'
         assert _parse_cloudinary_public_id(url) == 'glaze_prod/tile'
@@ -279,8 +103,6 @@ class TestParseCloudinaryPublicId:
 
 
 class TestParseCloudName:
-    """Regression tests for the cloud_name extraction logic from migration 0027."""
-
     def test_extracts_cloud_name(self):
         url = 'https://res.cloudinary.com/mycloud/image/upload/v1/folder/img.jpg'
         assert _parse_cloud_name(url) == 'mycloud'
@@ -290,3 +112,57 @@ class TestParseCloudName:
 
     def test_returns_none_for_empty_string(self):
         assert _parse_cloud_name('') is None
+
+
+# ---------------------------------------------------------------------------
+# Image field storage round-trip tests
+# ---------------------------------------------------------------------------
+
+class TestImageFieldStorageRoundTrip(TestCase):
+    """Verify the model correctly stores and retrieves image dict values."""
+
+    def test_dict_value_round_trips_through_orm(self):
+        image = {
+            'url': CLOUDINARY_URL,
+            'cloudinary_public_id': EXPECTED_PUBLIC_ID,
+            'cloud_name': EXPECTED_CLOUD_NAME,
+        }
+        gt = GlazeType.objects.create(user=None, name='Shino', test_tile_image=image)
+        gt.refresh_from_db()
+        assert gt.test_tile_image == image
+
+    def test_none_value_stored_as_null(self):
+        gt = GlazeType.objects.create(user=None, name='Tenmoku', test_tile_image=None)
+        gt.refresh_from_db()
+        assert gt.test_tile_image is None
+
+    def test_dict_missing_public_id_is_valid(self):
+        image = {'url': 'https://example.com/tile.jpg', 'cloudinary_public_id': None}
+        gt = GlazeType.objects.create(user=None, name='Ash', test_tile_image=image)
+        gt.refresh_from_db()
+        assert gt.test_tile_image == image
+
+    def test_glaze_combination_stores_dict_image(self):
+        image = {
+            'url': CLOUDINARY_URL,
+            'cloudinary_public_id': EXPECTED_PUBLIC_ID,
+            'cloud_name': EXPECTED_CLOUD_NAME,
+        }
+        combo = GlazeCombination.objects.create(
+            user=None,
+            name='Celadon!Shino',
+            test_tile_image=image,
+        )
+        combo.refresh_from_db()
+        assert combo.test_tile_image == image
+
+    def test_all_image_fields_accessible_after_roundtrip(self):
+        image = {
+            'url': CLOUDINARY_URL,
+            'cloudinary_public_id': EXPECTED_PUBLIC_ID,
+            'cloud_name': EXPECTED_CLOUD_NAME,
+        }
+        gt = GlazeType.objects.create(user=None, name='Chun Li', test_tile_image=image)
+        gt.refresh_from_db()
+        assert gt.test_tile_image['cloudinary_public_id'] == EXPECTED_PUBLIC_ID
+        assert gt.test_tile_image['cloud_name'] == EXPECTED_CLOUD_NAME
