@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import type { PieceDetail } from "../../util/types";
 import PiecePhotoGallery, {
   type EditablePiecePhoto,
   type PiecePhotoGalleryImage,
@@ -25,15 +26,22 @@ vi.mock("../ImageLightbox", () => ({
     initialIndex,
     footerActions,
     onClose,
+    onSetAsThumbnail,
   }: {
     images: PiecePhotoGalleryImage[];
     initialIndex: number;
     footerActions?: (index: number) => ReactNode;
     onClose: () => void;
+    onSetAsThumbnail?: (image: PiecePhotoGalleryImage) => Promise<void>;
   }) => (
     <div aria-label="Mock lightbox" role="dialog">
       <div>{images[initialIndex].caption}</div>
       {footerActions?.(initialIndex)}
+      {onSetAsThumbnail && (
+        <button onClick={() => void onSetAsThumbnail(images[initialIndex])}>
+          Set as thumbnail
+        </button>
+      )}
       <button onClick={onClose}>Close lightbox</button>
     </div>
   ),
@@ -60,12 +68,36 @@ function makeImages(): PiecePhotoGalleryImage[] {
   ];
 }
 
+function makeUpdatedPiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
+  const state = {
+    state: "wheel_thrown" as const,
+    notes: "Current notes",
+    created: new Date("2024-01-16T10:00:00Z"),
+    last_modified: new Date("2024-01-16T10:00:00Z"),
+    images: [],
+    previous_state: "designed" as const,
+    next_state: null,
+    additional_fields: {},
+  };
+  return {
+    id: "piece-1",
+    name: "Bowl",
+    created: new Date("2024-01-15T10:00:00Z"),
+    last_modified: new Date("2024-01-16T10:00:00Z"),
+    thumbnail: null,
+    current_state: state,
+    current_location: "",
+    tags: [],
+    history: [state],
+    ...overrides,
+  };
+}
+
 describe("PiecePhotoGallery", () => {
   it("opens a headerless gallery dialog from the photo count chip", async () => {
     render(
       <PiecePhotoGallery
         images={makeImages()}
-        onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
       />,
     );
 
@@ -80,7 +112,6 @@ describe("PiecePhotoGallery", () => {
     render(
       <PiecePhotoGallery
         images={makeImages()}
-        onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
       />,
     );
 
@@ -91,13 +122,17 @@ describe("PiecePhotoGallery", () => {
   });
 
   it("saves edited captions from the lightbox for current-state images", async () => {
-    const onUpdateCurrentStateImages = vi.fn().mockResolvedValue(undefined);
+    const updatedPiece = makeUpdatedPiece();
+    const updateCurrentStateFn = vi.fn().mockResolvedValue(updatedPiece);
+    const onPieceUpdated = vi.fn();
 
     render(
       <PiecePhotoGallery
         images={makeImages()}
-        onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
-        onUpdateCurrentStateImages={onUpdateCurrentStateImages}
+        pieceId="piece-1"
+        currentStateNotes="Current notes"
+        onPieceUpdated={onPieceUpdated}
+        updateCurrentStateFn={updateCurrentStateFn}
       />,
     );
 
@@ -110,23 +145,32 @@ describe("PiecePhotoGallery", () => {
     fireEvent.change(captionInput, { target: { value: "Updated caption" } });
     await userEvent.click(screen.getByText("Save"));
 
-    expect(onUpdateCurrentStateImages).toHaveBeenCalledWith([
-      {
-        url: "https://example.com/a.jpg",
-        caption: "Updated caption",
-        cloudinary_public_id: "piece/a",
-      },
-    ] satisfies EditablePiecePhoto[]);
+    expect(updateCurrentStateFn).toHaveBeenCalledWith(
+      "piece-1",
+      expect.objectContaining({
+        notes: "Current notes",
+        images: [
+          {
+            url: "https://example.com/a.jpg",
+            caption: "Updated caption",
+            cloudinary_public_id: "piece/a",
+          },
+        ] satisfies EditablePiecePhoto[],
+      }),
+    );
+    expect(onPieceUpdated).toHaveBeenCalledWith(updatedPiece);
   });
 
   it("lets current-state gallery images be deleted through the confirmation dialog", async () => {
-    const onUpdateCurrentStateImages = vi.fn().mockResolvedValue(undefined);
+    const updateCurrentStateFn = vi.fn().mockResolvedValue(makeUpdatedPiece());
 
     render(
       <PiecePhotoGallery
         images={makeImages()}
-        onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
-        onUpdateCurrentStateImages={onUpdateCurrentStateImages}
+        pieceId="piece-1"
+        currentStateNotes="Current notes"
+        onPieceUpdated={vi.fn()}
+        updateCurrentStateFn={updateCurrentStateFn}
       />,
     );
 
@@ -138,17 +182,22 @@ describe("PiecePhotoGallery", () => {
     expect(screen.getByText("Remove Image")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Remove" }));
 
-    expect(onUpdateCurrentStateImages).toHaveBeenCalledWith([]);
+    expect(updateCurrentStateFn).toHaveBeenCalledWith(
+      "piece-1",
+      expect.objectContaining({ images: [] }),
+    );
   });
 
   it("lets you click the caption text itself to start editing and save with Enter", async () => {
-    const onUpdateCurrentStateImages = vi.fn().mockResolvedValue(undefined);
+    const updateCurrentStateFn = vi.fn().mockResolvedValue(makeUpdatedPiece());
 
     render(
       <PiecePhotoGallery
         images={makeImages()}
-        onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
-        onUpdateCurrentStateImages={onUpdateCurrentStateImages}
+        pieceId="piece-1"
+        currentStateNotes="Current notes"
+        onPieceUpdated={vi.fn()}
+        updateCurrentStateFn={updateCurrentStateFn}
       />,
     );
 
@@ -167,21 +216,28 @@ describe("PiecePhotoGallery", () => {
       fireEvent.keyDown(captionInput, { key: "Enter" });
     });
 
-    expect(onUpdateCurrentStateImages).toHaveBeenCalledWith([
-      {
-        url: "https://example.com/a.jpg",
-        caption: "Wheel detail",
-        cloudinary_public_id: "piece/a",
-      },
-    ] satisfies EditablePiecePhoto[]);
+    expect(updateCurrentStateFn).toHaveBeenCalledWith(
+      "piece-1",
+      expect.objectContaining({
+        images: [
+          {
+            url: "https://example.com/a.jpg",
+            caption: "Wheel detail",
+            cloudinary_public_id: "piece/a",
+          },
+        ] satisfies EditablePiecePhoto[],
+      }),
+    );
   });
 
   it("cancels caption edits with Escape", async () => {
     render(
       <PiecePhotoGallery
         images={makeImages()}
-        onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
-        onUpdateCurrentStateImages={vi.fn().mockResolvedValue(undefined)}
+        pieceId="piece-1"
+        currentStateNotes="Current notes"
+        onPieceUpdated={vi.fn()}
+        updateCurrentStateFn={vi.fn().mockResolvedValue(makeUpdatedPiece())}
       />,
     );
 
@@ -214,7 +270,6 @@ describe("PiecePhotoGallery", () => {
     render(
       <PiecePhotoGallery
         images={makeImages()}
-        onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
       />,
     );
 
@@ -227,13 +282,15 @@ describe("PiecePhotoGallery", () => {
   });
 
   it("cancels image deletion without saving", async () => {
-    const onUpdateCurrentStateImages = vi.fn().mockResolvedValue(undefined);
+    const updateCurrentStateFn = vi.fn().mockResolvedValue(makeUpdatedPiece());
 
     render(
       <PiecePhotoGallery
         images={makeImages()}
-        onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
-        onUpdateCurrentStateImages={onUpdateCurrentStateImages}
+        pieceId="piece-1"
+        currentStateNotes="Current notes"
+        onPieceUpdated={vi.fn()}
+        updateCurrentStateFn={updateCurrentStateFn}
       />,
     );
 
@@ -246,6 +303,42 @@ describe("PiecePhotoGallery", () => {
     await waitFor(() =>
       expect(screen.queryByText("Remove Image")).not.toBeInTheDocument(),
     );
-    expect(onUpdateCurrentStateImages).not.toHaveBeenCalled();
+    expect(updateCurrentStateFn).not.toHaveBeenCalled();
+  });
+
+  it("persists thumbnail updates from the lightbox", async () => {
+    const updatedPiece = makeUpdatedPiece({
+      thumbnail: {
+        url: "https://example.com/a.jpg",
+        cloudinary_public_id: "piece/a",
+      },
+    });
+    const updatePieceFn = vi.fn().mockResolvedValue(updatedPiece);
+    const onPieceUpdated = vi.fn();
+
+    render(
+      <PiecePhotoGallery
+        images={makeImages()}
+        pieceId="piece-1"
+        onPieceUpdated={onPieceUpdated}
+        updatePieceFn={updatePieceFn}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+    await userEvent.click(
+      within(screen.getByLabelText("Mock lightbox")).getByText("Set as thumbnail"),
+    );
+
+    await waitFor(() =>
+      expect(updatePieceFn).toHaveBeenCalledWith("piece-1", {
+        thumbnail: {
+          url: "https://example.com/a.jpg",
+          cloudinary_public_id: "piece/a",
+        },
+      }),
+    );
+    expect(onPieceUpdated).toHaveBeenCalledWith(updatedPiece);
   });
 });

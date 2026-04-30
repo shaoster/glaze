@@ -353,12 +353,16 @@ js_library(
 
 js_library(
     name = "piece_photo_gallery_src",
-    srcs = ["src/components/PiecePhotoGallery.tsx"],
+    srcs = [
+        "src/components/PiecePhotoGallery.tsx",
+        "src/components/pieceDetailFields.ts",
+    ],
     deps = [
         ":cloudinary_image_src",
         ":generated_types",
         ":image_lightbox_src",
         ":node_modules",
+        ":util_lib",
     ],
 )
 

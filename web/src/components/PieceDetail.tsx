@@ -13,7 +13,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import { useBlocker } from "react-router-dom";
-import type { CaptionedImage, PieceDetail as PieceDetailType } from "../util/types";
+import type { PieceDetail as PieceDetailType } from "../util/types";
 import { formatState, isTerminalState } from "../util/types";
 import { addPieceState, updateCurrentState, updatePiece } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
@@ -24,10 +24,8 @@ import StateTransition from "./StateTransition";
 import PieceHistory from "./PieceHistory";
 import GlobalEntryField from "./GlobalEntryField";
 import PiecePhotoGallery, {
-  type EditablePiecePhoto,
   type PiecePhotoGalleryImage,
 } from "./PiecePhotoGallery";
-import { normalizeFields } from "./pieceDetailFields";
 import { PieceDetailSaveStatusProvider } from "./PieceDetailSaveStatusContext";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
 
@@ -244,34 +242,15 @@ function PieceDetailContent({
     }
   }
 
-  async function handleSetThumbnail(image: CaptionedImage) {
-    const updated = await updatePiece(piece.id, {
-      thumbnail: {
-        url: image.url,
-        cloudinary_public_id: image.cloudinary_public_id ?? null,
-      },
-    });
-    onPieceUpdated(updated);
-  }
-
-  async function handleUpdateCurrentStateImages(nextImages: EditablePiecePhoto[]) {
-    const updated = await updateCurrentState(piece.id, {
-      notes: currentState.notes,
-      images: nextImages.map((image) => ({
-        url: image.url,
-        caption: image.caption,
-        cloudinary_public_id: image.cloudinary_public_id ?? null,
-      })),
-      additional_fields: normalizeFields(currentState.additional_fields ?? {}),
-    });
-    onPieceUpdated(updated);
-  }
-
   const galleryProps = {
     images: galleryImages,
+    pieceId: piece.id,
+    currentStateNotes: currentState.notes,
+    currentStateAdditionalFields: currentState.additional_fields ?? {},
     currentThumbnailUrl: piece.thumbnail?.url,
-    onSetAsThumbnail: handleSetThumbnail,
-    onUpdateCurrentStateImages: handleUpdateCurrentStateImages,
+    onPieceUpdated,
+    updatePieceFn: updatePiece,
+    updateCurrentStateFn: updateCurrentState,
   } satisfies ComponentProps<typeof PiecePhotoGallery>;
 
   return (

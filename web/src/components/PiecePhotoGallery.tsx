@@ -17,9 +17,11 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import type { CaptionedImage } from "../util/types";
+import type { CaptionedImage, PieceDetail } from "../util/types";
+import { updateCurrentState, updatePiece } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
 import ImageLightbox from "./ImageLightbox";
+import { normalizeFields } from "./pieceDetailFields";
 
 export type PiecePhotoGalleryImage = CaptionedImage & {
   stateLabel: string;
@@ -33,9 +35,13 @@ export type EditablePiecePhoto = Pick<
 
 type PiecePhotoGalleryProps = {
   images: PiecePhotoGalleryImage[];
+  pieceId?: string;
+  currentStateNotes?: string;
+  currentStateAdditionalFields?: Record<string, unknown>;
   currentThumbnailUrl?: string;
-  onSetAsThumbnail: (image: CaptionedImage) => Promise<void>;
-  onUpdateCurrentStateImages?: (images: EditablePiecePhoto[]) => Promise<void>;
+  onPieceUpdated?: (updated: PieceDetail) => void;
+  updatePieceFn?: typeof updatePiece;
+  updateCurrentStateFn?: typeof updateCurrentState;
 };
 
 const DEFAULT_VIEWPORT_WIDTH = 768;
@@ -57,9 +63,13 @@ function isEditableImage(
 
 export default function PiecePhotoGallery({
   images,
+  pieceId,
+  currentStateNotes,
+  currentStateAdditionalFields,
   currentThumbnailUrl,
-  onSetAsThumbnail,
-  onUpdateCurrentStateImages,
+  onPieceUpdated,
+  updatePieceFn,
+  updateCurrentStateFn,
 }: PiecePhotoGalleryProps) {
   const theme = useTheme();
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -116,18 +126,52 @@ export default function PiecePhotoGallery({
     setCaptionDraft(activeImage?.caption ?? "");
   }
 
+  async function persistCurrentStateImages(nextImages: EditablePiecePhoto[]) {
+    if (
+      !pieceId ||
+      currentStateNotes === undefined ||
+      !onPieceUpdated ||
+      !updateCurrentStateFn
+    ) {
+      return;
+    }
+    const updated = await updateCurrentStateFn(pieceId, {
+      notes: currentStateNotes,
+      images: nextImages.map((image) => ({
+        url: image.url,
+        caption: image.caption,
+        cloudinary_public_id: image.cloudinary_public_id ?? null,
+      })),
+      additional_fields: normalizeFields(currentStateAdditionalFields ?? {}),
+    });
+    onPieceUpdated(updated);
+  }
+
+  async function handleSetThumbnail(image: CaptionedImage) {
+    if (!pieceId || !onPieceUpdated || !updatePieceFn) {
+      return;
+    }
+    const updated = await updatePieceFn(pieceId, {
+      thumbnail: {
+        url: image.url,
+        cloudinary_public_id: image.cloudinary_public_id ?? null,
+      },
+    });
+    onPieceUpdated(updated);
+  }
+
   async function handleSaveCaption() {
     if (
       lightboxIndex === null ||
       editableCurrentStateIndex === null ||
-      !onUpdateCurrentStateImages
+      !updateCurrentStateFn
     ) {
       return;
     }
     setCaptionSaving(true);
     setCaptionSaveError(null);
     try {
-      await onUpdateCurrentStateImages(
+      await persistCurrentStateImages(
         editableCurrentStateImages.map((image, index) => ({
           ...image,
           caption: index === editableCurrentStateIndex ? captionDraft.trim() : image.caption,
@@ -142,7 +186,7 @@ export default function PiecePhotoGallery({
   }
 
   async function handleDeleteImage() {
-    if (deleteDialogIndex === null || !onUpdateCurrentStateImages) {
+    if (deleteDialogIndex === null || !updateCurrentStateFn) {
       return;
     }
     const image = images[deleteDialogIndex];
@@ -151,7 +195,7 @@ export default function PiecePhotoGallery({
     }
     setDeleteSaving(true);
     try {
-      await onUpdateCurrentStateImages(
+      await persistCurrentStateImages(
         editableCurrentStateImages.filter(
           (_editableImage, index) => index !== image.editableCurrentStateIndex,
         ),
@@ -167,9 +211,18 @@ export default function PiecePhotoGallery({
 
   const triggerLabel = `${photoCount} photo${photoCount === 1 ? "" : "s"}`;
 
+  const canMutateCurrentStateImages =
+    pieceId !== undefined &&
+    currentStateNotes !== undefined &&
+    onPieceUpdated !== undefined &&
+    updateCurrentStateFn !== undefined;
+  const canSetThumbnail =
+    pieceId !== undefined &&
+    onPieceUpdated !== undefined &&
+    updatePieceFn !== undefined;
   const canEditCaption =
     editableCurrentStateIndex !== null &&
-    onUpdateCurrentStateImages !== undefined;
+    canMutateCurrentStateImages;
 
   const footer = activeImage ? (
     <Box sx={{ display: "grid", gap: 0.75, justifyItems: "center" }}>
@@ -364,7 +417,7 @@ export default function PiecePhotoGallery({
                     </Box>
                   </Box>
                   {image.editableCurrentStateIndex !== null &&
-                    onUpdateCurrentStateImages && (
+                    canMutateCurrentStateImages && (
                       <IconButton
                         aria-label={`Delete piece photo ${index + 1}`}
                         onClick={() => setDeleteDialogIndex(index)}
@@ -406,7 +459,7 @@ export default function PiecePhotoGallery({
           initialIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
           currentThumbnailUrl={currentThumbnailUrl}
-          onSetAsThumbnail={onSetAsThumbnail}
+          onSetAsThumbnail={canSetThumbnail ? handleSetThumbnail : undefined}
           footerActions={() => footer}
         />
       )}
