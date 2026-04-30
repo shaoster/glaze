@@ -21,7 +21,7 @@ from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from api.models import GlazeCombination, GlazeType, Piece, PieceState
+from api.models import ENTRY_STATE, GlazeCombination, GlazeType, Piece, PieceState
 
 # ---------------------------------------------------------------------------
 # Import the helper functions directly from the migration module.
@@ -248,7 +248,7 @@ class TestBackfillPublicIds(TestCase):
     def test_backfills_null_public_id_in_piece_state_images(self):
         url = 'https://res.cloudinary.com/mycloud/image/upload/v1776802576/glaze_prod/abc.jpg'
         piece = Piece.objects.create(user=self.user, name='Test Piece')
-        ps = PieceState.objects.filter(piece=piece).order_by('created').first()
+        ps = PieceState.objects.create(piece=piece, user=self.user, state=ENTRY_STATE)
         PieceState.objects.filter(pk=ps.pk).update(images=[
             {'url': url, 'cloudinary_public_id': None, 'cloud_name': 'mycloud', 'caption': ''}
         ])
@@ -260,7 +260,7 @@ class TestBackfillPublicIds(TestCase):
 
     def test_does_not_overwrite_existing_public_id(self):
         piece = Piece.objects.create(user=self.user, name='Piece2')
-        ps = PieceState.objects.filter(piece=piece).order_by('created').first()
+        ps = PieceState.objects.create(piece=piece, user=self.user, state=ENTRY_STATE)
         PieceState.objects.filter(pk=ps.pk).update(images=[
             {'url': 'https://res.cloudinary.com/c/image/upload/v1/folder/img.jpg',
              'cloudinary_public_id': 'explicit_id', 'cloud_name': 'c', 'caption': ''}
