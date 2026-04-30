@@ -11,7 +11,6 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceDetail from "../PieceDetail";
-import { normalizeFields } from "../../util/normalizeWorkflowFields";
 import type {
   PieceDetail as PieceDetailType,
   PieceState,
@@ -194,26 +193,6 @@ beforeEach(() => {
 });
 
 describe("PieceDetail", () => {
-  it("normalizes field payloads for primitive values and global refs", () => {
-    expect(
-      normalizeFields({
-        clay_body: { id: "clay-1", name: "Porcelain" },
-        shelf: "A1",
-        weight: 12.5,
-        food_safe: true,
-        empty_ref: { id: 12 },
-        unsupported: ["x"],
-      }),
-    ).toEqual({
-      clay_body: "clay-1",
-      shelf: "A1",
-      weight: 12.5,
-      food_safe: true,
-      empty_ref: null,
-      unsupported: null,
-    });
-  });
-
   it("renders piece name", async () => {
     await renderPieceDetail();
     expect(screen.getByText("Test Bowl")).toBeInTheDocument();

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import EditIcon from "@mui/icons-material/Edit";
 import PhotoLibraryOutlinedIcon from "@mui/icons-material/PhotoLibraryOutlined";
 import {
   alpha,
@@ -7,6 +8,9 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  IconButton,
+  TextField,
+  Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
@@ -14,7 +18,6 @@ import type { CaptionedImage, PieceDetail } from "../util/types";
 import { updateCurrentState, updatePiece } from "../util/api";
 import DeletePiecePhotoDialog from "./DeletePiecePhotoDialog";
 import ImageLightbox from "./ImageLightbox";
-import PiecePhotoGalleryFooter from "./PiecePhotoGalleryFooter";
 import PiecePhotoGalleryGrid from "./PiecePhotoGalleryGrid";
 import { normalizeFields } from "../util/normalizeWorkflowFields";
 
@@ -220,25 +223,105 @@ export default function PiecePhotoGallery({
     canMutateCurrentStateImages;
 
   const footer = activeImage ? (
-    <PiecePhotoGalleryFooter
-      activeCaption={activeImage.caption}
-      stateLabel={activeImage.stateLabel}
-      captionDraft={captionDraft}
-      captionEditing={captionEditing}
-      captionSaving={captionSaving}
-      captionSaveError={captionSaveError}
-      canEditCaption={canEditCaption}
-      isCurrentStateImage={editableCurrentStateIndex !== null}
-      onCaptionDraftChange={setCaptionDraft}
-      onStartEditing={() => {
-        if (!activeImage.caption) {
-          setCaptionDraft("");
-        }
-        setCaptionEditing(true);
-      }}
-      onStopEditing={stopEditingCaption}
-      onSaveCaption={() => void handleSaveCaption()}
-    />
+    <Box sx={{ display: "grid", gap: 0.75, justifyItems: "center" }}>
+      {captionEditing ? (
+        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <TextField
+            size="small"
+            value={captionDraft}
+            onChange={(event) => setCaptionDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void handleSaveCaption();
+              if (event.key === "Escape") stopEditingCaption();
+            }}
+            autoFocus
+            slotProps={{
+              htmlInput: { "aria-label": "Edit photo caption" },
+            }}
+            sx={{
+              minWidth: 220,
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "rgba(255,255,255,0.08)",
+                color: "white",
+              },
+            }}
+          />
+          <Button
+            size="small"
+            variant="contained"
+            onClick={() => void handleSaveCaption()}
+            disabled={captionSaving}
+          >
+            {captionSaving ? "Saving…" : "Save"}
+          </Button>
+          <Button
+            size="small"
+            variant="text"
+            onClick={stopEditingCaption}
+            disabled={captionSaving}
+          >
+            Cancel
+          </Button>
+        </Box>
+      ) : activeImage.caption ? (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => {
+              if (!canEditCaption) return;
+              setCaptionEditing(true);
+            }}
+            disabled={!canEditCaption}
+            sx={{
+              color: "rgba(255,255,255,0.85)",
+              textTransform: "none",
+              minWidth: 0,
+              p: 0,
+              lineHeight: 1.4,
+              "&:hover": { backgroundColor: "transparent", color: "white" },
+            }}
+          >
+            {activeImage.caption}
+          </Button>
+          {canEditCaption && (
+            <Tooltip title="Edit caption">
+              <IconButton
+                size="small"
+                onClick={() => setCaptionEditing(true)}
+                aria-label="Edit caption"
+                sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "white" } }}
+              >
+                <EditIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
+      ) : canEditCaption ? (
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<EditIcon fontSize="small" />}
+          onClick={() => {
+            setCaptionDraft("");
+            setCaptionEditing(true);
+          }}
+          sx={{ color: "white", borderColor: "rgba(255,255,255,0.35)" }}
+        >
+          Add caption
+        </Button>
+      ) : null}
+      {captionSaveError && (
+        <Typography variant="caption" sx={{ color: "error.light" }}>
+          {captionSaveError}
+        </Typography>
+      )}
+      <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.55)" }}>
+        {editableCurrentStateIndex !== null
+          ? "Added in current state"
+          : `Added in ${activeImage.stateLabel}`}
+      </Typography>
+    </Box>
   ) : null;
 
   return (
