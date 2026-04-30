@@ -157,3 +157,4 @@ pytest api/
 - Every new API endpoint or serializer change → add or update tests.
 - Pure helper functions → unit test with `monkeypatch` to decouple from real data files or configuration.
 - Prefer the API client (`client.post(...)`) for tests that exercise request/response behavior over creating objects directly via the ORM.
+- Add new tests to the existing file that already covers the same module or feature area — do not create a new cross-cutting test file just to hold coverage additions. Cross-cutting files obscure which module broke a test and defeat granular CI caching.

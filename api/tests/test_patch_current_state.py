@@ -2,8 +2,11 @@ import uuid
 
 import pytest
 from django.apps import apps
+from django.contrib.auth.models import User
+from rest_framework.test import APIClient
 
-from api.models import ENTRY_STATE, SUCCESSORS, GlazeCombination, GlazeType
+import api.workflow as workflow_module
+from api.models import ENTRY_STATE, SUCCESSORS, GlazeCombination, GlazeType, Location, Piece, PieceState
 
 # ---------------------------------------------------------------------------
 # PATCH /api/pieces/{id}/state/
@@ -153,3 +156,88 @@ class TestPatchCurrentState:
         )
         assert response.status_code == 200
         assert response.json()['current_state']['notes'] == 'On the new state'
+
+
+# ---------------------------------------------------------------------------
+# _write_global_ref_rows – clear_fields path
+# ---------------------------------------------------------------------------
+
+_MOCK_STATE_MAP_REF = {
+    'entry_state': {
+        'id': 'entry_state',
+        'visible': True,
+        'successors': ['state_with_global'],
+    },
+    'state_with_global': {
+        'id': 'state_with_global',
+        'visible': True,
+        'successors': ['terminal_state'],
+        'fields': {'loc_ref': {'$ref': '@location.name'}},
+    },
+    'terminal_state': {'id': 'terminal_state', 'visible': True, 'terminal': True},
+}
+
+_MOCK_GLOBALS_MAP_REF = {
+    'location': {'model': 'Location', 'fields': {'name': {'type': 'string'}}}
+}
+
+
+@pytest.mark.django_db
+class TestWriteGlobalRefRowsClearFields:
+    """Verify that passing clear_fields to _write_global_ref_rows deletes the junction row."""
+
+    def test_clear_fields_deletes_junction_row(self, monkeypatch):
+        monkeypatch.setattr(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP_REF)
+        monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP_REF)
+
+        user = User.objects.create(username='ref_clear@example.com', email='ref_clear@example.com')
+        loc = Location.objects.create(user=user, name='Studio')
+        piece = Piece.objects.create(user=user, name='Ref Piece')
+        PieceState.objects.create(piece=piece, state='entry_state', user=user)
+        piece_state = PieceState.objects.create(piece=piece, state='state_with_global', user=user)
+        ref_model = apps.get_model('api', 'PieceStateLocationRef')
+        ref_model.objects.create(piece_state=piece_state, field_name='loc_ref', location=loc)
+        assert ref_model.objects.filter(piece_state=piece_state).count() == 1
+
+        from api.serializers import _write_global_ref_rows
+
+        _write_global_ref_rows(
+            piece_state,
+            {'loc_ref': 'location'},
+            {},
+            clear_fields={'loc_ref'},
+        )
+
+        assert ref_model.objects.filter(piece_state=piece_state).count() == 0
+
+    def test_patch_null_global_ref_removes_junction_row(self, monkeypatch):
+        """Sending null for a global-ref field in PATCH removes the junction row."""
+        monkeypatch.setattr(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP_REF)
+        monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP_REF)
+        monkeypatch.setattr(
+            workflow_module,
+            'SUCCESSORS',
+            {'entry_state': ['state_with_global'], 'state_with_global': ['terminal_state']},
+        )
+        monkeypatch.setattr(
+            workflow_module, 'VALID_STATES', {'entry_state', 'state_with_global', 'terminal_state'}
+        )
+        monkeypatch.setattr(workflow_module, 'ENTRY_STATE', 'entry_state')
+
+        user = User.objects.create(username='patch_ref@example.com', email='patch_ref@example.com')
+        loc = Location.objects.create(user=user, name='Garage')
+        piece = Piece.objects.create(user=user, name='Patch Ref Piece')
+        PieceState.objects.create(piece=piece, state='entry_state', user=user)
+        piece_state = PieceState.objects.create(piece=piece, state='state_with_global', user=user)
+        ref_model = apps.get_model('api', 'PieceStateLocationRef')
+        ref_model.objects.create(piece_state=piece_state, field_name='loc_ref', location=loc)
+
+        c = APIClient()
+        c.force_authenticate(user=user)
+        resp = c.patch(
+            f'/api/pieces/{piece.id}/state/',
+            {'additional_fields': {'loc_ref': None}},
+            format='json',
+        )
+        assert resp.status_code == 200
+        assert ref_model.objects.filter(piece_state=piece_state).count() == 0

@@ -1,8 +1,10 @@
+from unittest.mock import patch
+
 import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from api.models import Piece
+from api.models import Piece, UserProfile
 
 
 @pytest.mark.django_db
@@ -174,3 +176,87 @@ class TestAuthEndpoints:
         assert user.is_staff is True
         assert user.is_superuser is True
         assert Piece.objects.filter(user=user).exists()
+
+
+_FAKE_IDINFO = {
+    'sub': 'google-sub-123',
+    'email': 'google@example.com',
+    'given_name': 'Google',
+    'family_name': 'User',
+    'picture': 'https://example.com/photo.jpg',
+}
+
+
+@pytest.mark.django_db
+class TestAuthGoogle:
+    URL = '/api/auth/google/'
+
+    def test_returns_400_on_invalid_credential(self, settings):
+        settings.GOOGLE_OAUTH_CLIENT_ID = 'test-client-id'
+        client = APIClient()
+        with patch('api.views.google_id_token.verify_oauth2_token', side_effect=ValueError('bad')):
+            resp = client.post(self.URL, {'credential': 'bad-token'}, format='json')
+        assert resp.status_code == 400
+        assert resp.json() == {'detail': 'Invalid Google credential.'}
+
+    def test_creates_new_user_and_profile_on_first_login(self, settings):
+        settings.GOOGLE_OAUTH_CLIENT_ID = 'test-client-id'
+        client = APIClient()
+        with patch('api.views.google_id_token.verify_oauth2_token', return_value=_FAKE_IDINFO.copy()):
+            resp = client.post(self.URL, {'credential': 'valid-token'}, format='json')
+        assert resp.status_code == 200
+        assert resp.json()['email'] == 'google@example.com'
+        user = User.objects.get(email='google@example.com')
+        assert user.first_name == 'Google'
+        profile = UserProfile.objects.get(user=user)
+        assert profile.openid_subject == 'google-sub-123'
+        assert profile.profile_image_url == 'https://example.com/photo.jpg'
+
+    def test_existing_user_matched_by_openid_subject(self, settings):
+        settings.GOOGLE_OAUTH_CLIENT_ID = 'test-client-id'
+        user = User.objects.create_user(
+            username='google@example.com', email='google@example.com', password='pass'
+        )
+        UserProfile.objects.create(user=user, openid_subject='google-sub-123')
+        client = APIClient()
+        with patch('api.views.google_id_token.verify_oauth2_token', return_value=_FAKE_IDINFO.copy()):
+            resp = client.post(self.URL, {'credential': 'valid-token'}, format='json')
+        assert resp.status_code == 200
+        assert User.objects.filter(email='google@example.com').count() == 1
+
+    def test_existing_email_user_linked_to_google_sub(self, settings):
+        """Email/password account is linked on first Google login instead of duplicated."""
+        settings.GOOGLE_OAUTH_CLIENT_ID = 'test-client-id'
+        user = User.objects.create_user(
+            username='google@example.com', email='google@example.com', password='somepass'
+        )
+        UserProfile.objects.create(user=user)
+        client = APIClient()
+        with patch('api.views.google_id_token.verify_oauth2_token', return_value=_FAKE_IDINFO.copy()):
+            resp = client.post(self.URL, {'credential': 'valid-token'}, format='json')
+        assert resp.status_code == 200
+        assert User.objects.filter(email='google@example.com').count() == 1
+        assert UserProfile.objects.get(user=user).openid_subject == 'google-sub-123'
+
+    def test_profile_picture_updated_on_repeat_login(self, settings):
+        settings.GOOGLE_OAUTH_CLIENT_ID = 'test-client-id'
+        user = User.objects.create_user(
+            username='google@example.com', email='google@example.com', password='pass'
+        )
+        profile = UserProfile.objects.create(
+            user=user,
+            openid_subject='google-sub-123',
+            profile_image_url='https://example.com/old.jpg',
+        )
+        new_idinfo = {**_FAKE_IDINFO, 'picture': 'https://example.com/new.jpg'}
+        client = APIClient()
+        with patch('api.views.google_id_token.verify_oauth2_token', return_value=new_idinfo):
+            resp = client.post(self.URL, {'credential': 'valid-token'}, format='json')
+        assert resp.status_code == 200
+        profile.refresh_from_db()
+        assert profile.profile_image_url == 'https://example.com/new.jpg'
+
+    def test_missing_credential_returns_400(self, settings):
+        settings.GOOGLE_OAUTH_CLIENT_ID = 'test-client-id'
+        resp = APIClient().post(self.URL, {}, format='json')
+        assert resp.status_code == 400
