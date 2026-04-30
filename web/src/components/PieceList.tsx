@@ -1,7 +1,5 @@
 import { useMemo, useState } from "react";
 import Autocomplete from "@mui/material/Autocomplete";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import LabelIcon from "@mui/icons-material/Label";
 import {
   Box,
   Card,
@@ -202,7 +200,6 @@ const PieceList = (props: PieceListingProps) => {
             flexWrap="wrap"
             alignItems="center"
           >
-            <FilterListIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
             {activeFilterOptions.map((option) => (
               <Chip
                 key={option.value}
@@ -240,7 +237,6 @@ const PieceList = (props: PieceListingProps) => {
             flexWrap="wrap"
             alignItems="center"
           >
-            <LabelIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
             {activeTags.map((tag) => (
               <Chip
                 key={tag.id}
