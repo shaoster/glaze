@@ -63,7 +63,11 @@ export default function TagChipList({
         <Button
           size="small"
           variant="text"
-          onClick={() => setExpanded(true)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setExpanded(true);
+          }}
           sx={{ minWidth: 0, px: 0.5, alignSelf: "center" }}
         >
           +{hiddenCount} more
@@ -73,7 +77,11 @@ export default function TagChipList({
         <Button
           size="small"
           variant="text"
-          onClick={() => setExpanded(false)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setExpanded(false);
+          }}
           sx={{ minWidth: 0, px: 0.5, alignSelf: "center" }}
         >
           Show less
