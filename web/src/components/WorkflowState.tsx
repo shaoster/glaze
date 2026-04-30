@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTheme } from "@mui/material";
 import {
@@ -35,7 +35,7 @@ export type ImageEntry = {
 };
 
 type WorkflowStateProps = {
-  pieceState: PieceState;
+  initialPieceState: PieceState;
   pieceId: string;
   onSaved: (updated: PieceDetail) => void;
   onDirtyChange?: (dirty: boolean) => void;
@@ -45,17 +45,14 @@ type WorkflowStateProps = {
 type AdditionalFieldInputMap = Record<string, string>;
 type GlobalRefPkMap = Record<string, string>;
 type DraftState = {
+  baseState: PieceState;
   notes: string;
   images: ImageEntry[];
   additionalFieldInputs: AdditionalFieldInputMap;
   globalRefPks: GlobalRefPkMap;
 };
 type DraftAction =
-  | {
-      type: "hydrate";
-      nextBaseDraft: DraftState;
-      previousBaseDraft: DraftState;
-    }
+  | { type: "replace_base_state"; pieceState: PieceState }
   | { type: "set_notes"; notes: string }
   | { type: "set_additional_field"; name: string; value: string }
   | { type: "set_global_ref_pks"; globalRefPks: GlobalRefPkMap };
@@ -171,34 +168,25 @@ function stateImages(pieceState: PieceState): ImageEntry[] {
   }));
 }
 
-function draftsMatch<T>(currentValue: T, previousValue: T): boolean {
-  return JSON.stringify(currentValue) === JSON.stringify(previousValue);
+function buildDraftState(pieceState: PieceState): DraftState {
+  const additionalFieldDefs = getAdditionalFieldDefinitions(pieceState.state);
+  const additionalFields = pieceState.additional_fields ?? {};
+  return {
+    baseState: pieceState,
+    notes: pieceState.notes,
+    images: stateImages(pieceState),
+    additionalFieldInputs: buildAdditionalFieldInputMap(
+      additionalFieldDefs,
+      additionalFields,
+    ),
+    globalRefPks: buildGlobalRefPkMap(additionalFieldDefs, additionalFields),
+  };
 }
 
 function draftReducer(state: DraftState, action: DraftAction): DraftState {
   switch (action.type) {
-    case "hydrate":
-      return {
-        notes:
-          state.notes === action.previousBaseDraft.notes
-            ? action.nextBaseDraft.notes
-            : state.notes,
-        images: draftsMatch(state.images, action.previousBaseDraft.images)
-          ? action.nextBaseDraft.images
-          : state.images,
-        additionalFieldInputs: draftsMatch(
-          state.additionalFieldInputs,
-          action.previousBaseDraft.additionalFieldInputs,
-        )
-          ? action.nextBaseDraft.additionalFieldInputs
-          : state.additionalFieldInputs,
-        globalRefPks: draftsMatch(
-          state.globalRefPks,
-          action.previousBaseDraft.globalRefPks,
-        )
-          ? action.nextBaseDraft.globalRefPks
-          : state.globalRefPks,
-      };
+    case "replace_base_state":
+      return buildDraftState(action.pieceState);
     case "set_notes":
       return { ...state, notes: action.notes };
     case "set_additional_field":
@@ -314,7 +302,7 @@ function ImageUploader({
 // ── WorkflowState ─────────────────────────────────────────────────────────────
 
 export default function WorkflowState({
-  pieceState,
+  initialPieceState,
   pieceId,
   onSaved,
   onDirtyChange,
@@ -322,25 +310,16 @@ export default function WorkflowState({
 }: WorkflowStateProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [widgetLoading, setWidgetLoading] = useState(false);
-  const additionalFieldDefs = useMemo(
-    () => getAdditionalFieldDefinitions(pieceState.state),
-    [pieceState.state],
+  const [draft, dispatch] = useReducer(
+    draftReducer,
+    initialPieceState,
+    buildDraftState,
   );
-  const baseDraft = useMemo(() => {
-    const additionalFields = pieceState.additional_fields ?? {};
-    return {
-      notes: pieceState.notes,
-      images: stateImages(pieceState),
-      additionalFieldInputs: buildAdditionalFieldInputMap(
-        additionalFieldDefs,
-        additionalFields,
-      ),
-      globalRefPks: buildGlobalRefPkMap(additionalFieldDefs, additionalFields),
-    };
-  }, [additionalFieldDefs, pieceState]);
-  const [draft, dispatch] = useReducer(draftReducer, baseDraft);
-  const previousBaseDraftRef = useRef(baseDraft);
-  const { notes, images, additionalFieldInputs, globalRefPks } = draft;
+  const { baseState, notes, images, additionalFieldInputs, globalRefPks } = draft;
+  const additionalFieldDefs = useMemo(
+    () => getAdditionalFieldDefinitions(baseState.state),
+    [baseState.state],
+  );
   const normalizedAdditionalFields = useMemo(
     () =>
       normalizeAdditionalFieldPayload(
@@ -354,10 +333,18 @@ export default function WorkflowState({
     () =>
       normalizeAdditionalFieldPayload(
         additionalFieldDefs,
-        baseDraft.additionalFieldInputs,
-        baseDraft.globalRefPks,
+        draft.baseState.additional_fields
+          ? buildAdditionalFieldInputMap(
+              additionalFieldDefs,
+              draft.baseState.additional_fields,
+            )
+          : {},
+        buildGlobalRefPkMap(
+          additionalFieldDefs,
+          draft.baseState.additional_fields ?? {},
+        ),
       ),
-    [additionalFieldDefs, baseDraft],
+    [additionalFieldDefs, draft.baseState.additional_fields],
   );
   const additionalFieldsDirty =
     JSON.stringify(normalizedAdditionalFields) !==
@@ -366,22 +353,10 @@ export default function WorkflowState({
   const theme = useTheme();
   const isMobileLayout = useMediaQuery(theme.breakpoints.down("sm"));
 
-  useEffect(() => {
-    if (previousBaseDraftRef.current === baseDraft) {
-      return;
-    }
-    dispatch({
-      type: "hydrate",
-      nextBaseDraft: baseDraft,
-      previousBaseDraft: previousBaseDraftRef.current,
-    });
-    previousBaseDraftRef.current = baseDraft;
-  }, [baseDraft]);
-
   const [savingImage, setSavingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
 
-  const isDirty = notes !== pieceState.notes || additionalFieldsDirty;
+  const isDirty = notes !== baseState.notes || additionalFieldsDirty;
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -394,13 +369,14 @@ export default function WorkflowState({
       additional_fields: normalizedAdditionalFields,
     };
     const result = await updateCurrentState(pieceId, payload);
+    dispatch({ type: "replace_base_state", pieceState: result.current_state });
     onSaved(result);
   }, [
+    pieceId,
     images,
     normalizedAdditionalFields,
     notes,
     onSaved,
-    pieceId,
   ]);
 
   const autosaveKey = useMemo(
@@ -520,7 +496,13 @@ export default function WorkflowState({
             images: [...images, newImage],
             additional_fields: normalizedAdditionalFields,
           })
-            .then(onSaved)
+            .then((result) => {
+              dispatch({
+                type: "replace_base_state",
+                pieceState: result.current_state,
+              });
+              onSaved(result);
+            })
             .catch(() =>
               setImageError("Failed to save image. Please try again."),
             )

@@ -463,7 +463,7 @@ function PieceDetailContent({
         <SectionCard>
           <WorkflowState
             key={currentState.state + currentState.created.toISOString()}
-            pieceState={currentState}
+            initialPieceState={currentState}
             pieceId={piece.id}
             onSaved={onPieceUpdated}
             onDirtyChange={setIsDirty}

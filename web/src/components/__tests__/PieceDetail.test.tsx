@@ -205,7 +205,7 @@ describe("PieceDetail", () => {
     const { rerender } = render(
       <ThemeProvider theme={TEST_THEME}>
         <WorkflowState
-          pieceState={initialState}
+          initialPieceState={initialState}
           pieceId="piece-id-1"
           onSaved={onSaved}
           autosaveDelayMs={60_000}
@@ -220,7 +220,7 @@ describe("PieceDetail", () => {
     rerender(
       <ThemeProvider theme={TEST_THEME}>
         <WorkflowState
-          pieceState={makeState({ notes: "Trim foot " })}
+          initialPieceState={makeState({ notes: "Trim foot " })}
           pieceId="piece-id-1"
           onSaved={onSaved}
           autosaveDelayMs={60_000}
