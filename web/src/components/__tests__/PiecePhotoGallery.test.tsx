@@ -68,6 +68,22 @@ function makeImages(): PiecePhotoGalleryImage[] {
   ];
 }
 
+function makeSingleImage(
+  overrides: Partial<PiecePhotoGalleryImage> = {},
+): PiecePhotoGalleryImage[] {
+  return [
+    {
+      url: "https://example.com/solo.jpg",
+      caption: "Only photo",
+      created: new Date("2024-01-18T10:00:00Z"),
+      cloudinary_public_id: "piece/solo",
+      stateLabel: "Throwing",
+      editableCurrentStateIndex: 0,
+      ...overrides,
+    },
+  ];
+}
+
 function makeUpdatedPiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
   const state = {
     state: "wheel_thrown" as const,
@@ -266,6 +282,40 @@ describe("PiecePhotoGallery", () => {
     ).toBeInTheDocument();
   });
 
+  it("exits caption saves early when current-state image persistence is not fully wired", async () => {
+    const updateCurrentStateFn = vi.fn();
+    const onPieceUpdated = vi.fn();
+
+    render(
+      <PiecePhotoGallery
+        images={makeImages()}
+        pieceId=""
+        currentStateNotes="Current notes"
+        onPieceUpdated={onPieceUpdated}
+        updateCurrentStateFn={updateCurrentStateFn}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+    await userEvent.click(screen.getByLabelText("Edit caption"));
+    const captionInput = within(screen.getByLabelText("Mock lightbox")).getByLabelText(
+      "Edit photo caption",
+      { selector: "input" },
+    );
+    fireEvent.change(captionInput, { target: { value: "No-op caption" } });
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(updateCurrentStateFn).not.toHaveBeenCalled();
+    expect(onPieceUpdated).not.toHaveBeenCalled();
+    expect(
+      within(screen.getByLabelText("Mock lightbox")).queryByLabelText(
+        "Edit photo caption",
+        { selector: "input" },
+      ),
+    ).not.toBeInTheDocument();
+  });
+
   it("closes the gallery dialog from the Close button", async () => {
     render(
       <PiecePhotoGallery
@@ -278,6 +328,25 @@ describe("PiecePhotoGallery", () => {
 
     await waitFor(() =>
       expect(screen.queryByLabelText("Piece photos")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("closes the lightbox from the close button", async () => {
+    render(
+      <PiecePhotoGallery
+        images={makeImages()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+    const lightbox = screen.getByLabelText("Mock lightbox");
+    await userEvent.click(
+      within(lightbox).getByText("Close lightbox"),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByLabelText("Mock lightbox")).not.toBeInTheDocument(),
     );
   });
 
@@ -304,6 +373,29 @@ describe("PiecePhotoGallery", () => {
       expect(screen.queryByText("Remove Image")).not.toBeInTheDocument(),
     );
     expect(updateCurrentStateFn).not.toHaveBeenCalled();
+  });
+
+  it("exits thumbnail updates early when the piece id is falsy", async () => {
+    const updatePieceFn = vi.fn();
+    const onPieceUpdated = vi.fn();
+
+    render(
+      <PiecePhotoGallery
+        images={makeImages()}
+        pieceId=""
+        onPieceUpdated={onPieceUpdated}
+        updatePieceFn={updatePieceFn}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+    await userEvent.click(
+      within(screen.getByLabelText("Mock lightbox")).getByText("Set as thumbnail"),
+    );
+
+    expect(updatePieceFn).not.toHaveBeenCalled();
+    expect(onPieceUpdated).not.toHaveBeenCalled();
   });
 
   it("persists thumbnail updates from the lightbox", async () => {
@@ -340,5 +432,88 @@ describe("PiecePhotoGallery", () => {
       }),
     );
     expect(onPieceUpdated).toHaveBeenCalledWith(updatedPiece);
+  });
+
+  it("starts editing an empty caption with a blank input", async () => {
+    render(
+      <PiecePhotoGallery
+        images={makeSingleImage({ caption: "" })}
+        pieceId="piece-1"
+        currentStateNotes="Current notes"
+        onPieceUpdated={vi.fn()}
+        updateCurrentStateFn={vi.fn().mockResolvedValue(makeUpdatedPiece())}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "1 photo" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+    await userEvent.click(
+      within(screen.getByLabelText("Mock lightbox")).getByText("Add caption"),
+    );
+
+    expect(
+      within(screen.getByLabelText("Mock lightbox")).getByLabelText(
+        "Edit photo caption",
+        { selector: "input" },
+      ),
+    ).toHaveValue("");
+  });
+
+  it("closes the lightbox after deleting the last image currently open", async () => {
+    const updateCurrentStateFn = vi.fn().mockResolvedValue(makeUpdatedPiece());
+
+    render(
+      <PiecePhotoGallery
+        images={makeSingleImage()}
+        pieceId="piece-1"
+        currentStateNotes="Current notes"
+        onPieceUpdated={vi.fn()}
+        updateCurrentStateFn={updateCurrentStateFn}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "1 photo" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "Delete piece photo 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+
+    expect(updateCurrentStateFn).toHaveBeenCalledWith(
+      "piece-1",
+      expect.objectContaining({ images: [] }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByLabelText("Mock lightbox")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("exits image deletion early when the pending image is no longer editable", async () => {
+    const updateCurrentStateFn = vi.fn();
+    const { rerender } = render(
+      <PiecePhotoGallery
+        images={makeSingleImage()}
+        pieceId="piece-1"
+        currentStateNotes="Current notes"
+        onPieceUpdated={vi.fn()}
+        updateCurrentStateFn={updateCurrentStateFn}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "1 photo" }));
+    await userEvent.click(screen.getByRole("button", { name: "Delete piece photo 1" }));
+
+    rerender(
+      <PiecePhotoGallery
+        images={makeSingleImage({ editableCurrentStateIndex: null })}
+        pieceId="piece-1"
+        currentStateNotes="Current notes"
+        onPieceUpdated={vi.fn()}
+        updateCurrentStateFn={updateCurrentStateFn}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+
+    expect(updateCurrentStateFn).not.toHaveBeenCalled();
+    expect(screen.getByText("Remove Image")).toBeInTheDocument();
   });
 });
