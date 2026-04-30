@@ -64,11 +64,11 @@ use_repo(rules_ts_ext, "npm_typescript")
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
     name = "python312_slim",
-    image = "index.docker.io/library/python",
     digest = "sha256:46cb7cc2877e60fbd5e21a9ae6115c30ace7a077b9f8772da879e4590c18c2e3",
+    image = "index.docker.io/library/python",
     platforms = ["linux/amd64"],
 )
-use_repo(oci, "python312_slim")
+use_repo(oci, "python312_slim", "python312_slim_linux_amd64")
 
 # ── mypy type stubs (auto-generated from requirements.txt) ────────────────────
 # Generates @pip_types//:types.bzl — a map from pip package name to its
