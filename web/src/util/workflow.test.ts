@@ -36,7 +36,11 @@ vi.mock("../../../workflow.yml", () => ({
         model: "GlazeCombination",
         favoritable: true,
         compose_from: {
-          glaze_types: { global: "glaze_type" },
+          glaze_types: {
+            global: "glaze_type",
+            ordered: true,
+            filter_label: "Glaze layers",
+          },
         },
         fields: {
           name: { type: "string" },
@@ -47,6 +51,28 @@ vi.mock("../../../workflow.yml", () => ({
           },
           runs: { type: "boolean", filterable: true, label: "Runs" },
           test_tile_image: { type: "image" },
+        },
+      },
+      photo_asset: {
+        model: "PhotoAsset",
+        fields: {
+          image: { type: "image", use_as_thumbnail: true },
+          caption: { type: "string" },
+        },
+      },
+      kiln_run: {
+        model: "KilnRun",
+        fields: {
+          name: { type: "string" },
+          firing_profile: {
+            $ref: "@firing_profile.code",
+            filterable: true,
+          },
+          broken_filter: {
+            $ref: "@firing_profile",
+            filterable: true,
+          },
+          atmosphere: { type: "string", filterable: true },
         },
       },
       piece: {
@@ -120,6 +146,50 @@ vi.mock("../../../workflow.yml", () => ({
             label: "Pre-trim Weight Lbs",
             description: "Weight after trimming",
           },
+          inherited_weight_lbs: {
+            $ref: "wheel_thrown.clay_weight_lbs",
+          },
+        },
+      },
+      {
+        id: "edge_cases",
+        visible: true,
+        friendly_name: "Edge Cases",
+        past_friendly_name: "Edge Cased",
+        description: "Coverage-only branch state.",
+        successors: ["recycled"],
+        fields: {
+          required_notes: {
+            type: "string",
+            required: true,
+            description: "Must always be filled",
+          },
+          optional_copy: {
+            $ref: "edge_cases.required_notes",
+            required: false,
+          },
+          clay_body_default_label: {
+            $ref: "@clay_body.name",
+          },
+          malformed_global_ref: {
+            $ref: "@location",
+            can_create: true,
+          },
+          missing_global_target: {
+            $ref: "@unknown_global.name",
+          },
+          malformed_state_ref: {
+            $ref: "wheel_thrown",
+          },
+          missing_state_target: {
+            $ref: "unknown_state.some_field",
+          },
+          cyclic_a: {
+            $ref: "edge_cases.cyclic_b",
+          },
+          cyclic_b: {
+            $ref: "edge_cases.cyclic_a",
+          },
         },
       },
       {
@@ -176,7 +246,11 @@ import {
   getFilterableFields,
   getGlobalComposeFrom,
   getGlobalDisplayField,
+  getGlobalPickerFilters,
+  getGlobalThumbnailField,
+  getStateMetadata,
   isFavoritableGlobal,
+  isTerminalState,
   isTaggableGlobal,
 } from "./workflow";
 
@@ -223,6 +297,37 @@ describe("getStateDescription", () => {
       "Done with the first firing!",
     );
   });
+
+  it("returns an empty string for an unknown state", () => {
+    expect(getStateDescription("unknown_state")).toBe("");
+  });
+});
+
+describe("isTerminalState", () => {
+  it("returns true for a terminal state", () => {
+    expect(isTerminalState("recycled")).toBe(true);
+  });
+
+  it("returns false for a non-terminal or unknown state", () => {
+    expect(isTerminalState("trimmed")).toBe(false);
+    expect(isTerminalState("unknown_state")).toBe(false);
+  });
+});
+
+describe("getStateMetadata", () => {
+  it("returns normalized metadata for a known state", () => {
+    expect(getStateMetadata("recycled")).toEqual({
+      id: "recycled",
+      friendlyName: "Recycled",
+      pastFriendlyName: "Recycled",
+      description: "Oops! Next time.",
+      isTerminal: true,
+    });
+  });
+
+  it("returns null for an unknown state", () => {
+    expect(getStateMetadata("unknown_state")).toBeNull();
+  });
 });
 
 describe("getGlobalDisplayField", () => {
@@ -242,7 +347,11 @@ describe("getGlobalDisplayField", () => {
 describe("getGlobalComposeFrom", () => {
   it("returns the compose_from map for a global that declares it", () => {
     expect(getGlobalComposeFrom("glaze_combination")).toEqual({
-      glaze_types: { global: "glaze_type" },
+      glaze_types: {
+        global: "glaze_type",
+        ordered: true,
+        filter_label: "Glaze layers",
+      },
     });
   });
 
@@ -252,6 +361,50 @@ describe("getGlobalComposeFrom", () => {
 
   it("returns undefined for an unknown global", () => {
     expect(getGlobalComposeFrom("nonexistent")).toBeUndefined();
+  });
+});
+
+describe("getGlobalThumbnailField", () => {
+  it("returns the field marked use_as_thumbnail", () => {
+    expect(getGlobalThumbnailField("photo_asset")).toBe("image");
+  });
+
+  it("returns null when no thumbnail field is declared or the global is unknown", () => {
+    expect(getGlobalThumbnailField("glaze_combination")).toBeNull();
+    expect(getGlobalThumbnailField("unknown_global")).toBeNull();
+  });
+});
+
+describe("getGlobalPickerFilters", () => {
+  it("returns compose_from filters before filterable global-ref filters", () => {
+    expect(getGlobalPickerFilters("kiln_run")).toEqual([
+      {
+        optionsGlobalName: "firing_profile",
+        label: "Firing Profile",
+        multiple: false,
+        paramKey: "firing_profile_id",
+        entryKey: "firing_profile",
+      },
+    ]);
+
+    expect(getGlobalPickerFilters("glaze_combination")).toEqual([
+      {
+        optionsGlobalName: "glaze_type",
+        label: "Glaze layers",
+        multiple: true,
+        paramKey: "glaze_type_ids",
+        entryKey: "glaze_types",
+      },
+    ]);
+  });
+
+  it("skips malformed global refs and unknown globals", () => {
+    expect(getGlobalPickerFilters("unknown_global")).toEqual([]);
+    expect(
+      getGlobalPickerFilters("kiln_run").find(
+        (f) => f.entryKey === "broken_filter",
+      ),
+    ).toBeUndefined();
   });
 });
 
@@ -280,6 +433,13 @@ describe("getAdditionalFieldDefinitions", () => {
       const f = fields.find((f) => f.name === "clay_weight_lbs")!;
       expect(f.required).toBe(false);
     });
+
+    it("keeps required=true when declared inline", () => {
+      const fields = getAdditionalFieldDefinitions("edge_cases");
+      const f = fields.find((field) => field.name === "required_notes")!;
+      expect(f.required).toBe(true);
+      expect(f.description).toBe("Must always be filled");
+    });
   });
 
   describe("global ref fields", () => {
@@ -301,6 +461,25 @@ describe("getAdditionalFieldDefinitions", () => {
     it("resolves the type from the referenced global field", () => {
       const fields = getAdditionalFieldDefinitions("wheel_thrown");
       expect(fields.find((f) => f.name === "clay_body")!.type).toBe("string");
+    });
+
+    it("falls back to a formatted label when neither ref nor target declare one", () => {
+      const fields = getAdditionalFieldDefinitions("edge_cases");
+      const f = fields.find((field) => field.name === "clay_body_default_label")!;
+      expect(f.label).toBe("Clay Body Default Label");
+      expect(f.canCreate).toBe(false);
+    });
+
+    it("falls back to string metadata for malformed or missing global refs", () => {
+      const fields = getAdditionalFieldDefinitions("edge_cases");
+      const malformed = fields.find((field) => field.name === "malformed_global_ref")!;
+      const missing = fields.find((field) => field.name === "missing_global_target")!;
+      expect(malformed.type).toBe("string");
+      expect(malformed.globalName).toBeUndefined();
+      expect(malformed.globalField).toBeUndefined();
+      expect(malformed.canCreate).toBe(true);
+      expect(missing.type).toBe("string");
+      expect(missing.canCreate).toBe(false);
     });
   });
 
@@ -340,6 +519,37 @@ describe("getAdditionalFieldDefinitions", () => {
         "02",
         "01",
       ]);
+    });
+
+    it("inherits description metadata when the ref field does not override it", () => {
+      const fields = getAdditionalFieldDefinitions("trimmed");
+      expect(
+        fields.find((field) => field.name === "inherited_weight_lbs")!
+          .description,
+      ).toBe("Weight of clay before trimming");
+    });
+
+    it("lets the ref field override a required target back to false", () => {
+      const fields = getAdditionalFieldDefinitions("edge_cases");
+      expect(fields.find((field) => field.name === "optional_copy")!.required).toBe(
+        false,
+      );
+    });
+
+    it("falls back to string metadata for malformed, missing, or cyclic state refs", () => {
+      const fields = getAdditionalFieldDefinitions("edge_cases");
+      expect(fields.find((field) => field.name === "malformed_state_ref")!.type).toBe(
+        "string",
+      );
+      expect(
+        fields.find((field) => field.name === "missing_state_target")!.type,
+      ).toBe("string");
+      expect(fields.find((field) => field.name === "cyclic_a")!.type).toBe(
+        "string",
+      );
+      expect(fields.find((field) => field.name === "cyclic_b")!.type).toBe(
+        "string",
+      );
     });
   });
 
@@ -396,6 +606,26 @@ describe("getFilterableFields", () => {
 
   it("returns an empty array for an unknown global", () => {
     expect(getFilterableFields("nonexistent")).toEqual([]);
+  });
+
+  it("falls back to a formatted label when a filterable field omits one", () => {
+    expect(getFilterableFields("kiln_run")).toEqual([
+      {
+        name: "firing_profile",
+        type: undefined,
+        label: "Firing Profile",
+      },
+      {
+        name: "broken_filter",
+        type: undefined,
+        label: "Broken Filter",
+      },
+      {
+        name: "atmosphere",
+        type: "string",
+        label: "Atmosphere",
+      },
+    ]);
   });
 });
 

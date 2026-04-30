@@ -1,50 +1,39 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import axios from "axios";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock axios.create to return a controlled mock client
-const mockGet = vi.fn();
-const mockPost = vi.fn();
-const mockPatch = vi.fn();
-const mockDelete = vi.fn();
+const mockClient = {
+  get: vi.fn(),
+  post: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
+  defaults: {} as Record<string, unknown>,
+};
 
-vi.mock("axios", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("axios")>();
-  return {
-    ...actual,
-    default: {
-      ...actual.default,
-      create: vi.fn(() => ({
-        get: mockGet,
-        post: mockPost,
-        patch: mockPatch,
-        delete: mockDelete,
-        defaults: {},
-      })),
-      isAxiosError: actual.default.isAxiosError,
-    },
-  };
+const mockCreate = vi.fn(() => mockClient);
+const mockIsAxiosError = vi.fn((error: unknown) => {
+  return Boolean(
+    typeof error === "object" &&
+      error !== null &&
+      "isAxiosError" in error &&
+      error.isAxiosError,
+  );
 });
 
-// Import after mocking
-const {
-  fetchPieces,
-  fetchPiece,
-  createPiece,
-  addPieceState,
-  updateCurrentState,
-  updatePiece,
-  fetchGlobalEntries,
-  fetchGlazeCombinations,
-  toggleGlobalEntryFavorite,
-  createGlobalEntry,
-  fetchCurrentUser,
-  loginWithEmail,
-  logoutUser,
-} = await import("../api");
+vi.mock("axios", () => ({
+  default: {
+    create: mockCreate,
+    isAxiosError: mockIsAxiosError,
+  },
+}));
 
-// ---------------------------------------------------------------------------
-// Shared wire fixtures
-// ---------------------------------------------------------------------------
+async function loadApiModule(options?: { expoBaseUrl?: string }) {
+  vi.resetModules();
+  if (options?.expoBaseUrl === undefined) {
+    delete process.env.EXPO_PUBLIC_API_BASE_URL;
+  } else {
+    process.env.EXPO_PUBLIC_API_BASE_URL = options.expoBaseUrl;
+  }
+  return import("../api");
+}
 
 const wireImage = {
   url: "https://example.com/img.jpg",
@@ -72,7 +61,7 @@ const wirePieceSummary = {
   thumbnail: "/thumbnails/vase.svg",
   current_state: { state: "designed" },
   current_location: "Studio",
-  tags: [{ id: "t1", name: "functional", color: "#aabbcc" }],
+  tags: [{ id: "t1", name: "functional", color: "#aabbcc", is_public: true }],
 };
 
 const wirePieceDetail = {
@@ -83,135 +72,271 @@ const wirePieceDetail = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockClient.get.mockReset();
+  mockClient.post.mockReset();
+  mockClient.patch.mockReset();
+  mockClient.delete.mockReset();
+  mockClient.defaults = {};
+  delete process.env.EXPO_PUBLIC_API_BASE_URL;
 });
 
-// ---------------------------------------------------------------------------
-// fetchPieces
-// ---------------------------------------------------------------------------
+afterEach(() => {
+  delete process.env.EXPO_PUBLIC_API_BASE_URL;
+});
 
-describe("fetchPieces", () => {
-  it("returns mapped PieceSummary array", async () => {
-    mockGet.mockResolvedValue({ data: [wirePieceSummary] });
+describe("client setup", () => {
+  it("creates the API client with default browser settings", async () => {
+    await loadApiModule();
+
+    expect(mockCreate).toHaveBeenCalledWith({ baseURL: "/api/" });
+    expect(mockClient.defaults).toMatchObject({
+      withCredentials: true,
+      xsrfCookieName: "csrftoken",
+      xsrfHeaderName: "X-CSRFToken",
+    });
+  });
+
+  it("overrides the base URL when Expo env config is present", async () => {
+    await loadApiModule({ expoBaseUrl: "https://api.example.com" });
+
+    expect(mockClient.defaults.baseURL).toBe("https://api.example.com");
+  });
+});
+
+describe("piece endpoints", () => {
+  it("fetchPieces maps wire data to PieceSummary values", async () => {
+    const { fetchPieces } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: [wirePieceSummary] });
 
     const result = await fetchPieces();
 
-    expect(mockGet).toHaveBeenCalledWith("pieces/");
+    expect(mockClient.get).toHaveBeenCalledWith("pieces/");
     expect(result).toHaveLength(1);
-    expect(result[0].id).toBe("piece-1");
     expect(result[0].created).toBeInstanceOf(Date);
     expect(result[0].last_modified).toBeInstanceOf(Date);
     expect(result[0].current_state.state).toBe("designed");
-    expect(result[0].tags[0].name).toBe("functional");
+    expect(result[0].tags[0]).toMatchObject({
+      name: "functional",
+      color: "#aabbcc",
+      is_public: true,
+    });
   });
 
-  it("maps tags with empty array when missing", async () => {
-    mockGet.mockResolvedValue({
+  it("fetchPieces defaults missing tags to an empty array", async () => {
+    const { fetchPieces } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
       data: [{ ...wirePieceSummary, tags: undefined }],
     });
+
     const result = await fetchPieces();
+
     expect(result[0].tags).toEqual([]);
   });
-});
 
-// ---------------------------------------------------------------------------
-// fetchPiece
-// ---------------------------------------------------------------------------
-
-describe("fetchPiece", () => {
-  it("returns mapped PieceDetail", async () => {
-    mockGet.mockResolvedValue({ data: wirePieceDetail });
+  it("fetchPiece maps nested dates, images, and navigation fields", async () => {
+    const { fetchPiece } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: {
+        ...wirePieceDetail,
+        current_state: {
+          ...wirePieceState,
+          previous_state: "designed",
+          next_state: "trimmed",
+          images: [{ ...wireImage, cloudinary_public_id: null }],
+          additional_fields: undefined,
+        },
+      },
+    });
 
     const result = await fetchPiece("piece-1");
 
-    expect(mockGet).toHaveBeenCalledWith("pieces/piece-1/");
-    expect(result.id).toBe("piece-1");
+    expect(mockClient.get).toHaveBeenCalledWith("pieces/piece-1/");
     expect(result.current_state.created).toBeInstanceOf(Date);
     expect(result.current_state.images[0].created).toBeInstanceOf(Date);
-    expect(result.current_state.additional_fields).toEqual({
-      clay_weight_lbs: 500,
-    });
-    expect(result.history).toHaveLength(1);
+    expect(result.current_state.images[0].cloudinary_public_id).toBeNull();
+    expect(result.current_state.additional_fields).toEqual({});
+    expect(result.current_state.previous_state).toBe("designed");
+    expect(result.current_state.next_state).toBe("trimmed");
   });
-});
 
-// ---------------------------------------------------------------------------
-// createPiece
-// ---------------------------------------------------------------------------
-
-describe("createPiece", () => {
-  it("posts to pieces/ and returns mapped PieceDetail", async () => {
-    mockPost.mockResolvedValue({ data: wirePieceDetail });
+  it("createPiece posts the payload and maps the response", async () => {
+    const { createPiece } = await loadApiModule();
+    mockClient.post.mockResolvedValue({ data: wirePieceDetail });
 
     const result = await createPiece({ name: "My Vase" });
 
-    expect(mockPost).toHaveBeenCalledWith("pieces/", { name: "My Vase" });
+    expect(mockClient.post).toHaveBeenCalledWith("pieces/", {
+      name: "My Vase",
+    });
     expect(result.name).toBe("My Vase");
   });
-});
 
-// ---------------------------------------------------------------------------
-// addPieceState
-// ---------------------------------------------------------------------------
-
-describe("addPieceState", () => {
-  it("posts to pieces/<id>/states/ and returns mapped PieceDetail", async () => {
-    mockPost.mockResolvedValue({ data: wirePieceDetail });
+  it("addPieceState posts to the state endpoint", async () => {
+    const { addPieceState } = await loadApiModule();
+    mockClient.post.mockResolvedValue({ data: wirePieceDetail });
 
     const result = await addPieceState("piece-1", {
       state: "wheel_thrown",
       notes: "threw it",
     });
 
-    expect(mockPost).toHaveBeenCalledWith("pieces/piece-1/states/", {
+    expect(mockClient.post).toHaveBeenCalledWith("pieces/piece-1/states/", {
       state: "wheel_thrown",
       notes: "threw it",
     });
     expect(result.id).toBe("piece-1");
   });
-});
 
-// ---------------------------------------------------------------------------
-// updateCurrentState
-// ---------------------------------------------------------------------------
-
-describe("updateCurrentState", () => {
-  it("patches pieces/<id>/state/ and returns mapped PieceDetail", async () => {
-    mockPatch.mockResolvedValue({ data: wirePieceDetail });
+  it("updateCurrentState patches the current state endpoint", async () => {
+    const { updateCurrentState } = await loadApiModule();
+    mockClient.patch.mockResolvedValue({ data: wirePieceDetail });
 
     const result = await updateCurrentState("piece-1", {
       notes: "updated notes",
     });
 
-    expect(mockPatch).toHaveBeenCalledWith("pieces/piece-1/state/", {
+    expect(mockClient.patch).toHaveBeenCalledWith("pieces/piece-1/state/", {
       notes: "updated notes",
     });
     expect(result.id).toBe("piece-1");
   });
-});
 
-// ---------------------------------------------------------------------------
-// updatePiece
-// ---------------------------------------------------------------------------
-
-describe("updatePiece", () => {
-  it("patches pieces/<id>/ with piece-level fields", async () => {
-    mockPatch.mockResolvedValue({ data: wirePieceDetail });
+  it("updatePiece patches piece-level fields", async () => {
+    const { updatePiece } = await loadApiModule();
+    mockClient.patch.mockResolvedValue({ data: wirePieceDetail });
 
     await updatePiece("piece-1", { name: "New Name" });
 
-    expect(mockPatch).toHaveBeenCalledWith("pieces/piece-1/", {
+    expect(mockClient.patch).toHaveBeenCalledWith("pieces/piece-1/", {
       name: "New Name",
     });
   });
 });
 
-// ---------------------------------------------------------------------------
-// fetchGlobalEntries
-// ---------------------------------------------------------------------------
+describe("auth endpoints", () => {
+  const authUser = {
+    id: 1,
+    email: "user@example.com",
+    first_name: "Jane",
+    last_name: "Doe",
+    is_staff: false,
+    openid_subject: "",
+    profile_image_url: "",
+  };
 
-describe("fetchGlobalEntries", () => {
-  it("maps snake_case is_public → camelCase isPublic", async () => {
-    mockGet.mockResolvedValue({
+  it("ensureCsrfCookie fetches the CSRF endpoint", async () => {
+    const { ensureCsrfCookie } = await loadApiModule();
+    mockClient.get.mockResolvedValue({});
+
+    await ensureCsrfCookie();
+
+    expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
+  });
+
+  it("loginWithEmail fetches CSRF before posting credentials", async () => {
+    const { loginWithEmail } = await loadApiModule();
+    mockClient.get.mockResolvedValue({});
+    mockClient.post.mockResolvedValue({ data: authUser });
+
+    const user = await loginWithEmail("user@example.com", "secret");
+
+    expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
+    expect(mockClient.post).toHaveBeenCalledWith("auth/login/", {
+      email: "user@example.com",
+      password: "secret",
+    });
+    expect(user.email).toBe("user@example.com");
+  });
+
+  it("registerWithEmail fetches CSRF before posting the payload", async () => {
+    const { registerWithEmail } = await loadApiModule();
+    mockClient.get.mockResolvedValue({});
+    mockClient.post.mockResolvedValue({ data: authUser });
+
+    const user = await registerWithEmail({
+      email: "user@example.com",
+      password: "secret",
+      first_name: "Jane",
+    });
+
+    expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
+    expect(mockClient.post).toHaveBeenCalledWith("auth/register/", {
+      email: "user@example.com",
+      password: "secret",
+      first_name: "Jane",
+    });
+    expect(user).toEqual(authUser);
+  });
+
+  it("fetchCurrentUser returns the user on success", async () => {
+    const { fetchCurrentUser } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: authUser });
+
+    await expect(fetchCurrentUser()).resolves.toEqual(authUser);
+  });
+
+  it("fetchCurrentUser returns null on 401 and 403 responses", async () => {
+    const { fetchCurrentUser } = await loadApiModule();
+
+    mockClient.get.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 401 },
+    });
+    await expect(fetchCurrentUser()).resolves.toBeNull();
+
+    mockClient.get.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 403 },
+    });
+    await expect(fetchCurrentUser()).resolves.toBeNull();
+  });
+
+  it("fetchCurrentUser rethrows non-auth failures", async () => {
+    const { fetchCurrentUser } = await loadApiModule();
+    const error = { isAxiosError: true, response: { status: 500 } };
+    mockClient.get.mockRejectedValue(error);
+
+    await expect(fetchCurrentUser()).rejects.toBe(error);
+  });
+
+  it("fetchCurrentUser rethrows non-Axios errors", async () => {
+    const { fetchCurrentUser } = await loadApiModule();
+    const error = new Error("boom");
+    mockClient.get.mockRejectedValue(error);
+
+    await expect(fetchCurrentUser()).rejects.toThrow("boom");
+  });
+
+  it("loginWithGoogle fetches CSRF before posting the credential", async () => {
+    const { loginWithGoogle } = await loadApiModule();
+    mockClient.get.mockResolvedValue({});
+    mockClient.post.mockResolvedValue({ data: authUser });
+
+    const user = await loginWithGoogle("google-token");
+
+    expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
+    expect(mockClient.post).toHaveBeenCalledWith("auth/google/", {
+      credential: "google-token",
+    });
+    expect(user).toEqual(authUser);
+  });
+
+  it("logoutUser fetches CSRF before posting to logout", async () => {
+    const { logoutUser } = await loadApiModule();
+    mockClient.get.mockResolvedValue({});
+    mockClient.post.mockResolvedValue({});
+
+    await logoutUser();
+
+    expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
+    expect(mockClient.post).toHaveBeenCalledWith("auth/logout/", {});
+  });
+});
+
+describe("global entry endpoints", () => {
+  it("fetchGlobalEntries maps snake_case fields to camelCase", async () => {
+    const { fetchGlobalEntries } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
       data: [
         {
           id: "g1",
@@ -225,119 +350,77 @@ describe("fetchGlobalEntries", () => {
 
     const result = await fetchGlobalEntries("glaze_type");
 
-    expect(mockGet).toHaveBeenCalledWith("globals/glaze_type/");
-    expect(result[0].isPublic).toBe(true);
-    expect(result[0].isFavorite).toBe(false);
-    expect(result[0].color).toBe("#ff0000");
+    expect(mockClient.get).toHaveBeenCalledWith("globals/glaze_type/");
+    expect(result).toEqual([
+      {
+        id: "g1",
+        name: "Cone 6",
+        isPublic: true,
+        isFavorite: false,
+        color: "#ff0000",
+      },
+    ]);
   });
 
-  it("omits isFavorite when is_favorite is absent", async () => {
-    mockGet.mockResolvedValue({
+  it("fetchGlobalEntries omits optional fields that are absent", async () => {
+    const { fetchGlobalEntries } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
       data: [{ id: "g2", name: "Studio B", is_public: false }],
     });
 
-    const result = await fetchGlobalEntries("location");
+    const [entry] = await fetchGlobalEntries("location");
 
-    expect("isFavorite" in result[0]).toBe(false);
-    expect("color" in result[0]).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// fetchGlazeCombinations — filter parameter encoding
-// ---------------------------------------------------------------------------
-
-describe("fetchGlazeCombinations", () => {
-  it("calls globals/glaze_combination/ with no params when no filters given", async () => {
-    mockGet.mockResolvedValue({ data: [] });
-
-    await fetchGlazeCombinations();
-
-    expect(mockGet).toHaveBeenCalledWith("globals/glaze_combination/", {
-      params: {},
+    expect(entry).toEqual({
+      id: "g2",
+      name: "Studio B",
+      isPublic: false,
     });
   });
 
-  it("encodes glazeTypeIds as comma-joined string", async () => {
-    mockGet.mockResolvedValue({ data: [] });
-
-    await fetchGlazeCombinations({ glazeTypeIds: ["a", "b"] });
-
-    expect(mockGet).toHaveBeenCalledWith(
-      "globals/glaze_combination/",
-      expect.objectContaining({ params: { glaze_type_ids: "a,b" } }),
-    );
-  });
-
-  it("encodes boolean filters as strings", async () => {
-    mockGet.mockResolvedValue({ data: [] });
-
-    await fetchGlazeCombinations({
-      isFoodSafe: true,
-      runs: false,
-      highlightsGrooves: true,
-      isDifferentOnWhiteAndBrownClay: false,
+  it("fetchGlobalEntriesWithFilters forwards query params unchanged", async () => {
+    const { fetchGlobalEntriesWithFilters } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: [{ id: "g1", name: "Cone 6", is_favorite: true }],
     });
 
-    expect(mockGet).toHaveBeenCalledWith(
-      "globals/glaze_combination/",
-      expect.objectContaining({
-        params: {
-          is_food_safe: "true",
-          runs: "false",
-          highlights_grooves: "true",
-          is_different_on_white_and_brown_clay: "false",
-        },
-      }),
-    );
+    const result = await fetchGlobalEntriesWithFilters("glaze_type", {
+      search: "cone",
+    });
+
+    expect(mockClient.get).toHaveBeenCalledWith("globals/glaze_type/", {
+      params: { search: "cone" },
+    });
+    expect(result[0].is_favorite).toBe(true);
   });
 
-  it("omits filters whose values are undefined", async () => {
-    mockGet.mockResolvedValue({ data: [] });
-
-    await fetchGlazeCombinations({ isFoodSafe: undefined });
-
-    const call = mockGet.mock.calls[0];
-    expect(call[1].params).not.toHaveProperty("is_food_safe");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// toggleGlobalEntryFavorite
-// ---------------------------------------------------------------------------
-
-describe("toggleGlobalEntryFavorite", () => {
-  it("POSTs to favorite when favorite=true", async () => {
-    mockPost.mockResolvedValue({});
+  it("toggleGlobalEntryFavorite posts when favorite is true", async () => {
+    const { toggleGlobalEntryFavorite } = await loadApiModule();
+    mockClient.post.mockResolvedValue({});
 
     await toggleGlobalEntryFavorite("glaze_combination", "gc-1", true);
 
-    expect(mockPost).toHaveBeenCalledWith(
+    expect(mockClient.post).toHaveBeenCalledWith(
       "globals/glaze_combination/gc-1/favorite/",
     );
-    expect(mockDelete).not.toHaveBeenCalled();
+    expect(mockClient.delete).not.toHaveBeenCalled();
   });
 
-  it("DELETEs from favorite when favorite=false", async () => {
-    mockDelete.mockResolvedValue({});
+  it("toggleGlobalEntryFavorite deletes when favorite is false", async () => {
+    const { toggleGlobalEntryFavorite } = await loadApiModule();
+    mockClient.delete.mockResolvedValue({});
 
     await toggleGlobalEntryFavorite("glaze_combination", "gc-1", false);
 
-    expect(mockDelete).toHaveBeenCalledWith(
+    expect(mockClient.delete).toHaveBeenCalledWith(
       "globals/glaze_combination/gc-1/favorite/",
     );
-    expect(mockPost).not.toHaveBeenCalled();
+    expect(mockClient.post).not.toHaveBeenCalled();
   });
-});
 
-// ---------------------------------------------------------------------------
-// createGlobalEntry
-// ---------------------------------------------------------------------------
-
-describe("createGlobalEntry", () => {
-  it("posts payload and maps the response", async () => {
-    mockPost.mockResolvedValue({
-      data: { id: "loc-1", name: "Studio B", is_public: false },
+  it("createGlobalEntry posts the payload and defaults isPublic to false", async () => {
+    const { createGlobalEntry } = await loadApiModule();
+    mockClient.post.mockResolvedValue({
+      data: { id: "loc-1", name: "Studio B" },
     });
 
     const result = await createGlobalEntry("location", {
@@ -345,162 +428,190 @@ describe("createGlobalEntry", () => {
       value: "Studio B",
     });
 
-    expect(mockPost).toHaveBeenCalledWith("globals/location/", {
+    expect(mockClient.post).toHaveBeenCalledWith("globals/location/", {
       field: "name",
       value: "Studio B",
     });
-    expect(result.id).toBe("loc-1");
-    expect(result.isPublic).toBe(false);
+    expect(result).toEqual({
+      id: "loc-1",
+      name: "Studio B",
+      isPublic: false,
+    });
   });
-});
 
-// ---------------------------------------------------------------------------
-// fetchCurrentUser — 401/403 → null, other errors rethrown
-// ---------------------------------------------------------------------------
-
-describe("fetchCurrentUser", () => {
-  it("returns user data on success", async () => {
-    mockGet.mockResolvedValue({
+  it("createTagEntry wraps tag fields in the values payload", async () => {
+    const { createTagEntry } = await loadApiModule();
+    mockClient.post.mockResolvedValue({
       data: {
-        id: 1,
-        email: "user@example.com",
-        first_name: "Jane",
-        last_name: "Doe",
-        is_staff: false,
-        openid_subject: "",
-        profile_image_url: "",
+        id: "tag-1",
+        name: "favorite",
+        color: "#112233",
+        is_public: false,
       },
     });
 
-    const user = await fetchCurrentUser();
-    expect(user?.email).toBe("user@example.com");
-  });
-
-  it("returns null on 401", async () => {
-    const err = Object.assign(new Error("Unauthorized"), {
-      isAxiosError: true,
-      response: { status: 401 },
+    const result = await createTagEntry({
+      name: "favorite",
+      color: "#112233",
     });
-    vi.spyOn(axios, "isAxiosError").mockReturnValue(true);
-    mockGet.mockRejectedValue(err);
 
-    const user = await fetchCurrentUser();
-    expect(user).toBeNull();
-  });
-
-  it("returns null on 403", async () => {
-    const err = Object.assign(new Error("Forbidden"), {
-      isAxiosError: true,
-      response: { status: 403 },
+    expect(mockClient.post).toHaveBeenCalledWith("globals/tag/", {
+      values: { name: "favorite", color: "#112233" },
     });
-    vi.spyOn(axios, "isAxiosError").mockReturnValue(true);
-    mockGet.mockRejectedValue(err);
-
-    const user = await fetchCurrentUser();
-    expect(user).toBeNull();
-  });
-
-  it("rethrows non-auth errors", async () => {
-    const err = Object.assign(new Error("Server Error"), {
-      isAxiosError: true,
-      response: { status: 500 },
-    });
-    vi.spyOn(axios, "isAxiosError").mockReturnValue(true);
-    mockGet.mockRejectedValue(err);
-
-    await expect(fetchCurrentUser()).rejects.toThrow("Server Error");
+    expect(result.name).toBe("favorite");
   });
 });
 
-// ---------------------------------------------------------------------------
-// loginWithEmail — calls ensureCsrfCookie first
-// ---------------------------------------------------------------------------
+describe("glaze analysis endpoints", () => {
+  it("fetchGlazeCombinations omits params when no filters are provided", async () => {
+    const { fetchGlazeCombinations } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: [] });
 
-describe("loginWithEmail", () => {
-  it("fetches CSRF cookie then POSTs credentials", async () => {
-    mockGet.mockResolvedValue({});
-    mockPost.mockResolvedValue({
+    await fetchGlazeCombinations();
+
+    expect(mockClient.get).toHaveBeenCalledWith("globals/glaze_combination/", {
+      params: {},
+    });
+  });
+
+  it("fetchGlazeCombinations encodes filter values into query params", async () => {
+    const { fetchGlazeCombinations } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: [] });
+
+    await fetchGlazeCombinations({
+      glazeTypeIds: ["a", "b"],
+      isFoodSafe: true,
+      runs: false,
+      highlightsGrooves: true,
+      isDifferentOnWhiteAndBrownClay: false,
+      firingTemperatureId: "cone-6",
+    });
+
+    expect(mockClient.get).toHaveBeenCalledWith("globals/glaze_combination/", {
+      params: {
+        glaze_type_ids: "a,b",
+        is_food_safe: "true",
+        runs: "false",
+        highlights_grooves: "true",
+        is_different_on_white_and_brown_clay: "false",
+        firing_temperature_id: "cone-6",
+      },
+    });
+  });
+
+  it("fetchGlazeCombinationImages maps nested piece images", async () => {
+    const { fetchGlazeCombinationImages } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: [
+        {
+          glaze_combination: { id: "gc-1", name: "Tenmoku / Clear" },
+          pieces: [
+            {
+              id: "piece-1",
+              name: "Mug",
+              state: "fired",
+              images: [wireImage],
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = await fetchGlazeCombinationImages();
+
+    expect(mockClient.get).toHaveBeenCalledWith(
+      "analysis/glaze-combination-images/",
+    );
+    expect(result[0].pieces[0].state).toBe("fired");
+    expect(result[0].pieces[0].images[0].created).toBeInstanceOf(Date);
+  });
+});
+
+describe("upload endpoints", () => {
+  it("fetchCloudinaryWidgetConfig returns the config unchanged", async () => {
+    const { fetchCloudinaryWidgetConfig } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: { cloud_name: "demo", api_key: "abc123", folder: "glaze" },
+    });
+
+    await expect(fetchCloudinaryWidgetConfig()).resolves.toEqual({
+      cloud_name: "demo",
+      api_key: "abc123",
+      folder: "glaze",
+    });
+  });
+
+  it("signCloudinaryWidgetParams posts wrapped params and returns the signature", async () => {
+    const { signCloudinaryWidgetParams } = await loadApiModule();
+    mockClient.post.mockResolvedValue({ data: { signature: "signed-value" } });
+
+    const signature = await signCloudinaryWidgetParams({
+      folder: "glaze",
+      timestamp: 123,
+    });
+
+    expect(mockClient.post).toHaveBeenCalledWith(
+      "uploads/cloudinary/widget-signature/",
+      {
+        params_to_sign: { folder: "glaze", timestamp: 123 },
+      },
+    );
+    expect(signature).toBe("signed-value");
+  });
+
+  it("importManualSquareCropRecords posts multipart data with payload and matching files", async () => {
+    const { importManualSquareCropRecords } = await loadApiModule();
+    mockClient.post.mockResolvedValue({
       data: {
-        id: 1,
-        email: "user@example.com",
-        first_name: "",
-        last_name: "",
-        is_staff: false,
-        openid_subject: "",
-        profile_image_url: "",
+        results: [],
+        summary: {
+          created_glaze_types: 0,
+          created_glaze_combinations: 0,
+          skipped_duplicates: 0,
+          errors: 0,
+        },
       },
     });
 
-    const user = await loginWithEmail("user@example.com", "secret");
-
-    expect(mockGet).toHaveBeenCalledWith("auth/csrf/");
-    expect(mockPost).toHaveBeenCalledWith("auth/login/", {
-      email: "user@example.com",
-      password: "secret",
-    });
-    expect(user.email).toBe("user@example.com");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// logoutUser — calls ensureCsrfCookie first
-// ---------------------------------------------------------------------------
-
-describe("logoutUser", () => {
-  it("fetches CSRF cookie then POSTs to logout", async () => {
-    mockGet.mockResolvedValue({});
-    mockPost.mockResolvedValue({});
-
-    await logoutUser();
-
-    expect(mockGet).toHaveBeenCalledWith("auth/csrf/");
-    expect(mockPost).toHaveBeenCalledWith("auth/logout/", {});
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Wire → domain mapping edge cases
-// ---------------------------------------------------------------------------
-
-describe("Wire → domain mapping", () => {
-  it("handles null cloudinary_public_id in images", async () => {
-    const wireWithNullId = {
-      ...wirePieceDetail,
-      current_state: {
-        ...wirePieceState,
-        images: [{ ...wireImage, cloudinary_public_id: null }],
+    const file = new File(["image"], "crop.jpg", { type: "image/jpeg" });
+    const records = [
+      {
+        client_id: "one",
+        filename: "crop.jpg",
+        reviewed: true,
+        parsed_fields: {
+          name: "Tenmoku",
+          kind: "glaze_type" as const,
+          first_glaze: "Tenmoku",
+          second_glaze: "",
+          runs: true,
+          is_food_safe: false,
+        },
       },
-    };
-    mockGet.mockResolvedValue({ data: wireWithNullId });
-
-    const result = await fetchPiece("piece-1");
-    expect(result.current_state.images[0].cloudinary_public_id).toBeNull();
-  });
-
-  it("handles missing additional_fields (defaults to {})", async () => {
-    const wireNoFields = {
-      ...wirePieceDetail,
-      current_state: { ...wirePieceState, additional_fields: undefined },
-    };
-    mockGet.mockResolvedValue({ data: wireNoFields });
-
-    const result = await fetchPiece("piece-1");
-    expect(result.current_state.additional_fields).toEqual({});
-  });
-
-  it("maps previous_state and next_state through as-is", async () => {
-    const wireWithNav = {
-      ...wirePieceDetail,
-      current_state: {
-        ...wirePieceState,
-        previous_state: "designed",
-        next_state: "trimmed",
+      {
+        client_id: "two",
+        filename: "skip.jpg",
+        reviewed: false,
+        parsed_fields: {
+          name: "Clear / Iron",
+          kind: "glaze_combination" as const,
+          first_glaze: "Clear",
+          second_glaze: "Iron",
+          runs: null,
+          is_food_safe: null,
+        },
       },
-    };
-    mockGet.mockResolvedValue({ data: wireWithNav });
+    ];
 
-    const result = await fetchPiece("piece-1");
-    expect(result.current_state.previous_state).toBe("designed");
-    expect(result.current_state.next_state).toBe("trimmed");
+    await importManualSquareCropRecords(records, { one: file });
+
+    const [path, form] = mockClient.post.mock.calls[0] as [string, FormData];
+    expect(path).toBe("admin/manual-square-crop-import/");
+    expect(form).toBeInstanceOf(FormData);
+    expect(form.get("payload")).toBe(JSON.stringify({ records }));
+    const uploadedFile = form.get("crop_image__one");
+    expect(uploadedFile).toBeInstanceOf(File);
+    expect((uploadedFile as File).name).toBe(file.name);
+    expect(form.get("crop_image__two")).toBeNull();
   });
 });
