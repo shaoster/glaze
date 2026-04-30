@@ -306,3 +306,89 @@ class TestBackfillPublicIds(TestCase):
 
         piece.refresh_from_db()
         assert piece.thumbnail['cloudinary_public_id'] == 'glaze_prod/photo'
+
+
+# ---------------------------------------------------------------------------
+# Migration 0027: backfill cloud_name where missing
+# ---------------------------------------------------------------------------
+
+_migration_0027 = importlib.import_module(
+    'api.migrations.0027_backfill_cloud_name'
+)
+_backfill_cloud_names = _migration_0027.backfill_cloud_names
+_parse_cloud_name_0027 = _migration_0027._parse_cloud_name
+
+
+class TestParseCloudName:
+    """Unit tests for the cloud_name extractor in migration 0027."""
+
+    def test_extracts_cloud_name(self):
+        url = 'https://res.cloudinary.com/mycloud/image/upload/v1/folder/img.jpg'
+        assert _parse_cloud_name_0027(url) == 'mycloud'
+
+    def test_returns_none_for_non_cloudinary(self):
+        assert _parse_cloud_name_0027('https://example.com/img.jpg') is None
+
+    def test_returns_none_for_empty_string(self):
+        assert _parse_cloud_name_0027('') is None
+
+
+class TestBackfillCloudNames(TestCase):
+    """Integration tests for the migration 0027 backfill function."""
+
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(username='test27@test.com', password='pw')
+
+    def _make_schema_editor(self):
+        return _FakeSchemaEditor()
+
+    def test_backfills_missing_cloud_name_in_piece_state_images(self):
+        url = 'https://res.cloudinary.com/mycloud27/image/upload/v1/glaze_prod/abc.jpg'
+        piece = Piece.objects.create(user=self.user, name='Piece27A')
+        ps = PieceState.objects.create(piece=piece, user=self.user, state=ENTRY_STATE)
+        PieceState.objects.filter(pk=ps.pk).update(images=[
+            {'url': url, 'cloudinary_public_id': 'glaze_prod/abc', 'caption': ''}
+        ])
+
+        _backfill_cloud_names(django_apps, self._make_schema_editor())
+
+        ps.refresh_from_db()
+        assert ps.images[0]['cloud_name'] == 'mycloud27'
+
+    def test_does_not_overwrite_existing_cloud_name(self):
+        url = 'https://res.cloudinary.com/mycloud27/image/upload/v1/glaze_prod/abc.jpg'
+        piece = Piece.objects.create(user=self.user, name='Piece27B')
+        ps = PieceState.objects.create(piece=piece, user=self.user, state=ENTRY_STATE)
+        PieceState.objects.filter(pk=ps.pk).update(images=[
+            {'url': url, 'cloudinary_public_id': 'glaze_prod/abc', 'cloud_name': 'explicit', 'caption': ''}
+        ])
+
+        _backfill_cloud_names(django_apps, self._make_schema_editor())
+
+        ps.refresh_from_db()
+        assert ps.images[0]['cloud_name'] == 'explicit'
+
+    def test_backfills_missing_cloud_name_in_piece_thumbnail(self):
+        url = 'https://res.cloudinary.com/mycloud27/image/upload/v1/glaze_prod/thumb.jpg'
+        piece = Piece.objects.create(user=self.user, name='Piece27C')
+        Piece.objects.filter(pk=piece.pk).update(thumbnail={
+            'url': url, 'cloudinary_public_id': 'glaze_prod/thumb'
+        })
+
+        _backfill_cloud_names(django_apps, self._make_schema_editor())
+
+        piece.refresh_from_db()
+        assert piece.thumbnail['cloud_name'] == 'mycloud27'
+
+    def test_does_not_overwrite_existing_thumbnail_cloud_name(self):
+        url = 'https://res.cloudinary.com/mycloud27/image/upload/v1/glaze_prod/thumb.jpg'
+        piece = Piece.objects.create(user=self.user, name='Piece27D')
+        Piece.objects.filter(pk=piece.pk).update(thumbnail={
+            'url': url, 'cloudinary_public_id': 'glaze_prod/thumb', 'cloud_name': 'original'
+        })
+
+        _backfill_cloud_names(django_apps, self._make_schema_editor())
+
+        piece.refresh_from_db()
+        assert piece.thumbnail['cloud_name'] == 'original'
