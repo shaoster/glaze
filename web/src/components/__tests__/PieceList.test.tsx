@@ -128,7 +128,6 @@ describe("PieceList", () => {
       ];
       renderPieceList(pieces);
       const rows = screen.getAllByRole("row");
-      // rows[0] is the header row
       expect(within(rows[0]).getByText("Bowl")).toBeInTheDocument();
       expect(within(rows[0]).getByText("Designing")).toBeInTheDocument();
       expect(within(rows[1]).getByText("Mug")).toBeInTheDocument();
@@ -136,15 +135,34 @@ describe("PieceList", () => {
     });
   });
 
-  describe("filter dropdown", () => {
-    it("renders filter and tag summaries in a compact state", () => {
+  describe("filter toolbar", () => {
+    it("renders + filter and + tag dashed buttons", () => {
       renderPieceList([]);
       expect(
-        screen.getByText("No status filters applied."),
+        screen.getByRole("button", { name: /add status filter/i }),
       ).toBeInTheDocument();
-      expect(screen.getByText("No tags selected.")).toBeInTheDocument();
-      expect(screen.queryByLabelText("Filters")).not.toBeInTheDocument();
-      expect(screen.queryByLabelText("Tags")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /add tag filter/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("autocomplete is not visible until + filter is clicked", () => {
+      renderPieceList([]);
+      expect(screen.queryByLabelText("Status filters")).not.toBeInTheDocument();
+    });
+
+    it("shows the filter autocomplete when + filter is clicked", async () => {
+      const user = userEvent.setup();
+      renderPieceList([]);
+      await user.click(screen.getByRole("button", { name: /add status filter/i }));
+      expect(screen.getByLabelText("Status filters")).toBeInTheDocument();
+    });
+
+    it("shows the tag autocomplete when + tag is clicked", async () => {
+      const user = userEvent.setup();
+      renderPieceList([]);
+      await user.click(screen.getByRole("button", { name: /add tag filter/i }));
+      expect(screen.getByLabelText("Tags")).toBeInTheDocument();
     });
 
     it("shows all pieces when no filter is selected", () => {
@@ -192,11 +210,9 @@ describe("PieceList", () => {
       ];
       renderPieceList(pieces);
 
-      await user.click(screen.getByRole("button", { name: /show filters/i }));
-      await user.click(screen.getByLabelText("Filters"));
-      await user.click(
-        screen.getByRole("option", { name: "Work in Progress" }),
-      );
+      await user.click(screen.getByRole("button", { name: /add status filter/i }));
+      await user.click(screen.getByLabelText("Status filters"));
+      await user.click(screen.getByRole("option", { name: "Work in Progress" }));
       await user.keyboard("{Escape}");
 
       expect(screen.getByText("Bowl")).toBeInTheDocument();
@@ -226,8 +242,8 @@ describe("PieceList", () => {
       ];
       renderPieceList(pieces);
 
-      await user.click(screen.getByRole("button", { name: /show filters/i }));
-      await user.click(screen.getByLabelText("Filters"));
+      await user.click(screen.getByRole("button", { name: /add status filter/i }));
+      await user.click(screen.getByLabelText("Status filters"));
       await user.click(screen.getByRole("option", { name: "Completed" }));
       await user.keyboard("{Escape}");
 
@@ -257,8 +273,8 @@ describe("PieceList", () => {
       ];
       renderPieceList(pieces);
 
-      await user.click(screen.getByRole("button", { name: /show filters/i }));
-      await user.click(screen.getByLabelText("Filters"));
+      await user.click(screen.getByRole("button", { name: /add status filter/i }));
+      await user.click(screen.getByLabelText("Status filters"));
       await user.click(screen.getByRole("option", { name: "Discarded" }));
       await user.keyboard("{Escape}");
 
@@ -288,8 +304,8 @@ describe("PieceList", () => {
       ];
       renderPieceList(pieces);
 
-      await user.click(screen.getByRole("button", { name: /show filters/i }));
-      await user.click(screen.getByLabelText("Filters"));
+      await user.click(screen.getByRole("button", { name: /add status filter/i }));
+      await user.click(screen.getByLabelText("Status filters"));
       await user.click(screen.getByRole("option", { name: "Completed" }));
       await user.click(screen.getByRole("option", { name: "Discarded" }));
       await user.keyboard("{Escape}");
@@ -299,7 +315,7 @@ describe("PieceList", () => {
       expect(screen.getByText("Vase")).toBeInTheDocument();
     });
 
-    it("shows all pieces again when filter is cleared", async () => {
+    it("shows all pieces again when a filter chip is removed", async () => {
       const user = userEvent.setup();
       const pieces = [
         makePiece({
@@ -315,18 +331,18 @@ describe("PieceList", () => {
       ];
       renderPieceList(pieces);
 
-      // Apply filter
-      await user.click(screen.getByRole("button", { name: /show filters/i }));
-      await user.click(screen.getByLabelText("Filters"));
+      await user.click(screen.getByRole("button", { name: /add status filter/i }));
+      await user.click(screen.getByLabelText("Status filters"));
       await user.click(screen.getByRole("option", { name: "Completed" }));
       await user.keyboard("{Escape}");
       expect(screen.queryByText("Bowl")).not.toBeInTheDocument();
 
-      // Remove filter by clicking the same option again
-      await user.click(screen.getByLabelText("Filters"));
+      // Deselect the option to clear the filter (Popper is still open after Escape)
+      await user.click(screen.getByLabelText("Status filters"));
       await user.click(screen.getByRole("option", { name: "Completed" }));
-      await user.keyboard("{Escape}");
-      expect(screen.getByText("Bowl")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Bowl")).toBeInTheDocument();
+      });
       expect(screen.getByText("Mug")).toBeInTheDocument();
     });
   });
@@ -351,7 +367,7 @@ describe("PieceList", () => {
       ];
       renderPieceList(pieces);
 
-      await user.click(screen.getByRole("button", { name: /show tags/i }));
+      await user.click(screen.getByRole("button", { name: /add tag filter/i }));
       await user.click(screen.getByLabelText("Tags"));
       await user.click(screen.getByRole("option", { name: "Gift" }));
       await user.click(screen.getByLabelText("Tags"));
@@ -360,28 +376,6 @@ describe("PieceList", () => {
 
       expect(screen.getByText("Bowl")).toBeInTheDocument();
       expect(screen.queryByText("Mug")).not.toBeInTheDocument();
-      expect(screen.getAllByText("For Sale").length).toBeGreaterThan(0);
-    });
-
-    it("can hide the selectors again after expanding them", async () => {
-      const user = userEvent.setup();
-      renderPieceList([]);
-
-      await user.click(screen.getByRole("button", { name: /show filters/i }));
-      expect(screen.getByLabelText("Filters")).toBeInTheDocument();
-
-      await user.click(screen.getByRole("button", { name: /hide filters/i }));
-      await waitFor(() => {
-        expect(screen.queryByLabelText("Filters")).not.toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole("button", { name: /show tags/i }));
-      expect(screen.getByLabelText("Tags")).toBeInTheDocument();
-
-      await user.click(screen.getByRole("button", { name: /hide tags/i }));
-      await waitFor(() => {
-        expect(screen.queryByLabelText("Tags")).not.toBeInTheDocument();
-      });
     });
 
     it("collapses piece tags behind an expand button when there are many", async () => {
@@ -407,7 +401,7 @@ describe("PieceList", () => {
       expect(screen.getByText("Blue")).toBeInTheDocument();
     });
 
-    it("keeps currently filtered tags visible even when the list is collapsed", async () => {
+    it("keeps currently filtered tags visible even when piece tags are collapsed", async () => {
       const user = userEvent.setup();
       renderPieceList([
         makePiece({
@@ -422,7 +416,7 @@ describe("PieceList", () => {
         }),
       ]);
 
-      await user.click(screen.getByRole("button", { name: /show tags/i }));
+      await user.click(screen.getByRole("button", { name: /add tag filter/i }));
       await user.click(screen.getByLabelText("Tags"));
       await user.click(screen.getByRole("option", { name: "Blue" }));
       await user.keyboard("{Escape}");
