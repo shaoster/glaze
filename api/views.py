@@ -27,8 +27,8 @@ from .models import (
     PieceState,
     UserProfile,
 )
-from .registry import (
-    _GLOBAL_ENTRY_SERIALIZERS,  # populated by @global_entry_serializer decorators in serializers.py
+from .serializer_registry import (
+    _GLOBAL_ENTRY_SERIALIZERS,  # auto-generated in _register_globals(); hand-written serializers overwrite
 )
 from .serializers import (
     AuthUserSerializer,
