@@ -1,14 +1,8 @@
-import { type ReactNode, useRef, useState } from "react";
+import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import {
   Alert,
   alpha,
   Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Divider,
   IconButton,
   TextField,
@@ -19,18 +13,21 @@ import EditIcon from "@mui/icons-material/Edit";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import { useBlocker } from "react-router-dom";
-import type { PieceDetail as PieceDetailType } from "../util/types";
+import type { CaptionedImage, PieceDetail as PieceDetailType } from "../util/types";
 import { formatState, isTerminalState } from "../util/types";
 import { addPieceState, updateCurrentState, updatePiece } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
+import NavigationBlocker from "./NavigationBlocker";
 import WorkflowState from "./WorkflowState";
 import TagManager from "./TagManager";
 import StateTransition from "./StateTransition";
 import PieceHistory from "./PieceHistory";
 import GlobalEntryField from "./GlobalEntryField";
 import PiecePhotoGallery, {
+  type EditablePiecePhoto,
   type PiecePhotoGalleryImage,
 } from "./PiecePhotoGallery";
+import { normalizeFields } from "./pieceDetailFields";
 import { PieceDetailSaveStatusProvider } from "./PieceDetailSaveStatusContext";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
 
@@ -111,28 +108,6 @@ function SectionCard({
       <Box sx={{ px: { xs: 1.5, sm: 2 }, pb: 1.5 }}>{children}</Box>
     </Box>
   );
-}
-
-function normalizeAdditionalFields(
-  fields: Record<string, unknown>,
-): Record<string, string | number | boolean | null> {
-  const result: Record<string, string | number | boolean | null> = {};
-  for (const [key, value] of Object.entries(fields)) {
-    if (typeof value === "object" && value !== null && "id" in value) {
-      const id = (value as { id: unknown }).id;
-      result[key] = typeof id === "string" ? id : null;
-    } else if (
-      typeof value === "string" ||
-      typeof value === "number" ||
-      typeof value === "boolean" ||
-      value === null
-    ) {
-      result[key] = value;
-    } else {
-      result[key] = null;
-    }
-  }
-  return result;
 }
 
 export default function PieceDetail({
@@ -268,6 +243,36 @@ function PieceDetailContent({
       setLocationSaving(false);
     }
   }
+
+  async function handleSetThumbnail(image: CaptionedImage) {
+    const updated = await updatePiece(piece.id, {
+      thumbnail: {
+        url: image.url,
+        cloudinary_public_id: image.cloudinary_public_id ?? null,
+      },
+    });
+    onPieceUpdated(updated);
+  }
+
+  async function handleUpdateCurrentStateImages(nextImages: EditablePiecePhoto[]) {
+    const updated = await updateCurrentState(piece.id, {
+      notes: currentState.notes,
+      images: nextImages.map((image) => ({
+        url: image.url,
+        caption: image.caption,
+        cloudinary_public_id: image.cloudinary_public_id ?? null,
+      })),
+      additional_fields: normalizeFields(currentState.additional_fields ?? {}),
+    });
+    onPieceUpdated(updated);
+  }
+
+  const galleryProps = {
+    images: galleryImages,
+    currentThumbnailUrl: piece.thumbnail?.url,
+    onSetAsThumbnail: handleSetThumbnail,
+    onUpdateCurrentStateImages: handleUpdateCurrentStateImages,
+  } satisfies ComponentProps<typeof PiecePhotoGallery>;
 
   return (
     <Box
@@ -463,92 +468,14 @@ function PieceDetailContent({
                 }}
               >
                 <PiecePhotoGallery
-                  images={galleryImages}
-                  currentThumbnailUrl={piece.thumbnail?.url}
-                  onSetAsThumbnail={async (image) => {
-                    const updated = await updatePiece(piece.id, {
-                      thumbnail: {
-                        url: image.url,
-                        cloudinary_public_id: image.cloudinary_public_id ?? null,
-                      },
-                    });
-                    onPieceUpdated(updated);
-                  }}
-                  onSaveCaption={async (currentStateImageIndex, caption) => {
-                    const updatedImages = currentState.images.map((image, index) => ({
-                      url: image.url,
-                      caption: index === currentStateImageIndex ? caption.trim() : image.caption,
-                      cloudinary_public_id: image.cloudinary_public_id ?? null,
-                    }));
-                    const updated = await updateCurrentState(piece.id, {
-                      notes: currentState.notes,
-                      images: updatedImages,
-                      additional_fields: normalizeAdditionalFields(currentState.additional_fields ?? {}),
-                    });
-                    onPieceUpdated(updated);
-                  }}
-                  onDeleteImage={async (currentStateImageIndex) => {
-                    const updatedImages = currentState.images
-                      .filter((_image, index) => index !== currentStateImageIndex)
-                      .map((image) => ({
-                        url: image.url,
-                        caption: image.caption,
-                        cloudinary_public_id: image.cloudinary_public_id ?? null,
-                      }));
-                    const updated = await updateCurrentState(piece.id, {
-                      notes: currentState.notes,
-                      images: updatedImages,
-                      additional_fields: normalizeAdditionalFields(currentState.additional_fields ?? {}),
-                    });
-                    onPieceUpdated(updated);
-                  }}
+                  {...galleryProps}
                 />
               </Box>
             </Box>
             {/* Photo gallery + upload trigger — below hero on desktop only */}
             <Box sx={{ display: { xs: "none", md: "flex" }, alignItems: "center", gap: 1, mt: 1 }}>
               <Box id="piece-upload-trigger" />
-              <PiecePhotoGallery
-                images={galleryImages}
-                currentThumbnailUrl={piece.thumbnail?.url}
-                onSetAsThumbnail={async (image) => {
-                  const updated = await updatePiece(piece.id, {
-                    thumbnail: {
-                      url: image.url,
-                      cloudinary_public_id: image.cloudinary_public_id ?? null,
-                    },
-                  });
-                  onPieceUpdated(updated);
-                }}
-                onSaveCaption={async (currentStateImageIndex, caption) => {
-                  const updatedImages = currentState.images.map((image, index) => ({
-                    url: image.url,
-                    caption: index === currentStateImageIndex ? caption.trim() : image.caption,
-                    cloudinary_public_id: image.cloudinary_public_id ?? null,
-                  }));
-                  const updated = await updateCurrentState(piece.id, {
-                    notes: currentState.notes,
-                    images: updatedImages,
-                    additional_fields: normalizeAdditionalFields(currentState.additional_fields ?? {}),
-                  });
-                  onPieceUpdated(updated);
-                }}
-                onDeleteImage={async (currentStateImageIndex) => {
-                  const updatedImages = currentState.images
-                    .filter((_image, index) => index !== currentStateImageIndex)
-                    .map((image) => ({
-                      url: image.url,
-                      caption: image.caption,
-                      cloudinary_public_id: image.cloudinary_public_id ?? null,
-                    }));
-                  const updated = await updateCurrentState(piece.id, {
-                    notes: currentState.notes,
-                    images: updatedImages,
-                    additional_fields: normalizeAdditionalFields(currentState.additional_fields ?? {}),
-                  });
-                  onPieceUpdated(updated);
-                }}
-              />
+              <PiecePhotoGallery {...galleryProps} />
             </Box>
           </Box>
 
@@ -582,21 +509,11 @@ function PieceDetailContent({
         </SectionCard>
       </Box>
 
-      {/* Navigation blocker dialog */}
-      <Dialog open={blocker.state === "blocked"}>
-        <DialogTitle>Unsaved Changes</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            You have unsaved changes. Are you sure you want to leave?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => blocker.reset?.()}>Stay</Button>
-          <Button onClick={() => blocker.proceed?.()} color="error">
-            Leave without saving
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <NavigationBlocker
+        open={blocker.state === "blocked"}
+        onStay={() => blocker.reset?.()}
+        onLeave={() => blocker.proceed?.()}
+      />
     </Box>
   );
 }

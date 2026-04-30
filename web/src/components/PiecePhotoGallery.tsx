@@ -23,23 +23,43 @@ import ImageLightbox from "./ImageLightbox";
 
 export type PiecePhotoGalleryImage = CaptionedImage & {
   stateLabel: string;
-  editableCurrentStateIndex?: number | null;
+  editableCurrentStateIndex: number | null;
 };
+
+export type EditablePiecePhoto = Pick<
+  CaptionedImage,
+  "url" | "caption" | "cloudinary_public_id"
+>;
 
 type PiecePhotoGalleryProps = {
   images: PiecePhotoGalleryImage[];
   currentThumbnailUrl?: string;
   onSetAsThumbnail: (image: CaptionedImage) => Promise<void>;
-  onSaveCaption?: (currentStateImageIndex: number, caption: string) => Promise<void>;
-  onDeleteImage?: (currentStateImageIndex: number) => Promise<void>;
+  onUpdateCurrentStateImages?: (images: EditablePiecePhoto[]) => Promise<void>;
 };
+
+const DEFAULT_VIEWPORT_WIDTH = 768;
+const DEFAULT_PIXEL_RATIO = 1;
+
+function getBrowserViewportWidth(): number {
+  return globalThis.window?.innerWidth ?? DEFAULT_VIEWPORT_WIDTH;
+}
+
+function getBrowserPixelRatio(): number {
+  return Math.max(globalThis.window?.devicePixelRatio ?? DEFAULT_PIXEL_RATIO, 1);
+}
+
+function isEditableImage(
+  image: PiecePhotoGalleryImage,
+): image is PiecePhotoGalleryImage & { editableCurrentStateIndex: number } {
+  return image.editableCurrentStateIndex !== null;
+}
 
 export default function PiecePhotoGallery({
   images,
   currentThumbnailUrl,
   onSetAsThumbnail,
-  onSaveCaption,
-  onDeleteImage,
+  onUpdateCurrentStateImages,
 }: PiecePhotoGalleryProps) {
   const theme = useTheme();
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -50,14 +70,10 @@ export default function PiecePhotoGallery({
   const [captionSaveError, setCaptionSaveError] = useState<string | null>(null);
   const [deleteDialogIndex, setDeleteDialogIndex] = useState<number | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
-  const [viewportWidth, setViewportWidth] = useState(
-    typeof window === "undefined" ? 768 : window.innerWidth,
-  );
-  const pixelRatio =
-    typeof window === "undefined" ? 1 : Math.max(window.devicePixelRatio || 1, 1);
+  const [viewportWidth, setViewportWidth] = useState(getBrowserViewportWidth);
+  const pixelRatio = getBrowserPixelRatio();
 
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
     function syncWidth() {
       setViewportWidth(window.innerWidth);
     }
@@ -85,19 +101,38 @@ export default function PiecePhotoGallery({
     lightboxIndex !== null ? images[lightboxIndex] : null;
   const editableCurrentStateIndex =
     activeImage?.editableCurrentStateIndex ?? null;
+  const editableCurrentStateImages = images
+    .filter(isEditableImage)
+    .sort((left, right) => left.editableCurrentStateIndex - right.editableCurrentStateIndex)
+    .map(({ url, caption, cloudinary_public_id }) => ({
+      url,
+      caption,
+      cloudinary_public_id: cloudinary_public_id ?? null,
+    }));
+
+  function stopEditingCaption() {
+    setCaptionEditing(false);
+    setCaptionSaveError(null);
+    setCaptionDraft(activeImage?.caption ?? "");
+  }
 
   async function handleSaveCaption() {
     if (
       lightboxIndex === null ||
       editableCurrentStateIndex === null ||
-      !onSaveCaption
+      !onUpdateCurrentStateImages
     ) {
       return;
     }
     setCaptionSaving(true);
     setCaptionSaveError(null);
     try {
-      await onSaveCaption(editableCurrentStateIndex, captionDraft);
+      await onUpdateCurrentStateImages(
+        editableCurrentStateImages.map((image, index) => ({
+          ...image,
+          caption: index === editableCurrentStateIndex ? captionDraft.trim() : image.caption,
+        })),
+      );
       setCaptionEditing(false);
     } catch {
       setCaptionSaveError("Failed to save caption. Please try again.");
@@ -107,17 +142,20 @@ export default function PiecePhotoGallery({
   }
 
   async function handleDeleteImage() {
-    if (deleteDialogIndex === null || !onDeleteImage) {
+    if (deleteDialogIndex === null || !onUpdateCurrentStateImages) {
       return;
     }
     const image = images[deleteDialogIndex];
-    const currentStateImageIndex = image?.editableCurrentStateIndex;
-    if (currentStateImageIndex === null || currentStateImageIndex === undefined) {
+    if (!image || image.editableCurrentStateIndex === null) {
       return;
     }
     setDeleteSaving(true);
     try {
-      await onDeleteImage(currentStateImageIndex);
+      await onUpdateCurrentStateImages(
+        editableCurrentStateImages.filter(
+          (_editableImage, index) => index !== image.editableCurrentStateIndex,
+        ),
+      );
       if (lightboxIndex === deleteDialogIndex) {
         setLightboxIndex(null);
       }
@@ -130,7 +168,8 @@ export default function PiecePhotoGallery({
   const triggerLabel = `${photoCount} photo${photoCount === 1 ? "" : "s"}`;
 
   const canEditCaption =
-    editableCurrentStateIndex !== null && onSaveCaption !== undefined;
+    editableCurrentStateIndex !== null &&
+    onUpdateCurrentStateImages !== undefined;
 
   const footer = activeImage ? (
     <Box sx={{ display: "grid", gap: 0.75, justifyItems: "center" }}>
@@ -143,7 +182,7 @@ export default function PiecePhotoGallery({
             onChange={(event) => setCaptionDraft(event.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") void handleSaveCaption();
-              if (e.key === "Escape") setCaptionEditing(false);
+              if (e.key === "Escape") stopEditingCaption();
             }}
             autoFocus
             slotProps={{
@@ -165,12 +204,33 @@ export default function PiecePhotoGallery({
           >
             {captionSaving ? "Saving…" : "Save"}
           </Button>
+          <Button
+            size="small"
+            variant="text"
+            onClick={stopEditingCaption}
+            disabled={captionSaving}
+          >
+            Cancel
+          </Button>
         </Box>
       ) : activeImage.caption ? (
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => canEditCaption && setCaptionEditing(true)}
+            disabled={!canEditCaption}
+            sx={{
+              color: "rgba(255,255,255,0.85)",
+              textTransform: "none",
+              minWidth: 0,
+              p: 0,
+              lineHeight: 1.4,
+              "&:hover": { backgroundColor: "transparent", color: "white" },
+            }}
+          >
             {activeImage.caption}
-          </Typography>
+          </Button>
           {canEditCaption && (
             <Tooltip title="Edit caption">
               <IconButton
@@ -189,7 +249,10 @@ export default function PiecePhotoGallery({
           size="small"
           variant="outlined"
           startIcon={<EditIcon fontSize="small" />}
-          onClick={() => { setCaptionDraft(""); setCaptionEditing(true); }}
+          onClick={() => {
+            setCaptionDraft("");
+            setCaptionEditing(true);
+          }}
           sx={{ color: "white", borderColor: "rgba(255,255,255,0.35)" }}
         >
           Add caption
@@ -301,8 +364,7 @@ export default function PiecePhotoGallery({
                     </Box>
                   </Box>
                   {image.editableCurrentStateIndex !== null &&
-                    image.editableCurrentStateIndex !== undefined &&
-                    onDeleteImage && (
+                    onUpdateCurrentStateImages && (
                       <IconButton
                         aria-label={`Delete piece photo ${index + 1}`}
                         onClick={() => setDeleteDialogIndex(index)}

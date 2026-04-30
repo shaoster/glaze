@@ -1,8 +1,11 @@
 import type { CSSProperties, ReactNode } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import PiecePhotoGallery, { type PiecePhotoGalleryImage } from "../PiecePhotoGallery";
+import PiecePhotoGallery, {
+  type EditablePiecePhoto,
+  type PiecePhotoGalleryImage,
+} from "../PiecePhotoGallery";
 
 vi.mock("../CloudinaryImage", () => ({
   default: ({
@@ -88,13 +91,13 @@ describe("PiecePhotoGallery", () => {
   });
 
   it("saves edited captions from the lightbox for current-state images", async () => {
-    const onSaveCaption = vi.fn().mockResolvedValue(undefined);
+    const onUpdateCurrentStateImages = vi.fn().mockResolvedValue(undefined);
 
     render(
       <PiecePhotoGallery
         images={makeImages()}
         onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
-        onSaveCaption={onSaveCaption}
+        onUpdateCurrentStateImages={onUpdateCurrentStateImages}
       />,
     );
 
@@ -107,17 +110,23 @@ describe("PiecePhotoGallery", () => {
     fireEvent.change(captionInput, { target: { value: "Updated caption" } });
     await userEvent.click(screen.getByText("Save"));
 
-    expect(onSaveCaption).toHaveBeenCalledWith(0, "Updated caption");
+    expect(onUpdateCurrentStateImages).toHaveBeenCalledWith([
+      {
+        url: "https://example.com/a.jpg",
+        caption: "Updated caption",
+        cloudinary_public_id: "piece/a",
+      },
+    ] satisfies EditablePiecePhoto[]);
   });
 
   it("lets current-state gallery images be deleted through the confirmation dialog", async () => {
-    const onDeleteImage = vi.fn().mockResolvedValue(undefined);
+    const onUpdateCurrentStateImages = vi.fn().mockResolvedValue(undefined);
 
     render(
       <PiecePhotoGallery
         images={makeImages()}
         onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
-        onDeleteImage={onDeleteImage}
+        onUpdateCurrentStateImages={onUpdateCurrentStateImages}
       />,
     );
 
@@ -129,6 +138,114 @@ describe("PiecePhotoGallery", () => {
     expect(screen.getByText("Remove Image")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Remove" }));
 
-    expect(onDeleteImage).toHaveBeenCalledWith(0);
+    expect(onUpdateCurrentStateImages).toHaveBeenCalledWith([]);
+  });
+
+  it("lets you click the caption text itself to start editing and save with Enter", async () => {
+    const onUpdateCurrentStateImages = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <PiecePhotoGallery
+        images={makeImages()}
+        onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
+        onUpdateCurrentStateImages={onUpdateCurrentStateImages}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+    const lightbox = screen.getByLabelText("Mock lightbox");
+    await userEvent.click(within(lightbox).getAllByText("Freshly thrown")[1]);
+    const captionInput = within(lightbox).getByLabelText(
+      "Edit photo caption",
+      {
+        selector: "input",
+      },
+    );
+    await act(async () => {
+      fireEvent.change(captionInput, { target: { value: "Wheel detail" } });
+      fireEvent.keyDown(captionInput, { key: "Enter" });
+    });
+
+    expect(onUpdateCurrentStateImages).toHaveBeenCalledWith([
+      {
+        url: "https://example.com/a.jpg",
+        caption: "Wheel detail",
+        cloudinary_public_id: "piece/a",
+      },
+    ] satisfies EditablePiecePhoto[]);
+  });
+
+  it("cancels caption edits with Escape", async () => {
+    render(
+      <PiecePhotoGallery
+        images={makeImages()}
+        onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
+        onUpdateCurrentStateImages={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+    await userEvent.click(screen.getByLabelText("Edit caption"));
+    const captionInput = within(screen.getByLabelText("Mock lightbox")).getByLabelText(
+      "Edit photo caption",
+      {
+        selector: "input",
+      },
+    );
+    await act(async () => {
+      fireEvent.change(captionInput, { target: { value: "Discard me" } });
+      fireEvent.keyDown(captionInput, { key: "Escape" });
+    });
+
+    expect(
+      within(screen.getByLabelText("Mock lightbox")).queryByLabelText(
+        "Edit photo caption",
+        { selector: "input" },
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("Mock lightbox")).getAllByText("Freshly thrown")[1],
+    ).toBeInTheDocument();
+  });
+
+  it("closes the gallery dialog from the Close button", async () => {
+    render(
+      <PiecePhotoGallery
+        images={makeImages()}
+        onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    await waitFor(() =>
+      expect(screen.queryByLabelText("Piece photos")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("cancels image deletion without saving", async () => {
+    const onUpdateCurrentStateImages = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <PiecePhotoGallery
+        images={makeImages()}
+        onSetAsThumbnail={vi.fn().mockResolvedValue(undefined)}
+        onUpdateCurrentStateImages={onUpdateCurrentStateImages}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete piece photo 1" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("Remove Image")).not.toBeInTheDocument(),
+    );
+    expect(onUpdateCurrentStateImages).not.toHaveBeenCalled();
   });
 });

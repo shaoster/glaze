@@ -398,7 +398,11 @@ js_library(
 
 js_library(
     name = "piece_detail_src",
-    srcs = ["src/components/PieceDetail.tsx"],
+    srcs = [
+        "src/components/NavigationBlocker.tsx",
+        "src/components/PieceDetail.tsx",
+        "src/components/pieceDetailFields.ts",
+    ],
     deps = [
         ":autosave_src",
         ":cloudinary_image_src",

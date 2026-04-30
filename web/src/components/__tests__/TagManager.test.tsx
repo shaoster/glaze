@@ -203,6 +203,24 @@ describe("TagManager", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows an inline error when trying to create an empty tag", async () => {
+    await act(async () => {
+      renderTagManager();
+    });
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add or edit tags" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    await userEvent.click(screen.getByRole("option", { name: "+ New tag" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(api.createTagEntry).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Tag name cannot be empty."),
+    ).toBeInTheDocument();
+  });
+
   it("adds a newly created tag to the draft selection and waits for Save to persist it", async () => {
     vi.mocked(api.createTagEntry).mockResolvedValue({
       id: "sale",
@@ -232,5 +250,77 @@ describe("TagManager", () => {
     );
     expect(screen.getByRole("button", { name: "Save tags" })).toBeInTheDocument();
     expect(api.updatePiece).not.toHaveBeenCalled();
+  });
+
+  it("shows a generic error when creating a tag fails", async () => {
+    vi.mocked(api.createTagEntry).mockRejectedValue(new Error("Network error"));
+    await act(async () => {
+      renderTagManager();
+    });
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add or edit tags" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    await userEvent.click(screen.getByRole("option", { name: "+ New tag" }));
+    fireEvent.change(screen.getByLabelText("Tag name"), {
+      target: { value: "For Sale" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(
+      screen.getByText("Failed to create tag. Please try again."),
+    ).toBeInTheDocument();
+  });
+
+  it("closes the create tag dialog when Cancel is pressed", async () => {
+    await act(async () => {
+      renderTagManager();
+    });
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add or edit tags" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    await userEvent.click(screen.getByRole("option", { name: "+ New tag" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "Create Tag" })).getByRole(
+        "button",
+        { name: "Cancel" },
+      ),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Create Tag" }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it("closes the attach-failure snackbar when dismissed", async () => {
+    vi.mocked(api.updatePiece).mockRejectedValue(new Error("Network error"));
+
+    await act(async () => {
+      renderTagManager([{ id: "gift", name: "Gift", color: "#2A9D8F" }]);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Add or edit tags" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save tags" }));
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "Failed to attach the selected tag. Please check your connection and try again.",
+        ),
+      ).toBeInTheDocument(),
+    );
+
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await waitFor(() =>
+      expect(
+        screen.queryByText(
+          "Failed to attach the selected tag. Please check your connection and try again.",
+        ),
+      ).not.toBeInTheDocument(),
+    );
   });
 });
