@@ -88,6 +88,15 @@ describe("PieceList", () => {
       expect(screen.getByText("Gift")).toBeInTheDocument();
       expect(screen.getByText("Functional")).toBeInTheDocument();
     });
+
+    it("renders a piece card without tag chips when the piece has no tags", () => {
+      renderPieceList([makePiece({ tags: [] })]);
+      const pieceCard = screen.getByRole("navigation", { name: "Clay Bowl" });
+      expect(within(pieceCard).queryByText("Gift")).not.toBeInTheDocument();
+      expect(
+        within(pieceCard).queryByRole("button", { name: /\+\d+ more/i }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("with multiple pieces", () => {
@@ -372,6 +381,53 @@ describe("PieceList", () => {
       await waitFor(() => {
         expect(screen.queryByLabelText("Tags")).not.toBeInTheDocument();
       });
+    });
+
+    it("collapses piece tags behind an expand button when there are many", async () => {
+      const user = userEvent.setup();
+      renderPieceList([
+        makePiece({
+          tags: [
+            { id: "gift", name: "Gift", color: "#2A9D8F" },
+            { id: "sale", name: "For Sale", color: "#4FC3F7" },
+            { id: "sold", name: "Sold", color: "#F4A261" },
+            { id: "blue", name: "Blue", color: "#457B9D" },
+          ],
+        }),
+      ]);
+
+      expect(screen.getByText("Gift")).toBeInTheDocument();
+      expect(screen.getByText("For Sale")).toBeInTheDocument();
+      expect(screen.getByText("Sold")).toBeInTheDocument();
+      expect(screen.queryByText("Blue")).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "+1 more" }));
+
+      expect(screen.getByText("Blue")).toBeInTheDocument();
+    });
+
+    it("keeps currently filtered tags visible even when the list is collapsed", async () => {
+      const user = userEvent.setup();
+      renderPieceList([
+        makePiece({
+          id: "id-1",
+          name: "Bowl",
+          tags: [
+            { id: "gift", name: "Gift", color: "#2A9D8F" },
+            { id: "sale", name: "For Sale", color: "#4FC3F7" },
+            { id: "sold", name: "Sold", color: "#F4A261" },
+            { id: "blue", name: "Blue", color: "#457B9D" },
+          ],
+        }),
+      ]);
+
+      await user.click(screen.getByRole("button", { name: /show tags/i }));
+      await user.click(screen.getByLabelText("Tags"));
+      await user.click(screen.getByRole("option", { name: "Blue" }));
+      await user.keyboard("{Escape}");
+
+      const pieceCard = screen.getByRole("navigation", { name: "Bowl" });
+      expect(within(pieceCard).getByText("Blue")).toBeInTheDocument();
     });
   });
 });

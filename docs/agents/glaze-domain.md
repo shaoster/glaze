@@ -257,10 +257,17 @@ Name uniqueness for public globals is enforced with two conditional DB constrain
 - `POST /api/auth/google/` → Google OAuth 2.0 login via JWT credential
 - `GET /api/pieces/` → list of `PieceSummary`
 - `GET /api/pieces/<id>/` → `PieceDetail`
+- `GET /api/pieces/<id>/current_state/` → the current editable `PieceState` only
 - `POST /api/pieces/` → create a new piece (always starts in `designed` state; accepts `name`, optional `thumbnail`, and optional `notes`)
 - `POST /api/pieces/<id>/states/` → record a new state transition
 - `PATCH /api/pieces/<id>/` → update piece-level editable fields (currently location)
 - `PATCH /api/pieces/<id>/state/` → update current state's editable fields
+
+**Piece vs. current-state access pattern:**
+
+- Use `GET /api/pieces/<id>/` when the screen needs the whole piece aggregate: piece metadata, current state, and history together.
+- Use `GET /api/pieces/<id>/current_state/` when a child workflow editor owns only the editable current-state slice and does not need to refetch the parent `PieceDetail` payload or full history.
+- Do not introduce `GET /api/piece-states/<state_id>/` as a primary client access pattern. Past states are sealed history; the API surface should stay centered on the piece aggregate plus its single current editable state.
 - `GET /api/globals/<global_name>/` → for private-only globals returns only the user's private objects; for public globals returns the user's private objects union all public objects (`user=NULL`), sorted by display field. Each item includes `is_public: bool`. **`global_entries` is the canonical list endpoint for all global types — do not add a separate `/api/<global-name>/` list route.**
   - Models may opt in to richer GET responses by declaring a `filter_queryset(qs, request)` classmethod (for query-param filtering) and registering a serializer in `_GLOBAL_ENTRY_SERIALIZERS` in `api/views.py`. `GlazeCombination` uses both: it supports `?glaze_type_ids=`, `?is_food_safe=`, `?runs=`, `?highlights_grooves=`, `?is_different_on_white_and_brown_clay=` query params and returns additional fields (`test_tile_image`, filter booleans, `glaze_types` list, `is_favorite`).
 - `POST /api/globals/<global_name>/` → get-or-create a private record owned by the requesting user. For public globals, a private entry with the same name as a public entry is permitted — the two scopes are independent.

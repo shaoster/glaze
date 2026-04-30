@@ -128,6 +128,10 @@ function createDisplayTitle(globalName: string): string {
   return `Browse ${formatWorkflowFieldLabel(globalName)}s`;
 }
 
+function getVisibilityLabel(entry: GenericGlobalEntry): string {
+  return entry.is_public ? "Public" : "Private";
+}
+
 // One dialog handles both "pick an existing entry" and "create a new entry"
 // flows so every global-ref field can share the same behavior and tests.
 export default function GlobalEntryDialog({
@@ -558,7 +562,8 @@ export default function GlobalEntryDialog({
                       <Typography variant="body1" fontWeight="medium" noWrap>
                         {entry.name}
                       </Typography>
-                      {relatedFilterDefs.some((rf) => entry[rf.entryKey]) && (
+                      {(relatedFilterDefs.some((rf) => entry[rf.entryKey]) ||
+                        typeof entry.is_public === "boolean") && (
                         <Box
                           sx={{
                             display: "flex",
@@ -586,8 +591,12 @@ export default function GlobalEntryDialog({
                               />
                             );
                           })}
-                          {entry.is_public && (
-                            <Chip label="public" size="small" variant="outlined" />
+                          {typeof entry.is_public === "boolean" && (
+                            <Chip
+                              label={getVisibilityLabel(entry)}
+                              size="small"
+                              variant={entry.is_public ? "outlined" : "filled"}
+                            />
                           )}
                         </Box>
                       )}

@@ -140,6 +140,29 @@ describe("GlobalEntryDialog", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("shows whether matching entries are public or private", async () => {
+    vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
+      makeCombo({ id: "public-entry", name: "Studio White", is_public: true }),
+      makeCombo({ id: "private-entry", name: "Studio White", is_public: false }),
+    ]);
+
+    render(
+      <GlobalEntryDialog
+        globalName="glaze_combination"
+        open
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getAllByText("Studio White")).toHaveLength(2),
+    );
+
+    expect(screen.getByText("Public")).toBeInTheDocument();
+    expect(screen.getByText("Private")).toBeInTheDocument();
+  });
+
   it("toggles favorites from the browse tab", async () => {
     render(
       <GlobalEntryDialog

@@ -71,6 +71,35 @@ This is a Single Page Application (SPA). Routing is handled client-side via Reac
 - **Maximum JSX nesting depth of 4.** If a component's JSX tree would exceed 4 levels of element nesting, extract the deeper subtree into a named child component with typed props. This also sidesteps TypeScript narrowing limitations: instead of narrowing a `string | undefined` inside a callback nested in a ternary branch, pass the already-narrowed value as a `string` prop to a child component.
 - Before splitting a large component, decide what the new boundary owns. Good splits usually create either a pure presentational subtree or a child that owns a coherent slice of state and business logic. Bad splits mostly move JSX into another file while still threading parent-owned state and setters through every layer.
 
+## Local state shape
+
+- Prefer plain `useState` when the component has one or two independent fields and the update rules are obvious from the setter call site.
+- Migrate to `useReducer` when the local state behaves like a small state machine: several fields must change together, updates depend on the previous draft and the previous server snapshot, or multiple event sources can advance the same state differently.
+- A reducer is usually justified when you see any of these:
+  - More than two sibling `useState` values that conceptually form one draft or workflow.
+  - Repeated "if X changed, also patch Y and maybe reset Z" logic spread across handlers and effects.
+  - Async server responses racing with local user edits, especially when "hydrate from server unless the user already changed this field" rules appear.
+  - Effects that exist mostly to observe one piece of React state and synchronously push updates into another piece of React state.
+- Do not migrate to a reducer just because a component is long. If the state is simple and the complexity is mostly rendering, extract child components first.
+
+## Reducer migration checklist
+
+When migrating a drafty or workflow-heavy component from multiple setters to a reducer, check these explicitly:
+
+- Define the reducer around domain events, not UI implementation details. Good action names look like `hydrate`, `edit_notes`, `select_tag`, `save_succeeded`, `save_failed`.
+- Keep one authoritative draft object when the fields conceptually travel together. Avoid parallel `useState` values plus a reducer unless there is a clear ownership boundary.
+- Audit old observer-style `useEffect` code carefully. Effects that used to watch state and call sibling setters are often the reason to adopt a reducer in the first place.
+- Preserve the source-of-truth boundary. Derived values from props or server data should usually stay derived; the reducer should own the editable draft, not duplicate every computed value.
+- Be explicit about hydration semantics. Decide what happens when new server data arrives while the user has unsaved edits:
+  - replace everything
+  - merge only untouched fields
+  - ignore stale responses entirely
+- Cover async races in tests. Add at least one test where a local edit exists and a stale or partial upstream update arrives afterward.
+- Re-check dirty-state logic after the migration. Reducers often change object identity patterns, which can accidentally make "is dirty?" checks always true or always false.
+- Re-check autosave/manual-save triggers after the migration. Make sure the reducer did not introduce effect loops or duplicate saves.
+- Re-check lint pressure from `react-hooks/set-state-in-effect`. If an effect still exists after the migration, it should usually bridge React to an external system or dispatch a single domain event rather than synchronously juggling multiple local setters.
+- Re-check callback ownership. If you are tempted to "just dispatch in the async callback instead of in an effect," verify that the callback is the only path that can update the upstream data. If props can also change because of parent refreshes, route changes, optimistic rollbacks, or sibling saves, keep a prop-to-reducer synchronization path.
+
 ## Custom hooks
 
 Extract reusable logic into custom hooks rather than duplicating it across components. A `useAsync` hook is the idiomatic Axios-native pattern for managing loading/error/data state without a server-state library:

@@ -17,6 +17,38 @@ describe("TagChipList", () => {
     expect(screen.getByText("Gift")).toBeInTheDocument();
     expect(screen.getByText("For Sale")).toBeInTheDocument();
   });
+
+  it("collapses overflow and can expand hidden tags", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TagChipList
+        tags={[
+          ...TAGS,
+          { id: "sold", name: "Sold", color: "#F4A261" },
+          { id: "blue", name: "Blue", color: "#457B9D" },
+        ]}
+        maxVisible={2}
+      />,
+    );
+
+    expect(screen.getByText("Gift")).toBeInTheDocument();
+    expect(screen.getByText("For Sale")).toBeInTheDocument();
+    expect(screen.queryByText("Sold")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "+2 more" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "+2 more" }));
+
+    expect(screen.getByText("Sold")).toBeInTheDocument();
+    expect(screen.getByText("Blue")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show less" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Show less" }));
+
+    expect(screen.queryByText("Sold")).not.toBeInTheDocument();
+    expect(screen.queryByText("Blue")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "+2 more" })).toBeInTheDocument();
+  });
 });
 
 describe("TagAutocomplete", () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTheme } from "@mui/material";
 import {
@@ -19,7 +19,6 @@ import {
   updateCurrentState,
 } from "../util/api";
 import {
-  type ResolvedAdditionalField,
   getAdditionalFieldDefinitions,
 } from "../util/workflow";
 import { entryNameOrEmpty } from "../util/optionalValues";
@@ -27,134 +26,20 @@ import GlobalEntryField from "./GlobalEntryField";
 import AutosaveStatus from "./AutosaveStatus";
 import { useAutosave } from "./useAutosave";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
-
-export type ImageEntry = {
-  url: string;
-  caption: string;
-  cloudinary_public_id?: string | null;
-};
+import {
+  buildDraftState,
+  draftReducer,
+  normalizeAdditionalFieldPayload,
+} from "./workflowStateDraft";
 
 type WorkflowStateProps = {
-  pieceState: PieceState;
+  initialPieceState: PieceState;
   pieceId: string;
   onSaved: (updated: PieceDetail) => void;
   onDirtyChange?: (dirty: boolean) => void;
   autosaveDelayMs?: number;
 };
 
-type AdditionalFieldInputMap = Record<string, string>;
-type GlobalRefPkMap = Record<string, string>;
-
-// Global-ref objects always carry an id and name. Any object without a name
-// is not a valid global ref value — treat it as empty so callers receive a
-// typed contract rather than a runtime fallback.
-function formatAdditionalFieldValue(
-  value: unknown,
-  type: ResolvedAdditionalField["type"],
-): string {
-  if (value === null || value === undefined) {
-    return "";
-  }
-  if (typeof value === "object") {
-    const obj = value as Record<string, unknown>;
-    if (typeof obj.name === "string") {
-      return obj.name;
-    }
-    // Objects without a name field are not representable as a string input.
-    return "";
-  }
-  if (type === "boolean") {
-    return value ? "true" : "false";
-  }
-  return String(value);
-}
-
-function extractGlobalRefPk(value: unknown): string | undefined {
-  if (typeof value === "object" && value !== null && "id" in value) {
-    const id = (value as { id: unknown }).id;
-    return typeof id === "string" ? id : undefined;
-  }
-  return undefined;
-}
-
-function buildAdditionalFieldInputMap(
-  defs: ResolvedAdditionalField[],
-  values: Record<string, unknown>,
-): AdditionalFieldInputMap {
-  const map: AdditionalFieldInputMap = {};
-  defs.forEach((def) => {
-    map[def.name] = formatAdditionalFieldValue(values[def.name], def.type);
-  });
-  return map;
-}
-
-function buildGlobalRefPkMap(
-  defs: ResolvedAdditionalField[],
-  values: Record<string, unknown>,
-): GlobalRefPkMap {
-  const map: GlobalRefPkMap = {};
-  defs.forEach((def) => {
-    if (def.isGlobalRef) {
-      const pk = extractGlobalRefPk(values[def.name]);
-      if (pk) map[def.name] = pk;
-    }
-  });
-  return map;
-}
-
-function normalizeAdditionalFieldPayload(
-  defs: ResolvedAdditionalField[],
-  inputs: AdditionalFieldInputMap,
-  globalRefPks: GlobalRefPkMap,
-): Record<string, string | number | boolean | null> {
-  const payload: Record<string, string | number | boolean | null> = {};
-  defs.forEach((def) => {
-    if (def.isGlobalRef) {
-      const pk = globalRefPks[def.name];
-      payload[def.name] = pk || null;
-      return;
-    }
-    // buildAdditionalFieldInputMap initializes all def names, so `raw` is
-    // always a string here. Guard is defensive for future call sites.
-    const raw = inputs[def.name] ?? "";
-    const trimmed = raw.trim();
-    if (trimmed === "") {
-      return;
-    }
-    if (def.type === "integer") {
-      const parsed = parseInt(trimmed, 10);
-      if (!Number.isNaN(parsed)) {
-        payload[def.name] = parsed;
-      }
-      return;
-    }
-    if (def.type === "number") {
-      const parsed = Number(trimmed);
-      if (!Number.isNaN(parsed)) {
-        payload[def.name] = parsed;
-      }
-      return;
-    }
-    if (def.type === "boolean") {
-      if (trimmed === "true") {
-        payload[def.name] = true;
-      } else if (trimmed === "false") {
-        payload[def.name] = false;
-      }
-      return;
-    }
-    payload[def.name] = raw;
-  });
-  return payload;
-}
-
-function stateImages(pieceState: PieceState): ImageEntry[] {
-  return pieceState.images.map((img) => ({
-    url: img.url,
-    caption: img.caption,
-    cloudinary_public_id: img.cloudinary_public_id ?? null,
-  }));
-}
 
 // ── ImageUploader ─────────────────────────────────────────────────────────────
 
@@ -254,37 +139,24 @@ function ImageUploader({
 // ── WorkflowState ─────────────────────────────────────────────────────────────
 
 export default function WorkflowState({
-  pieceState,
+  initialPieceState,
   pieceId,
   onSaved,
   onDirtyChange,
   autosaveDelayMs,
 }: WorkflowStateProps) {
-  const [notes, setNotes] = useState(pieceState.notes);
-  const [images, setImages] = useState<ImageEntry[]>(stateImages(pieceState));
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [widgetLoading, setWidgetLoading] = useState(false);
+  const [draft, dispatch] = useReducer(
+    draftReducer,
+    initialPieceState,
+    buildDraftState,
+  );
+  const { baseState, notes, images, additionalFieldInputs, globalRefPks } = draft;
+  const baseDraft = useMemo(() => buildDraftState(baseState), [baseState]);
   const additionalFieldDefs = useMemo(
-    () => getAdditionalFieldDefinitions(pieceState.state),
-    [pieceState.state],
-  );
-  const baseDraft = useMemo(() => {
-    const additionalFields = pieceState.additional_fields ?? {};
-    return {
-      notes: pieceState.notes,
-      images: stateImages(pieceState),
-      additionalFieldInputs: buildAdditionalFieldInputMap(
-        additionalFieldDefs,
-        additionalFields,
-      ),
-      globalRefPks: buildGlobalRefPkMap(additionalFieldDefs, additionalFields),
-    };
-  }, [additionalFieldDefs, pieceState]);
-  const [additionalFieldInputs, setAdditionalFieldInputs] = useState(
-    baseDraft.additionalFieldInputs,
-  );
-  const [globalRefPks, setGlobalRefPks] = useState<GlobalRefPkMap>(
-    baseDraft.globalRefPks,
+    () => getAdditionalFieldDefinitions(baseState.state),
+    [baseState.state],
   );
   const normalizedAdditionalFields = useMemo(
     () =>
@@ -302,7 +174,7 @@ export default function WorkflowState({
         baseDraft.additionalFieldInputs,
         baseDraft.globalRefPks,
       ),
-    [additionalFieldDefs, baseDraft],
+    [additionalFieldDefs, baseDraft.additionalFieldInputs, baseDraft.globalRefPks],
   );
   const additionalFieldsDirty =
     JSON.stringify(normalizedAdditionalFields) !==
@@ -311,17 +183,10 @@ export default function WorkflowState({
   const theme = useTheme();
   const isMobileLayout = useMediaQuery(theme.breakpoints.down("sm"));
 
-  useEffect(() => {
-    setNotes(baseDraft.notes);
-    setImages(baseDraft.images);
-    setAdditionalFieldInputs(baseDraft.additionalFieldInputs);
-    setGlobalRefPks(baseDraft.globalRefPks);
-  }, [baseDraft]);
-
   const [savingImage, setSavingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
 
-  const isDirty = notes !== pieceState.notes || additionalFieldsDirty;
+  const isDirty = notes !== baseState.notes || additionalFieldsDirty;
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -334,13 +199,14 @@ export default function WorkflowState({
       additional_fields: normalizedAdditionalFields,
     };
     const result = await updateCurrentState(pieceId, payload);
+    dispatch({ type: "replace_base_state", pieceState: result.current_state });
     onSaved(result);
   }, [
+    pieceId,
     images,
     normalizedAdditionalFields,
     notes,
     onSaved,
-    pieceId,
   ]);
 
   const autosaveKey = useMemo(
@@ -460,7 +326,13 @@ export default function WorkflowState({
             images: [...images, newImage],
             additional_fields: normalizedAdditionalFields,
           })
-            .then(onSaved)
+            .then((result) => {
+              dispatch({
+                type: "replace_base_state",
+                pieceState: result.current_state,
+              });
+              onSaved(result);
+            })
             .catch(() =>
               setImageError("Failed to save image. Please try again."),
             )
@@ -472,7 +344,7 @@ export default function WorkflowState({
   }
 
   function handleFieldChange(name: string, value: string) {
-    setAdditionalFieldInputs((prev) => ({ ...prev, [name]: value }));
+    dispatch({ type: "set_additional_field", name, value });
   }
 
   return (
@@ -490,7 +362,7 @@ export default function WorkflowState({
         multiline
         minRows={3}
         value={notes}
-        onChange={(e) => setNotes(e.target.value)}
+        onChange={(e) => dispatch({ type: "set_notes", notes: e.target.value })}
         slotProps={{ htmlInput: { maxLength: 2000 } }}
         fullWidth
       />
@@ -533,15 +405,16 @@ export default function WorkflowState({
                     value={value}
                     onSelect={(entry) => {
                       handleFieldChange(field.name, entryNameOrEmpty(entry));
-                      setGlobalRefPks((prev) =>
-                        entry
-                          ? { ...prev, [field.name]: entry.id }
+                      dispatch({
+                        type: "set_global_ref_pks",
+                        globalRefPks: entry
+                          ? { ...globalRefPks, [field.name]: entry.id }
                           : Object.fromEntries(
-                              Object.entries(prev).filter(
+                              Object.entries(globalRefPks).filter(
                                 ([key]) => key !== field.name,
                               ),
                             ),
-                      );
+                      });
                     }}
                     canCreate={Boolean(field.canCreate)}
                     helperText={helperText}
