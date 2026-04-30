@@ -12,8 +12,15 @@ vi.mock("../..//util/useAsync", () => ({
 }));
 
 vi.mock("../../components/PieceList", () => ({
-  default: ({ pieces }: { pieces: PieceSummary[] }) => (
+  default: ({
+    pieces,
+    onNewPiece,
+  }: {
+    pieces: PieceSummary[];
+    onNewPiece?: () => void;
+  }) => (
     <div data-testid="piece-list">
+      {onNewPiece && <button onClick={onNewPiece}>New Piece</button>}
       {pieces.map((piece) => piece.name).join(", ")}
     </div>
   ),
@@ -165,8 +172,8 @@ describe("PieceListPage", () => {
 
     render(<PieceListPage />);
 
-    expect(
-      screen.getByRole("button", { name: "New Piece" }),
-    ).toBeInTheDocument();
+    // The FAB is the accessible button labeled "New Piece"
+    const newPieceButtons = screen.getAllByRole("button", { name: "New Piece" });
+    expect(newPieceButtons.length).toBeGreaterThanOrEqual(1);
   });
 });

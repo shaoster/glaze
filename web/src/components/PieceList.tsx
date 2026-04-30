@@ -1,9 +1,7 @@
 import { useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import Autocomplete from "@mui/material/Autocomplete";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import AddIcon from "@mui/icons-material/Add";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import LabelIcon from "@mui/icons-material/Label";
 import {
   Box,
   Button,
@@ -12,12 +10,15 @@ import {
   CardContent,
   CardHeader,
   Chip,
-  Collapse,
+  ClickAwayListener,
   Grid,
+  Paper,
+  Popper,
   Stack,
   TextField,
-  Typography,
+  useMediaQuery,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import type { PieceSummary, TagEntry } from "../util/types";
 import {
   formatState,
@@ -28,6 +29,7 @@ import {
 import CloudinaryImage from "./CloudinaryImage";
 import StateChip from "./StateChip";
 import TagAutocomplete from "./TagAutocomplete";
+import TagChip from "./TagChip";
 import TagChipList from "./TagChipList";
 import { DEFAULT_THUMBNAIL } from "./thumbnailConstants";
 
@@ -36,17 +38,6 @@ type FilterCategory = "wip" | "completed" | "discarded";
 interface FilterOption {
   value: FilterCategory;
   label: string;
-}
-
-interface SelectorPanelProps {
-  title: string;
-  expanded: boolean;
-  count: number;
-  emptyLabel: string;
-  icon: ReactNode;
-  onToggle: () => void;
-  summary: ReactNode;
-  children: ReactNode;
 }
 
 const FILTER_OPTIONS: FilterOption[] = [
@@ -64,104 +55,37 @@ function matchesFilter(piece: PieceSummary, filter: FilterCategory): boolean {
   return false;
 }
 
-function SelectorPanel({
-  title,
-  expanded,
-  count,
-  emptyLabel,
-  icon,
-  onToggle,
-  summary,
-  children,
-}: SelectorPanelProps) {
-  const compactSummary =
-    count > 0 ? (
-      <Box sx={{ minWidth: 0, flex: 1, overflow: "hidden" }}>{summary}</Box>
-    ) : (
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{ whiteSpace: "nowrap" }}
-      >
-        {emptyLabel}
-      </Typography>
-    );
+const ADD_BUTTON_BASE_SX = {
+  display: "inline-flex",
+  alignItems: "center",
+  background: "transparent",
+  border: "1px dashed",
+  borderColor: "divider",
+  cursor: "pointer",
+  color: "text.secondary",
+  fontFamily: "inherit",
+  flexShrink: 0,
+  "&:hover": { borderColor: "text.secondary" },
+} as const;
 
-  return (
-    <Box
-      sx={{
-        border: 1,
-        borderColor: "divider",
-        borderRadius: 2,
-        p: expanded ? 1.5 : 1,
-        backgroundColor: "background.paper",
-      }}
-    >
-      <Stack
-        direction="row"
-        spacing={1}
-        alignItems="center"
-        justifyContent="space-between"
-      >
-        <Stack
-          direction="row"
-          spacing={1}
-          alignItems="center"
-          sx={{
-            minWidth: 0,
-            flex: 1,
-            overflow: "hidden",
-          }}
-        >
-          {icon}
-          {count > 0 && (
-            <Chip
-              label={count}
-              size="small"
-              color="primary"
-              sx={{ flexShrink: 0 }}
-            />
-          )}
-          {expanded ? (
-            <Stack spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
-              {count > 0 ? (
-                <Box sx={{ minWidth: 0 }}>{summary}</Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  {emptyLabel}
-                </Typography>
-              )}
-            </Stack>
-          ) : (
-            compactSummary
-          )}
-        </Stack>
-        <Button
-          size="small"
-          variant="text"
-          sx={{ flexShrink: 0, minWidth: 0, px: 1 }}
-          onClick={onToggle}
-          aria-expanded={expanded}
-          aria-label={
-            expanded
-              ? `Hide ${title.toLowerCase()}`
-              : `Show ${title.toLowerCase()}`
-          }
-        >
-          <ExpandMoreIcon
-            sx={{
-              transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "transform 0.2s ease",
-            }}
-          />
-        </Button>
-      </Stack>
-      <Collapse in={expanded} unmountOnExit>
-        <Box sx={{ pt: 1.5 }}>{children}</Box>
-      </Collapse>
-    </Box>
-  );
-}
+// Matches MUI Chip size="small" pill shape (height 24px, borderRadius 12px)
+const ADD_FILTER_BUTTON_SX = {
+  ...ADD_BUTTON_BASE_SX,
+  px: "8px",
+  height: "24px",
+  borderRadius: "12px",
+  fontSize: "0.8125rem",
+} as const;
+
+// Matches TagChip shape (borderRadius 4px, caption font size)
+const ADD_TAG_BUTTON_SX = {
+  ...ADD_BUTTON_BASE_SX,
+  px: 1,
+  py: 0.25,
+  borderRadius: "4px",
+  fontSize: "0.75rem",
+  margin: "2px",
+} as const;
 
 type PieceListItemProps = {
   piece: PieceSummary;
@@ -236,14 +160,17 @@ const PieceListItem = (props: PieceListItemProps) => {
 
 type PieceListingProps = {
   pieces: PieceSummary[];
+  onNewPiece?: () => void;
 };
 
 const PieceList = (props: PieceListingProps) => {
-  const { pieces } = props;
+  const { pieces, onNewPiece } = props;
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [activeFilters, setActiveFilters] = useState<FilterCategory[]>([]);
   const [activeTags, setActiveTags] = useState<TagEntry[]>([]);
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [tagsExpanded, setTagsExpanded] = useState(false);
+  const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
+  const [tagAnchor, setTagAnchor] = useState<HTMLElement | null>(null);
 
   const activeFilterOptions = useMemo(
     () =>
@@ -280,82 +207,162 @@ const PieceList = (props: PieceListingProps) => {
       <Box
         sx={{
           mb: 2,
-          display: "grid",
-          gap: 1.5,
-          gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" },
-          alignItems: "start",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 0.75,
         }}
+        role="toolbar"
+        aria-label="Filters and tags"
       >
-        <SelectorPanel
-          title="Filters"
-          expanded={filtersExpanded}
-          count={activeFilterOptions.length}
-          emptyLabel="No status filters applied."
-          icon={<FilterListIcon fontSize="small" color="action" />}
-          onToggle={() => setFiltersExpanded((prev) => !prev)}
-          summary={
-            <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
-              {activeFilterOptions.map((option) => (
-                <Chip
-                  key={option.value}
-                  label={option.label}
-                  size="small"
-                  onDelete={() =>
-                    setActiveFilters((prev) =>
-                      prev.filter((value) => value !== option.value),
-                    )
-                  }
-                />
-              ))}
-            </Stack>
-          }
-        >
-          <Autocomplete
-            multiple
-            disableCloseOnSelect
+        {!isMobile && onNewPiece && (
+          <Button
+            variant="contained"
             size="small"
-            options={FILTER_OPTIONS}
-            value={activeFilterOptions}
-            onChange={(_event, nextValue) => {
-              setActiveFilters(nextValue.map((option) => option.value));
-            }}
-            getOptionLabel={(option) => option.label}
-            isOptionEqualToValue={(option, selected) =>
-              option.value === selected.value
-            }
-            renderTags={(selected, getTagProps) =>
-              selected.map((option, index) => (
-                <Chip
-                  {...getTagProps({ index })}
-                  key={option.value}
-                  label={option.label}
-                  size="small"
-                />
-              ))
-            }
-            renderInput={(params) => (
-              <TextField {...params} label="Filters" fullWidth />
-            )}
-          />
-        </SelectorPanel>
-        <SelectorPanel
-          title="Tags"
-          expanded={tagsExpanded}
-          count={activeTags.length}
-          emptyLabel="No tags selected."
-          icon={<LabelIcon fontSize="small" color="action" />}
-          onToggle={() => setTagsExpanded((prev) => !prev)}
-          summary={<TagChipList tags={activeTags} />}
+            startIcon={<AddIcon />}
+            onClick={onNewPiece}
+            sx={{ flexShrink: 0 }}
+          >
+            New Piece
+          </Button>
+        )}
+        <FilterListIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
+        {activeFilterOptions.length > 0 && (
+          <Stack
+            direction="row"
+            spacing={0.75}
+            useFlexGap
+            flexWrap="wrap"
+            alignItems="center"
+          >
+            {activeFilterOptions.map((option) => (
+              <Chip
+                key={option.value}
+                label={option.label}
+                size="small"
+                onDelete={() =>
+                  setActiveFilters((prev) =>
+                    prev.filter((value) => value !== option.value),
+                  )
+                }
+              />
+            ))}
+          </Stack>
+        )}
+
+        <Box
+          component="button"
+          type="button"
+          onClick={(e) => {
+            setTagAnchor(null);
+            setFilterAnchor(filterAnchor ? null : e.currentTarget);
+          }}
+          aria-label="Add status filter"
+          aria-expanded={!!filterAnchor}
+          sx={ADD_FILTER_BUTTON_SX}
         >
-          <TagAutocomplete
-            label="Tags"
-            options={availableTags}
-            value={activeTags}
-            onChange={setActiveTags}
-            sx={{ minWidth: 0 }}
-          />
-        </SelectorPanel>
+          + filter
+        </Box>
+
+        {activeTags.length > 0 && (
+          <Stack
+            direction="row"
+            spacing={0.75}
+            useFlexGap
+            flexWrap="wrap"
+            alignItems="center"
+          >
+            {activeTags.map((tag) => (
+              <TagChip
+                key={tag.id}
+                label={tag.name}
+                color={tag.color}
+                onDelete={() =>
+                  setActiveTags((prev) => prev.filter((t) => t.id !== tag.id))
+                }
+              />
+            ))}
+          </Stack>
+        )}
+
+        <Box
+          component="button"
+          type="button"
+          onClick={(e) => {
+            setFilterAnchor(null);
+            setTagAnchor(tagAnchor ? null : e.currentTarget);
+          }}
+          aria-label="Add tag filter"
+          aria-expanded={!!tagAnchor}
+          sx={ADD_TAG_BUTTON_SX}
+        >
+          + tag
+        </Box>
       </Box>
+
+      <Popper
+        open={!!filterAnchor}
+        anchorEl={filterAnchor}
+        placement="bottom-start"
+        style={{ zIndex: 1300 }}
+      >
+        <ClickAwayListener onClickAway={() => setFilterAnchor(null)}>
+          <Paper elevation={3} sx={{ p: 1.5, mt: 0.5, minWidth: 260 }}>
+            <Autocomplete
+              multiple
+              disableCloseOnSelect
+              size="small"
+              options={FILTER_OPTIONS}
+              value={activeFilterOptions}
+              onChange={(_event, nextValue) => {
+                setActiveFilters(nextValue.map((option) => option.value));
+              }}
+              getOptionLabel={(option) => option.label}
+              isOptionEqualToValue={(option, selected) =>
+                option.value === selected.value
+              }
+              renderTags={(selected, getTagProps) =>
+                selected.map((option, index) => (
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={option.value}
+                    label={option.label}
+                    size="small"
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Status filters"
+                  fullWidth
+                  autoFocus
+                />
+              )}
+            />
+          </Paper>
+        </ClickAwayListener>
+      </Popper>
+
+      <Popper
+        open={!!tagAnchor}
+        anchorEl={tagAnchor}
+        placement="bottom-start"
+        style={{ zIndex: 1300 }}
+      >
+        <ClickAwayListener onClickAway={() => setTagAnchor(null)}>
+          <Paper elevation={3} sx={{ p: 1.5, mt: 0.5, minWidth: 260 }}>
+            <TagAutocomplete
+              label="Tags"
+              options={availableTags}
+              value={activeTags}
+              onChange={setActiveTags}
+              sx={{ minWidth: 0 }}
+            />
+          </Paper>
+        </ClickAwayListener>
+      </Popper>
+
       <Grid container spacing={1} alignItems="stretch" role="rowgroup">
         {filteredPieces.map((piece) => (
           <PieceListItem
