@@ -1,4 +1,4 @@
-"""Tests for migrations 0025 and 0026: image field conversion and public_id backfill.
+"""Tests for migrations 0025–0027: image field conversion and Cloudinary backfills.
 
 Exercises the data-migration helper functions (url_to_json / json_to_url) in
 isolation so that broken edge-cases are caught without touching the real DB
@@ -9,13 +9,15 @@ running the migration through Django's executor, because:
 - Running the migration in reverse and forward again inside a test is fragile.
 - The helper functions are pure enough to unit-test directly.
 
-For end-to-end confidence we also test:
-- that the model correctly stores and retrieves dict values.
-- that the Cloudinary public_id extraction from legacy URLs works correctly.
+Migrations 0026 and 0027 have been reduced to no-ops (their backfills ran in
+all environments).  Their URL-parsing logic is preserved here as regression
+tests so the extraction rules are not silently broken in future.
 """
 
 import importlib
 import json
+import re
+from urllib.parse import urlparse
 
 from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
@@ -196,199 +198,95 @@ class TestImageFieldStorageRoundTrip(TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Migration 0026: backfill cloudinary_public_id where null
+# URL-parsing helpers used by migrations 0026 and 0027.
+# The migration files are now no-ops (backfills already ran in all envs).
+# These helpers are preserved here as regression tests.
 # ---------------------------------------------------------------------------
 
-_migration_0026 = importlib.import_module(
-    'api.migrations.0026_backfill_cloudinary_public_id'
-)
-_backfill = _migration_0026.backfill_public_ids
-_parse_public_id = _migration_0026._parse_cloudinary_public_id
+_CLOUDINARY_HOSTNAME = 'res.cloudinary.com'
+_TRANSFORM_RE = re.compile(r'^[a-z]{1,4}_')
+_VERSION_RE = re.compile(r'^v\d+$')
+
+
+def _parse_cloudinary_public_id(url: str) -> str | None:
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return None
+    if parsed.hostname != _CLOUDINARY_HOSTNAME:
+        return None
+    parts = parsed.path.split('/')
+    if len(parts) < 5 or parts[2] != 'image' or parts[3] != 'upload':
+        return None
+    after_upload = parts[4:]
+    i = 0
+    while i < len(after_upload) - 1 and (
+        _TRANSFORM_RE.match(after_upload[i]) or _VERSION_RE.match(after_upload[i])
+    ):
+        i += 1
+    public_id_parts = after_upload[i:]
+    if not public_id_parts:
+        return None
+    public_id_parts[-1] = re.sub(r'\.[^.]+$', '', public_id_parts[-1])
+    result = '/'.join(public_id_parts)
+    return result or None
+
+
+def _parse_cloud_name(url: str) -> str | None:
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return None
+    if parsed.hostname != _CLOUDINARY_HOSTNAME:
+        return None
+    parts = parsed.path.split('/')
+    if len(parts) < 4 or parts[2] != 'image' or parts[3] != 'upload':
+        return None
+    return parts[1] or None
 
 
 class TestParseCloudinaryPublicId:
-    """Unit tests for the public_id extractor in migration 0026."""
+    """Regression tests for the public_id extraction logic from migration 0026."""
 
     def test_extracts_public_id_without_version(self):
         url = 'https://res.cloudinary.com/demo/image/upload/glaze_prod/tile.jpg'
-        assert _parse_public_id(url) == 'glaze_prod/tile'
+        assert _parse_cloudinary_public_id(url) == 'glaze_prod/tile'
 
     def test_strips_version_segment(self):
         url = 'https://res.cloudinary.com/demo/image/upload/v1776802576/glaze_prod/img.jpg'
-        assert _parse_public_id(url) == 'glaze_prod/img'
+        assert _parse_cloudinary_public_id(url) == 'glaze_prod/img'
 
     def test_skips_transform_segments(self):
         url = 'https://res.cloudinary.com/demo/image/upload/f_auto/v123/folder/img.png'
-        assert _parse_public_id(url) == 'folder/img'
+        assert _parse_cloudinary_public_id(url) == 'folder/img'
 
     def test_heic_extension_stripped(self):
         url = 'https://res.cloudinary.com/demo/image/upload/v1/glaze_prod/photo.heic'
-        assert _parse_public_id(url) == 'glaze_prod/photo'
+        assert _parse_cloudinary_public_id(url) == 'glaze_prod/photo'
 
     def test_non_cloudinary_url_returns_none(self):
-        assert _parse_public_id('https://example.com/tile.jpg') is None
+        assert _parse_cloudinary_public_id('https://example.com/tile.jpg') is None
 
     def test_empty_string_returns_none(self):
-        assert _parse_public_id('') is None
+        assert _parse_cloudinary_public_id('') is None
 
     def test_svg_thumbnail_returns_none(self):
-        assert _parse_public_id('/thumbnails/mug.svg') is None
+        assert _parse_cloudinary_public_id('/thumbnails/mug.svg') is None
 
-
-class TestBackfillPublicIds(TestCase):
-    """Integration tests for the migration 0026 backfill function."""
-
-    def setUp(self):
-        User = get_user_model()
-        self.user = User.objects.create_user(username='test@test.com', password='pw')
-
-    def _make_schema_editor(self):
-        return _FakeSchemaEditor()
-
-    def test_backfills_null_public_id_in_piece_state_images(self):
-        url = 'https://res.cloudinary.com/mycloud/image/upload/v1776802576/glaze_prod/abc.jpg'
-        piece = Piece.objects.create(user=self.user, name='Test Piece')
-        ps = PieceState.objects.create(piece=piece, user=self.user, state=ENTRY_STATE)
-        PieceState.objects.filter(pk=ps.pk).update(images=[
-            {'url': url, 'cloudinary_public_id': None, 'cloud_name': 'mycloud', 'caption': ''}
-        ])
-
-        _backfill(django_apps, self._make_schema_editor())
-
-        ps.refresh_from_db()
-        assert ps.images[0]['cloudinary_public_id'] == 'glaze_prod/abc'
-
-    def test_does_not_overwrite_existing_public_id(self):
-        piece = Piece.objects.create(user=self.user, name='Piece2')
-        ps = PieceState.objects.create(piece=piece, user=self.user, state=ENTRY_STATE)
-        PieceState.objects.filter(pk=ps.pk).update(images=[
-            {'url': 'https://res.cloudinary.com/c/image/upload/v1/folder/img.jpg',
-             'cloudinary_public_id': 'explicit_id', 'cloud_name': 'c', 'caption': ''}
-        ])
-
-        _backfill(django_apps, self._make_schema_editor())
-
-        ps.refresh_from_db()
-        assert ps.images[0]['cloudinary_public_id'] == 'explicit_id'
-
-    def test_backfills_null_public_id_in_piece_thumbnail(self):
-        url = 'https://res.cloudinary.com/mycloud/image/upload/v1/glaze_prod/thumb.jpg'
-        piece = Piece.objects.create(user=self.user, name='Piece3')
-        Piece.objects.filter(pk=piece.pk).update(thumbnail={
-            'url': url, 'cloudinary_public_id': None, 'cloud_name': 'mycloud'
-        })
-
-        _backfill(django_apps, self._make_schema_editor())
-
-        piece.refresh_from_db()
-        assert piece.thumbnail['cloudinary_public_id'] == 'glaze_prod/thumb'
-
-    def test_backfills_null_public_id_in_glaze_type_image(self):
-        url = 'https://res.cloudinary.com/mycloud/image/upload/v1/glaze_prod/tile.jpg'
-        gt = GlazeType.objects.create(
-            user=None, name='BackfillTest',
-            test_tile_image={'url': url, 'cloudinary_public_id': None, 'cloud_name': 'mycloud'},
-        )
-
-        _backfill(django_apps, self._make_schema_editor())
-
-        gt.refresh_from_db()
-        assert gt.test_tile_image['cloudinary_public_id'] == 'glaze_prod/tile'
-
-    def test_heic_url_gets_correct_public_id(self):
-        url = 'https://res.cloudinary.com/mycloud/image/upload/v1/glaze_prod/photo.heic'
-        piece = Piece.objects.create(user=self.user, name='Piece4')
-        Piece.objects.filter(pk=piece.pk).update(thumbnail={
-            'url': url, 'cloudinary_public_id': None, 'cloud_name': 'mycloud'
-        })
-
-        _backfill(django_apps, self._make_schema_editor())
-
-        piece.refresh_from_db()
-        assert piece.thumbnail['cloudinary_public_id'] == 'glaze_prod/photo'
-
-
-# ---------------------------------------------------------------------------
-# Migration 0027: backfill cloud_name where missing
-# ---------------------------------------------------------------------------
-
-_migration_0027 = importlib.import_module(
-    'api.migrations.0027_backfill_cloud_name'
-)
-_backfill_cloud_names = _migration_0027.backfill_cloud_names
-_parse_cloud_name_0027 = _migration_0027._parse_cloud_name
+    def test_folder_segment_not_mistaken_for_transform(self):
+        url = 'https://res.cloudinary.com/demo/image/upload/glaze_prod/abc.jpg'
+        assert _parse_cloudinary_public_id(url) == 'glaze_prod/abc'
 
 
 class TestParseCloudName:
-    """Unit tests for the cloud_name extractor in migration 0027."""
+    """Regression tests for the cloud_name extraction logic from migration 0027."""
 
     def test_extracts_cloud_name(self):
         url = 'https://res.cloudinary.com/mycloud/image/upload/v1/folder/img.jpg'
-        assert _parse_cloud_name_0027(url) == 'mycloud'
+        assert _parse_cloud_name(url) == 'mycloud'
 
     def test_returns_none_for_non_cloudinary(self):
-        assert _parse_cloud_name_0027('https://example.com/img.jpg') is None
+        assert _parse_cloud_name('https://example.com/img.jpg') is None
 
     def test_returns_none_for_empty_string(self):
-        assert _parse_cloud_name_0027('') is None
-
-
-class TestBackfillCloudNames(TestCase):
-    """Integration tests for the migration 0027 backfill function."""
-
-    def setUp(self):
-        User = get_user_model()
-        self.user = User.objects.create_user(username='test27@test.com', password='pw')
-
-    def _make_schema_editor(self):
-        return _FakeSchemaEditor()
-
-    def test_backfills_missing_cloud_name_in_piece_state_images(self):
-        url = 'https://res.cloudinary.com/mycloud27/image/upload/v1/glaze_prod/abc.jpg'
-        piece = Piece.objects.create(user=self.user, name='Piece27A')
-        ps = PieceState.objects.create(piece=piece, user=self.user, state=ENTRY_STATE)
-        PieceState.objects.filter(pk=ps.pk).update(images=[
-            {'url': url, 'cloudinary_public_id': 'glaze_prod/abc', 'caption': ''}
-        ])
-
-        _backfill_cloud_names(django_apps, self._make_schema_editor())
-
-        ps.refresh_from_db()
-        assert ps.images[0]['cloud_name'] == 'mycloud27'
-
-    def test_does_not_overwrite_existing_cloud_name(self):
-        url = 'https://res.cloudinary.com/mycloud27/image/upload/v1/glaze_prod/abc.jpg'
-        piece = Piece.objects.create(user=self.user, name='Piece27B')
-        ps = PieceState.objects.create(piece=piece, user=self.user, state=ENTRY_STATE)
-        PieceState.objects.filter(pk=ps.pk).update(images=[
-            {'url': url, 'cloudinary_public_id': 'glaze_prod/abc', 'cloud_name': 'explicit', 'caption': ''}
-        ])
-
-        _backfill_cloud_names(django_apps, self._make_schema_editor())
-
-        ps.refresh_from_db()
-        assert ps.images[0]['cloud_name'] == 'explicit'
-
-    def test_backfills_missing_cloud_name_in_piece_thumbnail(self):
-        url = 'https://res.cloudinary.com/mycloud27/image/upload/v1/glaze_prod/thumb.jpg'
-        piece = Piece.objects.create(user=self.user, name='Piece27C')
-        Piece.objects.filter(pk=piece.pk).update(thumbnail={
-            'url': url, 'cloudinary_public_id': 'glaze_prod/thumb'
-        })
-
-        _backfill_cloud_names(django_apps, self._make_schema_editor())
-
-        piece.refresh_from_db()
-        assert piece.thumbnail['cloud_name'] == 'mycloud27'
-
-    def test_does_not_overwrite_existing_thumbnail_cloud_name(self):
-        url = 'https://res.cloudinary.com/mycloud27/image/upload/v1/glaze_prod/thumb.jpg'
-        piece = Piece.objects.create(user=self.user, name='Piece27D')
-        Piece.objects.filter(pk=piece.pk).update(thumbnail={
-            'url': url, 'cloudinary_public_id': 'glaze_prod/thumb', 'cloud_name': 'original'
-        })
-
-        _backfill_cloud_names(django_apps, self._make_schema_editor())
-
-        piece.refresh_from_db()
-        assert piece.thumbnail['cloud_name'] == 'original'
+        assert _parse_cloud_name('') is None
