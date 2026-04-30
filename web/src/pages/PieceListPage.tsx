@@ -2,7 +2,6 @@ import { useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import {
   Box,
-  Button,
   CircularProgress,
   Fab,
   Typography,
@@ -32,7 +31,7 @@ export default function PieceListPage() {
 
   return (
     <>
-      {isMobile ? (
+      {isMobile && (
         <Fab
           color="primary"
           aria-label="New Piece"
@@ -46,16 +45,6 @@ export default function PieceListPage() {
         >
           <AddIcon />
         </Fab>
-      ) : (
-        <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setDialogOpen(true)}
-          >
-            New Piece
-          </Button>
-        </Box>
       )}
       {loading && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
@@ -63,7 +52,12 @@ export default function PieceListPage() {
         </Box>
       )}
       {error && <Typography color="error">Failed to load pieces.</Typography>}
-      {!loading && !error && <PieceList pieces={pieces ?? []} />}
+      {!loading && !error && (
+        <PieceList
+          pieces={pieces ?? []}
+          onNewPiece={() => setDialogOpen(true)}
+        />
+      )}
       <NewPieceDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}

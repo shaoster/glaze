@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 import Autocomplete from "@mui/material/Autocomplete";
+import AddIcon from "@mui/icons-material/Add";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import {
   Box,
+  Button,
   Card,
   CardActionArea,
   CardContent,
@@ -13,7 +16,9 @@ import {
   Popper,
   Stack,
   TextField,
+  useMediaQuery,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import type { PieceSummary, TagEntry } from "../util/types";
 import {
   formatState,
@@ -155,10 +160,13 @@ const PieceListItem = (props: PieceListItemProps) => {
 
 type PieceListingProps = {
   pieces: PieceSummary[];
+  onNewPiece?: () => void;
 };
 
 const PieceList = (props: PieceListingProps) => {
-  const { pieces } = props;
+  const { pieces, onNewPiece } = props;
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [activeFilters, setActiveFilters] = useState<FilterCategory[]>([]);
   const [activeTags, setActiveTags] = useState<TagEntry[]>([]);
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
@@ -207,6 +215,18 @@ const PieceList = (props: PieceListingProps) => {
         role="toolbar"
         aria-label="Filters and tags"
       >
+        {!isMobile && onNewPiece && (
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={onNewPiece}
+            sx={{ flexShrink: 0 }}
+          >
+            New Piece
+          </Button>
+        )}
+        <FilterListIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
         {activeFilterOptions.length > 0 && (
           <Stack
             direction="row"
