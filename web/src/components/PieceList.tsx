@@ -24,6 +24,7 @@ import {
 import CloudinaryImage from "./CloudinaryImage";
 import StateChip from "./StateChip";
 import TagAutocomplete from "./TagAutocomplete";
+import TagChip from "./TagChip";
 import TagChipList from "./TagChipList";
 import { DEFAULT_THUMBNAIL } from "./thumbnailConstants";
 
@@ -49,22 +50,36 @@ function matchesFilter(piece: PieceSummary, filter: FilterCategory): boolean {
   return false;
 }
 
-const DASHED_BUTTON_SX = {
+const ADD_BUTTON_BASE_SX = {
   display: "inline-flex",
   alignItems: "center",
-  gap: 0.5,
-  px: 1,
-  py: 0.375,
   background: "transparent",
   border: "1px dashed",
   borderColor: "divider",
-  borderRadius: "4px",
   cursor: "pointer",
   color: "text.secondary",
   fontFamily: "inherit",
-  fontSize: "0.75rem",
   flexShrink: 0,
   "&:hover": { borderColor: "text.secondary" },
+} as const;
+
+// Matches MUI Chip size="small" pill shape (height 24px, borderRadius 12px)
+const ADD_FILTER_BUTTON_SX = {
+  ...ADD_BUTTON_BASE_SX,
+  px: "8px",
+  height: "24px",
+  borderRadius: "12px",
+  fontSize: "0.8125rem",
+} as const;
+
+// Matches TagChip shape (borderRadius 4px, caption font size)
+const ADD_TAG_BUTTON_SX = {
+  ...ADD_BUTTON_BASE_SX,
+  px: 1,
+  py: 0.25,
+  borderRadius: "4px",
+  fontSize: "0.75rem",
+  margin: "2px",
 } as const;
 
 type PieceListItemProps = {
@@ -224,7 +239,7 @@ const PieceList = (props: PieceListingProps) => {
           }}
           aria-label="Add status filter"
           aria-expanded={!!filterAnchor}
-          sx={DASHED_BUTTON_SX}
+          sx={ADD_FILTER_BUTTON_SX}
         >
           + filter
         </Box>
@@ -238,10 +253,10 @@ const PieceList = (props: PieceListingProps) => {
             alignItems="center"
           >
             {activeTags.map((tag) => (
-              <Chip
+              <TagChip
                 key={tag.id}
                 label={tag.name}
-                size="small"
+                color={tag.color}
                 onDelete={() =>
                   setActiveTags((prev) => prev.filter((t) => t.id !== tag.id))
                 }
@@ -259,7 +274,7 @@ const PieceList = (props: PieceListingProps) => {
           }}
           aria-label="Add tag filter"
           aria-expanded={!!tagAnchor}
-          sx={DASHED_BUTTON_SX}
+          sx={ADD_TAG_BUTTON_SX}
         >
           + tag
         </Box>
