@@ -354,8 +354,10 @@ js_library(
 js_library(
     name = "piece_photo_gallery_src",
     srcs = [
+        "src/components/DeletePiecePhotoDialog.tsx",
+        "src/components/PiecePhotoGalleryFooter.tsx",
+        "src/components/PiecePhotoGalleryGrid.tsx",
         "src/components/PiecePhotoGallery.tsx",
-        "src/components/pieceDetailFields.ts",
     ],
     deps = [
         ":cloudinary_image_src",
@@ -405,7 +407,6 @@ js_library(
     srcs = [
         "src/components/NavigationBlocker.tsx",
         "src/components/PieceDetail.tsx",
-        "src/components/pieceDetailFields.ts",
     ],
     deps = [
         ":autosave_src",

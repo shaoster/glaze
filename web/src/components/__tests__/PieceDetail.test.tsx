@@ -11,7 +11,7 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceDetail from "../PieceDetail";
-import { normalizeFields } from "../pieceDetailFields";
+import { normalizeFields } from "../../util/normalizeWorkflowFields";
 import type {
   PieceDetail as PieceDetailType,
   PieceState,
