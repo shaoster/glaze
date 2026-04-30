@@ -156,6 +156,19 @@ py_test(
 )
 
 py_test(
+    name = "api_coverage_test",
+    size = "medium",
+    srcs = _CONFTEST + [
+        "tests/test_coverage_improvements.py",
+    ],
+    args = ["api/tests/test_coverage_improvements.py"],
+    data = _TEST_DATA,
+    env = _TEST_ENV,
+    main = "//tools:pytest_main.py",
+    deps = _TEST_DEPS,
+)
+
+py_test(
     name = "api_glaze_test",
     size = "medium",
     srcs = _CONFTEST + [
@@ -242,6 +255,7 @@ test_suite(
     tests = [
         ":api_admin_test",
         ":api_auth_test",
+        ":api_coverage_test",
         ":api_glaze_test",
         ":api_model_test",
         ":api_piece_test",
