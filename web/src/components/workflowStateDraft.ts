@@ -96,6 +96,8 @@ export function normalizeAdditionalFieldPayload(
       payload[def.name] = pk || null;
       return;
     }
+    // buildDraftState populates every known field name, but this helper is
+    // exported and can still be called with a sparse runtime map.
     const raw = inputs[def.name] ?? "";
     const trimmed = raw.trim();
     if (trimmed === "") {

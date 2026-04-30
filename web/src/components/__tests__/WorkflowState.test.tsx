@@ -8,7 +8,12 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import WorkflowState from "../WorkflowState";
-import { buildDraftState, draftReducer } from "../workflowStateDraft";
+import type { ResolvedAdditionalField } from "../../util/workflow";
+import {
+  buildDraftState,
+  draftReducer,
+  normalizeAdditionalFieldPayload,
+} from "../workflowStateDraft";
 import type { PieceState, PieceDetail } from "../../util/types";
 import * as api from "../../util/api";
 
@@ -323,6 +328,95 @@ describe("WorkflowState", () => {
       expect.objectContaining({ kiln_location: "Kiln A" }),
     );
     expect(draft.globalRefPks).toEqual({ kiln_location: "loc-1" });
+  });
+
+  it("buildDraftState ignores non-string objects for inline fields", () => {
+    const draft = buildDraftState(
+      makeState({
+        state: "bisque_fired",
+        additional_fields: {
+          kiln_temperature_c: { bad: "shape" },
+          cone: { name: 4 },
+        } as PieceState["additional_fields"],
+      }),
+    );
+    expect(draft.additionalFieldInputs).toEqual({
+      kiln_temperature_c: "",
+      cone: "",
+    });
+  });
+
+  it("normalizeAdditionalFieldPayload trims and parses boolean strings", () => {
+    const defs: ResolvedAdditionalField[] = [
+      {
+        name: "food_safe",
+        label: "Food Safe",
+        type: "boolean",
+        required: false,
+        isGlobalRef: false,
+        isStateRef: false,
+      },
+    ];
+    expect(
+      normalizeAdditionalFieldPayload(
+        defs,
+        {
+          food_safe: " true ",
+        },
+        {},
+      ),
+    ).toEqual({ food_safe: true });
+    expect(
+      normalizeAdditionalFieldPayload(
+        defs,
+        {
+          food_safe: "false",
+        },
+        {},
+      ),
+    ).toEqual({ food_safe: false });
+  });
+
+  it("normalizeAdditionalFieldPayload drops NaN integers and numbers", () => {
+    const defs: ResolvedAdditionalField[] = [
+      {
+        name: "kiln_temperature_c",
+        label: "Kiln Temperature C",
+        type: "integer",
+        required: false,
+        isGlobalRef: false,
+        isStateRef: false,
+      },
+    ];
+    expect(
+      normalizeAdditionalFieldPayload(
+        defs,
+        {
+          kiln_temperature_c: "twelve hundred",
+        },
+        {},
+      ),
+    ).toEqual({});
+
+    const numberDefs: ResolvedAdditionalField[] = [
+      {
+        name: "clay_weight_lbs",
+        label: "Clay Weight Lbs",
+        type: "number",
+        required: false,
+        isGlobalRef: false,
+        isStateRef: false,
+      },
+    ];
+    expect(
+      normalizeAdditionalFieldPayload(
+        numberDefs,
+        {
+          clay_weight_lbs: "not-a-number",
+        },
+        {},
+      ),
+    ).toEqual({});
   });
 
   it("draftReducer throws on an unhandled action", () => {
