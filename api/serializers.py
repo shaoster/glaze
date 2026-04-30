@@ -53,11 +53,10 @@ from .models import (
     Location,
     Piece,
     PieceState,
-    Tag,
     UserProfile,
     models,
 )
-from .registry import global_entry_serializer
+from .serializer_registry import _GLOBAL_ENTRY_SERIALIZERS, global_entry_serializer
 from .utils import get_or_create_location
 from .workflow import (
     ENTRY_STATE,
@@ -90,7 +89,12 @@ def add_tags(model_cls: type[models.Model]):
         cls_any.Meta.fields.append("tags")
         cls_any._declared_fields["tags"] = serializers.SerializerMethodField()
 
-        @extend_schema_field(TagEntrySerializer(many=True))
+        # _register_globals() has already populated _GLOBAL_ENTRY_SERIALIZERS with
+        # the auto-generated Tag serializer by the time this decorator runs.
+        tag_model = apps.get_model("api", "Tag")
+        tag_entry_cls = _GLOBAL_ENTRY_SERIALIZERS.get(tag_model, serializers.Serializer)
+
+        @extend_schema_field(tag_entry_cls(many=True))
         def get_tags(self, obj: models.Model):
             return _serialize_tags(obj, f"{model_cls._meta.model_name}tag")
 
@@ -115,24 +119,6 @@ class FiringTemperatureRefSerializer(serializers.ModelSerializer):
     class Meta:
         model = FiringTemperature
         fields = ["id", "name", "cone", "temperature_c", "atmosphere"]
-
-
-@global_entry_serializer(Tag)
-class TagEntrySerializer(serializers.ModelSerializer):
-    id = serializers.SerializerMethodField()
-    is_public = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Tag
-        fields = ["id", "name", "color", "is_public"]
-
-    @extend_schema_field(serializers.CharField())
-    def get_id(self, obj: Tag) -> str:
-        return str(obj.pk)
-
-    @extend_schema_field(serializers.BooleanField())
-    def get_is_public(self, obj: Tag) -> bool:
-        return obj.user_id is None
 
 
 @global_entry_serializer(GlazeCombination)

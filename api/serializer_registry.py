@@ -1,6 +1,6 @@
-"""App-level registries for global domain types.
+"""Registry mapping global model classes to their list-entry serializers.
 
-Keeping these in a neutral module avoids circular imports — registry.py
+Keeping this in a neutral module avoids circular imports — serializer_registry.py
 imports nothing from the rest of the app, so models, serializers, and views
 can all import from here without creating cycles.
 """
@@ -19,9 +19,6 @@ def global_entry_serializer(model_cls: type[django_models.Model]):
     shape for a global's list endpoint.  The make_global_entry_view factory in
     views.py reads this registry to choose the correct extend_schema annotation
     and serializer at URL registration time.
-
-    For globals that declare taggable: true, this decorator also adds a tags field
-    to the serializer, populated with the model's tags in {id, name, color}
 
     Usage::
 

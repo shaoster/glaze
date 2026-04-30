@@ -21,6 +21,7 @@ from .model_factories import (
     make_simple_global_model,
     make_taggable_model,
 )
+from .serializer_factories import make_global_entry_serializer
 from .workflow import (
     ENTRY_STATE as ENTRY_STATE,
 )
@@ -81,6 +82,7 @@ def _register_globals():
             ns[through_model_name] = through
         else:
             ns[model_name] = make_simple_global_model(global_name)
+        make_global_entry_serializer(global_name, ns[model_name])
         if is_favoritable_global(global_name):
             fav = make_favorite_model(global_name)
             ns[fav.__name__] = fav
