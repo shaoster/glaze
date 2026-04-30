@@ -33,7 +33,7 @@ from api.models import Piece, PieceState
 
 
 _CLOUDINARY_HOSTNAME = 'res.cloudinary.com'
-_TRANSFORM_RE = re.compile(r'^[a-z][a-z0-9]*_')
+_TRANSFORM_RE = re.compile(r'^[a-z]{1,4}_')
 _VERSION_RE = re.compile(r'^v\d+$')
 
 

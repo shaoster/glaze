@@ -18,7 +18,10 @@ from django.db import migrations
 
 
 _CLOUDINARY_HOSTNAME = 'res.cloudinary.com'
-_TRANSFORM_RE = re.compile(r'^[a-z][a-z0-9]*_')
+# Cloudinary transform keys are always 1–4 lowercase letters (e.g. f, w, dpr, fl).
+# Using {1,4} prevents folder segments like "glaze_prod" (5-char prefix) from
+# being misidentified as transforms.
+_TRANSFORM_RE = re.compile(r'^[a-z]{1,4}_')
 _VERSION_RE = re.compile(r'^v\d+$')
 
 
