@@ -35,7 +35,7 @@ CLOUDINARY_URL = (
     'https://res.cloudinary.com/demo-cloud/image/upload'
     '/v1776304349/glaze-public/tile.heic'
 )
-EXPECTED_PUBLIC_ID = 'glaze-public/tile'
+EXPECTED_PUBLIC_ID = 'v1776304349/glaze-public/tile'
 
 
 class TestExtractPublicId:
@@ -45,6 +45,14 @@ class TestExtractPublicId:
     def test_extracts_public_id_without_version_segment(self):
         url = 'https://res.cloudinary.com/demo/image/upload/glaze-public/tile.jpg'
         assert _extract_public_id(url) == 'glaze-public/tile'
+
+    def test_skips_transform_segments(self):
+        url = 'https://res.cloudinary.com/demo/image/upload/f_auto/w_100/glaze/tile.jpg'
+        assert _extract_public_id(url) == 'glaze/tile'
+
+    def test_skips_mixed_transforms_before_versioned_public_id(self):
+        url = 'https://res.cloudinary.com/demo/image/upload/f_auto/v123/folder/img.png'
+        assert _extract_public_id(url) == 'v123/folder/img'
 
     def test_returns_none_for_non_cloudinary_url(self):
         assert _extract_public_id('https://example.com/image.jpg') is None
@@ -104,7 +112,7 @@ class TestUrlToJsonDataMigration(TestCase):
         combo = GlazeCombination.objects.create(
             user=None,
             name='Celadon!Shino',
-            test_tile_image={'url': CLOUDINARY_URL, 'cloudinary_public_id': EXPECTED_PUBLIC_ID},
+            test_tile_image={'url': CLOUDINARY_URL, 'cloudinary_public_id': 'glaze-public/tile'},
         )
         _json_to_url(django_apps, self.schema_editor)
         combo.refresh_from_db()

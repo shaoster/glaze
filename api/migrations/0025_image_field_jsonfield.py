@@ -11,16 +11,45 @@ Reverse direction: convert dicts back to bare URL strings and revert the field t
 
 import json
 import re
+from urllib.parse import urlparse
 
 from django.db import migrations, models
 
 
-_PUBLIC_ID_RE = re.compile(r'/image/upload/(?:v\d+/)?(.+?)(?:\.[^./]+)?$')
+_CLOUDINARY_HOSTNAME = 'res.cloudinary.com'
+_TRANSFORM_RE = re.compile(r'^[a-z][a-z0-9]*_')
 
 
 def _extract_public_id(url: str) -> str | None:
-    m = _PUBLIC_ID_RE.search(url)
-    return m.group(1) if m else None
+    """Extract the Cloudinary public_id from a delivery URL.
+
+    Mirrors the parseCloudinaryUrl logic in CloudinaryImage.tsx:
+    skips Cloudinary transform segments (e.g. f_auto, w_100, c_fill)
+    that precede the public_id, then strips the file extension from
+    the last path segment.
+    """
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return None
+    if parsed.hostname != _CLOUDINARY_HOSTNAME:
+        return None
+    # pathname: /{cloudName}/image/upload/{...rest}
+    parts = parsed.path.split('/')
+    if len(parts) < 5 or parts[2] != 'image' or parts[3] != 'upload':
+        return None
+    after_upload = parts[4:]
+    # Skip leading transform segments (e.g. f_auto, w_100, c_fill, q_auto).
+    i = 0
+    while i < len(after_upload) - 1 and _TRANSFORM_RE.match(after_upload[i]):
+        i += 1
+    public_id_parts = after_upload[i:]
+    if not public_id_parts:
+        return None
+    # Strip file extension from the last segment.
+    public_id_parts[-1] = re.sub(r'\.[^.]+$', '', public_id_parts[-1])
+    result = '/'.join(public_id_parts)
+    return result if result else None
 
 
 def url_to_json(apps, schema_editor):
