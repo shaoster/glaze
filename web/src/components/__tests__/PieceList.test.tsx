@@ -88,6 +88,15 @@ describe("PieceList", () => {
       expect(screen.getByText("Gift")).toBeInTheDocument();
       expect(screen.getByText("Functional")).toBeInTheDocument();
     });
+
+    it("renders a piece card without tag chips when the piece has no tags", () => {
+      renderPieceList([makePiece({ tags: [] })]);
+      const pieceCard = screen.getByRole("navigation", { name: "Clay Bowl" });
+      expect(within(pieceCard).queryByText("Gift")).not.toBeInTheDocument();
+      expect(
+        within(pieceCard).queryByRole("button", { name: /\+\d+ more/i }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("with multiple pieces", () => {

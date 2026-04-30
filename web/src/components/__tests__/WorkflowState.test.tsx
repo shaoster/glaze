@@ -217,7 +217,7 @@ function makePieceDetail(overrides: Partial<PieceDetail> = {}): PieceDetail {
 }
 
 const defaultProps = {
-  pieceState: makeState(),
+  initialPieceState: makeState(),
   pieceId: "test-piece-id",
   onSaved: vi.fn(),
   onDirtyChange: vi.fn(),
@@ -328,7 +328,7 @@ describe("WorkflowState", () => {
       },
     });
     await act(async () => {
-      render(<WorkflowState {...defaultProps} pieceState={bisqueState} />);
+      render(<WorkflowState {...defaultProps} initialPieceState={bisqueState} />);
     });
     const tempInput = screen.getByLabelText("Kiln Temperature C");
     expect(tempInput).toBeInTheDocument();
@@ -345,7 +345,7 @@ describe("WorkflowState", () => {
       },
     });
     await act(async () => {
-      render(<WorkflowState {...defaultProps} pieceState={trimmedState} />);
+      render(<WorkflowState {...defaultProps} initialPieceState={trimmedState} />);
     });
     expect(screen.getByLabelText("Trimmed Weight Lbs")).toHaveValue(900);
     expect(screen.getByLabelText("Pre-trim Weight Lbs")).toHaveValue(1200);
@@ -357,7 +357,7 @@ describe("WorkflowState", () => {
       additional_fields: { pre_trim_weight_lbs: 1200 },
     });
     await act(async () => {
-      render(<WorkflowState {...defaultProps} pieceState={trimmedState} />);
+      render(<WorkflowState {...defaultProps} initialPieceState={trimmedState} />);
     });
     expect(screen.getByLabelText("Pre-trim Weight Lbs")).toBeDisabled();
   });
@@ -368,7 +368,7 @@ describe("WorkflowState", () => {
       additional_fields: { trimmed_weight_lbs: 900 },
     });
     await act(async () => {
-      render(<WorkflowState {...defaultProps} pieceState={trimmedState} />);
+      render(<WorkflowState {...defaultProps} initialPieceState={trimmedState} />);
     });
     expect(screen.getByLabelText("Trimmed Weight Lbs")).not.toBeDisabled();
   });
@@ -381,7 +381,7 @@ describe("WorkflowState", () => {
       state: "submitted_to_bisque_fire",
       additional_fields: { kiln_location: "" },
     });
-    render(<WorkflowState {...defaultProps} pieceState={globalState} />);
+    render(<WorkflowState {...defaultProps} initialPieceState={globalState} />);
     await userEvent.click(
       screen.getByRole("button", { name: "Browse Kiln Location" }),
     );
@@ -403,7 +403,7 @@ describe("WorkflowState", () => {
       state: "submitted_to_bisque_fire",
       additional_fields: { kiln_location: "" },
     });
-    render(<WorkflowState {...defaultProps} pieceState={globalState} />);
+    render(<WorkflowState {...defaultProps} initialPieceState={globalState} />);
     await userEvent.click(
       screen.getByRole("button", { name: "Browse Kiln Location" }),
     );
@@ -430,7 +430,7 @@ describe("WorkflowState", () => {
       state: "submitted_to_bisque_fire",
       additional_fields: { kiln_location: "" },
     });
-    render(<WorkflowState {...defaultProps} pieceState={withGlobalRef} />);
+    render(<WorkflowState {...defaultProps} initialPieceState={withGlobalRef} />);
     await userEvent.click(
       screen.getByRole("button", { name: "Browse Kiln Location" }),
     );
@@ -461,7 +461,7 @@ describe("WorkflowState", () => {
       render(
         <WorkflowState
           {...defaultProps}
-          pieceState={makeState({ notes: "Some notes" })}
+          initialPieceState={makeState({ notes: "Some notes" })}
         />,
       );
     });
@@ -508,6 +508,39 @@ describe("WorkflowState", () => {
       target: { value: "New notes" },
     });
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(updated));
+  });
+
+  it("adopts the server-returned current state as the new base after save", async () => {
+    const updated = makePieceDetail({
+      current_state: makeState({ notes: "Server canonical notes" }),
+    });
+    vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
+
+    render(
+      <WorkflowState
+        {...defaultProps}
+        initialPieceState={makeState({ notes: "Original notes" })}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Notes"), {
+      target: { value: "Locally edited notes" },
+    });
+
+    await waitFor(() =>
+      expect(api.updateCurrentState).toHaveBeenCalledWith(
+        "test-piece-id",
+        expect.objectContaining({ notes: "Locally edited notes" }),
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Notes")).toHaveValue(
+        "Server canonical notes",
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("autosave-status")).toHaveTextContent("Saved"),
+    );
   });
 
   it("shows error message on save failure", async () => {
@@ -560,7 +593,7 @@ describe("WorkflowState", () => {
       render(
         <WorkflowState
           {...defaultProps}
-          pieceState={makeState({ notes: "original" })}
+          initialPieceState={makeState({ notes: "original" })}
           onDirtyChange={onDirtyChange}
         />,
       );
@@ -721,7 +754,7 @@ describe("WorkflowState", () => {
       render(
         <WorkflowState
           {...defaultProps}
-          pieceState={makeState({
+          initialPieceState={makeState({
             images: [
               {
                 url: "http://example.com/img.jpg",
@@ -741,7 +774,7 @@ describe("WorkflowState", () => {
   it("renders enum and number additional fields for bisque_fired state", async () => {
     vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
     await act(async () => {
-      render(<WorkflowState {...defaultProps} pieceState={makeState({ state: "bisque_fired", additional_fields: {} })} />);
+      render(<WorkflowState {...defaultProps} initialPieceState={makeState({ state: "bisque_fired", additional_fields: {} })} />);
     });
     // cone is an enum field — verify select renders
     const coneField = screen.getByLabelText("Cone");
@@ -755,7 +788,7 @@ describe("WorkflowState", () => {
         <WorkflowState
           {...defaultProps}
           onDirtyChange={onDirtyChange}
-          pieceState={makeState({
+          initialPieceState={makeState({
             state: "trimmed",
             additional_fields: { trimmed_weight_lbs: 900 },
           })}
@@ -766,6 +799,43 @@ describe("WorkflowState", () => {
       target: { value: "950" },
     });
     expect(onDirtyChange).toHaveBeenCalledWith(true);
+  });
+
+  it("replaces saved additional fields from the server after a successful save", async () => {
+    vi.mocked(api.updateCurrentState).mockResolvedValue(
+      makePieceDetail({
+        current_state: makeState({
+          state: "trimmed",
+          additional_fields: { trimmed_weight_lbs: 975 },
+        }),
+      }),
+    );
+
+    render(
+      <WorkflowState
+        {...defaultProps}
+        initialPieceState={makeState({
+          state: "trimmed",
+          additional_fields: { trimmed_weight_lbs: 900 },
+        })}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Trimmed Weight Lbs"), {
+      target: { value: "950" },
+    });
+
+    await waitFor(() =>
+      expect(api.updateCurrentState).toHaveBeenCalledWith(
+        "test-piece-id",
+        expect.objectContaining({
+          additional_fields: { trimmed_weight_lbs: 950 },
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Trimmed Weight Lbs")).toHaveValue(975),
+    );
   });
 
   it("accepts any valid workflow state", async () => {
@@ -781,7 +851,7 @@ describe("WorkflowState", () => {
           render(
             <WorkflowState
               {...defaultProps}
-              pieceState={makeState({ state })}
+              initialPieceState={makeState({ state })}
             />,
           ),
         ).not.toThrow();
@@ -793,7 +863,7 @@ describe("WorkflowState", () => {
     it("renders a Browse button instead of a text input for thumbnail-backed globals", async () => {
       const glazedState = makeState({ state: "glazed", additional_fields: {} });
       await act(async () => {
-        render(<WorkflowState {...defaultProps} pieceState={glazedState} />);
+        render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
       });
       expect(
         screen.getByRole("button", { name: "Browse Glaze Combination" }),
@@ -812,7 +882,7 @@ describe("WorkflowState", () => {
         },
       });
       await act(async () => {
-        render(<WorkflowState {...defaultProps} pieceState={glazedState} />);
+        render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
       });
       expect(screen.getByText("Iron Red!Clear")).toBeInTheDocument();
       expect(
@@ -828,7 +898,7 @@ describe("WorkflowState", () => {
         },
       });
       await act(async () => {
-        render(<WorkflowState {...defaultProps} pieceState={glazedState} />);
+        render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
       });
       const chip = screen.getByRole("button", { name: /iron red!clear/i });
       // MUI adds MuiChip-deletable when onDelete is wired up
@@ -851,7 +921,7 @@ describe("WorkflowState", () => {
         },
       });
       await act(async () => {
-        render(<WorkflowState {...defaultProps} pieceState={glazedState} />);
+        render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
       });
       const chip = screen.getByRole("button", { name: /iron red!clear/i });
       // The MUI Chip cancel SVG icon is the last child element of the chip
@@ -879,7 +949,7 @@ describe("WorkflowState", () => {
 
     it("opens the browse dialog when Browse button is clicked", async () => {
       const glazedState = makeState({ state: "glazed", additional_fields: {} });
-      render(<WorkflowState {...defaultProps} pieceState={glazedState} />);
+      render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
       await userEvent.click(
         screen.getByRole("button", { name: "Browse Glaze Combination" }),
       );
@@ -892,7 +962,7 @@ describe("WorkflowState", () => {
 
     it("keeps glaze combination browse-only when can_create is not set", async () => {
       const glazedState = makeState({ state: "glazed", additional_fields: {} });
-      render(<WorkflowState {...defaultProps} pieceState={glazedState} />);
+      render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
       await userEvent.click(
         screen.getByRole("button", { name: "Browse Glaze Combination" }),
       );
