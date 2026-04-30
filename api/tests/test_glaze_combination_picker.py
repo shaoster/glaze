@@ -45,14 +45,14 @@ class TestGlazeCombinationGetShape:
         gt = _pub_gt('Iron Red')
         combo = _pub_combo(gt, is_food_safe=True, runs=False, highlights_grooves=None,
                            is_different_on_white_and_brown_clay=True,
-                           test_tile_image={'url': 'https://example.com/tile.jpg', 'cloudinary_public_id': 'tile'})
+                           test_tile_image={'url': 'https://example.com/tile.jpg', 'cloudinary_public_id': 'tile', 'cloud_name': None})
 
         response = client.get('/api/globals/glaze_combination/')
 
         assert response.status_code == 200
         item = next(i for i in response.data if i['id'] == str(combo.pk))
         assert item['name'] == combo.name
-        assert item['test_tile_image'] == {'url': 'https://example.com/tile.jpg', 'cloudinary_public_id': 'tile'}
+        assert item['test_tile_image'] == {'url': 'https://example.com/tile.jpg', 'cloudinary_public_id': 'tile', 'cloud_name': None}
         assert item['is_food_safe'] is True
         assert item['runs'] is False
         assert item['highlights_grooves'] is None

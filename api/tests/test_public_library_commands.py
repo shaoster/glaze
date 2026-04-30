@@ -121,6 +121,34 @@ class TestDumpPublicLibrary:
 
         assert nested.exists()
 
+    def test_exports_image_field_as_dict_with_cloud_name(self, tmp_path):
+        image = {
+            "url": "https://res.cloudinary.com/demo/image/upload/v1/glaze/celadon.jpg",
+            "cloudinary_public_id": "v1/glaze/celadon",
+            "cloud_name": "demo",
+        }
+        GlazeType.objects.create(user=None, name="Celadon", test_tile_image=image)
+        output = tmp_path / "out.json"
+
+        call_command("dump_public_library", output=str(output))
+
+        records = json.loads(output.read_text())
+        glaze_record = next(r for r in records if r["model"] == "api.glazetype")
+        exported_image = glaze_record["fields"]["test_tile_image"]
+        assert exported_image["url"] == image["url"]
+        assert exported_image["cloudinary_public_id"] == image["cloudinary_public_id"]
+        assert exported_image["cloud_name"] == image["cloud_name"]
+
+    def test_exports_null_image_as_none(self, tmp_path):
+        GlazeType.objects.create(user=None, name="Celadon", test_tile_image=None)
+        output = tmp_path / "out.json"
+
+        call_command("dump_public_library", output=str(output))
+
+        records = json.loads(output.read_text())
+        glaze_record = next(r for r in records if r["model"] == "api.glazetype")
+        assert glaze_record["fields"]["test_tile_image"] is None
+
 
 @pytest.mark.django_db
 class TestLoadPublicLibrary:
@@ -335,3 +363,91 @@ class TestLoadPublicLibrary:
         assert GlazeCombination.objects.filter(user=None).count() == 1
         combo = GlazeCombination.objects.get(user=None)
         assert combo.layers.count() == 2
+
+    def test_loads_image_field_dict_with_cloud_name(self, tmp_path):
+        """Full {url, cloudinary_public_id, cloud_name} image dict round-trips correctly."""
+        image = {
+            "url": "https://res.cloudinary.com/demo/image/upload/v1/glaze/celadon.jpg",
+            "cloudinary_public_id": "v1/glaze/celadon",
+            "cloud_name": "demo",
+        }
+        fixture = self._write_fixture(
+            tmp_path,
+            [
+                {
+                    "model": "api.glazetype",
+                    "fields": {
+                        "name": "Celadon",
+                        "short_description": "",
+                        "test_tile_image": image,
+                        "is_food_safe": None,
+                        "runs": None,
+                        "highlights_grooves": None,
+                        "is_different_on_white_and_brown_clay": None,
+                        "apply_thin": None,
+                    },
+                },
+            ],
+        )
+
+        call_command("load_public_library", fixture=str(fixture))
+
+        obj = GlazeType.objects.get(user=None, name="Celadon")
+        assert obj.test_tile_image == image
+
+    def test_loads_image_field_backfills_cloud_name_from_url(self, tmp_path):
+        """Older fixtures without cloud_name have it backfilled from the delivery URL."""
+        url = "https://res.cloudinary.com/demo/image/upload/v1/glaze/celadon.jpg"
+        fixture = self._write_fixture(
+            tmp_path,
+            [
+                {
+                    "model": "api.glazetype",
+                    "fields": {
+                        "name": "Celadon",
+                        "short_description": "",
+                        "test_tile_image": {
+                            "url": url,
+                            "cloudinary_public_id": "v1/glaze/celadon",
+                        },
+                        "is_food_safe": None,
+                        "runs": None,
+                        "highlights_grooves": None,
+                        "is_different_on_white_and_brown_clay": None,
+                        "apply_thin": None,
+                    },
+                },
+            ],
+        )
+
+        call_command("load_public_library", fixture=str(fixture))
+
+        obj = GlazeType.objects.get(user=None, name="Celadon")
+        assert obj.test_tile_image["cloud_name"] == "demo"
+        assert obj.test_tile_image["url"] == url
+
+    def test_loads_null_image_field(self, tmp_path):
+        """A null test_tile_image in the fixture stores None on the model."""
+        fixture = self._write_fixture(
+            tmp_path,
+            [
+                {
+                    "model": "api.glazetype",
+                    "fields": {
+                        "name": "Matte White",
+                        "short_description": "",
+                        "test_tile_image": None,
+                        "is_food_safe": None,
+                        "runs": None,
+                        "highlights_grooves": None,
+                        "is_different_on_white_and_brown_clay": None,
+                        "apply_thin": None,
+                    },
+                },
+            ],
+        )
+
+        call_command("load_public_library", fixture=str(fixture))
+
+        obj = GlazeType.objects.get(user=None, name="Matte White")
+        assert obj.test_tile_image is None

@@ -1,10 +1,10 @@
 /**
  * CloudinaryImage — optimized image renderer.
  *
- * When both cloud_name (parsed from the delivery URL) and cloudinary_public_id
- * (stored on the record) are available, the component uses @cloudinary/url-gen
- * to request a size-appropriate rendition. Otherwise it falls back to a plain
- * <img> at the original URL.
+ * When cloud_name and cloudinary_public_id are both provided and non-null,
+ * the component uses @cloudinary/url-gen to request a size-appropriate
+ * rendition from Cloudinary's image pipeline (auto format, auto quality,
+ * fill gravity). Otherwise it falls back to a plain <img> at the original URL.
  *
  * Context-specific sizing:
  *   thumbnail — 64×64 fill, used in image lists and history rows
@@ -23,7 +23,6 @@ import { AdvancedImage } from "@cloudinary/react";
 import { Box, CircularProgress } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 
-const CLOUDINARY_HOSTNAME = "res.cloudinary.com";
 const THUMBNAIL_SIZE = 64;
 const LIGHTBOX_MAX_WIDTH = "90vw";
 const LIGHTBOX_MAX_HEIGHT = "80vh";
@@ -45,25 +44,6 @@ function getViewportSnapshot(): ViewportSnapshot {
   };
 }
 
-/**
- * Extract the Cloudinary cloud_name from a delivery URL so the SDK can
- * construct optimized rendition URLs. Returns null for non-Cloudinary URLs.
- */
-function parseCloudinaryCloudName(url: string): string | null {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return null;
-  }
-  if (parsed.hostname !== CLOUDINARY_HOSTNAME) return null;
-  // pathname: /{cloudName}/image/upload/...
-  const parts = parsed.pathname.split("/");
-  if (parts.length < 4 || parts[2] !== "image" || parts[3] !== "upload")
-    return null;
-  return parts[1] || null;
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -78,7 +58,9 @@ export type CloudinaryImageContext =
 export type CloudinaryImageProps = {
   /** Full delivery URL — always required as fallback. */
   url: string;
-  /** Cloudinary public_id stored alongside the URL, if available. */
+  /** Cloudinary cloud_name stored on the image record. */
+  cloud_name?: string | null;
+  /** Cloudinary public_id stored on the image record. */
   cloudinary_public_id?: string | null;
   alt?: string;
   /** Rendering context determines the requested dimensions. */
@@ -94,6 +76,7 @@ export type CloudinaryImageProps = {
 
 export default function CloudinaryImage({
   url,
+  cloud_name,
   cloudinary_public_id,
   alt = "",
   context,
@@ -195,7 +178,7 @@ export default function CloudinaryImage({
     opacity: isLoading ? 0 : 1,
   };
 
-  const cloudName = parseCloudinaryCloudName(url);
+  const cloudName = cloud_name?.trim() || null;
   const publicId = cloudinary_public_id?.trim() || null;
   const viewport = getViewportSnapshot();
 

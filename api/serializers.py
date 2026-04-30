@@ -109,6 +109,7 @@ class GlobalImageSerializer(serializers.Serializer):
 
     url = serializers.CharField()
     cloudinary_public_id = serializers.CharField(allow_null=True, required=False)
+    cloud_name = serializers.CharField(allow_null=True, required=False)
 
 
 class GlazeTypeRefSerializer(serializers.Serializer):
@@ -221,6 +222,7 @@ class CaptionedImageSerializer(serializers.Serializer):
     cloudinary_public_id = serializers.CharField(
         allow_blank=True, required=False, default=None, allow_null=True
     )
+    cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
 
 
 class PieceStateSerializer(serializers.ModelSerializer):
@@ -295,6 +297,7 @@ class ThumbnailSerializer(serializers.Serializer):
     cloudinary_public_id = serializers.CharField(
         allow_blank=True, allow_null=True, default=None
     )
+    cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
 
 
 @add_tags(Piece)
@@ -380,7 +383,7 @@ class PieceCreateSerializer(serializers.ModelSerializer):
         location_obj = get_or_create_location(user, location_name)
         raw_thumbnail = validated_data.pop("thumbnail", None)
         thumbnail = (
-            {"url": raw_thumbnail, "cloudinary_public_id": None}
+            {"url": raw_thumbnail, "cloudinary_public_id": None, "cloud_name": None}
             if raw_thumbnail
             else None
         )

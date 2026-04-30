@@ -86,6 +86,7 @@ function mapImage(raw: Wire<CaptionedImage>): CaptionedImage {
     caption: raw.caption,
     created: new Date(raw.created ?? ""),
     cloudinary_public_id: raw.cloudinary_public_id ?? null,
+    cloud_name: raw.cloud_name ?? null,
   };
 }
 

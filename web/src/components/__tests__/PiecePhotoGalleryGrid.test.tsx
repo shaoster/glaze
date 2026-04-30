@@ -40,6 +40,7 @@ describe("PiecePhotoGalleryGrid", () => {
             url: "https://example.com/untitled.jpg",
             caption: "",
             cloudinary_public_id: "piece/untitled",
+            cloud_name: null,
             stateLabel: "Throwing",
             editableCurrentStateIndex: 0,
           },

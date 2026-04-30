@@ -6,11 +6,39 @@ objects by model + name; existing records are updated in place and missing
 records are inserted.  The command is safe to run multiple times (idempotent).
 """
 import json
+import re
 from pathlib import Path
+from urllib.parse import urlparse
 
 from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+
+_CLOUDINARY_HOSTNAME = 'res.cloudinary.com'
+_TRANSFORM_RE = re.compile(r'^[a-z][a-z0-9]*_')
+
+
+def _extract_cloud_name(url: str) -> str | None:
+    """Extract Cloudinary cloud_name from a delivery URL for fixture backfill."""
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return None
+    if parsed.hostname != _CLOUDINARY_HOSTNAME:
+        return None
+    parts = parsed.path.split('/')
+    if len(parts) < 4 or parts[2] != 'image' or parts[3] != 'upload':
+        return None
+    return parts[1] or None
+
+
+def _normalize_image_field(value: object) -> object:
+    """Ensure image dicts carry all three fields; fill cloud_name from URL if missing."""
+    if not isinstance(value, dict):
+        return value
+    if 'cloud_name' not in value:
+        value = {**value, 'cloud_name': _extract_cloud_name(value.get('url', '') or '')}
+    return value
 
 _DEFAULT_FIXTURE = Path(settings.BASE_DIR) / 'fixtures' / 'public_library.json'
 
@@ -85,11 +113,13 @@ class Command(BaseCommand):
             for k, v in fields.items():
                 if k == 'name':
                     continue
-                # Resolve FK integer values to model instances.
                 try:
                     field_obj = model_cls._meta.get_field(k)
                     if field_obj.is_relation and isinstance(v, int):
+                        # Resolve FK integer values to model instances.
                         v = field_obj.related_model.objects.get(pk=v)
+                    elif field_obj.get_internal_type() == 'JSONField':
+                        v = _normalize_image_field(v)
                 except Exception:
                     pass
                 defaults[k] = v

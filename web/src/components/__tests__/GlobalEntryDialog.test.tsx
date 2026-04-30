@@ -72,7 +72,7 @@ function makeCombo(
   return {
     id: "1",
     name: "Iron Red!Clear",
-    test_tile_image: { url: "https://example.com/test-tile.jpg", cloudinary_public_id: null },
+    test_tile_image: { url: "https://example.com/test-tile.jpg", cloudinary_public_id: null, cloud_name: null },
     is_food_safe: true,
     runs: false,
     highlights_grooves: null,

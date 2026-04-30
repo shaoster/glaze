@@ -518,8 +518,8 @@ export default function GlobalEntryDialog({
           ) : (
             <Stack spacing={1}>
               {visible.map((entry) => {
-                const thumbnailUrl = thumbnailField
-                  ? (entry[thumbnailField] as string | undefined)
+                const thumbnailImage = thumbnailField
+                  ? (entry[thumbnailField] as { url: string; cloudinary_public_id?: string | null; cloud_name?: string | null } | null | undefined)
                   : undefined;
                 return (
                   <Box
@@ -540,9 +540,11 @@ export default function GlobalEntryDialog({
                     }}
                   >
                     {thumbnailField &&
-                      (thumbnailUrl ? (
+                      (thumbnailImage?.url ? (
                         <CloudinaryImage
-                          url={thumbnailUrl}
+                          url={thumbnailImage.url}
+                          cloud_name={thumbnailImage.cloud_name}
+                          cloudinary_public_id={thumbnailImage.cloudinary_public_id}
                           alt={entry.name ?? ""}
                           context="thumbnail"
                         />
