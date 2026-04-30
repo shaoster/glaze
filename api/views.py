@@ -38,6 +38,7 @@ from .serializers import (
     PieceCreateSerializer,
     PieceDetailSerializer,
     PieceStateCreateSerializer,
+    PieceStateSerializer,
     PieceStateUpdateSerializer,
     PieceSummarySerializer,
     PieceUpdateSerializer,
@@ -161,6 +162,22 @@ def piece_states(request: Request, piece_id: str) -> Response:
     # Reload to pick up updated last_modified on current_state
     piece.refresh_from_db()
     return Response(PieceDetailSerializer(piece).data, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(
+    methods=["GET"],
+    responses={200: PieceStateSerializer},
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def piece_current_state_detail(request: Request, piece_id: str) -> Response:
+    piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
+    current = piece.current_state
+    if current is None:
+        return Response(
+            {"detail": "Piece has no states."}, status=status.HTTP_404_NOT_FOUND
+        )
+    return Response(PieceStateSerializer(current).data)
 
 
 @extend_schema(

@@ -168,3 +168,41 @@ class TestPieceDetail:
         PieceState.objects.create(piece=foreign_piece, state=ENTRY_STATE)
         response = client.get(f'/api/pieces/{foreign_piece.id}/')
         assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# GET /api/pieces/{id}/current_state/
+# ---------------------------------------------------------------------------
+
+@pytest.mark.django_db
+class TestPieceCurrentStateDetail:
+    def test_get(self, client, piece):
+        response = client.get(f'/api/pieces/{piece.id}/current_state/')
+        assert response.status_code == 200
+        data = response.json()
+        assert data['state'] == 'designed'
+        assert 'notes' in data
+        assert 'images' in data
+        assert 'additional_fields' in data
+        assert 'previous_state' in data
+        assert 'next_state' in data
+
+    def test_not_found(self, client):
+        response = client.get(f'/api/pieces/{uuid.uuid4()}/current_state/')
+        assert response.status_code == 404
+
+    def test_piece_with_no_states_returns_404(self, client, user):
+        from api.models import Piece
+
+        piece = Piece.objects.create(user=user, name='No History Yet')
+        response = client.get(f'/api/pieces/{piece.id}/current_state/')
+        assert response.status_code == 404
+        assert response.json() == {'detail': 'Piece has no states.'}
+
+    def test_cannot_read_other_users_piece(self, client, other_user):
+        from api.models import ENTRY_STATE, Piece, PieceState
+
+        foreign_piece = Piece.objects.create(user=other_user, name='Other User Piece')
+        PieceState.objects.create(piece=foreign_piece, state=ENTRY_STATE)
+        response = client.get(f'/api/pieces/{foreign_piece.id}/current_state/')
+        assert response.status_code == 404
