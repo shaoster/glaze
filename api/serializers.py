@@ -58,6 +58,7 @@ from .models import (
     models,
 )
 from .registry import global_entry_serializer
+from .utils import get_or_create_location
 from .workflow import (
     ENTRY_STATE,
     SUCCESSORS,
@@ -374,11 +375,7 @@ class PieceCreateSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         notes = validated_data.pop("notes", "")
         location_name = validated_data.pop("current_location", None)
-        location_obj = None
-        if location_name:
-            location_obj, _ = Location.objects.get_or_create(
-                user=user, name=location_name
-            )
+        location_obj = get_or_create_location(user, location_name)
         raw_thumbnail = validated_data.pop("thumbnail", None)
         thumbnail = (
             {"url": raw_thumbnail, "cloudinary_public_id": None}
@@ -631,15 +628,9 @@ class PieceUpdateSerializer(serializers.Serializer):
         if "name" in validated_data:
             instance.name = validated_data["name"]
         if "current_location" in validated_data:
-            location_name = validated_data["current_location"]
-            if location_name:
-                user = self.context["request"].user
-                location_obj, _ = Location.objects.get_or_create(
-                    user=user, name=location_name
-                )
-            else:
-                location_obj = None
-            instance.current_location = location_obj
+            instance.current_location = get_or_create_location(
+                self.context["request"].user, validated_data["current_location"]
+            )
         if "thumbnail" in validated_data:
             instance.thumbnail = validated_data["thumbnail"]
         instance.save()

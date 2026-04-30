@@ -30,6 +30,20 @@ SHARED_GLAZE_FIELDS: tuple[str, ...] = (
 )
 
 
+def get_or_create_location(user, name: str | None):
+    """Return a Location for *user* with the given *name*, creating it if needed.
+
+    Returns ``None`` when *name* is falsy so callers can assign the result
+    directly to ``piece.current_location``.
+    """
+    if not name:
+        return None
+    from .models import Location  # noqa: PLC0415
+
+    location, _ = Location.objects.get_or_create(user=user, name=name)
+    return location
+
+
 def sync_glaze_type_singleton_combination(
     glaze_type, *, old_name: str | None = None
 ) -> None:

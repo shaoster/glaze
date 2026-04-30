@@ -44,6 +44,45 @@ class TestPieceDetail:
         assert response.json()['current_location'] == 'Shelf Z'
         assert Location.objects.filter(name='Shelf Z').exists()
 
+    def test_patch_reuses_existing_location(self, client, piece, user):
+        existing = Location.objects.create(user=user, name='Shelf Z')
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'current_location': 'Shelf Z'},
+            format='json',
+        )
+        assert response.status_code == 200
+        assert response.json()['current_location'] == 'Shelf Z'
+        assert Location.objects.filter(name='Shelf Z').count() == 1
+        piece.refresh_from_db()
+        assert piece.current_location_id == existing.id
+
+    def test_patch_clears_location_with_null(self, client, piece, user):
+        piece.current_location = Location.objects.create(user=user, name='Studio')
+        piece.save()
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'current_location': None},
+            format='json',
+        )
+        assert response.status_code == 200
+        assert response.json()['current_location'] is None
+        piece.refresh_from_db()
+        assert piece.current_location is None
+
+    def test_patch_clears_location_with_blank(self, client, piece, user):
+        piece.current_location = Location.objects.create(user=user, name='Studio')
+        piece.save()
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'current_location': ''},
+            format='json',
+        )
+        assert response.status_code == 200
+        assert response.json()['current_location'] is None
+        piece.refresh_from_db()
+        assert piece.current_location is None
+
     def test_create_sets_initial_location(self, client):
         response = client.post(
             '/api/pieces/',
@@ -54,6 +93,29 @@ class TestPieceDetail:
         data = response.json()
         assert data['current_location'] == 'Kiln Garden'
         assert Location.objects.filter(name='Kiln Garden').exists()
+
+    def test_create_reuses_existing_location(self, client, user):
+        existing = Location.objects.create(user=user, name='Kiln Garden')
+        response = client.post(
+            '/api/pieces/',
+            {'name': 'New Mug', 'current_location': 'Kiln Garden'},
+            format='json',
+        )
+        assert response.status_code == 201
+        assert response.json()['current_location'] == 'Kiln Garden'
+        assert Location.objects.filter(name='Kiln Garden').count() == 1
+        from api.models import Piece
+        piece = Piece.objects.get(name='New Mug')
+        assert piece.current_location_id == existing.id
+
+    def test_create_without_location(self, client):
+        response = client.post(
+            '/api/pieces/',
+            {'name': 'Locationless Bowl'},
+            format='json',
+        )
+        assert response.status_code == 201
+        assert response.json()['current_location'] is None
 
     def test_patch_updates_name(self, client, piece):
         response = client.patch(
