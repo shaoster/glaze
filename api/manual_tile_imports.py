@@ -50,6 +50,11 @@ def _ensure_combination_layers(combo: GlazeCombination, glaze_types: list[GlazeT
         GlazeCombinationLayer.objects.create(combination=combo, glaze_type=glaze_type, order=order)
 
 
+def _image_url(image: dict | None) -> str | None:
+    """Extract the URL string from a test_tile_image dict value."""
+    return image.get('url') if image else None
+
+
 def _result_payload(record: dict, *, status: str, reason: str | None = None, object_id: str | None = None, image_url: str | None = None) -> dict:
     parsed = record.get('parsed_fields', {}) or {}
     return {
@@ -80,7 +85,7 @@ def import_manual_tile_records(records: list[dict], uploaded_files: dict[str, ob
             return _result_payload(record, status='error', reason='Missing cropped image upload.')
         existing = GlazeType.objects.filter(user=None, name=name).first()
         if existing:
-            return _result_payload(record, status='skipped_duplicate', reason='Public glaze type already exists.', object_id=str(existing.pk), image_url=existing.test_tile_image)
+            return _result_payload(record, status='skipped_duplicate', reason='Public glaze type already exists.', object_id=str(existing.pk), image_url=_image_url(existing.test_tile_image))
 
         upload = _upload_file(
             uploaded,
@@ -91,12 +96,12 @@ def import_manual_tile_records(records: list[dict], uploaded_files: dict[str, ob
         glaze_type = GlazeType.objects.create(
             user=None,
             name=name,
-            test_tile_image=upload['secure_url'],
+            test_tile_image={'url': upload['secure_url'], 'cloudinary_public_id': upload['public_id']},
             runs=parsed.get('runs'),
             is_food_safe=parsed.get('is_food_safe'),
         )
         sync_glaze_type_singleton_combination(glaze_type)
-        return _result_payload(record, status='created', object_id=str(glaze_type.pk), image_url=glaze_type.test_tile_image)
+        return _result_payload(record, status='created', object_id=str(glaze_type.pk), image_url=_image_url(glaze_type.test_tile_image))
 
     def import_glaze_combination(record: dict) -> dict:
         parsed = record.get('parsed_fields', {}) or {}
@@ -116,7 +121,7 @@ def import_manual_tile_records(records: list[dict], uploaded_files: dict[str, ob
             return _result_payload(record, status='error', reason='Missing cropped image upload.')
         existing = GlazeCombination.objects.filter(user=None, name=name).first()
         if existing:
-            return _result_payload(record, status='skipped_duplicate', reason='Public glaze combination already exists.', object_id=str(existing.pk), image_url=existing.test_tile_image)
+            return _result_payload(record, status='skipped_duplicate', reason='Public glaze combination already exists.', object_id=str(existing.pk), image_url=_image_url(existing.test_tile_image))
 
         first = GlazeType.objects.filter(user=None, name=first_name).first()
         second = GlazeType.objects.filter(user=None, name=second_name).first()
@@ -133,12 +138,12 @@ def import_manual_tile_records(records: list[dict], uploaded_files: dict[str, ob
         combo = GlazeCombination.objects.create(
             user=None,
             name=name,
-            test_tile_image=upload['secure_url'],
+            test_tile_image={'url': upload['secure_url'], 'cloudinary_public_id': upload['public_id']},
             runs=parsed.get('runs'),
             is_food_safe=parsed.get('is_food_safe'),
         )
         _ensure_combination_layers(combo, [first, second])
-        return _result_payload(record, status='created', object_id=str(combo.pk), image_url=combo.test_tile_image)
+        return _result_payload(record, status='created', object_id=str(combo.pk), image_url=_image_url(combo.test_tile_image))
 
     with transaction.atomic():
         for record in [r for r in records if (r.get('parsed_fields', {}) or {}).get('kind') == 'glaze_type']:

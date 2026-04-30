@@ -199,7 +199,7 @@ describe("GlazeCombinationGallery", () => {
         ...MOCK_COMBO_ENTRY,
         glaze_combination: {
           ...MOCK_COMBO_ENTRY.glaze_combination,
-          test_tile_image: "https://example.com/tile.jpg",
+          test_tile_image: { url: "https://example.com/tile.jpg", cloudinary_public_id: null },
         } as any,
       };
       vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue([
@@ -217,7 +217,7 @@ describe("GlazeCombinationGallery", () => {
         ...MOCK_COMBO_ENTRY,
         glaze_combination: {
           ...MOCK_COMBO_ENTRY.glaze_combination,
-          test_tile_image: "https://example.com/tile.jpg",
+          test_tile_image: { url: "https://example.com/tile.jpg", cloudinary_public_id: null },
         } as any,
       };
       vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue([

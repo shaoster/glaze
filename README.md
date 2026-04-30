@@ -83,7 +83,7 @@ The web UI is organized around a small set of React components in [`web/src/comp
 - [`PieceList.tsx`](web/src/components/PieceList.tsx): Renders the main pieces table with thumbnail, name, current state, created date, and last modified date, and supports navigation into a piece detail page from each row.
 - [`PieceDetail.tsx`](web/src/components/PieceDetail.tsx): Displays a single piece header, renders the current editable workflow state, exposes valid next-state transitions from `workflow.yml`, blocks navigation when edits are unsaved, and lets the user expand past state history with image previews.
 - [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx): Handles editing the current state itself, including notes, current location, workflow-driven additional fields, save/error states, image URL entry, optional Cloudinary uploads, caption editing, image removal, and lightbox launch for current-state images.
-- [`GlobalFieldPicker.tsx`](web/src/components/GlobalFieldPicker.tsx): Provides the reusable autocomplete used for workflow globals such as locations, including fetching existing options, selecting an existing entry, and inline creation of new global records when allowed by the field definition.
+- [`GlobalEntryField.tsx`](web/src/components/GlobalEntryField.tsx) + [`GlobalEntryDialog.tsx`](web/src/components/GlobalEntryDialog.tsx): Together provide the reusable UI for workflow globals — `GlobalEntryField` renders the autocomplete chip input and select affordance, while `GlobalEntryDialog` hosts the searchable list, inline creation form, and Cloudinary image upload for the selected global type.
 - [`ImageLightbox.tsx`](web/src/components/ImageLightbox.tsx): Shows piece images in a full-screen modal with captions plus desktop button navigation and touch swipe navigation for browsing multiple images.
 
 ## Quick start
@@ -427,7 +427,7 @@ After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` fr
 |---|---|
 | [`web/src/util/workflow.test.ts`](web/src/util/workflow.test.ts) | `formatWorkflowFieldLabel`, `getGlobalDisplayField`, `getAdditionalFieldDefinitions` (inline, state ref, global ref) — decoupled from real `workflow.yml` via `vi.mock` |
 | [`web/src/util/__tests__/api.test.ts`](web/src/util/__tests__/api.test.ts) | HTTP functions (fetchPieces, fetchPiece, createPiece, transitions, globals, auth) — axios mocked via `vi.mock` |
-| [`__tests__/GlobalFieldPicker.test.tsx`](web/src/components/__tests__/GlobalFieldPicker.test.tsx) | Rendering, internal fetch, provided options, create sentinel, inline creation (success/error), selecting existing |
+| [`__tests__/GlobalEntryDialog.test.tsx`](web/src/components/__tests__/GlobalEntryDialog.test.tsx) | Rendering, search/filter, create sentinel, inline creation (success/error), selecting existing entries |
 | [`__tests__/PieceList.test.tsx`](web/src/components/__tests__/PieceList.test.tsx) | Column headers, empty state, per-row data, links |
 | [`__tests__/NewPieceDialog.test.tsx`](web/src/components/__tests__/NewPieceDialog.test.tsx) | Rendering, name/notes/location/thumbnail, save/cancel behavior |
 | [`__tests__/WorkflowState.test.tsx`](web/src/components/__tests__/WorkflowState.test.tsx) | Notes, additional fields (inline, state ref, global ref), location, save button, unsaved indicator |

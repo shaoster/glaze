@@ -81,6 +81,8 @@ export type FiringTemperatureRef =
 export type GlazeCombinationEntry =
   components["schemas"]["GlazeCombinationEntry"];
 export type TagEntry = components["schemas"]["TagEntry"];
+// Structured image value stored by global model image fields.
+export type GlobalImage = components["schemas"]["GlobalImage"];
 // ---------------------------------------------------------------------------
 // Glaze Combination Gallery — analysis endpoint types
 // ---------------------------------------------------------------------------

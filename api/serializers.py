@@ -99,6 +99,13 @@ def add_tags(model_cls: type[models.Model]):
     return decorator
 
 
+class GlobalImageSerializer(serializers.Serializer):
+    """Structured image value for ``type: image`` fields on global models."""
+
+    url = serializers.CharField()
+    cloudinary_public_id = serializers.CharField(allow_null=True, required=False)
+
+
 class GlazeTypeRefSerializer(serializers.Serializer):
     """Minimal glaze type representation embedded in GlazeCombinationEntrySerializer."""
 
@@ -146,6 +153,7 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
     is_favorite = serializers.SerializerMethodField()
     glaze_types = serializers.SerializerMethodField()
     firing_temperature = FiringTemperatureRefSerializer(read_only=True, allow_null=True)
+    test_tile_image = serializers.SerializerMethodField()
 
     class Meta:
         model = GlazeCombination
@@ -180,6 +188,10 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.BooleanField())
     def get_is_favorite(self, obj: GlazeCombination) -> bool:
         return obj.pk in self.context.get("favorite_ids", set())
+
+    @extend_schema_field(GlobalImageSerializer(allow_null=True))
+    def get_test_tile_image(self, obj: GlazeCombination) -> dict | None:
+        return obj.test_tile_image
 
     @extend_schema_field(GlazeTypeRefSerializer(many=True))
     def get_glaze_types(self, obj: GlazeCombination) -> list:

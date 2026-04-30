@@ -99,17 +99,29 @@ def _cloudinary_public_id(url: str) -> str | None:
     return match.group(1) if match else None
 
 
-def _cloudinary_preview_url(url: str) -> str:
-    """Return a JPG thumbnail URL (200×200 fill) for a Cloudinary delivery URL.
+def _image_url(value: dict | str | None) -> str:
+    """Extract a plain URL string from an image field value.
 
-    Uses the Cloudinary SDK so that format conversion is expressed as a
-    first-class transformation rather than a raw URL string splice — important
-    for .heic and other formats that browsers cannot render natively.
+    Accepts the new dict format ``{"url": "...", "cloudinary_public_id": "..."}``
+    as well as legacy plain URL strings (for robustness during any transition).
+    Returns an empty string for missing/None values.
     """
+    if not value:
+        return ''
+    if isinstance(value, dict):
+        return value.get('url', '')
+    return value  # legacy string
+
+
+def _cloudinary_preview_url(value: dict | str | None) -> str:
+    """Return a JPG thumbnail URL (200×200 fill) for a Cloudinary delivery URL."""
+    url = _image_url(value)
     cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
     if not url or not cloud_name:
         return url
-    public_id = _cloudinary_public_id(url)
+    public_id = (
+        value.get('cloudinary_public_id') if isinstance(value, dict) else None
+    ) or _cloudinary_public_id(url)
     if not public_id:
         return url
     cloudinary.config(cloud_name=cloud_name)
@@ -118,12 +130,15 @@ def _cloudinary_preview_url(url: str) -> str:
     )
 
 
-def _cloudinary_lightbox_url(url: str) -> str:
+def _cloudinary_lightbox_url(value: dict | str | None) -> str:
     """Return a full-size JPG URL suitable for a lightbox modal."""
+    url = _image_url(value)
     cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
     if not url or not cloud_name:
         return url
-    public_id = _cloudinary_public_id(url)
+    public_id = (
+        value.get('cloudinary_public_id') if isinstance(value, dict) else None
+    ) or _cloudinary_public_id(url)
     if not public_id:
         return url
     cloudinary.config(cloud_name=cloud_name)
@@ -133,10 +148,9 @@ def _cloudinary_lightbox_url(url: str) -> str:
 class CloudinaryImageWidget(widgets.TextInput):
     """Text input that adds a Cloudinary Upload Widget button when configured.
 
-    Renders a standard URL text input alongside an 'Upload Image' button and a
-    live thumbnail preview.  The button opens the Cloudinary Upload Widget; on
-    success the secure_url is written back into the text input and the preview
-    is updated.
+    The field value is a JSON object ``{"url": "...", "cloudinary_public_id": "..."}``.
+    The text input stores the JSON string representation; the JS upload handler
+    writes new uploads in that format and the preview reads the url from it.
 
     If CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY are not set the button is
     omitted and only the plain text input is shown.
@@ -147,6 +161,12 @@ class CloudinaryImageWidget(widgets.TextInput):
             'https://upload-widget.cloudinary.com/global/all.js',
             'admin/js/cloudinary_image_widget.js',
         )
+
+    def format_value(self, value):
+        """Encode a dict value to a JSON string for display in the text input."""
+        if isinstance(value, dict):
+            return json.dumps(value)
+        return value  # None or already a string
 
     def render(self, name, value, attrs=None, renderer=None):
         cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')

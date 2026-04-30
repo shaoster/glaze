@@ -142,9 +142,9 @@ function ComboCard({
     <Card variant="outlined">
       <CardHeader
         avatar={
-          combo.test_tile_image ? (
+          combo.test_tile_image?.url ? (
             <TileAvatarButton
-              url={combo.test_tile_image}
+              url={combo.test_tile_image.url}
               name={combo.name ?? ""}
               onClick={onTileClick}
             />

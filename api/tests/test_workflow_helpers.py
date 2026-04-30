@@ -299,7 +299,7 @@ def test_get_image_fields_for_global_model_returns_empty_for_unknown_model(monke
     assert workflow_module.get_image_fields_for_global_model(UnknownModel) == []
 
 
-def test_resolve_image_type_maps_to_string_in_schema(monkeypatch):
+def test_resolve_image_type_maps_to_object_schema(monkeypatch):
     monkeypatch.setattr(workflow_module, '_STATE_MAP', {
         **_MOCK_STATE_MAP,
         'photo_state': {
@@ -313,7 +313,11 @@ def test_resolve_image_type_maps_to_string_in_schema(monkeypatch):
     })
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
     schema = workflow_module.build_additional_fields_schema('photo_state')
-    assert schema['properties']['thumbnail'] == {'type': 'string'}
+    image_schema = schema['properties']['thumbnail']
+    assert image_schema['type'] == 'object'
+    assert 'url' in image_schema['properties']
+    assert 'cloudinary_public_id' in image_schema['properties']
+    assert image_schema['required'] == ['url']
 
 
 def test_build_additional_fields_schema_unknown_state_is_empty_object(monkeypatch):

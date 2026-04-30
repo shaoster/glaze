@@ -147,7 +147,9 @@ def dsl_field_to_django_field(field_name: str, field_def: dict) -> models.Field:
     field_type = field_def.get('type', 'string')
     enum = field_def.get('enum')
 
-    if field_type in ('string', 'image'):
+    if field_type == 'image':
+        return models.JSONField(null=True, blank=True, default=None)
+    if field_type == 'string':
         if field_name == 'name':
             return models.CharField(max_length=field_def.get('max_length', 255))
         if enum:

@@ -142,7 +142,7 @@ class TestLoadPublicLibrary:
                     "fields": {
                         "name": "Celadon",
                         "short_description": "",
-                        "test_tile_image": "",
+                        "test_tile_image": None,
                         "is_food_safe": True,
                         "runs": None,
                         "highlights_grooves": None,
@@ -287,7 +287,7 @@ class TestLoadPublicLibrary:
                     "model": "api.glazecombination",
                     "fields": {
                         "name": "Celadon!Tenmoku",
-                        "test_tile_image": "",
+                        "test_tile_image": None,
                         "is_food_safe": False,
                         "runs": False,
                         "highlights_grooves": None,
@@ -319,7 +319,7 @@ class TestLoadPublicLibrary:
                     "model": "api.glazecombination",
                     "fields": {
                         "name": "Celadon!Tenmoku",
-                        "test_tile_image": "",
+                        "test_tile_image": None,
                         "is_food_safe": None,
                         "runs": None,
                         "highlights_grooves": None,

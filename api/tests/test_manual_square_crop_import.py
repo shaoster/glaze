@@ -85,7 +85,7 @@ class TestManualSquareCropImport:
         }
         assert body['results'][0]['status'] == 'created'
         glaze_type = GlazeType.objects.get(user=None, name='Dragon Green')
-        assert glaze_type.test_tile_image == 'https://example.com/manual-square-crop/type.png'
+        assert glaze_type.test_tile_image == {'url': 'https://example.com/manual-square-crop/type.png', 'cloudinary_public_id': 'manual-square-crop/type'}
         assert glaze_type.runs is None
         assert glaze_type.is_food_safe is None
         combo = GlazeCombination.objects.get(user=None, name='Dragon Green')
@@ -136,7 +136,7 @@ class TestManualSquareCropImport:
 
     def test_skips_duplicate_public_glaze_type_without_uploading(self, monkeypatch):
         admin = User.objects.create(username='admin2@example.com', email='admin2@example.com', is_staff=True)
-        existing = GlazeType.objects.create(user=None, name='Celadon', test_tile_image='https://example.com/existing.png')
+        existing = GlazeType.objects.create(user=None, name='Celadon', test_tile_image={'url': 'https://example.com/existing.png', 'cloudinary_public_id': 'existing'})
         client = APIClient()
         client.force_authenticate(user=admin)
 
@@ -442,7 +442,7 @@ class TestImportGlazeCombination:
     def test_skips_duplicate_combination_without_uploading(self, monkeypatch):
         self._patch_cloudinary(monkeypatch)
         existing = GlazeCombination.objects.create(
-            user=None, name='X!Y', test_tile_image='https://x.com/old.png'
+            user=None, name='X!Y', test_tile_image={'url': 'https://x.com/old.png', 'cloudinary_public_id': 'old'}
         )
         monkeypatch.setattr(
             'api.manual_tile_imports.cloudinary.uploader.upload',

@@ -75,7 +75,7 @@ clay_weight_grams:
   enum: [a, b, c] # optional; only valid when type: string
 ```
 
-The `image` type is a DSL-level annotation: it stores and validates the value as a URL string in JSON Schema (resolved to `type: string` by `_resolve_field_def`), but signals the Django admin to render a Cloudinary upload widget instead of a plain text input. Use `image` for any field that holds a Cloudinary-hosted image URL.
+The `image` type is a DSL-level annotation: at the model layer it is stored as a `JSONField` containing `{"url": "...", "cloudinary_public_id": "..."}` (both fields required; `cloudinary_public_id` is nullable for URL-only images). `_resolve_field_def` resolves it to a JSON Schema object with `url` and `cloudinary_public_id` properties so validation enforces the correct structure. The Django admin renders a Cloudinary upload widget instead of a plain text input, and the widget stores the complete object on upload. Use `image` for any field that holds a Cloudinary-hosted image — the stored `cloudinary_public_id` enables enumerating all referenced assets for cleanup workflows.
 
 _Ref field_ — two sub-forms, distinguished by the `@` prefix:
 
@@ -327,7 +327,7 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 [`web/src/util/workflow.ts`](../../web/src/util/workflow.ts) loads `workflow.yml` at build time and exposes typed helpers — do not duplicate state or globals data elsewhere.
 
 - `getAdditionalFieldDefinitions(stateId)` — resolves per-state additional field definitions into a form-ready structure; used by `WorkflowState` to render dynamic fields.
-- `getGlobalDisplayField(globalName)` — returns the display field name for a globals entry; used by `GlobalFieldPicker` to determine which field to write on create.
+- `getGlobalDisplayField(globalName)` — returns the display field name for a globals entry; used by `GlobalEntryDialog` to determine which field to write on create.
 - `formatWorkflowFieldLabel(fieldName)` — converts snake_case DSL names to Title Case UI labels.
 
 **Type generation pipeline:**
@@ -350,6 +350,8 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 - [`PieceList.tsx`](../../web/src/components/PieceList.tsx) — MUI table of `PieceSummary` objects (Thumbnail, Name, State, Created, Last Modified)
 - [`NewPieceDialog.tsx`](../../web/src/components/NewPieceDialog.tsx) — dialog for creating a new piece; name, optional notes, thumbnail gallery
 - [`WorkflowState.tsx`](../../web/src/components/WorkflowState.tsx) — edits the current `PieceState`: notes, location, additional fields, images (upload or URL), caption editing, lightbox launch
+- [`GlobalEntryField.tsx`](../../web/src/components/GlobalEntryField.tsx) — chip + button wrapper that shows the currently selected global entry and opens the `GlobalEntryDialog` picker on click.
+- [`GlobalEntryDialog.tsx`](../../web/src/components/GlobalEntryDialog.tsx) — full-screen dialog for browsing, searching, and selecting a global entry (e.g. Location, GlazeCombination). Supports inline creation when `can_create` is set in the DSL field definition, and renders Cloudinary image uploads for `type: image` fields on create.
 - [`CloudinaryImage.tsx`](../../web/src/components/CloudinaryImage.tsx) — renders a `CaptionedImage` via `@cloudinary/url-gen` + `@cloudinary/react` when available; falls back to a plain `<img>`. Sizing context: `thumbnail`/`preview` (64×64 fill), `lightbox` (90vw×80vh fit).
 - [`ImageLightbox.tsx`](../../web/src/components/ImageLightbox.tsx) — full-screen modal image viewer with caption and keyboard/touch navigation
 - [`StateChip.tsx`](../../web/src/components/StateChip.tsx) — shared workflow-state token. Takes `variant: 'current' | 'past' | 'future'` plus `isTerminal` and optional interaction hooks so list/detail/timeline UIs stay in one visual family.
@@ -403,7 +405,7 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 - Every new or modified React component → add or update a test in `web/src/components/__tests__/`.
 - Every new or modified `workflow.ts` helper → add or update a test in `web/src/util/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture. Never import `workflow.yml` directly in a test — always mock it.
 - Every new or modified `api.ts` function → add or update a test in `web/src/util/__tests__/api.test.ts`, mocking axios via `vi.mock`.
-- Component tests that involve typing into a controlled MUI Autocomplete must use a stateful wrapper (see `Controlled` in `GlobalFieldPicker.test.tsx`).
+- Component tests that involve typing into a controlled MUI Autocomplete must use a stateful wrapper (see `Controlled` in `GlobalEntryDialog.test.tsx`).
 
 ---
 
