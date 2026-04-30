@@ -43,6 +43,19 @@
     return withTransform(rawUrl, 'f_jpg');
   }
 
+  /**
+   * Extract the plain URL from an image field value.
+   * Accepts a JSON string {"url":"...","cloudinary_public_id":"..."} or a bare URL.
+   */
+  function extractUrl(inputValue) {
+    if (!inputValue) { return ''; }
+    try {
+      var parsed = JSON.parse(inputValue);
+      if (parsed && typeof parsed === 'object') { return parsed.url || ''; }
+    } catch (e) { /* not JSON — treat as plain URL */ }
+    return inputValue;
+  }
+
   /** Open a full-screen lightbox showing the given image URL. */
   function openLightbox(url) {
     var overlay = document.createElement('div');
@@ -104,7 +117,8 @@
       function (error, result) {
         if (!error && result && result.event === 'success') {
           var rawUrl = result.info.secure_url;
-          inp.value = rawUrl;
+          var publicId = result.info.public_id || null;
+          inp.value = JSON.stringify({ url: rawUrl, cloudinary_public_id: publicId });
           var preview = document.getElementById(previewId);
           if (preview) {
             preview.src = getPreviewUrl(rawUrl);

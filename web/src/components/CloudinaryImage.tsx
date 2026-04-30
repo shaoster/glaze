@@ -1,10 +1,10 @@
 /**
  * CloudinaryImage — optimized image renderer.
  *
- * If a Cloudinary public_id can be resolved (from the explicit prop or by
- * parsing the URL), the component uses @cloudinary/url-gen to request a
- * size-appropriate rendition from Cloudinary's image pipeline (auto format,
- * auto quality, fill gravity). Otherwise it falls back to a plain <img>.
+ * When both cloud_name (parsed from the delivery URL) and cloudinary_public_id
+ * (stored on the record) are available, the component uses @cloudinary/url-gen
+ * to request a size-appropriate rendition. Otherwise it falls back to a plain
+ * <img> at the original URL.
  *
  * Context-specific sizing:
  *   thumbnail — 64×64 fill, used in image lists and history rows
@@ -46,29 +46,10 @@ function getViewportSnapshot(): ViewportSnapshot {
 }
 
 /**
- * Parse cloud_name and public_id from a Cloudinary delivery URL.
- *
- * Cloudinary URL structure:
- *   https://res.cloudinary.com/{cloud_name}/image/upload/[transforms/]{public_id}.ext
- *
- * Transforms look like key_value (e.g. f_auto, w_100, c_fill). We skip
- * contiguous leading path segments that match that pattern and treat the
- * remainder as the public_id (without file extension).
- *
- * TODO: This parsing exists for backwards compatibility with images that
- * predate explicit cloudinary_public_id storage. For new uploads the
- * public_id is stored directly, so the URL is only parsed as a fallback.
- * If this heuristic ever becomes a problem (custom domains, CDN prefixes,
- * etc.), two cleaner alternatives are:
- *   1. Frontend config — read cloud_name from VITE_CLOUDINARY_CLOUD_NAME
- *      at module load time; zero schema changes, works for a single cloud.
- *   2. Per-image storage — add cloudinary_cloud_name to CaptionedImage
- *      alongside cloudinary_public_id; fully self-contained records but
- *      redundant data across all rows.
+ * Extract the Cloudinary cloud_name from a delivery URL so the SDK can
+ * construct optimized rendition URLs. Returns null for non-Cloudinary URLs.
  */
-function parseCloudinaryUrl(
-  url: string,
-): { cloudName: string; publicId: string } | null {
+function parseCloudinaryCloudName(url: string): string | null {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -76,29 +57,11 @@ function parseCloudinaryUrl(
     return null;
   }
   if (parsed.hostname !== CLOUDINARY_HOSTNAME) return null;
-
-  // parts: ['', cloudName, 'image', 'upload', ...rest]
+  // pathname: /{cloudName}/image/upload/...
   const parts = parsed.pathname.split("/");
-  if (parts.length < 5 || parts[2] !== "image" || parts[3] !== "upload")
+  if (parts.length < 4 || parts[2] !== "image" || parts[3] !== "upload")
     return null;
-
-  const cloudName = parts[1];
-  const afterUpload = parts.slice(4);
-
-  // Skip transform segments (e.g. f_auto, w_100, c_fill, q_auto)
-  const TRANSFORM_RE = /^[a-z][a-z0-9]*_/;
-  let i = 0;
-  while (i < afterUpload.length - 1 && TRANSFORM_RE.test(afterUpload[i])) {
-    i++;
-  }
-  const publicIdParts = afterUpload.slice(i);
-  if (publicIdParts.length === 0) return null;
-
-  // Strip file extension from last segment
-  const last = publicIdParts[publicIdParts.length - 1].replace(/\.[^.]+$/, "");
-  publicIdParts[publicIdParts.length - 1] = last;
-
-  return { cloudName, publicId: publicIdParts.join("/") };
+  return parts[1] || null;
 }
 
 // ---------------------------------------------------------------------------
@@ -232,11 +195,8 @@ export default function CloudinaryImage({
     opacity: isLoading ? 0 : 1,
   };
 
-  // Resolve cloud_name + publicId. Prefer the stored prop; fall back to URL parse.
-  const parsed = parseCloudinaryUrl(url);
-  const cloudName = parsed?.cloudName ?? null;
-  const publicId =
-    (cloudinary_public_id?.trim() || null) ?? parsed?.publicId ?? null;
+  const cloudName = parseCloudinaryCloudName(url);
+  const publicId = cloudinary_public_id?.trim() || null;
   const viewport = getViewportSnapshot();
 
   if (cloudName && publicId) {

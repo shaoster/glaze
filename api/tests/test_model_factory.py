@@ -32,10 +32,10 @@ class TestDslFieldToDjangoField:
         assert f.max_length == 1024
         assert f.blank
 
-    def test_image_field_is_char1024_blank(self):
+    def test_image_field_is_nullable_jsonfield(self):
         f = self._call('test_tile_image', {'type': 'image'})
-        assert isinstance(f, models.CharField)
-        assert f.max_length == 1024
+        assert isinstance(f, models.JSONField)
+        assert f.null
         assert f.blank
 
     def test_enum_field_uses_choices_and_capped_max_length(self):

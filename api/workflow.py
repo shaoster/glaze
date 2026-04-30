@@ -369,7 +369,14 @@ def _resolve_field_def(field_def: dict) -> dict:
     if 'type' in field_def:
         json_type = field_def['type']
         if json_type == 'image':
-            json_type = 'string'
+            return {
+                'type': 'object',
+                'properties': {
+                    'url': {'type': 'string'},
+                    'cloudinary_public_id': {'type': ['string', 'null']},
+                },
+                'required': ['url'],
+            }
         prop: dict = {'type': json_type}
         if 'enum' in field_def:
             prop['enum'] = field_def['enum']
