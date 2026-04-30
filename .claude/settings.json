@@ -2,7 +2,9 @@
   "env": {
     "BASH_ENV": "/home/phil/code/glaze/env-agent.sh"
   },
-  "hooks": {
-    "preToolUse": ["rtk"]
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"from pathlib import Path; p = Path\\('/home/phil/code/glaze/.agent-worktrees/claude/coverage-improvements/backend/settings.py'\\); print\\(p.resolve\\(\\).parent.parent\\)\")"
+    ]
   }
 }

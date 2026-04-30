@@ -2,10 +2,6 @@
 # Sourced automatically via BASH_ENV — keep it silent and fast.
 # Do NOT source ~/.bashrc here; agents don't need interactive shell config.
 
-# Guard against double-sourcing
-[[ -n "$_GLAZE_AGENT_ENV_LOADED" ]] && return
-export _GLAZE_AGENT_ENV_LOADED=1
-
 _GLAZE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 _gz_detect_git_root() {
@@ -20,8 +16,19 @@ _gz_detect_shared_root() {
     cd "$common_dir/.." 2>/dev/null && pwd
 }
 
-GLAZE_ROOT="$(_gz_detect_git_root)"
-GLAZE_ROOT="${GLAZE_ROOT:-$_GLAZE_SCRIPT_DIR}"
+_detected_root="$(_gz_detect_git_root)"
+_detected_root="${_detected_root:-$_GLAZE_SCRIPT_DIR}"
+
+# Guard against double-sourcing, but re-initialize if we're in a different
+# git root than what was previously detected (e.g. switched into a worktree).
+if [[ -n "$_GLAZE_AGENT_ENV_LOADED" && "${GLAZE_ROOT:-}" == "$_detected_root" ]]; then
+    unset _detected_root
+    return
+fi
+export _GLAZE_AGENT_ENV_LOADED=1
+
+GLAZE_ROOT="$_detected_root"
+unset _detected_root
 GLAZE_SHARED_ROOT="$(_gz_detect_shared_root "$GLAZE_ROOT")"
 GLAZE_SHARED_ROOT="${GLAZE_SHARED_ROOT:-$GLAZE_ROOT}"
 export GLAZE_ROOT GLAZE_SHARED_ROOT
