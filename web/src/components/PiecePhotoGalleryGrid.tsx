@@ -6,6 +6,7 @@ type PiecePhotoGalleryGridImage = {
   url: string;
   caption: string;
   cloudinary_public_id?: string | null;
+  cloud_name?: string | null;
   stateLabel: string;
   editableCurrentStateIndex: number | null;
 };
@@ -75,6 +76,7 @@ export default function PiecePhotoGalleryGrid({
             <Box sx={{ position: "relative", aspectRatio: "5 / 4" }}>
               <CloudinaryImage
                 url={image.url}
+                cloud_name={image.cloud_name}
                 cloudinary_public_id={image.cloudinary_public_id}
                 alt={image.caption || "Piece photo"}
                 context="gallery"

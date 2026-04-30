@@ -197,6 +197,7 @@ const PieceListItem = (props: PieceListItemProps) => {
             avatar={
               <CloudinaryImage
                 url={piece.thumbnail?.url ?? DEFAULT_THUMBNAIL}
+                cloud_name={piece.thumbnail?.cloud_name}
                 cloudinary_public_id={piece.thumbnail?.cloudinary_public_id}
                 context="thumbnail"
                 style={{ borderRadius: 4, margin: 0 }}

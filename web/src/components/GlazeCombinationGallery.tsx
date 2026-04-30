@@ -59,16 +59,16 @@ type LightboxState =
 // ---------------------------------------------------------------------------
 
 interface TileAvatarButtonProps {
-  url: string;
+  image: NonNullable<GlazeCombinationEntry["test_tile_image"]>;
   name: string;
-  onClick: (url: string, name: string) => void;
+  onClick: (image: NonNullable<GlazeCombinationEntry["test_tile_image"]>, name: string) => void;
 }
 
-function TileAvatarButton({ url, name, onClick }: TileAvatarButtonProps) {
+function TileAvatarButton({ image, name, onClick }: TileAvatarButtonProps) {
   return (
     <Box
       component="button"
-      onClick={() => onClick(url, name)}
+      onClick={() => onClick(image, name)}
       sx={{
         background: "none",
         border: "none",
@@ -78,7 +78,13 @@ function TileAvatarButton({ url, name, onClick }: TileAvatarButtonProps) {
       }}
       aria-label={`View test tile for ${name}`}
     >
-      <CloudinaryImage url={url} context="thumbnail" alt={name} />
+      <CloudinaryImage
+        url={image.url}
+        cloud_name={image.cloud_name}
+        cloudinary_public_id={image.cloudinary_public_id}
+        context="thumbnail"
+        alt={name}
+      />
     </Box>
   );
 }
@@ -107,6 +113,7 @@ function PieceImageButton({ img, label, onClick }: PieceImageButtonProps) {
       >
         <CloudinaryImage
           url={img.url}
+          cloud_name={img.cloud_name}
           cloudinary_public_id={img.cloudinary_public_id}
           alt={label}
           context="preview"
@@ -119,7 +126,7 @@ function PieceImageButton({ img, label, onClick }: PieceImageButtonProps) {
 interface ComboCardProps {
   combo: GlazeCombinationEntry;
   pieces: PieceEntry[];
-  onTileClick: (url: string, name: string) => void;
+  onTileClick: (image: NonNullable<GlazeCombinationEntry["test_tile_image"]>, name: string) => void;
   onPieceImageClick: (images: GalleryImage[], idx: number) => void;
 }
 
@@ -144,7 +151,7 @@ function ComboCard({
         avatar={
           combo.test_tile_image?.url ? (
             <TileAvatarButton
-              url={combo.test_tile_image.url}
+              image={combo.test_tile_image}
               name={combo.name ?? ""}
               onClick={onTileClick}
             />
@@ -229,12 +236,21 @@ export default function GlazeCombinationGallery() {
     );
   }
 
-  function handleTileClick(url: string, name: string) {
+  function handleTileClick(
+    image: NonNullable<GlazeCombinationEntry["test_tile_image"]>,
+    name: string,
+  ) {
     setLightbox({
       kind: "tile",
       initialIndex: 0,
       images: [
-        { url, caption: name, created: new Date(), cloudinary_public_id: null },
+        {
+          url: image.url,
+          caption: name,
+          created: new Date(),
+          cloudinary_public_id: image.cloudinary_public_id ?? null,
+          cloud_name: image.cloud_name ?? null,
+        },
       ],
     });
   }

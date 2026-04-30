@@ -20,6 +20,7 @@ function makePiece(overrides: Partial<PieceSummary> = {}): PieceSummary {
     thumbnail: {
       url: "https://example.com/bowl.jpg",
       cloudinary_public_id: null,
+      cloud_name: null,
     },
     current_location: null,
     current_state: { state: "designed" } as any,

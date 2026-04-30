@@ -415,6 +415,7 @@ function PieceDetailContent({
                 <Box sx={{ position: "absolute", inset: 0 }}>
                   <CloudinaryImage
                     url={piece.thumbnail.url}
+                    cloud_name={piece.thumbnail.cloud_name}
                     cloudinary_public_id={piece.thumbnail.cloudinary_public_id}
                     alt={piece.name}
                     context="detail"

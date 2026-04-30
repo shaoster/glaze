@@ -40,6 +40,7 @@ const wireImage = {
   caption: "a caption",
   created: "2024-01-01T00:00:00Z",
   cloudinary_public_id: "pub123",
+  cloud_name: "demo-cloud",
 };
 
 const wirePieceState = {

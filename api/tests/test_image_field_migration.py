@@ -27,42 +27,50 @@ from api.models import GlazeCombination, GlazeType
 # ---------------------------------------------------------------------------
 
 _migration = importlib.import_module('api.migrations.0025_image_field_jsonfield')
-_url_to_json = _migration.url_to_json
-_json_to_url = _migration.json_to_url
-_extract_public_id = _migration._extract_public_id
+_url_to_json = _migration.global_images_url_to_json
+_json_to_url = _migration.global_images_json_to_url
+_parse_cloudinary_url = _migration._parse_cloudinary_url
 
 CLOUDINARY_URL = (
     'https://res.cloudinary.com/demo-cloud/image/upload'
     '/v1776304349/glaze-public/tile.heic'
 )
+EXPECTED_CLOUD_NAME = 'demo-cloud'
 EXPECTED_PUBLIC_ID = 'v1776304349/glaze-public/tile'
 
 
-class TestExtractPublicId:
-    def test_extracts_public_id_with_version_segment(self):
-        assert _extract_public_id(CLOUDINARY_URL) == EXPECTED_PUBLIC_ID
+class TestParseCloudinaryUrl:
+    def test_parses_cloud_name_and_public_id(self):
+        cloud_name, public_id = _parse_cloudinary_url(CLOUDINARY_URL)
+        assert cloud_name == EXPECTED_CLOUD_NAME
+        assert public_id == EXPECTED_PUBLIC_ID
 
     def test_extracts_public_id_without_version_segment(self):
         url = 'https://res.cloudinary.com/demo/image/upload/glaze-public/tile.jpg'
-        assert _extract_public_id(url) == 'glaze-public/tile'
+        cloud_name, public_id = _parse_cloudinary_url(url)
+        assert cloud_name == 'demo'
+        assert public_id == 'glaze-public/tile'
 
     def test_skips_transform_segments(self):
         url = 'https://res.cloudinary.com/demo/image/upload/f_auto/w_100/glaze/tile.jpg'
-        assert _extract_public_id(url) == 'glaze/tile'
+        _, public_id = _parse_cloudinary_url(url)
+        assert public_id == 'glaze/tile'
 
     def test_skips_mixed_transforms_before_versioned_public_id(self):
         url = 'https://res.cloudinary.com/demo/image/upload/f_auto/v123/folder/img.png'
-        assert _extract_public_id(url) == 'v123/folder/img'
+        _, public_id = _parse_cloudinary_url(url)
+        assert public_id == 'v123/folder/img'
 
-    def test_returns_none_for_non_cloudinary_url(self):
-        assert _extract_public_id('https://example.com/image.jpg') is None
+    def test_returns_none_tuple_for_non_cloudinary_url(self):
+        assert _parse_cloudinary_url('https://example.com/image.jpg') == (None, None)
 
-    def test_returns_none_for_empty_string(self):
-        assert _extract_public_id('') is None
+    def test_returns_none_tuple_for_empty_string(self):
+        assert _parse_cloudinary_url('') == (None, None)
 
     def test_handles_no_folder_in_path(self):
         url = 'https://res.cloudinary.com/demo/image/upload/tile.png'
-        assert _extract_public_id(url) == 'tile'
+        _, public_id = _parse_cloudinary_url(url)
+        assert public_id == 'tile'
 
 
 class _FakeSchemaEditor:
@@ -112,7 +120,11 @@ class TestUrlToJsonDataMigration(TestCase):
         combo = GlazeCombination.objects.create(
             user=None,
             name='Celadon!Shino',
-            test_tile_image={'url': CLOUDINARY_URL, 'cloudinary_public_id': 'glaze-public/tile'},
+            test_tile_image={
+                'url': CLOUDINARY_URL,
+                'cloudinary_public_id': EXPECTED_PUBLIC_ID,
+                'cloud_name': EXPECTED_CLOUD_NAME,
+            },
         )
         _json_to_url(django_apps, self.schema_editor)
         combo.refresh_from_db()
@@ -134,7 +146,11 @@ class TestImageFieldStorageRoundTrip(TestCase):
     """Integration tests verifying the model correctly stores/retrieves dict values."""
 
     def test_dict_value_round_trips_through_orm(self):
-        image = {'url': CLOUDINARY_URL, 'cloudinary_public_id': EXPECTED_PUBLIC_ID}
+        image = {
+            'url': CLOUDINARY_URL,
+            'cloudinary_public_id': EXPECTED_PUBLIC_ID,
+            'cloud_name': EXPECTED_CLOUD_NAME,
+        }
         gt = GlazeType.objects.create(user=None, name='Shino', test_tile_image=image)
         gt.refresh_from_db()
         assert gt.test_tile_image == image
@@ -152,7 +168,11 @@ class TestImageFieldStorageRoundTrip(TestCase):
         assert gt.test_tile_image == image
 
     def test_glaze_combination_stores_dict_image(self):
-        image = {'url': CLOUDINARY_URL, 'cloudinary_public_id': EXPECTED_PUBLIC_ID}
+        image = {
+            'url': CLOUDINARY_URL,
+            'cloudinary_public_id': EXPECTED_PUBLIC_ID,
+            'cloud_name': EXPECTED_CLOUD_NAME,
+        }
         combo = GlazeCombination.objects.create(
             user=None,
             name='Celadon!Shino',
@@ -161,9 +181,14 @@ class TestImageFieldStorageRoundTrip(TestCase):
         combo.refresh_from_db()
         assert combo.test_tile_image == image
 
-    def test_cloudinary_public_id_extractable_after_roundtrip(self):
-        """After storing a dict, the cloudinary_public_id is directly accessible."""
-        image = {'url': CLOUDINARY_URL, 'cloudinary_public_id': EXPECTED_PUBLIC_ID}
+    def test_all_three_fields_accessible_after_roundtrip(self):
+        """After storing a dict, all three image fields are directly accessible."""
+        image = {
+            'url': CLOUDINARY_URL,
+            'cloudinary_public_id': EXPECTED_PUBLIC_ID,
+            'cloud_name': EXPECTED_CLOUD_NAME,
+        }
         gt = GlazeType.objects.create(user=None, name='Chun Li', test_tile_image=image)
         gt.refresh_from_db()
         assert gt.test_tile_image['cloudinary_public_id'] == EXPECTED_PUBLIC_ID
+        assert gt.test_tile_image['cloud_name'] == EXPECTED_CLOUD_NAME

@@ -8,6 +8,7 @@ export type ImageEntry = {
   url: string;
   caption: string;
   cloudinary_public_id?: string | null;
+  cloud_name?: string | null;
 };
 
 type AdditionalFieldInputMap = Record<string, string>;
@@ -135,6 +136,7 @@ function stateImages(pieceState: PieceState): ImageEntry[] {
     url: img.url,
     caption: img.caption,
     cloudinary_public_id: img.cloudinary_public_id ?? null,
+    cloud_name: img.cloud_name ?? null,
   }));
 }
 

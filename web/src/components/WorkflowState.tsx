@@ -318,6 +318,7 @@ export default function WorkflowState({
             url: result.info.secure_url,
             caption: "",
             cloudinary_public_id: result.info.public_id,
+            cloud_name: config.cloud_name,
           };
           setSavingImage(true);
           setImageError(null);

@@ -54,6 +54,7 @@ function makeImages(): PiecePhotoGalleryImage[] {
       caption: "Freshly thrown",
       created: new Date("2024-01-16T10:00:00Z"),
       cloudinary_public_id: "piece/a",
+      cloud_name: null,
       stateLabel: "Throwing",
       editableCurrentStateIndex: 0,
     },
@@ -62,6 +63,7 @@ function makeImages(): PiecePhotoGalleryImage[] {
       caption: "Trimmed rim",
       created: new Date("2024-01-17T10:00:00Z"),
       cloudinary_public_id: "piece/b",
+      cloud_name: null,
       stateLabel: "Trimming",
       editableCurrentStateIndex: null,
     },
@@ -77,6 +79,7 @@ function makeSingleImage(
       caption: "Only photo",
       created: new Date("2024-01-18T10:00:00Z"),
       cloudinary_public_id: "piece/solo",
+      cloud_name: null,
       stateLabel: "Throwing",
       editableCurrentStateIndex: 0,
       ...overrides,
@@ -170,6 +173,7 @@ describe("PiecePhotoGallery", () => {
             url: "https://example.com/a.jpg",
             caption: "Updated caption",
             cloudinary_public_id: "piece/a",
+            cloud_name: null,
           },
         ] satisfies EditablePiecePhoto[],
       }),
@@ -240,6 +244,7 @@ describe("PiecePhotoGallery", () => {
             url: "https://example.com/a.jpg",
             caption: "Wheel detail",
             cloudinary_public_id: "piece/a",
+            cloud_name: null,
           },
         ] satisfies EditablePiecePhoto[],
       }),
@@ -403,6 +408,7 @@ describe("PiecePhotoGallery", () => {
       thumbnail: {
         url: "https://example.com/a.jpg",
         cloudinary_public_id: "piece/a",
+        cloud_name: null,
       },
     });
     const updatePieceFn = vi.fn().mockResolvedValue(updatedPiece);
@@ -428,6 +434,7 @@ describe("PiecePhotoGallery", () => {
         thumbnail: {
           url: "https://example.com/a.jpg",
           cloudinary_public_id: "piece/a",
+          cloud_name: null,
         },
       }),
     );

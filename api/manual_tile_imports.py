@@ -96,7 +96,11 @@ def import_manual_tile_records(records: list[dict], uploaded_files: dict[str, ob
         glaze_type = GlazeType.objects.create(
             user=None,
             name=name,
-            test_tile_image={'url': upload['secure_url'], 'cloudinary_public_id': upload['public_id']},
+            test_tile_image={
+                'url': upload['secure_url'],
+                'cloudinary_public_id': upload['public_id'],
+                'cloud_name': cloudinary.config().cloud_name or None,
+            },
             runs=parsed.get('runs'),
             is_food_safe=parsed.get('is_food_safe'),
         )
@@ -138,7 +142,11 @@ def import_manual_tile_records(records: list[dict], uploaded_files: dict[str, ob
         combo = GlazeCombination.objects.create(
             user=None,
             name=name,
-            test_tile_image={'url': upload['secure_url'], 'cloudinary_public_id': upload['public_id']},
+            test_tile_image={
+                'url': upload['secure_url'],
+                'cloudinary_public_id': upload['public_id'],
+                'cloud_name': cloudinary.config().cloud_name or None,
+            },
             runs=parsed.get('runs'),
             is_food_safe=parsed.get('is_food_safe'),
         )
