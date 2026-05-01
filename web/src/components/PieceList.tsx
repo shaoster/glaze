@@ -199,14 +199,17 @@ const PieceList = (props: PieceListingProps) => {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || !hasMore) return;
-    const observer = new IntersectionObserver(
-      (entries) => { if (entries[0]?.isIntersecting) onLoadMoreRef.current?.(); },
-      { rootMargin: "200px" },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
+    if (!hasMore) return;
+    function check() {
+      const sentinel = sentinelRef.current;
+      if (!sentinel) return;
+      const rect = sentinel.getBoundingClientRect();
+      if (rect.top <= window.innerHeight + 300) onLoadMoreRef.current?.();
+    }
+    window.addEventListener("scroll", check, { passive: true });
+    // Also check immediately in case the sentinel is already in view.
+    check();
+    return () => window.removeEventListener("scroll", check);
   }, [hasMore]);
 
   const activeFilterOptions = useMemo(
