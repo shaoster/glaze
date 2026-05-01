@@ -1,26 +1,39 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import PieceListPage from "../PieceListPage";
 import type { PieceDetail, PieceSummary } from "../../util/types";
+import type { PieceSortOrder } from "../../util/api";
 
-const mockUseAsync = vi.fn();
+const mockFetchPieces = vi.fn();
 
-vi.mock("../..//util/useAsync", () => ({
-  useAsync: (...args: unknown[]) => mockUseAsync(...args),
-}));
+vi.mock("../../util/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../util/api")>();
+  return {
+    ...actual,
+    fetchPieces: (...args: unknown[]) => mockFetchPieces(...args),
+  };
+});
 
 vi.mock("../../components/PieceList", () => ({
   default: ({
     pieces,
     onNewPiece,
+    onSortChange,
+    onLoadMore,
   }: {
     pieces: PieceSummary[];
     onNewPiece?: () => void;
+    onSortChange?: (order: PieceSortOrder) => void;
+    onLoadMore?: () => void;
   }) => (
     <div data-testid="piece-list">
       {onNewPiece && <button onClick={onNewPiece}>New Piece</button>}
+      {onSortChange && (
+        <button onClick={() => onSortChange("name")}>Sort by Name</button>
+      )}
+      {onLoadMore && <button onClick={onLoadMore}>Load More</button>}
       {pieces.map((piece) => piece.name).join(", ")}
     </div>
   ),
@@ -86,6 +99,17 @@ function installMatchMedia(matches: boolean) {
   });
 }
 
+const EXISTING_PIECE: PieceSummary = {
+  id: "piece-1",
+  name: "Existing Bowl",
+  created: new Date("2024-01-01T00:00:00Z"),
+  last_modified: new Date("2024-01-01T00:00:00Z"),
+  thumbnail: null,
+  current_state: { state: "designed" } as PieceSummary["current_state"],
+  current_location: null,
+  tags: [],
+};
+
 describe("PieceListPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -93,52 +117,32 @@ describe("PieceListPage", () => {
   });
 
   it("shows a loading spinner while pieces are loading", () => {
-    mockUseAsync.mockReturnValue({
-      data: null,
-      loading: true,
-      error: null,
-      setData: vi.fn(),
-    });
-
+    mockFetchPieces.mockReturnValue(new Promise(() => {}));
     render(<PieceListPage />);
-
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
-  it("shows an error message when loading pieces fails", () => {
-    mockUseAsync.mockReturnValue({
-      data: null,
-      loading: false,
-      error: new Error("boom"),
-      setData: vi.fn(),
-    });
-
+  it("shows an error message when loading pieces fails", async () => {
+    mockFetchPieces.mockRejectedValue(new Error("boom"));
     render(<PieceListPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Failed to load pieces.")).toBeInTheDocument();
+    });
+  });
 
-    expect(screen.getByText("Failed to load pieces.")).toBeInTheDocument();
+  it("renders pieces after successful load", async () => {
+    mockFetchPieces.mockResolvedValue({ count: 1, results: [EXISTING_PIECE] });
+    render(<PieceListPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Existing Bowl")).toBeInTheDocument();
+    });
   });
 
   it("opens the dialog from the desktop button and prepends created pieces", async () => {
-    const setData = vi.fn();
-    mockUseAsync.mockReturnValue({
-      data: [
-        {
-          id: "piece-1",
-          name: "Existing Bowl",
-          created: new Date("2024-01-01T00:00:00Z"),
-          last_modified: new Date("2024-01-01T00:00:00Z"),
-          thumbnail: null,
-          current_state: { state: "designed" },
-          current_location: null,
-          tags: [],
-        },
-      ],
-      loading: false,
-      error: null,
-      setData,
-    });
-
+    mockFetchPieces.mockResolvedValue({ count: 1, results: [EXISTING_PIECE] });
     render(<PieceListPage />);
+
+    await waitFor(() => screen.getByText("Existing Bowl"));
 
     await userEvent.click(screen.getByRole("button", { name: "New Piece" }));
     expect(screen.getByText("New Piece Dialog")).toBeInTheDocument();
@@ -147,33 +151,63 @@ describe("PieceListPage", () => {
       screen.getByRole("button", { name: "Finish Create" }),
     );
 
-    expect(setData).toHaveBeenCalledTimes(1);
-    const updateFn = setData.mock.calls[0][0] as (
-      prev: PieceSummary[] | null,
-    ) => PieceSummary[];
-    expect(
-      updateFn([{ id: "piece-1", name: "Existing Bowl" } as PieceSummary])[0]
-        .name,
-    ).toBe("Fresh Mug");
-    expect(
-      updateFn([{ id: "piece-1", name: "Existing Bowl" } as PieceSummary])[1]
-        .name,
-    ).toBe("Existing Bowl");
+    await waitFor(() => {
+      expect(screen.getByTestId("piece-list").textContent).toContain("Fresh Mug");
+    });
+    expect(screen.getByTestId("piece-list").textContent).toContain("Existing Bowl");
   });
 
-  it("shows the mobile fab on small screens", () => {
+  it("shows the mobile fab on small screens", async () => {
     installMatchMedia(true);
-    mockUseAsync.mockReturnValue({
-      data: [],
-      loading: false,
-      error: null,
-      setData: vi.fn(),
-    });
-
+    mockFetchPieces.mockResolvedValue({ count: 0, results: [] });
     render(<PieceListPage />);
 
-    // The FAB is the accessible button labeled "New Piece"
+    await waitFor(() => screen.getByTestId("piece-list"));
+
     const newPieceButtons = screen.getAllByRole("button", { name: "New Piece" });
     expect(newPieceButtons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("re-fetches with new sort order when sort changes", async () => {
+    mockFetchPieces.mockResolvedValue({ count: 1, results: [EXISTING_PIECE] });
+    render(<PieceListPage />);
+
+    await waitFor(() => screen.getByTestId("piece-list"));
+
+    mockFetchPieces.mockResolvedValue({ count: 0, results: [] });
+    await userEvent.click(screen.getByRole("button", { name: "Sort by Name" }));
+
+    await waitFor(() => {
+      expect(mockFetchPieces).toHaveBeenCalledWith(
+        expect.objectContaining({ ordering: "name" }),
+      );
+    });
+  });
+
+  it("loads more pieces on scroll trigger", async () => {
+    const firstPage = Array.from({ length: 3 }, (_, i) => ({
+      ...EXISTING_PIECE,
+      id: `piece-${i}`,
+      name: `Piece ${i}`,
+    }));
+    mockFetchPieces.mockResolvedValueOnce({ count: 6, results: firstPage });
+    render(<PieceListPage />);
+
+    await waitFor(() => screen.getByTestId("piece-list"));
+
+    const secondPage = Array.from({ length: 3 }, (_, i) => ({
+      ...EXISTING_PIECE,
+      id: `piece-${i + 3}`,
+      name: `Piece ${i + 3}`,
+    }));
+    mockFetchPieces.mockResolvedValueOnce({ count: 6, results: secondPage });
+
+    await userEvent.click(screen.getByRole("button", { name: "Load More" }));
+
+    await waitFor(() => {
+      expect(mockFetchPieces).toHaveBeenCalledWith(
+        expect.objectContaining({ offset: 3 }),
+      );
+    });
   });
 });

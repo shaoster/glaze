@@ -6,10 +6,12 @@ from collections import defaultdict
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.db.models import Q
+from django.db.models import DateTimeField, Q, Subquery, OuterRef
+from django.db.models.functions import Coalesce, Greatest
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
+from rest_framework import serializers as drf_serializers
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 from rest_framework import status
@@ -93,15 +95,67 @@ _FAVORITES_REGISTRY = {
 }
 
 
+_PIECE_ORDERING_MAP = {
+    "last_modified": "computed_last_modified",
+    "-last_modified": "-computed_last_modified",
+    "name": "name",
+    "-name": "-name",
+    "created": "created",
+    "-created": "-created",
+}
+_DEFAULT_ORDERING = "-last_modified"
+_DEFAULT_PAGE_SIZE = 24
+
+
 def _piece_queryset(request: Request):
     return Piece.objects.prefetch_related("states", "tag_links__tag").filter(
         user=request.user
     )  # type: ignore[misc]
 
 
+def _apply_piece_ordering(qs, ordering_param: str):
+    db_ordering = _PIECE_ORDERING_MAP.get(ordering_param, _PIECE_ORDERING_MAP[_DEFAULT_ORDERING])
+    if "computed_last_modified" in db_ordering:
+        latest_state_lm = (
+            PieceState.objects.filter(piece=OuterRef("pk"))
+            .order_by("-last_modified")
+            .values("last_modified")[:1]
+        )
+        qs = qs.annotate(
+            computed_last_modified=Greatest(
+                "fields_last_modified",
+                Coalesce(
+                    Subquery(latest_state_lm, output_field=DateTimeField()),
+                    "fields_last_modified",
+                ),
+            )
+        )
+    return qs.order_by(db_ordering)
+
+
 @extend_schema(
     methods=["GET"],
-    responses={200: PieceSummarySerializer(many=True)},
+    parameters=[
+        OpenApiParameter(
+            name="ordering",
+            description="Sort order. Prefix with '-' for descending.",
+            required=False,
+            type=str,
+            enum=list(_PIECE_ORDERING_MAP.keys()),
+        ),
+        OpenApiParameter(name="limit", description="Page size.", required=False, type=int),
+        OpenApiParameter(name="offset", description="Pagination offset.", required=False, type=int),
+        OpenApiParameter(name="tag_ids", description="Comma-separated tag IDs (AND filter).", required=False, type=str),
+    ],
+    responses={
+        200: inline_serializer(
+            name="PiecePage",
+            fields={
+                "count": drf_serializers.IntegerField(),
+                "results": PieceSummarySerializer(many=True),
+            },
+        )
+    },
 )
 @extend_schema(
     methods=["POST"],
@@ -120,7 +174,17 @@ def pieces(request: Request) -> Response:
             ):
                 qs = qs.filter(tag_links__tag_id=tag_id)
             qs = qs.distinct()
-        return Response(PieceSummarySerializer(qs, many=True).data)
+        ordering_param = request.query_params.get("ordering", _DEFAULT_ORDERING)
+        qs = _apply_piece_ordering(qs, ordering_param)
+        try:
+            limit = max(1, min(100, int(request.query_params.get("limit", _DEFAULT_PAGE_SIZE))))
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except (ValueError, TypeError):
+            limit = _DEFAULT_PAGE_SIZE
+            offset = 0
+        count = qs.count()
+        page_qs = qs[offset : offset + limit]
+        return Response({"count": count, "results": PieceSummarySerializer(page_qs, many=True).data})
 
     serializer = PieceCreateSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)

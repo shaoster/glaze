@@ -141,9 +141,38 @@ function mapPieceDetail(raw: Wire<PieceDetail>): PieceDetail {
 // API calls
 // ---------------------------------------------------------------------------
 
-export async function fetchPieces(): Promise<PieceSummary[]> {
-  const { data } = await client.get<Wire<PieceSummary>[]>("pieces/");
-  return data.map(mapPieceSummary);
+export type PieceSortOrder =
+  | "last_modified"
+  | "-last_modified"
+  | "name"
+  | "-name"
+  | "created"
+  | "-created";
+
+export type PiecePage = { count: number; results: PieceSummary[] };
+
+export const PIECE_SORT_OPTIONS: { value: PieceSortOrder; label: string }[] = [
+  { value: "-last_modified", label: "Recently Modified" },
+  { value: "last_modified", label: "Oldest Modified" },
+  { value: "-created", label: "Newest First" },
+  { value: "created", label: "Oldest First" },
+  { value: "name", label: "Name A → Z" },
+  { value: "-name", label: "Name Z → A" },
+];
+
+export const DEFAULT_PIECE_SORT: PieceSortOrder = "-last_modified";
+export const PIECES_PAGE_SIZE = 24;
+
+export async function fetchPieces(params?: {
+  ordering?: PieceSortOrder;
+  limit?: number;
+  offset?: number;
+}): Promise<PiecePage> {
+  const { data } = await client.get<{
+    count: number;
+    results: Wire<PieceSummary>[];
+  }>("pieces/", { params });
+  return { count: data.count, results: data.results.map(mapPieceSummary) };
 }
 
 export async function ensureCsrfCookie(): Promise<void> {

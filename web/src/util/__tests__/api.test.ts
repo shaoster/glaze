@@ -107,31 +107,43 @@ describe("client setup", () => {
 describe("piece endpoints", () => {
   it("fetchPieces maps wire data to PieceSummary values", async () => {
     const { fetchPieces } = await loadApiModule();
-    mockClient.get.mockResolvedValue({ data: [wirePieceSummary] });
+    mockClient.get.mockResolvedValue({ data: { count: 1, results: [wirePieceSummary] } });
 
     const result = await fetchPieces();
 
-    expect(mockClient.get).toHaveBeenCalledWith("pieces/");
-    expect(result).toHaveLength(1);
-    expect(result[0].created).toBeInstanceOf(Date);
-    expect(result[0].last_modified).toBeInstanceOf(Date);
-    expect(result[0].current_state.state).toBe("designed");
-    expect(result[0].tags[0]).toMatchObject({
+    expect(mockClient.get).toHaveBeenCalledWith("pieces/", { params: undefined });
+    expect(result.count).toBe(1);
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].created).toBeInstanceOf(Date);
+    expect(result.results[0].last_modified).toBeInstanceOf(Date);
+    expect(result.results[0].current_state.state).toBe("designed");
+    expect(result.results[0].tags[0]).toMatchObject({
       name: "functional",
       color: "#aabbcc",
       is_public: true,
     });
   });
 
+  it("fetchPieces passes ordering and pagination params", async () => {
+    const { fetchPieces } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: { count: 0, results: [] } });
+
+    await fetchPieces({ ordering: "name", limit: 10, offset: 20 });
+
+    expect(mockClient.get).toHaveBeenCalledWith("pieces/", {
+      params: { ordering: "name", limit: 10, offset: 20 },
+    });
+  });
+
   it("fetchPieces defaults missing tags to an empty array", async () => {
     const { fetchPieces } = await loadApiModule();
     mockClient.get.mockResolvedValue({
-      data: [{ ...wirePieceSummary, tags: undefined }],
+      data: { count: 1, results: [{ ...wirePieceSummary, tags: undefined }] },
     });
 
     const result = await fetchPieces();
 
-    expect(result[0].tags).toEqual([]);
+    expect(result.results[0].tags).toEqual([]);
   });
 
   it("fetchPiece maps nested dates, images, and navigation fields", async () => {
