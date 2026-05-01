@@ -124,8 +124,12 @@ def bootstrap_dev_user(user) -> None:
 
 
 def _seed_dev_pieces(user) -> None:
-    """Create a few representative pieces for a newly bootstrapped dev user."""
-    from .models import ClayBody, GlazeCombination, GlazeType, Piece  # noqa: PLC0415
+    """Create 30 representative pieces for a newly bootstrapped dev user.
+
+    The volume exercises the default page size of 24 so infinite-scroll
+    pagination is immediately visible in the dev environment.
+    """
+    from .models import ClayBody, GlazeCombination, GlazeType, Location, Piece  # noqa: PLC0415
 
     clay_body, _ = ClayBody.objects.get_or_create(
         user=user,
@@ -133,6 +137,11 @@ def _seed_dev_pieces(user) -> None:
         defaults={
             "short_description": "Reliable mid-fire stoneware for local dev demos."
         },
+    )
+    porcelain, _ = ClayBody.objects.get_or_create(
+        user=user,
+        name="White Porcelain",
+        defaults={"short_description": "Smooth throwing porcelain."},
     )
     glaze_type, _ = GlazeType.objects.get_or_create(
         user=user,
@@ -147,105 +156,239 @@ def _seed_dev_pieces(user) -> None:
             "apply_thin": False,
         },
     )
-    glaze_combination, _ = GlazeCombination.get_or_create_with_components(
+    celadon, _ = GlazeType.objects.get_or_create(
         user=user,
-        glaze_types=[glaze_type],
+        name="Celadon Green",
+        defaults={
+            "short_description": "Soft celadon for porcelain.",
+            "test_tile_image": "",
+            "is_food_safe": True,
+            "runs": False,
+            "highlights_grooves": False,
+            "is_different_on_white_and_brown_clay": False,
+            "apply_thin": True,
+        },
     )
-
-    from .models import Location  # noqa: PLC0415
+    tenmoku, _ = GlazeType.objects.get_or_create(
+        user=user,
+        name="Tenmoku",
+        defaults={
+            "short_description": "Dark iron-rich glaze.",
+            "test_tile_image": "",
+            "is_food_safe": True,
+            "runs": True,
+            "highlights_grooves": True,
+            "is_different_on_white_and_brown_clay": True,
+            "apply_thin": False,
+        },
+    )
+    floating_blue_combo, _ = GlazeCombination.get_or_create_with_components(
+        user=user, glaze_types=[glaze_type]
+    )
+    celadon_combo, _ = GlazeCombination.get_or_create_with_components(
+        user=user, glaze_types=[celadon]
+    )
+    tenmoku_combo, _ = GlazeCombination.get_or_create_with_components(
+        user=user, glaze_types=[tenmoku]
+    )
 
     bisque_kiln, _ = Location.objects.get_or_create(user=user, name="Bisque Kiln")
     glaze_kiln, _ = Location.objects.get_or_create(user=user, name="Glaze Kiln")
+    shelf, _ = Location.objects.get_or_create(user=user, name="Drying Shelf")
 
-    trimmed_piece = Piece.objects.create(
-        user=user,
-        name="Trimmed Practice Bowl",
-        thumbnail={"url": DEV_THUMBNAIL_URLS["bowl"], "cloudinary_public_id": None},
-    )
-    _create_piece_state(trimmed_piece, "designed", notes="Starting a quick demo bowl.")
-    _create_piece_state(
-        trimmed_piece,
-        "wheel_thrown",
-        notes="Opened and pulled on the wheel.",
-        additional_fields={"clay_weight_lbs": 1250, "wall_thickness_mm": 7.5},
-        global_refs={"clay_body": ("clay_body", clay_body)},
-    )
-    _create_piece_state(
-        trimmed_piece,
-        "trimmed",
-        notes="Foot ring cleaned up and ready to dry.",
-        additional_fields={"trimmed_weight_lbs": 980, "pre_trim_weight_lbs": 1250},
-    )
+    T = DEV_THUMBNAIL_URLS
 
-    bisque_piece = Piece.objects.create(
-        user=user,
-        name="Bisque Queue Mug",
-        thumbnail={"url": DEV_THUMBNAIL_URLS["mug"], "cloudinary_public_id": None},
-    )
-    _create_piece_state(bisque_piece, "designed", notes="Planning a handbuilt mug.")
-    _create_piece_state(
-        bisque_piece,
-        "handbuilt",
-        notes="Walls are up and the handle is attached.",
-        global_refs={"clay_body": ("clay_body", clay_body)},
-    )
-    _create_piece_state(
-        bisque_piece,
-        "submitted_to_bisque_fire",
-        notes="Queued for the next bisque load.",
-        global_refs={"kiln_location": ("location", bisque_kiln)},
-    )
+    # -----------------------------------------------------------------------
+    # Pieces at various lifecycle stages.  30 total so the default page of 24
+    # leaves a second page for the infinite-scroll trigger to pick up.
+    # -----------------------------------------------------------------------
 
-    finished_piece = Piece.objects.create(
-        user=user,
-        name="Finished Test Plate",
-        thumbnail={"url": DEV_THUMBNAIL_URLS["plate"], "cloudinary_public_id": None},
-    )
-    _create_piece_state(
-        finished_piece, "designed", notes="Small plate for glaze testing."
-    )
-    _create_piece_state(
-        finished_piece,
-        "handbuilt",
-        notes="Slab-built and compressed.",
-        global_refs={"clay_body": ("clay_body", clay_body)},
-    )
-    _create_piece_state(
-        finished_piece,
-        "submitted_to_bisque_fire",
-        notes="Waiting for bisque firing.",
-        global_refs={"kiln_location": ("location", bisque_kiln)},
-    )
-    _create_piece_state(
-        finished_piece,
-        "bisque_fired",
-        notes="Bisque firing complete.",
-        additional_fields={"kiln_temperature_c": 1060, "cone": "04"},
-    )
-    _create_piece_state(
-        finished_piece,
-        "glazed",
-        notes="Floating Blue test coat applied.",
-        global_refs={"glaze_combination": ("glaze_combination", glaze_combination)},
-    )
-    _create_piece_state(
-        finished_piece,
-        "submitted_to_glaze_fire",
-        notes="Queued for glaze firing.",
-        global_refs={"kiln_location": ("location", glaze_kiln)},
-    )
-    _create_piece_state(
-        finished_piece,
-        "glaze_fired",
-        notes="Out of the kiln and looking promising.",
-        additional_fields={"kiln_temperature_c": 1060, "cone": "04"},
-        global_refs={"glaze_combination": ("glaze_combination", glaze_combination)},
-    )
-    _create_piece_state(
-        finished_piece,
-        "completed",
-        notes="Ready for quick UI smoke testing.",
-    )
+    def _bowl(name, *, clay=clay_body, thumb="bowl"):
+        p = Piece.objects.create(
+            user=user, name=name,
+            thumbnail={"url": T[thumb], "cloudinary_public_id": None},
+        )
+        return p, clay
+
+    def _mug(name, *, clay=clay_body, thumb="mug"):
+        p = Piece.objects.create(
+            user=user, name=name,
+            thumbnail={"url": T[thumb], "cloudinary_public_id": None},
+        )
+        return p, clay
+
+    def _plate(name, *, clay=clay_body, thumb="plate"):
+        p = Piece.objects.create(
+            user=user, name=name,
+            thumbnail={"url": T[thumb], "cloudinary_public_id": None},
+        )
+        return p, clay
+
+    def _vase(name, *, clay=clay_body, thumb="vase"):
+        p = Piece.objects.create(
+            user=user, name=name,
+            thumbnail={"url": T[thumb], "cloudinary_public_id": None},
+        )
+        return p, clay
+
+    # 1. Just designed
+    for label in [
+        "Morning Sketch Bowl",
+        "Teacup Concept",
+        "Platter Idea",
+    ]:
+        p = Piece.objects.create(
+            user=user, name=label,
+            thumbnail={"url": T["plate"], "cloudinary_public_id": None},
+        )
+        _create_piece_state(p, "designed", notes=f"Rough concept for {label}.")
+
+    # 2. Wheel thrown / handbuilt, drying
+    p, clay = _bowl("Throwing Practice Bowl")
+    _create_piece_state(p, "designed")
+    _create_piece_state(p, "wheel_thrown",
+        notes="Good centering, walls a bit uneven.",
+        additional_fields={"clay_weight_lbs": 1100, "wall_thickness_mm": 8.0},
+        global_refs={"clay_body": ("clay_body", clay)})
+
+    p, clay = _mug("Porcelain Yunomi", clay=porcelain)
+    _create_piece_state(p, "designed")
+    _create_piece_state(p, "wheel_thrown",
+        notes="Delicate thin walls.",
+        additional_fields={"clay_weight_lbs": 450, "wall_thickness_mm": 4.5},
+        global_refs={"clay_body": ("clay_body", clay)})
+
+    p, clay = _vase("Coil-Built Vase")
+    _create_piece_state(p, "designed")
+    _create_piece_state(p, "handbuilt", notes="Coils blended inside and out.",
+        global_refs={"clay_body": ("clay_body", clay)})
+
+    p, clay = _plate("Slab Tray")
+    _create_piece_state(p, "designed")
+    _create_piece_state(p, "handbuilt", notes="Rolled slab, edges folded.",
+        global_refs={"clay_body": ("clay_body", clay)})
+
+    # 3. Trimmed, drying
+    p, clay = _bowl("Trimmed Practice Bowl", clay=porcelain)
+    _create_piece_state(p, "designed")
+    _create_piece_state(p, "wheel_thrown",
+        additional_fields={"clay_weight_lbs": 900, "wall_thickness_mm": 6.0},
+        global_refs={"clay_body": ("clay_body", clay)})
+    _create_piece_state(p, "trimmed",
+        notes="Foot ring clean.",
+        additional_fields={"trimmed_weight_lbs": 720, "pre_trim_weight_lbs": 900})
+
+    p, clay = _mug("Trimmed Mug")
+    _create_piece_state(p, "designed")
+    _create_piece_state(p, "wheel_thrown",
+        additional_fields={"clay_weight_lbs": 600, "wall_thickness_mm": 6.5},
+        global_refs={"clay_body": ("clay_body", clay)})
+    _create_piece_state(p, "trimmed",
+        additional_fields={"trimmed_weight_lbs": 490, "pre_trim_weight_lbs": 600})
+
+    # 4. Queued / in bisque kiln
+    for label, thumb in [
+        ("Bisque Bowl #1", "bowl"),
+        ("Bisque Mug #1", "mug"),
+        ("Bisque Plate #1", "plate"),
+    ]:
+        p = Piece.objects.create(
+            user=user, name=label,
+            thumbnail={"url": T[thumb], "cloudinary_public_id": None},
+        )
+        _create_piece_state(p, "designed")
+        _create_piece_state(p, "wheel_thrown",
+            additional_fields={"clay_weight_lbs": 800, "wall_thickness_mm": 7.0},
+            global_refs={"clay_body": ("clay_body", clay_body)})
+        _create_piece_state(p, "trimmed",
+            additional_fields={"trimmed_weight_lbs": 650, "pre_trim_weight_lbs": 800})
+        _create_piece_state(p, "submitted_to_bisque_fire",
+            notes="In the next bisque load.",
+            global_refs={"kiln_location": ("location", bisque_kiln)})
+
+    # 5. Bisque-fired, planning glaze
+    for label, combo, thumb in [
+        ("Blue Bowl", floating_blue_combo, "bowl"),
+        ("Celadon Vase", celadon_combo, "vase"),
+        ("Tenmoku Mug", tenmoku_combo, "mug"),
+        ("Blue Plate", floating_blue_combo, "plate"),
+    ]:
+        p = Piece.objects.create(
+            user=user, name=label,
+            thumbnail={"url": T[thumb], "cloudinary_public_id": None},
+        )
+        _create_piece_state(p, "designed")
+        _create_piece_state(p, "wheel_thrown",
+            additional_fields={"clay_weight_lbs": 950, "wall_thickness_mm": 7.0},
+            global_refs={"clay_body": ("clay_body", clay_body)})
+        _create_piece_state(p, "trimmed",
+            additional_fields={"trimmed_weight_lbs": 780, "pre_trim_weight_lbs": 950})
+        _create_piece_state(p, "submitted_to_bisque_fire",
+            global_refs={"kiln_location": ("location", bisque_kiln)})
+        _create_piece_state(p, "bisque_fired",
+            notes="Bisque complete.",
+            additional_fields={"kiln_temperature_c": 1000, "cone": "06"})
+
+    # 6. Glazed and queued for glaze fire
+    p, _ = _bowl("Glazed Test Bowl", clay=porcelain)
+    _create_piece_state(p, "designed")
+    _create_piece_state(p, "wheel_thrown",
+        additional_fields={"clay_weight_lbs": 700, "wall_thickness_mm": 5.5},
+        global_refs={"clay_body": ("clay_body", porcelain)})
+    _create_piece_state(p, "trimmed",
+        additional_fields={"trimmed_weight_lbs": 570, "pre_trim_weight_lbs": 700})
+    _create_piece_state(p, "submitted_to_bisque_fire",
+        global_refs={"kiln_location": ("location", bisque_kiln)})
+    _create_piece_state(p, "bisque_fired",
+        additional_fields={"kiln_temperature_c": 1000, "cone": "06"})
+    _create_piece_state(p, "glazed",
+        notes="Celadon, single coat.",
+        global_refs={"glaze_combination": ("glaze_combination", celadon_combo)})
+    _create_piece_state(p, "submitted_to_glaze_fire",
+        notes="Ready for cone 6 fire.",
+        global_refs={"kiln_location": ("location", glaze_kiln)})
+
+    # 7. Completed pieces
+    for label, combo, thumb in [
+        ("Finished Blue Bowl", floating_blue_combo, "bowl"),
+        ("Finished Celadon Plate", celadon_combo, "plate"),
+        ("Finished Tenmoku Vase", tenmoku_combo, "vase"),
+    ]:
+        p = Piece.objects.create(
+            user=user, name=label,
+            thumbnail={"url": T[thumb], "cloudinary_public_id": None},
+        )
+        _create_piece_state(p, "designed")
+        _create_piece_state(p, "wheel_thrown",
+            additional_fields={"clay_weight_lbs": 1000, "wall_thickness_mm": 7.0},
+            global_refs={"clay_body": ("clay_body", clay_body)})
+        _create_piece_state(p, "trimmed",
+            additional_fields={"trimmed_weight_lbs": 820, "pre_trim_weight_lbs": 1000})
+        _create_piece_state(p, "submitted_to_bisque_fire",
+            global_refs={"kiln_location": ("location", bisque_kiln)})
+        _create_piece_state(p, "bisque_fired",
+            additional_fields={"kiln_temperature_c": 1000, "cone": "06"})
+        _create_piece_state(p, "glazed",
+            global_refs={"glaze_combination": ("glaze_combination", combo)})
+        _create_piece_state(p, "submitted_to_glaze_fire",
+            global_refs={"kiln_location": ("location", glaze_kiln)})
+        _create_piece_state(p, "glaze_fired",
+            notes="Out of the kiln.",
+            additional_fields={"kiln_temperature_c": 1240, "cone": "6"},
+            global_refs={"glaze_combination": ("glaze_combination", combo)})
+        _create_piece_state(p, "completed", notes="Ready to use.")
+
+    # 8. Recycled pieces
+    for label in ["Cracked Practice Bowl", "Collapsed Cylinder"]:
+        p = Piece.objects.create(
+            user=user, name=label,
+            thumbnail={"url": T["bowl"], "cloudinary_public_id": None},
+        )
+        _create_piece_state(p, "designed")
+        _create_piece_state(p, "wheel_thrown",
+            additional_fields={"clay_weight_lbs": 800, "wall_thickness_mm": 7.0},
+            global_refs={"clay_body": ("clay_body", clay_body)})
+        _create_piece_state(p, "recycled", notes="Reclaiming the clay.")
 
 
 def _create_piece_state(
