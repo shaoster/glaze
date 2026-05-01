@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Autocomplete from "@mui/material/Autocomplete";
 import AddIcon from "@mui/icons-material/Add";
 import SortIcon from "@mui/icons-material/Sort";
@@ -190,25 +190,24 @@ const PieceList = (props: PieceListingProps) => {
   const [activeTags, setActiveTags] = useState<TagEntry[]>([]);
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [tagAnchor, setTagAnchor] = useState<HTMLElement | null>(null);
+  // Keep a ref so the observer callback always calls the latest handler without
+  // needing to be listed as an effect dependency (which would cause the
+  // observer to be torn down and recreated on every load completion).
   const onLoadMoreRef = useRef(onLoadMore);
   useEffect(() => { onLoadMoreRef.current = onLoadMore; }, [onLoadMore]);
 
-  // Stable sentinel ref — the observer is created once per hasMore change and
-  // always calls the latest onLoadMore via the ref, avoiding constant
-  // reconnection due to onLoadMore identity churn.
-  const sentinelRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (!node || !hasMore) return;
-      const observer = new IntersectionObserver(
-        (entries) => { if (entries[0]?.isIntersecting) onLoadMoreRef.current?.(); },
-        { rootMargin: "200px" },
-      );
-      observer.observe(node);
-      // Disconnect when the element is removed or hasMore turns false.
-      return () => observer.disconnect();
-    },
-    [hasMore],
-  );
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0]?.isIntersecting) onLoadMoreRef.current?.(); },
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore]);
 
   const activeFilterOptions = useMemo(
     () =>
@@ -439,9 +438,9 @@ const PieceList = (props: PieceListingProps) => {
         ))}
       </Grid>
 
-      {/* Invisible sentinel — triggers onLoadMore via IntersectionObserver when
-          scrolled into view with a 200 px lookahead. */}
-      {hasMore && <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />}
+      {/* Invisible sentinel — always in the DOM so the ref is populated when the
+          effect runs; the effect itself is a no-op when hasMore is false. */}
+      <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
 
       {loadingMore && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
