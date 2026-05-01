@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Autocomplete from "@mui/material/Autocomplete";
 import AddIcon from "@mui/icons-material/Add";
 import SortIcon from "@mui/icons-material/Sort";
@@ -19,6 +19,7 @@ import {
   Select,
   Stack,
   TextField,
+  Typography,
   useMediaQuery,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -189,7 +190,25 @@ const PieceList = (props: PieceListingProps) => {
   const [activeTags, setActiveTags] = useState<TagEntry[]>([]);
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [tagAnchor, setTagAnchor] = useState<HTMLElement | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const onLoadMoreRef = useRef(onLoadMore);
+  useEffect(() => { onLoadMoreRef.current = onLoadMore; }, [onLoadMore]);
+
+  // Stable sentinel ref — the observer is created once per hasMore change and
+  // always calls the latest onLoadMore via the ref, avoiding constant
+  // reconnection due to onLoadMore identity churn.
+  const sentinelRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node || !hasMore) return;
+      const observer = new IntersectionObserver(
+        (entries) => { if (entries[0]?.isIntersecting) onLoadMoreRef.current?.(); },
+        { rootMargin: "200px" },
+      );
+      observer.observe(node);
+      // Disconnect when the element is removed or hasMore turns false.
+      return () => observer.disconnect();
+    },
+    [hasMore],
+  );
 
   const activeFilterOptions = useMemo(
     () =>
@@ -221,19 +240,6 @@ const PieceList = (props: PieceListingProps) => {
     });
   }, [pieces, activeFilters, activeTags]);
 
-  useEffect(() => {
-    if (!onLoadMore || !hasMore) return;
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) onLoadMore();
-      },
-      { rootMargin: "200px" },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [onLoadMore, hasMore]);
 
   return (
     <>
@@ -433,11 +439,21 @@ const PieceList = (props: PieceListingProps) => {
         ))}
       </Grid>
 
-      <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
+      {/* Invisible sentinel — triggers onLoadMore via IntersectionObserver when
+          scrolled into view with a 200 px lookahead. */}
+      {hasMore && <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />}
 
       {loadingMore && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
           <CircularProgress size={24} />
+        </Box>
+      )}
+
+      {!hasMore && !loadingMore && pieces.length > 0 && (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+          <Typography variant="caption" color="text.disabled">
+            End of pieces
+          </Typography>
         </Box>
       )}
     </>

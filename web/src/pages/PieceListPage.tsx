@@ -68,12 +68,11 @@ export default function PieceListPage() {
     setSortOrder(order);
   }
 
-  function handleLoadMore() {
+  const handleLoadMore = useCallback(() => {
     if (loadingMore || loading) return;
     const currentOffset = offsetRef.current;
-    if (currentOffset >= count) return;
     loadPage(sortOrder, currentOffset, false);
-  }
+  }, [loadingMore, loading, sortOrder, loadPage]);
 
   function handleCreated(piece: PieceDetail) {
     setPieces((prev) => [piece, ...prev]);
