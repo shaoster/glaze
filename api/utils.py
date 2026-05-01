@@ -327,7 +327,7 @@ def _seed_dev_pieces(user) -> None:
             global_refs={"kiln_location": ("location", bisque_kiln)})
         _create_piece_state(p, "bisque_fired",
             notes="Bisque complete.",
-            additional_fields={"kiln_temperature_c": 1000, "cone": "06"})
+            additional_fields={"kiln_temperature_c": 1000, "cone": "04"})
 
     # 6. Glazed and queued for glaze fire
     p, _ = _bowl("Glazed Test Bowl", clay=porcelain)
@@ -340,7 +340,7 @@ def _seed_dev_pieces(user) -> None:
     _create_piece_state(p, "submitted_to_bisque_fire",
         global_refs={"kiln_location": ("location", bisque_kiln)})
     _create_piece_state(p, "bisque_fired",
-        additional_fields={"kiln_temperature_c": 1000, "cone": "06"})
+        additional_fields={"kiln_temperature_c": 1000, "cone": "04"})
     _create_piece_state(p, "glazed",
         notes="Celadon, single coat.",
         global_refs={"glaze_combination": ("glaze_combination", celadon_combo)})
@@ -367,7 +367,7 @@ def _seed_dev_pieces(user) -> None:
         _create_piece_state(p, "submitted_to_bisque_fire",
             global_refs={"kiln_location": ("location", bisque_kiln)})
         _create_piece_state(p, "bisque_fired",
-            additional_fields={"kiln_temperature_c": 1000, "cone": "06"})
+            additional_fields={"kiln_temperature_c": 1000, "cone": "04"})
         _create_piece_state(p, "glazed",
             global_refs={"glaze_combination": ("glaze_combination", combo)})
         _create_piece_state(p, "submitted_to_glaze_fire",
