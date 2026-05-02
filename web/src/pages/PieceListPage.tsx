@@ -19,7 +19,12 @@ import PieceList from "../components/PieceList";
 import type { PieceDetail, PieceSummary } from "../util/types";
 
 export default function PieceListPage() {
+  // `pieces` is the committed list shown in the masonry grid.
+  // `pendingPieces` holds newly fetched items that are buffered while
+  // loadingMore is true, then flushed in one DOM update when loading finishes
+  // to avoid mid-scroll masonry reflow.
   const [pieces, setPieces] = useState<PieceSummary[]>([]);
+  const pendingRef = useRef<PieceSummary[] | null>(null);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -31,11 +36,14 @@ export default function PieceListPage() {
 
   const offsetRef = useRef(0);
   const sortOrderRef = useRef(sortOrder);
+  // Synchronous guard — React state updates are batched and arrive too late
+  // to prevent double-firing from rapid scroll events.
+  const loadingMoreRef = useRef(false);
 
   const loadPage = useCallback(
     async (ordering: PieceSortOrder, offset: number, replace: boolean) => {
       if (replace) setLoading(true);
-      else setLoadingMore(true);
+      else { setLoadingMore(true); loadingMoreRef.current = true; }
       setError(null);
       try {
         const page = await fetchPieces({
@@ -45,13 +53,29 @@ export default function PieceListPage() {
         });
         if (sortOrderRef.current !== ordering) return;
         setCount(page.count);
-        setPieces((prev) => (replace ? page.results : [...prev, ...page.results]));
+        if (replace) {
+          pendingRef.current = null;
+          setPieces(page.results);
+        } else {
+          // Buffer the new items; flush them when we clear loadingMore so
+          // the masonry grid updates in one frame instead of reshuffling
+          // mid-scroll as items trickle in.
+          pendingRef.current = page.results;
+        }
         offsetRef.current = offset + page.results.length;
       } catch {
         setError("Failed to load pieces.");
       } finally {
-        if (replace) setLoading(false);
-        else setLoadingMore(false);
+        if (replace) {
+          setLoading(false);
+        } else {
+          // Flush buffered items and clear the loading flag atomically
+          const pending = pendingRef.current;
+          pendingRef.current = null;
+          if (pending) setPieces((prev) => [...prev, ...pending]);
+          setLoadingMore(false);
+          loadingMoreRef.current = false;
+        }
       }
     },
     [],
@@ -60,6 +84,8 @@ export default function PieceListPage() {
   useEffect(() => {
     sortOrderRef.current = sortOrder;
     offsetRef.current = 0;
+    loadingMoreRef.current = false;
+    pendingRef.current = null;
     setPieces([]);
     loadPage(sortOrder, 0, true);
   }, [sortOrder, loadPage]);
@@ -69,10 +95,10 @@ export default function PieceListPage() {
   }
 
   const handleLoadMore = useCallback(() => {
-    if (loadingMore || loading) return;
+    if (loadingMoreRef.current || loading) return;
     const currentOffset = offsetRef.current;
     loadPage(sortOrder, currentOffset, false);
-  }, [loadingMore, loading, sortOrder, loadPage]);
+  }, [loading, sortOrder, loadPage]);
 
   function handleCreated(piece: PieceDetail) {
     setPieces((prev) => [piece, ...prev]);
@@ -91,8 +117,16 @@ export default function PieceListPage() {
           sx={{
             position: "fixed",
             right: 16,
-            bottom: 16,
+            // Sit above the bottom tab bar (56px) with extra breathing room
+            bottom: "calc(56px + 18px)",
             zIndex: (muiTheme) => muiTheme.zIndex.speedDial,
+            boxShadow: (muiTheme) => `
+              0 1px 0 rgba(255,255,255,0.18) inset,
+              0 -2px 6px rgba(0,0,0,0.35) inset,
+              0 8px 14px ${muiTheme.palette.common.black}8c,
+              0 22px 40px ${muiTheme.palette.primary.dark}8c,
+              0 0 0 1px ${muiTheme.palette.primary.dark}b3
+            `,
           }}
         >
           <AddIcon />

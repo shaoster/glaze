@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceList from "../PieceList";
@@ -37,12 +37,16 @@ function renderPieceList(pieces: PieceSummary[]) {
   return render(<RouterProvider router={router} />);
 }
 
+// Open the condensed filter panel
+async function openFilters(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: /toggle filters/i }));
+}
+
 describe("PieceList", () => {
   describe("with no pieces", () => {
-    it("renders an empty grid", () => {
+    it("renders the piece count as 0", () => {
       renderPieceList([]);
-      const container = screen.getByRole("rowgroup")!;
-      expect(container.children).toHaveLength(0);
+      expect(screen.getByText(/· 0 pieces/)).toBeInTheDocument();
     });
   });
 
@@ -60,18 +64,18 @@ describe("PieceList", () => {
     });
 
     it("renders the thumbnail image with correct src", () => {
-      renderPieceList([makePiece()]);
-      const imgs = screen.getAllByRole("presentation");
+      const { container } = renderPieceList([makePiece()]);
+      const imgs = container.querySelectorAll("img");
       expect(
-        imgs.some(
+        Array.from(imgs).some(
           (img) => img.getAttribute("src") === "https://example.com/bowl.jpg",
         ),
       ).toBe(true);
     });
 
-    it("name cell links to piece detail page", async () => {
+    it("card links to piece detail page", () => {
       renderPieceList([makePiece()]);
-      const link = screen.getByRole("navigation", { name: "Clay Bowl" });
+      const link = screen.getByRole("link");
       expect(link.getAttribute("href")).toBe(
         "/pieces/aaaaaaaa-0000-0000-0000-000000000001",
       );
@@ -81,8 +85,8 @@ describe("PieceList", () => {
       renderPieceList([
         makePiece({
           tags: [
-            { id: "tag-1", name: "Gift", color: "#2A9D8F" },
-            { id: "tag-2", name: "Functional", color: "#E76F51" },
+            { id: "tag-1", name: "Gift", color: "#2A9D8F", is_public: false },
+            { id: "tag-2", name: "Functional", color: "#E76F51", is_public: false },
           ],
         }),
       ]);
@@ -92,16 +96,12 @@ describe("PieceList", () => {
 
     it("renders a piece card without tag chips when the piece has no tags", () => {
       renderPieceList([makePiece({ tags: [] })]);
-      const pieceCard = screen.getByRole("navigation", { name: "Clay Bowl" });
-      expect(within(pieceCard).queryByText("Gift")).not.toBeInTheDocument();
-      expect(
-        within(pieceCard).queryByRole("button", { name: /\+\d+ more/i }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /\+\d+/i })).not.toBeInTheDocument();
     });
   });
 
   describe("with multiple pieces", () => {
-    it("renders a row for each piece", () => {
+    it("renders a card for each piece", () => {
       const pieces = [
         makePiece({ id: "id-1", name: "Bowl" }),
         makePiece({ id: "id-2", name: "Mug" }),
@@ -113,75 +113,42 @@ describe("PieceList", () => {
       expect(screen.getByText("Vase")).toBeInTheDocument();
     });
 
-    it("renders each piece in its own table row", () => {
+    it("shows the state chip label on each card", () => {
       const pieces = [
-        makePiece({
-          id: "id-1",
-          name: "Bowl",
-          current_state: { state: "designed" },
-        }),
-        makePiece({
-          id: "id-2",
-          name: "Mug",
-          current_state: { state: "glazed" },
-        }),
+        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
+        makePiece({ id: "id-2", name: "Mug", current_state: { state: "glazed" } as any }),
       ];
       renderPieceList(pieces);
-      const rows = screen.getAllByRole("row");
-      expect(within(rows[0]).getByText("Bowl")).toBeInTheDocument();
-      expect(within(rows[0]).getByText("Designing")).toBeInTheDocument();
-      expect(within(rows[1]).getByText("Mug")).toBeInTheDocument();
-      expect(within(rows[1]).getByText("Glazing")).toBeInTheDocument();
+      expect(screen.getByText("Designing")).toBeInTheDocument();
+      expect(screen.getByText("Glazing")).toBeInTheDocument();
     });
   });
 
   describe("filter toolbar", () => {
-    it("renders + filter and + tag dashed buttons", () => {
+    it("renders the condensed filter toggle button", () => {
       renderPieceList([]);
       expect(
-        screen.getByRole("button", { name: /add status filter/i }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /add tag filter/i }),
+        screen.getByRole("button", { name: /toggle filters/i }),
       ).toBeInTheDocument();
     });
 
-    it("autocomplete is not visible until + filter is clicked", () => {
+    it("filter panel is not expanded on initial render", () => {
       renderPieceList([]);
-      expect(screen.queryByLabelText("Status filters")).not.toBeInTheDocument();
+      expect(screen.queryByText("Active")).not.toBeInTheDocument();
     });
 
-    it("shows the filter autocomplete when + filter is clicked", async () => {
+    it("expands the filter panel when the toggle is clicked", async () => {
       const user = userEvent.setup();
       renderPieceList([]);
-      await user.click(screen.getByRole("button", { name: /add status filter/i }));
-      expect(screen.getByLabelText("Status filters")).toBeInTheDocument();
-    });
-
-    it("shows the tag autocomplete when + tag is clicked", async () => {
-      const user = userEvent.setup();
-      renderPieceList([]);
-      await user.click(screen.getByRole("button", { name: /add tag filter/i }));
-      expect(screen.getByLabelText("Tags")).toBeInTheDocument();
+      await openFilters(user);
+      expect(screen.getByText("Active")).toBeVisible();
     });
 
     it("shows all pieces when no filter is selected", () => {
       const pieces = [
-        makePiece({
-          id: "id-1",
-          name: "Bowl",
-          current_state: { state: "designed" } as any,
-        }),
-        makePiece({
-          id: "id-2",
-          name: "Mug",
-          current_state: { state: "completed" } as any,
-        }),
-        makePiece({
-          id: "id-3",
-          name: "Vase",
-          current_state: { state: "recycled" } as any,
-        }),
+        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
+        makePiece({ id: "id-2", name: "Mug", current_state: { state: "completed" } as any }),
+        makePiece({ id: "id-3", name: "Vase", current_state: { state: "recycled" } as any }),
       ];
       renderPieceList(pieces);
       expect(screen.getByText("Bowl")).toBeInTheDocument();
@@ -192,91 +159,58 @@ describe("PieceList", () => {
     it("filters to work in progress pieces only", async () => {
       const user = userEvent.setup();
       const pieces = [
-        makePiece({
-          id: "id-1",
-          name: "Bowl",
-          current_state: { state: "designed" } as any,
-        }),
-        makePiece({
-          id: "id-2",
-          name: "Mug",
-          current_state: { state: "completed" } as any,
-        }),
-        makePiece({
-          id: "id-3",
-          name: "Vase",
-          current_state: { state: "recycled" } as any,
-        }),
+        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
+        makePiece({ id: "id-2", name: "Mug", current_state: { state: "completed" } as any }),
+        makePiece({ id: "id-3", name: "Vase", current_state: { state: "recycled" } as any }),
       ];
       renderPieceList(pieces);
 
-      await user.click(screen.getByRole("button", { name: /add status filter/i }));
-      await user.click(screen.getByLabelText("Status filters"));
-      await user.click(screen.getByRole("option", { name: "Work in Progress" }));
-      await user.keyboard("{Escape}");
+      await openFilters(user);
+      // Click the "Active" chip inside the filter panel
+      const activeChip = screen.getAllByText("Active").find(
+        (el) => el.closest('[role="button"]'),
+      );
+      await user.click(activeChip!.closest('[role="button"]')!);
 
       expect(screen.getByText("Bowl")).toBeInTheDocument();
       expect(screen.queryByText("Mug")).not.toBeInTheDocument();
       expect(screen.queryByText("Vase")).not.toBeInTheDocument();
-      expect(screen.getAllByText("Work in Progress").length).toBeGreaterThan(0);
     });
 
     it("filters to completed pieces only", async () => {
       const user = userEvent.setup();
       const pieces = [
-        makePiece({
-          id: "id-1",
-          name: "Bowl",
-          current_state: { state: "designed" } as any,
-        }),
-        makePiece({
-          id: "id-2",
-          name: "Mug",
-          current_state: { state: "completed" } as any,
-        }),
-        makePiece({
-          id: "id-3",
-          name: "Vase",
-          current_state: { state: "recycled" } as any,
-        }),
+        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
+        makePiece({ id: "id-2", name: "Mug", current_state: { state: "completed" } as any }),
+        makePiece({ id: "id-3", name: "Vase", current_state: { state: "recycled" } as any }),
       ];
       renderPieceList(pieces);
 
-      await user.click(screen.getByRole("button", { name: /add status filter/i }));
-      await user.click(screen.getByLabelText("Status filters"));
-      await user.click(screen.getByRole("option", { name: "Completed" }));
-      await user.keyboard("{Escape}");
+      await openFilters(user);
+      const completedChip = screen.getAllByText("Completed").find(
+        (el) => el.closest('[role="button"]'),
+      );
+      await user.click(completedChip!.closest('[role="button"]')!);
 
       expect(screen.queryByText("Bowl")).not.toBeInTheDocument();
       expect(screen.getByText("Mug")).toBeInTheDocument();
       expect(screen.queryByText("Vase")).not.toBeInTheDocument();
     });
 
-    it("filters to discarded pieces only", async () => {
+    it("filters to recycled pieces only", async () => {
       const user = userEvent.setup();
       const pieces = [
-        makePiece({
-          id: "id-1",
-          name: "Bowl",
-          current_state: { state: "designed" } as any,
-        }),
-        makePiece({
-          id: "id-2",
-          name: "Mug",
-          current_state: { state: "completed" } as any,
-        }),
-        makePiece({
-          id: "id-3",
-          name: "Vase",
-          current_state: { state: "recycled" } as any,
-        }),
+        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
+        makePiece({ id: "id-2", name: "Mug", current_state: { state: "completed" } as any }),
+        makePiece({ id: "id-3", name: "Vase", current_state: { state: "recycled" } as any }),
       ];
       renderPieceList(pieces);
 
-      await user.click(screen.getByRole("button", { name: /add status filter/i }));
-      await user.click(screen.getByLabelText("Status filters"));
-      await user.click(screen.getByRole("option", { name: "Discarded" }));
-      await user.keyboard("{Escape}");
+      await openFilters(user);
+      const recycledChip = screen.getAllByText("Recycled").find(
+        (el) => el.closest('[role="button"]'),
+      );
+      await user.click(recycledChip!.closest('[role="button"]')!);
 
       expect(screen.queryByText("Bowl")).not.toBeInTheDocument();
       expect(screen.queryByText("Mug")).not.toBeInTheDocument();
@@ -286,60 +220,45 @@ describe("PieceList", () => {
     it("supports combining multiple filters", async () => {
       const user = userEvent.setup();
       const pieces = [
-        makePiece({
-          id: "id-1",
-          name: "Bowl",
-          current_state: { state: "designed" } as any,
-        }),
-        makePiece({
-          id: "id-2",
-          name: "Mug",
-          current_state: { state: "completed" } as any,
-        }),
-        makePiece({
-          id: "id-3",
-          name: "Vase",
-          current_state: { state: "recycled" } as any,
-        }),
+        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
+        makePiece({ id: "id-2", name: "Mug", current_state: { state: "completed" } as any }),
+        makePiece({ id: "id-3", name: "Vase", current_state: { state: "recycled" } as any }),
       ];
       renderPieceList(pieces);
 
-      await user.click(screen.getByRole("button", { name: /add status filter/i }));
-      await user.click(screen.getByLabelText("Status filters"));
-      await user.click(screen.getByRole("option", { name: "Completed" }));
-      await user.click(screen.getByRole("option", { name: "Discarded" }));
-      await user.keyboard("{Escape}");
+      await openFilters(user);
+      const completedChip = screen.getAllByText("Completed").find(
+        (el) => el.closest('[role="button"]'),
+      );
+      const recycledChip = screen.getAllByText("Recycled").find(
+        (el) => el.closest('[role="button"]'),
+      );
+      await user.click(completedChip!.closest('[role="button"]')!);
+      await user.click(recycledChip!.closest('[role="button"]')!);
 
       expect(screen.queryByText("Bowl")).not.toBeInTheDocument();
       expect(screen.getByText("Mug")).toBeInTheDocument();
       expect(screen.getByText("Vase")).toBeInTheDocument();
     });
 
-    it("shows all pieces again when a filter chip is removed", async () => {
+    it("shows all pieces again when a filter chip is toggled off", async () => {
       const user = userEvent.setup();
       const pieces = [
-        makePiece({
-          id: "id-1",
-          name: "Bowl",
-          current_state: { state: "designed" } as any,
-        }),
-        makePiece({
-          id: "id-2",
-          name: "Mug",
-          current_state: { state: "completed" } as any,
-        }),
+        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
+        makePiece({ id: "id-2", name: "Mug", current_state: { state: "completed" } as any }),
       ];
       renderPieceList(pieces);
 
-      await user.click(screen.getByRole("button", { name: /add status filter/i }));
-      await user.click(screen.getByLabelText("Status filters"));
-      await user.click(screen.getByRole("option", { name: "Completed" }));
-      await user.keyboard("{Escape}");
+      await openFilters(user);
+      const completedChip = screen.getAllByText("Completed").find(
+        (el) => el.closest('[role="button"]'),
+      );
+      // Activate filter
+      await user.click(completedChip!.closest('[role="button"]')!);
       expect(screen.queryByText("Bowl")).not.toBeInTheDocument();
 
-      // Deselect the option to clear the filter (Popper is still open after Escape)
-      await user.click(screen.getByLabelText("Status filters"));
-      await user.click(screen.getByRole("option", { name: "Completed" }));
+      // Deactivate filter
+      await user.click(completedChip!.closest('[role="button"]')!);
       await waitFor(() => {
         expect(screen.getByText("Bowl")).toBeInTheDocument();
       });
@@ -355,74 +274,50 @@ describe("PieceList", () => {
           id: "id-1",
           name: "Bowl",
           tags: [
-            { id: "gift", name: "Gift", color: "#2A9D8F" },
-            { id: "sale", name: "For Sale", color: "#4FC3F7" },
+            { id: "gift", name: "Gift", color: "#2A9D8F", is_public: false },
+            { id: "sale", name: "For Sale", color: "#4FC3F7", is_public: false },
           ],
         }),
         makePiece({
           id: "id-2",
           name: "Mug",
-          tags: [{ id: "gift", name: "Gift", color: "#2A9D8F" }],
+          tags: [{ id: "gift", name: "Gift", color: "#2A9D8F", is_public: false }],
         }),
       ];
       renderPieceList(pieces);
 
-      await user.click(screen.getByRole("button", { name: /add tag filter/i }));
-      await user.click(screen.getByLabelText("Tags"));
+      await openFilters(user);
+      // Open the tag picker then select a tag (picker auto-closes after selection)
+      await user.click(screen.getByRole("button", { name: /\+ tag/i }));
+      await user.click(screen.getByLabelText("Filter by tag"));
       await user.click(screen.getByRole("option", { name: "Gift" }));
-      await user.click(screen.getByLabelText("Tags"));
+      // Gift is now an active chip; open the picker again for the second tag
+      await user.click(screen.getByRole("button", { name: /\+ tag/i }));
+      await user.click(screen.getByLabelText("Filter by tag"));
       await user.click(screen.getByRole("option", { name: "For Sale" }));
-      await user.keyboard("{Escape}");
 
       expect(screen.getByText("Bowl")).toBeInTheDocument();
       expect(screen.queryByText("Mug")).not.toBeInTheDocument();
     });
 
-    it("collapses piece tags behind an expand button when there are many", async () => {
-      const user = userEvent.setup();
+    it("shows at most 2 tag chips per card with a dashed overflow chip", () => {
       renderPieceList([
         makePiece({
           tags: [
-            { id: "gift", name: "Gift", color: "#2A9D8F" },
-            { id: "sale", name: "For Sale", color: "#4FC3F7" },
-            { id: "sold", name: "Sold", color: "#F4A261" },
-            { id: "blue", name: "Blue", color: "#457B9D" },
+            { id: "gift", name: "Gift", color: "#2A9D8F", is_public: false },
+            { id: "sale", name: "For Sale", color: "#4FC3F7", is_public: false },
+            { id: "sold", name: "Sold", color: "#F4A261", is_public: false },
+            { id: "blue", name: "Blue", color: "#457B9D", is_public: false },
           ],
         }),
       ]);
 
       expect(screen.getByText("Gift")).toBeInTheDocument();
       expect(screen.getByText("For Sale")).toBeInTheDocument();
-      expect(screen.getByText("Sold")).toBeInTheDocument();
+      expect(screen.queryByText("Sold")).not.toBeInTheDocument();
       expect(screen.queryByText("Blue")).not.toBeInTheDocument();
-
-      await user.click(screen.getByRole("button", { name: "+1 more" }));
-
-      expect(screen.getByText("Blue")).toBeInTheDocument();
-    });
-
-    it("keeps currently filtered tags visible even when piece tags are collapsed", async () => {
-      const user = userEvent.setup();
-      renderPieceList([
-        makePiece({
-          id: "id-1",
-          name: "Bowl",
-          tags: [
-            { id: "gift", name: "Gift", color: "#2A9D8F" },
-            { id: "sale", name: "For Sale", color: "#4FC3F7" },
-            { id: "sold", name: "Sold", color: "#F4A261" },
-            { id: "blue", name: "Blue", color: "#457B9D" },
-          ],
-        }),
-      ]);
-
-      await user.click(screen.getByRole("button", { name: /add tag filter/i }));
-      await user.click(screen.getByLabelText("Tags"));
-      await user.click(screen.getByRole("option", { name: "Blue" }));
-      await user.keyboard("{Escape}");
-
-      const pieceCard = screen.getByRole("navigation", { name: "Bowl" });
-      expect(within(pieceCard).getByText("Blue")).toBeInTheDocument();
+      // Overflow chip shows +2
+      expect(screen.getByText("+2")).toBeInTheDocument();
     });
   });
 
@@ -432,7 +327,8 @@ describe("PieceList", () => {
       expect(screen.queryByLabelText("Sort order")).not.toBeInTheDocument();
     });
 
-    it("renders a sort selector when onSortChange is provided", () => {
+    it("renders a sort selector when onSortChange is provided", async () => {
+      const user = userEvent.setup();
       const router = createMemoryRouter(
         [
           {
@@ -449,6 +345,8 @@ describe("PieceList", () => {
         { initialEntries: ["/"] },
       );
       render(<RouterProvider router={router} />);
+      // Sort selector lives inside the expandable panel
+      await openFilters(user);
       expect(screen.getByLabelText("Sort order")).toBeInTheDocument();
     });
 
@@ -472,6 +370,8 @@ describe("PieceList", () => {
       );
       render(<RouterProvider router={router} />);
 
+      // Open filter panel so the sort selector is interactable
+      await openFilters(user);
       await user.click(screen.getByLabelText("Sort order"));
       await user.click(screen.getByRole("option", { name: "Name A → Z" }));
 

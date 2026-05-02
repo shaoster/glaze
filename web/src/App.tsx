@@ -518,8 +518,12 @@ function AppShell({
           sm: 2,
         },
         pb: 2,
-        px: {
-          xs: "max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right))",
+        pl: {
+          xs: "max(16px, env(safe-area-inset-left))",
+          sm: 3,
+        },
+        pr: {
+          xs: "max(16px, env(safe-area-inset-right))",
           sm: 3,
         },
       }}
