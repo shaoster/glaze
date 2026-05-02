@@ -280,7 +280,8 @@ def _seed_dev_pieces(user) -> None:
 
         # How far along the path does this piece get?
         # Weight distribution: more pieces in early/mid states, fewer completed.
-        stop = rng.choices(range(len(path)), weights=[3,4,3,3,3,2,2,2,1], k=1)[0]
+        weights = [3, 4, 3, 3, 3, 2, 2, 2, 1]
+        stop = rng.choices(range(len(path)), weights=weights[: len(path)], k=1)[0]
 
         # 10 % chance of recycling instead of stopping at the chosen state.
         recycled = stop > 0 and rng.random() < 0.10
