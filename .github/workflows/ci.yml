@@ -96,7 +96,7 @@ jobs:
   publish:
     name: Publish OCI image
     needs: [preflight, test]
-    if: ${{ github.event_name == 'push' && needs.test.result == 'success' }}
+    if: ${{ github.event_name == 'push' && (needs.test.result == 'success' || needs.preflight.outputs.skip_main == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       packages: write
