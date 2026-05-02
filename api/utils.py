@@ -124,128 +124,182 @@ def bootstrap_dev_user(user) -> None:
 
 
 def _seed_dev_pieces(user) -> None:
-    """Create a few representative pieces for a newly bootstrapped dev user."""
-    from .models import ClayBody, GlazeCombination, GlazeType, Piece  # noqa: PLC0415
+    """Create 75 pieces in random workflow states for a bootstrapped dev user.
 
-    clay_body, _ = ClayBody.objects.get_or_create(
-        user=user,
-        name="Brown Stoneware",
-        defaults={
-            "short_description": "Reliable mid-fire stoneware for local dev demos."
-        },
-    )
-    glaze_type, _ = GlazeType.objects.get_or_create(
-        user=user,
-        name="Floating Blue",
-        defaults={
-            "short_description": "Sample glaze for bootstrapped dev data.",
-            "test_tile_image": "",
-            "is_food_safe": True,
-            "runs": False,
-            "highlights_grooves": True,
-            "is_different_on_white_and_brown_clay": True,
-            "apply_thin": False,
-        },
-    )
-    glaze_combination, _ = GlazeCombination.get_or_create_with_components(
-        user=user,
-        glaze_types=[glaze_type],
-    )
+    75 pieces fills three full pages of 24 so infinite-scroll pagination is
+    immediately exercisable.  A seeded RNG makes the output reproducible across
+    dev database resets.
+    """
+    import random  # noqa: PLC0415
 
-    from .models import Location  # noqa: PLC0415
+    from .models import ClayBody, GlazeCombination, GlazeType, Location, Piece  # noqa: PLC0415
+
+    rng = random.Random(42)
+
+    # ------------------------------------------------------------------
+    # Reference data
+    # ------------------------------------------------------------------
+    clay_bodies = []
+    for name, desc in [
+        ("Brown Stoneware", "Reliable mid-fire stoneware."),
+        ("White Stoneware", "Smooth mid-fire stoneware."),
+        ("White Porcelain", "Translucent throwing porcelain."),
+        ("Speckled Buff", "Buff body with iron specks."),
+    ]:
+        cb, _ = ClayBody.objects.get_or_create(
+            user=user, name=name, defaults={"short_description": desc}
+        )
+        clay_bodies.append(cb)
+
+    glaze_defs = [
+        ("Floating Blue",  True,  False, True,  True,  False),
+        ("Celadon Green",  True,  False, False, False, True),
+        ("Tenmoku",        True,  True,  True,  True,  False),
+        ("Shino",          True,  False, False, False, True),
+        ("Copper Red",     False, True,  True,  True,  False),
+    ]
+    combos = []
+    for name, food_safe, runs, grooves, diff_clay, thin in glaze_defs:
+        gt, _ = GlazeType.objects.get_or_create(
+            user=user, name=name,
+            defaults={
+                "short_description": f"{name} — dev sample glaze.",
+                "test_tile_image": "",
+                "is_food_safe": food_safe,
+                "runs": runs,
+                "highlights_grooves": grooves,
+                "is_different_on_white_and_brown_clay": diff_clay,
+                "apply_thin": thin,
+            },
+        )
+        combo, _ = GlazeCombination.get_or_create_with_components(
+            user=user, glaze_types=[gt]
+        )
+        combos.append(combo)
 
     bisque_kiln, _ = Location.objects.get_or_create(user=user, name="Bisque Kiln")
     glaze_kiln, _ = Location.objects.get_or_create(user=user, name="Glaze Kiln")
 
-    trimmed_piece = Piece.objects.create(
-        user=user,
-        name="Trimmed Practice Bowl",
-        thumbnail={"url": DEV_THUMBNAIL_URLS["bowl"], "cloudinary_public_id": None},
-    )
-    _create_piece_state(trimmed_piece, "designed", notes="Starting a quick demo bowl.")
-    _create_piece_state(
-        trimmed_piece,
-        "wheel_thrown",
-        notes="Opened and pulled on the wheel.",
-        additional_fields={"clay_weight_lbs": 1250, "wall_thickness_mm": 7.5},
-        global_refs={"clay_body": ("clay_body", clay_body)},
-    )
-    _create_piece_state(
-        trimmed_piece,
-        "trimmed",
-        notes="Foot ring cleaned up and ready to dry.",
-        additional_fields={"trimmed_weight_lbs": 980, "pre_trim_weight_lbs": 1250},
-    )
+    # ------------------------------------------------------------------
+    # State-step definitions
+    #
+    # Each entry is (state_name, additional_fields_fn, global_refs_fn).
+    # The fns receive (rng, clay, combo) and return dicts (or None).
+    # ------------------------------------------------------------------
+    def _wheel_thrown_fields(r, clay, _combo):
+        weight = r.randint(400, 1800)
+        return (
+            {"clay_weight_lbs": weight, "wall_thickness_mm": round(r.uniform(4.0, 12.0), 1)},
+            {"clay_body": ("clay_body", clay)},
+        )
 
-    bisque_piece = Piece.objects.create(
-        user=user,
-        name="Bisque Queue Mug",
-        thumbnail={"url": DEV_THUMBNAIL_URLS["mug"], "cloudinary_public_id": None},
-    )
-    _create_piece_state(bisque_piece, "designed", notes="Planning a handbuilt mug.")
-    _create_piece_state(
-        bisque_piece,
-        "handbuilt",
-        notes="Walls are up and the handle is attached.",
-        global_refs={"clay_body": ("clay_body", clay_body)},
-    )
-    _create_piece_state(
-        bisque_piece,
-        "submitted_to_bisque_fire",
-        notes="Queued for the next bisque load.",
-        global_refs={"kiln_location": ("location", bisque_kiln)},
-    )
+    def _trimmed_fields(r, _clay, _combo):
+        pre = r.randint(400, 1800)
+        return (
+            {"trimmed_weight_lbs": int(pre * r.uniform(0.7, 0.95)),
+             "pre_trim_weight_lbs": pre},
+            None,
+        )
 
-    finished_piece = Piece.objects.create(
-        user=user,
-        name="Finished Test Plate",
-        thumbnail={"url": DEV_THUMBNAIL_URLS["plate"], "cloudinary_public_id": None},
-    )
-    _create_piece_state(
-        finished_piece, "designed", notes="Small plate for glaze testing."
-    )
-    _create_piece_state(
-        finished_piece,
-        "handbuilt",
-        notes="Slab-built and compressed.",
-        global_refs={"clay_body": ("clay_body", clay_body)},
-    )
-    _create_piece_state(
-        finished_piece,
-        "submitted_to_bisque_fire",
-        notes="Waiting for bisque firing.",
-        global_refs={"kiln_location": ("location", bisque_kiln)},
-    )
-    _create_piece_state(
-        finished_piece,
-        "bisque_fired",
-        notes="Bisque firing complete.",
-        additional_fields={"kiln_temperature_c": 1060, "cone": "04"},
-    )
-    _create_piece_state(
-        finished_piece,
-        "glazed",
-        notes="Floating Blue test coat applied.",
-        global_refs={"glaze_combination": ("glaze_combination", glaze_combination)},
-    )
-    _create_piece_state(
-        finished_piece,
-        "submitted_to_glaze_fire",
-        notes="Queued for glaze firing.",
-        global_refs={"kiln_location": ("location", glaze_kiln)},
-    )
-    _create_piece_state(
-        finished_piece,
-        "glaze_fired",
-        notes="Out of the kiln and looking promising.",
-        additional_fields={"kiln_temperature_c": 1060, "cone": "04"},
-        global_refs={"glaze_combination": ("glaze_combination", glaze_combination)},
-    )
-    _create_piece_state(
-        finished_piece,
-        "completed",
-        notes="Ready for quick UI smoke testing.",
-    )
+    def _bisque_fields(r, _clay, _combo):
+        return (
+            {"kiln_temperature_c": r.randint(960, 1020), "cone": r.choice(["04", "03"])},
+            {"kiln_location": ("location", bisque_kiln)},
+        )
+
+    def _bisque_fired_fields(r, _clay, _combo):
+        return (
+            {"kiln_temperature_c": r.randint(960, 1020), "cone": r.choice(["04", "03"])},
+            None,
+        )
+
+    def _glazed_fields(_r, _clay, combo):
+        return (None, {"glaze_combination": ("glaze_combination", combo)})
+
+    def _glaze_fire_fields(_r, _clay, _combo):
+        return (None, {"kiln_location": ("location", glaze_kiln)})
+
+    def _glaze_fired_fields(r, _clay, combo):
+        return (
+            {"kiln_temperature_c": r.randint(1220, 1260), "cone": r.choice(["5", "6"])},
+            {"glaze_combination": ("glaze_combination", combo)},
+        )
+
+    # Two paths: wheel-thrown and handbuilt.  Each is a list of
+    # (state, additional_fields_fn, global_refs_fn) steps.
+    WHEEL_PATH = [
+        ("designed",               None,                 None),
+        ("wheel_thrown",           _wheel_thrown_fields, None),
+        ("trimmed",                _trimmed_fields,      None),
+        ("submitted_to_bisque_fire", lambda r,c,g: (None, {"kiln_location": ("location", bisque_kiln)}), None),
+        ("bisque_fired",           _bisque_fired_fields, None),
+        ("glazed",                 _glazed_fields,       None),
+        ("submitted_to_glaze_fire", _glaze_fire_fields,  None),
+        ("glaze_fired",            _glaze_fired_fields,  None),
+        ("completed",              None,                 None),
+    ]
+
+    HANDBUILT_PATH = [
+        ("designed",               None,                 None),
+        ("handbuilt",              lambda r,c,g: (None, {"clay_body": ("clay_body", c)}), None),
+        ("submitted_to_bisque_fire", lambda r,c,g: (None, {"kiln_location": ("location", bisque_kiln)}), None),
+        ("bisque_fired",           _bisque_fired_fields, None),
+        ("glazed",                 _glazed_fields,       None),
+        ("submitted_to_glaze_fire", _glaze_fire_fields,  None),
+        ("glaze_fired",            _glaze_fired_fields,  None),
+        ("completed",              None,                 None),
+    ]
+
+    FORMS = [
+        ("Bowl",    "bowl"),
+        ("Mug",     "mug"),
+        ("Vase",    "vase"),
+        ("Plate",   "plate"),
+        ("Cup",     "mug"),
+        ("Jug",     "vase"),
+        ("Platter", "plate"),
+        ("Jar",     "bowl"),
+        ("Pitcher", "vase"),
+        ("Dish",    "plate"),
+    ]
+
+    ADJECTIVES = [
+        "Tall", "Short", "Wide", "Rustic", "Delicate", "Heavy",
+        "Practice", "Test", "Study", "Small", "Large", "Faceted",
+        "Carved", "Slip-Trailed", "Fluted", "Altered", "Classic",
+    ]
+
+    T = DEV_THUMBNAIL_URLS
+
+    for i in range(75):
+        adj   = rng.choice(ADJECTIVES)
+        form, thumb = rng.choice(FORMS)
+        clay  = rng.choice(clay_bodies)
+        combo = rng.choice(combos)
+        path  = rng.choice([WHEEL_PATH, HANDBUILT_PATH])
+
+        # How far along the path does this piece get?
+        # Weight distribution: more pieces in early/mid states, fewer completed.
+        weights = [3, 4, 3, 3, 3, 2, 2, 2, 1]
+        stop = rng.choices(range(len(path)), weights=weights[: len(path)], k=1)[0]
+
+        # 10 % chance of recycling instead of stopping at the chosen state.
+        recycled = stop > 0 and rng.random() < 0.10
+
+        p = Piece.objects.create(
+            user=user,
+            name=f"{adj} {form} #{i + 1}",
+            thumbnail={"url": T[thumb], "cloudinary_public_id": None},
+        )
+
+        for step_state, fields_fn, _ in path[: stop + 1]:
+            af, gr = fields_fn(rng, clay, combo) if fields_fn else (None, None)
+            _create_piece_state(p, step_state,
+                additional_fields=af or {},
+                global_refs=gr or {})
+
+        if recycled:
+            _create_piece_state(p, "recycled", notes="Reclaiming the clay.")
 
 
 def _create_piece_state(

@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Autocomplete from "@mui/material/Autocomplete";
 import AddIcon from "@mui/icons-material/Add";
-import FilterListIcon from "@mui/icons-material/FilterList";
+import SortIcon from "@mui/icons-material/Sort";
 import {
   Box,
   Button,
@@ -10,12 +10,16 @@ import {
   CardContent,
   CardHeader,
   Chip,
+  CircularProgress,
   ClickAwayListener,
   Grid,
+  MenuItem,
   Paper,
   Popper,
+  Select,
   Stack,
   TextField,
+  Typography,
   useMediaQuery,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -26,6 +30,8 @@ import {
   isTerminalState,
   SUCCESSORS,
 } from "../util/types";
+import type { PieceSortOrder } from "../util/api";
+import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
 import StateChip from "./StateChip";
 import TagAutocomplete from "./TagAutocomplete";
@@ -161,16 +167,50 @@ const PieceListItem = (props: PieceListItemProps) => {
 type PieceListingProps = {
   pieces: PieceSummary[];
   onNewPiece?: () => void;
+  sortOrder?: PieceSortOrder;
+  onSortChange?: (order: PieceSortOrder) => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
 };
 
 const PieceList = (props: PieceListingProps) => {
-  const { pieces, onNewPiece } = props;
+  const {
+    pieces,
+    onNewPiece,
+    sortOrder = DEFAULT_PIECE_SORT,
+    onSortChange,
+    onLoadMore,
+    hasMore = false,
+    loadingMore = false,
+  } = props;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [activeFilters, setActiveFilters] = useState<FilterCategory[]>([]);
   const [activeTags, setActiveTags] = useState<TagEntry[]>([]);
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [tagAnchor, setTagAnchor] = useState<HTMLElement | null>(null);
+  // Keep a ref so the observer callback always calls the latest handler without
+  // needing to be listed as an effect dependency (which would cause the
+  // observer to be torn down and recreated on every load completion).
+  const onLoadMoreRef = useRef(onLoadMore);
+  useEffect(() => { onLoadMoreRef.current = onLoadMore; }, [onLoadMore]);
+
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!hasMore) return;
+    function check() {
+      const sentinel = sentinelRef.current;
+      if (!sentinel) return;
+      const rect = sentinel.getBoundingClientRect();
+      if (rect.top <= window.innerHeight + 300) onLoadMoreRef.current?.();
+    }
+    window.addEventListener("scroll", check, { passive: true });
+    // Also check immediately in case the sentinel is already in view.
+    check();
+    return () => window.removeEventListener("scroll", check);
+  }, [hasMore]);
 
   const activeFilterOptions = useMemo(
     () =>
@@ -202,6 +242,7 @@ const PieceList = (props: PieceListingProps) => {
     });
   }, [pieces, activeFilters, activeTags]);
 
+
   return (
     <>
       <Box
@@ -226,7 +267,34 @@ const PieceList = (props: PieceListingProps) => {
             New Piece
           </Button>
         )}
-        <FilterListIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
+
+        {onSortChange && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <SortIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
+            <Select
+              value={sortOrder}
+              onChange={(e) => onSortChange(e.target.value as PieceSortOrder)}
+              size="small"
+              variant="standard"
+              disableUnderline
+              inputProps={{ "aria-label": "Sort order" }}
+              sx={{
+                fontSize: "0.8125rem",
+                color: "text.secondary",
+                "& .MuiSelect-select": { py: 0 },
+              }}
+            >
+              {PIECE_SORT_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "0.8125rem" }}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </Box>
+        )}
+
+        <Box sx={{ width: "1px", height: "20px", bgcolor: "divider", flexShrink: 0, mx: 0.25 }} />
+
         {activeFilterOptions.length > 0 && (
           <Stack
             direction="row"
@@ -372,6 +440,24 @@ const PieceList = (props: PieceListingProps) => {
           />
         ))}
       </Grid>
+
+      {/* Invisible sentinel — always in the DOM so the ref is populated when the
+          effect runs; the effect itself is a no-op when hasMore is false. */}
+      <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
+
+      {loadingMore && (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+          <CircularProgress size={24} />
+        </Box>
+      )}
+
+      {!hasMore && !loadingMore && pieces.length > 0 && (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+          <Typography variant="caption" color="text.disabled">
+            End of pieces
+          </Typography>
+        </Box>
+      )}
     </>
   );
 };

@@ -151,7 +151,7 @@ class TestAuthEndpoints:
         user = User.objects.get(email="devadmin@example.com")
         assert user.is_staff is True
         assert user.is_superuser is True
-        assert Piece.objects.filter(user=user).count() == 3
+        assert Piece.objects.filter(user=user).count() == 75
 
     def test_login_bootstraps_existing_first_dev_user_when_enabled(self, settings):
         settings.DEV_BOOTSTRAP_ENABLED = True

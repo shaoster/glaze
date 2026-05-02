@@ -425,4 +425,59 @@ describe("PieceList", () => {
       expect(within(pieceCard).getByText("Blue")).toBeInTheDocument();
     });
   });
+
+  describe("sort selector", () => {
+    it("does not render the sort selector when onSortChange is not provided", () => {
+      renderPieceList([]);
+      expect(screen.queryByLabelText("Sort order")).not.toBeInTheDocument();
+    });
+
+    it("renders a sort selector when onSortChange is provided", () => {
+      const router = createMemoryRouter(
+        [
+          {
+            path: "/",
+            element: (
+              <PieceList
+                pieces={[]}
+                sortOrder="-last_modified"
+                onSortChange={vi.fn()}
+              />
+            ),
+          },
+        ],
+        { initialEntries: ["/"] },
+      );
+      render(<RouterProvider router={router} />);
+      expect(screen.getByLabelText("Sort order")).toBeInTheDocument();
+    });
+
+    it("calls onSortChange when a new sort option is selected", async () => {
+      const user = userEvent.setup();
+      const onSortChange = vi.fn();
+      const router = createMemoryRouter(
+        [
+          {
+            path: "/",
+            element: (
+              <PieceList
+                pieces={[]}
+                sortOrder="-last_modified"
+                onSortChange={onSortChange}
+              />
+            ),
+          },
+        ],
+        { initialEntries: ["/"] },
+      );
+      render(<RouterProvider router={router} />);
+
+      await user.click(screen.getByLabelText("Sort order"));
+      await user.click(screen.getByRole("option", { name: "Name A → Z" }));
+
+      await waitFor(() => {
+        expect(onSortChange).toHaveBeenCalledWith("name");
+      });
+    });
+  });
 });

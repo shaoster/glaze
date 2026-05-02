@@ -4,7 +4,8 @@
   },
   "permissions": {
     "allow": [
-      "Bash(python3 -c \"from pathlib import Path; p = Path\\('/home/phil/code/glaze/.agent-worktrees/claude/coverage-improvements/backend/settings.py'\\); print\\(p.resolve\\(\\).parent.parent\\)\")"
+      "Bash(python3 -c \"from pathlib import Path; p = Path\\('/home/phil/code/glaze/.agent-worktrees/claude/coverage-improvements/backend/settings.py'\\); print\\(p.resolve\\(\\).parent.parent\\)\")",
+      "Read(//home/phil/code/glaze/.claire/worktrees/issue+216-sort-pagination/web/src/components/__tests__/**)"
     ]
   }
 }
