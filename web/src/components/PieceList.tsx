@@ -1,43 +1,33 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import Autocomplete from "@mui/material/Autocomplete";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import SortIcon from "@mui/icons-material/Sort";
 import {
   Box,
-  Button,
-  Card,
-  CardActionArea,
-  CardContent,
-  CardHeader,
   Chip,
   CircularProgress,
-  ClickAwayListener,
-  Grid,
   MenuItem,
-  Paper,
-  Popper,
   Select,
-  Stack,
-  TextField,
   Typography,
   useMediaQuery,
 } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import type { PieceSummary, TagEntry } from "../util/types";
 import {
   formatState,
-  getStateDescription,
   isTerminalState,
   SUCCESSORS,
 } from "../util/types";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
+import { Link } from "react-router-dom";
 import CloudinaryImage from "./CloudinaryImage";
-import StateChip from "./StateChip";
 import TagAutocomplete from "./TagAutocomplete";
 import TagChip from "./TagChip";
-import TagChipList from "./TagChipList";
 import { DEFAULT_THUMBNAIL } from "./thumbnailConstants";
+
+// Kiln-glow amber used for stale indicator
+const KILN_COLOR = "oklch(0.72 0.13 55)";
 
 type FilterCategory = "wip" | "completed" | "discarded";
 
@@ -47,9 +37,9 @@ interface FilterOption {
 }
 
 const FILTER_OPTIONS: FilterOption[] = [
-  { value: "wip", label: "Work in Progress" },
+  { value: "wip", label: "Active" },
   { value: "completed", label: "Completed" },
-  { value: "discarded", label: "Discarded" },
+  { value: "discarded", label: "Recycled" },
 ];
 
 function matchesFilter(piece: PieceSummary, filter: FilterCategory): boolean {
@@ -61,110 +51,187 @@ function matchesFilter(piece: PieceSummary, filter: FilterCategory): boolean {
   return false;
 }
 
-const ADD_BUTTON_BASE_SX = {
-  display: "inline-flex",
-  alignItems: "center",
-  background: "transparent",
-  border: "1px dashed",
-  borderColor: "divider",
-  cursor: "pointer",
-  color: "text.secondary",
-  fontFamily: "inherit",
-  flexShrink: 0,
-  "&:hover": { borderColor: "text.secondary" },
-} as const;
+function daysSince(date: Date): number {
+  return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+}
 
-// Matches MUI Chip size="small" pill shape (height 24px, borderRadius 12px)
-const ADD_FILTER_BUTTON_SX = {
-  ...ADD_BUTTON_BASE_SX,
-  px: "8px",
-  height: "24px",
-  borderRadius: "12px",
-  fontSize: "0.8125rem",
-} as const;
+// Variable card thumbnail height based on recency
+function thumbHeight(days: number, isTerminal: boolean): number {
+  if (isTerminal) return 110;
+  if (days <= 2) return 180;
+  if (days < 14) return 140;
+  return 110;
+}
 
-// Matches TagChip shape (borderRadius 4px, caption font size)
-const ADD_TAG_BUTTON_SX = {
-  ...ADD_BUTTON_BASE_SX,
-  px: 1,
-  py: 0.25,
-  borderRadius: "4px",
-  fontSize: "0.75rem",
-  margin: "2px",
-} as const;
-
-type PieceListItemProps = {
+interface PieceCardProps {
   piece: PieceSummary;
   activeTagIds: string[];
-};
+}
 
-const PieceListItem = (props: PieceListItemProps) => {
-  const { piece, activeTagIds } = props;
+const PieceCard = ({ piece }: PieceCardProps) => {
+  const theme = useTheme();
+  const isTerminal = isTerminalState(piece.current_state.state);
+  const days = daysSince(new Date(piece.last_modified));
+  const isStale = days >= 14 && !isTerminal;
+  const h = thumbHeight(days, isTerminal);
+  const label = formatState(piece.current_state.state);
   const detailPath = `/pieces/${piece.id}`;
 
+  // Tags: show 2 visible + dashed overflow chip (non-expandable in card)
+  const tags = piece.tags ?? [];
+  const visibleTags = tags.slice(0, 2);
+  const extra = tags.length - visibleTags.length;
+
+  const lastActivity = days === 0 ? "today" : `${days}d ago`;
+
+  const accentColor = theme.palette.primary.main;
+  const accentText = theme.palette.primary.contrastText;
+
   return (
-    <Grid
-      size={{ xs: 6, sm: 4, md: 3, lg: 2 }}
-      sx={{ display: "flex", flexDirection: "column" }}
-      role="row"
+    <Box
+      component={Link}
+      to={detailPath}
+      sx={{
+        display: "block",
+        breakInside: "avoid",
+        mb: 1,
+        borderRadius: 2,
+        overflow: "hidden",
+        bgcolor: "background.paper",
+        border: "1px solid",
+        borderColor: "divider",
+        textDecoration: "none",
+        color: "inherit",
+        opacity: isTerminal ? 0.78 : 1,
+        transition: "opacity 0.15s, filter 0.15s",
+        "&:hover": { opacity: isTerminal ? 0.9 : 1, filter: "brightness(1.07)" },
+      }}
     >
-      <Card
-        sx={{ cursor: "pointer", padding: 0, margin: 0, height: "100%" }}
-        data-state={piece.current_state.state}
-      >
-        <CardActionArea
+      {/* Thumbnail area */}
+      <Box sx={{ height: h, position: "relative", overflow: "hidden" }}>
+        <CloudinaryImage
+          url={piece.thumbnail?.url ?? DEFAULT_THUMBNAIL}
+          cloud_name={piece.thumbnail?.cloud_name}
+          cloudinary_public_id={piece.thumbnail?.cloudinary_public_id}
+          context="gallery"
+          requestedWidth={300}
+          requestedHeight={200}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+
+        {/* Bottom gradient scrim */}
+        <Box sx={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.55) 100%)",
+          pointerEvents: "none",
+        }} />
+
+        {/* Top-right: stale dot */}
+        {isStale && (
+          <Box sx={{
+            position: "absolute", top: 6, right: 6,
+            width: 8, height: 8, borderRadius: "50%",
+            bgcolor: KILN_COLOR,
+            boxShadow: `0 0 6px ${KILN_COLOR}`,
+          }} />
+        )}
+
+        {/* Bottom-left: state chip overlay */}
+        <Box sx={{
+          position: "absolute", bottom: 6, left: 6,
+          px: "8px", py: "3px",
+          borderRadius: 999,
+          bgcolor: isTerminal ? alpha("#000", 0.55) : accentColor,
+          color: isTerminal ? "text.secondary" : accentText,
+          backdropFilter: isTerminal ? "blur(6px)" : "none",
+          border: isTerminal ? "1px solid rgba(255,255,255,0.12)" : "none",
+          fontSize: "0.6875rem",
+          fontWeight: 600,
+          fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+          letterSpacing: "0.02em",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "5px",
+          lineHeight: 1,
+        }}>
+          <Box sx={{
+            width: 5, height: 5, borderRadius: "50%", flexShrink: 0,
+            bgcolor: isTerminal ? accentColor : alpha(accentText, 0.7),
+          }} />
+          {label}
+        </Box>
+      </Box>
+
+      {/* Card body */}
+      <Box sx={{ px: 1.25, pt: 1, pb: 1.25 }}>
+        <Typography
+          variant="body2"
           sx={{
-            transition: "transform 0.15s ease-in-out",
-            padding: 1.5,
-            height: "100%",
+            fontWeight: 600,
+            lineHeight: 1.25,
+            letterSpacing: "-0.005em",
+            color: "text.primary",
           }}
-          href={detailPath}
-          role="navigation"
-          aria-label={piece.name}
         >
-          <CardHeader
-            title={<h4 style={{ margin: 0 }}>{piece.name}</h4>}
-            avatar={
-              <CloudinaryImage
-                url={piece.thumbnail?.url ?? DEFAULT_THUMBNAIL}
-                cloud_name={piece.thumbnail?.cloud_name}
-                cloudinary_public_id={piece.thumbnail?.cloudinary_public_id}
-                context="thumbnail"
-                style={{ borderRadius: 4, margin: 0 }}
-              />
-            }
-            sx={{ padding: 0, pb: 1 }}
-          />
-          <CardContent
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 1,
-              alignItems: "start",
-              padding: 0,
-              pb: 1,
-            }}
-          >
-            <StateChip
-              state={piece.current_state.state}
-              label={formatState(piece.current_state.state)}
-              description={getStateDescription(piece.current_state.state)}
-              variant="current"
-              isTerminal={isTerminalState(piece.current_state.state)}
-            />
-            <TagChipList
-              tags={piece.tags ?? []}
-              maxVisible={3}
-              alwaysVisibleTagIds={activeTagIds}
-            />
-          </CardContent>
-        </CardActionArea>
-      </Card>
-    </Grid>
+          {piece.name}
+        </Typography>
+
+        {/* Last-activity caption */}
+        <Box sx={{
+          mt: 0.5,
+          fontSize: "0.6875rem",
+          color: "text.disabled",
+          fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          flexWrap: "wrap",
+        }}>
+          <span>{lastActivity}</span>
+          {!isTerminal && (
+            <>
+              <span>·</span>
+              <span style={{ color: isStale ? KILN_COLOR : undefined }}>
+                {days}d in {label.toLowerCase()}
+              </span>
+            </>
+          )}
+        </Box>
+
+        {/* Tags */}
+        {tags.length > 0 && (
+          <Box sx={{ mt: 0.75, display: "flex", flexWrap: "wrap" }}>
+            {visibleTags.map((tag) => (
+              <TagChip key={tag.id} label={tag.name} color={tag.color} />
+            ))}
+            {extra > 0 && (
+              <Box
+                component="span"
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  px: "7px",
+                  py: "3px",
+                  border: "1px dashed",
+                  borderColor: "divider",
+                  borderRadius: "4px",
+                  fontSize: "0.6875rem",
+                  fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+                  color: "text.disabled",
+                  margin: "2px",
+                }}
+              >
+                +{extra}
+              </Box>
+            )}
+          </Box>
+        )}
+      </Box>
+    </Box>
   );
 };
 
-type PieceListingProps = {
+type PieceListProps = {
   pieces: PieceSummary[];
   onNewPiece?: () => void;
   sortOrder?: PieceSortOrder;
@@ -174,7 +241,7 @@ type PieceListingProps = {
   loadingMore?: boolean;
 };
 
-const PieceList = (props: PieceListingProps) => {
+const PieceList = (props: PieceListProps) => {
   const {
     pieces,
     onNewPiece,
@@ -188,14 +255,11 @@ const PieceList = (props: PieceListingProps) => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [activeFilters, setActiveFilters] = useState<FilterCategory[]>([]);
   const [activeTags, setActiveTags] = useState<TagEntry[]>([]);
-  const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
-  const [tagAnchor, setTagAnchor] = useState<HTMLElement | null>(null);
-  // Keep a ref so the observer callback always calls the latest handler without
-  // needing to be listed as an effect dependency (which would cause the
-  // observer to be torn down and recreated on every load completion).
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [tagPickerOpen, setTagPickerOpen] = useState(false);
+
   const onLoadMoreRef = useRef(onLoadMore);
   useEffect(() => { onLoadMoreRef.current = onLoadMore; }, [onLoadMore]);
-
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -207,16 +271,9 @@ const PieceList = (props: PieceListingProps) => {
       if (rect.top <= window.innerHeight + 300) onLoadMoreRef.current?.();
     }
     window.addEventListener("scroll", check, { passive: true });
-    // Also check immediately in case the sentinel is already in view.
     check();
     return () => window.removeEventListener("scroll", check);
   }, [hasMore]);
-
-  const activeFilterOptions = useMemo(
-    () =>
-      FILTER_OPTIONS.filter((option) => activeFilters.includes(option.value)),
-    [activeFilters],
-  );
 
   const availableTags = useMemo(() => {
     const deduped = new Map<string, TagEntry>();
@@ -242,214 +299,299 @@ const PieceList = (props: PieceListingProps) => {
     });
   }, [pieces, activeFilters, activeTags]);
 
+  const activeFilterLabel = useMemo(() => {
+    if (activeFilters.length === 0 && activeTags.length === 0) return "All";
+    const parts: string[] = [];
+    activeFilters.forEach((f) => {
+      const opt = FILTER_OPTIONS.find((o) => o.value === f);
+      if (opt) parts.push(opt.label);
+    });
+    activeTags.forEach((t) => parts.push(t.name));
+    return parts.join(", ");
+  }, [activeFilters, activeTags]);
+
+  const hasActiveFilters = activeFilters.length > 0 || activeTags.length > 0;
+
+  const toggleFilter = useCallback((filter: FilterCategory) => {
+    setActiveFilters((prev) =>
+      prev.includes(filter) ? prev.filter((f) => f !== filter) : [...prev, filter],
+    );
+  }, []);
+
+  const sortLabel = useMemo(() => {
+    return PIECE_SORT_OPTIONS.find((o) => o.value === sortOrder)?.label ?? sortOrder;
+  }, [sortOrder]);
 
   return (
     <>
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: 0.75,
-        }}
-        role="toolbar"
-        aria-label="Filters and tags"
-      >
-        {!isMobile && onNewPiece && (
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<AddIcon />}
-            onClick={onNewPiece}
-            sx={{ flexShrink: 0 }}
-          >
-            New Piece
-          </Button>
-        )}
-
-        {onSortChange && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <SortIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
-            <Select
-              value={sortOrder}
-              onChange={(e) => onSortChange(e.target.value as PieceSortOrder)}
-              size="small"
-              variant="standard"
-              disableUnderline
-              inputProps={{ "aria-label": "Sort order" }}
+      {/* Condensed filter strip — sticky, collapses to the toggle button height only.
+          The expanded panel is absolutely positioned so it overlays the masonry
+          without pushing content down or causing the page to scroll. */}
+      <Box sx={{
+        position: "sticky",
+        top: 0,
+        zIndex: 10,
+        background: "transparent",
+        pt: 0.75,
+        pb: 0.75,
+        mb: 0,
+        borderBottom: "1px solid",
+        borderColor: "divider",
+      }}>
+        <Box
+          component="button"
+          type="button"
+          onClick={() => setFilterOpen((o) => !o)}
+          aria-expanded={filterOpen}
+          aria-label="Toggle filters"
+          sx={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 1,
+            px: 1.5,
+            py: 1,
+            borderRadius: 2,
+            bgcolor: alpha("#181210", 0.95),
+            border: "1px solid",
+            borderColor: "divider",
+            color: "text.secondary",
+            fontFamily: "inherit",
+            cursor: "pointer",
+            textAlign: "left",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, overflow: "hidden" }}>
+            <FilterListIcon sx={{ fontSize: 15, flexShrink: 0, color: "text.disabled" }} />
+            <Typography
+              component="span"
               sx={{
                 fontSize: "0.8125rem",
-                color: "text.secondary",
-                "& .MuiSelect-select": { py: 0 },
+                fontWeight: hasActiveFilters ? 600 : 400,
+                color: hasActiveFilters ? "text.primary" : "text.secondary",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
             >
-              {PIECE_SORT_OPTIONS.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "0.8125rem" }}>
-                  {opt.label}
-                </MenuItem>
+              {activeFilterLabel}
+            </Typography>
+            <Typography
+              component="span"
+              sx={{
+                fontSize: "0.6875rem",
+                color: "text.disabled",
+                fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+                flexShrink: 0,
+              }}
+            >
+              · {filteredPieces.length}{hasMore ? "+" : ""} pieces
+            </Typography>
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
+            <SortIcon sx={{ fontSize: 13, color: "text.disabled" }} />
+            <Typography
+              component="span"
+              sx={{
+                fontSize: "0.6875rem",
+                color: "text.disabled",
+                fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+              }}
+            >
+              {sortLabel}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Absolutely positioned so the panel overlays the masonry without
+            pushing it down or triggering a page scroll. */}
+        {filterOpen && (
+          <Box sx={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            right: 0,
+            mt: 0,
+            p: 1.5,
+            borderRadius: "0 0 8px 8px",
+            bgcolor: alpha("#181210", 0.97),
+            border: "1px solid",
+            borderColor: "divider",
+            borderTop: "none",
+            display: "flex",
+            flexDirection: "column",
+            gap: 1.5,
+            zIndex: 11,
+          }}>
+            {/* Status filter chips */}
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+              {FILTER_OPTIONS.map((opt) => {
+                const active = activeFilters.includes(opt.value);
+                return (
+                  <Chip
+                    key={opt.value}
+                    label={opt.label}
+                    size="small"
+                    onClick={() => toggleFilter(opt.value)}
+                    sx={{
+                      cursor: "pointer",
+                      bgcolor: active ? "primary.main" : alpha("#000", 0.18),
+                      color: active ? "primary.contrastText" : "text.secondary",
+                      border: "1px solid",
+                      borderColor: active ? "primary.main" : "divider",
+                      fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+                      fontSize: "0.6875rem",
+                      "&:hover": { filter: "brightness(1.12)" },
+                    }}
+                  />
+                );
+              })}
+            </Box>
+
+            {/* Tag filter: chips for active tags + "+ tag" button to open picker */}
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, alignItems: "center" }}>
+              {activeTags.map((tag) => (
+                <TagChip
+                  key={tag.id}
+                  label={tag.name}
+                  color={tag.color}
+                  onDelete={() => setActiveTags((prev) => prev.filter((t) => t.id !== tag.id))}
+                />
               ))}
-            </Select>
+              {tagPickerOpen ? (
+                <Box sx={{ width: "100%", mt: activeTags.length > 0 ? 0.5 : 0 }}>
+                  <TagAutocomplete
+                    label="Filter by tag"
+                    options={availableTags}
+                    value={activeTags}
+                    onChange={(next) => { setActiveTags(next); setTagPickerOpen(false); }}
+                    sx={{ minWidth: 0 }}
+                  />
+                </Box>
+              ) : (
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => setTagPickerOpen(true)}
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    px: "8px",
+                    height: 24,
+                    borderRadius: "12px",
+                    bgcolor: "transparent",
+                    border: "1px dashed",
+                    borderColor: "divider",
+                    color: "text.disabled",
+                    fontSize: "0.75rem",
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                    "&:hover": { borderColor: "text.secondary", color: "text.secondary" },
+                  }}
+                >
+                  + tag
+                </Box>
+              )}
+            </Box>
+
+            {/* Sort */}
+            {onSortChange && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                <SortIcon fontSize="small" sx={{ color: "text.disabled" }} />
+                <Select
+                  value={sortOrder}
+                  onChange={(e) => onSortChange(e.target.value as PieceSortOrder)}
+                  size="small"
+                  variant="standard"
+                  disableUnderline
+                  inputProps={{ "aria-label": "Sort order" }}
+                  sx={{
+                    fontSize: "0.8125rem",
+                    color: "text.secondary",
+                    "& .MuiSelect-select": { py: 0 },
+                  }}
+                >
+                  {PIECE_SORT_OPTIONS.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "0.8125rem" }}>
+                      {opt.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Box>
+            )}
+
+            {/* New Piece button (desktop only) */}
+            {!isMobile && onNewPiece && (
+              <Box
+                component="button"
+                type="button"
+                onClick={onNewPiece}
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  px: 1.5,
+                  py: 0.75,
+                  alignSelf: "flex-start",
+                  borderRadius: 1.5,
+                  bgcolor: "primary.main",
+                  color: "primary.contrastText",
+                  border: "none",
+                  fontSize: "0.8125rem",
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                  cursor: "pointer",
+                  "&:hover": { filter: "brightness(1.1)" },
+                }}
+              >
+                <AddIcon sx={{ fontSize: 16 }} />
+                New Piece
+              </Box>
+            )}
           </Box>
         )}
-
-        <Box sx={{ width: "1px", height: "20px", bgcolor: "divider", flexShrink: 0, mx: 0.25 }} />
-
-        {activeFilterOptions.length > 0 && (
-          <Stack
-            direction="row"
-            spacing={0.75}
-            useFlexGap
-            flexWrap="wrap"
-            alignItems="center"
-          >
-            {activeFilterOptions.map((option) => (
-              <Chip
-                key={option.value}
-                label={option.label}
-                size="small"
-                onDelete={() =>
-                  setActiveFilters((prev) =>
-                    prev.filter((value) => value !== option.value),
-                  )
-                }
-              />
-            ))}
-          </Stack>
-        )}
-
-        <Box
-          component="button"
-          type="button"
-          onClick={(e) => {
-            setTagAnchor(null);
-            setFilterAnchor(filterAnchor ? null : e.currentTarget);
-          }}
-          aria-label="Add status filter"
-          aria-expanded={!!filterAnchor}
-          sx={ADD_FILTER_BUTTON_SX}
-        >
-          + filter
-        </Box>
-
-        {activeTags.length > 0 && (
-          <Stack
-            direction="row"
-            spacing={0.75}
-            useFlexGap
-            flexWrap="wrap"
-            alignItems="center"
-          >
-            {activeTags.map((tag) => (
-              <TagChip
-                key={tag.id}
-                label={tag.name}
-                color={tag.color}
-                onDelete={() =>
-                  setActiveTags((prev) => prev.filter((t) => t.id !== tag.id))
-                }
-              />
-            ))}
-          </Stack>
-        )}
-
-        <Box
-          component="button"
-          type="button"
-          onClick={(e) => {
-            setFilterAnchor(null);
-            setTagAnchor(tagAnchor ? null : e.currentTarget);
-          }}
-          aria-label="Add tag filter"
-          aria-expanded={!!tagAnchor}
-          sx={ADD_TAG_BUTTON_SX}
-        >
-          + tag
-        </Box>
       </Box>
 
-      <Popper
-        open={!!filterAnchor}
-        anchorEl={filterAnchor}
-        placement="bottom-start"
-        style={{ zIndex: 1300 }}
-      >
-        <ClickAwayListener onClickAway={() => setFilterAnchor(null)}>
-          <Paper elevation={3} sx={{ p: 1.5, mt: 0.5, minWidth: 260 }}>
-            <Autocomplete
-              multiple
-              disableCloseOnSelect
-              size="small"
-              options={FILTER_OPTIONS}
-              value={activeFilterOptions}
-              onChange={(_event, nextValue) => {
-                setActiveFilters(nextValue.map((option) => option.value));
-              }}
-              getOptionLabel={(option) => option.label}
-              isOptionEqualToValue={(option, selected) =>
-                option.value === selected.value
-              }
-              renderTags={(selected, getTagProps) =>
-                selected.map((option, index) => (
-                  <Chip
-                    {...getTagProps({ index })}
-                    key={option.value}
-                    label={option.label}
-                    size="small"
-                  />
-                ))
-              }
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Status filters"
-                  fullWidth
-                  autoFocus
-                />
-              )}
+      {/* 2-column masonry grid on mobile, more columns on wider screens */}
+      <Box sx={{ mt: 1.5 }} />
+      {/* Wrapper enables the loadingMore overlay without affecting layout */}
+      <Box sx={{ position: "relative" }}>
+        <Box sx={{
+          columnCount: isMobile ? 2 : { sm: 3, md: 4 },
+          columnGap: "8px",
+          // Dim the grid while loading more so the column redistribution
+          // that happens on append is masked behind the overlay.
+          opacity: loadingMore ? 0.35 : 1,
+          transition: "opacity 0.15s ease",
+          pointerEvents: loadingMore ? "none" : "auto",
+        }}>
+          {filteredPieces.map((piece) => (
+            <PieceCard
+              key={piece.id}
+              piece={piece}
+              activeTagIds={activeTags.map((t) => t.id)}
             />
-          </Paper>
-        </ClickAwayListener>
-      </Popper>
-
-      <Popper
-        open={!!tagAnchor}
-        anchorEl={tagAnchor}
-        placement="bottom-start"
-        style={{ zIndex: 1300 }}
-      >
-        <ClickAwayListener onClickAway={() => setTagAnchor(null)}>
-          <Paper elevation={3} sx={{ p: 1.5, mt: 0.5, minWidth: 260 }}>
-            <TagAutocomplete
-              label="Tags"
-              options={availableTags}
-              value={activeTags}
-              onChange={setActiveTags}
-              sx={{ minWidth: 0 }}
-            />
-          </Paper>
-        </ClickAwayListener>
-      </Popper>
-
-      <Grid container spacing={1} alignItems="stretch" role="rowgroup">
-        {filteredPieces.map((piece) => (
-          <PieceListItem
-            key={piece.id}
-            piece={piece}
-            activeTagIds={activeTags.map((tag) => tag.id)}
-          />
-        ))}
-      </Grid>
-
-      {/* Invisible sentinel — always in the DOM so the ref is populated when the
-          effect runs; the effect itself is a no-op when hasMore is false. */}
-      <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
-
-      {loadingMore && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-          <CircularProgress size={24} />
+          ))}
         </Box>
-      )}
+
+        {/* Centered spinner overlay while fetching the next page */}
+        {loadingMore && (
+          <Box sx={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: 80,
+          }}>
+            <CircularProgress size={32} />
+          </Box>
+        )}
+      </Box>
+
+      {/* Scroll sentinel — placed after the grid so it triggers near the bottom */}
+      <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
 
       {!hasMore && !loadingMore && pieces.length > 0 && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
@@ -458,6 +600,7 @@ const PieceList = (props: PieceListingProps) => {
           </Typography>
         </Box>
       )}
+
     </>
   );
 };

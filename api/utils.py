@@ -271,6 +271,24 @@ def _seed_dev_pieces(user) -> None:
 
     T = DEV_THUMBNAIL_URLS
 
+    from .models import Tag  # noqa: PLC0415
+    PieceTag = apps.get_model("api", "PieceTag")
+
+    TAG_DEFS = [
+        ("gift",       "#E76F51"),
+        ("functional", "#2A9D8F"),
+        ("decorative", "#9b5de5"),
+        ("for sale",   "#457B9D"),
+        ("wabi-sabi",  "#6d4c41"),
+        ("practice",   "#78909c"),
+        ("commission", "#c0392b"),
+        ("series",     "#f4a261"),
+    ]
+    tags = []
+    for tag_name, tag_color in TAG_DEFS:
+        tag, _ = Tag.objects.get_or_create(user=user, name=tag_name, defaults={"color": tag_color})
+        tags.append(tag)
+
     for i in range(75):
         adj   = rng.choice(ADJECTIVES)
         form, thumb = rng.choice(FORMS)
@@ -291,6 +309,12 @@ def _seed_dev_pieces(user) -> None:
             name=f"{adj} {form} #{i + 1}",
             thumbnail={"url": T[thumb], "cloudinary_public_id": None},
         )
+
+        # Attach 0–3 random tags to each piece
+        n_tags = rng.choices([0, 1, 2, 3], weights=[3, 4, 2, 1])[0]
+        piece_tags = rng.sample(tags, min(n_tags, len(tags)))
+        for order, tag in enumerate(piece_tags):
+            PieceTag.objects.get_or_create(piece=p, tag=tag, defaults={"order": order})
 
         for step_state, fields_fn, _ in path[: stop + 1]:
             af, gr = fields_fn(rng, clay, combo) if fields_fn else (None, None)
