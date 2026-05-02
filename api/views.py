@@ -135,6 +135,7 @@ def _apply_piece_ordering(qs, ordering_param: str):
 
 @extend_schema(
     methods=["GET"],
+    operation_id="pieces_list",
     parameters=[
         OpenApiParameter(
             name="ordering",
@@ -192,7 +193,7 @@ def pieces(request: Request) -> Response:
     return Response(PieceDetailSerializer(piece).data, status=status.HTTP_201_CREATED)
 
 
-@extend_schema(responses={200: PieceDetailSerializer})
+@extend_schema(methods=["GET"], operation_id="pieces_retrieve", responses={200: PieceDetailSerializer})
 @extend_schema(
     methods=["PATCH"],
     request=PieceUpdateSerializer,
