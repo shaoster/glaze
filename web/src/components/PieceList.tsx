@@ -20,6 +20,8 @@ import {
 } from "../util/types";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
+import { Masonry } from "masonic";
+import type { RenderComponentProps } from "masonic";
 import { Link } from "react-router-dom";
 import CloudinaryImage from "./CloudinaryImage";
 import TagAutocomplete from "./TagAutocomplete";
@@ -65,7 +67,6 @@ function thumbHeight(days: number, isTerminal: boolean): number {
 
 interface PieceCardProps {
   piece: PieceSummary;
-  activeTagIds: string[];
 }
 
 const PieceCard = ({ piece }: PieceCardProps) => {
@@ -93,8 +94,6 @@ const PieceCard = ({ piece }: PieceCardProps) => {
       to={detailPath}
       sx={{
         display: "block",
-        breakInside: "avoid",
-        mb: 1,
         borderRadius: 2,
         overflow: "hidden",
         bgcolor: "background.paper",
@@ -231,6 +230,10 @@ const PieceCard = ({ piece }: PieceCardProps) => {
   );
 };
 
+function MasonryPieceCard({ data }: RenderComponentProps<PieceSummary>) {
+  return <PieceCard piece={data} />;
+}
+
 type PieceListProps = {
   pieces: PieceSummary[];
   onNewPiece?: () => void;
@@ -311,6 +314,11 @@ const PieceList = (props: PieceListProps) => {
   }, [activeFilters, activeTags]);
 
   const hasActiveFilters = activeFilters.length > 0 || activeTags.length > 0;
+  const filterKey = useMemo(() => {
+    const filters = [...activeFilters].sort().join(",");
+    const tags = activeTags.map((tag) => tag.id).sort().join(",");
+    return `${filters}|${tags}|${sortOrder}`;
+  }, [activeFilters, activeTags, sortOrder]);
 
   const toggleFilter = useCallback((filter: FilterCategory) => {
     setActiveFilters((prev) =>
@@ -553,26 +561,28 @@ const PieceList = (props: PieceListProps) => {
         )}
       </Box>
 
-      {/* 2-column masonry grid on mobile, more columns on wider screens */}
+      {/* Masonry layout keeps append order stable without CSS column rebalancing. */}
       <Box sx={{ mt: 1.5 }} />
       {/* Wrapper enables the loadingMore overlay without affecting layout */}
       <Box sx={{ position: "relative" }}>
-        <Box sx={{
-          columnCount: isMobile ? 2 : { sm: 3, md: 4 },
-          columnGap: "8px",
-          // Dim the grid while loading more so the column redistribution
-          // that happens on append is masked behind the overlay.
-          opacity: loadingMore ? 0.35 : 1,
-          transition: "opacity 0.15s ease",
-          pointerEvents: loadingMore ? "none" : "auto",
-        }}>
-          {filteredPieces.map((piece) => (
-            <PieceCard
-              key={piece.id}
-              piece={piece}
-              activeTagIds={activeTags.map((t) => t.id)}
-            />
-          ))}
+        <Box
+          sx={{
+            opacity: loadingMore ? 0.35 : 1,
+            transition: "opacity 0.15s ease",
+            pointerEvents: loadingMore ? "none" : "auto",
+          }}
+        >
+          <Masonry
+            key={filterKey}
+            items={filteredPieces}
+            render={MasonryPieceCard}
+            itemKey={(piece) => piece.id}
+            itemHeightEstimate={260}
+            columnWidth={isMobile ? 160 : 220}
+            maxColumnCount={isMobile ? 2 : 4}
+            columnGutter={8}
+            rowGutter={8}
+          />
         </Box>
 
         {/* Centered spinner overlay while fetching the next page */}
