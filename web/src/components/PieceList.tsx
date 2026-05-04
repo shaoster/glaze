@@ -13,11 +13,7 @@ import {
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import type { PieceSummary, TagEntry } from "../util/types";
-import {
-  formatState,
-  isTerminalState,
-  SUCCESSORS,
-} from "../util/types";
+import { formatState, isTerminalState, SUCCESSORS } from "../util/types";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import { Masonry } from "masonic";
@@ -103,7 +99,10 @@ const PieceCard = ({ piece }: PieceCardProps) => {
         color: "inherit",
         opacity: isTerminal ? 0.78 : 1,
         transition: "opacity 0.15s, filter 0.15s",
-        "&:hover": { opacity: isTerminal ? 0.9 : 1, filter: "brightness(1.07)" },
+        "&:hover": {
+          opacity: isTerminal ? 0.9 : 1,
+          filter: "brightness(1.07)",
+        },
       }}
     >
       {/* Thumbnail area */}
@@ -115,48 +114,73 @@ const PieceCard = ({ piece }: PieceCardProps) => {
           context="gallery"
           requestedWidth={300}
           requestedHeight={200}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
         />
 
         {/* Bottom gradient scrim */}
-        <Box sx={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.55) 100%)",
-          pointerEvents: "none",
-        }} />
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.55) 100%)",
+            pointerEvents: "none",
+          }}
+        />
 
         {/* Top-right: stale dot */}
         {isStale && (
-          <Box sx={{
-            position: "absolute", top: 6, right: 6,
-            width: 8, height: 8, borderRadius: "50%",
-            bgcolor: KILN_COLOR,
-            boxShadow: `0 0 6px ${KILN_COLOR}`,
-          }} />
+          <Box
+            sx={{
+              position: "absolute",
+              top: 6,
+              right: 6,
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              bgcolor: KILN_COLOR,
+              boxShadow: `0 0 6px ${KILN_COLOR}`,
+            }}
+          />
         )}
 
         {/* Bottom-left: state chip overlay */}
-        <Box sx={{
-          position: "absolute", bottom: 6, left: 6,
-          px: "8px", py: "3px",
-          borderRadius: 999,
-          bgcolor: isTerminal ? alpha("#000", 0.55) : accentColor,
-          color: isTerminal ? "text.secondary" : accentText,
-          backdropFilter: isTerminal ? "blur(6px)" : "none",
-          border: isTerminal ? "1px solid rgba(255,255,255,0.12)" : "none",
-          fontSize: "0.6875rem",
-          fontWeight: 600,
-          fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
-          letterSpacing: "0.02em",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "5px",
-          lineHeight: 1,
-        }}>
-          <Box sx={{
-            width: 5, height: 5, borderRadius: "50%", flexShrink: 0,
-            bgcolor: isTerminal ? accentColor : alpha(accentText, 0.7),
-          }} />
+        <Box
+          sx={{
+            position: "absolute",
+            bottom: 6,
+            left: 6,
+            px: "8px",
+            py: "3px",
+            borderRadius: 999,
+            bgcolor: isTerminal ? alpha("#000", 0.55) : accentColor,
+            color: isTerminal ? "text.secondary" : accentText,
+            backdropFilter: isTerminal ? "blur(6px)" : "none",
+            border: isTerminal ? "1px solid rgba(255,255,255,0.12)" : "none",
+            fontSize: "0.6875rem",
+            fontWeight: 600,
+            fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+            letterSpacing: "0.02em",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px",
+            lineHeight: 1,
+          }}
+        >
+          <Box
+            sx={{
+              width: 5,
+              height: 5,
+              borderRadius: "50%",
+              flexShrink: 0,
+              bgcolor: isTerminal ? accentColor : alpha(accentText, 0.7),
+            }}
+          />
           {label}
         </Box>
       </Box>
@@ -176,16 +200,18 @@ const PieceCard = ({ piece }: PieceCardProps) => {
         </Typography>
 
         {/* Last-activity caption */}
-        <Box sx={{
-          mt: 0.5,
-          fontSize: "0.6875rem",
-          color: "text.disabled",
-          fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
-          display: "flex",
-          alignItems: "center",
-          gap: "4px",
-          flexWrap: "wrap",
-        }}>
+        <Box
+          sx={{
+            mt: 0.5,
+            fontSize: "0.6875rem",
+            color: "text.disabled",
+            fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            flexWrap: "wrap",
+          }}
+        >
           <span>{lastActivity}</span>
           {!isTerminal && (
             <>
@@ -262,7 +288,9 @@ const PieceList = (props: PieceListProps) => {
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
 
   const onLoadMoreRef = useRef(onLoadMore);
-  useEffect(() => { onLoadMoreRef.current = onLoadMore; }, [onLoadMore]);
+  useEffect(() => {
+    onLoadMoreRef.current = onLoadMore;
+  }, [onLoadMore]);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -316,18 +344,25 @@ const PieceList = (props: PieceListProps) => {
   const hasActiveFilters = activeFilters.length > 0 || activeTags.length > 0;
   const filterKey = useMemo(() => {
     const filters = [...activeFilters].sort().join(",");
-    const tags = activeTags.map((tag) => tag.id).sort().join(",");
+    const tags = activeTags
+      .map((tag) => tag.id)
+      .sort()
+      .join(",");
     return `${filters}|${tags}|${sortOrder}`;
   }, [activeFilters, activeTags, sortOrder]);
 
   const toggleFilter = useCallback((filter: FilterCategory) => {
     setActiveFilters((prev) =>
-      prev.includes(filter) ? prev.filter((f) => f !== filter) : [...prev, filter],
+      prev.includes(filter)
+        ? prev.filter((f) => f !== filter)
+        : [...prev, filter],
     );
   }, []);
 
   const sortLabel = useMemo(() => {
-    return PIECE_SORT_OPTIONS.find((o) => o.value === sortOrder)?.label ?? sortOrder;
+    return (
+      PIECE_SORT_OPTIONS.find((o) => o.value === sortOrder)?.label ?? sortOrder
+    );
   }, [sortOrder]);
 
   return (
@@ -335,17 +370,19 @@ const PieceList = (props: PieceListProps) => {
       {/* Condensed filter strip — sticky, collapses to the toggle button height only.
           The expanded panel is absolutely positioned so it overlays the masonry
           without pushing content down or causing the page to scroll. */}
-      <Box sx={{
-        position: "sticky",
-        top: 0,
-        zIndex: 10,
-        background: "transparent",
-        pt: 0.75,
-        pb: 0.75,
-        mb: 0,
-        borderBottom: "1px solid",
-        borderColor: "divider",
-      }}>
+      <Box
+        sx={{
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: "transparent",
+          pt: 0.75,
+          pb: 0.75,
+          mb: 0,
+          borderBottom: "1px solid",
+          borderColor: "divider",
+        }}
+      >
         <Box
           component="button"
           type="button"
@@ -370,8 +407,17 @@ const PieceList = (props: PieceListProps) => {
             textAlign: "left",
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, overflow: "hidden" }}>
-            <FilterListIcon sx={{ fontSize: 15, flexShrink: 0, color: "text.disabled" }} />
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              overflow: "hidden",
+            }}
+          >
+            <FilterListIcon
+              sx={{ fontSize: 15, flexShrink: 0, color: "text.disabled" }}
+            />
             <Typography
               component="span"
               sx={{
@@ -394,10 +440,18 @@ const PieceList = (props: PieceListProps) => {
                 flexShrink: 0,
               }}
             >
-              · {filteredPieces.length}{hasMore ? "+" : ""} pieces
+              · {filteredPieces.length}
+              {hasMore ? "+" : ""} pieces
             </Typography>
           </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+              flexShrink: 0,
+            }}
+          >
             <SortIcon sx={{ fontSize: 13, color: "text.disabled" }} />
             <Typography
               component="span"
@@ -415,23 +469,25 @@ const PieceList = (props: PieceListProps) => {
         {/* Absolutely positioned so the panel overlays the masonry without
             pushing it down or triggering a page scroll. */}
         {filterOpen && (
-          <Box sx={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            mt: 0,
-            p: 1.5,
-            borderRadius: "0 0 8px 8px",
-            bgcolor: alpha("#181210", 0.97),
-            border: "1px solid",
-            borderColor: "divider",
-            borderTop: "none",
-            display: "flex",
-            flexDirection: "column",
-            gap: 1.5,
-            zIndex: 11,
-          }}>
+          <Box
+            sx={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              mt: 0,
+              p: 1.5,
+              borderRadius: "0 0 8px 8px",
+              bgcolor: alpha("#181210", 0.97),
+              border: "1px solid",
+              borderColor: "divider",
+              borderTop: "none",
+              display: "flex",
+              flexDirection: "column",
+              gap: 1.5,
+              zIndex: 11,
+            }}
+          >
             {/* Status filter chips */}
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
               {FILTER_OPTIONS.map((opt) => {
@@ -458,22 +514,36 @@ const PieceList = (props: PieceListProps) => {
             </Box>
 
             {/* Tag filter: chips for active tags + "+ tag" button to open picker */}
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, alignItems: "center" }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 0.75,
+                alignItems: "center",
+              }}
+            >
               {activeTags.map((tag) => (
                 <TagChip
                   key={tag.id}
                   label={tag.name}
                   color={tag.color}
-                  onDelete={() => setActiveTags((prev) => prev.filter((t) => t.id !== tag.id))}
+                  onDelete={() =>
+                    setActiveTags((prev) => prev.filter((t) => t.id !== tag.id))
+                  }
                 />
               ))}
               {tagPickerOpen ? (
-                <Box sx={{ width: "100%", mt: activeTags.length > 0 ? 0.5 : 0 }}>
+                <Box
+                  sx={{ width: "100%", mt: activeTags.length > 0 ? 0.5 : 0 }}
+                >
                   <TagAutocomplete
                     label="Filter by tag"
                     options={availableTags}
                     value={activeTags}
-                    onChange={(next) => { setActiveTags(next); setTagPickerOpen(false); }}
+                    onChange={(next) => {
+                      setActiveTags(next);
+                      setTagPickerOpen(false);
+                    }}
                     sx={{ minWidth: 0 }}
                   />
                 </Box>
@@ -495,7 +565,10 @@ const PieceList = (props: PieceListProps) => {
                     fontSize: "0.75rem",
                     fontFamily: "inherit",
                     cursor: "pointer",
-                    "&:hover": { borderColor: "text.secondary", color: "text.secondary" },
+                    "&:hover": {
+                      borderColor: "text.secondary",
+                      color: "text.secondary",
+                    },
                   }}
                 >
                   + tag
@@ -509,7 +582,9 @@ const PieceList = (props: PieceListProps) => {
                 <SortIcon fontSize="small" sx={{ color: "text.disabled" }} />
                 <Select
                   value={sortOrder}
-                  onChange={(e) => onSortChange(e.target.value as PieceSortOrder)}
+                  onChange={(e) =>
+                    onSortChange(e.target.value as PieceSortOrder)
+                  }
                   size="small"
                   variant="standard"
                   disableUnderline
@@ -521,7 +596,11 @@ const PieceList = (props: PieceListProps) => {
                   }}
                 >
                   {PIECE_SORT_OPTIONS.map((opt) => (
-                    <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "0.8125rem" }}>
+                    <MenuItem
+                      key={opt.value}
+                      value={opt.value}
+                      sx={{ fontSize: "0.8125rem" }}
+                    >
                       {opt.label}
                     </MenuItem>
                   ))}
@@ -567,8 +646,6 @@ const PieceList = (props: PieceListProps) => {
       <Box sx={{ position: "relative" }}>
         <Box
           sx={{
-            opacity: loadingMore ? 0.35 : 1,
-            transition: "opacity 0.15s ease",
             pointerEvents: loadingMore ? "none" : "auto",
           }}
         >
@@ -587,14 +664,16 @@ const PieceList = (props: PieceListProps) => {
 
         {/* Centered spinner overlay while fetching the next page */}
         {loadingMore && (
-          <Box sx={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: 80,
-          }}>
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: 80,
+            }}
+          >
             <CircularProgress size={32} />
           </Box>
         )}
@@ -610,7 +689,6 @@ const PieceList = (props: PieceListProps) => {
           </Typography>
         </Box>
       )}
-
     </>
   );
 };
