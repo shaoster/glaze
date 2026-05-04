@@ -1,3 +1,4 @@
+import type React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -8,6 +9,29 @@ import type { PieceSummary } from "../../util/types";
 vi.mock("../CloudinaryImage", () => ({
   default: ({ url, alt }: { url: string; alt?: string }) => (
     <img src={url} alt={alt ?? ""} />
+  ),
+}));
+
+vi.mock("masonic", () => ({
+  Masonry: ({
+    items,
+    render: RenderComponent,
+    itemKey,
+  }: {
+    items: PieceSummary[];
+    render: React.ComponentType<{ data: PieceSummary; index: number; width: number }>;
+    itemKey?: (item: PieceSummary, index: number) => string | number;
+  }) => (
+    <div data-testid="piece-grid">
+      {items.map((item, index) => (
+        <div
+          key={itemKey ? itemKey(item, index) : index}
+          data-key={itemKey ? itemKey(item, index) : index}
+        >
+          <RenderComponent data={item} index={index} width={240} />
+        </div>
+      ))}
+    </div>
   ),
 }));
 
@@ -121,6 +145,19 @@ describe("PieceList", () => {
       renderPieceList(pieces);
       expect(screen.getByText("Designing")).toBeInTheDocument();
       expect(screen.getByText("Glazing")).toBeInTheDocument();
+    });
+
+    it("passes stable piece ids to the masonry renderer as item keys", () => {
+      const pieces = [
+        makePiece({ id: "id-1", name: "Tagged Bowl", tags: [{ id: "tag-1", name: "Gift", color: "#2A9D8F", is_public: false }] }),
+        makePiece({ id: "id-2", name: "Plain Mug", tags: [] }),
+      ];
+
+      const { container } = renderPieceList(pieces);
+      const wrappers = container.querySelectorAll('[data-testid="piece-grid"] > div');
+
+      expect(wrappers[0]?.getAttribute("data-key")).toBe("id-1");
+      expect(wrappers[1]?.getAttribute("data-key")).toBe("id-2");
     });
   });
 
