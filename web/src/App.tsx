@@ -343,9 +343,21 @@ function AuthLanding({
                 type="submit"
                 variant="contained"
                 disabled={submitting || !email.trim() || !password}
+                startIcon={
+                  submitting ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : undefined
+                }
               >
                 {mode === "login" ? "Log In" : "Create Account"}
               </Button>
+              {submitting && (
+                <Typography variant="body2" color="text.secondary">
+                  {mode === "login"
+                    ? "Signing you in..."
+                    : "Creating your account..."}
+                </Typography>
+              )}
             </Stack>
           </Box>
 
@@ -355,6 +367,9 @@ function AuthLanding({
               <Box
                 sx={{
                   display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 1,
                   justifyContent: "center",
                   overflowX: "auto",
                 }}
@@ -378,6 +393,13 @@ function AuthLanding({
                     setError("Google sign-in failed. Please try again.")
                   }
                 />
+                {submitting && (
+                  <CircularProgress
+                    size={20}
+                    color="inherit"
+                    aria-label="Authenticating"
+                  />
+                )}
               </Box>
             </>
           )}

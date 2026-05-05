@@ -3,32 +3,41 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // Mock the module before importing App
-vi.mock("./util/api", () => ({
-  fetchCurrentUser: vi.fn().mockResolvedValue(null),
-  loginWithGoogle: vi.fn(),
-  loginWithEmail: vi.fn(),
-  logoutUser: vi.fn().mockResolvedValue(undefined),
-  registerWithEmail: vi.fn(),
-  fetchPieces: vi.fn().mockResolvedValue([]),
-  fetchPiece: vi.fn(),
-  ensureCsrfCookie: vi.fn().mockResolvedValue(undefined),
-  createPiece: vi.fn(),
-  addPieceState: vi.fn(),
-  updateCurrentState: vi.fn(),
-  updatePiece: vi.fn(),
-  fetchGlobalEntries: vi.fn().mockResolvedValue([]),
-  createGlobalEntry: vi.fn(),
-  hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
-  uploadImageToCloudinary: vi.fn(),
-  fetchGlazeCombinationImages: vi.fn().mockResolvedValue([]),
-}));
+vi.mock("./util/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./util/api")>();
+  return {
+    ...actual,
+    fetchCurrentUser: vi.fn().mockResolvedValue(null),
+    loginWithGoogle: vi.fn(),
+    loginWithEmail: vi.fn(),
+    logoutUser: vi.fn().mockResolvedValue(undefined),
+    registerWithEmail: vi.fn(),
+    fetchPieces: vi.fn().mockResolvedValue({ count: 0, results: [] }),
+    fetchPiece: vi.fn(),
+    ensureCsrfCookie: vi.fn().mockResolvedValue(undefined),
+    createPiece: vi.fn(),
+    addPieceState: vi.fn(),
+    updateCurrentState: vi.fn(),
+    updatePiece: vi.fn(),
+    fetchGlobalEntries: vi.fn().mockResolvedValue([]),
+    createGlobalEntry: vi.fn(),
+    hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
+    uploadImageToCloudinary: vi.fn(),
+    fetchGlazeCombinationImages: vi.fn().mockResolvedValue([]),
+  };
+});
 
 vi.mock("./components/NewPieceDialog", () => ({
   default: () => null,
 }));
 
 vi.mock("./components/PieceList", () => ({
-  default: () => <div>Piece List Content</div>,
+  default: ({ onNewPiece }: { onNewPiece?: () => void }) => (
+    <div>
+      {onNewPiece && <button onClick={onNewPiece}>New Piece</button>}
+      <div>Piece List Content</div>
+    </div>
+  ),
 }));
 
 vi.mock("./components/PieceDetail", () => ({
@@ -197,6 +206,41 @@ describe("App auth flow", () => {
       "aria-selected",
       "false",
     );
+  });
+
+  it("shows a spinner while login is submitting", async () => {
+    vi.mocked(loginWithEmail).mockImplementation(
+      () => new Promise(() => {}) as ReturnType<typeof loginWithEmail>,
+    );
+
+    const { container } = render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Track every pottery piece through your workflow."),
+      ).toBeInTheDocument();
+    });
+
+    const inputs = container.querySelectorAll(
+      'input[type="email"], input[type="password"]',
+    );
+    const emailInput = inputs[0] as HTMLInputElement;
+    const passwordInput = inputs[1] as HTMLInputElement;
+
+    fireEvent.change(emailInput, { target: { value: "potter@example.com" } });
+    fireEvent.change(passwordInput, { target: { value: "password123" } });
+
+    const submitButton = screen
+      .getAllByRole("button")
+      .find((btn) => btn.textContent === "Log In" && btn.closest("form"));
+    expect(submitButton).toBeDefined();
+
+    await userEvent.click(submitButton!);
+
+    expect(screen.getByText("Signing you in...")).toBeInTheDocument();
+    expect(
+      submitButton?.querySelector('[role="progressbar"]'),
+    ).toBeInTheDocument();
   });
 
   it("switches between landing tabs and keeps the URL in sync", async () => {

@@ -267,6 +267,7 @@ type PieceListProps = {
   onSortChange?: (order: PieceSortOrder) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
+  loading?: boolean;
   loadingMore?: boolean;
 };
 
@@ -278,6 +279,7 @@ const PieceList = (props: PieceListProps) => {
     onSortChange,
     onLoadMore,
     hasMore = false,
+    loading = false,
     loadingMore = false,
   } = props;
   const theme = useTheme();
@@ -364,6 +366,9 @@ const PieceList = (props: PieceListProps) => {
       PIECE_SORT_OPTIONS.find((o) => o.value === sortOrder)?.label ?? sortOrder
     );
   }, [sortOrder]);
+
+  const showOverlay = loading || loadingMore;
+  const isReplacing = loading;
 
   return (
     <>
@@ -645,8 +650,13 @@ const PieceList = (props: PieceListProps) => {
       {/* Wrapper enables the loadingMore overlay without affecting layout */}
       <Box sx={{ position: "relative" }}>
         <Box
+          data-testid="piece-list-content"
+          style={{
+            opacity: isReplacing ? 0.42 : 1,
+            transition: "opacity 0.18s ease",
+          }}
           sx={{
-            pointerEvents: loadingMore ? "none" : "auto",
+            pointerEvents: showOverlay ? "none" : "auto",
           }}
         >
           <Masonry
@@ -663,8 +673,14 @@ const PieceList = (props: PieceListProps) => {
         </Box>
 
         {/* Centered spinner overlay while fetching the next page */}
-        {loadingMore && (
+        {showOverlay && (
           <Box
+            data-testid="piece-list-overlay"
+            style={{
+              backgroundColor: isReplacing
+                ? alpha(theme.palette.background.default, 0.5)
+                : "transparent",
+            }}
             sx={{
               position: "absolute",
               inset: 0,
@@ -682,7 +698,7 @@ const PieceList = (props: PieceListProps) => {
       {/* Scroll sentinel — placed after the grid so it triggers near the bottom */}
       <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
 
-      {!hasMore && !loadingMore && pieces.length > 0 && (
+      {!hasMore && !showOverlay && pieces.length > 0 && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
           <Typography variant="caption" color="text.disabled">
             End of pieces

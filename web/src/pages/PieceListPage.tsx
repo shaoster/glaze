@@ -27,6 +27,7 @@ export default function PieceListPage() {
   const pendingRef = useRef<PieceSummary[] | null>(null);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<PieceSortOrder>(DEFAULT_PIECE_SORT);
@@ -35,6 +36,7 @@ export default function PieceListPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const offsetRef = useRef(0);
+  const piecesRef = useRef<PieceSummary[]>([]);
   const sortOrderRef = useRef(sortOrder);
   // Synchronous guard — React state updates are batched and arrive too late
   // to prevent double-firing from rapid scroll events.
@@ -42,8 +44,16 @@ export default function PieceListPage() {
 
   const loadPage = useCallback(
     async (ordering: PieceSortOrder, offset: number, replace: boolean) => {
-      if (replace) setLoading(true);
-      else { setLoadingMore(true); loadingMoreRef.current = true; }
+      if (replace) {
+        if (piecesRef.current.length === 0) {
+          setLoading(true);
+        } else {
+          setRefreshing(true);
+        }
+      } else {
+        setLoadingMore(true);
+        loadingMoreRef.current = true;
+      }
       setError(null);
       try {
         const page = await fetchPieces({
@@ -68,6 +78,7 @@ export default function PieceListPage() {
       } finally {
         if (replace) {
           setLoading(false);
+          setRefreshing(false);
         } else {
           // Flush buffered items and clear the loading flag atomically
           const pending = pendingRef.current;
@@ -82,11 +93,14 @@ export default function PieceListPage() {
   );
 
   useEffect(() => {
+    piecesRef.current = pieces;
+  }, [pieces]);
+
+  useEffect(() => {
     sortOrderRef.current = sortOrder;
     offsetRef.current = 0;
     loadingMoreRef.current = false;
     pendingRef.current = null;
-    setPieces([]);
     loadPage(sortOrder, 0, true);
   }, [sortOrder, loadPage]);
 
@@ -95,10 +109,10 @@ export default function PieceListPage() {
   }
 
   const handleLoadMore = useCallback(() => {
-    if (loadingMoreRef.current || loading) return;
+    if (loadingMoreRef.current || loading || refreshing) return;
     const currentOffset = offsetRef.current;
     loadPage(sortOrder, currentOffset, false);
-  }, [loading, sortOrder, loadPage]);
+  }, [loading, refreshing, sortOrder, loadPage]);
 
   function handleCreated(piece: PieceDetail) {
     setPieces((prev) => [piece, ...prev]);
@@ -146,6 +160,7 @@ export default function PieceListPage() {
           onSortChange={handleSortChange}
           onLoadMore={handleLoadMore}
           hasMore={hasMore}
+          loading={refreshing}
           loadingMore={loadingMore}
         />
       )}
