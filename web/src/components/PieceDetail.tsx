@@ -1,4 +1,4 @@
-import { type ComponentProps, type ReactNode, useRef, useState } from "react";
+import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from "react";
 import {
   Alert,
   alpha,
@@ -169,6 +169,24 @@ function PieceDetailContent({
   } as const;
 
   const blocker = useBlocker(canEdit && isDirty);
+
+  // Preload all piece images aggressively: hero first, then the rest async.
+  useEffect(() => {
+    const heroUrl = piece.thumbnail?.url;
+    const galleryUrls = galleryImages.map((img) => img.url).filter(Boolean);
+    // Prioritize hero, then background-load the rest.
+    const ordered = heroUrl
+      ? [heroUrl, ...galleryUrls.filter((u) => u !== heroUrl)]
+      : galleryUrls;
+    ordered.forEach((url, i) => {
+      const img = new Image();
+      if (i === 0) img.fetchPriority = "high";
+      img.src = url;
+    });
+  // galleryImages is recomputed every render but its identity changes with piece,
+  // so depend only on piece to avoid re-running on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [piece]);
 
   async function handleTransition(nextState: string) {
     setTransitioning(true);

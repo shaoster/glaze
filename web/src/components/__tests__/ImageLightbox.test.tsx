@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ImageLightbox from "../ImageLightbox";
@@ -34,12 +34,6 @@ function renderLightbox(
   };
 }
 
-// jsdom has `ontouchstart` in window by default, making isTouchDevice always true.
-// Remove it before each test so the component sees a non-touch device unless explicitly changed.
-beforeEach(() => {
-  delete (window as Window & { ontouchstart?: unknown }).ontouchstart;
-});
-
 describe("ImageLightbox", () => {
   describe("image display", () => {
     it("renders the image at initialIndex", () => {
@@ -56,9 +50,7 @@ describe("ImageLightbox", () => {
 
     it("does not show a caption element when caption is empty", () => {
       const { container } = renderLightbox(THREE_IMAGES, 2);
-      // Image renders but no Typography caption should be present
       expect(screen.getByRole("img")).toHaveAttribute("src", "/img/c.jpg");
-      // The only <p> elements are from MUI structure, none containing caption text
       const paragraphs = container.querySelectorAll("p");
       paragraphs.forEach((p) => expect(p.textContent).not.toBe(""));
     });
@@ -70,7 +62,7 @@ describe("ImageLightbox", () => {
   });
 
   describe("navigation", () => {
-    it("shows prev/next buttons for multiple images on non-touch device", () => {
+    it("shows prev/next buttons for multiple images", () => {
       renderLightbox(THREE_IMAGES, 1);
       expect(
         screen.getByRole("button", { name: /previous image/i }),
@@ -130,7 +122,6 @@ describe("ImageLightbox", () => {
 
     it("shows image counter with current position and total", () => {
       renderLightbox(THREE_IMAGES, 1);
-      // Counter text may be split across text nodes; match by combined textContent
       const counter = screen.getByText((_, el) => el?.textContent === "2 / 3");
       expect(counter).toBeInTheDocument();
     });
@@ -149,11 +140,32 @@ describe("ImageLightbox", () => {
     });
   });
 
+  describe("indicator dots", () => {
+    it("shows one dot per image when there are multiple images", () => {
+      renderLightbox(THREE_IMAGES, 0);
+      expect(
+        screen.getAllByRole("button", { name: /go to image/i }),
+      ).toHaveLength(3);
+    });
+
+    it("does not show indicator dots for a single image", () => {
+      renderLightbox(ONE_IMAGE, 0);
+      expect(
+        screen.queryByRole("button", { name: /go to image/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("clicking a dot navigates to that image", () => {
+      renderLightbox(THREE_IMAGES, 0);
+      fireEvent.click(screen.getByRole("button", { name: "Go to image 3" }));
+      expect(screen.getByRole("img")).toHaveAttribute("src", "/img/c.jpg");
+    });
+  });
+
   describe("close behavior", () => {
     it("calls onClose when backdrop is clicked", () => {
       const { onClose } = renderLightbox(THREE_IMAGES, 0);
-      // The outer Box has onClick={onClose}; click parent of the <img>
-      fireEvent.click(screen.getByRole("img").parentElement!);
+      fireEvent.click(screen.getByTestId("lightbox-backdrop"));
       expect(onClose).toHaveBeenCalledOnce();
     });
 
@@ -178,69 +190,52 @@ describe("ImageLightbox", () => {
   });
 
   describe("touch swipe", () => {
-    beforeEach(() => {
-      Object.defineProperty(navigator, "maxTouchPoints", {
-        value: 1,
-        configurable: true,
-        writable: true,
-      });
-    });
-
-    afterEach(() => {
-      Object.defineProperty(navigator, "maxTouchPoints", {
-        value: 0,
-        configurable: true,
-        writable: true,
-      });
-    });
-
-    it("hides nav buttons on touch device", () => {
-      renderLightbox(THREE_IMAGES, 1);
-      expect(
-        screen.queryByRole("button", { name: /previous image/i }),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: /next image/i }),
-      ).not.toBeInTheDocument();
-    });
+    function getSwipeArea() {
+      return screen.getByTestId("lightbox-swipe-area");
+    }
 
     it("swipe right (positive delta > 50px) navigates to previous image", () => {
       renderLightbox(THREE_IMAGES, 1);
-      const box = screen.getByRole("img").parentElement!;
-      fireEvent.touchStart(box, { touches: [{ clientX: 200 }] });
-      fireEvent.touchEnd(box, { changedTouches: [{ clientX: 260 }] });
+      const area = getSwipeArea();
+      fireEvent.touchStart(area, { touches: [{ clientX: 200, clientY: 0 }] });
+      fireEvent.touchMove(area, { touches: [{ clientX: 260, clientY: 0 }] });
+      fireEvent.touchEnd(area, { changedTouches: [{ clientX: 260, clientY: 0 }] });
       expect(screen.getByRole("img")).toHaveAttribute("src", "/img/a.jpg");
     });
 
     it("swipe left (negative delta > 50px) navigates to next image", () => {
       renderLightbox(THREE_IMAGES, 1);
-      const box = screen.getByRole("img").parentElement!;
-      fireEvent.touchStart(box, { touches: [{ clientX: 200 }] });
-      fireEvent.touchEnd(box, { changedTouches: [{ clientX: 140 }] });
+      const area = getSwipeArea();
+      fireEvent.touchStart(area, { touches: [{ clientX: 200, clientY: 0 }] });
+      fireEvent.touchMove(area, { touches: [{ clientX: 140, clientY: 0 }] });
+      fireEvent.touchEnd(area, { changedTouches: [{ clientX: 140, clientY: 0 }] });
       expect(screen.getByRole("img")).toHaveAttribute("src", "/img/c.jpg");
     });
 
     it("small swipe (< 50px) does not navigate", () => {
       renderLightbox(THREE_IMAGES, 1);
-      const box = screen.getByRole("img").parentElement!;
-      fireEvent.touchStart(box, { touches: [{ clientX: 200 }] });
-      fireEvent.touchEnd(box, { changedTouches: [{ clientX: 230 }] });
+      const area = getSwipeArea();
+      fireEvent.touchStart(area, { touches: [{ clientX: 200, clientY: 0 }] });
+      fireEvent.touchMove(area, { touches: [{ clientX: 230, clientY: 0 }] });
+      fireEvent.touchEnd(area, { changedTouches: [{ clientX: 230, clientY: 0 }] });
       expect(screen.getByRole("img")).toHaveAttribute("src", "/img/b.jpg");
     });
 
     it("swipe does not go past the first image", () => {
       renderLightbox(THREE_IMAGES, 0);
-      const box = screen.getByRole("img").parentElement!;
-      fireEvent.touchStart(box, { touches: [{ clientX: 200 }] });
-      fireEvent.touchEnd(box, { changedTouches: [{ clientX: 260 }] });
+      const area = getSwipeArea();
+      fireEvent.touchStart(area, { touches: [{ clientX: 200, clientY: 0 }] });
+      fireEvent.touchMove(area, { touches: [{ clientX: 260, clientY: 0 }] });
+      fireEvent.touchEnd(area, { changedTouches: [{ clientX: 260, clientY: 0 }] });
       expect(screen.getByRole("img")).toHaveAttribute("src", "/img/a.jpg");
     });
 
     it("swipe does not go past the last image", () => {
       renderLightbox(THREE_IMAGES, 2);
-      const box = screen.getByRole("img").parentElement!;
-      fireEvent.touchStart(box, { touches: [{ clientX: 200 }] });
-      fireEvent.touchEnd(box, { changedTouches: [{ clientX: 140 }] });
+      const area = getSwipeArea();
+      fireEvent.touchStart(area, { touches: [{ clientX: 200, clientY: 0 }] });
+      fireEvent.touchMove(area, { touches: [{ clientX: 140, clientY: 0 }] });
+      fireEvent.touchEnd(area, { changedTouches: [{ clientX: 140, clientY: 0 }] });
       expect(screen.getByRole("img")).toHaveAttribute("src", "/img/c.jpg");
     });
   });
