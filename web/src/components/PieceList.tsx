@@ -367,6 +367,8 @@ const PieceList = (props: PieceListProps) => {
     );
   }, [sortOrder]);
 
+  // Replace-style refreshes like re-sorting should visibly dim the current
+  // list, while append pagination keeps the list feeling seamless.
   const showOverlay = loading || loadingMore;
   const isReplacing = loading;
 

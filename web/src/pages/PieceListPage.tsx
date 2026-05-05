@@ -92,6 +92,8 @@ export default function PieceListPage() {
     [],
   );
 
+  // Keep the latest rendered list available so replace fetches can
+  // distinguish first-load empty state from re-sorting an existing list.
   useEffect(() => {
     piecesRef.current = pieces;
   }, [pieces]);
