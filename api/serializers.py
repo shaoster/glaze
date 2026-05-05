@@ -285,7 +285,7 @@ class PieceStateSerializer(serializers.ModelSerializer):
         )
         return nxt.state if nxt else None
 
-    def to_representation(self, instance: PieceState) -> dict:  # type: ignore[override]
+    def to_representation(self, instance: PieceState) -> dict:
         data = super().to_representation(instance)
         request = self.context.get("request")
         is_owner = (
