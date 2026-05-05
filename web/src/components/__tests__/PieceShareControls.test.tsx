@@ -132,12 +132,9 @@ describe("PieceShareControls", () => {
     expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
   });
 
-  it("uses the native share sheet when available (no thumbnail)", async () => {
+  it("uses piece name and state as share text (no thumbnail)", async () => {
     const share = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "share", {
-      value: share,
-      configurable: true,
-    });
+    Object.defineProperty(navigator, "share", { value: share, configurable: true });
 
     render(
       <ShareControls
@@ -150,7 +147,7 @@ describe("PieceShareControls", () => {
     await waitFor(() =>
       expect(share).toHaveBeenCalledWith({
         title: "Test Bowl",
-        text: "Test Bowl",
+        text: "Test Bowl — Completed",
         url: "http://localhost:3000/pieces/piece-id-1",
       }),
     );
@@ -184,6 +181,7 @@ describe("PieceShareControls", () => {
 
     await waitFor(() => expect(share).toHaveBeenCalled());
     const shareData = share.mock.calls[0][0] as ShareData;
+    expect(shareData.text).toBe("Test Bowl — Completed");
     expect(shareData.files).toHaveLength(1);
     expect((shareData.files![0] as File).name).toBe("thumbnail.jpg");
   });

@@ -11,6 +11,7 @@ import { jpg } from "@cloudinary/url-gen/qualifiers/format";
 import { auto as autoQuality } from "@cloudinary/url-gen/qualifiers/quality";
 import { autoGravity } from "@cloudinary/url-gen/qualifiers/gravity";
 import type { PieceDetail, Thumbnail } from "../util/types";
+import { formatState } from "../util/types";
 import { updatePiece } from "../util/api";
 
 const SHARE_IMAGE_SIZE = 600;
@@ -31,6 +32,10 @@ function buildThumbnailShareUrl(thumbnail: Thumbnail): string {
 
 function publicPieceUrl(pieceId: string): string {
   return `${window.location.origin}/pieces/${pieceId}`;
+}
+
+function buildShareText(piece: PieceDetail): string {
+  return `${piece.name} — ${formatState(piece.current_state.state)}`;
 }
 
 export default function ShareControls({
@@ -71,8 +76,8 @@ export default function ShareControls({
   async function shareLink() {
     if (!canUseNativeShare) return;
     try {
-      const shareData: ShareData = { title: piece.name, text: piece.name, url: publicUrl };
-      if (piece.thumbnail) {
+      const shareData: ShareData = { title: piece.name, text: buildShareText(piece), url: publicUrl };
+      if (piece.thumbnail?.cloudinary_public_id) {
         const imageUrl = buildThumbnailShareUrl(piece.thumbnail);
         try {
           const response = await fetch(imageUrl);

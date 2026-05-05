@@ -285,6 +285,18 @@ class PieceStateSerializer(serializers.ModelSerializer):
         )
         return nxt.state if nxt else None
 
+    def to_representation(self, instance: PieceState) -> dict:  # type: ignore[override]
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        is_owner = (
+            request is not None
+            and request.user.is_authenticated
+            and instance.piece.user_id == request.user.id
+        )
+        if not is_owner:
+            data["notes"] = ""
+        return data
+
 
 class StateSummarySerializer(serializers.Serializer):
     """Minimal state representation embedded in PieceSummary list responses."""
@@ -360,11 +372,11 @@ class PieceDetailSerializer(PieceSummarySerializer):
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
         assert cs is not None, f"Piece {obj.id} has no states"
-        return PieceStateSerializer(cs).data
+        return PieceStateSerializer(cs, context=self.context).data
 
     @extend_schema_field(PieceStateSerializer(many=True))
     def get_history(self, obj: Piece) -> list:
-        return list(PieceStateSerializer(obj.states.all(), many=True).data)
+        return list(PieceStateSerializer(obj.states.all(), many=True, context=self.context).data)
 
 
 class PieceCreateSerializer(serializers.ModelSerializer):
