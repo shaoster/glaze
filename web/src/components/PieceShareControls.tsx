@@ -4,8 +4,30 @@ import IosShareIcon from "@mui/icons-material/IosShare";
 import PublicIcon from "@mui/icons-material/Public";
 import PublicOffIcon from "@mui/icons-material/PublicOff";
 import { alpha, Box, Button, Stack, Typography } from "@mui/material";
-import type { PieceDetail } from "../util/types";
+import { Cloudinary } from "@cloudinary/url-gen";
+import { fill } from "@cloudinary/url-gen/actions/resize";
+import { format, quality } from "@cloudinary/url-gen/actions/delivery";
+import { jpg } from "@cloudinary/url-gen/qualifiers/format";
+import { auto as autoQuality } from "@cloudinary/url-gen/qualifiers/quality";
+import { autoGravity } from "@cloudinary/url-gen/qualifiers/gravity";
+import type { PieceDetail, Thumbnail } from "../util/types";
 import { updatePiece } from "../util/api";
+
+const SHARE_IMAGE_SIZE = 600;
+
+function buildThumbnailShareUrl(thumbnail: Thumbnail): string {
+  const cloudName = thumbnail.cloud_name?.trim() ?? null;
+  const publicId = thumbnail.cloudinary_public_id?.trim() ?? null;
+  if (cloudName && publicId) {
+    const cld = new Cloudinary({ cloud: { cloudName } });
+    const img = cld.image(publicId);
+    img.resize(fill().width(SHARE_IMAGE_SIZE).height(SHARE_IMAGE_SIZE).gravity(autoGravity()));
+    img.delivery(format(jpg()));
+    img.delivery(quality(autoQuality()));
+    return img.toURL();
+  }
+  return thumbnail.url;
+}
 
 function publicPieceUrl(pieceId: string): string {
   return `${window.location.origin}/pieces/${pieceId}`;
@@ -49,11 +71,21 @@ export default function ShareControls({
   async function shareLink() {
     if (!canUseNativeShare) return;
     try {
-      await navigator.share({
-        title: piece.name,
-        text: piece.name,
-        url: publicUrl,
-      });
+      const shareData: ShareData = { title: piece.name, text: piece.name, url: publicUrl };
+      if (piece.thumbnail) {
+        const imageUrl = buildThumbnailShareUrl(piece.thumbnail);
+        try {
+          const response = await fetch(imageUrl);
+          const blob = await response.blob();
+          const file = new File([blob], "thumbnail.jpg", { type: blob.type || "image/jpeg" });
+          if (navigator.canShare?.({ files: [file] })) {
+            shareData.files = [file];
+          }
+        } catch {
+          // Thumbnail fetch failure is non-fatal — share without the image.
+        }
+      }
+      await navigator.share(shareData);
     } catch {
       // Browser share sheets reject when the user cancels; no UI error needed.
     }
