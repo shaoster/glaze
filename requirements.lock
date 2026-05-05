@@ -552,6 +552,10 @@ django-import-export==4.3.9 \
     --hash=sha256:3d83b1c28f30935240ef9d914a1d4845c6fcaf5c7e5454889dda800eb5d374fb \
     --hash=sha256:966e01c2cbd6acda710a0a0097cd99b28d4f9883abbfbbf712f34a2e8eea8809
     # via -r requirements.txt
+django-meta==2.5.1 \
+    --hash=sha256:0699e585444d59286c25bc301b865e56814e2473a069cd1046840669204cec2a \
+    --hash=sha256:35941347c39fa69139cdede3fe39f408330eb586819c7a9c4610991479e1ae57
+    # via -r requirements.txt
 django-stubs[compatible-mypy]==6.0.2 \
     --hash=sha256:56d43b5e3741563af0063e5b6283f908c625b0439aa06314268673699d1bdccd \
     --hash=sha256:c3bc84d80421758f3b2ad9e1358e001d719388a8eb106e67c873e606216108d4

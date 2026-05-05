@@ -396,6 +396,68 @@ class TestPieceDetail:
 
 
 # ---------------------------------------------------------------------------
+# GET /pieces/{id}
+# ---------------------------------------------------------------------------
+
+@pytest.mark.django_db
+class TestPublicPieceMetadata:
+    def test_shared_piece_spa_response_includes_open_graph_metadata(
+        self, client, piece, tmp_path, monkeypatch
+    ):
+        import backend.urls
+
+        index_html = tmp_path / 'index.html'
+        index_html.write_text(
+            '<html><head><title>PotterDoc</title></head><body></body></html>',
+            encoding='utf-8',
+        )
+        monkeypatch.setattr(backend.urls, '_INDEX_HTML', index_html)
+        PieceState.objects.create(user=piece.user, piece=piece, state='completed')
+        piece.thumbnail = {
+            'url': 'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+            'cloudinary_public_id': 'pieces/sample',
+            'cloud_name': 'demo',
+        }
+        piece.shared = True
+        piece.save()
+
+        response = client.get(f'/pieces/{piece.id}')
+
+        assert response.status_code == 200
+        html = response.content.decode()
+        assert '<title>Test Bowl - Completed</title>' in html
+        assert '<meta property="og:title" content="Test Bowl - Completed">' in html
+        assert (
+            '<meta property="og:url" content="http://testserver/pieces/'
+            f'{piece.id}">'
+        ) in html
+        assert (
+            'https://res.cloudinary.com/demo/image/upload/'
+            'c_fill,g_auto,h_600,q_auto,w_600,f_jpg/pieces/sample.jpg'
+        ) in html
+        assert '<meta name="twitter:card" content="summary_large_image">' in html
+
+    def test_private_piece_spa_response_uses_default_metadata(
+        self, client, piece, tmp_path, monkeypatch
+    ):
+        import backend.urls
+
+        index_html = tmp_path / 'index.html'
+        index_html.write_text(
+            '<html><head><title>PotterDoc</title></head><body></body></html>',
+            encoding='utf-8',
+        )
+        monkeypatch.setattr(backend.urls, '_INDEX_HTML', index_html)
+
+        response = client.get(f'/pieces/{piece.id}')
+
+        assert response.status_code == 200
+        html = response.content.decode()
+        assert '<title>PotterDoc</title>' in html
+        assert 'og:title' not in html
+
+
+# ---------------------------------------------------------------------------
 # GET /api/pieces/{id}/current_state/
 # ---------------------------------------------------------------------------
 

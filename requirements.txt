@@ -15,6 +15,7 @@ Django==6.0.4
 django-admin-sortable2==2.3.1
 django-cors-headers==4.9.0
 django-import-export==4.3.9
+django-meta==2.5.1
 django-stubs==6.0.2
 django-stubs-ext==6.0.2
 djangorestframework==3.17.1
