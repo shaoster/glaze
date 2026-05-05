@@ -84,6 +84,17 @@ git add web/package.json web/package-lock.json web/pnpm-lock.yaml
 
 ---
 
+### Orientation inside a worktree
+
+In a git worktree `.git` is a **file**, not a directory — `cat .git/HEAD` will fail. To confirm which branch a worktree is on:
+
+```bash
+cat .git                    # shows: gitdir: /path/to/.git/worktrees/<name>
+git branch --show-current   # shows the checked-out branch
+```
+
+`git checkout <branch>` fails inside a worktree with "already used by worktree" if that branch is already checked out there — this is the normal signal that you are already on the right branch. Do not attempt to switch away and back; just confirm with `git branch --show-current` and proceed.
+
 ### Working directory discipline
 
 Always run `git` commands from the repo root. When a command must run from a subdirectory, wrap it in a subshell so the caller's working directory is unchanged:
@@ -238,7 +249,7 @@ Coverage reports are uploaded to [Codecov](https://codecov.io). Codecov posts a 
 
 ### What to test
 
-Run `rtk bazel test //...` — it discovers and runs all affected tests automatically.
+Run `rtk bazel test //...` — it discovers and runs all affected tests automatically. Do not pick granular targets to save time during iterative debugging. Bazel caches passing targets, so re-running `//...` after a fix costs no more than running a single target when the others haven't changed.
 
 ## Token Efficiency
 
