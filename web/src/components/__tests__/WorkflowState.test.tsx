@@ -822,6 +822,18 @@ describe("WorkflowState", () => {
     expect(api.fetchCloudinaryWidgetConfig).not.toHaveBeenCalled();
   });
 
+  it("returns before opening the upload widget when read-only", async () => {
+    await act(async () => {
+      render(<WorkflowState {...defaultProps} readOnly />);
+    });
+
+    const hiddenUploadButton = document.querySelector("button[hidden]");
+    expect(hiddenUploadButton).toBeInstanceOf(HTMLButtonElement);
+    fireEvent.click(hiddenUploadButton as HTMLButtonElement);
+
+    expect(api.fetchCloudinaryWidgetConfig).not.toHaveBeenCalled();
+  });
+
   it("shows a floating camera action on mobile layouts", async () => {
     setScreenWidth(390);
     await act(async () => {

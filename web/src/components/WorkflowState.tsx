@@ -50,6 +50,7 @@ type ImageUploaderProps = {
   uploadError: string | null;
   imageError: string | null;
   mobile: boolean;
+  hidden?: boolean;
   onUploadClick: () => void;
 };
 
@@ -59,13 +60,14 @@ function ImageUploader({
   uploadError,
   imageError,
   mobile,
+  hidden = false,
   onUploadClick,
 }: ImageUploaderProps) {
   const buttonDisabled = saving || widgetLoading;
   const statusMessage = saving ? "Saving…" : "Upload Image";
 
   return (
-    <Box>
+    <Box sx={hidden ? { display: "none" } : undefined}>
       {mobile ? (
         <Portal>
           <Fab
@@ -73,7 +75,9 @@ function ImageUploader({
             aria-label="Upload Image"
             onClick={onUploadClick}
             disabled={buttonDisabled}
+            hidden={hidden}
             sx={{
+              display: hidden ? "none" : undefined,
               position: "fixed",
               right: 24,
               bottom: 24,
@@ -111,10 +115,11 @@ function ImageUploader({
             size="small"
             onClick={onUploadClick}
             disabled={buttonDisabled}
+            hidden={hidden}
             startIcon={
               saving ? <CircularProgress size={14} color="inherit" /> : undefined
             }
-            sx={{ position: "relative" }}
+            sx={{ display: hidden ? "none" : undefined, position: "relative" }}
           >
             <Box sx={{ opacity: widgetLoading ? 0 : 1 }}>{statusMessage}</Box>
             {widgetLoading && (
@@ -518,16 +523,15 @@ export default function WorkflowState({
         />
       )}
 
-      {!readOnly && (
-        <ImageUploader
-          saving={savingImage}
-          widgetLoading={widgetLoading}
-          uploadError={uploadError}
-          imageError={imageError}
-          mobile={isMobileLayout}
-          onUploadClick={handleUploadWidgetClick}
-        />
-      )}
+      <ImageUploader
+        saving={savingImage}
+        widgetLoading={widgetLoading}
+        uploadError={uploadError}
+        imageError={imageError}
+        mobile={isMobileLayout}
+        hidden={readOnly}
+        onUploadClick={handleUploadWidgetClick}
+      />
     </Box>
   );
 }
