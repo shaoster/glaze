@@ -82,6 +82,17 @@ class TestPiecesList:
         assert data2['count'] == 5
         assert len(data2['results']) == 1
 
+    def test_invalid_pagination_params_fall_back_to_defaults(self, client, user):
+        pieces = [Piece.objects.create(user=user, name=f'Piece {i}') for i in range(2)]
+        for p in pieces:
+            PieceState.objects.create(piece=p, state=ENTRY_STATE)
+
+        response = client.get('/api/pieces/', {'limit': 'not-an-int', 'offset': 'also-bad'})
+
+        assert response.status_code == 200
+        assert response.json()['count'] == 2
+        assert len(response.json()['results']) == 2
+
     def test_ordering_by_name(self, client, user):
         names = ['Zebra Vase', 'Apple Mug', 'Mango Bowl']
         for name in names:

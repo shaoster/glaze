@@ -1,8 +1,10 @@
 import uuid
 
 import pytest
+from rest_framework.exceptions import ValidationError
 
 from api.models import Location, Tag
+from api.serializers import _replace_piece_tags
 
 # ---------------------------------------------------------------------------
 # GET /api/pieces/{id}/
@@ -128,6 +130,40 @@ class TestPieceDetail:
         piece.refresh_from_db()
         assert piece.name == 'Revised Vase'
 
+    def test_patch_name_without_current_location_preserves_existing_location(self, client, piece, user):
+        location = Location.objects.create(user=user, name='Studio Shelf')
+        piece.current_location = location
+        piece.save()
+
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'name': 'Renamed Only'},
+            format='json',
+        )
+
+        assert response.status_code == 200
+        assert response.json()['current_location'] == 'Studio Shelf'
+        piece.refresh_from_db()
+        assert piece.current_location_id == location.id
+
+    def test_patch_updates_thumbnail(self, client, piece):
+        thumbnail = {
+            'url': 'https://example.com/thumb.jpg',
+            'cloudinary_public_id': 'pieces/thumb',
+            'cloud_name': 'demo-cloud',
+        }
+
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'thumbnail': thumbnail},
+            format='json',
+        )
+
+        assert response.status_code == 200
+        assert response.json()['thumbnail'] == thumbnail
+        piece.refresh_from_db()
+        assert piece.thumbnail == thumbnail
+
     def test_patch_updates_ordered_tags(self, client, piece, user):
         first = Tag.objects.create(user=user, name='Functional', color='#E76F51')
         second = Tag.objects.create(user=user, name='Gift', color='#2A9D8F')
@@ -152,6 +188,14 @@ class TestPieceDetail:
 
         assert response.status_code == 400
         assert response.json() == {'tags': ["Invalid tag id: '00000000-0000-0000-0000-000000000000'"]}
+
+    def test_replace_piece_tags_rejects_missing_tag_id(self, piece, user):
+        with pytest.raises(ValidationError) as exc:
+            _replace_piece_tags(piece, user, ['00000000-0000-0000-0000-000000000000'])
+
+        assert exc.value.detail == {
+            'tags': ["Invalid tag id: '00000000-0000-0000-0000-000000000000'"]
+        }
 
     def test_patch_name_empty_rejected(self, client, piece):
         response = client.patch(
