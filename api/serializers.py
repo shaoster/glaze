@@ -50,7 +50,6 @@ from rest_framework import serializers
 from .models import (
     FiringTemperature,
     GlazeCombination,
-    Location,
     Piece,
     PieceState,
     UserProfile,
@@ -329,8 +328,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
     @extend_schema_field(StateSummarySerializer)
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
-        if cs is None:
-            raise ValueError(f"Piece {obj.id} has no states — data integrity error")
+        assert cs is not None, f"Piece {obj.id} has no states"
         return {"state": cs.state}
 
     @extend_schema_field(serializers.CharField(allow_null=True, required=False))
@@ -348,8 +346,7 @@ class PieceDetailSerializer(PieceSummarySerializer):
     @extend_schema_field(PieceStateSerializer)
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
-        if cs is None:
-            raise ValueError(f"Piece {obj.id} has no states — data integrity error")
+        assert cs is not None, f"Piece {obj.id} has no states"
         return PieceStateSerializer(cs).data
 
     @extend_schema_field(PieceStateSerializer(many=True))
@@ -427,24 +424,10 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data: dict) -> PieceState:
-        # Ensure all images have a created timestamp set by the backend.
-        images = validated_data.get("images", [])
-        if images:
-            processed: list[dict] = []
-            for img in images:
-                created_val = img.get("created", timezone.now())
-                processed.append(
-                    {
-                        "url": img["url"],
-                        "caption": img["caption"],
-                        "created": (
-                            created_val.isoformat()
-                            if hasattr(created_val, "isoformat")
-                            else str(created_val)
-                        ),
-                    }
-                )
-            validated_data["images"] = processed
+        if "images" in validated_data:
+            validated_data["images"] = _normalize_captioned_images(
+                validated_data["images"]
+            )
 
         new_state_id: str = validated_data["state"]
         piece: Piece = self.context["piece"]
@@ -552,6 +535,25 @@ def _write_global_ref_rows(
         )
 
 
+def _normalize_captioned_images(images: list[dict]) -> list[dict]:
+    """Return API image payloads in the JSON shape stored by PieceState."""
+    normalized: list[dict] = []
+    for img in images:
+        created_val = img.get("created", timezone.now())
+        normalized.append(
+            {
+                "url": img["url"],
+                "caption": img["caption"],
+                "created": (
+                    created_val.isoformat()
+                    if hasattr(created_val, "isoformat")
+                    else str(created_val)
+                ),
+            }
+        )
+    return normalized
+
+
 class PieceStateUpdateSerializer(serializers.Serializer):
     """Partial update of the current PieceState's editable fields."""
 
@@ -572,21 +574,7 @@ class PieceStateUpdateSerializer(serializers.Serializer):
         if "notes" in validated_data:
             instance.notes = validated_data["notes"]
         if "images" in validated_data:
-            images_json = []
-            for img in validated_data["images"]:
-                created_val = img.get("created", timezone.now())
-                images_json.append(
-                    {
-                        "url": img["url"],
-                        "caption": img["caption"],
-                        "created": (
-                            created_val.isoformat()
-                            if hasattr(created_val, "isoformat")
-                            else str(created_val)
-                        ),
-                    }
-                )
-            instance.images = images_json
+            instance.images = _normalize_captioned_images(validated_data["images"])
         if "additional_fields" in validated_data:
             incoming: dict = dict(validated_data["additional_fields"])
             global_ref_fields = get_global_ref_fields_for_state(instance.state)
@@ -629,7 +617,7 @@ class PieceUpdateSerializer(serializers.Serializer):
 
     name = serializers.CharField(required=False, max_length=255)
     current_location = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True, default=None
+        required=False, allow_blank=True, allow_null=True
     )
     thumbnail = ThumbnailSerializer(required=False, allow_null=True)
     tags = serializers.ListField(child=serializers.CharField(), required=False)

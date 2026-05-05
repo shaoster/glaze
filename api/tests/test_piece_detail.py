@@ -128,6 +128,40 @@ class TestPieceDetail:
         piece.refresh_from_db()
         assert piece.name == 'Revised Vase'
 
+    def test_patch_name_without_current_location_preserves_existing_location(self, client, piece, user):
+        location = Location.objects.create(user=user, name='Studio Shelf')
+        piece.current_location = location
+        piece.save()
+
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'name': 'Renamed Only'},
+            format='json',
+        )
+
+        assert response.status_code == 200
+        assert response.json()['current_location'] == 'Studio Shelf'
+        piece.refresh_from_db()
+        assert piece.current_location_id == location.id
+
+    def test_patch_updates_thumbnail(self, client, piece):
+        thumbnail = {
+            'url': 'https://example.com/thumb.jpg',
+            'cloudinary_public_id': 'pieces/thumb',
+            'cloud_name': 'demo-cloud',
+        }
+
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'thumbnail': thumbnail},
+            format='json',
+        )
+
+        assert response.status_code == 200
+        assert response.json()['thumbnail'] == thumbnail
+        piece.refresh_from_db()
+        assert piece.thumbnail == thumbnail
+
     def test_patch_updates_ordered_tags(self, client, piece, user):
         first = Tag.objects.create(user=user, name='Functional', color='#E76F51')
         second = Tag.objects.create(user=user, name='Gift', color='#2A9D8F')

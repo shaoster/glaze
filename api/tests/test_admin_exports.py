@@ -1,9 +1,10 @@
 import pytest
+from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.test import Client
 from django.urls import reverse
 
-from api.admin import PieceResource, PieceStateResource
+from api.admin import PieceAdmin, PieceResource, PieceStateAdmin, PieceStateResource
 from api.models import Piece, PieceState
 
 
@@ -86,3 +87,33 @@ class TestAdminExports:
         assert 'history:' in yaml_output
         assert 'state: designed' in yaml_output
         assert 'state: handbuilt' in yaml_output
+
+    def test_piece_admin_current_state_display_handles_missing_state(self, user):
+        piece = Piece.objects.create(user=user, name='No State')
+        ma = PieceAdmin(Piece, AdminSite())
+
+        assert ma.get_current_state(piece) == '—'
+
+    def test_piece_admin_current_state_display_returns_current_state(self, user):
+        piece = Piece.objects.create(user=user, name='With State')
+        PieceState.objects.create(piece=piece, user=user, state='designed')
+        ma = PieceAdmin(Piece, AdminSite())
+
+        assert ma.get_current_state(piece) == 'designed'
+
+    def test_piece_state_admin_save_model_passes_sealed_override(self, user):
+        piece = Piece.objects.create(user=user, name='Sealed State')
+        old_state = PieceState.objects.create(piece=piece, user=user, state='designed')
+        PieceState.objects.create(piece=piece, user=user, state='handbuilt')
+        old_state.notes = 'Corrected by admin'
+        form = type('FakeForm', (), {'cleaned_data': {'allow_sealed_edit': True}})()
+
+        PieceStateAdmin(PieceState, AdminSite()).save_model(
+            request=None,
+            obj=old_state,
+            form=form,
+            change=True,
+        )
+
+        old_state.refresh_from_db()
+        assert old_state.notes == 'Corrected by admin'

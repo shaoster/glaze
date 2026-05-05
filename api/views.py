@@ -6,14 +6,14 @@ from collections import defaultdict
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.db.models import DateTimeField, Q, Subquery, OuterRef
+from django.db.models import DateTimeField, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce, Greatest
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
-from rest_framework import serializers as drf_serializers
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
+from rest_framework import serializers as drf_serializers
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes, permission_classes
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -740,17 +740,19 @@ def glaze_combination_images(request: Request) -> Response:
     # Resolve the GlazeCombination junction model generated at import time.
     GlazeCombinationRef = apps.get_model("api", "PieceStateGlazeCombinationRef")
 
-    # Collect all (piece_id → combo_id) mappings for this user's pieces.
-    # A piece may appear in multiple refs (glazed + glaze_fired both carry the
-    # combo forward), so deduplicate by piece — same combo in each case.
+    # Collect the latest (piece_id → combo_id) mapping for this user's pieces.
+    # Current states such as "completed" may not carry their own junction row, so
+    # use the most recent state that does.
     refs = (
         GlazeCombinationRef.objects.filter(piece_state__piece__user=request.user)
         .values("piece_state__piece_id", "glaze_combination_id")
-        .distinct()
+        .order_by("piece_state__piece_id", "-piece_state__created")
     )
     piece_to_combo: dict = {}
     for ref in refs:
         piece_id = ref["piece_state__piece_id"]
+        if piece_id in piece_to_combo:
+            continue
         combo_id = ref["glaze_combination_id"]
         piece_to_combo[piece_id] = combo_id
 
@@ -765,7 +767,7 @@ def glaze_combination_images(request: Request) -> Response:
             state__in=qualifying,
         )
         .select_related("piece")
-        .order_by("-last_modified")
+        .order_by("-created")
     )
 
     # Group images and state by piece — collect all images across qualifying states.
@@ -783,11 +785,9 @@ def glaze_combination_images(request: Request) -> Response:
                 "last_modified": ps.last_modified,
             }
         else:
-            # Additional qualifying state for the same piece: extend images;
-            # keep state pointing at the most recently modified qualifying state.
-            if ps.last_modified > piece_data[pid]["last_modified"]:
-                piece_data[pid]["state"] = ps.state
-                piece_data[pid]["last_modified"] = ps.last_modified
+            # Additional qualifying state for the same piece: extend images.
+            # The first row is the current/latest qualifying state by creation
+            # order; sealed old states do not affect display state or sort order.
             piece_data[pid]["images"].extend(ps.images)
 
     # Group pieces by combo.

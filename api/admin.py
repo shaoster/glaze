@@ -136,6 +136,8 @@ def _cloudinary_lightbox_url(value: dict | str | None) -> str:
     cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
     if not url or not cloud_name:
         return url
+    if isinstance(value, dict) and 'cloudinary_public_id' not in value:
+        raise AssertionError('image values must include cloudinary_public_id')
     public_id = (
         value.get('cloudinary_public_id') if isinstance(value, dict) else None
     ) or _cloudinary_public_id(url)
@@ -411,9 +413,10 @@ class PieceStateInline(admin.TabularInline):
     readonly_fields = ('id', 'state', 'created', 'last_modified', 'notes', 'images', 'additional_fields')
     # Past states are sealed — edits go through PieceStateAdmin with the override checkbox.
     can_delete = False
+    can_change = False
 
     def has_change_permission(self, request: HttpRequest, obj: object = None) -> bool:
-        return False
+        return self.can_change
 
 
 class PieceResource(resources.ModelResource):
