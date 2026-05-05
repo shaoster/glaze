@@ -49,7 +49,9 @@ describe("PieceShareControls", () => {
     vi.mocked(api.updatePiece).mockResolvedValue(updated);
     const onPieceUpdated = vi.fn();
 
-    render(<ShareControls piece={makePiece()} onPieceUpdated={onPieceUpdated} />);
+    render(
+      <ShareControls piece={makePiece()} onPieceUpdated={onPieceUpdated} />,
+    );
     await userEvent.click(screen.getByRole("button", { name: "Share" }));
 
     await waitFor(() =>
@@ -65,7 +67,9 @@ describe("PieceShareControls", () => {
     vi.mocked(api.updatePiece).mockRejectedValue(new Error("Network error"));
     const onPieceUpdated = vi.fn();
 
-    render(<ShareControls piece={makePiece()} onPieceUpdated={onPieceUpdated} />);
+    render(
+      <ShareControls piece={makePiece()} onPieceUpdated={onPieceUpdated} />,
+    );
     await userEvent.click(screen.getByRole("button", { name: "Share" }));
 
     await waitFor(() =>
@@ -115,7 +119,9 @@ describe("PieceShareControls", () => {
     await userEvent.click(screen.getByRole("button", { name: "Copy link" }));
 
     await waitFor(() =>
-      expect(screen.getByText("Could not copy the public link.")).toBeInTheDocument(),
+      expect(
+        screen.getByText("Could not copy the public link."),
+      ).toBeInTheDocument(),
     );
   });
 
@@ -127,14 +133,21 @@ describe("PieceShareControls", () => {
       />,
     );
 
-    expect(screen.queryByRole("button", { name: "Share" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Share" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Unshare" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Copy link" }),
+    ).toBeInTheDocument();
   });
 
   it("uses piece name and state as share text (no thumbnail)", async () => {
     const share = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "share", { value: share, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: share,
+      configurable: true,
+    });
 
     render(
       <ShareControls
@@ -146,8 +159,8 @@ describe("PieceShareControls", () => {
 
     await waitFor(() =>
       expect(share).toHaveBeenCalledWith({
-        title: "Test Bowl",
-        text: "Test Bowl — Completed",
+        text: "Powered by PotterDoc",
+        title: "Test Bowl — Completed",
         url: "http://localhost:3000/pieces/piece-id-1",
       }),
     );
@@ -156,8 +169,14 @@ describe("PieceShareControls", () => {
   it("includes thumbnail file in native share when Cloudinary image is available", async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     const canShare = vi.fn().mockReturnValue(true);
-    Object.defineProperty(navigator, "share", { value: share, configurable: true });
-    Object.defineProperty(navigator, "canShare", { value: canShare, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: share,
+      configurable: true,
+    });
+    Object.defineProperty(navigator, "canShare", {
+      value: canShare,
+      configurable: true,
+    });
 
     const mockBlob = new Blob(["img"], { type: "image/jpeg" });
     vi.stubGlobal(
@@ -181,7 +200,7 @@ describe("PieceShareControls", () => {
 
     await waitFor(() => expect(share).toHaveBeenCalled());
     const shareData = share.mock.calls[0][0] as ShareData;
-    expect(shareData.text).toBe("Test Bowl — Completed");
+    expect(shareData.title).toBe("Test Bowl — Completed");
     expect(shareData.files).toHaveLength(1);
     expect((shareData.files![0] as File).name).toBe("thumbnail.jpg");
   });
@@ -189,8 +208,14 @@ describe("PieceShareControls", () => {
   it("shares without files when thumbnail fetch fails", async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     const canShare = vi.fn().mockReturnValue(true);
-    Object.defineProperty(navigator, "share", { value: share, configurable: true });
-    Object.defineProperty(navigator, "canShare", { value: canShare, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: share,
+      configurable: true,
+    });
+    Object.defineProperty(navigator, "canShare", {
+      value: canShare,
+      configurable: true,
+    });
 
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network")));
 
@@ -218,8 +243,14 @@ describe("PieceShareControls", () => {
   it("shares without files when canShare rejects file sharing", async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     const canShare = vi.fn().mockReturnValue(false);
-    Object.defineProperty(navigator, "share", { value: share, configurable: true });
-    Object.defineProperty(navigator, "canShare", { value: canShare, configurable: true });
+    Object.defineProperty(navigator, "share", {
+      value: share,
+      configurable: true,
+    });
+    Object.defineProperty(navigator, "canShare", {
+      value: canShare,
+      configurable: true,
+    });
 
     const mockBlob = new Blob(["img"], { type: "image/jpeg" });
     vi.stubGlobal(

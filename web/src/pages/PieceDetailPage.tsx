@@ -3,7 +3,7 @@ import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { fetchPiece } from "../util/api";
 import { useAsync } from "../util/useAsync";
 import PieceDetailComponent from "../components/PieceDetail";
-import type { PieceDetail } from "../util/types";
+import { type PieceDetail } from "../util/types";
 
 export default function PieceDetailPage() {
   const { id } = useParams<{ id: string }>();
