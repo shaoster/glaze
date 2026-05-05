@@ -1,8 +1,10 @@
 import uuid
 
 import pytest
+from rest_framework.exceptions import ValidationError
 
 from api.models import Location, Tag
+from api.serializers import _replace_piece_tags
 
 # ---------------------------------------------------------------------------
 # GET /api/pieces/{id}/
@@ -186,6 +188,14 @@ class TestPieceDetail:
 
         assert response.status_code == 400
         assert response.json() == {'tags': ["Invalid tag id: '00000000-0000-0000-0000-000000000000'"]}
+
+    def test_replace_piece_tags_rejects_missing_tag_id(self, piece, user):
+        with pytest.raises(ValidationError) as exc:
+            _replace_piece_tags(piece, user, ['00000000-0000-0000-0000-000000000000'])
+
+        assert exc.value.detail == {
+            'tags': ["Invalid tag id: '00000000-0000-0000-0000-000000000000'"]
+        }
 
     def test_patch_name_empty_rejected(self, client, piece):
         response = client.patch(

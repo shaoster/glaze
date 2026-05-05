@@ -431,54 +431,10 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
 
         new_state_id: str = validated_data["state"]
         piece: Piece = self.context["piece"]
-        global_ref_fields = get_global_ref_fields_for_state(new_state_id)
         incoming: dict = dict(validated_data.pop("additional_fields", {}))
-
-        # Separate incoming payload into inline fields and global-ref PKs.
-        inline_fields: dict = {}
-        global_ref_pks: dict[str, str] = {}
-        for field_name, value in incoming.items():
-            if field_name in global_ref_fields:
-                if value in (None, ""):
-                    continue
-                global_ref_pks[field_name] = str(value)
-            else:
-                inline_fields[field_name] = value
-
-        # Auto-populate state ref fields from ancestor states.
-        # Inline state refs copy from the ancestor's JSON blob.
-        # Global-ref state refs copy from the ancestor's junction row.
-        state_refs = get_state_ref_fields(new_state_id)
-        for field_name, (source_state_id, source_field_name) in state_refs.items():
-            ancestor = (
-                piece.states.filter(state=source_state_id).order_by("-created").first()
-            )
-            if ancestor is None:
-                continue
-            if field_name in global_ref_fields:
-                if field_name not in global_ref_pks:
-                    # Copy FK from the ancestor's junction table row.
-                    src_global_name = global_ref_fields[field_name]
-                    src_config = get_global_config(src_global_name)
-                    src_ref_model = apps.get_model(
-                        "api", f'PieceState{src_config["model"]}Ref'
-                    )
-                    try:
-                        src_row = src_ref_model.objects.get(
-                            piece_state=ancestor, field_name=source_field_name
-                        )
-                        global_ref_pks[field_name] = str(
-                            getattr(src_row, f"{src_global_name}_id")
-                        )
-                    except src_ref_model.DoesNotExist:
-                        pass
-            else:
-                if field_name not in inline_fields and source_field_name in (
-                    ancestor.additional_fields or {}
-                ):
-                    inline_fields[field_name] = ancestor.additional_fields[
-                        source_field_name
-                    ]
+        inline_fields, global_ref_fields, global_ref_pks, clear_global_ref_fields = (
+            _resolve_additional_field_payload(piece, new_state_id, incoming)
+        )
 
         validated_data["additional_fields"] = inline_fields
         try:
@@ -491,8 +447,61 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"additional_fields": str(exc)}) from exc
 
         # Write junction rows for global ref fields.
-        _write_global_ref_rows(piece_state, global_ref_fields, global_ref_pks)
+        _write_global_ref_rows(
+            piece_state, global_ref_fields, global_ref_pks, clear_global_ref_fields
+        )
         return piece_state
+
+
+def _resolve_additional_field_payload(
+    piece: Piece,
+    state_id: str,
+    incoming: dict,
+    *,
+    clear_empty_refs: bool = False,
+) -> tuple[dict, dict[str, str], dict[str, str], set[str]]:
+    """Split inline JSON fields from global refs and copy state-ref defaults."""
+    global_ref_fields = get_global_ref_fields_for_state(state_id)
+    inline_fields: dict = {}
+    global_ref_pks: dict[str, str] = {}
+    clear_global_ref_fields: set[str] = set()
+
+    for field_name, value in incoming.items():
+        if field_name in global_ref_fields:
+            if value in (None, ""):
+                if clear_empty_refs:
+                    clear_global_ref_fields.add(field_name)
+                continue
+            global_ref_pks[field_name] = str(value)
+        else:
+            inline_fields[field_name] = value
+
+    state_refs = get_state_ref_fields(state_id)
+    for field_name, (source_state_id, source_field_name) in state_refs.items():
+        ancestor = piece.states.filter(state=source_state_id).order_by("-created").first()
+        if ancestor is None:
+            continue
+        if field_name in global_ref_fields:
+            if field_name in global_ref_pks or field_name in clear_global_ref_fields:
+                continue
+            src_global_name = global_ref_fields[field_name]
+            src_config = get_global_config(src_global_name)
+            src_ref_model = apps.get_model("api", f'PieceState{src_config["model"]}Ref')
+            try:
+                src_row = src_ref_model.objects.get(
+                    piece_state=ancestor, field_name=source_field_name
+                )
+                global_ref_pks[field_name] = str(
+                    getattr(src_row, f"{src_global_name}_id")
+                )
+            except src_ref_model.DoesNotExist:
+                pass
+        elif field_name not in inline_fields and source_field_name in (
+            ancestor.additional_fields or {}
+        ):
+            inline_fields[field_name] = ancestor.additional_fields[source_field_name]
+
+    return inline_fields, global_ref_fields, global_ref_pks, clear_global_ref_fields
 
 
 def _write_global_ref_rows(
@@ -577,20 +586,14 @@ class PieceStateUpdateSerializer(serializers.Serializer):
             instance.images = _normalize_captioned_images(validated_data["images"])
         if "additional_fields" in validated_data:
             incoming: dict = dict(validated_data["additional_fields"])
-            global_ref_fields = get_global_ref_fields_for_state(instance.state)
-
-            # Separate incoming dict into inline fields and global-ref PKs.
-            inline_fields: dict = {}
-            global_ref_pks: dict[str, str] = {}
-            clear_global_ref_fields: set[str] = set()
-            for field_name, value in incoming.items():
-                if field_name in global_ref_fields:
-                    if value in (None, ""):
-                        clear_global_ref_fields.add(field_name)
-                        continue
-                    global_ref_pks[field_name] = str(value)
-                else:
-                    inline_fields[field_name] = value
+            inline_fields, global_ref_fields, global_ref_pks, clear_global_ref_fields = (
+                _resolve_additional_field_payload(
+                    instance.piece,
+                    instance.state,
+                    incoming,
+                    clear_empty_refs=True,
+                )
+            )
 
             instance.additional_fields = inline_fields
             try:

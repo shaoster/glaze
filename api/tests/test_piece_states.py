@@ -3,7 +3,15 @@ import uuid
 import pytest
 from rest_framework.exceptions import ValidationError
 
-from api.models import ENTRY_STATE, SUCCESSORS, ClayBody, Location, Piece
+from api.models import (
+    ENTRY_STATE,
+    SUCCESSORS,
+    ClayBody,
+    GlazeCombination,
+    GlazeType,
+    Location,
+    Piece,
+)
 from api.serializers import (
     PieceStateCreateSerializer,
     PieceSummarySerializer,
@@ -192,6 +200,42 @@ class TestPieceStates:
         )
         assert response.status_code == 201
         assert response.json()['current_state']['additional_fields']['pre_trim_weight_lbs'] == 999
+
+    def test_global_ref_state_ref_auto_populated_on_transition(self, client, piece):
+        glaze = GlazeType.objects.create(user=None, name='Copper Blue')
+        combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[glaze])
+        for state in [
+            'wheel_thrown',
+            'trimmed',
+            'submitted_to_bisque_fire',
+            'bisque_fired',
+        ]:
+            response = client.post(f'/api/pieces/{piece.id}/states/', {'state': state}, format='json')
+            assert response.status_code == 201
+        response = client.post(
+            f'/api/pieces/{piece.id}/states/',
+            {
+                'state': 'glazed',
+                'additional_fields': {'glaze_combination': str(combo.pk)},
+            },
+            format='json',
+        )
+        assert response.status_code == 201
+        response = client.post(
+            f'/api/pieces/{piece.id}/states/',
+            {'state': 'submitted_to_glaze_fire'},
+            format='json',
+        )
+        assert response.status_code == 201
+
+        response = client.post(
+            f'/api/pieces/{piece.id}/states/',
+            {'state': 'glaze_fired'},
+            format='json',
+        )
+
+        assert response.status_code == 201
+        assert response.json()['current_state']['additional_fields']['glaze_combination'] == {'id': str(combo.pk), 'name': 'Copper Blue'}
 
     def test_piece_not_found(self, client, db):
         response = client.post(

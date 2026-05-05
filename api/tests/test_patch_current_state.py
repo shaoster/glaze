@@ -3,10 +3,20 @@ import uuid
 import pytest
 from django.apps import apps
 from django.contrib.auth.models import User
+from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient
 
 import api.workflow as workflow_module
-from api.models import ENTRY_STATE, SUCCESSORS, GlazeCombination, GlazeType, Location, Piece, PieceState
+from api.models import (
+    ENTRY_STATE,
+    SUCCESSORS,
+    GlazeCombination,
+    GlazeType,
+    Location,
+    Piece,
+    PieceState,
+)
+from api.serializers import PieceStateUpdateSerializer
 
 # ---------------------------------------------------------------------------
 # PATCH /api/pieces/{id}/state/
@@ -152,6 +162,87 @@ class TestPatchCurrentState:
             piece_state=state,
             field_name='glaze_combination',
         ).exists()
+
+    def test_global_ref_state_ref_auto_populated_on_update(self, client, piece):
+        glaze = GlazeType.objects.create(user=None, name='Floating Blue')
+        combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[glaze])
+        for state in [
+            'wheel_thrown',
+            'trimmed',
+            'submitted_to_bisque_fire',
+            'bisque_fired',
+        ]:
+            response = client.post(f'/api/pieces/{piece.id}/states/', {'state': state}, format='json')
+            assert response.status_code == 201
+        response = client.post(
+            f'/api/pieces/{piece.id}/states/',
+            {
+                'state': 'glazed',
+                'additional_fields': {'glaze_combination': str(combo.pk)},
+            },
+            format='json',
+        )
+        assert response.status_code == 201
+        response = client.post(
+            f'/api/pieces/{piece.id}/states/',
+            {'state': 'submitted_to_glaze_fire'},
+            format='json',
+        )
+        assert response.status_code == 201
+        response = client.post(
+            f'/api/pieces/{piece.id}/states/',
+            {'state': 'glaze_fired'},
+            format='json',
+        )
+        assert response.status_code == 201
+        ref_model = apps.get_model('api', 'PieceStateGlazeCombinationRef')
+        current = piece.current_state
+        ref_model.objects.filter(
+            piece_state=current,
+            field_name='glaze_combination',
+        ).delete()
+
+        response = client.patch(
+            f'/api/pieces/{piece.id}/state/',
+            {'additional_fields': {}},
+            format='json',
+        )
+
+        assert response.status_code == 200
+        assert response.json()['current_state']['additional_fields']['glaze_combination']['id'] == str(combo.pk)
+        assert ref_model.objects.filter(
+            piece_state=current,
+            field_name='glaze_combination',
+            glaze_combination=combo,
+        ).exists()
+
+    def test_update_validation_error_when_additional_fields_save_fails(self, piece, monkeypatch):
+        state = piece.current_state
+
+        def fail_save(*args, **kwargs):
+            raise ValueError('bad additional fields')
+
+        monkeypatch.setattr(state, 'save', fail_save)
+        serializer = PieceStateUpdateSerializer()
+
+        with pytest.raises(ValidationError) as exc:
+            serializer.update(state, {'additional_fields': {'unexpected': 'value'}})
+
+        assert exc.value.detail == {'additional_fields': 'bad additional fields'}
+
+    def test_update_validation_error_when_plain_save_fails(self, piece, monkeypatch):
+        state = piece.current_state
+
+        def fail_save(*args, **kwargs):
+            raise ValueError('bad plain save')
+
+        monkeypatch.setattr(state, 'save', fail_save)
+        serializer = PieceStateUpdateSerializer()
+
+        with pytest.raises(ValidationError) as exc:
+            serializer.update(state, {'notes': 'changed'})
+
+        assert exc.value.detail == {'additional_fields': 'bad plain save'}
 
     def test_cannot_patch_past_state_via_endpoint(self, client, piece):
         """Transitioning seals the old state; PATCH endpoint targets the new current state."""
