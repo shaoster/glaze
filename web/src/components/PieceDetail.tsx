@@ -506,7 +506,7 @@ function PieceDetailContent({
 
         <Divider sx={{ my: 2, opacity: 0.4 }} />
 
-        {isTerminal && (
+        {isTerminal && canEdit && (
           <Alert severity="info" sx={{ mb: 2.5, borderRadius: 3 }}>
             This piece is in a terminal state (
             <strong>{formatState(currentState.state)}</strong>). No further

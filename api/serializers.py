@@ -161,9 +161,11 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
 
     @classmethod
     def prepare_global_entry_queryset(cls, qs, display_field):
-        return qs.select_related('firing_temperature').prefetch_related(
-            'layers__glaze_type'
-        ).order_by(display_field)
+        return (
+            qs.select_related("firing_temperature")
+            .prefetch_related("layers__glaze_type")
+            .order_by(display_field)
+        )
 
     @extend_schema_field(serializers.CharField())
     def get_id(self, obj: GlazeCombination) -> str:
@@ -258,7 +260,7 @@ class PieceStateSerializer(serializers.ModelSerializer):
         global_ref_fields = get_global_ref_fields_for_state(obj.state)
         for field_name, global_name in global_ref_fields.items():
             config = get_global_config(global_name)
-            ref_model = apps.get_model("api", f'PieceState{config["model"]}Ref')
+            ref_model = apps.get_model("api", f"PieceState{config['model']}Ref")
             try:
                 ref_row = ref_model.objects.select_related(global_name).get(
                     piece_state=obj, field_name=field_name
@@ -284,6 +286,15 @@ class PieceStateSerializer(serializers.ModelSerializer):
             obj.piece.states.filter(created__gt=obj.created).order_by("created").first()
         )
         return nxt.state if nxt else None
+
+    def to_representation(self, instance: PieceState) -> dict:
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        if request is not None and not (
+            request.user.is_authenticated and instance.piece.user_id == request.user.id
+        ):
+            data["notes"] = ""
+        return data
 
 
 class StateSummarySerializer(serializers.Serializer):
@@ -325,9 +336,11 @@ class PieceSummarySerializer(serializers.ModelSerializer):
 
     @classmethod
     def prepare_global_entry_queryset(cls, qs, display_field):
-        return qs.select_related('current_location').prefetch_related(
-            'states', 'tag_links__tag'
-        ).order_by(display_field)
+        return (
+            qs.select_related("current_location")
+            .prefetch_related("states", "tag_links__tag")
+            .order_by(display_field)
+        )
 
     @extend_schema_field(StateSummarySerializer)
     def get_current_state(self, obj: Piece) -> dict:
@@ -343,9 +356,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
     def get_can_edit(self, obj: Piece) -> bool:
         request = self.context.get("request")
         return bool(
-            request
-            and request.user.is_authenticated
-            and obj.user_id == request.user.id
+            request and request.user.is_authenticated and obj.user_id == request.user.id
         )
 
 
@@ -360,11 +371,13 @@ class PieceDetailSerializer(PieceSummarySerializer):
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
         assert cs is not None, f"Piece {obj.id} has no states"
-        return PieceStateSerializer(cs).data
+        return PieceStateSerializer(cs, context=self.context).data
 
     @extend_schema_field(PieceStateSerializer(many=True))
     def get_history(self, obj: Piece) -> list:
-        return list(PieceStateSerializer(obj.states.all(), many=True).data)
+        return list(
+            PieceStateSerializer(obj.states.all(), many=True, context=self.context).data
+        )
 
 
 class PieceCreateSerializer(serializers.ModelSerializer):
@@ -411,7 +424,9 @@ class PieceCreateSerializer(serializers.ModelSerializer):
 
 class PieceStateCreateSerializer(serializers.ModelSerializer):
     state = serializers.ChoiceField(choices=sorted(VALID_STATES))
-    notes = serializers.CharField(required=False, allow_blank=True, trim_whitespace=False)
+    notes = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
     images = CaptionedImageSerializer(many=True, required=False, default=list)
     additional_fields = serializers.JSONField(required=False, default=dict)
 
@@ -491,7 +506,9 @@ def _resolve_additional_field_payload(
 
     state_refs = get_state_ref_fields(state_id)
     for field_name, (source_state_id, source_field_name) in state_refs.items():
-        ancestor = piece.states.filter(state=source_state_id).order_by("-created").first()
+        ancestor = (
+            piece.states.filter(state=source_state_id).order_by("-created").first()
+        )
         if ancestor is None:
             continue
         if field_name in global_ref_fields:
@@ -499,7 +516,7 @@ def _resolve_additional_field_payload(
                 continue
             src_global_name = global_ref_fields[field_name]
             src_config = get_global_config(src_global_name)
-            src_ref_model = apps.get_model("api", f'PieceState{src_config["model"]}Ref')
+            src_ref_model = apps.get_model("api", f"PieceState{src_config['model']}Ref")
             try:
                 src_row = src_ref_model.objects.get(
                     piece_state=ancestor, field_name=source_field_name
@@ -532,7 +549,7 @@ def _write_global_ref_rows(
     for field_name in clear_fields:
         global_name = global_ref_fields[field_name]
         config = get_global_config(global_name)
-        ref_model_cls = apps.get_model("api", f'PieceState{config["model"]}Ref')
+        ref_model_cls = apps.get_model("api", f"PieceState{config['model']}Ref")
         ref_model_cls.objects.filter(
             piece_state=piece_state, field_name=field_name
         ).delete()
@@ -541,7 +558,7 @@ def _write_global_ref_rows(
         global_name = global_ref_fields[field_name]
         config = get_global_config(global_name)
         model_cls = apps.get_model("api", config["model"])
-        ref_model_cls = apps.get_model("api", f'PieceState{config["model"]}Ref')
+        ref_model_cls = apps.get_model("api", f"PieceState{config['model']}Ref")
         try:
             global_obj = model_cls.objects.get(pk=pk_str)
         except (model_cls.DoesNotExist, ValueError):
@@ -599,13 +616,16 @@ class PieceStateUpdateSerializer(serializers.Serializer):
             instance.images = _normalize_captioned_images(validated_data["images"])
         if "additional_fields" in validated_data:
             incoming: dict = dict(validated_data["additional_fields"])
-            inline_fields, global_ref_fields, global_ref_pks, clear_global_ref_fields = (
-                _resolve_additional_field_payload(
-                    instance.piece,
-                    instance.state,
-                    incoming,
-                    clear_empty_refs=True,
-                )
+            (
+                inline_fields,
+                global_ref_fields,
+                global_ref_pks,
+                clear_global_ref_fields,
+            ) = _resolve_additional_field_payload(
+                instance.piece,
+                instance.state,
+                incoming,
+                clear_empty_refs=True,
             )
 
             instance.additional_fields = inline_fields
@@ -645,9 +665,7 @@ class PieceUpdateSerializer(serializers.Serializer):
         instance: Piece | None = self.context.get("piece")
         current = instance.current_state if instance is not None else None
         if current is None or current.state not in TERMINAL_STATES:
-            raise serializers.ValidationError(
-                "Only terminal pieces can be shared."
-            )
+            raise serializers.ValidationError("Only terminal pieces can be shared.")
         return value
 
     def update(self, instance: Piece, validated_data: dict) -> Piece:

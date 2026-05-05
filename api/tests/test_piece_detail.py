@@ -349,6 +349,51 @@ class TestPieceDetail:
 
         assert response.status_code == 404
 
+    def test_notes_hidden_from_anonymous_viewer(self, piece):
+        from api.models import PieceState
+        PieceState.objects.create(
+            user=piece.user, piece=piece, state='completed', notes='secret notes'
+        )
+        piece.shared = True
+        piece.save()
+        anon = APIClient()
+
+        response = anon.get(f'/api/pieces/{piece.id}/')
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data['current_state']['notes'] == ''
+        assert all(s['notes'] == '' for s in data['history'])
+
+    def test_notes_hidden_from_non_owner(self, client, other_user):
+        from api.models import ENTRY_STATE, Piece, PieceState
+
+        foreign_piece = Piece.objects.create(
+            user=other_user, name='Other Piece', shared=True
+        )
+        PieceState.objects.create(
+            user=other_user, piece=foreign_piece, state=ENTRY_STATE, notes='owner notes'
+        )
+
+        response = client.get(f'/api/pieces/{foreign_piece.id}/')
+
+        assert response.status_code == 200
+        assert response.json()['current_state']['notes'] == ''
+
+    def test_notes_visible_to_owner(self, client, piece):
+        from api.models import PieceState
+        PieceState.objects.create(
+            user=piece.user, piece=piece, state='completed', notes='my notes'
+        )
+        piece.shared = True
+        piece.save()
+
+        response = client.get(f'/api/pieces/{piece.id}/')
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data['current_state']['notes'] == 'my notes'
+
 
 # ---------------------------------------------------------------------------
 # GET /api/pieces/{id}/current_state/

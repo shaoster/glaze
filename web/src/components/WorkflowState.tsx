@@ -367,17 +367,18 @@ export default function WorkflowState({
         textAlign: "left",
       }}
     >
-      {/* Notes */}
-      <TextField
-        label="Notes"
-        multiline
-        minRows={3}
-        value={notes}
-        onChange={(e) => dispatch({ type: "set_notes", notes: e.target.value })}
-        slotProps={{ htmlInput: { maxLength: 2000 } }}
-        disabled={readOnly}
-        fullWidth
-      />
+      {/* Notes — hidden in read-only (public) views */}
+      {!readOnly && (
+        <TextField
+          label="Notes"
+          multiline
+          minRows={3}
+          value={notes}
+          onChange={(e) => dispatch({ type: "set_notes", notes: e.target.value })}
+          slotProps={{ htmlInput: { maxLength: 2000 } }}
+          fullWidth
+        />
+      )}
       {additionalFieldDefs.length > 0 && (
         <Box>
           <Box

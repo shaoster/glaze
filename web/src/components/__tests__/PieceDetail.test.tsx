@@ -437,7 +437,7 @@ describe("PieceDetail", () => {
     await waitFor(() =>
       expect(share).toHaveBeenCalledWith({
         title: "Test Bowl",
-        text: "Test Bowl",
+        text: "Test Bowl — Completed",
         url: "http://localhost:3000/pieces/piece-id-1",
       }),
     );
@@ -474,7 +474,7 @@ describe("PieceDetail", () => {
       screen.queryByRole("button", { name: "Upload Image" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Unshare" })).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Notes")).toBeDisabled();
+    expect(screen.queryByLabelText("Notes")).not.toBeInTheDocument();
   });
 
   it("transition buttons disabled when there are unsaved changes", async () => {

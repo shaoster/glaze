@@ -129,7 +129,9 @@ def _serialize_piece_summary(qs, request: Request):
 
 
 def _apply_piece_ordering(qs, ordering_param: str):
-    db_ordering = _PIECE_ORDERING_MAP.get(ordering_param, _PIECE_ORDERING_MAP[_DEFAULT_ORDERING])
+    db_ordering = _PIECE_ORDERING_MAP.get(
+        ordering_param, _PIECE_ORDERING_MAP[_DEFAULT_ORDERING]
+    )
     if "computed_last_modified" in db_ordering:
         latest_state_lm = (
             PieceState.objects.filter(piece=OuterRef("pk"))
@@ -159,9 +161,18 @@ def _apply_piece_ordering(qs, ordering_param: str):
             type=str,
             enum=list(_PIECE_ORDERING_MAP.keys()),
         ),
-        OpenApiParameter(name="limit", description="Page size.", required=False, type=int),
-        OpenApiParameter(name="offset", description="Pagination offset.", required=False, type=int),
-        OpenApiParameter(name="tag_ids", description="Comma-separated tag IDs (AND filter).", required=False, type=str),
+        OpenApiParameter(
+            name="limit", description="Page size.", required=False, type=int
+        ),
+        OpenApiParameter(
+            name="offset", description="Pagination offset.", required=False, type=int
+        ),
+        OpenApiParameter(
+            name="tag_ids",
+            description="Comma-separated tag IDs (AND filter).",
+            required=False,
+            type=str,
+        ),
     ],
     responses={
         200: inline_serializer(
@@ -193,22 +204,32 @@ def pieces(request: Request) -> Response:
         ordering_param = request.query_params.get("ordering", _DEFAULT_ORDERING)
         qs = _apply_piece_ordering(qs, ordering_param)
         try:
-            limit = max(1, min(100, int(request.query_params.get("limit", _DEFAULT_PAGE_SIZE))))
+            limit = max(
+                1, min(100, int(request.query_params.get("limit", _DEFAULT_PAGE_SIZE)))
+            )
             offset = max(0, int(request.query_params.get("offset", 0)))
         except (ValueError, TypeError):
             limit = _DEFAULT_PAGE_SIZE
             offset = 0
         count = qs.count()
         page_qs = qs[offset : offset + limit]
-        return Response({"count": count, "results": _serialize_piece_summary(page_qs, request)})
+        return Response(
+            {"count": count, "results": _serialize_piece_summary(page_qs, request)}
+        )
 
     serializer = PieceCreateSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
     piece = serializer.save()
-    return Response(_serialize_piece_detail(piece, request), status=status.HTTP_201_CREATED)
+    return Response(
+        _serialize_piece_detail(piece, request), status=status.HTTP_201_CREATED
+    )
 
 
-@extend_schema(methods=["GET"], operation_id="pieces_retrieve", responses={200: PieceDetailSerializer})
+@extend_schema(
+    methods=["GET"],
+    operation_id="pieces_retrieve",
+    responses={200: PieceDetailSerializer},
+)
 @extend_schema(
     methods=["PATCH"],
     request=PieceUpdateSerializer,
@@ -250,7 +271,9 @@ def piece_states(request: Request, piece_id: str) -> Response:
     serializer.save()
     # Reload to pick up updated last_modified on current_state
     piece.refresh_from_db()
-    return Response(_serialize_piece_detail(piece, request), status=status.HTTP_201_CREATED)
+    return Response(
+        _serialize_piece_detail(piece, request), status=status.HTTP_201_CREATED
+    )
 
 
 @extend_schema(
@@ -266,7 +289,7 @@ def piece_current_state_detail(request: Request, piece_id: str) -> Response:
         return Response(
             {"detail": "Piece has no states."}, status=status.HTTP_404_NOT_FOUND
         )
-    return Response(PieceStateSerializer(current).data)
+    return Response(PieceStateSerializer(current, context={"request": request}).data)
 
 
 @extend_schema(
@@ -342,7 +365,7 @@ def _global_entries_impl(request: Request, global_name: str) -> Response:
                 fav_model.get_favorite_ids_for(request.user) if fav_model else set()
             )
             prepare_queryset = getattr(
-                entry_serializer_cls, 'prepare_global_entry_queryset', None
+                entry_serializer_cls, "prepare_global_entry_queryset", None
             )
             if callable(prepare_queryset):
                 objects = list(prepare_queryset(base_qs, display_field))
