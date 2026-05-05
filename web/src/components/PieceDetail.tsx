@@ -28,6 +28,7 @@ import PiecePhotoGallery, {
 } from "./PiecePhotoGallery";
 import { PieceDetailSaveStatusProvider } from "./PieceDetailSaveStatusContext";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
+import ShareControls from "./PieceShareControls";
 
 type PieceDetailProps = {
   piece: PieceDetailType;
@@ -137,6 +138,7 @@ function PieceDetailContent({
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
   const currentState = piece.current_state;
   const isTerminal = isTerminalState(currentState.state);
+  const canEdit = piece.can_edit;
   const pastHistory = piece.history.slice(0, -1);
   function formatDate(d: Date): string {
     const y = d.getFullYear();
@@ -153,7 +155,7 @@ function PieceDetailContent({
     return state.images.map((image, imageIndex) => ({
       ...image,
       stateLabel: formatState(state.state),
-      editableCurrentStateIndex: isCurrentState ? imageIndex : null,
+      editableCurrentStateIndex: canEdit && isCurrentState ? imageIndex : null,
     }));
   });
   const editButtonSx = {
@@ -166,7 +168,7 @@ function PieceDetailContent({
     backgroundColor: alpha(theme.palette.background.paper, 0.38),
   } as const;
 
-  const blocker = useBlocker(isDirty);
+  const blocker = useBlocker(canEdit && isDirty);
 
   async function handleTransition(nextState: string) {
     setTransitioning(true);
@@ -249,8 +251,8 @@ function PieceDetailContent({
     currentStateAdditionalFields: currentState.additional_fields ?? {},
     currentThumbnailUrl: piece.thumbnail?.url,
     onPieceUpdated,
-    updatePieceFn: updatePiece,
-    updateCurrentStateFn: updateCurrentState,
+    updatePieceFn: canEdit ? updatePiece : undefined,
+    updateCurrentStateFn: canEdit ? updateCurrentState : undefined,
   } satisfies ComponentProps<typeof PiecePhotoGallery>;
 
   return (
@@ -355,31 +357,42 @@ function PieceDetailContent({
                   >
                     {piece.name}
                   </Typography>
-                  <IconButton
-                    aria-label="Edit piece name"
-                    onClick={startEditingName}
-                    size="small"
-                    sx={{ ...editButtonSx, alignSelf: "center" }}
-                  >
-                    <EditIcon sx={{ fontSize: 14 }} />
-                  </IconButton>
+                  {canEdit && (
+                    <IconButton
+                      aria-label="Edit piece name"
+                      onClick={startEditingName}
+                      size="small"
+                      sx={{ ...editButtonSx, alignSelf: "center" }}
+                    >
+                      <EditIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  )}
                 </Box>
               )}
             </Box>
-            <TagManager
-              pieceId={piece.id}
-              initialTags={piece.tags ?? []}
-              onSaved={onPieceUpdated}
-            />
-            <Box sx={{ mt: 2, mb: 1.5 }}>
-              <StateTransition
-                currentStateName={currentState.state}
-                disabled={isDirty}
-                transitioning={transitioning}
-                transitionError={transitionError}
-                onTransition={handleTransition}
+            {canEdit ? (
+              <TagManager
+                pieceId={piece.id}
+                initialTags={piece.tags ?? []}
+                onSaved={onPieceUpdated}
               />
-            </Box>
+            ) : null}
+            {canEdit && (
+              <Box sx={{ mt: 2, mb: 1.5 }}>
+                <StateTransition
+                  currentStateName={currentState.state}
+                  disabled={isDirty}
+                  transitioning={transitioning}
+                  transitionError={transitionError}
+                  onTransition={handleTransition}
+                />
+              </Box>
+            )}
+            {canEdit && isTerminal && (
+              <Box sx={{ mb: 1.5 }}>
+                <ShareControls piece={piece} onPieceUpdated={onPieceUpdated} />
+              </Box>
+            )}
             <Box sx={{ mb: 1.5 }}>
               <SectionCard>
                 <GlobalEntryField
@@ -387,6 +400,7 @@ function PieceDetailContent({
                   label="Current location"
                   value={piece.current_location ?? ""}
                   onSelect={(entry) => void handleLocationSelect(entry)}
+                  disabled={!canEdit}
                   sx={{ opacity: locationSaving ? 0.7 : 1 }}
                 />
                 {locationError && (
@@ -468,6 +482,7 @@ function PieceDetailContent({
             pieceId={piece.id}
             onSaved={onPieceUpdated}
             onDirtyChange={setIsDirty}
+            readOnly={!canEdit}
           />
         </SectionCard>
 
@@ -489,11 +504,13 @@ function PieceDetailContent({
         </SectionCard>
       </Box>
 
-      <NavigationBlocker
-        open={blocker.state === "blocked"}
-        onStay={() => blocker.reset?.()}
-        onLeave={() => blocker.proceed?.()}
-      />
+      {canEdit && (
+        <NavigationBlocker
+          open={blocker.state === "blocked"}
+          onStay={() => blocker.reset?.()}
+          onLeave={() => blocker.proceed?.()}
+        />
+      )}
     </Box>
   );
 }

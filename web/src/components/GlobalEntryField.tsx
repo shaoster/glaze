@@ -12,6 +12,7 @@ export interface GlobalEntryFieldProps {
   required?: boolean;
   canCreate?: boolean;
   hideLabel?: boolean;
+  disabled?: boolean;
   sx?: SxProps<Theme>;
 }
 
@@ -26,6 +27,7 @@ export default function GlobalEntryField({
   required = false,
   canCreate = false,
   hideLabel = false,
+  disabled = false,
   sx,
 }: GlobalEntryFieldProps) {
   const [open, setOpen] = useState(false);
@@ -50,11 +52,17 @@ export default function GlobalEntryField({
             {required && " *"}
           </Typography>
         )}
-        {value && <Chip label={value} onDelete={() => onSelect(null)} />}
+        {value && (
+          <Chip
+            label={value}
+            onDelete={disabled ? undefined : () => onSelect(null)}
+          />
+        )}
         <Button
           variant="outlined"
           size="small"
           onClick={() => setOpen(true)}
+          disabled={disabled}
           aria-label={value ? `Change ${label}` : `Browse ${label}`}
           sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
         >

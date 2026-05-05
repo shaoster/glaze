@@ -26,6 +26,8 @@ const MOCK_PIECE: PieceDetail = {
   created: new Date("2024-01-01T00:00:00Z"),
   last_modified: new Date("2024-01-02T00:00:00Z"),
   thumbnail: "/thumbnails/question-mark.svg",
+  shared: false,
+  can_edit: true,
   current_state: {
     state: "designed",
     notes: "",

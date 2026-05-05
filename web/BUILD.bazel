@@ -405,6 +405,25 @@ js_library(
 )
 
 js_library(
+    name = "piece_share_controls_src",
+    srcs = ["src/components/PieceShareControls.tsx"],
+    deps = [
+        ":generated_types",
+        ":node_modules",
+        ":util_lib",
+    ],
+)
+
+js_library(
+    name = "public_piece_shell_src",
+    srcs = ["src/components/PublicPieceShell.tsx"],
+    deps = [
+        ":node_modules",
+        ":primitive_src",
+    ],
+)
+
+js_library(
     name = "piece_detail_src",
     srcs = [
         "src/components/NavigationBlocker.tsx",
@@ -417,6 +436,7 @@ js_library(
         ":node_modules",
         ":piece_history_src",
         ":piece_photo_gallery_src",
+        ":piece_share_controls_src",
         ":primitive_src",
         ":state_transition_src",
         ":tag_manager_src",
@@ -523,6 +543,7 @@ vitest_test(
     name = "web_picker_test",
     srcs = [
         "src/components/__tests__/GlobalEntryDialog.test.tsx",
+        "src/components/__tests__/GlobalEntryField.test.tsx",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [
@@ -617,6 +638,28 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":piece_history_src",
+    ],
+)
+
+vitest_test(
+    name = "web_piece_share_controls_test",
+    srcs = [
+        "src/components/__tests__/PieceShareControls.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":piece_share_controls_src",
+    ],
+)
+
+vitest_test(
+    name = "web_public_piece_shell_test",
+    srcs = [
+        "src/components/__tests__/PublicPieceShell.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":public_piece_shell_src",
     ],
 )
 
@@ -738,7 +781,9 @@ test_suite(
         ":web_piece_history_test",
         ":web_piece_list_page_test",
         ":web_piece_list_test",
+        ":web_piece_share_controls_test",
         ":web_primitive_test",
+        ":web_public_piece_shell_test",
         ":web_state_transition_test",
         ":web_tag_manager_test",
         ":web_tag_test",

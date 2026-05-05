@@ -60,6 +60,7 @@ from .utils import get_or_create_location
 from .workflow import (
     ENTRY_STATE,
     SUCCESSORS,
+    TERMINAL_STATES,
     VALID_STATES,
     get_global_config,
     get_global_ref_fields_for_state,
@@ -304,6 +305,7 @@ class ThumbnailSerializer(serializers.Serializer):
 class PieceSummarySerializer(serializers.ModelSerializer):
     current_state = serializers.SerializerMethodField()
     current_location = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
     thumbnail = ThumbnailSerializer(allow_null=True, read_only=True)
     last_modified = serializers.DateTimeField(read_only=True)
 
@@ -315,6 +317,8 @@ class PieceSummarySerializer(serializers.ModelSerializer):
             "created",
             "last_modified",
             "thumbnail",
+            "shared",
+            "can_edit",
             "current_state",
             "current_location",
         ]
@@ -334,6 +338,15 @@ class PieceSummarySerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.CharField(allow_null=True, required=False))
     def get_current_location(self, obj: Piece) -> str | None:
         return obj.current_location.name if obj.current_location else None
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_can_edit(self, obj: Piece) -> bool:
+        request = self.context.get("request")
+        return bool(
+            request
+            and request.user.is_authenticated
+            and obj.user_id == request.user.id
+        )
 
 
 class PieceDetailSerializer(PieceSummarySerializer):
@@ -623,7 +636,19 @@ class PieceUpdateSerializer(serializers.Serializer):
         required=False, allow_blank=True, allow_null=True
     )
     thumbnail = ThumbnailSerializer(required=False, allow_null=True)
+    shared = serializers.BooleanField(required=False)
     tags = serializers.ListField(child=serializers.CharField(), required=False)
+
+    def validate_shared(self, value: bool) -> bool:
+        if not value:
+            return value
+        instance: Piece | None = self.context.get("piece")
+        current = instance.current_state if instance is not None else None
+        if current is None or current.state not in TERMINAL_STATES:
+            raise serializers.ValidationError(
+                "Only terminal pieces can be shared."
+            )
+        return value
 
     def update(self, instance: Piece, validated_data: dict) -> Piece:
         if "name" in validated_data:
@@ -634,6 +659,8 @@ class PieceUpdateSerializer(serializers.Serializer):
             )
         if "thumbnail" in validated_data:
             instance.thumbnail = validated_data["thumbnail"]
+        if "shared" in validated_data:
+            instance.shared = validated_data["shared"]
         instance.save()
         if "tags" in validated_data:
             tag_ids = [str(tag_id) for tag_id in validated_data["tags"]]

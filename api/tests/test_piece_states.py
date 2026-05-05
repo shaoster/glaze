@@ -245,6 +245,24 @@ class TestPieceStates:
         )
         assert response.status_code == 404
 
+    def test_non_owner_cannot_add_state_to_shared_piece(self, client, other_user):
+        foreign_piece = Piece.objects.create(
+            user=other_user,
+            name='Shared Foreign Piece',
+            shared=True,
+        )
+        from api.models import PieceState
+
+        PieceState.objects.create(user=other_user, piece=foreign_piece, state=ENTRY_STATE)
+
+        response = client.post(
+            f'/api/pieces/{foreign_piece.id}/states/',
+            {'state': SUCCESSORS[ENTRY_STATE][0]},
+            format='json',
+        )
+
+        assert response.status_code == 404
+
     def test_summary_serializer_asserts_piece_has_current_state(self, user):
         piece = Piece.objects.create(user=user, name='Broken Summary')
         serializer = PieceSummarySerializer()

@@ -38,6 +38,7 @@ type WorkflowStateProps = {
   onSaved: (updated: PieceDetail) => void;
   onDirtyChange?: (dirty: boolean) => void;
   autosaveDelayMs?: number;
+  readOnly?: boolean;
 };
 
 
@@ -49,6 +50,7 @@ type ImageUploaderProps = {
   uploadError: string | null;
   imageError: string | null;
   mobile: boolean;
+  hidden?: boolean;
   onUploadClick: () => void;
 };
 
@@ -58,13 +60,14 @@ function ImageUploader({
   uploadError,
   imageError,
   mobile,
+  hidden = false,
   onUploadClick,
 }: ImageUploaderProps) {
   const buttonDisabled = saving || widgetLoading;
   const statusMessage = saving ? "Saving…" : "Upload Image";
 
   return (
-    <Box>
+    <Box sx={hidden ? { display: "none" } : undefined}>
       {mobile ? (
         <Portal>
           <Fab
@@ -72,7 +75,9 @@ function ImageUploader({
             aria-label="Upload Image"
             onClick={onUploadClick}
             disabled={buttonDisabled}
+            hidden={hidden}
             sx={{
+              display: hidden ? "none" : undefined,
               position: "fixed",
               right: 24,
               bottom: 24,
@@ -110,10 +115,11 @@ function ImageUploader({
             size="small"
             onClick={onUploadClick}
             disabled={buttonDisabled}
+            hidden={hidden}
             startIcon={
               saving ? <CircularProgress size={14} color="inherit" /> : undefined
             }
-            sx={{ position: "relative" }}
+            sx={{ display: hidden ? "none" : undefined, position: "relative" }}
           >
             <Box sx={{ opacity: widgetLoading ? 0 : 1 }}>{statusMessage}</Box>
             {widgetLoading && (
@@ -144,6 +150,7 @@ export default function WorkflowState({
   onSaved,
   onDirtyChange,
   autosaveDelayMs,
+  readOnly = false,
 }: WorkflowStateProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [widgetLoading, setWidgetLoading] = useState(false);
@@ -189,8 +196,8 @@ export default function WorkflowState({
   const isDirty = notes !== baseState.notes || additionalFieldsDirty;
 
   useEffect(() => {
-    onDirtyChange?.(isDirty);
-  }, [isDirty, onDirtyChange]);
+    onDirtyChange?.(readOnly ? false : isDirty);
+  }, [isDirty, onDirtyChange, readOnly]);
 
   const saveWorkflowState = useCallback(async () => {
     const payload = {
@@ -220,7 +227,7 @@ export default function WorkflowState({
   );
 
   const autosave = useAutosave({
-    dirty: isDirty,
+    dirty: !readOnly && isDirty,
     saveKey: autosaveKey,
     save: saveWorkflowState,
     delayMs: autosaveDelayMs,
@@ -241,6 +248,9 @@ export default function WorkflowState({
   ]);
 
   async function handleUploadWidgetClick() {
+    if (readOnly) {
+      return;
+    }
     setUploadError(null);
     setWidgetLoading(true);
     let config;
@@ -365,6 +375,7 @@ export default function WorkflowState({
         value={notes}
         onChange={(e) => dispatch({ type: "set_notes", notes: e.target.value })}
         slotProps={{ htmlInput: { maxLength: 2000 } }}
+        disabled={readOnly}
         fullWidth
       />
       {additionalFieldDefs.length > 0 && (
@@ -405,6 +416,7 @@ export default function WorkflowState({
                     label={label}
                     value={value}
                     onSelect={(entry) => {
+                      if (readOnly) return;
                       handleFieldChange(field.name, entryNameOrEmpty(entry));
                       dispatch({
                         type: "set_global_ref_pks",
@@ -418,6 +430,7 @@ export default function WorkflowState({
                       });
                     }}
                     canCreate={Boolean(field.canCreate)}
+                    disabled={readOnly}
                     helperText={helperText}
                     required={field.required}
                   />
@@ -433,6 +446,7 @@ export default function WorkflowState({
                     onChange={(e) => handleFieldChange(field.name, e.target.value)}
                     helperText={helperText}
                     required={field.required}
+                    disabled={readOnly}
                     fullWidth
                   >
                     {field.enum.map((option) => (
@@ -460,6 +474,7 @@ export default function WorkflowState({
                     }}
                     helperText={helperText}
                     required={field.required}
+                    disabled={readOnly}
                     fullWidth
                   />
                 );
@@ -474,6 +489,7 @@ export default function WorkflowState({
                     onChange={(e) => handleFieldChange(field.name, e.target.value)}
                     helperText={helperText}
                     required={field.required}
+                    disabled={readOnly}
                     fullWidth
                   >
                     <MenuItem value="true">True</MenuItem>
@@ -489,6 +505,7 @@ export default function WorkflowState({
                   onChange={(e) => handleFieldChange(field.name, e.target.value)}
                   helperText={helperText}
                   required={field.required}
+                  disabled={readOnly}
                   fullWidth
                 />
               );
@@ -512,6 +529,7 @@ export default function WorkflowState({
         uploadError={uploadError}
         imageError={imageError}
         mobile={isMobileLayout}
+        hidden={readOnly}
         onUploadClick={handleUploadWidgetClick}
       />
     </Box>

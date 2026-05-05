@@ -113,6 +113,8 @@ class TestGlobalEntries:
                     '+00:00', 'Z'
                 ),
                 'thumbnail': None,
+                'shared': False,
+                'can_edit': True,
                 'current_state': {'state': 'designed'},
                 'current_location': None,
                 'tags': [],

@@ -811,6 +811,29 @@ describe("WorkflowState", () => {
     ).toBeInTheDocument();
   });
 
+  it("does not expose the upload action when read-only", async () => {
+    await act(async () => {
+      render(<WorkflowState {...defaultProps} readOnly />);
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Upload Image" }),
+    ).not.toBeInTheDocument();
+    expect(api.fetchCloudinaryWidgetConfig).not.toHaveBeenCalled();
+  });
+
+  it("returns before opening the upload widget when read-only", async () => {
+    await act(async () => {
+      render(<WorkflowState {...defaultProps} readOnly />);
+    });
+
+    const hiddenUploadButton = document.querySelector("button[hidden]");
+    expect(hiddenUploadButton).toBeInstanceOf(HTMLButtonElement);
+    fireEvent.click(hiddenUploadButton as HTMLButtonElement);
+
+    expect(api.fetchCloudinaryWidgetConfig).not.toHaveBeenCalled();
+  });
+
   it("shows a floating camera action on mobile layouts", async () => {
     setScreenWidth(390);
     await act(async () => {

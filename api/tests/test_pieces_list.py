@@ -27,7 +27,18 @@ class TestPiecesList:
     def test_summary_shape(self, client, piece):
         data = client.get('/api/pieces/').json()
         keys = set(data['results'][0].keys())
-        assert keys == {'id', 'name', 'created', 'current_location', 'last_modified', 'thumbnail', 'current_state', 'tags'}
+        assert keys == {
+            'id',
+            'name',
+            'created',
+            'current_location',
+            'last_modified',
+            'thumbnail',
+            'shared',
+            'can_edit',
+            'current_state',
+            'tags',
+        }
 
     def test_does_not_include_other_users_pieces(self, client, other_user):
         hidden = Piece.objects.create(user=other_user, name='Hidden Piece')

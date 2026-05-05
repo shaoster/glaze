@@ -48,6 +48,7 @@ import {
 } from "./util/api";
 import { useAsync } from "./util/useAsync";
 import ErrorBoundary from "./components/ErrorBoundary";
+import PublicPieceShell from "./components/PublicPieceShell";
 import type { AuthUser } from "./util/api";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -503,6 +504,14 @@ function UnauthenticatedApp({
                     <PrivacyPolicyPage />
                   </Suspense>
                 </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/pieces/:id"
+              element={
+                <PublicPieceShell>
+                  <PieceDetailPage />
+                </PublicPieceShell>
               }
             />
             <Route path="*" element={<Navigate to="/" replace />} />
