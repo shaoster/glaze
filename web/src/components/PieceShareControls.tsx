@@ -13,7 +13,6 @@ import { autoGravity } from "@cloudinary/url-gen/qualifiers/gravity";
 import type { PieceDetail, Thumbnail } from "../util/types";
 import { formatState } from "../util/types";
 import { updatePiece } from "../util/api";
-import { Helmet } from "react-helmet-async";
 
 const SHARE_IMAGE_SIZE = 600;
 
@@ -122,23 +121,6 @@ export default function ShareControls({
         overflow: "hidden",
       })}
     >
-      <Helmet>
-        <title>{piece ? buildShareText(piece) : "Loading..."}</title>
-        <meta
-          property="og:title"
-          content={piece ? buildShareText(piece) : "Loading..."}
-        />
-        <meta property="og:description" content="Powered by PotterDoc" />
-        <meta property="og:url" content={publicUrl} />
-        {piece.thumbnail !== null && (
-          <meta
-            property="og:image"
-            content={buildThumbnailShareUrl(piece.thumbnail)}
-          />
-        )}
-        <meta property="og:type" content="article" />
-      </Helmet>
-
       <Box sx={{ px: { xs: 1.5, sm: 2 }, pt: 1.25, pb: 0.75 }}>
         <Typography variant="h6" component="h3">
           Share

@@ -41,6 +41,12 @@ def get_name_for_global(model: type[django_models.Model]) -> str | None:
             return global_name
     return None
 
+
+def get_state_friendly_name(state_id: str) -> str:
+    """Return the authored friendly name for a workflow state."""
+    return str(_STATE_MAP.get(state_id, {}).get('friendly_name', state_id))
+
+
 def get_state_ref_fields(state_id: str) -> dict[str, tuple[str, str]]:
     """Return {field_name: (source_state_id, source_field_name)} for all state ref fields.
 

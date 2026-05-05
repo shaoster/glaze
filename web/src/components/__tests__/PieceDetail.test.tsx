@@ -403,6 +403,33 @@ describe("PieceDetail", () => {
     expect(screen.getByRole("button", { name: "Share" })).toBeInTheDocument();
   });
 
+  it("shares an editable terminal piece through the PieceDetail API interaction", async () => {
+    const updated = makePiece({
+      shared: true,
+      current_state: makeState({ state: "completed" }),
+      history: [makeState({ state: "completed" })],
+    });
+    vi.mocked(api.updatePiece).mockResolvedValue(updated);
+    const onPieceUpdated = vi.fn();
+    await renderPieceDetail(
+      makePiece({
+        current_state: makeState({ state: "completed" }),
+        history: [makeState({ state: "completed" })],
+      }),
+      onPieceUpdated,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Share" }));
+
+    await waitFor(() =>
+      expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
+        shared: true,
+      }),
+    );
+    expect(onPieceUpdated).toHaveBeenCalledWith(updated);
+    expect(screen.getByText("Public link created.")).toBeInTheDocument();
+  });
+
   it("copies the public link for a shared terminal piece", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {

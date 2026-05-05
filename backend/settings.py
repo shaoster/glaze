@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "adminsortable2",
     "import_export",
+    "meta",
     "rest_framework",
     "corsheaders",
     "drf_spectacular",

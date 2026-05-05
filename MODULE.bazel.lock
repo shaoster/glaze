@@ -262,7 +262,7 @@
         "bzlTransitiveDigest": "HKMVj1TG4O7hW/qkMUGevNijK2IpfzhTvuIV3FOWIbo=",
         "usagesDigest": "jgXSyw2zB6hLAQDv/3Pr3kgPnN5jdzqcETRqehvo1aw=",
         "recordedFileInputs": {
-          "@@//web/package.json": "776fc8afbb1df635090fc6a36d1e5aaecf60a5b675e3272950381cfe54883cb8"
+          "@@//web/package.json": "7758caadb18a07fe2b9e5a5f1c35ace106b3c5b4e766ecc4b487f2703990b261"
         },
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -941,7 +941,7 @@
           "@@rules_python~//tools/publish/requirements_linux.txt": "d576e0d8542df61396a9b38deeaa183c24135ed5e8e73bb9622f298f2671811e",
           "@@rules_fuzzing~//fuzzing/requirements.txt": "ab04664be026b632a0d2a2446c4f65982b7654f5b6851d2f9d399a19b7242a5b",
           "@@rules_python~//tools/publish/requirements_windows.txt": "d18538a3982beab378fd5687f4db33162ee1ece69801f9a451661b1b64286b76",
-          "@@//requirements.lock": "db82c616c10d523454e50ebba0a0baf4c3b645c18eb81e6c999be7dae6cd4cb4",
+          "@@//requirements.lock": "0c9f40969f3f9faa90a3aa27d562bd2f102fde69cefafc18066a933713ae9abb",
           "@@protobuf~//python/requirements.txt": "983be60d3cec4b319dcab6d48aeb3f5b2f7c3350f26b3a9e97486c37967c73c5",
           "@@rules_python~//tools/publish/requirements_darwin.txt": "095d4a4f3d639dce831cd493367631cd51b53665292ab20194bac2c0c6458fa8"
         },
@@ -1109,6 +1109,16 @@
               "python_interpreter_target": "@@rules_python~~python~python_3_12_host//:python",
               "repo": "pip_312",
               "requirement": "django-import-export==4.3.9 --hash=sha256:3d83b1c28f30935240ef9d914a1d4845c6fcaf5c7e5454889dda800eb5d374fb --hash=sha256:966e01c2cbd6acda710a0a0097cd99b28d4f9883abbfbbf712f34a2e8eea8809"
+            }
+          },
+          "pip_312_django_meta": {
+            "bzlFile": "@@rules_python~//python/private/pypi:whl_library.bzl",
+            "ruleClassName": "whl_library",
+            "attributes": {
+              "dep_template": "@pip//{name}:{target}",
+              "python_interpreter_target": "@@rules_python~~python~python_3_12_host//:python",
+              "repo": "pip_312",
+              "requirement": "django-meta==2.5.1 --hash=sha256:0699e585444d59286c25bc301b865e56814e2473a069cd1046840669204cec2a --hash=sha256:35941347c39fa69139cdede3fe39f408330eb586819c7a9c4610991479e1ae57"
             }
           },
           "pip_312_django_stubs": {
@@ -4225,6 +4235,7 @@
                 "django_admin_sortable2": "{\"pip_312_django_admin_sortable2\":[{\"version\":\"3.12\"}]}",
                 "django_cors_headers": "{\"pip_312_django_cors_headers\":[{\"version\":\"3.12\"}]}",
                 "django_import_export": "{\"pip_312_django_import_export\":[{\"version\":\"3.12\"}]}",
+                "django_meta": "{\"pip_312_django_meta\":[{\"version\":\"3.12\"}]}",
                 "django_stubs": "{\"pip_312_django_stubs\":[{\"version\":\"3.12\"}]}",
                 "django_stubs_ext": "{\"pip_312_django_stubs_ext\":[{\"version\":\"3.12\"}]}",
                 "djangorestframework": "{\"pip_312_djangorestframework\":[{\"version\":\"3.12\"}]}",
@@ -4292,6 +4303,7 @@
                 "django_admin_sortable2",
                 "django_cors_headers",
                 "django_import_export",
+                "django_meta",
                 "django_stubs",
                 "django_stubs_ext",
                 "djangorestframework",

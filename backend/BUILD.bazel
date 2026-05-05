@@ -29,6 +29,7 @@ py_library(
         requirement("Pillow"),
         requirement("psycopg2-binary"),
         requirement("django-import-export"),
+        requirement("django-meta"),
     ],
     visibility = ["//visibility:public"],
 )
