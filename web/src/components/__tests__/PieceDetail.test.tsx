@@ -151,7 +151,11 @@ function makePiece(overrides: Partial<PieceDetailType> = {}): PieceDetailType {
     name: "Test Bowl",
     created: new Date("2024-01-15T10:00:00Z"),
     last_modified: new Date("2024-01-15T10:00:00Z"),
-    thumbnail: { url: "/thumbnails/bowl.svg", cloudinary_public_id: null, cloud_name: null },
+    thumbnail: {
+      url: "/thumbnails/bowl.svg",
+      cloudinary_public_id: null,
+      cloud_name: null,
+    },
     shared: false,
     can_edit: true,
     current_state: state,
@@ -276,9 +280,13 @@ describe("PieceDetail", () => {
         history: [designed, thrown],
       }),
     );
-    await userEvent.click(screen.getAllByRole("button", { name: /2 photos/i })[0]);
+    await userEvent.click(
+      screen.getAllByRole("button", { name: /2 photos/i })[0],
+    );
     expect(screen.getByLabelText("Piece photos")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /open piece photo/i })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("button", { name: /open piece photo/i }),
+    ).toHaveLength(2);
   });
 
   it("renders current location controls", async () => {
@@ -436,8 +444,8 @@ describe("PieceDetail", () => {
 
     await waitFor(() =>
       expect(share).toHaveBeenCalledWith({
-        title: "Test Bowl",
-        text: "Test Bowl — Completed",
+        text: "Powered by PotterDoc",
+        title: "Test Bowl — Completed",
         url: "http://localhost:3000/pieces/piece-id-1",
       }),
     );
@@ -473,7 +481,9 @@ describe("PieceDetail", () => {
     expect(
       screen.queryByRole("button", { name: "Upload Image" }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Unshare" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Unshare" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Notes")).not.toBeInTheDocument();
   });
 
@@ -725,7 +735,9 @@ describe("PieceDetail", () => {
         screen.getByRole("button", { name: "Leave without saving" }),
       );
 
-      await waitFor(() => expect(screen.getByText("Elsewhere")).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByText("Elsewhere")).toBeInTheDocument(),
+      );
     });
   });
 
@@ -747,9 +759,7 @@ describe("PieceDetail", () => {
     it("shows the tag editor when the edit button is pressed", async () => {
       await renderPieceDetail();
 
-      fireEvent.click(
-        screen.getByRole("button", { name: "Add or edit tags" }),
-      );
+      fireEvent.click(screen.getByRole("button", { name: "Add or edit tags" }));
 
       expect(screen.getByLabelText("Tags")).toBeInTheDocument();
       await userEvent.click(screen.getByRole("button", { name: "Open" }));

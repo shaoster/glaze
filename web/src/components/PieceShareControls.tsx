@@ -13,6 +13,7 @@ import { autoGravity } from "@cloudinary/url-gen/qualifiers/gravity";
 import type { PieceDetail, Thumbnail } from "../util/types";
 import { formatState } from "../util/types";
 import { updatePiece } from "../util/api";
+import { Helmet } from "react-helmet-async";
 
 const SHARE_IMAGE_SIZE = 600;
 
@@ -22,7 +23,12 @@ function buildThumbnailShareUrl(thumbnail: Thumbnail): string {
   if (cloudName && publicId) {
     const cld = new Cloudinary({ cloud: { cloudName } });
     const img = cld.image(publicId);
-    img.resize(fill().width(SHARE_IMAGE_SIZE).height(SHARE_IMAGE_SIZE).gravity(autoGravity()));
+    img.resize(
+      fill()
+        .width(SHARE_IMAGE_SIZE)
+        .height(SHARE_IMAGE_SIZE)
+        .gravity(autoGravity()),
+    );
     img.delivery(format(jpg()));
     img.delivery(quality(autoQuality()));
     return img.toURL();
@@ -56,7 +62,9 @@ export default function ShareControls({
     try {
       const updated = await updatePiece(piece.id, { shared: !piece.shared });
       onPieceUpdated(updated);
-      setMessage(updated.shared ? "Public link created." : "Public link disabled.");
+      setMessage(
+        updated.shared ? "Public link created." : "Public link disabled.",
+      );
     } catch {
       setMessage("Failed to update sharing. Please try again.");
     } finally {
@@ -76,13 +84,19 @@ export default function ShareControls({
   async function shareLink() {
     if (!canUseNativeShare) return;
     try {
-      const shareData: ShareData = { title: piece.name, text: buildShareText(piece), url: publicUrl };
+      const shareData: ShareData = {
+        text: "Powered by PotterDoc",
+        title: buildShareText(piece),
+        url: publicUrl,
+      };
       if (piece.thumbnail?.cloudinary_public_id) {
         const imageUrl = buildThumbnailShareUrl(piece.thumbnail);
         try {
           const response = await fetch(imageUrl);
           const blob = await response.blob();
-          const file = new File([blob], "thumbnail.jpg", { type: blob.type || "image/jpeg" });
+          const file = new File([blob], "thumbnail.jpg", {
+            type: blob.type || "image/jpeg",
+          });
           if (navigator.canShare?.({ files: [file] })) {
             shareData.files = [file];
           }
@@ -108,6 +122,23 @@ export default function ShareControls({
         overflow: "hidden",
       })}
     >
+      <Helmet>
+        <title>{piece ? buildShareText(piece) : "Loading..."}</title>
+        <meta
+          property="og:title"
+          content={piece ? buildShareText(piece) : "Loading..."}
+        />
+        <meta property="og:description" content="Powered by PotterDoc" />
+        <meta property="og:url" content={publicUrl} />
+        {piece.thumbnail !== null && (
+          <meta
+            property="og:image"
+            content={buildThumbnailShareUrl(piece.thumbnail)}
+          />
+        )}
+        <meta property="og:type" content="article" />
+      </Helmet>
+
       <Box sx={{ px: { xs: 1.5, sm: 2 }, pt: 1.25, pb: 0.75 }}>
         <Typography variant="h6" component="h3">
           Share
