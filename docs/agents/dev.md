@@ -64,6 +64,26 @@ This keeps worktrees close to the repo-local bootstrap, makes cleanup easier, an
 
 When you do want a truly separate dependency environment inside the worktree, run `gz_setup --isolated` to replace any shared `.venv` or `web/node_modules` symlinks with local worktree-specific installs.
 
+### Updating pnpm-lock.yaml after npm installs
+
+Bazel resolves npm packages from `web/pnpm-lock.yaml`. After any `npm install` that adds or removes packages, regenerate the lockfile with `pnpm import` so Bazel picks up the change:
+
+```bash
+# Install the package normally (from the repo root or web/ — npm resolves via web/package.json)
+(cd web && npm install react-swipeable)
+
+# Regenerate the pnpm lockfile from the updated package-lock.json
+# pnpm must be run from web/ where package.json and pnpm-lock.yaml live
+(cd web && pnpm import)
+
+# Commit both the updated package files
+git add web/package.json web/package-lock.json web/pnpm-lock.yaml
+```
+
+`pnpm` is available at `~/.nvm/versions/node/*/bin/pnpm` when nvm is active. If `env-agent.sh` has sourced `.nvm/nvm.sh`, the `pnpm` binary is on `$PATH` and the `(cd web && pnpm import)` subshell inherits it.
+
+---
+
 ### Working directory discipline
 
 Always run `git` commands from the repo root. When a command must run from a subdirectory, wrap it in a subshell so the caller's working directory is unchanged:
