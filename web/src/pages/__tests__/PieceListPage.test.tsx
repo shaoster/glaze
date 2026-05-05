@@ -22,11 +22,13 @@ vi.mock("../../components/PieceList", () => ({
     onNewPiece,
     onSortChange,
     onLoadMore,
+    loading = false,
   }: {
     pieces: PieceSummary[];
     onNewPiece?: () => void;
     onSortChange?: (order: PieceSortOrder) => void;
     onLoadMore?: () => void;
+    loading?: boolean;
   }) => (
     <div data-testid="piece-list">
       {onNewPiece && <button onClick={onNewPiece}>New Piece</button>}
@@ -34,6 +36,7 @@ vi.mock("../../components/PieceList", () => ({
         <button onClick={() => onSortChange("name")}>Sort by Name</button>
       )}
       {onLoadMore && <button onClick={onLoadMore}>Load More</button>}
+      {loading && <div>Refreshing Pieces</div>}
       {pieces.map((piece) => piece.name).join(", ")}
     </div>
   ),
@@ -181,6 +184,39 @@ describe("PieceListPage", () => {
       expect(mockFetchPieces).toHaveBeenCalledWith(
         expect.objectContaining({ ordering: "name" }),
       );
+    });
+  });
+
+  it("keeps the current list mounted while refreshing a new sort order", async () => {
+    let resolveSortedPage: ((value: { count: number; results: PieceSummary[] }) => void) | null =
+      null;
+
+    mockFetchPieces
+      .mockResolvedValueOnce({ count: 1, results: [EXISTING_PIECE] })
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSortedPage = resolve;
+          }),
+      );
+
+    render(<PieceListPage />);
+
+    await waitFor(() => screen.getByText("Existing Bowl"));
+    await userEvent.click(screen.getByRole("button", { name: "Sort by Name" }));
+
+    expect(screen.getByTestId("piece-list")).toBeInTheDocument();
+    expect(screen.getByText("Existing Bowl")).toBeInTheDocument();
+    expect(screen.getByText("Refreshing Pieces")).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+
+    resolveSortedPage?.({
+      count: 1,
+      results: [{ ...EXISTING_PIECE, name: "Alphabetized Bowl" }],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Alphabetized Bowl")).toBeInTheDocument();
     });
   });
 

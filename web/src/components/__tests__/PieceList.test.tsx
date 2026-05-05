@@ -417,4 +417,48 @@ describe("PieceList", () => {
       });
     });
   });
+
+  describe("loading states", () => {
+    it("dims the existing list during replace-style refreshes", () => {
+      const router = createMemoryRouter(
+        [
+          {
+            path: "/",
+            element: <PieceList pieces={[makePiece()]} loading />,
+          },
+        ],
+        { initialEntries: ["/"] },
+      );
+
+      render(<RouterProvider router={router} />);
+
+      expect(screen.getByTestId("piece-list-content").getAttribute("style")).toContain(
+        "opacity: 0.42",
+      );
+      expect(screen.getByTestId("piece-list-overlay").getAttribute("style")).not.toContain(
+        "background-color: transparent",
+      );
+    });
+
+    it("keeps append pagination undimmed while showing the overlay spinner", () => {
+      const router = createMemoryRouter(
+        [
+          {
+            path: "/",
+            element: <PieceList pieces={[makePiece()]} loadingMore />,
+          },
+        ],
+        { initialEntries: ["/"] },
+      );
+
+      render(<RouterProvider router={router} />);
+
+      expect(screen.getByTestId("piece-list-content").getAttribute("style")).toContain(
+        "opacity: 1",
+      );
+      expect(screen.getByTestId("piece-list-overlay").getAttribute("style")).toContain(
+        "background-color: transparent",
+      );
+    });
+  });
 });
