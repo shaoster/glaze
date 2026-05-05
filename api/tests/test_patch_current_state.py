@@ -116,6 +116,26 @@ class TestPatchCurrentState:
         )
         assert response.status_code == 404
 
+    def test_non_owner_cannot_patch_shared_piece_state(self, client, other_user):
+        foreign_piece = Piece.objects.create(
+            user=other_user,
+            name='Shared Foreign Piece',
+            shared=True,
+        )
+        PieceState.objects.create(
+            user=other_user,
+            piece=foreign_piece,
+            state=ENTRY_STATE,
+        )
+
+        response = client.patch(
+            f'/api/pieces/{foreign_piece.id}/state/',
+            {'notes': 'Nope'},
+            format='json',
+        )
+
+        assert response.status_code == 404
+
     def test_piece_with_no_states_returns_404(self, client, user):
         from api.models import Piece
 

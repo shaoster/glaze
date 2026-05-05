@@ -64,6 +64,8 @@ export type PieceState = components["schemas"]["PieceState"] & {
 // Piece list entry. Intersection narrows current_state to use our typed StateSummary.
 export type PieceSummary = components["schemas"]["PieceSummary"] & {
   current_state: StateSummary;
+  shared: boolean;
+  can_edit: boolean;
   tags: TagEntry[];
 };
 

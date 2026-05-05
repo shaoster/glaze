@@ -395,6 +395,13 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 - Unauthenticated → login form with email/password and optional Google Sign-In button (`VITE_GOOGLE_CLIENT_ID`).
 - `Sign Up` is intentionally disabled (`SIGN_UP_ENABLED = false`); create accounts via Django admin.
 
+**Frontend routing for piece detail access:**
+
+- Unauthenticated users normally see the auth routes, but `/pieces/:id` is also registered in the unauthenticated router inside `PublicPieceShell`. That route calls the same `PieceDetailPage` as the authenticated app. The backend decides whether the piece is readable: shared pieces load read-only; private pieces return the normal load error.
+- Authenticated owners reach `/pieces/:id` through the app shell. The API returns `can_edit: true`, so `PieceDetail` renders owner controls for name, tags, location, workflow edits, image upload/photo editing, transitions, and terminal-piece sharing.
+- Authenticated non-owners can open `/pieces/:id` only when the piece is shared. The API returns `can_edit: false`, and the same `PieceDetail` component renders a read-only view with edit, upload, transition, tag, and share-management controls hidden or disabled.
+- Do not introduce a separate public piece detail page or route unless the product behavior changes. The canonical public URL is `/pieces/:id`; ownership and read-only behavior come from the API response.
+
 **Cloudinary image upload flow:**
 
 - Images are stored as a JSON array of `CaptionedImage` objects (url, caption, created, cloudinary_public_id).

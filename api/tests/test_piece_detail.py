@@ -2,8 +2,9 @@ import uuid
 
 import pytest
 from rest_framework.exceptions import ValidationError
+from rest_framework.test import APIClient
 
-from api.models import Location, Tag
+from api.models import Location, PieceState, Tag
 from api.serializers import _replace_piece_tags
 
 # ---------------------------------------------------------------------------
@@ -17,6 +18,8 @@ class TestPieceDetail:
         assert response.status_code == 200
         data = response.json()
         assert data['name'] == 'Test Bowl'
+        assert data['shared'] is False
+        assert data['can_edit'] is True
         assert 'history' in data
         assert len(data['history']) == 1
 
@@ -119,6 +122,15 @@ class TestPieceDetail:
         assert response.status_code == 201
         assert response.json()['current_location'] is None
 
+    def test_new_piece_private_by_default(self, client):
+        response = client.post(
+            '/api/pieces/',
+            {'name': 'Private by Default'},
+            format='json',
+        )
+        assert response.status_code == 201
+        assert response.json()['shared'] is False
+
     def test_patch_updates_name(self, client, piece):
         response = client.patch(
             f'/api/pieces/{piece.id}/',
@@ -163,6 +175,67 @@ class TestPieceDetail:
         assert response.json()['thumbnail'] == thumbnail
         piece.refresh_from_db()
         assert piece.thumbnail == thumbnail
+
+    def test_owner_can_share_completed_piece(self, client, piece):
+        PieceState.objects.create(
+            user=piece.user,
+            piece=piece,
+            state='completed',
+        )
+
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'shared': True},
+            format='json',
+        )
+
+        assert response.status_code == 200
+        assert response.json()['shared'] is True
+        piece.refresh_from_db()
+        assert piece.shared is True
+
+    def test_owner_can_share_recycled_piece(self, client, piece):
+        PieceState.objects.create(
+            user=piece.user,
+            piece=piece,
+            state='recycled',
+        )
+
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'shared': True},
+            format='json',
+        )
+
+        assert response.status_code == 200
+        assert response.json()['shared'] is True
+
+    def test_owner_cannot_share_non_terminal_piece(self, client, piece):
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'shared': True},
+            format='json',
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {'shared': ['Only terminal pieces can be shared.']}
+        piece.refresh_from_db()
+        assert piece.shared is False
+
+    def test_owner_can_unshare_non_terminal_piece(self, client, piece):
+        piece.shared = True
+        piece.save()
+
+        response = client.patch(
+            f'/api/pieces/{piece.id}/',
+            {'shared': False},
+            format='json',
+        )
+
+        assert response.status_code == 200
+        assert response.json()['shared'] is False
+        piece.refresh_from_db()
+        assert piece.shared is False
 
     def test_patch_updates_ordered_tags(self, client, piece, user):
         first = Tag.objects.create(user=user, name='Functional', color='#E76F51')
@@ -209,8 +282,71 @@ class TestPieceDetail:
         from api.models import ENTRY_STATE, Piece, PieceState
 
         foreign_piece = Piece.objects.create(user=other_user, name='Other User Piece')
-        PieceState.objects.create(piece=foreign_piece, state=ENTRY_STATE)
+        PieceState.objects.create(user=other_user, piece=foreign_piece, state=ENTRY_STATE)
         response = client.get(f'/api/pieces/{foreign_piece.id}/')
+        assert response.status_code == 404
+
+    def test_anonymous_can_read_shared_piece(self, piece):
+        PieceState.objects.create(user=piece.user, piece=piece, state='completed')
+        piece.shared = True
+        piece.save()
+        anon = APIClient()
+
+        response = anon.get(f'/api/pieces/{piece.id}/')
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data['name'] == 'Test Bowl'
+        assert data['shared'] is True
+        assert data['can_edit'] is False
+
+    def test_anonymous_cannot_read_private_piece(self, piece):
+        response = APIClient().get(f'/api/pieces/{piece.id}/')
+        assert response.status_code == 404
+
+    def test_anonymous_cannot_patch_shared_piece(self, piece):
+        PieceState.objects.create(user=piece.user, piece=piece, state='completed')
+        piece.shared = True
+        piece.save()
+        response = APIClient().patch(
+            f'/api/pieces/{piece.id}/',
+            {'name': 'Nope'},
+            format='json',
+        )
+
+        assert response.status_code == 403
+
+    def test_non_owner_can_read_shared_piece_read_only(self, client, other_user):
+        from api.models import ENTRY_STATE, Piece, PieceState
+
+        foreign_piece = Piece.objects.create(
+            user=other_user,
+            name='Other User Piece',
+            shared=True,
+        )
+        PieceState.objects.create(user=other_user, piece=foreign_piece, state=ENTRY_STATE)
+
+        response = client.get(f'/api/pieces/{foreign_piece.id}/')
+
+        assert response.status_code == 200
+        assert response.json()['can_edit'] is False
+
+    def test_non_owner_cannot_patch_shared_piece(self, client, other_user):
+        from api.models import ENTRY_STATE, Piece, PieceState
+
+        foreign_piece = Piece.objects.create(
+            user=other_user,
+            name='Other User Piece',
+            shared=True,
+        )
+        PieceState.objects.create(user=other_user, piece=foreign_piece, state=ENTRY_STATE)
+
+        response = client.patch(
+            f'/api/pieces/{foreign_piece.id}/',
+            {'name': 'Nope'},
+            format='json',
+        )
+
         assert response.status_code == 404
 
 

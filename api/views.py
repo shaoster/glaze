@@ -113,6 +113,21 @@ def _piece_queryset(request: Request):
     )  # type: ignore[misc]
 
 
+def _piece_read_queryset(request: Request):
+    qs = Piece.objects.prefetch_related("states", "tag_links__tag")
+    if request.user.is_authenticated:
+        return qs.filter(Q(user=request.user) | Q(shared=True))
+    return qs.filter(shared=True)
+
+
+def _serialize_piece_detail(piece: Piece, request: Request):
+    return PieceDetailSerializer(piece, context={"request": request}).data
+
+
+def _serialize_piece_summary(qs, request: Request):
+    return PieceSummarySerializer(qs, many=True, context={"request": request}).data
+
+
 def _apply_piece_ordering(qs, ordering_param: str):
     db_ordering = _PIECE_ORDERING_MAP.get(ordering_param, _PIECE_ORDERING_MAP[_DEFAULT_ORDERING])
     if "computed_last_modified" in db_ordering:
@@ -185,12 +200,12 @@ def pieces(request: Request) -> Response:
             offset = 0
         count = qs.count()
         page_qs = qs[offset : offset + limit]
-        return Response({"count": count, "results": PieceSummarySerializer(page_qs, many=True).data})
+        return Response({"count": count, "results": _serialize_piece_summary(page_qs, request)})
 
     serializer = PieceCreateSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
     piece = serializer.save()
-    return Response(PieceDetailSerializer(piece).data, status=status.HTTP_201_CREATED)
+    return Response(_serialize_piece_detail(piece, request), status=status.HTTP_201_CREATED)
 
 
 @extend_schema(methods=["GET"], operation_id="pieces_retrieve", responses={200: PieceDetailSerializer})
@@ -200,17 +215,26 @@ def pieces(request: Request) -> Response:
     responses={200: PieceDetailSerializer},
 )
 @api_view(["GET", "PATCH"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def piece_detail(request: Request, piece_id: str) -> Response:
+    if request.method == "GET":
+        piece = get_object_or_404(_piece_read_queryset(request), pk=piece_id)
+        return Response(_serialize_piece_detail(piece, request))
+
+    if not request.user.is_authenticated:
+        return Response(
+            {"detail": "Authentication credentials were not provided."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
     piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
     if request.method == "PATCH":
         serializer = PieceUpdateSerializer(
-            data=request.data, context={"request": request}
+            data=request.data, context={"request": request, "piece": piece}
         )
         serializer.is_valid(raise_exception=True)
         serializer.update(piece, serializer.validated_data)
         piece.refresh_from_db()
-    return Response(PieceDetailSerializer(piece).data)
+    return Response(_serialize_piece_detail(piece, request))
 
 
 @extend_schema(
@@ -226,7 +250,7 @@ def piece_states(request: Request, piece_id: str) -> Response:
     serializer.save()
     # Reload to pick up updated last_modified on current_state
     piece.refresh_from_db()
-    return Response(PieceDetailSerializer(piece).data, status=status.HTTP_201_CREATED)
+    return Response(_serialize_piece_detail(piece, request), status=status.HTTP_201_CREATED)
 
 
 @extend_schema(
@@ -263,7 +287,7 @@ def piece_current_state(request: Request, piece_id: str) -> Response:
     serializer.is_valid(raise_exception=True)
     serializer.update(current, serializer.validated_data)
     piece.refresh_from_db()
-    return Response(PieceDetailSerializer(piece).data)
+    return Response(_serialize_piece_detail(piece, request))
 
 
 _GLOBAL_ENTRY_SCHEMA = {

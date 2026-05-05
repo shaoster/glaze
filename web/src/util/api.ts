@@ -123,6 +123,8 @@ function mapPieceSummary(raw: Wire<PieceSummary>): PieceSummary {
     created: new Date(raw.created ?? ""),
     last_modified: new Date(raw.last_modified ?? ""),
     thumbnail: raw.thumbnail as Thumbnail | null,
+    shared: raw.shared ?? false,
+    can_edit: raw.can_edit ?? true,
     current_state: mapStateSummary(raw.current_state),
     current_location: raw.current_location ?? "",
     tags: (raw.tags ?? []).map(mapTagEntry),
@@ -291,6 +293,7 @@ export type UpdatePiecePayload = {
   name?: string;
   current_location?: string;
   thumbnail?: Thumbnail | null;
+  shared?: boolean;
   tags?: string[];
 };
 

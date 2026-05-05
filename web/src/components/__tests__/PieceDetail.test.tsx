@@ -152,6 +152,8 @@ function makePiece(overrides: Partial<PieceDetailType> = {}): PieceDetailType {
     created: new Date("2024-01-15T10:00:00Z"),
     last_modified: new Date("2024-01-15T10:00:00Z"),
     thumbnail: { url: "/thumbnails/bowl.svg", cloudinary_public_id: null, cloud_name: null },
+    shared: false,
+    can_edit: true,
     current_state: state,
     current_location: "",
     tags: [],
@@ -382,6 +384,65 @@ describe("PieceDetail", () => {
     expect(screen.getByText(/terminal state/i)).toBeInTheDocument();
   });
 
+  it("shows share controls for editable terminal pieces", async () => {
+    await renderPieceDetail(
+      makePiece({
+        current_state: makeState({ state: "completed" }),
+        history: [makeState({ state: "completed" })],
+      }),
+    );
+
+    expect(screen.getByRole("button", { name: "Share" })).toBeInTheDocument();
+  });
+
+  it("copies the public link for a shared terminal piece", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    await renderPieceDetail(
+      makePiece({
+        shared: true,
+        current_state: makeState({ state: "completed" }),
+        history: [makeState({ state: "completed" })],
+      }),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Copy link" }));
+
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(
+        "http://localhost:3000/pieces/piece-id-1",
+      ),
+    );
+  });
+
+  it("uses native share when available for a shared terminal piece", async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "share", {
+      value: share,
+      configurable: true,
+    });
+    await renderPieceDetail(
+      makePiece({
+        shared: true,
+        current_state: makeState({ state: "completed" }),
+        history: [makeState({ state: "completed" })],
+      }),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Share" }));
+
+    await waitFor(() =>
+      expect(share).toHaveBeenCalledWith({
+        title: "Test Bowl",
+        text: "Test Bowl",
+        url: "http://localhost:3000/pieces/piece-id-1",
+      }),
+    );
+  });
+
   it("shows no transition buttons for terminal states", async () => {
     const piece = makePiece({
       current_state: makeState({ state: "completed" }),
@@ -391,6 +452,29 @@ describe("PieceDetail", () => {
     expect(
       screen.queryByRole("button", { name: "Throwing" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("hides editing controls in read-only mode", async () => {
+    await renderPieceDetail(
+      makePiece({
+        can_edit: false,
+        shared: true,
+        current_state: makeState({ state: "completed" }),
+        history: [makeState({ state: "completed" })],
+      }),
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Edit piece name" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Add or edit tags" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Upload Image" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Unshare" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Notes")).toBeDisabled();
   });
 
   it("transition buttons disabled when there are unsaved changes", async () => {
