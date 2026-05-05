@@ -132,7 +132,7 @@ describe("PieceShareControls", () => {
     expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
   });
 
-  it("uses the native share sheet when available", async () => {
+  it("uses the native share sheet when available (no thumbnail)", async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "share", {
       value: share,
@@ -153,6 +153,100 @@ describe("PieceShareControls", () => {
         text: "Test Bowl",
         url: "http://localhost:3000/pieces/piece-id-1",
       }),
+    );
+  });
+
+  it("includes thumbnail file in native share when Cloudinary image is available", async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    const canShare = vi.fn().mockReturnValue(true);
+    Object.defineProperty(navigator, "share", { value: share, configurable: true });
+    Object.defineProperty(navigator, "canShare", { value: canShare, configurable: true });
+
+    const mockBlob = new Blob(["img"], { type: "image/jpeg" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ blob: () => Promise.resolve(mockBlob) }),
+    );
+
+    const thumbnail = {
+      url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+      cloudinary_public_id: "sample",
+      cloud_name: "demo",
+    };
+
+    render(
+      <ShareControls
+        piece={makePiece({ shared: true, thumbnail })}
+        onPieceUpdated={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Share" }));
+
+    await waitFor(() => expect(share).toHaveBeenCalled());
+    const shareData = share.mock.calls[0][0] as ShareData;
+    expect(shareData.files).toHaveLength(1);
+    expect((shareData.files![0] as File).name).toBe("thumbnail.jpg");
+  });
+
+  it("shares without files when thumbnail fetch fails", async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    const canShare = vi.fn().mockReturnValue(true);
+    Object.defineProperty(navigator, "share", { value: share, configurable: true });
+    Object.defineProperty(navigator, "canShare", { value: canShare, configurable: true });
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network")));
+
+    const thumbnail = {
+      url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+      cloudinary_public_id: "sample",
+      cloud_name: "demo",
+    };
+
+    render(
+      <ShareControls
+        piece={makePiece({ shared: true, thumbnail })}
+        onPieceUpdated={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Share" }));
+
+    await waitFor(() =>
+      expect(share).toHaveBeenCalledWith(
+        expect.not.objectContaining({ files: expect.anything() }),
+      ),
+    );
+  });
+
+  it("shares without files when canShare rejects file sharing", async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    const canShare = vi.fn().mockReturnValue(false);
+    Object.defineProperty(navigator, "share", { value: share, configurable: true });
+    Object.defineProperty(navigator, "canShare", { value: canShare, configurable: true });
+
+    const mockBlob = new Blob(["img"], { type: "image/jpeg" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ blob: () => Promise.resolve(mockBlob) }),
+    );
+
+    const thumbnail = {
+      url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+      cloudinary_public_id: "sample",
+      cloud_name: "demo",
+    };
+
+    render(
+      <ShareControls
+        piece={makePiece({ shared: true, thumbnail })}
+        onPieceUpdated={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Share" }));
+
+    await waitFor(() =>
+      expect(share).toHaveBeenCalledWith(
+        expect.not.objectContaining({ files: expect.anything() }),
+      ),
     );
   });
 });
