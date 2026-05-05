@@ -6,9 +6,19 @@ class used by SortableInlineAdminMixin) to match runtime behavior exactly.
 """
 import pytest
 from adminsortable2.admin import CustomInlineFormSet
+from django.contrib.admin.sites import AdminSite
+from django.contrib.auth.models import User
 from django.forms.models import inlineformset_factory
+from django.test import RequestFactory
 
-from api.models import GlazeCombination, GlazeCombinationLayer, GlazeType
+from api.admin import GlazeCombinationAdmin, GlazeCombinationLayerInline
+from api.models import (
+    FiringTemperature,
+    GlazeCombination,
+    GlazeCombinationLayer,
+    GlazeMethod,
+    GlazeType,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -144,3 +154,76 @@ class TestReorderLayers:
         assert result[0].glaze_type == gt2
         assert result[1].glaze_type == gt1
         assert result[2].glaze_type == gt3
+
+
+@pytest.mark.django_db
+class TestGlazeCombinationLayerInlineAdmin:
+    def test_foreign_key_fields_use_admin_querysets(self):
+        public = GlazeType.objects.create(user=None, name='Public')
+        user = User.objects.create(username='private@example.com', email='private@example.com')
+        GlazeType.objects.create(user=user, name='Private')
+        method = GlazeMethod.objects.create(user=user, name='Dip')
+        request = RequestFactory().get('/')
+        inline = GlazeCombinationLayerInline(GlazeCombination, AdminSite())
+
+        glaze_type_field = inline.formfield_for_foreignkey(
+            GlazeCombinationLayer._meta.get_field('glaze_type'), request
+        )
+        method_field = inline.formfield_for_foreignkey(
+            GlazeCombinationLayer._meta.get_field('glaze_method'), request
+        )
+
+        assert list(glaze_type_field.queryset) == [public]
+        assert list(method_field.queryset) == [method]
+
+    def test_get_queryset_selects_related_models(self):
+        gt = GlazeType.objects.create(user=None, name='Selectable')
+        combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt])
+        request = RequestFactory().get('/')
+        request.user = User.objects.create_superuser(
+            username='inline-admin@example.com',
+            email='inline-admin@example.com',
+            password='password',
+        )
+        inline = GlazeCombinationLayerInline(GlazeCombination, AdminSite())
+
+        queryset = inline.get_queryset(request)
+
+        assert list(queryset) == list(combo.layers.all())
+        assert {'glaze_type', 'glaze_method'} <= set(queryset.query.select_related)
+
+
+@pytest.mark.django_db
+class TestGlazeCombinationAdmin:
+    def test_firing_temperature_field_only_shows_public_entries(self):
+        public = FiringTemperature.objects.create(
+            user=None, name='Cone 6', cone='6', temperature_c=1222, atmosphere='oxidation'
+        )
+        admin_user = User.objects.create(username='admin@example.com', email='admin@example.com')
+        request = RequestFactory().get('/')
+        request.user = admin_user
+        ma = GlazeCombinationAdmin(GlazeCombination, AdminSite())
+
+        field = ma.formfield_for_foreignkey(
+            GlazeCombination._meta.get_field('firing_temperature'), request
+        )
+
+        assert list(field.queryset) == [public]
+
+    def test_save_related_recomputes_name_from_layer_order(self):
+        gt1 = GlazeType.objects.create(user=None, name='Base')
+        gt2 = GlazeType.objects.create(user=None, name='Top')
+        combo, _ = GlazeCombination.get_or_create_with_components(user=None, glaze_types=[gt1])
+        GlazeCombinationLayer.objects.create(combination=combo, glaze_type=gt2, order=1)
+        ma = GlazeCombinationAdmin(GlazeCombination, AdminSite())
+
+        class FakeForm:
+            instance = combo
+
+            def save_m2m(self):
+                pass
+
+        ma.save_related(RequestFactory().post('/'), FakeForm(), [], change=True)
+
+        combo.refresh_from_db()
+        assert combo.name == 'Base!Top'

@@ -1,10 +1,12 @@
 import pytest
 from django.apps import apps
 from django.contrib.auth.models import User
-from rest_framework.test import APIClient
+from rest_framework.request import Request
+from rest_framework.test import APIClient, APIRequestFactory
 
-from api.models import ClayBody, GlazeType, Tag
+from api.models import ClayBody, FiringTemperature, GlazeCombination, GlazeType, Tag
 from api.serializer_registry import _GLOBAL_ENTRY_SERIALIZERS
+from api.views import _apply_global_filters, _global_entries_impl
 
 
 def _get_serializer(model_name: str):
@@ -127,3 +129,113 @@ class TestGlobalEntries:
             assert model_cls in _GLOBAL_ENTRY_SERIALIZERS, (
                 f'{global_name} ({model_name}) has no registered entry serializer'
             )
+
+    def test_default_get_serializer_used_when_no_rich_serializer_registered(self, client, monkeypatch):
+        monkeypatch.delitem(_GLOBAL_ENTRY_SERIALIZERS, apps.get_model('api', 'Location'), raising=False)
+
+        response = client.get('/api/globals/location/')
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_default_post_response_used_when_no_rich_serializer_registered(self, client, monkeypatch):
+        location_model = apps.get_model('api', 'Location')
+        monkeypatch.delitem(_GLOBAL_ENTRY_SERIALIZERS, location_model, raising=False)
+
+        response = client.post(
+            '/api/globals/location/',
+            {'values': {'name': 'Default Serializer Shelf'}},
+            format='json',
+        )
+
+        assert response.status_code == 201
+        assert response.json() == {
+            'id': response.json()['id'],
+            'name': 'Default Serializer Shelf',
+        }
+
+    def test_post_rejects_unknown_values_field(self, client):
+        response = client.post(
+            '/api/globals/location/',
+            {'values': {'name': 'Shelf', 'unknown': 'nope'}},
+            format='json',
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {'detail': 'Invalid field: unknown'}
+
+    def test_default_get_serializer_stringifies_relation_display_field(self, user, monkeypatch):
+        temp = FiringTemperature.objects.create(
+            user=None, name='Cone 6 Electric', cone='6', temperature_c=1222, atmosphere='oxidation'
+        )
+        combo = GlazeCombination.objects.create(
+            user=user,
+            name='Relation Display',
+            firing_temperature=temp,
+        )
+        monkeypatch.delitem(_GLOBAL_ENTRY_SERIALIZERS, GlazeCombination, raising=False)
+        monkeypatch.setattr(
+            'api.views.get_global_model_and_field',
+            lambda global_name: (
+                GlazeCombination,
+                {'firing_temperature': {'$ref': '@firing_temperature.name'}},
+                'firing_temperature',
+            ),
+        )
+        monkeypatch.setattr('api.views.is_public_global', lambda global_name: False)
+        monkeypatch.setattr('api.views.is_private_global', lambda global_name: True)
+        django_request = APIRequestFactory().get('/api/globals/fake/')
+        request = Request(django_request)
+        request._user = user
+
+        response = _global_entries_impl(request, 'fake')
+
+        assert response.data == [
+            {
+                'id': str(combo.pk),
+                'name': 'Cone 6 Electric',
+                'is_public': False,
+            }
+        ]
+
+
+class TestApplyGlobalFilters:
+    class RecordingQuerySet:
+        def __init__(self):
+            self.filters = []
+
+        def filter(self, **kwargs):
+            self.filters.append(kwargs)
+            return self
+
+    class FilterableModel:
+        filterable_fields = {
+            'is_food_safe': {'type': 'boolean'},
+            'runs': {'type': 'boolean'},
+            'layers__glaze_type_id': {'type': 'm2m_id', 'param': 'glaze_type_ids'},
+            'firing_temperature_id': {'type': 'fk_id'},
+        }
+
+    def test_applies_boolean_m2m_and_fk_filters(self):
+        qs = self.RecordingQuerySet()
+        django_request = APIRequestFactory().get(
+            '/api/globals/glaze_combination/',
+            {
+                'is_food_safe': 'false',
+                'runs': 'true',
+                'glaze_type_ids': '1, 2',
+                'firing_temperature_id': '9',
+            },
+        )
+        request = Request(django_request)
+
+        result = _apply_global_filters(qs, self.FilterableModel, request)
+
+        assert result is qs
+        assert qs.filters == [
+            {'is_food_safe': False},
+            {'runs': True},
+            {'layers__glaze_type_id': '1'},
+            {'layers__glaze_type_id': '2'},
+            {'firing_temperature_id': '9'},
+        ]

@@ -13,7 +13,7 @@ from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
 from django.test import RequestFactory
 
-from api.models import ClayBody, GlazeType, Location
+from api.models import ClayBody, GlazeCombination, GlazeType, Location
 
 
 @pytest.mark.django_db
@@ -203,6 +203,29 @@ class TestPublicLibraryAdmin:
         obj.refresh_from_db()
         assert obj.user is None
 
+    def test_get_form_uses_public_library_form_and_cloudinary_widget(self):
+        from api.admin import (
+            CloudinaryImageWidget,
+            PublicLibraryAdmin,
+            _make_public_library_form,
+        )
+
+        superuser = User.objects.create_superuser(
+            username='su-form@example.com', email='su-form@example.com', password='password'
+        )
+        ma = PublicLibraryAdmin(GlazeType, AdminSite())
+        request = RequestFactory().get('/')
+        request.user = superuser
+
+        form_class = ma.get_form(request)
+        public_form_class = _make_public_library_form(GlazeType)
+
+        assert public_form_class._meta.model is GlazeType
+        assert 'user' in public_form_class.base_fields
+        assert form_class._meta.model is GlazeType
+        assert 'user' not in form_class.base_fields
+        assert isinstance(form_class.base_fields['test_tile_image'].widget, CloudinaryImageWidget)
+
     def test_get_queryset_excludes_private_objects(self):
         from api.admin import PublicLibraryAdmin
 
@@ -246,3 +269,47 @@ class TestPublicLibraryAdmin:
         )
         assert response.status_code == 400
         assert response.json() == {'detail': "Unknown GlazeType pk: '00000000-0000-0000-0000-000000000000'"}
+
+
+@pytest.mark.django_db
+class TestGlazeAdminSite:
+    def test_app_label_subpage_is_returned_unchanged(self, monkeypatch):
+        from api.admin import GlazeAdminSite
+
+        expected = [{'app_label': 'api', 'models': []}]
+        monkeypatch.setattr(AdminSite, 'get_app_list', lambda self, request, app_label=None: expected)
+
+        request = RequestFactory().get('/admin/api/')
+        assert GlazeAdminSite(name='glaze').get_app_list(request, app_label='api') is expected
+
+    def test_index_without_public_models_does_not_add_public_libraries(self, monkeypatch):
+        from api import admin as admin_module
+        from api.admin import GlazeAdminSite
+
+        app_list = [{'app_label': 'api', 'models': [{'object_name': 'Piece', 'name': 'Pieces'}]}]
+        monkeypatch.setattr(AdminSite, 'get_app_list', lambda self, request, app_label=None: app_list)
+        monkeypatch.setattr(admin_module, 'get_public_global_models', lambda: [])
+
+        result = GlazeAdminSite(name='glaze').get_app_list(RequestFactory().get('/admin/'))
+
+        assert result == app_list
+        assert all(app['app_label'] != 'public_libraries' for app in result)
+
+
+@pytest.mark.django_db
+class TestGlazeTypeAdmin:
+    def test_save_model_syncs_singleton_combination(self):
+        from api.admin import GlazeTypeAdmin
+
+        superuser = User.objects.create_superuser(
+            username='su-gt@example.com', email='su-gt@example.com', password='password'
+        )
+        ma = GlazeTypeAdmin(GlazeType, AdminSite())
+        request = RequestFactory().post('/')
+        request.user = superuser
+
+        glaze_type = GlazeType(name='Admin Celadon')
+        ma.save_model(request, glaze_type, type('FakeForm', (), {'cleaned_data': {}})(), change=False)
+
+        combo = GlazeCombination.objects.get(user=None, name='Admin Celadon')
+        assert list(combo.layers.values_list('glaze_type_id', flat=True)) == [glaze_type.pk]

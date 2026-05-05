@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from api.admin import (
     CloudinaryImageWidget,
     _cloudinary_lightbox_url,
@@ -101,6 +103,11 @@ class TestCloudinaryLightboxUrl:
         result = _cloudinary_lightbox_url(HEIC_IMAGE_DICT)
         assert result.endswith('.jpg')
         assert result.startswith('https://')
+
+    def test_dict_value_must_include_public_id_key(self, monkeypatch):
+        monkeypatch.setenv('CLOUDINARY_CLOUD_NAME', 'demo-cloud')
+        with pytest.raises(AssertionError, match='cloudinary_public_id'):
+            _cloudinary_lightbox_url({'url': HEIC_URL})
 
     def test_returns_original_when_no_cloud_name(self, monkeypatch):
         monkeypatch.delenv('CLOUDINARY_CLOUD_NAME', raising=False)

@@ -12,12 +12,16 @@ Covers:
 - API POST: returns 400 for unknown GlazeType IDs or empty layer list
 """
 import pytest
+from django.apps import apps
 
 from api.models import (
     COMPOSITE_NAME_SEPARATOR,
+    ENTRY_STATE,
     GlazeCombination,
     GlazeCombinationLayer,
     GlazeType,
+    Piece,
+    PieceState,
 )
 
 # ---------------------------------------------------------------------------
@@ -357,3 +361,67 @@ class TestGlazeCombinationApiPost:
         )
         assert response.status_code == 201
         assert response.json()['name'] == f'Shino{sep}Shino'
+
+
+@pytest.mark.django_db
+class TestGlazeCombinationImages:
+    def test_returns_empty_when_combo_ref_has_no_qualifying_piece_images(self, client, user):
+        gt = _pub_gt('Sparse')
+        combo = _pub_combo(gt)
+        piece = Piece.objects.create(user=user, name='Sparse Usage')
+        PieceState.objects.create(piece=piece, user=user, state=ENTRY_STATE)
+        glazed = PieceState.objects.create(piece=piece, user=user, state='glazed', images=[])
+        ref_model = apps.get_model('api', 'PieceStateGlazeCombinationRef')
+        ref_model.objects.create(
+            piece_state=glazed,
+            field_name='glaze_combination',
+            glaze_combination=combo,
+        )
+
+        response = client.get('/api/analysis/glaze-combination-images/')
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_uses_current_state_combo_ref_for_piece_grouping(self, client, user):
+        old_gt = _pub_gt('Old Combo Glaze')
+        current_gt = _pub_gt('Current Combo Glaze')
+        old_combo = _pub_combo(old_gt)
+        current_combo = _pub_combo(current_gt)
+        piece = Piece.objects.create(user=user, name='Changed Glaze Plan')
+        PieceState.objects.create(piece=piece, user=user, state=ENTRY_STATE)
+        old_state = PieceState.objects.create(
+            piece=piece,
+            user=user,
+            state='glazed',
+            images=[{'url': 'https://example.com/old.jpg', 'caption': 'old'}],
+        )
+        current_state = PieceState.objects.create(
+            piece=piece,
+            user=user,
+            state='glaze_fired',
+            images=[{'url': 'https://example.com/current.jpg', 'caption': 'current'}],
+        )
+        ref_model = apps.get_model('api', 'PieceStateGlazeCombinationRef')
+        ref_model.objects.create(
+            piece_state=old_state,
+            field_name='glaze_combination',
+            glaze_combination=old_combo,
+        )
+        ref_model.objects.create(
+            piece_state=current_state,
+            field_name='glaze_combination',
+            glaze_combination=current_combo,
+        )
+
+        response = client.get('/api/analysis/glaze-combination-images/')
+
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body) == 1
+        assert body[0]['glaze_combination']['id'] == str(current_combo.pk)
+        assert body[0]['pieces'][0]['state'] == 'glaze_fired'
+        assert [img['url'] for img in body[0]['pieces'][0]['images']] == [
+            'https://example.com/current.jpg',
+            'https://example.com/old.jpg',
+        ]

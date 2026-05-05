@@ -256,6 +256,41 @@ class TestAuthGoogle:
         profile.refresh_from_db()
         assert profile.profile_image_url == 'https://example.com/new.jpg'
 
+    def test_profile_picture_unchanged_on_repeat_login(self, settings):
+        settings.GOOGLE_OAUTH_CLIENT_ID = 'test-client-id'
+        user = User.objects.create_user(
+            username='google@example.com', email='google@example.com', password='pass'
+        )
+        profile = UserProfile.objects.create(
+            user=user,
+            openid_subject='google-sub-123',
+            profile_image_url='https://example.com/photo.jpg',
+        )
+        client = APIClient()
+        with patch('api.views.google_id_token.verify_oauth2_token', return_value=_FAKE_IDINFO.copy()):
+            resp = client.post(self.URL, {'credential': 'valid-token'}, format='json')
+        assert resp.status_code == 200
+        profile.refresh_from_db()
+        assert profile.profile_image_url == 'https://example.com/photo.jpg'
+
+    def test_missing_profile_picture_does_not_clear_existing_picture(self, settings):
+        settings.GOOGLE_OAUTH_CLIENT_ID = 'test-client-id'
+        user = User.objects.create_user(
+            username='google@example.com', email='google@example.com', password='pass'
+        )
+        profile = UserProfile.objects.create(
+            user=user,
+            openid_subject='google-sub-123',
+            profile_image_url='https://example.com/photo.jpg',
+        )
+        idinfo = {key: value for key, value in _FAKE_IDINFO.items() if key != 'picture'}
+        client = APIClient()
+        with patch('api.views.google_id_token.verify_oauth2_token', return_value=idinfo):
+            resp = client.post(self.URL, {'credential': 'valid-token'}, format='json')
+        assert resp.status_code == 200
+        profile.refresh_from_db()
+        assert profile.profile_image_url == 'https://example.com/photo.jpg'
+
     def test_missing_credential_returns_400(self, settings):
         settings.GOOGLE_OAUTH_CLIENT_ID = 'test-client-id'
         resp = APIClient().post(self.URL, {}, format='json')

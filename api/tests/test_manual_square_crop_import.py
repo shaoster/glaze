@@ -200,6 +200,34 @@ class TestManualSquareCropImport:
         assert response.status_code == 400
         assert response.json() == {'detail': 'payload must be valid JSON.'}
 
+    def test_rejects_empty_records_payload(self):
+        admin = User.objects.create(username='admin-empty@example.com', email='admin-empty@example.com', is_staff=True)
+        client = APIClient()
+        client.force_authenticate(user=admin)
+
+        response = client.post(URL, {'payload': json.dumps({'records': []})}, format='multipart')
+
+        assert response.status_code == 400
+        assert response.json() == {'detail': 'payload.records must be a non-empty list.'}
+
+    def test_returns_400_when_import_raises_value_error(self, monkeypatch):
+        admin = User.objects.create(username='admin-import-error@example.com', email='admin-import-error@example.com', is_staff=True)
+        client = APIClient()
+        client.force_authenticate(user=admin)
+        monkeypatch.setattr(
+            'api.views.import_manual_tile_records',
+            lambda records, uploaded_files: (_ for _ in ()).throw(ValueError('bad import')),
+        )
+
+        response = client.post(
+            URL,
+            {'payload': json.dumps({'records': [{'client_id': 'rec-1', 'reviewed': True}]})},
+            format='multipart',
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {'detail': 'bad import'}
+
     def test_rejects_unreviewed_records(self):
         admin = User.objects.create(username='admin6@example.com', email='admin6@example.com', is_staff=True)
         client = APIClient()
@@ -246,7 +274,6 @@ class TestEnsureCombinationLayers:
 
         _ensure_combination_layers(combo, [t1, t2])
 
-        from api.models import GlazeCombinationLayer
 
         layers = list(combo.layers.order_by('order'))
         assert len(layers) == 2

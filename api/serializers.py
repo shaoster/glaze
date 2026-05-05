@@ -50,7 +50,6 @@ from rest_framework import serializers
 from .models import (
     FiringTemperature,
     GlazeCombination,
-    Location,
     Piece,
     PieceState,
     UserProfile,
@@ -329,8 +328,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
     @extend_schema_field(StateSummarySerializer)
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
-        if cs is None:
-            raise ValueError(f"Piece {obj.id} has no states — data integrity error")
+        assert cs is not None, f"Piece {obj.id} has no states"
         return {"state": cs.state}
 
     @extend_schema_field(serializers.CharField(allow_null=True, required=False))
@@ -348,8 +346,7 @@ class PieceDetailSerializer(PieceSummarySerializer):
     @extend_schema_field(PieceStateSerializer)
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
-        if cs is None:
-            raise ValueError(f"Piece {obj.id} has no states — data integrity error")
+        assert cs is not None, f"Piece {obj.id} has no states"
         return PieceStateSerializer(cs).data
 
     @extend_schema_field(PieceStateSerializer(many=True))
@@ -427,75 +424,17 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data: dict) -> PieceState:
-        # Ensure all images have a created timestamp set by the backend.
-        images = validated_data.get("images", [])
-        if images:
-            processed: list[dict] = []
-            for img in images:
-                created_val = img.get("created", timezone.now())
-                processed.append(
-                    {
-                        "url": img["url"],
-                        "caption": img["caption"],
-                        "created": (
-                            created_val.isoformat()
-                            if hasattr(created_val, "isoformat")
-                            else str(created_val)
-                        ),
-                    }
-                )
-            validated_data["images"] = processed
+        if "images" in validated_data:
+            validated_data["images"] = _normalize_captioned_images(
+                validated_data["images"]
+            )
 
         new_state_id: str = validated_data["state"]
         piece: Piece = self.context["piece"]
-        global_ref_fields = get_global_ref_fields_for_state(new_state_id)
         incoming: dict = dict(validated_data.pop("additional_fields", {}))
-
-        # Separate incoming payload into inline fields and global-ref PKs.
-        inline_fields: dict = {}
-        global_ref_pks: dict[str, str] = {}
-        for field_name, value in incoming.items():
-            if field_name in global_ref_fields:
-                if value in (None, ""):
-                    continue
-                global_ref_pks[field_name] = str(value)
-            else:
-                inline_fields[field_name] = value
-
-        # Auto-populate state ref fields from ancestor states.
-        # Inline state refs copy from the ancestor's JSON blob.
-        # Global-ref state refs copy from the ancestor's junction row.
-        state_refs = get_state_ref_fields(new_state_id)
-        for field_name, (source_state_id, source_field_name) in state_refs.items():
-            ancestor = (
-                piece.states.filter(state=source_state_id).order_by("-created").first()
-            )
-            if ancestor is None:
-                continue
-            if field_name in global_ref_fields:
-                if field_name not in global_ref_pks:
-                    # Copy FK from the ancestor's junction table row.
-                    src_global_name = global_ref_fields[field_name]
-                    src_config = get_global_config(src_global_name)
-                    src_ref_model = apps.get_model(
-                        "api", f'PieceState{src_config["model"]}Ref'
-                    )
-                    try:
-                        src_row = src_ref_model.objects.get(
-                            piece_state=ancestor, field_name=source_field_name
-                        )
-                        global_ref_pks[field_name] = str(
-                            getattr(src_row, f"{src_global_name}_id")
-                        )
-                    except src_ref_model.DoesNotExist:
-                        pass
-            else:
-                if field_name not in inline_fields and source_field_name in (
-                    ancestor.additional_fields or {}
-                ):
-                    inline_fields[field_name] = ancestor.additional_fields[
-                        source_field_name
-                    ]
+        inline_fields, global_ref_fields, global_ref_pks, clear_global_ref_fields = (
+            _resolve_additional_field_payload(piece, new_state_id, incoming)
+        )
 
         validated_data["additional_fields"] = inline_fields
         try:
@@ -508,8 +447,61 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"additional_fields": str(exc)}) from exc
 
         # Write junction rows for global ref fields.
-        _write_global_ref_rows(piece_state, global_ref_fields, global_ref_pks)
+        _write_global_ref_rows(
+            piece_state, global_ref_fields, global_ref_pks, clear_global_ref_fields
+        )
         return piece_state
+
+
+def _resolve_additional_field_payload(
+    piece: Piece,
+    state_id: str,
+    incoming: dict,
+    *,
+    clear_empty_refs: bool = False,
+) -> tuple[dict, dict[str, str], dict[str, str], set[str]]:
+    """Split inline JSON fields from global refs and copy state-ref defaults."""
+    global_ref_fields = get_global_ref_fields_for_state(state_id)
+    inline_fields: dict = {}
+    global_ref_pks: dict[str, str] = {}
+    clear_global_ref_fields: set[str] = set()
+
+    for field_name, value in incoming.items():
+        if field_name in global_ref_fields:
+            if value in (None, ""):
+                if clear_empty_refs:
+                    clear_global_ref_fields.add(field_name)
+                continue
+            global_ref_pks[field_name] = str(value)
+        else:
+            inline_fields[field_name] = value
+
+    state_refs = get_state_ref_fields(state_id)
+    for field_name, (source_state_id, source_field_name) in state_refs.items():
+        ancestor = piece.states.filter(state=source_state_id).order_by("-created").first()
+        if ancestor is None:
+            continue
+        if field_name in global_ref_fields:
+            if field_name in global_ref_pks or field_name in clear_global_ref_fields:
+                continue
+            src_global_name = global_ref_fields[field_name]
+            src_config = get_global_config(src_global_name)
+            src_ref_model = apps.get_model("api", f'PieceState{src_config["model"]}Ref')
+            try:
+                src_row = src_ref_model.objects.get(
+                    piece_state=ancestor, field_name=source_field_name
+                )
+                global_ref_pks[field_name] = str(
+                    getattr(src_row, f"{src_global_name}_id")
+                )
+            except src_ref_model.DoesNotExist:
+                pass
+        elif field_name not in inline_fields and source_field_name in (
+            ancestor.additional_fields or {}
+        ):
+            inline_fields[field_name] = ancestor.additional_fields[source_field_name]
+
+    return inline_fields, global_ref_fields, global_ref_pks, clear_global_ref_fields
 
 
 def _write_global_ref_rows(
@@ -552,6 +544,25 @@ def _write_global_ref_rows(
         )
 
 
+def _normalize_captioned_images(images: list[dict]) -> list[dict]:
+    """Return API image payloads in the JSON shape stored by PieceState."""
+    normalized: list[dict] = []
+    for img in images:
+        created_val = img.get("created", timezone.now())
+        normalized.append(
+            {
+                "url": img["url"],
+                "caption": img["caption"],
+                "created": (
+                    created_val.isoformat()
+                    if hasattr(created_val, "isoformat")
+                    else str(created_val)
+                ),
+            }
+        )
+    return normalized
+
+
 class PieceStateUpdateSerializer(serializers.Serializer):
     """Partial update of the current PieceState's editable fields."""
 
@@ -572,37 +583,17 @@ class PieceStateUpdateSerializer(serializers.Serializer):
         if "notes" in validated_data:
             instance.notes = validated_data["notes"]
         if "images" in validated_data:
-            images_json = []
-            for img in validated_data["images"]:
-                created_val = img.get("created", timezone.now())
-                images_json.append(
-                    {
-                        "url": img["url"],
-                        "caption": img["caption"],
-                        "created": (
-                            created_val.isoformat()
-                            if hasattr(created_val, "isoformat")
-                            else str(created_val)
-                        ),
-                    }
-                )
-            instance.images = images_json
+            instance.images = _normalize_captioned_images(validated_data["images"])
         if "additional_fields" in validated_data:
             incoming: dict = dict(validated_data["additional_fields"])
-            global_ref_fields = get_global_ref_fields_for_state(instance.state)
-
-            # Separate incoming dict into inline fields and global-ref PKs.
-            inline_fields: dict = {}
-            global_ref_pks: dict[str, str] = {}
-            clear_global_ref_fields: set[str] = set()
-            for field_name, value in incoming.items():
-                if field_name in global_ref_fields:
-                    if value in (None, ""):
-                        clear_global_ref_fields.add(field_name)
-                        continue
-                    global_ref_pks[field_name] = str(value)
-                else:
-                    inline_fields[field_name] = value
+            inline_fields, global_ref_fields, global_ref_pks, clear_global_ref_fields = (
+                _resolve_additional_field_payload(
+                    instance.piece,
+                    instance.state,
+                    incoming,
+                    clear_empty_refs=True,
+                )
+            )
 
             instance.additional_fields = inline_fields
             try:
@@ -629,7 +620,7 @@ class PieceUpdateSerializer(serializers.Serializer):
 
     name = serializers.CharField(required=False, max_length=255)
     current_location = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True, default=None
+        required=False, allow_blank=True, allow_null=True
     )
     thumbnail = ThumbnailSerializer(required=False, allow_null=True)
     tags = serializers.ListField(child=serializers.CharField(), required=False)
