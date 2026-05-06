@@ -207,6 +207,10 @@ vi.mock("../../../workflow.yml", () => ({
             type: "string",
             enum: ["04", "03", "02", "01"],
           },
+          kiln_location: {
+            $ref: "@location.name",
+            can_create: true,
+          },
         },
       },
       {
@@ -222,6 +226,11 @@ vi.mock("../../../workflow.yml", () => ({
           },
           cone: {
             $ref: "bisque_fired.cone",
+          },
+          // State ref that chains to a global ref — should behave as a global ref.
+          kiln_location: {
+            $ref: "bisque_fired.kiln_location",
+            description: "Carried-forward kiln location",
           },
         },
       },
@@ -599,6 +608,26 @@ describe("getAdditionalFieldDefinitions", () => {
       expect(fields.find((field) => field.name === "optional_copy")!.required).toBe(
         false,
       );
+    });
+
+    it("state ref chaining to a global ref is treated as a global ref, not a plain state ref", () => {
+      const fields = getAdditionalFieldDefinitions("glaze_fired");
+      const f = fields.find((f) => f.name === "kiln_location")!;
+      expect(f.isGlobalRef).toBe(true);
+      expect(f.isStateRef).toBe(false);
+      expect(f.globalName).toBe("location");
+      expect(f.globalField).toBe("name");
+    });
+
+    it("state ref chaining to a global ref uses the overriding description", () => {
+      const fields = getAdditionalFieldDefinitions("glaze_fired");
+      const f = fields.find((f) => f.name === "kiln_location")!;
+      expect(f.description).toBe("Carried-forward kiln location");
+    });
+
+    it("state ref chaining to a global ref defaults canCreate to false (no can_create on the ref)", () => {
+      const fields = getAdditionalFieldDefinitions("glaze_fired");
+      expect(fields.find((f) => f.name === "kiln_location")!.canCreate).toBe(false);
     });
 
     it("falls back to string metadata for malformed, missing, or cyclic state refs", () => {
