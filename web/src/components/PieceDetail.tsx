@@ -15,7 +15,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import { useBlocker } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
 import { formatState, isTerminalState } from "../util/types";
-import { getStateSummaryDefinition } from "../util/workflow";
+import { getAdditionalFieldDefinitions, getStateSummaryDefinition } from "../util/workflow";
 import { addPieceState, updateCurrentState, updatePiece } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
 import NavigationBlocker from "./NavigationBlocker";
@@ -142,6 +142,8 @@ function PieceDetailContent({
   const isTerminal = isTerminalState(currentState.state);
   const hasStateSummary = getStateSummaryDefinition(currentState.state).length > 0;
   const canEdit = piece.can_edit;
+  const hasWorkflowContent =
+    canEdit || getAdditionalFieldDefinitions(currentState.state).length > 0;
   const pastHistory = piece.history.slice(0, -1);
   function formatDate(d: Date): string {
     const y = d.getFullYear();
@@ -497,16 +499,18 @@ function PieceDetailContent({
 
         </Box>
 
-        <SectionCard>
-          <WorkflowState
-            key={currentState.state + currentState.created.toISOString()}
-            initialPieceState={currentState}
-            pieceId={piece.id}
-            onSaved={onPieceUpdated}
-            onDirtyChange={setIsDirty}
-            readOnly={!canEdit}
-          />
-        </SectionCard>
+        {hasWorkflowContent && (
+          <SectionCard>
+            <WorkflowState
+              key={currentState.state + currentState.created.toISOString()}
+              initialPieceState={currentState}
+              pieceId={piece.id}
+              onSaved={onPieceUpdated}
+              onDirtyChange={setIsDirty}
+              readOnly={!canEdit}
+            />
+          </SectionCard>
+        )}
 
         <Divider sx={{ my: 2, opacity: 0.4 }} />
 

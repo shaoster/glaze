@@ -213,6 +213,7 @@ rtk bazel test //web:web_test
 cd web && npm run test:watch           # watch mode (no Bazel equivalent)
 
 # Web type-check + lint (both covered by the lint target)
+# Do not run tsc directly — tsc may not resolve depending on environment setup.
 rtk bazel build --config=lint //web/...
 ```
 
