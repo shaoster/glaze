@@ -419,6 +419,7 @@ function PieceDetailContent({
                   value={piece.current_location ?? ""}
                   onSelect={(entry) => void handleLocationSelect(entry)}
                   disabled={!canEdit}
+                  hideActionWhenDisabled
                   sx={{ opacity: locationSaving ? 0.7 : 1 }}
                 />
                 {locationError && (

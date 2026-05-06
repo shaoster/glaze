@@ -511,6 +511,9 @@ describe("PieceDetail", () => {
     expect(
       screen.queryByRole("button", { name: "Unshare" }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Browse Current location" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Notes")).not.toBeInTheDocument();
   });
 

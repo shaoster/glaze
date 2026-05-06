@@ -13,6 +13,7 @@ export interface GlobalEntryFieldProps {
   canCreate?: boolean;
   hideLabel?: boolean;
   disabled?: boolean;
+  hideActionWhenDisabled?: boolean;
   sx?: SxProps<Theme>;
 }
 
@@ -28,9 +29,11 @@ export default function GlobalEntryField({
   canCreate = false,
   hideLabel = false,
   disabled = false,
+  hideActionWhenDisabled = false,
   sx,
 }: GlobalEntryFieldProps) {
   const [open, setOpen] = useState(false);
+  const showAction = !disabled || !hideActionWhenDisabled;
 
   return (
     <Box sx={sx}>
@@ -58,16 +61,18 @@ export default function GlobalEntryField({
             onDelete={disabled ? undefined : () => onSelect(null)}
           />
         )}
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={() => setOpen(true)}
-          disabled={disabled}
-          aria-label={value ? `Change ${label}` : `Browse ${label}`}
-          sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
-        >
-          {value ? "Change…" : "Browse…"}
-        </Button>
+        {showAction && (
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setOpen(true)}
+            disabled={disabled}
+            aria-label={value ? `Change ${label}` : `Browse ${label}`}
+            sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
+          >
+            {value ? "Change…" : "Browse…"}
+          </Button>
+        )}
       </Box>
       {helperText && (
         <Typography
