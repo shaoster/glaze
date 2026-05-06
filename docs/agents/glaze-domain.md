@@ -224,9 +224,12 @@ PieceSummary & {
   url: string;
   caption: string;
   created: Date;
-  cloudinary_public_id: string | null;
+  cloudinary_public_id: string;
+  cloud_name: string;
 }
 ```
+
+**Image metadata contract:** Every stored image record is guaranteed to have both `cloudinary_public_id` and `cloud_name` populated. Code that renders images may always assume the Cloudinary SDK path is available — there is no fallback-to-URL-only case for images that have been through the normal upload flow.
 
 ---
 
@@ -451,9 +454,9 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 
 **Cloudinary image upload flow:**
 
-- Images are stored as a JSON array of `CaptionedImage` objects (url, caption, created, cloudinary_public_id).
+- Images are stored as a JSON array of `CaptionedImage` objects (url, caption, created, cloudinary_public_id, cloud_name). Both `cloudinary_public_id` and `cloud_name` are guaranteed to be present — see the image metadata contract in the Data Model section.
 - `WorkflowState` calls `GET /api/uploads/cloudinary/widget-config/` → opens the Cloudinary Upload Widget → widget calls `POST /api/uploads/cloudinary/widget-signature/` for signing → on success stores `secure_url` + `public_id` locally → `PATCH /api/pieces/<id>/state/` persists the array.
-- `CloudinaryImage` uses `cloudinary_public_id` (when present) for optimized delivery URLs; falls back to parsing the cloud name from the delivery URL for older images.
+- `CloudinaryImage` uses `cloudinary_public_id` and `cloud_name` for optimized delivery URLs via the Cloudinary SDK. Both fields are always present, so the SDK path is always taken.
 - Cloudinary is optional: if env vars are absent, the config endpoint returns 503 and the UI falls back to URL-paste mode.
 
 **Google OAuth frontend:**
