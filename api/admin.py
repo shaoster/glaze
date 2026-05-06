@@ -265,6 +265,15 @@ class CloudinaryImageFormField(forms.Field):
     widget = CloudinaryImageWidget
 
     def prepare_value(self, value):
+        import uuid
+
+        if isinstance(value, uuid.UUID):
+            from api.models import Image
+
+            try:
+                value = Image.objects.get(pk=value)
+            except Image.DoesNotExist:
+                value = None
         image_payload = image_to_dict(value)
         if image_payload:
             return json.dumps(image_payload)

@@ -240,6 +240,40 @@ class TestGlazeCombinationAdmin:
 
         assert list(field.queryset) == [public]
 
+    def test_change_page_renders_with_test_tile_image(self):
+        """Regression: prepare_value must handle a UUID pk, not just an Image instance.
+
+        Django admin passes the raw FK pk (UUID) to prepare_value when rendering
+        an existing object's change form, which previously caused an AttributeError.
+        """
+        from django.test import Client, override_settings
+
+        gt = GlazeType.objects.create(user=None, name="Shino")
+        combo, _ = GlazeCombination.get_or_create_with_components(
+            user=None, glaze_types=[gt]
+        )
+        from api.models import Image
+
+        image = Image.objects.create(
+            url="https://res.cloudinary.com/demo/image/upload/test/tile.jpg",
+            cloudinary_public_id="test/tile",
+            cloud_name="demo",
+        )
+        combo.test_tile_image = image
+        combo.save(update_fields=["test_tile_image"])
+
+        admin_user = User.objects.create_superuser(
+            username="admin@example.com",
+            email="admin@example.com",
+            password="password",
+        )
+        with override_settings(ALLOWED_HOSTS=["testserver"]):
+            c = Client()
+            c.force_login(admin_user)
+            response = c.get(f"/admin/api/glazecombination/{combo.pk}/change/")
+
+        assert response.status_code == 200
+
     def test_save_related_recomputes_name_from_layer_order(self):
         gt1 = GlazeType.objects.create(user=None, name="Base")
         gt2 = GlazeType.objects.create(user=None, name="Top")
