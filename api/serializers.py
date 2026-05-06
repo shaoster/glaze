@@ -43,7 +43,6 @@ from typing import Any
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
@@ -56,7 +55,13 @@ from .models import (
     models,
 )
 from .serializer_registry import _GLOBAL_ENTRY_SERIALIZERS, global_entry_serializer
-from .utils import get_or_create_location
+from .utils import (
+    captioned_image_to_dict,
+    get_or_create_location,
+    image_to_dict,
+    normalize_image_payload,
+    replace_piece_state_images,
+)
 from .workflow import (
     ENTRY_STATE,
     SUCCESSORS,
@@ -162,7 +167,7 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
     @classmethod
     def prepare_global_entry_queryset(cls, qs, display_field):
         return (
-            qs.select_related("firing_temperature")
+            qs.select_related("firing_temperature", "test_tile_image")
             .prefetch_related("layers__glaze_type")
             .order_by(display_field)
         )
@@ -181,7 +186,7 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
 
     @extend_schema_field(GlobalImageSerializer(allow_null=True))
     def get_test_tile_image(self, obj: GlazeCombination) -> dict | None:
-        return obj.test_tile_image
+        return image_to_dict(obj.test_tile_image)
 
     @extend_schema_field(GlazeTypeRefSerializer(many=True))
     def get_glaze_types(self, obj: GlazeCombination) -> list:
@@ -230,7 +235,7 @@ class CaptionedImageSerializer(serializers.Serializer):
 class PieceStateSerializer(serializers.ModelSerializer):
     previous_state = serializers.SerializerMethodField()
     next_state = serializers.SerializerMethodField()
-    images = CaptionedImageSerializer(many=True)
+    images = serializers.SerializerMethodField()
     custom_fields = serializers.SerializerMethodField()
 
     class Meta:
@@ -296,6 +301,13 @@ class PieceStateSerializer(serializers.ModelSerializer):
             data["notes"] = ""
         return data
 
+    @extend_schema_field(CaptionedImageSerializer(many=True))
+    def get_images(self, obj: PieceState) -> list[dict]:
+        links = getattr(obj, "_prefetched_objects_cache", {}).get("image_links")
+        if links is None:
+            links = obj.image_links.select_related("image").order_by("order", "pk")
+        return [captioned_image_to_dict(link) for link in links]
+
 
 class StateSummarySerializer(serializers.Serializer):
     """Minimal state representation embedded in PieceSummary list responses."""
@@ -317,7 +329,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
     current_state = serializers.SerializerMethodField()
     current_location = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
-    thumbnail = ThumbnailSerializer(allow_null=True, read_only=True)
+    thumbnail = serializers.SerializerMethodField()
     last_modified = serializers.DateTimeField(read_only=True)
 
     class Meta:
@@ -337,8 +349,8 @@ class PieceSummarySerializer(serializers.ModelSerializer):
     @classmethod
     def prepare_global_entry_queryset(cls, qs, display_field):
         return (
-            qs.select_related("current_location")
-            .prefetch_related("states", "tag_links__tag")
+            qs.select_related("current_location", "thumbnail")
+            .prefetch_related("states__image_links__image", "tag_links__tag")
             .order_by(display_field)
         )
 
@@ -358,6 +370,10 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         return bool(
             request and request.user.is_authenticated and obj.user_id == request.user.id
         )
+
+    @extend_schema_field(ThumbnailSerializer(allow_null=True))
+    def get_thumbnail(self, obj: Piece) -> dict | None:
+        return image_to_dict(obj.thumbnail)
 
 
 class PieceDetailSerializer(PieceSummarySerializer):
@@ -405,11 +421,7 @@ class PieceCreateSerializer(serializers.ModelSerializer):
         location_name = validated_data.pop("current_location", None)
         location_obj = get_or_create_location(user, location_name)
         raw_thumbnail = validated_data.pop("thumbnail", None)
-        thumbnail = (
-            {"url": raw_thumbnail, "cloudinary_public_id": None, "cloud_name": None}
-            if raw_thumbnail
-            else None
-        )
+        thumbnail = normalize_image_payload(raw_thumbnail, user=user)
         piece = Piece.objects.create(
             user=user,
             thumbnail=thumbnail,
@@ -452,10 +464,7 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data: dict) -> PieceState:
-        if "images" in validated_data:
-            validated_data["images"] = _normalize_captioned_images(
-                validated_data["images"]
-            )
+        images = validated_data.pop("images", [])
 
         new_state_id: str = validated_data["state"]
         piece: Piece = self.context["piece"]
@@ -478,6 +487,7 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         _write_global_ref_rows(
             piece_state, global_ref_fields, global_ref_pks, clear_global_ref_fields
         )
+        replace_piece_state_images(piece_state, images, user=piece.user)
         return piece_state
 
 
@@ -563,34 +573,13 @@ def _write_global_ref_rows(
             global_obj = model_cls.objects.get(pk=pk_str)
         except (model_cls.DoesNotExist, ValueError):
             raise serializers.ValidationError(
-                {
-                    f"custom_fields.{field_name}": f"Invalid {global_name} id: {pk_str!r}"
-                }
+                {f"custom_fields.{field_name}": f"Invalid {global_name} id: {pk_str!r}"}
             )
         ref_model_cls.objects.update_or_create(
             piece_state=piece_state,
             field_name=field_name,
             defaults={global_name: global_obj},
         )
-
-
-def _normalize_captioned_images(images: list[dict]) -> list[dict]:
-    """Return API image payloads in the JSON shape stored by PieceState."""
-    normalized: list[dict] = []
-    for img in images:
-        created_val = img.get("created", timezone.now())
-        normalized.append(
-            {
-                "url": img["url"],
-                "caption": img["caption"],
-                "created": (
-                    created_val.isoformat()
-                    if hasattr(created_val, "isoformat")
-                    else str(created_val)
-                ),
-            }
-        )
-    return normalized
 
 
 class PieceStateUpdateSerializer(serializers.Serializer):
@@ -613,7 +602,9 @@ class PieceStateUpdateSerializer(serializers.Serializer):
         if "notes" in validated_data:
             instance.notes = validated_data["notes"]
         if "images" in validated_data:
-            instance.images = _normalize_captioned_images(validated_data["images"])
+            replace_piece_state_images(
+                instance, validated_data["images"], user=instance.piece.user
+            )
         if "custom_fields" in validated_data:
             incoming: dict = dict(validated_data["custom_fields"])
             (
@@ -632,9 +623,7 @@ class PieceStateUpdateSerializer(serializers.Serializer):
             try:
                 instance.save()
             except ValueError as exc:
-                raise serializers.ValidationError(
-                    {"custom_fields": str(exc)}
-                ) from exc
+                raise serializers.ValidationError({"custom_fields": str(exc)}) from exc
             _write_global_ref_rows(
                 instance, global_ref_fields, global_ref_pks, clear_global_ref_fields
             )
@@ -642,9 +631,7 @@ class PieceStateUpdateSerializer(serializers.Serializer):
             try:
                 instance.save()
             except ValueError as exc:
-                raise serializers.ValidationError(
-                    {"custom_fields": str(exc)}
-                ) from exc
+                raise serializers.ValidationError({"custom_fields": str(exc)}) from exc
         return instance
 
 
@@ -676,7 +663,9 @@ class PieceUpdateSerializer(serializers.Serializer):
                 self.context["request"].user, validated_data["current_location"]
             )
         if "thumbnail" in validated_data:
-            instance.thumbnail = validated_data["thumbnail"]
+            instance.thumbnail = normalize_image_payload(
+                validated_data["thumbnail"], user=instance.user
+            )
         if "shared" in validated_data:
             instance.shared = validated_data["shared"]
         instance.save()

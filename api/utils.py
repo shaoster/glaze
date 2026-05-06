@@ -7,6 +7,8 @@ workflow-state-machine logic derived from workflow.yml).
 
 from django.apps import apps
 from django.conf import settings
+from django.db import transaction
+from django.utils import timezone
 
 DEV_THUMBNAIL_URLS = {
     "bowl": "/thumbnails/bowl.svg",
@@ -42,6 +44,103 @@ def get_or_create_location(user, name: str | None):
 
     location, _ = Location.objects.get_or_create(user=user, name=name)
     return location
+
+
+def image_to_dict(image) -> dict | None:
+    """Serialize an Image model instance to the stable API image object."""
+    if image is None:
+        return None
+    if isinstance(image, dict):
+        return {
+            "url": image.get("url") or "",
+            "cloudinary_public_id": image.get("cloudinary_public_id"),
+            "cloud_name": image.get("cloud_name"),
+        }
+    if isinstance(image, str):
+        return {
+            "url": image,
+            "cloudinary_public_id": None,
+            "cloud_name": None,
+        }
+    return {
+        "url": image.url,
+        "cloudinary_public_id": image.cloudinary_public_id,
+        "cloud_name": image.cloud_name,
+    }
+
+
+def normalize_image_payload(payload: object, user=None):
+    """Return an Image row for an API/admin image payload.
+
+    Cloudinary-backed assets are deduplicated by (cloud_name, public_id). Local
+    curated thumbnails and URL-only images are deduplicated by URL.
+    """
+    if payload in (None, ""):
+        return None
+    if isinstance(payload, str):
+        data = {"url": payload, "cloudinary_public_id": None, "cloud_name": None}
+    elif isinstance(payload, dict):
+        data = {
+            "url": payload.get("url") or "",
+            "cloudinary_public_id": payload.get("cloudinary_public_id") or None,
+            "cloud_name": payload.get("cloud_name") or None,
+        }
+    else:
+        return None
+
+    url = str(data["url"]).strip()
+    if not url:
+        return None
+
+    from .models import Image  # noqa: PLC0415
+
+    cloud_name = data["cloud_name"]
+    public_id = data["cloudinary_public_id"]
+    defaults = {"url": url, "user": user}
+    if cloud_name and public_id:
+        image, _ = Image.objects.update_or_create(
+            cloud_name=cloud_name,
+            cloudinary_public_id=public_id,
+            defaults=defaults,
+        )
+        return image
+
+    image, _ = Image.objects.get_or_create(
+        url=url,
+        cloudinary_public_id=public_id,
+        defaults={"cloud_name": cloud_name, "user": user},
+    )
+    return image
+
+
+def captioned_image_to_dict(link) -> dict:
+    """Serialize a PieceStateImage link to the stable CaptionedImage shape."""
+    image_payload = image_to_dict(link.image) or {}
+    return {
+        **image_payload,
+        "caption": link.caption,
+        "created": link.created,
+    }
+
+
+@transaction.atomic
+def replace_piece_state_images(piece_state, images: list[dict], user=None) -> None:
+    """Replace a PieceState's ordered image attachments from API payloads."""
+    from .models import PieceStateImage  # noqa: PLC0415
+
+    piece_state.image_links.all().delete()
+    for order, payload in enumerate(images):
+        image = normalize_image_payload(payload, user=user)
+        if image is None:
+            continue
+        created_val = payload.get("created") or timezone.now()
+        PieceStateImage.objects.create(
+            piece_state=piece_state,
+            image=image,
+            caption=payload.get("caption") or "",
+            created=created_val,
+            order=order,
+        )
 
 
 def sync_glaze_type_singleton_combination(
@@ -132,7 +231,13 @@ def _seed_dev_pieces(user) -> None:
     """
     import random  # noqa: PLC0415
 
-    from .models import ClayBody, GlazeCombination, GlazeType, Location, Piece  # noqa: PLC0415
+    from .models import (  # noqa: PLC0415
+        ClayBody,
+        GlazeCombination,
+        GlazeType,
+        Location,
+        Piece,
+    )
 
     rng = random.Random(42)
 
@@ -152,16 +257,17 @@ def _seed_dev_pieces(user) -> None:
         clay_bodies.append(cb)
 
     glaze_defs = [
-        ("Floating Blue",  True,  False, True,  True,  False),
-        ("Celadon Green",  True,  False, False, False, True),
-        ("Tenmoku",        True,  True,  True,  True,  False),
-        ("Shino",          True,  False, False, False, True),
-        ("Copper Red",     False, True,  True,  True,  False),
+        ("Floating Blue", True, False, True, True, False),
+        ("Celadon Green", True, False, False, False, True),
+        ("Tenmoku", True, True, True, True, False),
+        ("Shino", True, False, False, False, True),
+        ("Copper Red", False, True, True, True, False),
     ]
     combos = []
     for name, food_safe, runs, grooves, diff_clay, thin in glaze_defs:
         gt, _ = GlazeType.objects.get_or_create(
-            user=user, name=name,
+            user=user,
+            name=name,
             defaults={
                 "short_description": f"{name} — dev sample glaze.",
                 "test_tile_image": "",
@@ -189,27 +295,38 @@ def _seed_dev_pieces(user) -> None:
     def _wheel_thrown_fields(r, clay, _combo):
         weight = r.randint(400, 1800)
         return (
-            {"clay_weight_lbs": weight, "wall_thickness_mm": round(r.uniform(4.0, 12.0), 1)},
+            {
+                "clay_weight_lbs": weight,
+                "wall_thickness_mm": round(r.uniform(4.0, 12.0), 1),
+            },
             {"clay_body": ("clay_body", clay)},
         )
 
     def _trimmed_fields(r, _clay, _combo):
         pre = r.randint(400, 1800)
         return (
-            {"trimmed_weight_lbs": int(pre * r.uniform(0.7, 0.95)),
-             "pre_trim_weight_lbs": pre},
+            {
+                "trimmed_weight_lbs": int(pre * r.uniform(0.7, 0.95)),
+                "pre_trim_weight_lbs": pre,
+            },
             None,
         )
 
     def _bisque_fields(r, _clay, _combo):
         return (
-            {"kiln_temperature_c": r.randint(960, 1020), "cone": r.choice(["04", "03"])},
+            {
+                "kiln_temperature_c": r.randint(960, 1020),
+                "cone": r.choice(["04", "03"]),
+            },
             {"kiln_location": ("location", bisque_kiln)},
         )
 
     def _bisque_fired_fields(r, _clay, _combo):
         return (
-            {"kiln_temperature_c": r.randint(960, 1020), "cone": r.choice(["04", "03"])},
+            {
+                "kiln_temperature_c": r.randint(960, 1020),
+                "cone": r.choice(["04", "03"]),
+            },
             None,
         )
 
@@ -228,73 +345,98 @@ def _seed_dev_pieces(user) -> None:
     # Two paths: wheel-thrown and handbuilt.  Each is a list of
     # (state, custom_fields_fn, global_refs_fn) steps.
     WHEEL_PATH = [
-        ("designed",               None,                 None),
-        ("wheel_thrown",           _wheel_thrown_fields, None),
-        ("trimmed",                _trimmed_fields,      None),
-        ("submitted_to_bisque_fire", lambda r,c,g: (None, {"kiln_location": ("location", bisque_kiln)}), None),
-        ("bisque_fired",           _bisque_fired_fields, None),
-        ("glazed",                 _glazed_fields,       None),
-        ("submitted_to_glaze_fire", _glaze_fire_fields,  None),
-        ("glaze_fired",            _glaze_fired_fields,  None),
-        ("completed",              None,                 None),
+        ("designed", None, None),
+        ("wheel_thrown", _wheel_thrown_fields, None),
+        ("trimmed", _trimmed_fields, None),
+        (
+            "submitted_to_bisque_fire",
+            lambda r, c, g: (None, {"kiln_location": ("location", bisque_kiln)}),
+            None,
+        ),
+        ("bisque_fired", _bisque_fired_fields, None),
+        ("glazed", _glazed_fields, None),
+        ("submitted_to_glaze_fire", _glaze_fire_fields, None),
+        ("glaze_fired", _glaze_fired_fields, None),
+        ("completed", None, None),
     ]
 
     HANDBUILT_PATH = [
-        ("designed",               None,                 None),
-        ("handbuilt",              lambda r,c,g: (None, {"clay_body": ("clay_body", c)}), None),
-        ("submitted_to_bisque_fire", lambda r,c,g: (None, {"kiln_location": ("location", bisque_kiln)}), None),
-        ("bisque_fired",           _bisque_fired_fields, None),
-        ("glazed",                 _glazed_fields,       None),
-        ("submitted_to_glaze_fire", _glaze_fire_fields,  None),
-        ("glaze_fired",            _glaze_fired_fields,  None),
-        ("completed",              None,                 None),
+        ("designed", None, None),
+        ("handbuilt", lambda r, c, g: (None, {"clay_body": ("clay_body", c)}), None),
+        (
+            "submitted_to_bisque_fire",
+            lambda r, c, g: (None, {"kiln_location": ("location", bisque_kiln)}),
+            None,
+        ),
+        ("bisque_fired", _bisque_fired_fields, None),
+        ("glazed", _glazed_fields, None),
+        ("submitted_to_glaze_fire", _glaze_fire_fields, None),
+        ("glaze_fired", _glaze_fired_fields, None),
+        ("completed", None, None),
     ]
 
     FORMS = [
-        ("Bowl",    "bowl"),
-        ("Mug",     "mug"),
-        ("Vase",    "vase"),
-        ("Plate",   "plate"),
-        ("Cup",     "mug"),
-        ("Jug",     "vase"),
+        ("Bowl", "bowl"),
+        ("Mug", "mug"),
+        ("Vase", "vase"),
+        ("Plate", "plate"),
+        ("Cup", "mug"),
+        ("Jug", "vase"),
         ("Platter", "plate"),
-        ("Jar",     "bowl"),
+        ("Jar", "bowl"),
         ("Pitcher", "vase"),
-        ("Dish",    "plate"),
+        ("Dish", "plate"),
     ]
 
     ADJECTIVES = [
-        "Tall", "Short", "Wide", "Rustic", "Delicate", "Heavy",
-        "Practice", "Test", "Study", "Small", "Large", "Faceted",
-        "Carved", "Slip-Trailed", "Fluted", "Altered", "Classic",
+        "Tall",
+        "Short",
+        "Wide",
+        "Rustic",
+        "Delicate",
+        "Heavy",
+        "Practice",
+        "Test",
+        "Study",
+        "Small",
+        "Large",
+        "Faceted",
+        "Carved",
+        "Slip-Trailed",
+        "Fluted",
+        "Altered",
+        "Classic",
     ]
 
     T = DEV_THUMBNAIL_URLS
 
     from .models import Tag  # noqa: PLC0415
+
     PieceTag = apps.get_model("api", "PieceTag")
 
     TAG_DEFS = [
-        ("gift",       "#E76F51"),
+        ("gift", "#E76F51"),
         ("functional", "#2A9D8F"),
         ("decorative", "#9b5de5"),
-        ("for sale",   "#457B9D"),
-        ("wabi-sabi",  "#6d4c41"),
-        ("practice",   "#78909c"),
+        ("for sale", "#457B9D"),
+        ("wabi-sabi", "#6d4c41"),
+        ("practice", "#78909c"),
         ("commission", "#c0392b"),
-        ("series",     "#f4a261"),
+        ("series", "#f4a261"),
     ]
     tags = []
     for tag_name, tag_color in TAG_DEFS:
-        tag, _ = Tag.objects.get_or_create(user=user, name=tag_name, defaults={"color": tag_color})
+        tag, _ = Tag.objects.get_or_create(
+            user=user, name=tag_name, defaults={"color": tag_color}
+        )
         tags.append(tag)
 
     for i in range(75):
-        adj   = rng.choice(ADJECTIVES)
+        adj = rng.choice(ADJECTIVES)
         form, thumb = rng.choice(FORMS)
-        clay  = rng.choice(clay_bodies)
+        clay = rng.choice(clay_bodies)
         combo = rng.choice(combos)
-        path  = rng.choice([WHEEL_PATH, HANDBUILT_PATH])
+        path = rng.choice([WHEEL_PATH, HANDBUILT_PATH])
 
         # How far along the path does this piece get?
         # Weight distribution: more pieces in early/mid states, fewer completed.
@@ -307,7 +449,9 @@ def _seed_dev_pieces(user) -> None:
         p = Piece.objects.create(
             user=user,
             name=f"{adj} {form} #{i + 1}",
-            thumbnail={"url": T[thumb], "cloudinary_public_id": None},
+            thumbnail=normalize_image_payload(
+                {"url": T[thumb], "cloudinary_public_id": None}, user=user
+            ),
         )
 
         # Attach 0–3 random tags to each piece
@@ -318,9 +462,9 @@ def _seed_dev_pieces(user) -> None:
 
         for step_state, fields_fn, _ in path[: stop + 1]:
             af, gr = fields_fn(rng, clay, combo) if fields_fn else (None, None)
-            _create_piece_state(p, step_state,
-                custom_fields=af or {},
-                global_refs=gr or {})
+            _create_piece_state(
+                p, step_state, custom_fields=af or {}, global_refs=gr or {}
+            )
 
         if recycled:
             _create_piece_state(p, "recycled", notes="Reclaiming the clay.")

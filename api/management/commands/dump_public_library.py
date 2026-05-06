@@ -5,58 +5,72 @@ Exports all public library objects (user=NULL) from every global declared
 can be committed to git and loaded in other environments with the companion
 ``load_public_library`` command.
 """
+
 import json
 from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
+from api.utils import image_to_dict
 from api.workflow import get_public_global_models
 
-_DEFAULT_FIXTURE = Path(settings.BASE_DIR) / 'fixtures' / 'public_library.json'
+_DEFAULT_FIXTURE = Path(settings.BASE_DIR) / "fixtures" / "public_library.json"
 
 
 class Command(BaseCommand):
     help = (
-        'Export all public library objects (user=NULL) to a JSON fixture file '
-        'that can be committed to git and loaded with load_public_library.'
+        "Export all public library objects (user=NULL) to a JSON fixture file "
+        "that can be committed to git and loaded with load_public_library."
     )
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--output',
+            "--output",
             default=str(_DEFAULT_FIXTURE),
             help=(
-                f'Path to write the fixture file '
-                f'(default: {_DEFAULT_FIXTURE}). '
+                f"Path to write the fixture file "
+                f"(default: {_DEFAULT_FIXTURE}). "
                 'Use "-" to write to stdout.'
             ),
         )
 
     def handle(self, *args, **options):
-        output = options['output']
+        output = options["output"]
         records = []
 
         for model_cls in get_public_global_models():
             app_label = model_cls._meta.app_label
             model_name = model_cls._meta.model_name
-            public_qs = model_cls.objects.filter(user__isnull=True).order_by('name')  # type: ignore[attr-defined]
+            public_qs = model_cls.objects.filter(user__isnull=True).order_by("name")  # type: ignore[attr-defined]
 
             for obj in public_qs:
                 fields: dict = {}
                 for field in model_cls._meta.fields:
-                    if field.name in ('id', 'user'):
+                    if field.name in ("id", "user"):
                         continue
-                    fields[field.name] = getattr(obj, field.attname)
+                    value = getattr(obj, field.name)
+                    related_model = getattr(field, "related_model", None)
+                    if (
+                        field.is_relation
+                        and related_model is not None
+                        and related_model != "self"
+                        and related_model._meta.model_name == "image"
+                    ):
+                        fields[field.name] = image_to_dict(value)
+                    else:
+                        fields[field.name] = getattr(obj, field.attname)
 
-                records.append({
-                    'model': f'{app_label}.{model_name}',
-                    'fields': fields,
-                })
+                records.append(
+                    {
+                        "model": f"{app_label}.{model_name}",
+                        "fields": fields,
+                    }
+                )
 
         payload = json.dumps(records, indent=2, default=str)
 
-        if output == '-':
+        if output == "-":
             self.stdout.write(payload)
         else:
             out_path = Path(output)
@@ -64,6 +78,6 @@ class Command(BaseCommand):
             out_path.write_text(payload)
             self.stdout.write(
                 self.style.SUCCESS(
-                    f'Exported {len(records)} public library record(s) to {out_path}'
+                    f"Exported {len(records)} public library record(s) to {out_path}"
                 )
             )

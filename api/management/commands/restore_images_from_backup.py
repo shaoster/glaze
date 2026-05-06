@@ -21,7 +21,6 @@ same logic as migration 0026 so restored images are immediately usable.
 """
 
 import re
-import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -30,11 +29,11 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from api.models import Piece, PieceState
+from api.utils import normalize_image_payload, replace_piece_state_images
 
-
-_CLOUDINARY_HOSTNAME = 'res.cloudinary.com'
-_TRANSFORM_RE = re.compile(r'^[a-z]{1,4}_')
-_VERSION_RE = re.compile(r'^v\d+$')
+_CLOUDINARY_HOSTNAME = "res.cloudinary.com"
+_TRANSFORM_RE = re.compile(r"^[a-z]{1,4}_")
+_VERSION_RE = re.compile(r"^v\d+$")
 
 
 def _parse_cloudinary_url(url: str) -> tuple[str | None, str | None]:
@@ -44,8 +43,8 @@ def _parse_cloudinary_url(url: str) -> tuple[str | None, str | None]:
         return None, None
     if parsed.hostname != _CLOUDINARY_HOSTNAME:
         return None, None
-    parts = parsed.path.split('/')
-    if len(parts) < 5 or parts[2] != 'image' or parts[3] != 'upload':
+    parts = parsed.path.split("/")
+    if len(parts) < 5 or parts[2] != "image" or parts[3] != "upload":
         return None, None
     cloud_name = parts[1] or None
     after_upload = parts[4:]
@@ -57,50 +56,50 @@ def _parse_cloudinary_url(url: str) -> tuple[str | None, str | None]:
     public_id_parts = after_upload[i:]
     if not public_id_parts:
         return cloud_name, None
-    public_id_parts[-1] = re.sub(r'\.[^.]+$', '', public_id_parts[-1])
-    result = '/'.join(public_id_parts)
+    public_id_parts[-1] = re.sub(r"\.[^.]+$", "", public_id_parts[-1])
+    result = "/".join(public_id_parts)
     return cloud_name, (result or None)
 
 
 def _normalize_image(img: dict) -> dict:
     """Ensure the image dict has cloudinary_public_id and cloud_name set."""
-    url = img.get('url') or ''
-    cloud_name = img.get('cloud_name')
-    public_id = img.get('cloudinary_public_id')
+    url = img.get("url") or ""
+    cloud_name = img.get("cloud_name")
+    public_id = img.get("cloudinary_public_id")
     if not cloud_name or not public_id:
         derived_cloud, derived_id = _parse_cloudinary_url(url)
         cloud_name = cloud_name or derived_cloud
         public_id = public_id or derived_id
     return {
-        'url': url,
-        'cloudinary_public_id': public_id,
-        'cloud_name': cloud_name,
-        'caption': img.get('caption', ''),
-        'created': img.get('created'),
+        "url": url,
+        "cloudinary_public_id": public_id,
+        "cloud_name": cloud_name,
+        "caption": img.get("caption", ""),
+        "created": img.get("created"),
     }
 
 
 def _is_placeholder_thumbnail(thumb: dict | None) -> bool:
     if not thumb:
         return True
-    url = thumb.get('url') or ''
-    return not url or 'question-mark' in url
+    url = thumb.get("url") or ""
+    return not url or "question-mark" in url
 
 
 class Command(BaseCommand):
     help = "Restore piece images and thumbnails from a pre-migration YAML backup."
 
     def add_arguments(self, parser):
-        parser.add_argument('backup', type=Path, help='Path to the backup YAML file')
+        parser.add_argument("backup", type=Path, help="Path to the backup YAML file")
         parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Show what would be changed without writing to the database',
+            "--dry-run",
+            action="store_true",
+            help="Show what would be changed without writing to the database",
         )
 
     def handle(self, *args, **options):
-        backup_path: Path = options['backup']
-        dry_run: bool = options['dry_run']
+        backup_path: Path = options["backup"]
+        dry_run: bool = options["dry_run"]
 
         if not backup_path.exists():
             raise CommandError(f"Backup file not found: {backup_path}")
@@ -116,7 +115,7 @@ class Command(BaseCommand):
         skipped = 0
 
         for record in records:
-            piece_id = record.get('id')
+            piece_id = record.get("id")
             if not piece_id:
                 continue
 
@@ -129,20 +128,18 @@ class Command(BaseCommand):
                 skipped += 1
                 continue
 
-            history = record.get('history') or []
+            history = record.get("history") or []
 
             # --- Restore PieceState images ---
             # Build a dict: state_name → list of state records from backup
             # (a piece can pass through the same state multiple times, so we
             # pair by position in creation order)
-            db_states = list(
-                PieceState.objects.filter(piece=piece).order_by('created')
-            )
+            db_states = list(PieceState.objects.filter(piece=piece).order_by("created"))
             backup_states = list(history)
 
             # Match by index position (creation order preserved in backup)
             for i, backup_state in enumerate(backup_states):
-                backup_images = backup_state.get('images') or []
+                backup_images = backup_state.get("images") or []
                 if not backup_images:
                     continue  # Nothing to restore for this state
 
@@ -159,10 +156,11 @@ class Command(BaseCommand):
                 db_images = db_state.images or []
 
                 # Check if DB images are missing entries found in backup
-                db_urls = {img.get('url') for img in db_images if isinstance(img, dict)}
+                db_urls = {img.get("url") for img in db_images if isinstance(img, dict)}
                 missing = [
-                    img for img in backup_images
-                    if isinstance(img, dict) and img.get('url') not in db_urls
+                    img
+                    for img in backup_images
+                    if isinstance(img, dict) and img.get("url") not in db_urls
                 ]
 
                 if not missing:
@@ -178,18 +176,25 @@ class Command(BaseCommand):
                 )
                 if not dry_run:
                     with transaction.atomic():
-                        PieceState.objects.filter(pk=db_state.pk).update(images=new_images)
+                        replace_piece_state_images(
+                            db_state, new_images, user=piece.user
+                        )
 
                 restored_states += 1
 
             # --- Restore thumbnail ---
-            backup_thumb_raw = record.get('thumbnail')
+            backup_thumb_raw = record.get("thumbnail")
             if isinstance(backup_thumb_raw, str):
                 import json as _json
+
                 try:
                     backup_thumb = _json.loads(backup_thumb_raw)
                 except (ValueError, TypeError):
-                    backup_thumb = {'url': backup_thumb_raw, 'cloudinary_public_id': None, 'cloud_name': None}
+                    backup_thumb = {
+                        "url": backup_thumb_raw,
+                        "cloudinary_public_id": None,
+                        "cloud_name": None,
+                    }
             elif isinstance(backup_thumb_raw, dict):
                 backup_thumb = backup_thumb_raw
             else:
@@ -208,7 +213,10 @@ class Command(BaseCommand):
             )
             if not dry_run:
                 with transaction.atomic():
-                    Piece.objects.filter(pk=piece_id).update(thumbnail=normalized)
+                    piece.thumbnail = normalize_image_payload(
+                        normalized, user=piece.user
+                    )
+                    piece.save(update_fields=["thumbnail"])
 
             restored_thumbnails += 1
 
