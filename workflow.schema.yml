@@ -414,6 +414,14 @@ $defs:
           overrides the factory default (255 for non-description strings).
           Only meaningful when type is "string" or "image"; ignored otherwise.
         minimum: 1
+      format:
+        type: string
+        description: |
+          Optional semantic format constraint for string fields.
+          Currently supported value: "hex_color" — restricts the field to a
+          valid CSS hex color code (#RGB, #RRGGBB, #RGBA, or #RRGGBBAA).
+          Only valid when type is "string" — enforced in tests/test_workflow.py.
+        enum: [hex_color]
       label:
         type: string
         description: |

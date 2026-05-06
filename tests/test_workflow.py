@@ -762,6 +762,15 @@ class TestAdditionalFieldsDSL:
                     f"'{field_def.get('type')}' — enum is only valid on type: string"
                 )
 
+    def test_format_only_on_string_type(self, workflow):
+        """format is only meaningful on type: string fields."""
+        for context, field_name, field_def in _all_inline_fields(workflow):
+            if "format" in field_def:
+                assert field_def.get("type") == "string", (
+                    f"Field '{field_name}' in {context} declares format but type is "
+                    f"'{field_def.get('type')}' — format is only valid on type: string"
+                )
+
     def test_state_ref_state_exists(self, workflow, state_ids):
         """The state_id in a state ref must be a known state."""
         for host_state, field_name, ref_str in _all_refs(workflow):
