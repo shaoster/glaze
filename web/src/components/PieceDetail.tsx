@@ -271,7 +271,7 @@ function PieceDetailContent({
     images: galleryImages,
     pieceId: piece.id,
     currentStateNotes: currentState.notes,
-    currentStateAdditionalFields: currentState.additional_fields ?? {},
+    currentStateAdditionalFields: currentState.custom_fields ?? {},
     currentThumbnailUrl: piece.thumbnail?.url,
     onPieceUpdated,
     updatePieceFn: canEdit ? updatePiece : undefined,

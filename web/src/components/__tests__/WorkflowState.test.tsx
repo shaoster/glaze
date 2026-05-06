@@ -202,7 +202,7 @@ function makeState(overrides: Partial<PieceState> = {}): PieceState {
     images: [],
     previous_state: null,
     next_state: null,
-    additional_fields: {},
+    custom_fields: {},
     ...overrides,
   };
 }
@@ -320,7 +320,7 @@ describe("WorkflowState", () => {
     const draft = buildDraftState(
       makeState({
         state: "submitted_to_bisque_fire",
-        additional_fields: {
+        custom_fields: {
           kiln_location: { id: "loc-1", name: "Kiln A" },
         },
       }),
@@ -359,9 +359,9 @@ describe("WorkflowState", () => {
     const draft = buildDraftState(
       makeState({
         state: "submitted_to_bisque_fire",
-        additional_fields: {
+        custom_fields: {
           kiln_location: { id: 123, name: "Unsaved Kiln" },
-        } as PieceState["additional_fields"],
+        } as PieceState["custom_fields"],
       }),
     );
     expect(draft.additionalFieldInputs).toEqual(
@@ -374,10 +374,10 @@ describe("WorkflowState", () => {
     const draft = buildDraftState(
       makeState({
         state: "bisque_fired",
-        additional_fields: {
+        custom_fields: {
           kiln_temperature_c: { bad: "shape" },
           cone: { name: 4 },
-        } as PieceState["additional_fields"],
+        } as PieceState["custom_fields"],
       }),
     );
     expect(draft.additionalFieldInputs).toEqual({
@@ -497,10 +497,10 @@ describe("WorkflowState", () => {
     expect(screen.getByLabelText("Notes")).toBeInTheDocument();
   });
 
-  it("renders state-specific fields when the state defines additional_fields", async () => {
+  it("renders state-specific fields when the state defines custom_fields", async () => {
     const bisqueState = makeState({
       state: "bisque_fired",
-      additional_fields: {
+      custom_fields: {
         kiln_temperature_c: "1200",
         cone: "04",
         food_safe: true,
@@ -518,7 +518,7 @@ describe("WorkflowState", () => {
   it("renders state-reference additional fields with their values", async () => {
     const trimmedState = makeState({
       state: "trimmed",
-      additional_fields: {
+      custom_fields: {
         trimmed_weight_lbs: 900,
         pre_trim_weight_lbs: 1200,
       },
@@ -533,7 +533,7 @@ describe("WorkflowState", () => {
   it("renders state ref fields as disabled (read-only)", async () => {
     const trimmedState = makeState({
       state: "trimmed",
-      additional_fields: { pre_trim_weight_lbs: 1200 },
+      custom_fields: { pre_trim_weight_lbs: 1200 },
     });
     await act(async () => {
       render(<WorkflowState {...defaultProps} initialPieceState={trimmedState} />);
@@ -544,7 +544,7 @@ describe("WorkflowState", () => {
   it("renders inline additional fields as editable", async () => {
     const trimmedState = makeState({
       state: "trimmed",
-      additional_fields: { trimmed_weight_lbs: 900 },
+      custom_fields: { trimmed_weight_lbs: 900 },
     });
     await act(async () => {
       render(<WorkflowState {...defaultProps} initialPieceState={trimmedState} />);
@@ -558,7 +558,7 @@ describe("WorkflowState", () => {
     ]);
     const globalState = makeState({
       state: "submitted_to_bisque_fire",
-      additional_fields: { kiln_location: "" },
+      custom_fields: { kiln_location: "" },
     });
     render(<WorkflowState {...defaultProps} initialPieceState={globalState} />);
     await userEvent.click(
@@ -580,7 +580,7 @@ describe("WorkflowState", () => {
     vi.mocked(api.createGlobalEntry).mockReturnValue(createPromise);
     const globalState = makeState({
       state: "submitted_to_bisque_fire",
-      additional_fields: { kiln_location: "" },
+      custom_fields: { kiln_location: "" },
     });
     render(<WorkflowState {...defaultProps} initialPieceState={globalState} />);
     await userEvent.click(
@@ -607,7 +607,7 @@ describe("WorkflowState", () => {
   it("fetches global entries for createable global refs", async () => {
     const withGlobalRef = makeState({
       state: "submitted_to_bisque_fire",
-      additional_fields: { kiln_location: "" },
+      custom_fields: { kiln_location: "" },
     });
     render(<WorkflowState {...defaultProps} initialPieceState={withGlobalRef} />);
     await userEvent.click(
@@ -991,7 +991,7 @@ describe("WorkflowState", () => {
   it("renders enum and number additional fields for bisque_fired state", async () => {
     vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
     await act(async () => {
-      render(<WorkflowState {...defaultProps} initialPieceState={makeState({ state: "bisque_fired", additional_fields: {} })} />);
+      render(<WorkflowState {...defaultProps} initialPieceState={makeState({ state: "bisque_fired", custom_fields: {} })} />);
     });
     // cone is an enum field — verify select renders
     const coneField = screen.getByLabelText("Cone");
@@ -1007,7 +1007,7 @@ describe("WorkflowState", () => {
           onDirtyChange={onDirtyChange}
           initialPieceState={makeState({
             state: "trimmed",
-            additional_fields: { trimmed_weight_lbs: 900 },
+            custom_fields: { trimmed_weight_lbs: 900 },
           })}
         />,
       );
@@ -1023,7 +1023,7 @@ describe("WorkflowState", () => {
       makePieceDetail({
         current_state: makeState({
           state: "trimmed",
-          additional_fields: { trimmed_weight_lbs: 975 },
+          custom_fields: { trimmed_weight_lbs: 975 },
         }),
       }),
     );
@@ -1033,7 +1033,7 @@ describe("WorkflowState", () => {
         {...defaultProps}
         initialPieceState={makeState({
           state: "trimmed",
-          additional_fields: { trimmed_weight_lbs: 900 },
+          custom_fields: { trimmed_weight_lbs: 900 },
         })}
       />,
     );
@@ -1046,7 +1046,7 @@ describe("WorkflowState", () => {
       expect(api.updateCurrentState).toHaveBeenCalledWith(
         "test-piece-id",
         expect.objectContaining({
-          additional_fields: { trimmed_weight_lbs: 950 },
+          custom_fields: { trimmed_weight_lbs: 950 },
         }),
       ),
     );
@@ -1078,7 +1078,7 @@ describe("WorkflowState", () => {
 
   describe("thumbnail-backed global ref picker (glazed → glaze_combination)", () => {
     it("renders a Browse button instead of a text input for thumbnail-backed globals", async () => {
-      const glazedState = makeState({ state: "glazed", additional_fields: {} });
+      const glazedState = makeState({ state: "glazed", custom_fields: {} });
       await act(async () => {
         render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
       });
@@ -1094,7 +1094,7 @@ describe("WorkflowState", () => {
     it("shows the selected value as a chip when a glaze combination is set", async () => {
       const glazedState = makeState({
         state: "glazed",
-        additional_fields: {
+        custom_fields: {
           glaze_combination: { id: "gc1", name: "Iron Red!Clear" },
         },
       });
@@ -1110,7 +1110,7 @@ describe("WorkflowState", () => {
     it("shows the chip as deletable when a value is set", async () => {
       const glazedState = makeState({
         state: "glazed",
-        additional_fields: {
+        custom_fields: {
           glaze_combination: { id: "gc1", name: "Iron Red!Clear" },
         },
       });
@@ -1127,13 +1127,13 @@ describe("WorkflowState", () => {
         makePieceDetail({
           current_state: makeState({
             state: "glazed",
-            additional_fields: {},
+            custom_fields: {},
           }),
         }),
       );
       const glazedState = makeState({
         state: "glazed",
-        additional_fields: {
+        custom_fields: {
           glaze_combination: { id: "gc1", name: "Iron Red!Clear" },
         },
       });
@@ -1156,7 +1156,7 @@ describe("WorkflowState", () => {
         expect(api.updateCurrentState).toHaveBeenCalledWith(
           "test-piece-id",
           expect.objectContaining({
-            additional_fields: expect.objectContaining({
+            custom_fields: expect.objectContaining({
               glaze_combination: null,
             }),
           }),
@@ -1165,7 +1165,7 @@ describe("WorkflowState", () => {
     });
 
     it("opens the browse dialog when Browse button is clicked", async () => {
-      const glazedState = makeState({ state: "glazed", additional_fields: {} });
+      const glazedState = makeState({ state: "glazed", custom_fields: {} });
       render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
       await userEvent.click(
         screen.getByRole("button", { name: "Browse Glaze Combination" }),
@@ -1178,7 +1178,7 @@ describe("WorkflowState", () => {
     });
 
     it("keeps glaze combination browse-only when can_create is not set", async () => {
-      const glazedState = makeState({ state: "glazed", additional_fields: {} });
+      const glazedState = makeState({ state: "glazed", custom_fields: {} });
       render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
       await userEvent.click(
         screen.getByRole("button", { name: "Browse Glaze Combination" }),

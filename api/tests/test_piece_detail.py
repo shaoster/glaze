@@ -30,7 +30,7 @@ class TestPieceDetail:
     def test_current_state_has_full_fields(self, client, piece):
         data = client.get(f'/api/pieces/{piece.id}/').json()
         cs = data['current_state']
-        assert {'state', 'notes', 'created', 'last_modified', 'images', 'additional_fields'} <= cs.keys()
+        assert {'state', 'notes', 'created', 'last_modified', 'images', 'custom_fields'} <= cs.keys()
 
     def test_current_location_exposed(self, client, piece, user):
         location = Location.objects.create(user=user, name='Studio Q')
@@ -470,7 +470,7 @@ class TestPieceCurrentStateDetail:
         assert data['state'] == 'designed'
         assert 'notes' in data
         assert 'images' in data
-        assert 'additional_fields' in data
+        assert 'custom_fields' in data
         assert 'previous_state' in data
         assert 'next_state' in data
 

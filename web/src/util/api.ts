@@ -112,7 +112,7 @@ function mapPieceState(raw: Wire<PieceState>): PieceState {
     images: raw.images.map(mapImage),
     previous_state: raw.previous_state as State | null,
     next_state: raw.next_state as State | null,
-    additional_fields: raw.additional_fields ?? {},
+    custom_fields: raw.custom_fields ?? {},
   };
 }
 
@@ -254,7 +254,7 @@ export type AddStatePayload = {
   state: State;
   notes?: string;
   images?: Wire<CaptionedImage>[];
-  additional_fields?: Record<string, string | number | boolean | null>;
+  custom_fields?: Record<string, string | number | boolean | null>;
 };
 
 export async function addPieceState(
@@ -275,7 +275,7 @@ export type UpdateStatePayload = {
     caption: string;
     cloudinary_public_id?: string | null;
   }>;
-  additional_fields?: Record<string, string | number | boolean | null>;
+  custom_fields?: Record<string, string | number | boolean | null>;
 };
 
 export async function updateCurrentState(

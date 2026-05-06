@@ -34,7 +34,7 @@ function makePieceDetail(): PieceDetail {
       created: new Date("2024-01-15T10:00:00Z"),
       last_modified: new Date("2024-01-15T10:00:00Z"),
       images: [],
-      additional_fields: {},
+      custom_fields: {},
       previous_state: null,
       next_state: null,
     },

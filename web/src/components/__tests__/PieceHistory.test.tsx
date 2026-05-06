@@ -37,7 +37,7 @@ function makeState(overrides: Partial<PieceState> = {}): PieceState {
     images: [],
     previous_state: null,
     next_state: null,
-    additional_fields: {},
+    custom_fields: {},
     ...overrides,
   };
 }

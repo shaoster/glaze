@@ -183,7 +183,7 @@ def _seed_dev_pieces(user) -> None:
     # ------------------------------------------------------------------
     # State-step definitions
     #
-    # Each entry is (state_name, additional_fields_fn, global_refs_fn).
+    # Each entry is (state_name, custom_fields_fn, global_refs_fn).
     # The fns receive (rng, clay, combo) and return dicts (or None).
     # ------------------------------------------------------------------
     def _wheel_thrown_fields(r, clay, _combo):
@@ -226,7 +226,7 @@ def _seed_dev_pieces(user) -> None:
         )
 
     # Two paths: wheel-thrown and handbuilt.  Each is a list of
-    # (state, additional_fields_fn, global_refs_fn) steps.
+    # (state, custom_fields_fn, global_refs_fn) steps.
     WHEEL_PATH = [
         ("designed",               None,                 None),
         ("wheel_thrown",           _wheel_thrown_fields, None),
@@ -319,7 +319,7 @@ def _seed_dev_pieces(user) -> None:
         for step_state, fields_fn, _ in path[: stop + 1]:
             af, gr = fields_fn(rng, clay, combo) if fields_fn else (None, None)
             _create_piece_state(p, step_state,
-                additional_fields=af or {},
+                custom_fields=af or {},
                 global_refs=gr or {})
 
         if recycled:
@@ -331,7 +331,7 @@ def _create_piece_state(
     state: str,
     *,
     notes: str = "",
-    additional_fields: dict | None = None,
+    custom_fields: dict | None = None,
     global_refs: dict | None = None,
 ):
     """Create a PieceState plus any workflow global-ref junction rows it needs."""
@@ -343,7 +343,7 @@ def _create_piece_state(
         piece=piece,
         state=state,
         notes=notes,
-        additional_fields=additional_fields or {},
+        custom_fields=custom_fields or {},
     )
 
     for field_name, (global_name, global_obj) in (global_refs or {}).items():

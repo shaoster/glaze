@@ -35,7 +35,7 @@ class TestAdminExports:
             state='designed',
             notes='Initial sketch',
             images=[{'url': 'https://example.com/sketch.jpg', 'caption': 'Sketch'}],
-            additional_fields={},
+            custom_fields={},
         )
         PieceState.objects.create(
             piece=piece,
@@ -43,7 +43,7 @@ class TestAdminExports:
             state='handbuilt',
             notes='Built by hand',
             images=[],
-            additional_fields={},
+            custom_fields={},
         )
 
         piece_dataset = PieceResource().export(Piece.objects.filter(pk=piece.pk))
@@ -78,8 +78,8 @@ class TestAdminExports:
 
     def test_piece_resource_yaml_export_includes_plain_history(self, user):
         piece = Piece.objects.create(user=user, name='Moon Jar')
-        PieceState.objects.create(piece=piece, user=user, state='designed', notes='', images=[], additional_fields={})
-        PieceState.objects.create(piece=piece, user=user, state='handbuilt', notes='', images=[], additional_fields={})
+        PieceState.objects.create(piece=piece, user=user, state='designed', notes='', images=[], custom_fields={})
+        PieceState.objects.create(piece=piece, user=user, state='handbuilt', notes='', images=[], custom_fields={})
 
         dataset = PieceResource().export(Piece.objects.filter(pk=piece.pk))
         yaml_output = dataset.export('yaml')

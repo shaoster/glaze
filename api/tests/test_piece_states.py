@@ -85,7 +85,7 @@ class TestPieceStates:
         cs = data['current_state']
         assert cs['notes'] == 'Looks good'
 
-    def test_additional_fields_recorded(self, client, piece, user):
+    def test_custom_fields_recorded(self, client, piece, user):
         kiln = Location.objects.create(user=user, name='Kiln A')
         client.post(f'/api/pieces/{piece.id}/states/', {'state': 'wheel_thrown'}, format='json')
         client.post(f'/api/pieces/{piece.id}/states/', {'state': 'trimmed'}, format='json')
@@ -93,14 +93,14 @@ class TestPieceStates:
             f'/api/pieces/{piece.id}/states/',
             {
                 'state': 'submitted_to_bisque_fire',
-                'additional_fields': {'kiln_location': str(kiln.pk)},
+                'custom_fields': {'kiln_location': str(kiln.pk)},
             },
             format='json',
         )
         assert response.status_code == 201
         cs = response.json()['current_state']
         assert cs['state'] == 'submitted_to_bisque_fire'
-        assert cs['additional_fields']['kiln_location'] == {'id': str(kiln.pk), 'name': 'Kiln A'}
+        assert cs['custom_fields']['kiln_location'] == {'id': str(kiln.pk), 'name': 'Kiln A'}
 
     def test_create_records_images_and_global_ref_field(self, client, piece, user):
         clay = ClayBody.objects.create(user=user, name='Speckled Stoneware')
@@ -110,7 +110,7 @@ class TestPieceStates:
             {
                 'state': 'wheel_thrown',
                 'images': [{'url': 'https://example.com/throwing.jpg', 'caption': 'throwing'}],
-                'additional_fields': {
+                'custom_fields': {
                     'clay_weight_lbs': 2.5,
                     'clay_body': str(clay.pk),
                 },
@@ -122,8 +122,8 @@ class TestPieceStates:
         current = response.json()['current_state']
         assert current['images'][0]['url'] == 'https://example.com/throwing.jpg'
         assert 'created' in current['images'][0]
-        assert current['additional_fields']['clay_weight_lbs'] == 2.5
-        assert current['additional_fields']['clay_body'] == {
+        assert current['custom_fields']['clay_weight_lbs'] == 2.5
+        assert current['custom_fields']['clay_body'] == {
             'id': str(clay.pk),
             'name': 'Speckled Stoneware',
         }
@@ -133,30 +133,30 @@ class TestPieceStates:
             f'/api/pieces/{piece.id}/states/',
             {
                 'state': 'wheel_thrown',
-                'additional_fields': {'clay_weight_lbs': 'heavy'},
+                'custom_fields': {'clay_weight_lbs': 'heavy'},
             },
             format='json',
         )
 
         assert response.status_code == 400
-        assert 'additional_fields' in response.json()
+        assert 'custom_fields' in response.json()
 
-    def test_invalid_additional_fields_returns_400(self, client, piece):
-        # additional_fields must be a JSON object — passing a list should fail validation
+    def test_invalid_custom_fields_returns_400(self, client, piece):
+        # custom_fields must be a JSON object — passing a list should fail validation
         response = client.post(
             f'/api/pieces/{piece.id}/states/',
-            {'state': SUCCESSORS[ENTRY_STATE][0], 'additional_fields': ['not', 'an', 'object']},
+            {'state': SUCCESSORS[ENTRY_STATE][0], 'custom_fields': ['not', 'an', 'object']},
             format='json',
         )
         assert response.status_code == 400
 
-    def test_new_state_has_empty_additional_fields_when_no_source(self, client, piece, user):
+    def test_new_state_has_empty_custom_fields_when_no_source(self, client, piece, user):
         # If the source field for a state ref was never set, the new state's
-        # additional_fields should not include that ref field.
+        # custom_fields should not include that ref field.
         clay = ClayBody.objects.create(user=user, name='Stoneware')
         client.post(
             f'/api/pieces/{piece.id}/states/',
-            {'state': 'wheel_thrown', 'additional_fields': {'clay_body': str(clay.pk)}},
+            {'state': 'wheel_thrown', 'custom_fields': {'clay_body': str(clay.pk)}},
             format='json',
         )
         response = client.post(
@@ -167,14 +167,14 @@ class TestPieceStates:
         assert response.status_code == 201
         # clay_weight_lbs was not recorded in wheel_thrown, so pre_trim_weight_lbs
         # should not be auto-populated.
-        assert response.json()['current_state']['additional_fields'] == {}
+        assert response.json()['current_state']['custom_fields'] == {}
 
     def test_state_ref_fields_auto_populated_on_transition(self, client, piece):
         # When wheel_thrown.clay_weight_lbs is recorded, transitioning to trimmed
         # should carry it forward into pre_trim_weight_lbs automatically.
         client.post(
             f'/api/pieces/{piece.id}/states/',
-            {'state': 'wheel_thrown', 'additional_fields': {'clay_weight_lbs': 1000}},
+            {'state': 'wheel_thrown', 'custom_fields': {'clay_weight_lbs': 1000}},
             format='json',
         )
         response = client.post(
@@ -183,23 +183,23 @@ class TestPieceStates:
             format='json',
         )
         assert response.status_code == 201
-        assert response.json()['current_state']['additional_fields']['pre_trim_weight_lbs'] == 1000
+        assert response.json()['current_state']['custom_fields']['pre_trim_weight_lbs'] == 1000
 
     def test_state_ref_client_value_not_overridden(self, client, piece):
         # If the client explicitly supplies a value for a state ref field, the
         # auto-population should not override it.
         client.post(
             f'/api/pieces/{piece.id}/states/',
-            {'state': 'wheel_thrown', 'additional_fields': {'clay_weight_lbs': 1000}},
+            {'state': 'wheel_thrown', 'custom_fields': {'clay_weight_lbs': 1000}},
             format='json',
         )
         response = client.post(
             f'/api/pieces/{piece.id}/states/',
-            {'state': 'trimmed', 'additional_fields': {'pre_trim_weight_lbs': 999}},
+            {'state': 'trimmed', 'custom_fields': {'pre_trim_weight_lbs': 999}},
             format='json',
         )
         assert response.status_code == 201
-        assert response.json()['current_state']['additional_fields']['pre_trim_weight_lbs'] == 999
+        assert response.json()['current_state']['custom_fields']['pre_trim_weight_lbs'] == 999
 
     def test_global_ref_state_ref_auto_populated_on_transition(self, client, piece):
         glaze = GlazeType.objects.create(user=None, name='Copper Blue')
@@ -216,7 +216,7 @@ class TestPieceStates:
             f'/api/pieces/{piece.id}/states/',
             {
                 'state': 'glazed',
-                'additional_fields': {'glaze_combination': str(combo.pk)},
+                'custom_fields': {'glaze_combination': str(combo.pk)},
             },
             format='json',
         )
@@ -235,7 +235,7 @@ class TestPieceStates:
         )
 
         assert response.status_code == 201
-        assert response.json()['current_state']['additional_fields']['glaze_combination'] == {'id': str(combo.pk), 'name': 'Copper Blue'}
+        assert response.json()['current_state']['custom_fields']['glaze_combination'] == {'id': str(combo.pk), 'name': 'Copper Blue'}
 
     def test_piece_not_found(self, client, db):
         response = client.post(
@@ -281,5 +281,5 @@ class TestPieceStates:
             )
 
         assert exc.value.detail == {
-            'additional_fields.kiln_location': "Invalid location id: '00000000-0000-0000-0000-000000000000'"
+            'custom_fields.kiln_location': "Invalid location id: '00000000-0000-0000-0000-000000000000'"
         }
