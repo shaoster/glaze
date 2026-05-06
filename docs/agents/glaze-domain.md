@@ -73,6 +73,7 @@ clay_weight_grams:
   description: "..." # optional
   required: true # optional, default false
   enum: [a, b, c] # optional; only valid when type: string
+  format: hex_color # optional; only valid when type: string — enforces a CSS hex color pattern (#RGB / #RRGGBB / #RGBA / #RRGGBBAA)
 ```
 
 The `image` type is a DSL-level annotation: at the model layer it is stored as a `JSONField` containing `{"url": "...", "cloudinary_public_id": "..."}` (both fields required; `cloudinary_public_id` is nullable for URL-only images). `_resolve_field_def` resolves it to a JSON Schema object with `url` and `cloudinary_public_id` properties so validation enforces the correct structure. The Django admin renders a Cloudinary upload widget instead of a plain text input, and the widget stores the complete object on upload. Use `image` for any field that holds a Cloudinary-hosted image — the stored `cloudinary_public_id` enables enumerating all referenced assets for cleanup workflows.
@@ -99,6 +100,8 @@ Referential rules enforced by `TestAdditionalFieldsDSL`:
 
 - **State refs** (`state_id.field_name`): state must exist, field must be declared on it, state must be a reachable ancestor (path through the successor graph from that state to this one).
 - **Global refs** (`@global_name.field_name`): global must be declared in `globals`, field must be declared in that global's `fields`.
+- **`format` only on strings**: if a field declares `format`, its `type` must be `string` — enforced by `TestAdditionalFieldsDSL.test_format_only_on_string_type`.
+- **`format: hex_color`**: `_resolve_field_def` emits a JSON Schema `pattern` constraint so the backend rejects any value that is not a valid CSS hex color code; `_global_entries_impl` also validates this in the globals POST path and returns HTTP 400 with a human-readable error.
 
 **Terminal state summaries:** Terminal states may declare a read-only `summary`
 section that promotes useful data from prior states without creating new
@@ -403,6 +406,9 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 - [`CloudinaryImage.tsx`](../../web/src/components/CloudinaryImage.tsx) — renders a `CaptionedImage` via `@cloudinary/url-gen` + `@cloudinary/react` when available; falls back to a plain `<img>`. Sizing context: `thumbnail`/`preview` (64×64 fill), `lightbox` (90vw×80vh fit).
 - [`ImageLightbox.tsx`](../../web/src/components/ImageLightbox.tsx) — full-screen modal image viewer with caption and keyboard/touch navigation
 - [`StateChip.tsx`](../../web/src/components/StateChip.tsx) — shared workflow-state token. Takes `variant: 'current' | 'past' | 'future'` plus `isTerminal` and optional interaction hooks so list/detail/timeline UIs stay in one visual family.
+- [`WorkflowSummary.tsx`](../../web/src/components/WorkflowSummary.tsx) — renders the read-only `summary` section declared on terminal states in `workflow.yml`. Displays promoted field values, computed numeric results (`product`, `difference`, `sum`, `ratio`), and static text with optional `when` (state_exists / state_missing) visibility. Rendered by `PieceDetail` when the piece is in a terminal state.
+- [`PieceShareControls.tsx`](../../web/src/components/PieceShareControls.tsx) — owner-only sharing controls shown on terminal pieces. Renders a toggle to make the piece publicly accessible and a copyable share link; hidden from non-owners and non-terminal pieces.
+- [`PublicPieceShell.tsx`](../../web/src/components/PublicPieceShell.tsx) — thin unauthenticated route wrapper that renders `PieceDetailPage` for publicly shared terminal pieces without the main app shell. The backend decides readability; shared pieces load read-only with notes and owner controls suppressed.
 
 **Visual design system — state chips and state flow:**
 

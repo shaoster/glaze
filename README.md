@@ -85,6 +85,9 @@ The web UI is organized around a small set of React components in [`web/src/comp
 - [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx): Handles editing the current state itself, including notes, current location, workflow-driven additional fields, save/error states, image URL entry, optional Cloudinary uploads, caption editing, image removal, and lightbox launch for current-state images.
 - [`GlobalEntryField.tsx`](web/src/components/GlobalEntryField.tsx) + [`GlobalEntryDialog.tsx`](web/src/components/GlobalEntryDialog.tsx): Together provide the reusable UI for workflow globals — `GlobalEntryField` renders the autocomplete chip input and select affordance, while `GlobalEntryDialog` hosts the searchable list, inline creation form, and Cloudinary image upload for the selected global type.
 - [`ImageLightbox.tsx`](web/src/components/ImageLightbox.tsx): Shows piece images in a full-screen modal with captions plus desktop button navigation and touch swipe navigation for browsing multiple images.
+- [`WorkflowSummary.tsx`](web/src/components/WorkflowSummary.tsx): Renders the read-only summary section declared on terminal states in `workflow.yml` — displays promoted field values, computed numeric results, and static text with optional `when` conditions.
+- [`PieceShareControls.tsx`](web/src/components/PieceShareControls.tsx): Owner-only sharing controls shown on terminal pieces — toggles the public sharing flag and provides a copyable share link.
+- [`PublicPieceShell.tsx`](web/src/components/PublicPieceShell.tsx): Thin unauthenticated route wrapper that renders `PieceDetailPage` for publicly shared terminal pieces, without the main app shell.
 
 ## Quick start
 
@@ -431,7 +434,10 @@ After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` fr
 | [`__tests__/PieceList.test.tsx`](web/src/components/__tests__/PieceList.test.tsx) | Column headers, empty state, per-row data, links |
 | [`__tests__/NewPieceDialog.test.tsx`](web/src/components/__tests__/NewPieceDialog.test.tsx) | Rendering, name/notes/location/thumbnail, save/cancel behavior |
 | [`__tests__/WorkflowState.test.tsx`](web/src/components/__tests__/WorkflowState.test.tsx) | Notes, additional fields (inline, state ref, global ref), location, save button, unsaved indicator |
-| [`__tests__/PieceDetail.test.tsx`](web/src/components/__tests__/PieceDetail.test.tsx) | Rendering, state transitions, confirmation dialog, location editing |
+| [`__tests__/PieceDetail.test.tsx`](web/src/components/__tests__/PieceDetail.test.tsx) | Rendering, state transitions, confirmation dialog, location editing, can_edit read-only mode |
+| [`__tests__/WorkflowSummary.test.tsx`](web/src/components/__tests__/WorkflowSummary.test.tsx) | Value items, compute items, static text items, conditional `when` visibility, empty-section hiding |
+| [`__tests__/PieceShareControls.test.tsx`](web/src/components/__tests__/PieceShareControls.test.tsx) | Share toggle, copy-link, disabled state for non-terminal pieces |
+| [`__tests__/PublicPieceShell.test.tsx`](web/src/components/__tests__/PublicPieceShell.test.tsx) | Unauthenticated route wrapper rendering |
 
 ## Agent documentation (`docs/agents/`)
 
@@ -519,9 +525,9 @@ The workflow state machine and all valid transitions are defined in [`workflow.y
 
 When you add an `additional_fields` entry to a state in `workflow.yml`, the web automatically renders the inputs for you inside the `WorkflowState` component. Inline JSON primitives, state references, and global references are all interpreted through the helper utilities in [`web/src/util/workflow.ts`](web/src/util/workflow.ts) (`getAdditionalFieldDefinitions`, `formatWorkflowFieldLabel`, etc.) so the DSL does not need to be mentioned elsewhere in the code.
 
-1. **Inline fields** (give the field a `type`, optional `description`, `required`, and/or `enum`). They render as `TextField`s—numbers as numeric inputs, booleans as selects with `True`/`False`, enums as dropdowns—directly below Notes and above the image list.
-2. **State refs** (`$ref: "ancestor_state.field_name"`) carry a value forward from a reachable ancestor state; they render the referenced value while still allowing edits and backend validation just like inline fields.
-3. **Global refs** (`$ref: "@global_name.field_name"`) render as `Autocomplete` pickers populated from `/api/globals/<name>/`. When a `global` entry sets `can_create: true`, the Autocomplete offers a “Create …” option and posts to `/api/globals/<name>/` to create the referenced object before the main Save action persists the new value.
+1. **Inline fields** (give the field a `type`, optional `description`, `required`, `enum`, and/or `format`). They render as `TextField`s—numbers as numeric inputs, booleans as selects with `True`/`False`, enums as dropdowns—directly below Notes and above the image list. The `format: hex_color` annotation (valid on `type: string` only) adds a backend pattern constraint that rejects values which are not valid CSS hex color codes (`#RGB`, `#RRGGBB`, `#RGBA`, or `#RRGGBBAA`).
+2. **State refs** (`$ref: “ancestor_state.field_name”`) carry a value forward from a reachable ancestor state; they render the referenced value while still allowing edits and backend validation just like inline fields.
+3. **Global refs** (`$ref: “@global_name.field_name”`) render as `Autocomplete` pickers populated from `/api/globals/<name>/`. When a `global` entry sets `can_create: true`, the Autocomplete offers a “Create …” option and posts to `/api/globals/<name>/` to create the referenced object before the main Save action persists the new value.
 
 Example snippets from `workflow.yml`:
 
@@ -555,6 +561,42 @@ Example snippets from `workflow.yml`:
 (\*Global ref: renders an Autocomplete tied to the `clay_body` global, with inline creation.)
 
 [`workflow.schema.yml`](workflow.schema.yml) enforces structural rules with JSON Schema (Draft 2020-12); [`tests/test_workflow.py`](tests/test_workflow.py) enforces semantic and referential integrity rules, including verifying that every declared global and its fields match the corresponding Django model in `api/models.py`.
+
+### Terminal state summaries
+
+Terminal states (currently `completed`) may declare a read-only `summary` section in `workflow.yml` that promotes values from earlier states for display when a piece is finished. Summaries are display metadata only — they do not create new persisted fields.
+
+```yaml
+- id: completed
+  terminal: true
+  summary:
+    sections:
+      - title: Making
+        fields:
+          - label: Starting weight
+            value: wheel_thrown.clay_weight_lbs
+            when:
+              state_exists: wheel_thrown
+          - label: Trimming loss
+            compute:
+              op: difference
+              left: wheel_thrown.clay_weight_lbs
+              right: trimmed.trimmed_weight_lbs
+              unit: lb
+              decimals: 2
+            when:
+              state_exists: trimmed
+          - label: Wax resist
+            text: Not recorded
+            when:
+              state_missing: waxed
+```
+
+Each summary item uses exactly one of `value` (display a field from a prior state), `compute` (display a numeric result — `product`, `difference`, `sum`, or `ratio`), or `text` (static string). An optional `when` clause (`state_exists` or `state_missing`) hides the item when the condition is not met. `WorkflowSummary.tsx` renders the resulting sections when a piece reaches a terminal state.
+
+### Public sharing for terminal pieces
+
+When a piece reaches a terminal state (`completed` or `recycled`), the owner can make it publicly viewable via `PieceShareControls`. A shared piece is readable at its canonical URL (`/pieces/:id`) by anyone — authenticated or not — without exposing the owner's private notes. The backend controls access via the `shared` field on `Piece`; the `can_edit: bool` flag in the API response tells the frontend whether to show owner controls.
 
 ## Using the App
 
