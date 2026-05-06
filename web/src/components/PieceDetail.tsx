@@ -15,6 +15,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import { useBlocker } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
 import { formatState, isTerminalState } from "../util/types";
+import { getStateSummaryDefinition } from "../util/workflow";
 import { addPieceState, updateCurrentState, updatePiece } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
 import NavigationBlocker from "./NavigationBlocker";
@@ -22,6 +23,7 @@ import WorkflowState from "./WorkflowState";
 import TagManager from "./TagManager";
 import StateTransition from "./StateTransition";
 import PieceHistory from "./PieceHistory";
+import WorkflowSummary from "./WorkflowSummary";
 import GlobalEntryField from "./GlobalEntryField";
 import PiecePhotoGallery, {
   type PiecePhotoGalleryImage,
@@ -138,6 +140,7 @@ function PieceDetailContent({
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
   const currentState = piece.current_state;
   const isTerminal = isTerminalState(currentState.state);
+  const hasStateSummary = getStateSummaryDefinition(currentState.state).length > 0;
   const canEdit = piece.can_edit;
   const pastHistory = piece.history.slice(0, -1);
   function formatDate(d: Date): string {
@@ -513,6 +516,14 @@ function PieceDetailContent({
             <strong>{formatState(currentState.state)}</strong>). No further
             transitions are possible.
           </Alert>
+        )}
+
+        {isTerminal && hasStateSummary && (
+          <Box sx={{ mb: 2.5 }}>
+            <SectionCard title="Summary">
+              <WorkflowSummary stateId={currentState.state} history={piece.history} />
+            </SectionCard>
+          </Box>
         )}
 
         <SectionCard

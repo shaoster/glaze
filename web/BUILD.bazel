@@ -428,6 +428,7 @@ js_library(
     srcs = [
         "src/components/NavigationBlocker.tsx",
         "src/components/PieceDetail.tsx",
+        "src/components/WorkflowSummary.tsx",
     ],
     deps = [
         ":autosave_src",
@@ -653,6 +654,17 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_workflow_summary_test",
+    srcs = [
+        "src/components/__tests__/WorkflowSummary.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":piece_detail_src",
+    ],
+)
+
+vitest_test(
     name = "web_public_piece_shell_test",
     srcs = [
         "src/components/__tests__/PublicPieceShell.test.tsx",
@@ -788,6 +800,7 @@ test_suite(
         ":web_tag_manager_test",
         ":web_tag_test",
         ":web_workflow_state_test",
+        ":web_workflow_summary_test",
         ":workflow_test",
     ],
 )

@@ -56,6 +56,7 @@ interface WorkflowStateDefinition {
   terminal?: boolean;
   successors?: string[];
   fields?: Record<string, FieldDefinition>;
+  summary?: WorkflowStateSummaryDefinition;
 }
 
 export interface ComposeFromEntry {
@@ -114,6 +115,77 @@ export interface WorkflowStateMetadata {
   pastFriendlyName: string;
   description: string;
   isTerminal: boolean;
+}
+
+export type SummaryComputeOp = "product" | "difference" | "sum" | "ratio";
+
+export interface WorkflowSummaryCondition {
+  state_exists?: string;
+  state_missing?: string;
+}
+
+export interface WorkflowSummaryComputeDefinition {
+  op: SummaryComputeOp;
+  operands?: string[];
+  left?: string;
+  right?: string;
+  numerator?: string;
+  denominator?: string;
+  unit?: string;
+  decimals?: number;
+}
+
+interface WorkflowSummaryItemDefinition {
+  label?: string;
+  description?: string;
+  value?: string;
+  text?: string;
+  compute?: WorkflowSummaryComputeDefinition;
+  when?: WorkflowSummaryCondition;
+}
+
+interface WorkflowStateSummaryDefinition {
+  sections: Array<{
+    title: string;
+    fields: WorkflowSummaryItemDefinition[];
+  }>;
+}
+
+export interface WorkflowSummaryValueItem {
+  kind: "value";
+  label: string;
+  description?: string;
+  ref: string;
+  stateId: string;
+  fieldName: string;
+  field: ResolvedAdditionalField;
+  when?: WorkflowSummaryCondition;
+}
+
+export interface WorkflowSummaryTextItem {
+  kind: "text";
+  label: string;
+  description?: string;
+  text: string;
+  when?: WorkflowSummaryCondition;
+}
+
+export interface WorkflowSummaryComputeItem {
+  kind: "compute";
+  label: string;
+  description?: string;
+  compute: WorkflowSummaryComputeDefinition;
+  when?: WorkflowSummaryCondition;
+}
+
+export type WorkflowSummaryItem =
+  | WorkflowSummaryValueItem
+  | WorkflowSummaryTextItem
+  | WorkflowSummaryComputeItem;
+
+export interface WorkflowSummarySection {
+  title: string;
+  fields: WorkflowSummaryItem[];
 }
 
 /**
@@ -340,6 +412,21 @@ export function getStateMetadata(
   };
 }
 
+export function getStateSummaryDefinition(
+  stateId: string,
+): WorkflowSummarySection[] {
+  const summary = STATE_MAP.get(stateId)?.summary;
+  if (!summary) {
+    return [];
+  }
+  return summary.sections.map((section) => ({
+    title: section.title,
+    fields: section.fields
+      .map((item) => buildSummaryItem(item))
+      .filter((item): item is WorkflowSummaryItem => item !== null),
+  }));
+}
+
 function isStateRefField(def: FieldDefinition): boolean {
   return "$ref" in def && !def.$ref.startsWith("@");
 }
@@ -424,4 +511,63 @@ function parseGlobalRef(
     return [undefined, undefined];
   }
   return [globalName, fieldName];
+}
+
+function buildSummaryItem(
+  item: WorkflowSummaryItemDefinition,
+): WorkflowSummaryItem | null {
+  if (item.value) {
+    const resolved = resolveStateFieldRef(item.value);
+    if (!resolved) {
+      return null;
+    }
+    return {
+      kind: "value",
+      label: item.label ?? resolved.field.label,
+      description: item.description ?? resolved.field.description,
+      ref: item.value,
+      stateId: resolved.stateId,
+      fieldName: resolved.fieldName,
+      field: resolved.field,
+      when: item.when,
+    };
+  }
+  if (item.text !== undefined) {
+    return {
+      kind: "text",
+      label: item.label ?? "",
+      description: item.description,
+      text: item.text,
+      when: item.when,
+    };
+  }
+  if (item.compute) {
+    return {
+      kind: "compute",
+      label: item.label ?? formatWorkflowFieldLabel(item.compute.op),
+      description: item.description,
+      compute: item.compute,
+      when: item.when,
+    };
+  }
+  return null;
+}
+
+function resolveStateFieldRef(
+  ref: string,
+): { stateId: string; fieldName: string; field: ResolvedAdditionalField } | null {
+  const [stateId, fieldName] = ref.split(".", 2);
+  if (!stateId || !fieldName) {
+    return null;
+  }
+  const state = STATE_MAP.get(stateId);
+  const fieldDef = state?.fields?.[fieldName];
+  if (!fieldDef) {
+    return null;
+  }
+  return {
+    stateId,
+    fieldName,
+    field: buildResolvedField(fieldName, fieldDef),
+  };
 }

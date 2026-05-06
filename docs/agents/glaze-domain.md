@@ -100,6 +100,47 @@ Referential rules enforced by `TestAdditionalFieldsDSL`:
 - **State refs** (`state_id.field_name`): state must exist, field must be declared on it, state must be a reachable ancestor (path through the successor graph from that state to this one).
 - **Global refs** (`@global_name.field_name`): global must be declared in `globals`, field must be declared in that global's `fields`.
 
+**Terminal state summaries:** Terminal states may declare a read-only `summary`
+section that promotes useful data from prior states without creating new
+persisted fields on the terminal state. Summary items are display metadata for
+existing workflow data, so they belong in `workflow.yml` when the selected
+information is part of the domain contract for a finished piece.
+
+```yaml
+summary:
+  sections:
+    - title: Making
+      fields:
+        - label: Starting weight
+          value: wheel_thrown.clay_weight_lbs
+          when:
+            state_exists: wheel_thrown
+        - label: Trimming loss
+          compute:
+            op: difference # product | difference | sum | ratio
+            left: wheel_thrown.clay_weight_lbs
+            right: trimmed.trimmed_weight_lbs
+            unit: lb
+            decimals: 2
+          when:
+            state_exists: trimmed
+        - label: Wax resist
+          text: Not recorded
+          when:
+            state_missing: waxed
+```
+
+Summary items support exactly one of:
+
+- `value: state_id.field_name` — display a field from a reachable ancestor state.
+- `compute` — display a numeric result using `product`, `difference`, `sum`, or `ratio`.
+- `text` — display static workflow-authored text.
+
+Optional `when` clauses currently support `state_exists` and `state_missing`.
+This is intentionally conditional visibility, not a general expression language:
+use separate summary items for path-specific display instead of ternary-style
+logic. Summary computations are display-only; they are not persisted.
+
 **States** (in rough lifecycle order):
 
 Each state in [`workflow.yml`](../../workflow.yml) must declare a `friendly_name` and a `description`. Clients use the authored label directly and do not derive a fallback from the snake_case state ID.
