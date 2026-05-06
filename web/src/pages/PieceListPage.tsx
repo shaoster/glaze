@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import {
   Box,
@@ -10,6 +11,7 @@ import {
 import { useTheme } from "@mui/material/styles";
 import {
   DEFAULT_PIECE_SORT,
+  PIECE_SORT_OPTIONS,
   PIECES_PAGE_SIZE,
   fetchPieces,
 } from "../util/api";
@@ -30,7 +32,13 @@ export default function PieceListPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState<PieceSortOrder>(DEFAULT_PIECE_SORT);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sortFromUrl = searchParams.get("sort") as PieceSortOrder | null;
+  const sortOrder: PieceSortOrder =
+    sortFromUrl &&
+    PIECE_SORT_OPTIONS.some((o) => o.value === sortFromUrl)
+      ? sortFromUrl
+      : DEFAULT_PIECE_SORT;
   const [dialogOpen, setDialogOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -107,7 +115,18 @@ export default function PieceListPage() {
   }, [sortOrder, loadPage]);
 
   function handleSortChange(order: PieceSortOrder) {
-    setSortOrder(order);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (order === DEFAULT_PIECE_SORT) {
+          next.delete("sort");
+        } else {
+          next.set("sort", order);
+        }
+        return next;
+      },
+      { replace: false },
+    );
   }
 
   const handleLoadMore = useCallback(() => {
