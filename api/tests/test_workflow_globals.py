@@ -31,6 +31,7 @@ def globals_section(workflow):
 # Globals — verify against api/models.py via Django introspection
 # ---------------------------------------------------------------------------
 
+
 class TestGlobals:
     def test_all_globals_map_to_real_models(self, globals_section):
         """Every global's `model` must be a real model in the api app."""
@@ -102,7 +103,9 @@ class TestGlobals:
         """A field with use_as_thumbnail: true must have type: image."""
         for alias, global_def in globals_section.items():
             for name, field_def in global_def.get("fields", {}).items():
-                if not (isinstance(field_def, dict) and field_def.get("use_as_thumbnail")):
+                if not (
+                    isinstance(field_def, dict) and field_def.get("use_as_thumbnail")
+                ):
                     continue
                 field_type = field_def.get("type")
                 assert field_type == "image", (
@@ -110,7 +113,9 @@ class TestGlobals:
                     f"but type is '{field_type}' — only image fields may be used as thumbnails"
                 )
 
-    def test_filterable_global_ref_fields_reference_declared_globals(self, globals_section):
+    def test_filterable_global_ref_fields_reference_declared_globals(
+        self, globals_section
+    ):
         """A global ref field with filterable: true must point to a declared global."""
         for alias, global_def in globals_section.items():
             for field_name, field_def in global_def.get("fields", {}).items():
@@ -130,6 +135,7 @@ class TestGlobals:
 # ---------------------------------------------------------------------------
 # compose_from — ordered M2M composition relationships
 # ---------------------------------------------------------------------------
+
 
 class TestComposeFrom:
     def test_compose_from_referenced_global_exists(self, globals_section):

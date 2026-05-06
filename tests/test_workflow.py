@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="module")
 def workflow():
     return yaml.safe_load((ROOT / "workflow.yml").read_text())
@@ -45,6 +46,7 @@ def globals_section(workflow):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _successors_map(workflow):
     return {s["id"]: s.get("successors", []) for s in workflow["states"]}
@@ -153,7 +155,12 @@ def _resolved_field_def(workflow, state_id, field_name, seen=None):
     ref = field_def["$ref"]
     if ref.startswith("@"):
         global_name, global_field_name = ref[1:].split(".", 1)
-        return workflow.get("globals", {}).get(global_name, {}).get("fields", {}).get(global_field_name)
+        return (
+            workflow.get("globals", {})
+            .get(global_name, {})
+            .get("fields", {})
+            .get(global_field_name)
+        )
     source_state_id, source_field_name = ref.split(".", 1)
     return _resolved_field_def(workflow, source_state_id, source_field_name, seen)
 
@@ -161,6 +168,7 @@ def _resolved_field_def(workflow, state_id, field_name, seen=None):
 # ---------------------------------------------------------------------------
 # Schema validation
 # ---------------------------------------------------------------------------
+
 
 class TestSchemaValidation:
     def test_valid_workflow_passes_schema(self, workflow, schema):
@@ -218,7 +226,13 @@ class TestSchemaValidation:
         bad = {
             "version": "1.0.0",
             "states": [
-                {"id": "a", "visible": True, "past_friendly_name": "A", "description": "desc", "successors": ["b"]},
+                {
+                    "id": "a",
+                    "visible": True,
+                    "past_friendly_name": "A",
+                    "description": "desc",
+                    "successors": ["b"],
+                },
                 _state("b", terminal=True),
             ],
         }
@@ -229,7 +243,13 @@ class TestSchemaValidation:
         bad = {
             "version": "1.0.0",
             "states": [
-                {"id": "a", "visible": True, "friendly_name": "A", "description": "desc", "successors": ["b"]},
+                {
+                    "id": "a",
+                    "visible": True,
+                    "friendly_name": "A",
+                    "description": "desc",
+                    "successors": ["b"],
+                },
                 _state("b", terminal=True),
             ],
         }
@@ -240,7 +260,13 @@ class TestSchemaValidation:
         bad = {
             "version": "1.0.0",
             "states": [
-                {"id": "a", "visible": True, "friendly_name": "A", "past_friendly_name": "A", "successors": ["b"]},
+                {
+                    "id": "a",
+                    "visible": True,
+                    "friendly_name": "A",
+                    "past_friendly_name": "A",
+                    "successors": ["b"],
+                },
                 _state("b", terminal=True),
             ],
         }
@@ -434,7 +460,11 @@ class TestSchemaValidation:
                                         },
                                         "when": {"state_exists": "a"},
                                     },
-                                    {"label": "Path", "text": "No wax", "when": {"state_missing": "waxed"}},
+                                    {
+                                        "label": "Path",
+                                        "text": "No wax",
+                                        "when": {"state_missing": "waxed"},
+                                    },
                                 ],
                             }
                         ]
@@ -453,7 +483,11 @@ class TestSchemaValidation:
                 _state(
                     "b",
                     terminal=True,
-                    summary={"sections": [{"title": "Result", "fields": [{"label": "Missing"}]}]},
+                    summary={
+                        "sections": [
+                            {"title": "Result", "fields": [{"label": "Missing"}]}
+                        ]
+                    },
                 ),
             ],
         }
@@ -475,7 +509,10 @@ class TestSchemaValidation:
                                 "fields": [
                                     {
                                         "label": "Bad",
-                                        "compute": {"op": "median", "operands": ["a.x", "a.x"]},
+                                        "compute": {
+                                            "op": "median",
+                                            "operands": ["a.x", "a.x"],
+                                        },
                                     }
                                 ],
                             }
@@ -658,6 +695,7 @@ class TestSchemaValidation:
 # Referential integrity (things JSON Schema cannot express)
 # ---------------------------------------------------------------------------
 
+
 class TestReferentialIntegrity:
     def test_all_successor_ids_exist(self, workflow, state_ids):
         """Every id listed in a state's successors must be a known state id."""
@@ -752,6 +790,7 @@ class TestReferentialIntegrity:
 # Additional fields DSL — referential integrity
 # ---------------------------------------------------------------------------
 
+
 class TestAdditionalFieldsDSL:
     def test_enum_only_on_string_type(self, workflow):
         """enum is only meaningful on type: string fields."""
@@ -784,8 +823,7 @@ class TestAdditionalFieldsDSL:
     def test_state_ref_field_exists(self, workflow):
         """The field_name in a state ref must be declared on that state."""
         fields_by_state = {
-            s["id"]: set(s.get("fields", {}).keys())
-            for s in workflow["states"]
+            s["id"]: set(s.get("fields", {}).keys()) for s in workflow["states"]
         }
         for host_state, field_name, ref_str in _all_refs(workflow):
             kind, ref_state, ref_field = _parse_ref(ref_str)

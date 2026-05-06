@@ -3,10 +3,11 @@
 Runs mypy over the paths passed as argv arguments, with the config file
 read from mypy.ini in the workspace root (available via runfiles).
 """
+
 import os
 import sys
-import mypy.main
 
+import mypy.main
 
 if __name__ == "__main__":
     # Bazel sets RUNFILES_DIR; _main is the canonical workspace name.

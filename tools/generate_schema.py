@@ -8,6 +8,7 @@ Django setup requirements:
     - No real database is needed: spectacular generates the schema entirely
       from code introspection (models, serializers, views).
 """
+
 import os
 import sys
 
@@ -17,6 +18,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
 os.environ.setdefault("DATABASE_URL", "sqlite:///schema_gen_tmp.db")
 
 import django  # noqa: E402
+
 django.setup()
 
 from django.core.management import call_command  # noqa: E402

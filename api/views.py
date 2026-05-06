@@ -55,7 +55,7 @@ from .workflow import (
     is_public_global,
 )
 
-_HEX_COLOR_RE = re.compile(r'^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$')
+_HEX_COLOR_RE = re.compile(r"^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 
 
 def _apply_global_filters(qs, model_cls, request):
@@ -467,10 +467,12 @@ def _global_entries_impl(request: Request, global_name: str) -> Response:
 
     for field_name, field_val in payload.items():
         field_def = fields.get(field_name, {})
-        if field_def.get('format') == 'hex_color' and field_val is not None:
+        if field_def.get("format") == "hex_color" and field_val is not None:
             if not _HEX_COLOR_RE.match(str(field_val)):
                 return Response(
-                    {"detail": f"{field_name} must be a valid hex color code (e.g. #rgb or #rrggbb)."},
+                    {
+                        "detail": f"{field_name} must be a valid hex color code (e.g. #rgb or #rrggbb)."
+                    },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 

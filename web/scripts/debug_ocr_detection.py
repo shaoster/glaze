@@ -12,23 +12,26 @@ Outputs a PNG showing:
   - the bottom-third search boundary (blue dashed)
 """
 
+import math
 import sys
 from pathlib import Path
+
 from PIL import Image, ImageDraw
-import math
 
 # ── Tuneable constants (mirror GlazeImportToolPage.tsx) ──────────────────────
 ANALYSIS_SIZE = 128
-LABEL_WHITE_THRESHOLD = 0.75   # phase-1: catch pink/salmon labels (~0.80 lum)
-TEXT_DARK_THRESHOLD   = 0.50   # phase-2: also catches coloured text (red ~0.45)
-WHITE_SCORE           = 1.0
-NONWHITE_PENALTY      = -0.4
-TEXT_PAD              = 3
-MIN_LABEL_FRACTION    = 0.1
+LABEL_WHITE_THRESHOLD = 0.75  # phase-1: catch pink/salmon labels (~0.80 lum)
+TEXT_DARK_THRESHOLD = 0.50  # phase-2: also catches coloured text (red ~0.45)
+WHITE_SCORE = 1.0
+NONWHITE_PENALTY = -0.4
+TEXT_PAD = 3
+MIN_LABEL_FRACTION = 0.1
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def luminance(r, g, b):
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
+
 
 def run_detection(img_path: str):
     src = Image.open(img_path).convert("RGB")
@@ -36,19 +39,19 @@ def run_detection(img_path: str):
     w, h = src.size
     side = min(w, h)
     left = (w - side) // 2
-    top  = (h - side) // 2
-    src  = src.crop((left, top, left + side, top + side))
+    top = (h - side) // 2
+    src = src.crop((left, top, left + side, top + side))
 
     N = ANALYSIS_SIZE
     small = src.resize((N, N), Image.LANCZOS)
-    pixels = list(small.getdata())   # list of (r,g,b)
+    pixels = list(small.getdata())  # list of (r,g,b)
 
     bright = [0.0] * (N * N)
-    score  = [0.0] * (N * N)
+    score = [0.0] * (N * N)
     for i, (r, g, b) in enumerate(pixels):
         lum = luminance(r, g, b)
         bright[i] = lum
-        score[i]  = WHITE_SCORE if lum >= LABEL_WHITE_THRESHOLD else NONWHITE_PENALTY
+        score[i] = WHITE_SCORE if lum >= LABEL_WHITE_THRESHOLD else NONWHITE_PENALTY
 
     row_search_start = math.floor(N * 2 / 3)
 
@@ -84,11 +87,15 @@ def run_detection(img_path: str):
     print(f"Bottom-third starts at row: {row_search_start}")
     print(f"Found label: {found_label}  score={best_total:.1f}")
     if found_label:
-        print(f"  Label rect (grid px): r=[{label_r1},{label_r2}] c=[{label_c1},{label_c2}]")
+        print(
+            f"  Label rect (grid px): r=[{label_r1},{label_r2}] c=[{label_c1},{label_c2}]"
+        )
         row_span = label_r2 - label_r1
         col_span = label_c2 - label_c1
-        print(f"  Row span {row_span} (min {N*MIN_LABEL_FRACTION:.0f}), "
-              f"col span {col_span} (min {N*MIN_LABEL_FRACTION:.0f})")
+        print(
+            f"  Row span {row_span} (min {N * MIN_LABEL_FRACTION:.0f}), "
+            f"col span {col_span} (min {N * MIN_LABEL_FRACTION:.0f})"
+        )
         if row_span < N * MIN_LABEL_FRACTION or col_span < N * MIN_LABEL_FRACTION:
             print("  → REJECTED (too small) → using defaultOcrRegion")
             found_label = False
@@ -116,7 +123,7 @@ def run_detection(img_path: str):
             print(f"  Text bbox (grid px): r=[{ry_min},{ry_max}] c=[{rx_min},{rx_max}]")
 
     # ── Visualisation ────────────────────────────────────────────────────────
-    scale = 8   # blow the 128-px grid up to 1024 px for visibility
+    scale = 8  # blow the 128-px grid up to 1024 px for visibility
     vis_size = N * scale
     vis = small.resize((vis_size, vis_size), Image.NEAREST)
     draw = ImageDraw.Draw(vis)
@@ -124,7 +131,8 @@ def run_detection(img_path: str):
     def grid_rect(r1, c1, r2, c2, colour, width=2):
         draw.rectangle(
             [c1 * scale, r1 * scale, (c2 + 1) * scale - 1, (r2 + 1) * scale - 1],
-            outline=colour, width=width,
+            outline=colour,
+            width=width,
         )
 
     # Blue line: bottom-third boundary
@@ -146,9 +154,9 @@ def run_detection(img_path: str):
     print("  Red rect   = detected text bounding box")
 
     # Print luminance stats for bottom third to help tune thresholds
-    bottom_lums = [bright[r * N + c]
-                   for r in range(row_search_start, N)
-                   for c in range(N)]
+    bottom_lums = [
+        bright[r * N + c] for r in range(row_search_start, N) for c in range(N)
+    ]
     bottom_lums.sort(reverse=True)
     n = len(bottom_lums)
     print(f"\nLuminance stats for bottom third ({n} pixels):")
@@ -157,8 +165,8 @@ def run_detection(img_path: str):
         print(f"  top {pct:2d}% brightest: {bottom_lums[idx]:.3f}")
     print(f"  Current LABEL_WHITE_THRESHOLD = {LABEL_WHITE_THRESHOLD}")
     # Count pixels that would score positive
-    positive = sum(1 for l in bottom_lums if l >= LABEL_WHITE_THRESHOLD)
-    print(f"  Pixels scoring positive: {positive}/{n} ({100*positive/n:.1f}%)")
+    positive = sum(1 for lum in bottom_lums if lum >= LABEL_WHITE_THRESHOLD)
+    print(f"  Pixels scoring positive: {positive}/{n} ({100 * positive / n:.1f}%)")
 
 
 if __name__ == "__main__":
