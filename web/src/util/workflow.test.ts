@@ -226,6 +226,40 @@ vi.mock("../../../workflow.yml", () => ({
         },
       },
       {
+        id: "completed",
+        visible: true,
+        friendly_name: "Completed",
+        past_friendly_name: "Completed",
+        description: "All done.",
+        terminal: true,
+        summary: {
+          sections: [
+            {
+              title: "Making",
+              fields: [
+                { label: "Starting weight", value: "wheel_thrown.clay_weight_lbs" },
+                {
+                  label: "Trimming loss",
+                  compute: {
+                    op: "difference",
+                    left: "wheel_thrown.clay_weight_lbs",
+                    right: "trimmed.trimmed_weight_lbs",
+                    unit: "lb",
+                    decimals: 1,
+                  },
+                  when: { state_exists: "trimmed" },
+                },
+                {
+                  label: "Wax resist",
+                  text: "Not recorded",
+                  when: { state_missing: "waxed" },
+                },
+              ],
+            },
+          ],
+        },
+      },
+      {
         id: "recycled",
         visible: true,
         friendly_name: "Recycled",
@@ -249,6 +283,7 @@ import {
   getGlobalPickerFilters,
   getGlobalThumbnailField,
   getStateMetadata,
+  getStateSummaryDefinition,
   isFavoritableGlobal,
   isTerminalState,
   isTaggableGlobal,
@@ -576,6 +611,43 @@ describe("getAdditionalFieldDefinitions", () => {
     expect(fields.find((f) => f.name === "firing_fee_usd")!.label).toBe(
       "Firing Fee (USD)",
     );
+  });
+});
+
+describe("getStateSummaryDefinition", () => {
+  it("returns resolved direct, computed, and text summary items", () => {
+    const summary = getStateSummaryDefinition("completed");
+
+    expect(summary).toHaveLength(1);
+    expect(summary[0].title).toBe("Making");
+    expect(summary[0].fields[0]).toMatchObject({
+      kind: "value",
+      label: "Starting weight",
+      ref: "wheel_thrown.clay_weight_lbs",
+      stateId: "wheel_thrown",
+      fieldName: "clay_weight_lbs",
+      field: expect.objectContaining({ type: "number" }),
+    });
+    expect(summary[0].fields[1]).toMatchObject({
+      kind: "compute",
+      label: "Trimming loss",
+      compute: expect.objectContaining({
+        op: "difference",
+        left: "wheel_thrown.clay_weight_lbs",
+        right: "trimmed.trimmed_weight_lbs",
+      }),
+      when: { state_exists: "trimmed" },
+    });
+    expect(summary[0].fields[2]).toMatchObject({
+      kind: "text",
+      label: "Wax resist",
+      text: "Not recorded",
+      when: { state_missing: "waxed" },
+    });
+  });
+
+  it("returns an empty array for states without a summary", () => {
+    expect(getStateSummaryDefinition("recycled")).toEqual([]);
   });
 });
 

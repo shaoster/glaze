@@ -447,6 +447,95 @@ states:
     past_friendly_name: Completed
     description: All done and ready to admire.
     terminal: true
+    summary:
+      sections:
+        - title: Making
+          fields:
+            - label: Build method
+              text: Wheel thrown
+              when:
+                state_exists: wheel_thrown
+            - label: Build method
+              text: Handbuilt
+              when:
+                state_exists: handbuilt
+            - label: Clay body
+              value: wheel_thrown.clay_body
+              when:
+                state_exists: wheel_thrown
+            - label: Clay body
+              value: handbuilt.clay_body
+              when:
+                state_exists: handbuilt
+            - label: Starting weight
+              value: wheel_thrown.clay_weight_lbs
+              when:
+                state_exists: wheel_thrown
+            - label: Trimmed weight
+              value: trimmed.trimmed_weight_lbs
+              when:
+                state_exists: trimmed
+            - label: Trimming loss
+              compute:
+                op: difference
+                left: wheel_thrown.clay_weight_lbs
+                right: trimmed.trimmed_weight_lbs
+                unit: lb
+                decimals: 2
+              when:
+                state_exists: trimmed
+        - title: Firing
+          fields:
+            - label: Bisque kiln
+              value: submitted_to_bisque_fire.kiln_location
+            - label: Bisque cone
+              value: bisque_fired.cone
+            - label: Glaze kiln
+              value: submitted_to_glaze_fire.kiln_location
+            - label: Glaze cone
+              value: glaze_fired.cone
+        - title: Glaze and Finish
+          fields:
+            - label: Wax resist
+              text: Applied
+              when:
+                state_exists: waxed
+            - label: Wax resist
+              text: Not recorded
+              when:
+                state_missing: waxed
+            - label: Glaze combination
+              value: glazed.glaze_combination
+            - label: Finishing
+              text: Sanded
+              when:
+                state_exists: sanded
+        - title: Measurements
+          fields:
+            - label: Dimensions total
+              compute:
+                op: sum
+                operands:
+                  - submitted_to_bisque_fire.length_in
+                  - submitted_to_bisque_fire.width_in
+                  - submitted_to_bisque_fire.height_in
+                unit: in
+                decimals: 2
+            - label: Approximate volume
+              compute:
+                op: product
+                operands:
+                  - submitted_to_bisque_fire.length_in
+                  - submitted_to_bisque_fire.width_in
+                  - submitted_to_bisque_fire.height_in
+                unit: cu in
+                decimals: 2
+            - label: Length to width ratio
+              compute:
+                op: ratio
+                numerator: submitted_to_bisque_fire.length_in
+                denominator: submitted_to_bisque_fire.width_in
+                decimals: 2
 
   - id: recycled
     visible: true

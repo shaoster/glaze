@@ -47,6 +47,17 @@ def get_state_friendly_name(state_id: str) -> str:
     return str(_STATE_MAP.get(state_id, {}).get('friendly_name', state_id))
 
 
+def get_state_summary(state_id: str) -> dict:
+    """Return read-only summary metadata declared for a workflow state.
+
+    The returned structure is copied from workflow.yml so callers can inspect
+    summary sections, direct value refs, display text, simple numeric
+    computations, and conditional visibility without mutating the cached
+    workflow definition.
+    """
+    return dict(_STATE_MAP.get(state_id, {}).get('summary', {}))
+
+
 def get_state_ref_fields(state_id: str) -> dict[str, tuple[str, str]]:
     """Return {field_name: (source_state_id, source_field_name)} for all state ref fields.
 

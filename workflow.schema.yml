@@ -227,6 +227,8 @@ $defs:
           pattern: '^[a-z][a-z0-9_]*$'
         additionalProperties:
           $ref: "#/$defs/field_def"
+      summary:
+        $ref: "#/$defs/state_summary"
 
   # ---------------------------------------------------------------------------
   # Field DSL
@@ -246,6 +248,126 @@ $defs:
     oneOf:
       - $ref: "#/$defs/inline_field"
       - $ref: "#/$defs/global_ref_field"
+
+  state_summary:
+    type: object
+    required: [sections]
+    additionalProperties: false
+    description: |
+      Read-only summary fields to display when this state is current. Summary
+      items read or compute values from previous workflow states; they do not
+      declare persisted fields on the host state.
+    properties:
+      sections:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          required: [title, fields]
+          additionalProperties: false
+          properties:
+            title:
+              type: string
+            fields:
+              type: array
+              minItems: 1
+              items:
+                $ref: "#/$defs/summary_item"
+
+  summary_item:
+    type: object
+    additionalProperties: false
+    properties:
+      label:
+        type: string
+      description:
+        type: string
+      value:
+        $ref: "#/$defs/state_field_ref"
+      text:
+        type: string
+      compute:
+        $ref: "#/$defs/summary_compute"
+      when:
+        $ref: "#/$defs/summary_when"
+    oneOf:
+      - required: [value]
+      - required: [text]
+      - required: [compute]
+
+  summary_when:
+    type: object
+    additionalProperties: false
+    oneOf:
+      - required: [state_exists]
+      - required: [state_missing]
+    properties:
+      state_exists:
+        type: string
+        pattern: '^[a-z][a-z0-9_]*$'
+      state_missing:
+        type: string
+        pattern: '^[a-z][a-z0-9_]*$'
+
+  summary_compute:
+    type: object
+    additionalProperties: false
+    properties:
+      op:
+        type: string
+        enum: [product, difference, sum, ratio]
+      operands:
+        type: array
+        minItems: 2
+        items:
+          $ref: "#/$defs/state_field_ref"
+      left:
+        $ref: "#/$defs/state_field_ref"
+      right:
+        $ref: "#/$defs/state_field_ref"
+      numerator:
+        $ref: "#/$defs/state_field_ref"
+      denominator:
+        $ref: "#/$defs/state_field_ref"
+      unit:
+        type: string
+      decimals:
+        type: integer
+        minimum: 0
+        maximum: 6
+    oneOf:
+      - required: [op, operands]
+        properties:
+          op:
+            enum: [product, sum]
+        not:
+          anyOf:
+            - required: [left]
+            - required: [right]
+            - required: [numerator]
+            - required: [denominator]
+      - required: [op, left, right]
+        properties:
+          op:
+            const: difference
+        not:
+          anyOf:
+            - required: [operands]
+            - required: [numerator]
+            - required: [denominator]
+      - required: [op, numerator, denominator]
+        properties:
+          op:
+            const: ratio
+        not:
+          anyOf:
+            - required: [operands]
+            - required: [left]
+            - required: [right]
+
+  state_field_ref:
+    type: string
+    pattern: '^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$'
 
   inline_field:
     type: object

@@ -77,6 +77,16 @@ _MOCK_STATE_MAP = {
         'id': 'completed',
         'visible': True,
         'terminal': True,
+        'summary': {
+            'sections': [
+                {
+                    'title': 'Making',
+                    'fields': [
+                        {'label': 'Starting weight', 'value': 'wheel_thrown.clay_weight_lbs'},
+                    ],
+                },
+            ],
+        },
     },
     'recycled': {
         'id': 'recycled',
@@ -185,6 +195,18 @@ def test_get_state_ref_fields_unknown_state_returns_empty(monkeypatch):
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
 
     assert workflow_module.get_state_ref_fields('unknown_state') == {}
+
+
+def test_get_state_summary_returns_declared_summary(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP)
+
+    assert workflow_module.get_state_summary('completed') == _MOCK_STATE_MAP['completed']['summary']
+
+
+def test_get_state_summary_unknown_state_returns_empty(monkeypatch):
+    monkeypatch.setattr(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP)
+
+    assert workflow_module.get_state_summary('unknown_state') == {}
 
 
 def test_get_global_model_and_field_prefers_name(monkeypatch):

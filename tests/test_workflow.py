@@ -89,6 +89,23 @@ def _all_refs(workflow):
                 yield state["id"], field_name, field_def["$ref"]
 
 
+def _summary_refs(summary_item):
+    if "value" in summary_item:
+        yield summary_item["value"]
+    compute = summary_item.get("compute", {})
+    for key in ("left", "right", "numerator", "denominator"):
+        if key in compute:
+            yield compute[key]
+    yield from compute.get("operands", [])
+
+
+def _all_summary_items(workflow):
+    for state in workflow["states"]:
+        for section in state.get("summary", {}).get("sections", []):
+            for item in section.get("fields", []):
+                yield state["id"], section["title"], item
+
+
 def _all_inline_fields(workflow):
     """Yield (context, field_name, field_def) for every inline field in states and globals."""
     for state in workflow["states"]:
@@ -112,6 +129,33 @@ def _state(state_id, **overrides):
     }
     state.update(overrides)
     return state
+
+
+def _field_def(workflow, state_id, field_name):
+    state = next((s for s in workflow["states"] if s["id"] == state_id), None)
+    if state is None:
+        return None
+    return state.get("fields", {}).get(field_name)
+
+
+def _resolved_field_def(workflow, state_id, field_name, seen=None):
+    if seen is None:
+        seen = set()
+    key = (state_id, field_name)
+    if key in seen:
+        return None
+    seen.add(key)
+    field_def = _field_def(workflow, state_id, field_name)
+    if not field_def:
+        return None
+    if "type" in field_def:
+        return field_def
+    ref = field_def["$ref"]
+    if ref.startswith("@"):
+        global_name, global_field_name = ref[1:].split(".", 1)
+        return workflow.get("globals", {}).get(global_name, {}).get("fields", {}).get(global_field_name)
+    source_state_id, source_field_name = ref.split(".", 1)
+    return _resolved_field_def(workflow, source_state_id, source_field_name, seen)
 
 
 # ---------------------------------------------------------------------------
@@ -366,6 +410,83 @@ class TestSchemaValidation:
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
 
+    def test_summary_accepted_on_terminal_state(self, schema):
+        valid = {
+            "version": "1.0.0",
+            "states": [
+                _state("a", successors=["b"], fields={"x": {"type": "number"}}),
+                _state(
+                    "b",
+                    terminal=True,
+                    summary={
+                        "sections": [
+                            {
+                                "title": "Result",
+                                "fields": [
+                                    {"label": "Source", "value": "a.x"},
+                                    {
+                                        "label": "Double",
+                                        "compute": {
+                                            "op": "sum",
+                                            "operands": ["a.x", "a.x"],
+                                            "unit": "lb",
+                                            "decimals": 1,
+                                        },
+                                        "when": {"state_exists": "a"},
+                                    },
+                                    {"label": "Path", "text": "No wax", "when": {"state_missing": "waxed"}},
+                                ],
+                            }
+                        ]
+                    },
+                ),
+                _state("waxed", terminal=True),
+            ],
+        }
+        jsonschema.validate(instance=valid, schema=schema)
+
+    def test_summary_item_requires_one_value_text_or_compute(self, schema):
+        bad = {
+            "version": "1.0.0",
+            "states": [
+                _state("a", successors=["b"], fields={"x": {"type": "number"}}),
+                _state(
+                    "b",
+                    terminal=True,
+                    summary={"sections": [{"title": "Result", "fields": [{"label": "Missing"}]}]},
+                ),
+            ],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
+    def test_summary_compute_rejects_unknown_op(self, schema):
+        bad = {
+            "version": "1.0.0",
+            "states": [
+                _state("a", successors=["b"], fields={"x": {"type": "number"}}),
+                _state(
+                    "b",
+                    terminal=True,
+                    summary={
+                        "sections": [
+                            {
+                                "title": "Result",
+                                "fields": [
+                                    {
+                                        "label": "Bad",
+                                        "compute": {"op": "median", "operands": ["a.x", "a.x"]},
+                                    }
+                                ],
+                            }
+                        ]
+                    },
+                ),
+            ],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad, schema=schema)
+
     def test_invalid_ref_pattern_fails(self, schema):
         """A $ref that matches neither form must be rejected by the schema."""
         bad = {
@@ -577,6 +698,55 @@ class TestReferentialIntegrity:
                 f"State '{state['id']}' lists itself as a successor"
             )
 
+    def test_summary_only_on_terminal_states(self, workflow):
+        """State summaries are currently terminal-state display metadata."""
+        for state in workflow["states"]:
+            if "summary" in state:
+                assert state.get("terminal"), (
+                    f"State '{state['id']}' declares summary but is not terminal"
+                )
+
+    def test_summary_conditions_reference_known_states(self, workflow, state_ids):
+        for host_state_id, section_title, item in _all_summary_items(workflow):
+            when = item.get("when", {})
+            for key in ("state_exists", "state_missing"):
+                if key in when:
+                    assert when[key] in state_ids, (
+                        f"Summary item in state '{host_state_id}' section "
+                        f"'{section_title}' has unknown {key} state '{when[key]}'"
+                    )
+
+    def test_summary_refs_point_to_reachable_ancestor_fields(self, workflow, state_ids):
+        successors_map = _successors_map(workflow)
+        for host_state_id, section_title, item in _all_summary_items(workflow):
+            ancestors = _ancestors(host_state_id, successors_map)
+            for ref in _summary_refs(item):
+                source_state_id, field_name = ref.split(".", 1)
+                assert source_state_id in state_ids, (
+                    f"Summary item in state '{host_state_id}' section "
+                    f"'{section_title}' references unknown state '{source_state_id}'"
+                )
+                assert source_state_id in ancestors, (
+                    f"Summary item in state '{host_state_id}' section "
+                    f"'{section_title}' references non-ancestor state '{source_state_id}'"
+                )
+                assert _field_def(workflow, source_state_id, field_name) is not None, (
+                    f"Summary item in state '{host_state_id}' section "
+                    f"'{section_title}' references unknown field '{ref}'"
+                )
+
+    def test_summary_compute_refs_are_numeric(self, workflow):
+        for host_state_id, section_title, item in _all_summary_items(workflow):
+            if "compute" not in item:
+                continue
+            for ref in _summary_refs(item):
+                source_state_id, field_name = ref.split(".", 1)
+                field_def = _resolved_field_def(workflow, source_state_id, field_name)
+                assert field_def and field_def.get("type") in {"number", "integer"}, (
+                    f"Summary compute in state '{host_state_id}' section "
+                    f"'{section_title}' references non-numeric field '{ref}'"
+                )
+
 
 # ---------------------------------------------------------------------------
 # Additional fields DSL — referential integrity
@@ -648,4 +818,3 @@ class TestAdditionalFieldsDSL:
                     f"State '{host_state}' field '{field_name}': $ref '{ref_str}' "
                     f"references field '{ref_field}' which is not declared in global '@{global_name}'"
                 )
-
