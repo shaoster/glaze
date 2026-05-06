@@ -627,4 +627,41 @@ describe("upload endpoints", () => {
     expect((uploadedFile as File).name).toBe(file.name);
     expect(form.get("crop_image__two")).toBeNull();
   });
+
+  it("scanCloudinaryCleanupAssets returns the admin cleanup payload", async () => {
+    const { scanCloudinaryCleanupAssets } = await loadApiModule();
+    const payload = {
+      assets: [
+        {
+          public_id: "piece/orphan",
+          url: "https://example.com/orphan.jpg",
+          bytes: 2048,
+          created_at: "2026-05-06T12:00:00Z",
+          referenced: false,
+        },
+      ],
+      summary: { total: 1, referenced: 0, unused: 1 },
+    };
+    mockClient.get.mockResolvedValue({ data: payload });
+
+    await expect(scanCloudinaryCleanupAssets()).resolves.toEqual(payload);
+    expect(mockClient.get).toHaveBeenCalledWith("admin/cloudinary-cleanup/");
+  });
+
+  it("deleteCloudinaryCleanupAssets sends public ids in the delete body", async () => {
+    const { deleteCloudinaryCleanupAssets } = await loadApiModule();
+    mockClient.delete.mockResolvedValue({
+      data: { deleted: { "piece/orphan": "deleted" } },
+    });
+
+    await expect(
+      deleteCloudinaryCleanupAssets(["piece/orphan"]),
+    ).resolves.toEqual({ "piece/orphan": "deleted" });
+    expect(mockClient.delete).toHaveBeenCalledWith(
+      "admin/cloudinary-cleanup/",
+      {
+        data: { public_ids: ["piece/orphan"] },
+      },
+    );
+  });
 });

@@ -189,11 +189,13 @@ py_test(
     size = "medium",
     srcs = _CONFTEST + [
         "tests/test_admin_exports.py",
+        "tests/test_cloudinary_cleanup.py",
         "tests/test_cloudinary_image_widget.py",
         "tests/test_cloudinary_upload_signature.py",
     ],
     args = [
         "api/tests/test_admin_exports.py",
+        "api/tests/test_cloudinary_cleanup.py",
         "api/tests/test_cloudinary_image_widget.py",
         "api/tests/test_cloudinary_upload_signature.py",
     ],

@@ -36,6 +36,7 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
 import CropFreeIcon from "@mui/icons-material/CropFree";
+import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
 import { alpha, ThemeProvider, createTheme } from "@mui/material/styles";
 
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
@@ -56,6 +57,9 @@ const PieceListPage = lazy(() => import("./pages/PieceListPage"));
 const PieceDetailPage = lazy(() => import("./pages/PieceDetailPage"));
 const AnalyzePage = lazy(() => import("./pages/AnalyzePage"));
 const GlazeImportToolPage = lazy(() => import("./pages/GlazeImportToolPage"));
+const CloudinaryCleanupPage = lazy(
+  () => import("./pages/CloudinaryCleanupPage"),
+);
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 
@@ -609,16 +613,28 @@ function AppShell({
           transformOrigin={{ vertical: "top", horizontal: "right" }}
         >
           {currentUser.is_staff ? (
-            <MenuItem
-              component={Link}
-              to="/tools/glaze-import"
-              onClick={() => setMenuAnchor(null)}
-            >
-              <ListItemIcon>
-                <CropFreeIcon fontSize="small" />
-              </ListItemIcon>
-              Glaze Import Tool
-            </MenuItem>
+            <>
+              <MenuItem
+                component={Link}
+                to="/tools/glaze-import"
+                onClick={() => setMenuAnchor(null)}
+              >
+                <ListItemIcon>
+                  <CropFreeIcon fontSize="small" />
+                </ListItemIcon>
+                Glaze Import Tool
+              </MenuItem>
+              <MenuItem
+                component={Link}
+                to="/tools/cloudinary-cleanup"
+                onClick={() => setMenuAnchor(null)}
+              >
+                <ListItemIcon>
+                  <CleaningServicesIcon fontSize="small" />
+                </ListItemIcon>
+                Cloudinary Cleanup
+              </MenuItem>
+            </>
           ) : null}
           <MenuItem
             onClick={() => {
@@ -672,6 +688,16 @@ function AuthenticatedApp({
               element={
                 currentUser.is_staff ? (
                   <GlazeImportToolPage />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
+            <Route
+              path="/tools/cloudinary-cleanup"
+              element={
+                currentUser.is_staff ? (
+                  <CloudinaryCleanupPage />
                 ) : (
                   <Navigate to="/" replace />
                 )
