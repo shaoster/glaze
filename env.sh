@@ -275,7 +275,15 @@ gz_prod() {          # gz_prod <manage.py subcommand> [args…]
     ssh "$host" "cd ~/glaze && docker compose exec web python manage.py $*"
 }
 
-gz_prod_shell()      { gz_prod shell "$@"; }
+gz_prod_shell() {    # gz_prod_shell [-c "cmd"]  — piping avoids SSH quoting issues
+    local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
+    if [[ "$1" == "-c" ]]; then
+        echo "${2:?gz_prod_shell -c requires a command string}" \
+            | ssh "$host" "cd ~/glaze && docker compose exec -T web python manage.py shell"
+    else
+        ssh "$host" "cd ~/glaze && docker compose exec web python manage.py shell $*"
+    fi
+}
 gz_prod_dbshell()    { gz_prod dbshell "$@"; }
 
 # ---------------------------------------------------------------------------
