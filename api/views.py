@@ -22,6 +22,7 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from .cloudinary_cleanup import delete_cloudinary_assets, list_cloudinary_assets
 from .manual_tile_imports import import_manual_tile_records
 from .models import (
     FavoriteGlazeCombination,
@@ -651,6 +652,102 @@ def cloudinary_widget_sign(request: Request) -> Response:
         f"{signing_string}{api_secret}".encode("utf-8")
     ).hexdigest()
     return Response({"signature": signature})
+
+
+@extend_schema(
+    methods=["GET"],
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "assets": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "public_id": {"type": "string"},
+                            "url": {"type": "string"},
+                            "bytes": {"type": ["integer", "null"]},
+                            "created_at": {"type": ["string", "null"]},
+                            "referenced": {"type": "boolean"},
+                        },
+                    },
+                },
+                "summary": {"type": "object"},
+            },
+        },
+        503: {"type": "object"},
+    },
+)
+@extend_schema(
+    methods=["DELETE"],
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "public_ids": {"type": "array", "items": {"type": "string"}}
+            },
+            "required": ["public_ids"],
+        }
+    },
+    responses={
+        200: {"type": "object"},
+        400: {"type": "object"},
+        503: {"type": "object"},
+    },
+)
+@api_view(["GET", "DELETE"])
+@permission_classes([IsAdminUser])
+def admin_cloudinary_cleanup(request: Request) -> Response:
+    if request.method == "GET":
+        try:
+            assets = list_cloudinary_assets()
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        unused = [asset for asset in assets if not asset.referenced]
+        return Response(
+            {
+                "assets": [
+                    {
+                        "public_id": asset.public_id,
+                        "url": asset.url,
+                        "bytes": asset.bytes,
+                        "created_at": asset.created_at,
+                        "referenced": asset.referenced,
+                    }
+                    for asset in assets
+                ],
+                "summary": {
+                    "total": len(assets),
+                    "referenced": len(assets) - len(unused),
+                    "unused": len(unused),
+                },
+            }
+        )
+
+    public_ids = request.data.get("public_ids")
+    if not isinstance(public_ids, list) or not all(
+        isinstance(public_id, str) and public_id for public_id in public_ids
+    ):
+        return Response(
+            {"detail": "public_ids must be a non-empty list of strings."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        deleted = delete_cloudinary_assets(public_ids)
+    except ValueError as exc:
+        message = str(exc)
+        response_status = (
+            status.HTTP_503_SERVICE_UNAVAILABLE
+            if message == "Cloudinary is not configured on the server."
+            else status.HTTP_400_BAD_REQUEST
+        )
+        return Response({"detail": message}, status=response_status)
+
+    return Response({"deleted": deleted})
 
 
 @extend_schema(request=None, responses={204: None})

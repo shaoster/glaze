@@ -5,6 +5,11 @@ from .workflow import get_global_model_and_field, get_global_names
 
 urlpatterns = [
     path(
+        "admin/cloudinary-cleanup/",
+        views.admin_cloudinary_cleanup,
+        name="admin-cloudinary-cleanup",
+    ),
+    path(
         "analysis/glaze-combination-images/",
         views.glaze_combination_images,
         name="analysis-glaze-combination-images",

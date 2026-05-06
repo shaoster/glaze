@@ -522,3 +522,37 @@ export async function importManualSquareCropRecords(
   );
   return data;
 }
+
+export type CloudinaryCleanupAsset = {
+  public_id: string;
+  url: string;
+  bytes: number | null;
+  created_at: string | null;
+  referenced: boolean;
+};
+
+export type CloudinaryCleanupScanResponse = {
+  assets: CloudinaryCleanupAsset[];
+  summary: {
+    total: number;
+    referenced: number;
+    unused: number;
+  };
+};
+
+export async function scanCloudinaryCleanupAssets(): Promise<CloudinaryCleanupScanResponse> {
+  const { data } = await client.get<CloudinaryCleanupScanResponse>(
+    "admin/cloudinary-cleanup/",
+  );
+  return data;
+}
+
+export async function deleteCloudinaryCleanupAssets(
+  publicIds: string[],
+): Promise<Record<string, string>> {
+  const { data } = await client.delete<{ deleted: Record<string, string> }>(
+    "admin/cloudinary-cleanup/",
+    { data: { public_ids: publicIds } },
+  );
+  return data.deleted;
+}
