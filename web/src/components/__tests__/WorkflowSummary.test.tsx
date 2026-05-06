@@ -1,78 +1,7 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import WorkflowSummary from "../WorkflowSummary";
 import type { PieceState } from "../../util/types";
-
-vi.mock("../../../workflow.yml", () => ({
-  default: {
-    version: "0.0.2",
-    states: [
-      {
-        id: "wheel_thrown",
-        visible: true,
-        friendly_name: "Throwing",
-        past_friendly_name: "Thrown",
-        description: "Thrown.",
-        successors: ["trimmed"],
-        fields: {
-          clay_weight_lbs: { type: "number", label: "Clay weight" },
-        },
-      },
-      {
-        id: "trimmed",
-        visible: true,
-        friendly_name: "Trimming",
-        past_friendly_name: "Trimmed",
-        description: "Trimmed.",
-        successors: ["completed"],
-        fields: {
-          trimmed_weight_lbs: { type: "number", label: "Trimmed weight" },
-        },
-      },
-      {
-        id: "waxed",
-        visible: true,
-        friendly_name: "Waxing",
-        past_friendly_name: "Waxed",
-        description: "Waxed.",
-        successors: ["completed"],
-      },
-      {
-        id: "completed",
-        visible: true,
-        friendly_name: "Completed",
-        past_friendly_name: "Completed",
-        description: "Done.",
-        terminal: true,
-        summary: {
-          sections: [
-            {
-              title: "Making",
-              fields: [
-                { label: "Starting weight", value: "wheel_thrown.clay_weight_lbs" },
-                {
-                  label: "Trimming loss",
-                  compute: {
-                    op: "difference",
-                    left: "wheel_thrown.clay_weight_lbs",
-                    right: "trimmed.trimmed_weight_lbs",
-                    unit: "lb",
-                    decimals: 2,
-                  },
-                },
-                {
-                  label: "Wax resist",
-                  text: "Not recorded",
-                  when: { state_missing: "waxed" },
-                },
-              ],
-            },
-          ],
-        },
-      },
-    ],
-  },
-}));
 
 function makeState(
   state: string,
@@ -94,8 +23,18 @@ describe("WorkflowSummary", () => {
       <WorkflowSummary
         stateId="completed"
         history={[
-          makeState("wheel_thrown", { clay_weight_lbs: 4 }),
-          makeState("trimmed", { trimmed_weight_lbs: 3.25 }),
+          makeState("wheel_thrown", {
+            clay_weight_lbs: 4,
+            clay_body: { id: "clay-1", name: "Speckled Buff" },
+          }),
+          makeState("trimmed", {
+            trimmed_weight_lbs: 3.25,
+          }),
+          makeState("submitted_to_bisque_fire", {
+            length_in: 6,
+            width_in: 3,
+            height_in: 2,
+          }),
           makeState("completed"),
         ]}
       />,
@@ -104,10 +43,18 @@ describe("WorkflowSummary", () => {
     expect(screen.getByText("Making")).toBeInTheDocument();
     expect(screen.getByText("Starting weight")).toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument();
+    expect(screen.getByText("Clay body")).toBeInTheDocument();
+    expect(screen.getByText("Speckled Buff")).toBeInTheDocument();
     expect(screen.getByText("Trimming loss")).toBeInTheDocument();
     expect(screen.getByText("0.75 lb")).toBeInTheDocument();
     expect(screen.getByText("Wax resist")).toBeInTheDocument();
     expect(screen.getByText("Not recorded")).toBeInTheDocument();
+    expect(screen.getByText("Dimensions total")).toBeInTheDocument();
+    expect(screen.getByText("11 in")).toBeInTheDocument();
+    expect(screen.getByText("Approximate volume")).toBeInTheDocument();
+    expect(screen.getByText("36 cu in")).toBeInTheDocument();
+    expect(screen.getByText("Length to width ratio")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 
   it("honors state_exists and state_missing visibility", () => {
@@ -124,5 +71,31 @@ describe("WorkflowSummary", () => {
     );
 
     expect(screen.queryByText("Not recorded")).not.toBeInTheDocument();
+    expect(screen.getByText("Applied")).toBeInTheDocument();
+  });
+
+  it("uses the latest matching state value and hides empty sections", () => {
+    const { container } = render(
+      <WorkflowSummary
+        stateId="completed"
+        history={[
+          makeState("wheel_thrown", { clay_weight_lbs: 4 }),
+          makeState("wheel_thrown", { clay_weight_lbs: "5.5" }),
+          makeState("completed"),
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("5.5")).toBeInTheDocument();
+    expect(screen.queryByText("Trimming loss")).not.toBeInTheDocument();
+    expect(container).not.toBeEmptyDOMElement();
+  });
+
+  it("renders nothing when a state has no summary", () => {
+    const { container } = render(
+      <WorkflowSummary stateId="recycled" history={[makeState("recycled")]} />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
   });
 });

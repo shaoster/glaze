@@ -260,6 +260,36 @@ vi.mock("../../../workflow.yml", () => ({
         },
       },
       {
+        id: "summary_edge_cases",
+        visible: true,
+        friendly_name: "Summary Edge Cases",
+        past_friendly_name: "Summary Edge Cased",
+        description: "Coverage-only summary state.",
+        terminal: true,
+        summary: {
+          sections: [
+            {
+              title: "Edges",
+              fields: [
+                { value: "wheel_thrown.clay_body" },
+                { value: "not_a_ref" },
+                { value: "unknown_state.some_field" },
+                { text: "Fallback label text" },
+                {
+                  compute: {
+                    op: "sum",
+                    operands: [
+                      "wheel_thrown.clay_weight_lbs",
+                      "trimmed.trimmed_weight_lbs",
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+      {
         id: "recycled",
         visible: true,
         friendly_name: "Recycled",
@@ -648,6 +678,32 @@ describe("getStateSummaryDefinition", () => {
 
   it("returns an empty array for states without a summary", () => {
     expect(getStateSummaryDefinition("recycled")).toEqual([]);
+  });
+
+  it("returns an empty array for unknown states", () => {
+    expect(getStateSummaryDefinition("unknown_state")).toEqual([]);
+  });
+
+  it("handles omitted labels and skips unresolved value refs", () => {
+    const summary = getStateSummaryDefinition("summary_edge_cases");
+
+    expect(summary).toHaveLength(1);
+    expect(summary[0].fields).toHaveLength(3);
+    expect(summary[0].fields[0]).toMatchObject({
+      kind: "value",
+      label: "Clay Body",
+      ref: "wheel_thrown.clay_body",
+    });
+    expect(summary[0].fields[1]).toMatchObject({
+      kind: "text",
+      label: "",
+      text: "Fallback label text",
+    });
+    expect(summary[0].fields[2]).toMatchObject({
+      kind: "compute",
+      label: "Sum",
+      compute: expect.objectContaining({ op: "sum" }),
+    });
   });
 });
 
