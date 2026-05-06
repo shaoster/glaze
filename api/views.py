@@ -812,15 +812,28 @@ def glaze_combination_images(request: Request) -> Response:
             piece_id__in=piece_to_combo.keys(),
             piece__user=request.user,  # type: ignore[misc]
             state__in=qualifying,
+            image_links__isnull=False,
         )
         .select_related("piece")
+        .prefetch_related("image_links__image")
+        .distinct()
         .order_by("-created")
     )
 
     # Group images and state by piece — collect all images across qualifying states.
     piece_data: dict = {}
     for ps in qualifying_ps:
-        if not ps.images:
+        images = [
+            {
+                "url": link.image.url,
+                "caption": link.caption,
+                "created": link.created,
+                "cloudinary_public_id": link.image.cloudinary_public_id,
+                "cloud_name": link.image.cloud_name,
+            }
+            for link in ps.image_links.all()
+        ]
+        if not images:
             continue
         pid = ps.piece_id
         if pid not in piece_data:
@@ -828,14 +841,14 @@ def glaze_combination_images(request: Request) -> Response:
                 "id": str(pid),
                 "name": ps.piece.name,
                 "state": ps.state,
-                "images": list(ps.images),
+                "images": images,
                 "last_modified": ps.last_modified,
             }
         else:
             # Additional qualifying state for the same piece: extend images.
             # The first row is the current/latest qualifying state by creation
             # order; sealed old states do not affect display state or sort order.
-            piece_data[pid]["images"].extend(ps.images)
+            piece_data[pid]["images"].extend(images)
 
     # Group pieces by combo.
     combo_pieces: dict = defaultdict(list)

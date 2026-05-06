@@ -274,6 +274,7 @@ export type UpdateStatePayload = {
     url: string;
     caption: string;
     cloudinary_public_id?: string | null;
+    cloud_name?: string | null;
   }>;
   custom_fields?: Record<string, string | number | boolean | null>;
 };

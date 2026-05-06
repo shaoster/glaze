@@ -118,7 +118,11 @@
         if (!error && result && result.event === 'success') {
           var rawUrl = result.info.secure_url;
           var publicId = result.info.public_id || null;
-          inp.value = JSON.stringify({ url: rawUrl, cloudinary_public_id: publicId });
+          inp.value = JSON.stringify({
+            url: rawUrl,
+            cloudinary_public_id: publicId,
+            cloud_name: inp.dataset.cloudinaryCloudName || null,
+          });
           var preview = document.getElementById(previewId);
           if (preview) {
             preview.src = getPreviewUrl(rawUrl);

@@ -5,6 +5,7 @@ Imports public library objects from a JSON fixture file produced by
 objects by model + name; existing records are updated in place and missing
 records are inserted.  The command is safe to run multiple times (idempotent).
 """
+
 import json
 import re
 from pathlib import Path
@@ -14,8 +15,10 @@ from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-_CLOUDINARY_HOSTNAME = 'res.cloudinary.com'
-_TRANSFORM_RE = re.compile(r'^[a-z][a-z0-9]*_')
+from api.utils import normalize_image_payload
+
+_CLOUDINARY_HOSTNAME = "res.cloudinary.com"
+_TRANSFORM_RE = re.compile(r"^[a-z][a-z0-9]*_")
 
 
 def _extract_cloud_name(url: str) -> str | None:
@@ -26,8 +29,8 @@ def _extract_cloud_name(url: str) -> str | None:
         return None
     if parsed.hostname != _CLOUDINARY_HOSTNAME:
         return None
-    parts = parsed.path.split('/')
-    if len(parts) < 4 or parts[2] != 'image' or parts[3] != 'upload':
+    parts = parsed.path.split("/")
+    if len(parts) < 4 or parts[2] != "image" or parts[3] != "upload":
         return None
     return parts[1] or None
 
@@ -36,74 +39,72 @@ def _normalize_image_field(value: object) -> object:
     """Ensure image dicts carry all three fields; fill cloud_name from URL if missing."""
     if not isinstance(value, dict):
         return value
-    if 'cloud_name' not in value:
-        value = {**value, 'cloud_name': _extract_cloud_name(value.get('url', '') or '')}
+    if "cloud_name" not in value:
+        value = {**value, "cloud_name": _extract_cloud_name(value.get("url", "") or "")}
     return value
 
-_DEFAULT_FIXTURE = Path(settings.BASE_DIR) / 'fixtures' / 'public_library.json'
+
+_DEFAULT_FIXTURE = Path(settings.BASE_DIR) / "fixtures" / "public_library.json"
 
 
 class Command(BaseCommand):
     help = (
-        'Import public library objects from a JSON fixture file created by '
-        'dump_public_library.  Existing records are updated in place; new records '
-        'are inserted.  Safe to run multiple times (idempotent).'
+        "Import public library objects from a JSON fixture file created by "
+        "dump_public_library.  Existing records are updated in place; new records "
+        "are inserted.  Safe to run multiple times (idempotent)."
     )
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--fixture',
+            "--fixture",
             default=str(_DEFAULT_FIXTURE),
-            help=(
-                f'Path to the fixture file '
-                f'(default: {_DEFAULT_FIXTURE}).'
-            ),
+            help=(f"Path to the fixture file (default: {_DEFAULT_FIXTURE})."),
         )
         parser.add_argument(
-            '--skip-if-missing',
-            action='store_true',
+            "--skip-if-missing",
+            action="store_true",
             default=False,
             help=(
-                'If the fixture file does not exist, print a warning and exit '
-                'successfully instead of raising an error.  Useful in deployment '
-                'contexts where no fixture has been committed yet.'
+                "If the fixture file does not exist, print a warning and exit "
+                "successfully instead of raising an error.  Useful in deployment "
+                "contexts where no fixture has been committed yet."
             ),
         )
 
     def handle(self, *args, **options):
-        fixture_path = Path(options['fixture'])
+        fixture_path = Path(options["fixture"])
 
         if not fixture_path.exists():
-            if options['skip_if_missing']:
+            if options["skip_if_missing"]:
                 self.stdout.write(
                     self.style.WARNING(
-                        f'No fixture file found at {fixture_path} — skipping public library load.'
+                        f"No fixture file found at {fixture_path} — skipping public library load."
                     )
                 )
                 return
-            raise CommandError(f'Fixture file not found: {fixture_path}')
+            raise CommandError(f"Fixture file not found: {fixture_path}")
 
         try:
             records = json.loads(fixture_path.read_text())
         except json.JSONDecodeError as exc:
-            raise CommandError(f'Invalid JSON in fixture file: {exc}') from exc
+            raise CommandError(f"Invalid JSON in fixture file: {exc}") from exc
 
         if not isinstance(records, list):
-            raise CommandError('Fixture must be a JSON array of records.')
+            raise CommandError("Fixture must be a JSON array of records.")
 
         created_count = 0
         updated_count = 0
 
         for record in records:
-            model_label = record.get('model', '')
-            fields = record.get('fields', {})
+            model_label = record.get("model", "")
+            fields = record.get("fields", {})
 
             try:
                 model_cls = apps.get_model(model_label)
             except (LookupError, ValueError) as exc:
                 raise CommandError(f'Unknown model "{model_label}": {exc}') from exc
 
-            name = fields.get('name')
+            name = fields.get("name")
             if not name:
                 raise CommandError(
                     f'Record for model {model_label} is missing a "name" field: {record}'
@@ -111,14 +112,19 @@ class Command(BaseCommand):
 
             defaults = {}
             for k, v in fields.items():
-                if k == 'name':
+                if k == "name":
                     continue
                 try:
                     field_obj = model_cls._meta.get_field(k)
-                    if field_obj.is_relation and isinstance(v, int):
+                    if (
+                        field_obj.is_relation
+                        and field_obj.related_model._meta.model_name == "image"
+                    ):
+                        v = normalize_image_payload(_normalize_image_field(v))
+                    elif field_obj.is_relation and isinstance(v, int):
                         # Resolve FK integer values to model instances.
                         v = field_obj.related_model.objects.get(pk=v)
-                    elif field_obj.get_internal_type() == 'JSONField':
+                    elif field_obj.get_internal_type() == "JSONField":
                         v = _normalize_image_field(v)
                 except Exception:
                     pass
@@ -128,7 +134,7 @@ class Command(BaseCommand):
                 name=name,
                 defaults=defaults,
             )
-            if hasattr(model_cls, 'post_fixture_load'):
+            if hasattr(model_cls, "post_fixture_load"):
                 model_cls.post_fixture_load(obj, was_created)
             if was_created:
                 created_count += 1
@@ -137,7 +143,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f'Loaded {len(records)} record(s): '
-                f'{created_count} created, {updated_count} updated.'
+                f"Loaded {len(records)} record(s): "
+                f"{created_count} created, {updated_count} updated."
             )
         )

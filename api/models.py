@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any
 import jsonschema
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
+from django.utils import timezone
 
 from .model_factories import (
     COMPOSITE_NAME_SEPARATOR as COMPOSITE_NAME_SEPARATOR,
@@ -13,6 +15,9 @@ from .model_factories import (
 )
 from .model_factories import (
     GlobalModel as GlobalModel,
+)
+from .model_factories import (
+    ImageForeignKey as ImageForeignKey,
 )
 from .model_factories import (
     make_compose_global_models,
@@ -52,6 +57,65 @@ from .workflow import (
     get_state_ref_fields as get_state_ref_fields,
 )
 
+
+class Image(models.Model):
+    """Shared image asset referenced by pieces, states, and global entries."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+    url = models.CharField(max_length=2048)
+    cloudinary_public_id = models.CharField(max_length=1024, null=True, blank=True)
+    cloud_name = models.CharField(max_length=255, null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cloud_name", "cloudinary_public_id"],
+                condition=Q(
+                    cloud_name__isnull=False, cloudinary_public_id__isnull=False
+                ),
+                name="uniq_image_cloudinary_identity",
+            ),
+            models.UniqueConstraint(
+                fields=["url"],
+                condition=Q(cloudinary_public_id__isnull=True),
+                name="uniq_image_url_without_cloudinary_id",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.url
+
+    def as_dict(self) -> dict:
+        return {
+            "url": self.url,
+            "cloudinary_public_id": self.cloudinary_public_id,
+            "cloud_name": self.cloud_name,
+        }
+
+    def __getitem__(self, key: str):
+        return self.as_dict()[key]
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, dict):
+            return self.as_dict() == {
+                "url": other.get("url") or "",
+                "cloudinary_public_id": other.get("cloudinary_public_id"),
+                "cloud_name": other.get("cloud_name"),
+            }
+        return super().__eq__(other)
+
+    __hash__ = models.Model.__hash__
+
+
 # ---------------------------------------------------------------------------
 # Auto-register all globals declared in workflow.yml
 #
@@ -66,19 +130,22 @@ from .workflow import (
 # (because ``__module__ = 'api.models'`` is set inside each factory).
 # ---------------------------------------------------------------------------
 
+
 def _register_globals():
     ns = globals()
     for global_name in get_global_names():
         if not is_factory_global(global_name):
             continue
         config = get_global_config(global_name)
-        model_name: str = config['model']
+        model_name: str = config["model"]
         compose_from = get_compose_from(global_name)
         if compose_from:
             composite, through = make_compose_global_models(global_name)
             ns[model_name] = composite
             compose_config = next(iter(compose_from.values()))
-            through_model_name: str = compose_config.get('through_model', f'{model_name}Through')
+            through_model_name: str = compose_config.get(
+                "through_model", f"{model_name}Through"
+            )
             ns[through_model_name] = through
         else:
             ns[model_name] = make_simple_global_model(global_name)
@@ -98,6 +165,7 @@ def _register_globals():
         tag_model = make_taggable_model(global_name)
         ns[tag_model.__name__] = tag_model
 
+
 _register_globals()
 
 
@@ -105,22 +173,28 @@ _register_globals()
 # Core piece models
 # ---------------------------------------------------------------------------
 
+
 class Piece(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='pieces')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="pieces"
+    )
     name = models.CharField(max_length=255)
     created = models.DateTimeField(auto_now_add=True)
     # Tracks changes to owned fields (name, thumbnail) only.
     # Use the `last_modified` property externally — it incorporates the current state's timestamp.
     fields_last_modified = models.DateTimeField(auto_now=True)
-    thumbnail = models.JSONField(null=True, blank=True, default=None)
+    thumbnail = ImageForeignKey(
+        to="api.Image",
+        related_name="thumbnail_for_pieces",
+    )
     shared = models.BooleanField(default=False)
     current_location = models.ForeignKey(
-        'Location',
+        "Location",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='pieces',
+        related_name="pieces",
     )
     # Workflow version under which this piece was created. All of its states are
     # validated against this version. Hardcoded to the current WORKFLOW_VERSION
@@ -128,11 +202,11 @@ class Piece(models.Model):
     workflow_version = models.CharField(max_length=32, default=WORKFLOW_VERSION)
 
     class Meta:
-        ordering = ['-fields_last_modified']
+        ordering = ["-fields_last_modified"]
 
     @property
-    def current_state(self) -> 'PieceState | None':
-        return self.states.order_by('-created').first()
+    def current_state(self) -> "PieceState | None":
+        return self.states.order_by("-created").first()
 
     @property
     def last_modified(self):
@@ -148,15 +222,13 @@ class Piece(models.Model):
 class PieceState(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='piece_states'
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="piece_states"
     )
-    piece = models.ForeignKey(Piece, on_delete=models.CASCADE, related_name='states')
+    piece = models.ForeignKey(Piece, on_delete=models.CASCADE, related_name="states")
     state = models.CharField(max_length=64)
-    notes = models.TextField(blank=True, default='')
+    notes = models.TextField(blank=True, default="")
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
-    # Stored as a list of {url, caption, created} objects.
-    images = models.JSONField(default=list)
     # Inline (non-global-ref) state-specific fields for this state.
     # Global ref fields are stored in per-type junction tables (PieceState*Ref models).
     custom_fields = models.JSONField(default=dict)
@@ -167,7 +239,26 @@ class PieceState(models.Model):
         return self.piece.workflow_version
 
     class Meta:
-        ordering = ['created']
+        ordering = ["created"]
+
+    def __init__(self, *args, **kwargs):
+        self._pending_images = kwargs.pop("images", None)
+        super().__init__(*args, **kwargs)
+
+    @property
+    def images(self) -> list[dict]:
+        from .utils import captioned_image_to_dict
+
+        if self.pk is None:
+            return list(self._pending_images or [])
+        return [
+            captioned_image_to_dict(link)
+            for link in self.image_links.select_related("image").order_by("order", "pk")
+        ]
+
+    @images.setter
+    def images(self, value: list[dict]) -> None:
+        self._pending_images = value
 
     def save(self, *args, allow_sealed_edit: bool = False, **kwargs):
         """
@@ -198,22 +289,57 @@ class PieceState(models.Model):
             current = self.piece.current_state
             if current is None or current.pk != self.pk:
                 raise ValueError(
-                    f'PieceState {self.pk} is sealed: only the current state of a piece '
-                    f'may be modified. Pass allow_sealed_edit=True to override.'
+                    f"PieceState {self.pk} is sealed: only the current state of a piece "
+                    f"may be modified. Pass allow_sealed_edit=True to override."
                 )
         super().save(*args, **kwargs)
+        if self._pending_images is not None:
+            from .utils import replace_piece_state_images
+
+            replace_piece_state_images(self, self._pending_images, user=self.user)
+            self._pending_images = None
 
     def __str__(self) -> str:
-        return f'{self.piece.name} → {self.state}'
+        return f"{self.piece.name} → {self.state}"
+
+
+class PieceStateImage(models.Model):
+    piece_state = models.ForeignKey(
+        PieceState,
+        on_delete=models.CASCADE,
+        related_name="image_links",
+    )
+    image = models.ForeignKey(
+        Image,
+        on_delete=models.PROTECT,
+        related_name="piece_state_links",
+    )
+    caption = models.CharField(max_length=1024, blank=True, default="")
+    created = models.DateTimeField(default=timezone.now)
+    order = models.PositiveSmallIntegerField()
+
+    class Meta:
+        ordering = ["order", "pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["piece_state", "order"],
+                name="uniq_piece_state_image_order",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.piece_state} / image {self.order}"
 
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
-    openid_subject = models.CharField(max_length=255, blank=True, default='')
-    profile_image_url = models.URLField(blank=True, default='')
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
+    )
+    openid_subject = models.CharField(max_length=255, blank=True, default="")
+    profile_image_url = models.URLField(blank=True, default="")
 
     def __str__(self) -> str:
-        return f'Profile({self.user})'
+        return f"Profile({self.user})"
 
 
 # These names are injected into the module namespace by _register_globals().

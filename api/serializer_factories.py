@@ -10,6 +10,7 @@ from django.db import models as django_models
 from rest_framework import serializers
 
 from .serializer_registry import _GLOBAL_ENTRY_SERIALIZERS
+from .utils import image_to_dict
 from .workflow import get_global_config
 
 
@@ -19,6 +20,15 @@ def _get_id(self: serializers.Serializer, obj: django_models.Model) -> str:
 
 def _get_is_public(self: serializers.Serializer, obj: django_models.Model) -> bool:
     return obj.user_id is None  # type: ignore[attr-defined]
+
+
+def _make_get_image(field_name: str):
+    def get_image(
+        self: serializers.Serializer, obj: django_models.Model
+    ) -> dict | None:
+        return image_to_dict(getattr(obj, field_name))
+
+    return get_image
 
 
 def make_global_entry_serializer(
@@ -36,22 +46,27 @@ def make_global_entry_serializer(
     list view uses it instead of the bare {id, name, is_public} fallback.
     """
     config = get_global_config(global_name)
-    fields_config: dict = config.get('fields', {})
+    fields_config: dict = config.get("fields", {})
 
-    meta_fields = ['id'] + list(fields_config.keys()) + ['is_public']
+    meta_fields = ["id"] + list(fields_config.keys()) + ["is_public"]
 
-    meta_cls = type('Meta', (), {'model': model_cls, 'fields': meta_fields})
+    meta_cls = type("Meta", (), {"model": model_cls, "fields": meta_fields})
 
     attrs: dict = {
-        '__module__': 'api.serializers',
-        'Meta': meta_cls,
-        'id': serializers.SerializerMethodField(),
-        'is_public': serializers.SerializerMethodField(),
-        'get_id': _get_id,
-        'get_is_public': _get_is_public,
+        "__module__": "api.serializers",
+        "Meta": meta_cls,
+        "id": serializers.SerializerMethodField(),
+        "is_public": serializers.SerializerMethodField(),
+        "get_id": _get_id,
+        "get_is_public": _get_is_public,
     }
 
-    cls_name = f'{model_cls.__name__}EntrySerializer'
+    for field_name, field_def in fields_config.items():
+        if isinstance(field_def, dict) and field_def.get("type") == "image":
+            attrs[field_name] = serializers.SerializerMethodField()
+            attrs[f"get_{field_name}"] = _make_get_image(field_name)
+
+    cls_name = f"{model_cls.__name__}EntrySerializer"
     serializer_cls: type[serializers.ModelSerializer] = type(
         cls_name, (serializers.ModelSerializer,), attrs
     )

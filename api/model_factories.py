@@ -12,11 +12,13 @@ This module contains:
 Nothing in this module should be imported directly by application code outside of
 ``api/models.py``.  All public symbols are re-exported from there.
 """
+
 from typing import Any, ClassVar
 
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from django.db.models.fields.related_descriptors import ForwardManyToOneDescriptor
 
 from .workflow import (
     get_filterable_compose_fields,
@@ -29,7 +31,35 @@ from .workflow import (
 # Separator used in compose_from globals to join ordered component names into a
 # stored computed name (e.g. GlazeCombination.name = "LayerA!LayerB").
 # Must not appear in the names of simple globals (enforced in GlobalModel.save()).
-COMPOSITE_NAME_SEPARATOR = '!'
+COMPOSITE_NAME_SEPARATOR = "!"
+
+
+class ImageForwardDescriptor(ForwardManyToOneDescriptor):
+    def __set__(self, instance, value):
+        if isinstance(value, (dict, str)):
+            from .utils import normalize_image_payload
+
+            user = getattr(instance, "user", None)
+            value = normalize_image_payload(value, user=user)
+        super().__set__(instance, value)
+
+
+class ImageForeignKey(models.ForeignKey):
+    forward_related_accessor_class = ImageForwardDescriptor
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("to", "api.Image")
+        kwargs.setdefault("null", True)
+        kwargs.setdefault("blank", True)
+        kwargs.setdefault("default", None)
+        kwargs.setdefault("on_delete", models.SET_NULL)
+        kwargs.setdefault("related_name", "+")
+        super().__init__(**kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        path = "django.db.models.ForeignKey"
+        return name, path, args, kwargs
 
 
 class GlobalModel(models.Model):
@@ -48,7 +78,7 @@ class GlobalModel(models.Model):
     for use in parameterised tests that must cover all registered globals.
     """
 
-    _registry: ClassVar[list[type['GlobalModel']]] = []
+    _registry: ClassVar[list[type["GlobalModel"]]] = []
     objects: ClassVar[Any]
 
     # Set to True on compose_from globals whose ``name`` is a separator-joined
@@ -71,21 +101,26 @@ class GlobalModel(models.Model):
     def save(self, *args, **kwargs):
         if self.pk is not None:
             old_user_id = (
-                type(self).objects
-                .filter(pk=self.pk)
-                .values_list('user_id', flat=True)
+                type(self)
+                .objects.filter(pk=self.pk)
+                .values_list("user_id", flat=True)
                 .first()
             )
             if old_user_id != self.user_id:  # type: ignore[attr-defined]
                 raise ValueError(
-                    f'Cannot change the user field on {type(self).__name__} '
-                    f'(pk={self.pk}) after creation.'
+                    f"Cannot change the user field on {type(self).__name__} "
+                    f"(pk={self.pk}) after creation."
                 )
-        if not self._computed_name and self.name and COMPOSITE_NAME_SEPARATOR in self.name:  # type: ignore[attr-defined]
+        name_value = getattr(self, "name", "")
+        if (
+            not self._computed_name
+            and name_value
+            and COMPOSITE_NAME_SEPARATOR in name_value
+        ):
             raise ValueError(
-                f'{type(self).__name__} names cannot contain '
+                f"{type(self).__name__} names cannot contain "
                 f'"{COMPOSITE_NAME_SEPARATOR}" '
-                f'(it is reserved as the composite name separator).'
+                f"(it is reserved as the composite name separator)."
             )
         super().save(*args, **kwargs)
 
@@ -93,6 +128,7 @@ class GlobalModel(models.Model):
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _deregister_model_if_exists(app_label: str, model_name: str) -> None:
     """Remove a model from the Django app registry if it is already registered.
@@ -126,9 +162,9 @@ def _pluralize_snake(name: str) -> str:
     Handles the English y→ies rule; otherwise appends 's'.
     Examples: 'location' → 'locations', 'clay_body' → 'clay_bodies'.
     """
-    if name.endswith('y'):
-        return name[:-1] + 'ies'
-    return name + 's'
+    if name.endswith("y"):
+        return name[:-1] + "ies"
+    return name + "s"
 
 
 def dsl_field_to_django_field(field_name: str, field_def: dict) -> models.Field:
@@ -138,30 +174,36 @@ def dsl_field_to_django_field(field_name: str, field_def: dict) -> models.Field:
     - ``name`` fields → CharField(max_length=255) — no blank/default, to match
       the migration baseline for all existing globals.
     - Enum string fields → CharField with choices and max_length=max(enum values, 16).
-    - Other string/image fields → CharField(max_length=1024, blank=True, default='').
+    - Other string fields → CharField(max_length=1024, blank=True, default='').
+    - image fields → FK to the shared Image asset table.
     - integer → IntegerField(null=True, blank=True)
     - number  → FloatField(null=True, blank=True)
     - boolean → BooleanField(null=True, blank=True)  (nullable for tri-state UI)
     - array/object → JSONField(default=dict)
     """
-    field_type = field_def.get('type', 'string')
-    enum = field_def.get('enum')
+    field_type = field_def.get("type", "string")
+    enum = field_def.get("enum")
 
-    if field_type == 'image':
-        return models.JSONField(null=True, blank=True, default=None)
-    if field_type == 'string':
-        if field_name == 'name':
-            return models.CharField(max_length=field_def.get('max_length', 255))
+    if field_type == "image":
+        return ImageForeignKey()
+    if field_type == "string":
+        if field_name == "name":
+            return models.CharField(max_length=field_def.get("max_length", 255))
         if enum:
             max_length = max(max(len(v) for v in enum), 16)
-            return models.CharField(max_length=max_length, blank=True, default='', choices=[(v, v) for v in enum])
-        max_length = field_def.get('max_length', 1024)
-        return models.CharField(max_length=max_length, blank=True, default='')
-    if field_type == 'integer':
+            return models.CharField(
+                max_length=max_length,
+                blank=True,
+                default="",
+                choices=[(v, v) for v in enum],
+            )
+        max_length = field_def.get("max_length", 1024)
+        return models.CharField(max_length=max_length, blank=True, default="")
+    if field_type == "integer":
         return models.IntegerField(null=True, blank=True)
-    if field_type == 'number':
+    if field_type == "number":
         return models.FloatField(null=True, blank=True)
-    if field_type == 'boolean':
+    if field_type == "boolean":
         return models.BooleanField(null=True, blank=True)
     return models.JSONField(default=dict)
 
@@ -169,6 +211,7 @@ def dsl_field_to_django_field(field_name: str, field_def: dict) -> models.Field:
 # ---------------------------------------------------------------------------
 # Simple global model factory
 # ---------------------------------------------------------------------------
+
 
 def make_simple_global_model(global_name: str) -> type:
     """Generate a GlobalModel subclass for a simple (non-compose_from) global.
@@ -187,32 +230,32 @@ def make_simple_global_model(global_name: str) -> type:
     """
     config = get_global_config(global_name)
     if not config:
-        raise ValueError(f'Unknown global: {global_name!r}')
+        raise ValueError(f"Unknown global: {global_name!r}")
 
-    model_name: str = config['model']
-    is_public: bool = bool(config.get('public', False))
-    is_private: bool = bool(config.get('private', True))
-    dsl_fields: dict = config.get('fields', {})
-    plural: str = config.get('plural', _pluralize_snake(global_name))
+    model_name: str = config["model"]
+    is_public: bool = bool(config.get("public", False))
+    is_private: bool = bool(config.get("private", True))
+    dsl_fields: dict = config.get("fields", {})
+    plural: str = config.get("plural", _pluralize_snake(global_name))
 
     attrs: dict = {
-        '__module__': 'api.models',
-        '__str__': lambda self: self.name,
+        "__module__": "api.models",
+        "__str__": lambda self: self.name,
     }
 
     # user FK — nullable for public (or public+private) globals, required for private-only.
     user_kwargs: dict = {
-        'to': settings.AUTH_USER_MODEL,
-        'on_delete': models.CASCADE,
-        'related_name': plural,
+        "to": settings.AUTH_USER_MODEL,
+        "on_delete": models.CASCADE,
+        "related_name": plural,
     }
     if is_public:
-        user_kwargs.update({'null': True, 'blank': True})
-    attrs['user'] = models.ForeignKey(**user_kwargs)
+        user_kwargs.update({"null": True, "blank": True})
+    attrs["user"] = models.ForeignKey(**user_kwargs)
 
     # Inline DSL fields — $ref entries are custom_fields references, not model columns.
     for field_name, field_def in dsl_fields.items():
-        if '$ref' not in field_def:
+        if "$ref" not in field_def:
             attrs[field_name] = dsl_field_to_django_field(field_name, field_def)
 
     # Standard uniqueness constraints derived from public/private flags.
@@ -220,42 +263,43 @@ def make_simple_global_model(global_name: str) -> type:
     if is_public and is_private:
         constraints += [
             models.UniqueConstraint(
-                fields=['user', 'name'],
+                fields=["user", "name"],
                 condition=Q(user__isnull=False),
-                name=f'uniq_{global_name}_name_per_user',
+                name=f"uniq_{global_name}_name_per_user",
             ),
             models.UniqueConstraint(
-                fields=['name'],
+                fields=["name"],
                 condition=Q(user__isnull=True),
-                name=f'uniq_{global_name}_name_public',
+                name=f"uniq_{global_name}_name_public",
             ),
         ]
     elif is_public:
         # public-only (private: false) — only admin-managed public objects exist.
         constraints.append(
             models.UniqueConstraint(
-                fields=['name'],
+                fields=["name"],
                 condition=Q(user__isnull=True),
-                name=f'uniq_{global_name}_name_public',
+                name=f"uniq_{global_name}_name_public",
             )
         )
     else:
         # private-only — each user owns their own set.
         constraints.append(
             models.UniqueConstraint(
-                fields=['user', 'name'],
-                name=f'uniq_{global_name}_name_per_user',
+                fields=["user", "name"],
+                name=f"uniq_{global_name}_name_per_user",
             )
         )
 
-    attrs['Meta'] = type('Meta', (), {'constraints': constraints})
-    _deregister_model_if_exists('api', model_name)
+    attrs["Meta"] = type("Meta", (), {"constraints": constraints})
+    _deregister_model_if_exists("api", model_name)
     return type(model_name, (GlobalModel,), attrs)
 
 
 # ---------------------------------------------------------------------------
 # Compose-from global model factory
 # ---------------------------------------------------------------------------
+
 
 def make_compose_global_models(global_name: str) -> tuple[type, type]:
     """Generate (CompositeModel, ThroughModel) for a compose_from global.
@@ -278,64 +322,66 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
     """
     config = get_global_config(global_name)
     if not config:
-        raise ValueError(f'Unknown global: {global_name!r}')
-    compose_from = config.get('compose_from')
+        raise ValueError(f"Unknown global: {global_name!r}")
+    compose_from = config.get("compose_from")
     if not compose_from:
         raise ValueError(f"Global '{global_name}' has no compose_from declaration.")
 
-    model_name: str = config['model']
-    is_public: bool = bool(config.get('public', False))
-    is_private: bool = bool(config.get('private', True))
-    dsl_fields: dict = config.get('fields', {})
-    plural: str = config.get('plural', _pluralize_snake(global_name))
+    model_name: str = config["model"]
+    is_public: bool = bool(config.get("public", False))
+    is_private: bool = bool(config.get("private", True))
+    dsl_fields: dict = config.get("fields", {})
+    plural: str = config.get("plural", _pluralize_snake(global_name))
 
     # compose_from has exactly one key (the M2M relationship name, e.g. 'glaze_types').
     compose_key = next(iter(compose_from))
     compose_config = compose_from[compose_key]
-    component_global: str = compose_config['global']
-    component_model_name: str = get_global_config(component_global)['model']
-    through_fields: dict = compose_config.get('through_fields', {})
-    is_ordered: bool = bool(compose_config.get('ordered', False))
+    component_global: str = compose_config["global"]
+    component_model_name: str = get_global_config(component_global)["model"]
+    through_fields: dict = compose_config.get("through_fields", {})
+    is_ordered: bool = bool(compose_config.get("ordered", False))
     # through_model key in compose_from lets workflow.yml name the through class
     # explicitly (required for migration-tracked models like GlazeCombinationLayer).
     # Defaults to f'{model_name}Through' for new globals.
-    through_model_name: str = compose_config.get('through_model', f'{model_name}Through')
+    through_model_name: str = compose_config.get(
+        "through_model", f"{model_name}Through"
+    )
 
     # --- Through model ---
     through_attrs: dict = {
-        '__module__': 'api.models',
-        'combination': models.ForeignKey(
-            f'api.{model_name}',
+        "__module__": "api.models",
+        "combination": models.ForeignKey(
+            f"api.{model_name}",
             on_delete=models.CASCADE,
-            related_name='layers',
+            related_name="layers",
         ),
         component_global: models.ForeignKey(
-            f'api.{component_model_name}',
+            f"api.{component_model_name}",
             on_delete=models.PROTECT,
         ),
-        '__str__': (lambda cg: lambda self: str(getattr(self, cg)))(component_global),
+        "__str__": (lambda cg: lambda self: str(getattr(self, cg)))(component_global),
     }
     if is_ordered:
-        through_attrs['order'] = models.PositiveSmallIntegerField()
+        through_attrs["order"] = models.PositiveSmallIntegerField()
 
     for tf_name, tf_def in through_fields.items():
-        ref = tf_def.get('$ref', '')
-        required = bool(tf_def.get('required', False))
-        if ref.startswith('@'):
-            ref_global = ref[1:].split('.')[0]
-            ref_model_name = get_global_config(ref_global)['model']
+        ref = tf_def.get("$ref", "")
+        required = bool(tf_def.get("required", False))
+        if ref.startswith("@"):
+            ref_global = ref[1:].split(".")[0]
+            ref_model_name = get_global_config(ref_global)["model"]
             through_attrs[tf_name] = models.ForeignKey(
-                f'api.{ref_model_name}',
+                f"api.{ref_model_name}",
                 on_delete=models.SET_NULL,
                 null=not required,
                 blank=not required,
-                related_name=f'{global_name}_layers',
+                related_name=f"{global_name}_layers",
             )
 
     through_meta_kwargs: dict = {}
     if is_ordered:
-        through_meta_kwargs['ordering'] = ['order']
-    through_attrs['Meta'] = type('Meta', (), through_meta_kwargs)
+        through_meta_kwargs["ordering"] = ["order"]
+    through_attrs["Meta"] = type("Meta", (), through_meta_kwargs)
 
     # Public-reference invariant: if the parent composite is public (user=NULL),
     # its component and all through-field references must also be public.
@@ -346,10 +392,11 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
     # - Through fields referencing non-public globals must be NULL on public
     #   composites (no public instances of those globals exist to reference).
     _private_through_fks: list[tuple[str, str]] = [
-        (tf_name, ref[1:].split('.')[0])
+        (tf_name, ref[1:].split(".")[0])
         for tf_name, tf_def in through_fields.items()
-        if (ref := tf_def.get('$ref', '')) and ref.startswith('@')
-        and not is_public_global(ref[1:].split('.')[0])
+        if (ref := tf_def.get("$ref", ""))
+        and ref.startswith("@")
+        and not is_public_global(ref[1:].split(".")[0])
     ]
     _cg = component_global  # captured name for closure
 
@@ -359,105 +406,107 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
             if component.user_id is not None:
                 component_cls_name = type(component).__name__
                 raise ValueError(
-                    f'Public {model_name} can only reference public '
-                    f'{component_cls_name} instances. '
+                    f"Public {model_name} can only reference public "
+                    f"{component_cls_name} instances. "
                     f'{component_cls_name} "{component}" (id={component.pk}) is private.'
                 )
             for tf_name, tf_global in _private_through_fks:
-                if getattr(self, f'{tf_name}_id') is not None:
+                if getattr(self, f"{tf_name}_id") is not None:
                     raise ValueError(
-                        f'Public {model_name} cannot reference private '
-                        f'{tf_global} instances (id={getattr(self, f"{tf_name}_id")}).'
+                        f"Public {model_name} cannot reference private "
+                        f"{tf_global} instances (id={getattr(self, f'{tf_name}_id')})."
                     )
         super(type(self), self).save(*args, **kwargs)
 
-    through_attrs['save'] = _through_save
-    _deregister_model_if_exists('api', through_model_name)
+    through_attrs["save"] = _through_save
+    _deregister_model_if_exists("api", through_model_name)
     through_model = type(through_model_name, (models.Model,), through_attrs)
 
     # --- Composite model ---
     composite_attrs: dict = {
-        '__module__': 'api.models',
+        "__module__": "api.models",
         # The name field intentionally contains COMPOSITE_NAME_SEPARATOR.
-        '_computed_name': True,
+        "_computed_name": True,
         # Stored computed name — set via compute_name() before save().
-        'name': models.CharField(max_length=2047, blank=True, default=''),
+        "name": models.CharField(max_length=2047, blank=True, default=""),
         # Ordered M2M to the component type via the through table.
         compose_key: models.ManyToManyField(
-            f'api.{component_model_name}',
-            through=f'api.{through_model_name}',
-            related_name='combinations',
+            f"api.{component_model_name}",
+            through=f"api.{through_model_name}",
+            related_name="combinations",
         ),
-        '__str__': lambda self: self.name,
+        "__str__": lambda self: self.name,
     }
 
     # user FK.
     user_kwargs: dict = {
-        'to': settings.AUTH_USER_MODEL,
-        'on_delete': models.CASCADE,
-        'related_name': plural,
+        "to": settings.AUTH_USER_MODEL,
+        "on_delete": models.CASCADE,
+        "related_name": plural,
     }
     if is_public:
-        user_kwargs.update({'null': True, 'blank': True})
-    composite_attrs['user'] = models.ForeignKey(**user_kwargs)
+        user_kwargs.update({"null": True, "blank": True})
+    composite_attrs["user"] = models.ForeignKey(**user_kwargs)
 
     # Inline and global-ref fields from the DSL (skip 'name' — already added).
     for field_name, field_def in dsl_fields.items():
-        if field_name == 'name':
+        if field_name == "name":
             continue
-        if '$ref' in field_def:
-            ref = field_def['$ref']
-            if ref.startswith('@'):
-                ref_global = ref[1:].split('.')[0]
-                ref_model_name = get_global_config(ref_global)['model']
+        if "$ref" in field_def:
+            ref = field_def["$ref"]
+            if ref.startswith("@"):
+                ref_global = ref[1:].split(".")[0]
+                ref_model_name = get_global_config(ref_global)["model"]
                 composite_attrs[field_name] = models.ForeignKey(
-                    f'api.{ref_model_name}',
+                    f"api.{ref_model_name}",
                     on_delete=models.SET_NULL,
                     null=True,
                     blank=True,
                     related_name=plural,
                 )
         else:
-            composite_attrs[field_name] = dsl_field_to_django_field(field_name, field_def)
+            composite_attrs[field_name] = dsl_field_to_django_field(
+                field_name, field_def
+            )
 
     # Standard uniqueness constraints.
     constraints: list = []
     if is_public and is_private:
         constraints += [
             models.UniqueConstraint(
-                fields=['name'],
+                fields=["name"],
                 condition=Q(user__isnull=True),
-                name=f'uniq_{global_name}_name_public',
+                name=f"uniq_{global_name}_name_public",
             ),
             models.UniqueConstraint(
-                fields=['user', 'name'],
+                fields=["user", "name"],
                 condition=Q(user__isnull=False),
-                name=f'uniq_{global_name}_name_per_user',
+                name=f"uniq_{global_name}_name_per_user",
             ),
         ]
     elif is_public:
         constraints.append(
             models.UniqueConstraint(
-                fields=['name'],
+                fields=["name"],
                 condition=Q(user__isnull=True),
-                name=f'uniq_{global_name}_name_public',
+                name=f"uniq_{global_name}_name_public",
             )
         )
     else:
         constraints.append(
             models.UniqueConstraint(
-                fields=['user', 'name'],
-                name=f'uniq_{global_name}_name_per_user',
+                fields=["user", "name"],
+                name=f"uniq_{global_name}_name_per_user",
             )
         )
-    composite_attrs['Meta'] = type('Meta', (), {'constraints': constraints})
+    composite_attrs["Meta"] = type("Meta", (), {"constraints": constraints})
 
     # compute_name — joins component display names with the standard separator.
     @staticmethod  # type: ignore[misc]
     def compute_name(component_names: list[str]) -> str:
         return COMPOSITE_NAME_SEPARATOR.join(component_names)
 
-    composite_attrs['compute_name'] = compute_name
+    composite_attrs["compute_name"] = compute_name
 
     # get_or_create_with_components — finds or creates a composite from a list of component
     # instances.  The keyword parameter is named after the compose_key so callers can use
@@ -469,44 +518,50 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
     def _make_get_or_create(ck, cg, tmr):
         @classmethod  # type: ignore[misc]
         def get_or_create_with_components(cls, user, **kwargs) -> tuple:
-            components = kwargs[ck] if ck in kwargs else kwargs.get('components')
+            components = kwargs[ck] if ck in kwargs else kwargs.get("components")
             if components is None:
                 raise TypeError(
-                    f'get_or_create_with_components() requires keyword argument '
+                    f"get_or_create_with_components() requires keyword argument "
                     f'{ck!r} (or generic alias "components")'
                 )
             if not components:
-                raise ValueError(f'A {cls.__name__} must have at least one component.')
+                raise ValueError(f"A {cls.__name__} must have at least one component.")
             name = cls.compute_name([str(c) for c in components])
             composite, created = cls.objects.get_or_create(user=user, name=name)
             if created:
                 tm = tmr[0]
                 for order, component in enumerate(components):
-                    tm.objects.create(combination=composite, **{cg: component}, order=order)
+                    tm.objects.create(
+                        combination=composite, **{cg: component}, order=order
+                    )
             return composite, created
+
         return get_or_create_with_components
 
-    get_or_create_with_components = _make_get_or_create(_compose_key, component_global, _through_model_ref)
-    composite_attrs['get_or_create_with_components'] = get_or_create_with_components
+    get_or_create_with_components = _make_get_or_create(
+        _compose_key, component_global, _through_model_ref
+    )
+    composite_attrs["get_or_create_with_components"] = get_or_create_with_components
 
     # get_or_create_from_ordered_pks — resolves PKs to component instances, then delegates.
     @classmethod  # type: ignore[misc]
     def get_or_create_from_ordered_pks(cls, user, pks: list) -> tuple:
         from django.apps import apps as _apps
-        component_model = _apps.get_model('api', _component_model_name)
+
+        component_model = _apps.get_model("api", _component_model_name)
         components = []
         for pk in pks:
             try:
                 components.append(component_model.objects.get(pk=pk))
             except (component_model.DoesNotExist, TypeError, ValueError) as exc:
-                raise ValueError(f'Unknown {_component_model_name} pk: {pk!r}') from exc
+                raise ValueError(f"Unknown {_component_model_name} pk: {pk!r}") from exc
         if not components:
-            raise ValueError(f'A {cls.__name__} must have at least one component.')
+            raise ValueError(f"A {cls.__name__} must have at least one component.")
         return cls.get_or_create_with_components(user=user, components=components)
 
-    composite_attrs['get_or_create_from_ordered_pks'] = get_or_create_from_ordered_pks
+    composite_attrs["get_or_create_from_ordered_pks"] = get_or_create_from_ordered_pks
 
-    _deregister_model_if_exists('api', model_name)
+    _deregister_model_if_exists("api", model_name)
     composite_model = type(model_name, (GlobalModel,), composite_attrs)
     _through_model_ref.append(through_model)
 
@@ -515,7 +570,7 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
     # - FK fields with filterable: true (global ref fields → _id suffix)
     # - compose_from relationships with filter_label (m2m → layers__<component>_id)
     composite_model.filterable_fields = {  # type: ignore[attr-defined]
-        **{k: {'type': 'boolean'} for k in get_filterable_fields(global_name)},
+        **{k: {"type": "boolean"} for k in get_filterable_fields(global_name)},
         **get_filterable_ref_fields(global_name),
         **get_filterable_compose_fields(global_name),
     }
@@ -532,11 +587,16 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
         if not created:
             return
         from django.apps import apps as _apps
-        component_model = _apps.get_model('api', _component_model_name)
+
+        component_model = _apps.get_model("api", _component_model_name)
         tm = _through_model_ref[0]
-        for order, component_name in enumerate(obj.name.split(COMPOSITE_NAME_SEPARATOR)):
+        for order, component_name in enumerate(
+            obj.name.split(COMPOSITE_NAME_SEPARATOR)
+        ):
             component = component_model.objects.get(user=None, name=component_name)
-            tm.objects.create(combination=obj, **{component_global: component}, order=order)
+            tm.objects.create(
+                combination=obj, **{component_global: component}, order=order
+            )
 
     composite_model.post_fixture_load = post_fixture_load  # type: ignore[attr-defined]
 
@@ -546,6 +606,7 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
 # ---------------------------------------------------------------------------
 # Favorite model base class and factory
 # ---------------------------------------------------------------------------
+
 
 class FavoriteModel(models.Model):
     """Abstract base class for per-user favorites junction tables.
@@ -569,7 +630,7 @@ class FavoriteModel(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='+',  # no reverse accessor needed; subclasses may override
+        related_name="+",  # no reverse accessor needed; subclasses may override
     )
 
     class Meta:
@@ -578,7 +639,11 @@ class FavoriteModel(models.Model):
     @classmethod
     def get_favorite_ids_for(cls, user) -> set:
         """Return the set of favorited global-object PKs for the given user."""
-        return set(cls.objects.filter(user=user).values_list(f'{cls.global_fk_field}_id', flat=True))
+        return set(
+            cls.objects.filter(user=user).values_list(
+                f"{cls.global_fk_field}_id", flat=True
+            )
+        )
 
 
 def make_favorite_model(global_name: str) -> type:
@@ -595,41 +660,46 @@ def make_favorite_model(global_name: str) -> type:
     """
     config = get_global_config(global_name)
     if not config:
-        raise ValueError(f'Unknown global: {global_name!r}')
+        raise ValueError(f"Unknown global: {global_name!r}")
 
-    model_name: str = config['model']
-    plural: str = config.get('plural', _pluralize_snake(global_name))
+    model_name: str = config["model"]
+    plural: str = config.get("plural", _pluralize_snake(global_name))
 
     attrs: dict = {
-        '__module__': 'api.models',
-        'global_fk_field': global_name,
-        'user': models.ForeignKey(
+        "__module__": "api.models",
+        "global_fk_field": global_name,
+        "user": models.ForeignKey(
             settings.AUTH_USER_MODEL,
             on_delete=models.CASCADE,
-            related_name=f'favorite_{plural}',
+            related_name=f"favorite_{plural}",
         ),
         global_name: models.ForeignKey(
-            f'api.{model_name}',
+            f"api.{model_name}",
             on_delete=models.CASCADE,
-            related_name='favorited_by',
+            related_name="favorited_by",
         ),
-        'Meta': type('Meta', (), {
-            'constraints': [
-                models.UniqueConstraint(
-                    fields=['user', global_name],
-                    name=f'uniq_favorite_{global_name}_per_user',
-                )
-            ]
-        }),
+        "Meta": type(
+            "Meta",
+            (),
+            {
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=["user", global_name],
+                        name=f"uniq_favorite_{global_name}_per_user",
+                    )
+                ]
+            },
+        ),
     }
 
-    _deregister_model_if_exists('api', f'Favorite{model_name}')
-    return type(f'Favorite{model_name}', (FavoriteModel,), attrs)
+    _deregister_model_if_exists("api", f"Favorite{model_name}")
+    return type(f"Favorite{model_name}", (FavoriteModel,), attrs)
 
 
 # ---------------------------------------------------------------------------
 # PieceState global-ref junction model factory
 # ---------------------------------------------------------------------------
+
 
 def make_piece_state_global_ref_model(global_name: str) -> type:
     """Generate a junction model that stores FK references from PieceState to a global type.
@@ -649,34 +719,40 @@ def make_piece_state_global_ref_model(global_name: str) -> type:
     """
     config = get_global_config(global_name)
     if not config:
-        raise ValueError(f'Unknown global: {global_name!r}')
+        raise ValueError(f"Unknown global: {global_name!r}")
 
-    model_name: str = config['model']
-    ref_model_class_name = f'PieceState{model_name}Ref'
+    model_name: str = config["model"]
+    ref_model_class_name = f"PieceState{model_name}Ref"
     plural = _pluralize_snake(global_name)
 
     attrs: dict = {
-        '__module__': 'api.models',
-        'piece_state': models.ForeignKey(
-            'api.PieceState',
+        "__module__": "api.models",
+        "piece_state": models.ForeignKey(
+            "api.PieceState",
             on_delete=models.CASCADE,
-            related_name=f'{plural}_refs',
+            related_name=f"{plural}_refs",
         ),
-        'field_name': models.CharField(max_length=100),
+        "field_name": models.CharField(max_length=100),
         global_name: models.ForeignKey(
-            f'api.{model_name}',
+            f"api.{model_name}",
             on_delete=models.PROTECT,
-            related_name='piece_state_refs',
+            related_name="piece_state_refs",
         ),
-        '__str__': (lambda gn: lambda self: f'{self.piece_state} / {self.field_name}={getattr(self, gn)}')(global_name),
-        'Meta': type('Meta', (), {
-            'constraints': [
-                models.UniqueConstraint(
-                    fields=['piece_state', 'field_name'],
-                    name=f'uniq_piece_state_{global_name}_ref',
-                )
-            ]
-        }),
+        "__str__": (
+            lambda gn: lambda self: f"{self.piece_state} / {self.field_name}={getattr(self, gn)}"
+        )(global_name),
+        "Meta": type(
+            "Meta",
+            (),
+            {
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=["piece_state", "field_name"],
+                        name=f"uniq_piece_state_{global_name}_ref",
+                    )
+                ]
+            },
+        ),
     }
 
     return type(ref_model_class_name, (models.Model,), attrs)
@@ -686,35 +762,41 @@ def make_taggable_model(global_name: str) -> type:
     """Generate an ordered shared-tag junction model for a ``taggable: true`` global."""
     config = get_global_config(global_name)
     if not config:
-        raise ValueError(f'Unknown global: {global_name!r}')
+        raise ValueError(f"Unknown global: {global_name!r}")
 
-    model_name: str = config['model']
-    through_model_name = f'{model_name}Tag'
+    model_name: str = config["model"]
+    through_model_name = f"{model_name}Tag"
 
     attrs: dict = {
-        '__module__': 'api.models',
+        "__module__": "api.models",
         global_name: models.ForeignKey(
-            f'api.{model_name}',
+            f"api.{model_name}",
             on_delete=models.CASCADE,
-            related_name='tag_links',
+            related_name="tag_links",
         ),
-        'tag': models.ForeignKey(
-            'api.Tag',
+        "tag": models.ForeignKey(
+            "api.Tag",
             on_delete=models.PROTECT,
-            related_name=f'{global_name}_links',
+            related_name=f"{global_name}_links",
         ),
-        'order': models.PositiveSmallIntegerField(),
-        '__str__': (lambda gn: lambda self: f'{getattr(self, gn)} / {self.tag}')(global_name),
-        'Meta': type('Meta', (), {
-            'ordering': ['order', 'pk'],
-            'constraints': [
-                models.UniqueConstraint(
-                    fields=[global_name, 'tag'],
-                    name=f'uniq_{global_name}_tag',
-                )
-            ]
-        }),
+        "order": models.PositiveSmallIntegerField(),
+        "__str__": (lambda gn: lambda self: f"{getattr(self, gn)} / {self.tag}")(
+            global_name
+        ),
+        "Meta": type(
+            "Meta",
+            (),
+            {
+                "ordering": ["order", "pk"],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=[global_name, "tag"],
+                        name=f"uniq_{global_name}_tag",
+                    )
+                ],
+            },
+        ),
     }
 
-    _deregister_model_if_exists('api', through_model_name)
+    _deregister_model_if_exists("api", through_model_name)
     return type(through_model_name, (models.Model,), attrs)
