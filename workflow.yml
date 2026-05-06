@@ -164,6 +164,7 @@ globals:
         type: string
         description: Hex color code used to render the tag chip.
         max_length: 7
+        format: hex_color
 
   firing_temperature:
     model: FiringTemperature

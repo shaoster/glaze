@@ -397,6 +397,8 @@ def _resolve_field_def(field_def: dict) -> dict:
         prop: dict = {'type': json_type}
         if 'enum' in field_def:
             prop['enum'] = field_def['enum']
+        if field_def.get('format') == 'hex_color':
+            prop['pattern'] = '^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$'
         return prop
 
     ref: str = field_def['$ref']
