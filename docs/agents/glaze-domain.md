@@ -229,7 +229,7 @@ PieceSummary & {
 }
 ```
 
-**Image metadata contract:** Every stored image record is guaranteed to have both `cloudinary_public_id` and `cloud_name` populated. Code that renders images may always assume the Cloudinary SDK path is available — there is no fallback-to-URL-only case for images that have been through the normal upload flow.
+**Image metadata contract:** Every Cloudinary-backed image record is guaranteed to have both `cloudinary_public_id` and `cloud_name` populated. Code that renders these images may always assume the Cloudinary SDK path is available. The only exceptions are curated local SVG piece thumbnails (e.g. `/thumbnails/question-mark.svg`) stored as `Image` rows — these have no Cloudinary identity and are never rendered via `CloudinaryImage`.
 
 ---
 
