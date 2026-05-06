@@ -44,10 +44,18 @@ const MOCK_PIECE: PieceDetail = {
 function renderPage({
   fromGallery = false,
   id = "piece-1",
-}: { fromGallery?: boolean; id?: string } = {}) {
+  showBackToPieces,
+}: {
+  fromGallery?: boolean;
+  id?: string;
+  showBackToPieces?: boolean;
+} = {}) {
   const router = createMemoryRouter(
     [
-      { path: "/pieces/:id", element: <PieceDetailPage /> },
+      {
+        path: "/pieces/:id",
+        element: <PieceDetailPage showBackToPieces={showBackToPieces} />,
+      },
       { path: "/", element: <div data-testid="pieces-page" /> },
       { path: "/analyze", element: <div data-testid="analyze-page" /> },
     ],
@@ -75,6 +83,17 @@ describe("PieceDetailPage", () => {
         screen.getByRole("button", { name: /Back to Pieces/i }),
       ).toBeInTheDocument(),
     );
+  });
+
+  it("hides Back to Pieces when disabled for public views", async () => {
+    renderPage({ showBackToPieces: false });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("piece-detail-component")).toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByRole("button", { name: /Back to Pieces/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows Back to Gallery button when navigated from gallery", async () => {

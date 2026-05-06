@@ -510,7 +510,7 @@ function UnauthenticatedApp({
               path="/pieces/:id"
               element={
                 <PublicPieceShell>
-                  <PieceDetailPage />
+                  <PieceDetailPage showBackToPieces={false} />
                 </PublicPieceShell>
               }
             />

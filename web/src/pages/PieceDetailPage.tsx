@@ -5,12 +5,19 @@ import { useAsync } from "../util/useAsync";
 import PieceDetailComponent from "../components/PieceDetail";
 import { type PieceDetail } from "../util/types";
 
-export default function PieceDetailPage() {
+interface PieceDetailPageProps {
+  showBackToPieces?: boolean;
+}
+
+export default function PieceDetailPage({
+  showBackToPieces = true,
+}: PieceDetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const fromGallery =
     (location.state as { fromGallery?: boolean } | null)?.fromGallery === true;
+  const showBackButton = fromGallery || showBackToPieces;
   // id is always defined — this component is only rendered via the /pieces/:id route
   const {
     data: piece,
@@ -21,15 +28,17 @@ export default function PieceDetailPage() {
 
   return (
     <>
-      <Box sx={{ mb: 2, textAlign: "left" }}>
-        <Button
-          variant="text"
-          onClick={() => navigate(fromGallery ? "/analyze" : "/")}
-          sx={{ px: 0 }}
-        >
-          {fromGallery ? "← Back to Gallery" : "← Back to Pieces"}
-        </Button>
-      </Box>
+      {showBackButton && (
+        <Box sx={{ mb: 2, textAlign: "left" }}>
+          <Button
+            variant="text"
+            onClick={() => navigate(fromGallery ? "/analyze" : "/")}
+            sx={{ px: 0 }}
+          >
+            {fromGallery ? "← Back to Gallery" : "← Back to Pieces"}
+          </Button>
+        </Box>
+      )}
       {loading && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
           <CircularProgress />
