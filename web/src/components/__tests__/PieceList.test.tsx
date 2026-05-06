@@ -49,6 +49,8 @@ function makePiece(overrides: Partial<PieceSummary> = {}): PieceSummary {
     current_location: null,
     current_state: { state: "designed" } as any,
     tags: [],
+    shared: false,
+    can_edit: true,
     ...overrides,
   };
 }

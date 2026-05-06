@@ -18,7 +18,7 @@ import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import { Masonry } from "masonic";
 import type { RenderComponentProps } from "masonic";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import CloudinaryImage from "./CloudinaryImage";
 import TagAutocomplete from "./TagAutocomplete";
 import TagChip from "./TagChip";
@@ -27,7 +27,7 @@ import { DEFAULT_THUMBNAIL } from "./thumbnailConstants";
 // Kiln-glow amber used for stale indicator
 const KILN_COLOR = "oklch(0.72 0.13 55)";
 
-type FilterCategory = "wip" | "completed" | "discarded";
+type FilterCategory = "wip" | "completed" | "discarded" | "shared";
 
 interface FilterOption {
   value: FilterCategory;
@@ -38,6 +38,7 @@ const FILTER_OPTIONS: FilterOption[] = [
   { value: "wip", label: "Active" },
   { value: "completed", label: "Completed" },
   { value: "discarded", label: "Recycled" },
+  { value: "shared", label: "Shared" },
 ];
 
 function matchesFilter(piece: PieceSummary, filter: FilterCategory): boolean {
@@ -46,7 +47,29 @@ function matchesFilter(piece: PieceSummary, filter: FilterCategory): boolean {
   if (filter === "wip") return isNonTerminal;
   if (filter === "completed") return state === "completed";
   if (filter === "discarded") return state === "recycled";
+  if (filter === "shared") return piece.shared;
   return false;
+}
+
+const VALID_FILTER_CATEGORIES = new Set<FilterCategory>([
+  "wip",
+  "completed",
+  "discarded",
+  "shared",
+]);
+
+function parseFilterParam(param: string | null): FilterCategory[] {
+  if (!param) return [];
+  return param
+    .split(",")
+    .filter((v): v is FilterCategory =>
+      VALID_FILTER_CATEGORIES.has(v as FilterCategory),
+    );
+}
+
+function parseTagIdsParam(param: string | null): string[] {
+  if (!param) return [];
+  return param.split(",").filter(Boolean);
 }
 
 function daysSince(date: Date): number {
@@ -284,8 +307,15 @@ const PieceList = (props: PieceListProps) => {
   } = props;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const [activeFilters, setActiveFilters] = useState<FilterCategory[]>([]);
-  const [activeTags, setActiveTags] = useState<TagEntry[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeFilters = useMemo(
+    () => parseFilterParam(searchParams.get("filter")),
+    [searchParams],
+  );
+  const activeTagIds = useMemo(
+    () => parseTagIdsParam(searchParams.get("tags")),
+    [searchParams],
+  );
   const [filterOpen, setFilterOpen] = useState(false);
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
 
@@ -316,6 +346,11 @@ const PieceList = (props: PieceListProps) => {
     return [...deduped.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [pieces]);
 
+  const activeTags = useMemo(
+    () => availableTags.filter((tag) => activeTagIds.includes(tag.id)),
+    [availableTags, activeTagIds],
+  );
+
   const filteredPieces = useMemo(() => {
     return pieces.filter((piece) => {
       const matchesState =
@@ -323,17 +358,17 @@ const PieceList = (props: PieceListProps) => {
           ? true
           : activeFilters.some((filter) => matchesFilter(piece, filter));
       const matchesTags =
-        activeTags.length === 0
+        activeTagIds.length === 0
           ? true
-          : activeTags.every((tag) =>
-              (piece.tags ?? []).some((pieceTag) => pieceTag.id === tag.id),
+          : activeTagIds.every((id) =>
+              (piece.tags ?? []).some((pieceTag) => pieceTag.id === id),
             );
       return matchesState && matchesTags;
     });
-  }, [pieces, activeFilters, activeTags]);
+  }, [pieces, activeFilters, activeTagIds]);
 
   const activeFilterLabel = useMemo(() => {
-    if (activeFilters.length === 0 && activeTags.length === 0) return "All";
+    if (activeFilters.length === 0 && activeTagIds.length === 0) return "All";
     const parts: string[] = [];
     activeFilters.forEach((f) => {
       const opt = FILTER_OPTIONS.find((o) => o.value === f);
@@ -341,25 +376,36 @@ const PieceList = (props: PieceListProps) => {
     });
     activeTags.forEach((t) => parts.push(t.name));
     return parts.join(", ");
-  }, [activeFilters, activeTags]);
+  }, [activeFilters, activeTagIds, activeTags]);
 
-  const hasActiveFilters = activeFilters.length > 0 || activeTags.length > 0;
+  const hasActiveFilters = activeFilters.length > 0 || activeTagIds.length > 0;
   const filterKey = useMemo(() => {
     const filters = [...activeFilters].sort().join(",");
-    const tags = activeTags
-      .map((tag) => tag.id)
-      .sort()
-      .join(",");
+    const tags = [...activeTagIds].sort().join(",");
     return `${filters}|${tags}|${sortOrder}`;
-  }, [activeFilters, activeTags, sortOrder]);
+  }, [activeFilters, activeTagIds, sortOrder]);
 
-  const toggleFilter = useCallback((filter: FilterCategory) => {
-    setActiveFilters((prev) =>
-      prev.includes(filter)
-        ? prev.filter((f) => f !== filter)
-        : [...prev, filter],
-    );
-  }, []);
+  const toggleFilter = useCallback(
+    (filter: FilterCategory) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          const current = parseFilterParam(next.get("filter"));
+          const updated = current.includes(filter)
+            ? current.filter((f) => f !== filter)
+            : [...current, filter];
+          if (updated.length > 0) {
+            next.set("filter", updated.join(","));
+          } else {
+            next.delete("filter");
+          }
+          return next;
+        },
+        { replace: false },
+      );
+    },
+    [setSearchParams],
+  );
 
   const sortLabel = useMemo(() => {
     return (
@@ -535,7 +581,21 @@ const PieceList = (props: PieceListProps) => {
                   label={tag.name}
                   color={tag.color}
                   onDelete={() =>
-                    setActiveTags((prev) => prev.filter((t) => t.id !== tag.id))
+                    setSearchParams(
+                      (prev) => {
+                        const next = new URLSearchParams(prev);
+                        const ids = parseTagIdsParam(next.get("tags")).filter(
+                          (id) => id !== tag.id,
+                        );
+                        if (ids.length > 0) {
+                          next.set("tags", ids.join(","));
+                        } else {
+                          next.delete("tags");
+                        }
+                        return next;
+                      },
+                      { replace: false },
+                    )
                   }
                 />
               ))}
@@ -548,7 +608,18 @@ const PieceList = (props: PieceListProps) => {
                     options={availableTags}
                     value={activeTags}
                     onChange={(next) => {
-                      setActiveTags(next);
+                      setSearchParams(
+                        (prev) => {
+                          const params = new URLSearchParams(prev);
+                          if (next.length > 0) {
+                            params.set("tags", next.map((t) => t.id).join(","));
+                          } else {
+                            params.delete("tags");
+                          }
+                          return params;
+                        },
+                        { replace: false },
+                      );
                       setTagPickerOpen(false);
                     }}
                     sx={{ minWidth: 0 }}

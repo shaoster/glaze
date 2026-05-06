@@ -412,6 +412,9 @@ states:
         $ref: "@location.name"
         description: Name of the kiln where this piece was submitted for glaze firing.
         can_create: true
+      glaze_combination:
+        $ref: "glazed.glaze_combination"
+        description: Glaze combination queued for firing.
 
   - id: glaze_fired
     visible: true
@@ -438,6 +441,10 @@ states:
     friendly_name: Sanding
     past_friendly_name: Sanded
     description: Almost there. Smoothing the last rough spots before calling it done.
+    fields:
+      glaze_combination:
+        $ref: "glazed.glaze_combination"
+        description: Glaze combination applied to this piece.
     successors:
       - recycled
       - completed
