@@ -261,7 +261,12 @@ export default function WorkflowState({
       return;
     }
     const hideStyle = document.createElement("style");
-    hideStyle.textContent = 'iframe[title="Upload Widget"] { opacity: 0; }';
+    hideStyle.textContent = [
+      'iframe[title="Upload Widget"] { opacity: 0; }',
+      // On iOS PWA with viewport-fit=cover the status bar overlays the page.
+      // Push the widget iframe below it so its header controls are reachable.
+      'iframe[title="Upload Widget"] { top: env(safe-area-inset-top) !important; height: calc(100dvh - env(safe-area-inset-top)) !important; }',
+    ].join("\n");
     document.head.appendChild(hideStyle);
 
     const uploadWidget = window.cloudinary?.createUploadWidget(

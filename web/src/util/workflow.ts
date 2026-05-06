@@ -436,10 +436,18 @@ function buildResolvedField(
   fieldDef: FieldDefinition,
 ): ResolvedAdditionalField {
   const inline = resolveInlineField(fieldDef);
-  const globalRef = isGlobalRefField(fieldDef);
+  const isDirectGlobalRef = isGlobalRefField(fieldDef);
   const stateRef = isStateRefField(fieldDef);
+  // A state ref that ultimately chains to a global ref should render as an
+  // editable global-entry picker rather than a disabled plain text field.
+  const resolvedGlobal = isDirectGlobalRef
+    ? fieldDef
+    : stateRef
+      ? resolveStateRefToGlobalRef(fieldDef, new Set())
+      : null;
+  const globalRef = resolvedGlobal !== null;
   const [globalName, globalField] = globalRef
-    ? parseGlobalRef(fieldDef)
+    ? parseGlobalRef(resolvedGlobal!)
     : [undefined, undefined];
   return {
     name,
@@ -449,11 +457,26 @@ function buildResolvedField(
     required: fieldDef.required ?? inline.required ?? false,
     enum: inline.enum,
     isGlobalRef: globalRef,
-    isStateRef: stateRef,
-    canCreate: globalRef ? (fieldDef.can_create ?? false) : undefined,
+    isStateRef: stateRef && !globalRef,
+    canCreate: globalRef ? ((fieldDef as GlobalRefFieldDef).can_create ?? false) : undefined,
     globalName,
     globalField,
   };
+}
+
+function resolveStateRefToGlobalRef(
+  fieldDef: FieldDefinition,
+  seen: Set<string>,
+): GlobalRefFieldDef | null {
+  if (!isStateRefField(fieldDef)) return null;
+  const ref = (fieldDef as StateRefFieldDef).$ref;
+  if (seen.has(ref)) return null;
+  const [stateId, fieldName] = ref.split(".", 2);
+  if (!stateId || !fieldName) return null;
+  const target = STATE_MAP.get(stateId)?.fields?.[fieldName];
+  if (!target) return null;
+  if (isGlobalRefField(target)) return target;
+  return resolveStateRefToGlobalRef(target, new Set([...seen, ref]));
 }
 
 function resolveInlineField(
