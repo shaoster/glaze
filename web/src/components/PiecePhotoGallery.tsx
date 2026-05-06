@@ -142,7 +142,7 @@ export default function PiecePhotoGallery({
         cloudinary_public_id: image.cloudinary_public_id ?? null,
         cloud_name: image.cloud_name ?? null,
       })),
-      additional_fields: normalizeFields(currentStateAdditionalFields ?? {}),
+      custom_fields: normalizeFields(currentStateAdditionalFields ?? {}),
     });
     onPieceUpdated(updated);
   }

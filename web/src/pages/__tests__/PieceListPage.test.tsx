@@ -71,7 +71,7 @@ vi.mock("../../components/NewPieceDialog", () => ({
                 created: new Date("2024-01-01T00:00:00Z"),
                 last_modified: new Date("2024-01-01T00:00:00Z"),
                 images: [],
-                additional_fields: {},
+                custom_fields: {},
                 previous_state: null,
                 next_state: null,
               },

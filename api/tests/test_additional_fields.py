@@ -8,13 +8,13 @@ import api.workflow as workflow_module
 from api.models import Piece, PieceState
 
 # ---------------------------------------------------------------------------
-# Model: PieceState.additional_fields schema validation
+# Model: PieceState.custom_fields schema validation
 #
 # All tests in this class patch api.models._STATE_MAP and api.models._GLOBALS_MAP
 # so they are decoupled from the real workflow.yml contents.
 # ---------------------------------------------------------------------------
 
-# Mock state map used across additional_fields tests.
+# Mock state map used across custom_fields tests.
 _MOCK_STATE_MAP = {
     'mock_entry': {
         'id': 'mock_entry',
@@ -73,22 +73,22 @@ _MOCK_GLOBALS_MAP = {
 }
 
 
-def _make_piece_with_state(state_id: str, additional_fields: dict | None = None) -> PieceState:
+def _make_piece_with_state(state_id: str, custom_fields: dict | None = None) -> PieceState:
     """ORM-only helper: create a Piece + PieceState, bypassing view-level validation."""
     user = User.objects.create(
         username=f'user_{state_id}_{uuid.uuid4().hex[:8]}',
         email=f'user_{state_id}_{uuid.uuid4().hex[:8]}@example.com',
     )
     p = Piece.objects.create(user=user, name='Test Piece')
-    ps = PieceState(piece=p, state=state_id, additional_fields=additional_fields or {})
+    ps = PieceState(piece=p, state=state_id, custom_fields=custom_fields or {})
     return ps
 
 
 @pytest.mark.django_db
 class TestAdditionalFieldsValidation:
-    """Positive and negative cases for PieceState.save() additional_fields validation."""
+    """Positive and negative cases for PieceState.save() custom_fields validation."""
 
-    # -- state with no additional_fields declared ----------------------------
+    # -- state with no custom_fields declared ----------------------------
 
     def test_no_fields_state_accepts_empty_dict(self, db):
         with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
@@ -100,7 +100,7 @@ class TestAdditionalFieldsValidation:
         with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
              patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
             ps = _make_piece_with_state('mock_no_fields', {'unexpected': 'value'})
-            with pytest.raises(ValueError, match='additional_fields validation failed'):
+            with pytest.raises(ValueError, match='custom_fields validation failed'):
                 ps.save()
 
     # -- required field present / absent ------------------------------------
@@ -115,7 +115,7 @@ class TestAdditionalFieldsValidation:
         with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
              patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
             ps = _make_piece_with_state('mock_typed', {})
-            with pytest.raises(ValueError, match='additional_fields validation failed'):
+            with pytest.raises(ValueError, match='custom_fields validation failed'):
                 ps.save()
 
     # -- type checking -------------------------------------------------------
@@ -124,7 +124,7 @@ class TestAdditionalFieldsValidation:
         with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
              patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
             ps = _make_piece_with_state('mock_typed', {'required_num': 'not-a-number'})
-            with pytest.raises(ValueError, match='additional_fields validation failed'):
+            with pytest.raises(ValueError, match='custom_fields validation failed'):
                 ps.save()
 
     def test_optional_string_field_accepts_string(self, db):
@@ -137,7 +137,7 @@ class TestAdditionalFieldsValidation:
         with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
              patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
             ps = _make_piece_with_state('mock_typed', {'required_num': 1, 'optional_str': 99})
-            with pytest.raises(ValueError, match='additional_fields validation failed'):
+            with pytest.raises(ValueError, match='custom_fields validation failed'):
                 ps.save()
 
     def test_integer_field_accepts_integer(self, db):
@@ -150,7 +150,7 @@ class TestAdditionalFieldsValidation:
         with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
              patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
             ps = _make_piece_with_state('mock_typed', {'required_num': 1, 'int_field': 7.5})
-            with pytest.raises(ValueError, match='additional_fields validation failed'):
+            with pytest.raises(ValueError, match='custom_fields validation failed'):
                 ps.save()
 
     def test_boolean_field_accepts_bool(self, db):
@@ -171,7 +171,7 @@ class TestAdditionalFieldsValidation:
         with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
              patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
             ps = _make_piece_with_state('mock_typed', {'required_num': 1, 'enum_field': 'delta'})
-            with pytest.raises(ValueError, match='additional_fields validation failed'):
+            with pytest.raises(ValueError, match='custom_fields validation failed'):
                 ps.save()
 
     # -- unknown / extra keys ------------------------------------------------
@@ -180,7 +180,7 @@ class TestAdditionalFieldsValidation:
         with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
              patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
             ps = _make_piece_with_state('mock_typed', {'required_num': 1, 'undeclared': 'x'})
-            with pytest.raises(ValueError, match='additional_fields validation failed'):
+            with pytest.raises(ValueError, match='custom_fields validation failed'):
                 ps.save()
 
     # -- state ref ($ref to another state's field) ---------------------------
@@ -196,7 +196,7 @@ class TestAdditionalFieldsValidation:
         with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
              patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
             ps = _make_piece_with_state('mock_with_ref', {'carried_num': 'not-a-number'})
-            with pytest.raises(ValueError, match='additional_fields validation failed'):
+            with pytest.raises(ValueError, match='custom_fields validation failed'):
                 ps.save()
 
     def test_state_ref_empty_blob_passes(self, db):
@@ -216,7 +216,7 @@ class TestAdditionalFieldsValidation:
              patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
             # global_str is a global ref — it must NOT appear in the blob.
             ps = _make_piece_with_state('mock_with_ref', {'global_str': 'Kiln Room'})
-            with pytest.raises(ValueError, match='additional_fields validation failed'):
+            with pytest.raises(ValueError, match='custom_fields validation failed'):
                 ps.save()
 
     def test_global_ref_absent_from_blob_passes(self, db):
@@ -239,5 +239,5 @@ class TestAdditionalFieldsValidation:
         with patch.object(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP), \
              patch.object(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP):
             ps = _make_piece_with_state('totally_unknown_state', {'foo': 'bar'})
-            with pytest.raises(ValueError, match='additional_fields validation failed'):
+            with pytest.raises(ValueError, match='custom_fields validation failed'):
                 ps.save()

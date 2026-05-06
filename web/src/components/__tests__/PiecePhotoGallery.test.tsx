@@ -96,7 +96,7 @@ function makeUpdatedPiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
     images: [],
     previous_state: "designed" as const,
     next_state: null,
-    additional_fields: {},
+    custom_fields: {},
   };
   return {
     id: "piece-1",

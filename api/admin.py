@@ -410,7 +410,7 @@ for _model_cls in get_public_global_models():
 class PieceStateInline(admin.TabularInline):
     model = PieceState
     extra = 0
-    readonly_fields = ('id', 'state', 'created', 'last_modified', 'notes', 'images', 'additional_fields')
+    readonly_fields = ('id', 'state', 'created', 'last_modified', 'notes', 'images', 'custom_fields')
     # Past states are sealed — edits go through PieceStateAdmin with the override checkbox.
     can_delete = False
     can_change = False
@@ -492,7 +492,7 @@ class PieceStateResource(resources.ModelResource):
             'created',
             'last_modified',
             'images',
-            'additional_fields',
+            'custom_fields',
         )
         export_order = (
             'id',
@@ -506,7 +506,7 @@ class PieceStateResource(resources.ModelResource):
             'created',
             'last_modified',
             'images',
-            'additional_fields',
+            'custom_fields',
         )
 
     def dehydrate_piece_id(self, obj: PieceState) -> str:

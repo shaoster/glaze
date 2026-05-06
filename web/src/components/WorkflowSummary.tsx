@@ -133,7 +133,7 @@ function getFieldValue(
   fieldName: string,
 ): unknown {
   const state = [...history].reverse().find((entry) => entry.state === stateId);
-  return state?.additional_fields?.[fieldName];
+  return state?.custom_fields?.[fieldName];
 }
 
 function getNumericValue(

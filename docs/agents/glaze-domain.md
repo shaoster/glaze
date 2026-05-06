@@ -27,14 +27,14 @@ The source of truth for piece states is [`workflow.yml`](../../workflow.yml) at 
 
 - Top-level required fields: `version` (semver string) and `states` (array, at least 2 items). `globals` is optional.
 - Per-state required fields: `id` (snake*case, `^[a-z]a-z0-9*]\*$`) and `visible` (boolean).
-- Optional per-state fields: `terminal` (boolean), `successors` (array of snake_case strings, no duplicates within a state), `additional_fields` (map of field DSL entries).
+- Optional per-state fields: `terminal` (boolean), `successors` (array of snake_case strings, no duplicates within a state), `custom_fields` (map of field DSL entries).
 - `additionalProperties: false` at both the top level and per-state — unknown keys are rejected.
 
 [`tests/test_workflow.py`](../../tests/test_workflow.py) is the common test suite that validates `workflow.yml` in full — both structurally and semantically:
 
 - **Structural** (`TestSchemaValidation`): runs `jsonschema.validate` against `workflow.schema.yml`, and verifies that malformed inputs (missing fields, bad version format, invalid ID patterns, duplicate successors, unknown keys) are correctly rejected.
 - **Semantic** (`TestReferentialIntegrity`): enforces rules JSON Schema cannot express — every successor ID references a real state, terminal states have no successors, non-terminal states have at least one successor, all state IDs are unique, no state lists itself as a successor.
-- **DSL referential integrity** (`TestAdditionalFieldsDSL`): enforces `additional_fields` rules — `enum` only on `type: string` fields; state refs point to known states with declared fields that are reachable ancestors; global refs point to declared globals with declared fields.
+- **DSL referential integrity** (`TestAdditionalFieldsDSL`): enforces `custom_fields` rules — `enum` only on `type: string` fields; state refs point to known states with declared fields that are reachable ancestors; global refs point to declared globals with declared fields.
 - **Global/model alignment** (`TestGlobals`): verifies every `globals` entry maps to a real Django model in `api/models.py`, every field declared in that global exists on the model, and every global with `public: true` has a nullable `user` field on its model.
 
 **`globals` section:** The optional top-level `globals` map registers named domain types backed by Django models. Each entry declares the model class name (PascalCase, verified against `api/models.py` by tests) and a subset of its fields exposed to the field DSL. `api/models.py` remains the authoritative source of truth — `globals` is a DSL-level view of those models, kept in sync by tests.
@@ -63,7 +63,7 @@ Currently `clay_body` and `glaze_type` have `public: true`; `location` and `glaz
 
 `TestGlobals` verifies — in addition to model/field alignment — that every `public: true` global has a nullable `user` field on its Django model.
 
-**`additional_fields` DSL:** Each state may declare state-specific fields beyond the base `PieceState` fields using two forms:
+**`custom_fields` DSL:** Each state may declare state-specific fields beyond the base `PieceState` fields using two forms:
 
 _Inline field_ — declares a new field directly on the state:
 

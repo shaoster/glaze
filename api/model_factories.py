@@ -183,7 +183,7 @@ def make_simple_global_model(global_name: str) -> type:
     new simple global to workflow.yml only requires a ``makemigrations`` run.
 
     DSL fields whose definition contains a ``$ref`` key are skipped — those
-    describe ``additional_fields`` references, not columns on the global model.
+    describe ``custom_fields`` references, not columns on the global model.
     """
     config = get_global_config(global_name)
     if not config:
@@ -210,7 +210,7 @@ def make_simple_global_model(global_name: str) -> type:
         user_kwargs.update({'null': True, 'blank': True})
     attrs['user'] = models.ForeignKey(**user_kwargs)
 
-    # Inline DSL fields — $ref entries are additional_fields references, not model columns.
+    # Inline DSL fields — $ref entries are custom_fields references, not model columns.
     for field_name, field_def in dsl_fields.items():
         if '$ref' not in field_def:
             attrs[field_name] = dsl_field_to_django_field(field_name, field_def)

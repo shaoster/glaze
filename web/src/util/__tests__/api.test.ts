@@ -51,7 +51,7 @@ const wirePieceState = {
   images: [wireImage],
   previous_state: null,
   next_state: null,
-  additional_fields: { clay_weight_lbs: 500 },
+  custom_fields: { clay_weight_lbs: 500 },
 };
 
 const wirePieceSummary = {
@@ -156,7 +156,7 @@ describe("piece endpoints", () => {
           previous_state: "designed",
           next_state: "trimmed",
           images: [{ ...wireImage, cloudinary_public_id: null }],
-          additional_fields: undefined,
+          custom_fields: undefined,
         },
       },
     });
@@ -167,7 +167,7 @@ describe("piece endpoints", () => {
     expect(result.current_state.created).toBeInstanceOf(Date);
     expect(result.current_state.images[0].created).toBeInstanceOf(Date);
     expect(result.current_state.images[0].cloudinary_public_id).toBeNull();
-    expect(result.current_state.additional_fields).toEqual({});
+    expect(result.current_state.custom_fields).toEqual({});
     expect(result.current_state.previous_state).toBe("designed");
     expect(result.current_state.next_state).toBe("trimmed");
   });

@@ -142,7 +142,7 @@ function stateImages(pieceState: PieceState): ImageEntry[] {
 
 export function buildDraftState(pieceState: PieceState): DraftState {
   const additionalFieldDefs = getAdditionalFieldDefinitions(pieceState.state);
-  const additionalFields = pieceState.additional_fields;
+  const additionalFields = pieceState.custom_fields;
   return {
     baseState: pieceState,
     notes: pieceState.notes,

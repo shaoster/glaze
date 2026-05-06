@@ -43,7 +43,7 @@ function makePiece(overrides = {}): PieceDetail {
     images: [],
     previous_state: null,
     next_state: null,
-    additional_fields: {},
+    custom_fields: {},
   };
   return {
     id: "piece-id-1",

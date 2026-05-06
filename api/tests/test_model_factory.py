@@ -150,7 +150,7 @@ class TestMakeSimpleGlobalModel:
         assert 'weight' in field_names
 
     def test_ref_fields_are_skipped(self, monkeypatch):
-        """$ref fields in a global's fields section are additional_fields references
+        """$ref fields in a global's fields section are custom_fields references
         and must not become model columns."""
         import api.model_factories as m
         import api.workflow as wf

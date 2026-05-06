@@ -409,7 +409,7 @@ After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` fr
 
 ### What is tested
 
-**Common** ([`tests/test_workflow.py`](tests/test_workflow.py)): structural validation of [`workflow.yml`](workflow.yml) against [`workflow.schema.yml`](workflow.schema.yml), semantic/referential integrity (successor references, reachability, terminal-state rules), `additional_fields` DSL rules (enum constraints, ref targets), and global/model alignment against [`api/models.py`](api/models.py).
+**Common** ([`tests/test_workflow.py`](tests/test_workflow.py)): structural validation of [`workflow.yml`](workflow.yml) against [`workflow.schema.yml`](workflow.schema.yml), semantic/referential integrity (successor references, reachability, terminal-state rules), `custom_fields` DSL rules (enum constraints, ref targets), and global/model alignment against [`api/models.py`](api/models.py).
 
 **Backend** (`api/tests/`):
 | File | What it covers |
@@ -417,11 +417,11 @@ After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` fr
 | [`test_pieces_list.py`](api/tests/test_pieces_list.py) | `GET /api/pieces/` list endpoint |
 | [`test_pieces_create.py`](api/tests/test_pieces_create.py) | `POST /api/pieces/` creation, location handling |
 | [`test_piece_detail.py`](api/tests/test_piece_detail.py) | `GET /api/pieces/<id>/` detail endpoint |
-| [`test_piece_states.py`](api/tests/test_piece_states.py) | `POST /api/pieces/<id>/states/` transitions, history, additional_fields |
+| [`test_piece_states.py`](api/tests/test_piece_states.py) | `POST /api/pieces/<id>/states/` transitions, history, custom_fields |
 | [`test_patch_current_state.py`](api/tests/test_patch_current_state.py) | `PATCH /api/pieces/<id>/state/` partial update, location, sealed-state protection |
 | [`test_sealed_state.py`](api/tests/test_sealed_state.py) | ORM-level sealed state enforcement |
-| [`test_additional_fields.py`](api/tests/test_additional_fields.py) | `PieceState.save()` schema validation for every field type (inline, state ref, global ref) |
-| [`test_workflow_helpers.py`](api/tests/test_workflow_helpers.py) | Pure unit tests for [`api/workflow.py`](api/workflow.py) helpers (`get_state_ref_fields`, `get_global_model_and_field`, `build_additional_fields_schema`) — decoupled from real `workflow.yml` via `monkeypatch` |
+| [`test_custom_fields.py`](api/tests/test_custom_fields.py) | `PieceState.save()` schema validation for every field type (inline, state ref, global ref) |
+| [`test_workflow_helpers.py`](api/tests/test_workflow_helpers.py) | Pure unit tests for [`api/workflow.py`](api/workflow.py) helpers (`get_state_ref_fields`, `get_global_model_and_field`, `build_custom_fields_schema`) — decoupled from real `workflow.yml` via `monkeypatch` |
 | [`test_globals.py`](api/tests/test_globals.py) | `GlobalModel` registry invariants (parameterised over all registered models): `name` field presence, user immutability, workflow consistency; `GET/POST /api/globals/<name>/` list and create |
 | [`test_glaze_combination.py`](api/tests/test_glaze_combination.py) | `GlazeCombination` computed `name` field, public/private FK constraint, `GlazeType.name` separator validation, API GET/POST |
 
@@ -445,7 +445,7 @@ Agent and contributor documentation lives in [`docs/agents/`](docs/agents/) and 
 
 | File                                                                           | Contents                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`docs/agents/glaze-domain.md`](docs/agents/glaze-domain.md)                   | Everything specific to this project: workflow state machine, `additional_fields` DSL, data model, key constraints, and Glaze-specific conventions layered on top of each stack (Django model patterns, frontend module aliases, component inventory, Cloudinary/OAuth flows, protected files, project-specific definition-of-done checks). **Add content here** when it is specific to Glaze's domain, data model, or architecture. |
+| [`docs/agents/glaze-domain.md`](docs/agents/glaze-domain.md)                   | Everything specific to this project: workflow state machine, `custom_fields` DSL, data model, key constraints, and Glaze-specific conventions layered on top of each stack (Django model patterns, frontend module aliases, component inventory, Cloudinary/OAuth flows, protected files, project-specific definition-of-done checks). **Add content here** when it is specific to Glaze's domain, data model, or architecture. |
 | [`docs/agents/django-drf-python.md`](docs/agents/django-drf-python.md)         | Generic Django + DRF conventions reusable in any project: serializer rules, CORS, session auth, user-isolation patterns, test approach. **Add content here** only if it applies to Django/DRF projects in general, with no Glaze-specific models or endpoints.                                                                                                                                                                      |
 | [`docs/agents/typescript-react-vite.md`](docs/agents/typescript-react-vite.md) | Generic React + TypeScript + Vite conventions reusable in any project: MUI usage, strict TS rules, theming tokens, Axios usage, async test patterns. **Add content here** only if it applies to React/TS/Vite projects in general, with no Glaze-specific components or data pipelines.                                                                                                                                             |
 | [`docs/agents/github-interactions.md`](docs/agents/github-interactions.md)     | Generic GitHub agent conventions reusable in any project: `--body-file` pattern, branch naming, scope-limit categories, PR ownership labels, definition-of-done checklist. **Add content here** only if it applies to any GitHub-hosted project.                                                                                                                                                                                    |
@@ -519,11 +519,11 @@ The workflow state machine and all valid transitions are defined in [`workflow.y
 `workflow.yml` also contains two optional sections beyond the state list:
 
 - **`globals`** — named domain types backed by Django models. Each entry drives both the backend and frontend: `api/model_factories.py` auto-generates the Django model class at import time (a `makemigrations` run is all that is needed to add a new global), and the frontend reads the same declaration to render pickers and resolve display fields. Set `factory: false` for globals whose model is hand-written (currently only `piece`).
-- **`additional_fields`** (per-state) — state-specific fields declared using the embedded DSL. See the “Authoring `additional_fields`” section below for the exact syntax and how the web renders the inputs.
+- **`custom_fields`** (per-state) — state-specific fields declared using the embedded DSL. See the “Authoring `custom_fields`” section below for the exact syntax and how the web renders the inputs.
 
-### Authoring `additional_fields`
+### Authoring `custom_fields`
 
-When you add an `additional_fields` entry to a state in `workflow.yml`, the web automatically renders the inputs for you inside the `WorkflowState` component. Inline JSON primitives, state references, and global references are all interpreted through the helper utilities in [`web/src/util/workflow.ts`](web/src/util/workflow.ts) (`getAdditionalFieldDefinitions`, `formatWorkflowFieldLabel`, etc.) so the DSL does not need to be mentioned elsewhere in the code.
+When you add an `custom_fields` entry to a state in `workflow.yml`, the web automatically renders the inputs for you inside the `WorkflowState` component. Inline JSON primitives, state references, and global references are all interpreted through the helper utilities in [`web/src/util/workflow.ts`](web/src/util/workflow.ts) (`getAdditionalFieldDefinitions`, `formatWorkflowFieldLabel`, etc.) so the DSL does not need to be mentioned elsewhere in the code.
 
 1. **Inline fields** (give the field a `type`, optional `description`, `required`, `enum`, and/or `format`). They render as `TextField`s—numbers as numeric inputs, booleans as selects with `True`/`False`, enums as dropdowns—directly below Notes and above the image list. The `format: hex_color` annotation (valid on `type: string` only) adds a backend pattern constraint that rejects values which are not valid CSS hex color codes (`#RGB`, `#RRGGBB`, `#RGBA`, or `#RRGGBBAA`).
 2. **State refs** (`$ref: “ancestor_state.field_name”`) carry a value forward from a reachable ancestor state; they render the referenced value while still allowing edits and backend validation just like inline fields.
@@ -533,7 +533,7 @@ Example snippets from `workflow.yml`:
 
 ```yaml
 - id: wheel_thrown
-  additional_fields:
+  custom_fields:
     clay_weight_grams:
       type: number
       description: Weight of clay before throwing.
@@ -543,7 +543,7 @@ Example snippets from `workflow.yml`:
 
 ```yaml
 - id: trimmed
-  additional_fields:
+  custom_fields:
     pre_trim_weight_grams:
       $ref: "wheel_thrown.clay_weight_grams"
 ```
@@ -552,7 +552,7 @@ Example snippets from `workflow.yml`:
 
 ```yaml
 - id: wheel_thrown
-  additional_fields:
+  custom_fields:
     clay_body:
       $ref: "@clay_body.name"
       can_create: true

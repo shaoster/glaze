@@ -231,7 +231,7 @@ class PieceStateSerializer(serializers.ModelSerializer):
     previous_state = serializers.SerializerMethodField()
     next_state = serializers.SerializerMethodField()
     images = CaptionedImageSerializer(many=True)
-    additional_fields = serializers.SerializerMethodField()
+    custom_fields = serializers.SerializerMethodField()
 
     class Meta:
         model = PieceState
@@ -241,7 +241,7 @@ class PieceStateSerializer(serializers.ModelSerializer):
             "created",
             "last_modified",
             "images",
-            "additional_fields",
+            "custom_fields",
             "previous_state",
             "next_state",
         ]
@@ -250,13 +250,13 @@ class PieceStateSerializer(serializers.ModelSerializer):
         }
 
     @extend_schema_field(serializers.DictField())
-    def get_additional_fields(self, obj: PieceState) -> dict:
+    def get_custom_fields(self, obj: PieceState) -> dict:
         """Merge inline JSON blob with global-ref junction table lookups.
 
         Global ref fields are returned as {id, name} objects; inline fields
         are returned as their raw JSON values.
         """
-        result = dict(obj.additional_fields or {})
+        result = dict(obj.custom_fields or {})
         global_ref_fields = get_global_ref_fields_for_state(obj.state)
         for field_name, global_name in global_ref_fields.items():
             config = get_global_config(global_name)
@@ -428,13 +428,13 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         required=False, allow_blank=True, trim_whitespace=False
     )
     images = CaptionedImageSerializer(many=True, required=False, default=list)
-    additional_fields = serializers.JSONField(required=False, default=dict)
+    custom_fields = serializers.JSONField(required=False, default=dict)
 
     class Meta:
         model = PieceState
-        fields = ["state", "notes", "images", "additional_fields"]
+        fields = ["state", "notes", "images", "custom_fields"]
 
-    def validate_additional_fields(self, value):
+    def validate_custom_fields(self, value):
         if not isinstance(value, dict):
             raise serializers.ValidationError("Must be a JSON object.")
         return value
@@ -459,12 +459,12 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
 
         new_state_id: str = validated_data["state"]
         piece: Piece = self.context["piece"]
-        incoming: dict = dict(validated_data.pop("additional_fields", {}))
+        incoming: dict = dict(validated_data.pop("custom_fields", {}))
         inline_fields, global_ref_fields, global_ref_pks, clear_global_ref_fields = (
             _resolve_additional_field_payload(piece, new_state_id, incoming)
         )
 
-        validated_data["additional_fields"] = inline_fields
+        validated_data["custom_fields"] = inline_fields
         try:
             piece_state = PieceState.objects.create(
                 user=piece.user,
@@ -472,7 +472,7 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
                 **validated_data,
             )
         except ValueError as exc:
-            raise serializers.ValidationError({"additional_fields": str(exc)}) from exc
+            raise serializers.ValidationError({"custom_fields": str(exc)}) from exc
 
         # Write junction rows for global ref fields.
         _write_global_ref_rows(
@@ -527,9 +527,9 @@ def _resolve_additional_field_payload(
             except src_ref_model.DoesNotExist:
                 pass
         elif field_name not in inline_fields and source_field_name in (
-            ancestor.additional_fields or {}
+            ancestor.custom_fields or {}
         ):
-            inline_fields[field_name] = ancestor.additional_fields[source_field_name]
+            inline_fields[field_name] = ancestor.custom_fields[source_field_name]
 
     return inline_fields, global_ref_fields, global_ref_pks, clear_global_ref_fields
 
@@ -564,7 +564,7 @@ def _write_global_ref_rows(
         except (model_cls.DoesNotExist, ValueError):
             raise serializers.ValidationError(
                 {
-                    f"additional_fields.{field_name}": f"Invalid {global_name} id: {pk_str!r}"
+                    f"custom_fields.{field_name}": f"Invalid {global_name} id: {pk_str!r}"
                 }
             )
         ref_model_cls.objects.update_or_create(
@@ -602,9 +602,9 @@ class PieceStateUpdateSerializer(serializers.Serializer):
         trim_whitespace=False,
     )
     images = CaptionedImageSerializer(many=True, required=False)
-    additional_fields = serializers.JSONField(required=False)
+    custom_fields = serializers.JSONField(required=False)
 
-    def validate_additional_fields(self, value):
+    def validate_custom_fields(self, value):
         if not isinstance(value, dict):
             raise serializers.ValidationError("Must be a JSON object.")
         return value
@@ -614,8 +614,8 @@ class PieceStateUpdateSerializer(serializers.Serializer):
             instance.notes = validated_data["notes"]
         if "images" in validated_data:
             instance.images = _normalize_captioned_images(validated_data["images"])
-        if "additional_fields" in validated_data:
-            incoming: dict = dict(validated_data["additional_fields"])
+        if "custom_fields" in validated_data:
+            incoming: dict = dict(validated_data["custom_fields"])
             (
                 inline_fields,
                 global_ref_fields,
@@ -628,12 +628,12 @@ class PieceStateUpdateSerializer(serializers.Serializer):
                 clear_empty_refs=True,
             )
 
-            instance.additional_fields = inline_fields
+            instance.custom_fields = inline_fields
             try:
                 instance.save()
             except ValueError as exc:
                 raise serializers.ValidationError(
-                    {"additional_fields": str(exc)}
+                    {"custom_fields": str(exc)}
                 ) from exc
             _write_global_ref_rows(
                 instance, global_ref_fields, global_ref_pks, clear_global_ref_fields
@@ -643,7 +643,7 @@ class PieceStateUpdateSerializer(serializers.Serializer):
                 instance.save()
             except ValueError as exc:
                 raise serializers.ValidationError(
-                    {"additional_fields": str(exc)}
+                    {"custom_fields": str(exc)}
                 ) from exc
         return instance
 

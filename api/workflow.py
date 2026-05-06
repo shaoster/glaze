@@ -61,7 +61,7 @@ def get_state_summary(state_id: str) -> dict:
 def get_state_ref_fields(state_id: str) -> dict[str, tuple[str, str]]:
     """Return {field_name: (source_state_id, source_field_name)} for all state ref fields.
 
-    State ref fields are `additional_fields` entries whose `$ref` does not start
+    State ref fields are `custom_fields` entries whose `$ref` does not start
     with `@` (which would mark a global ref).  The returned mapping is used by
     the serializer to auto-populate carried-forward values when a new state is
     created.
@@ -412,7 +412,7 @@ def _resolve_field_def(field_def: dict) -> dict:
     return _resolve_field_def(target)
 
 
-def build_additional_fields_schema(state_id: str) -> dict:
+def build_custom_fields_schema(state_id: str) -> dict:
     """Return a JSON Schema that validates the inline_fields blob for a given state.
 
     Only includes fields that are NOT global refs (or state refs resolving to global

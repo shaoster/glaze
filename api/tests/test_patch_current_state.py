@@ -148,11 +148,11 @@ class TestPatchCurrentState:
         assert response.status_code == 404
         assert response.json() == {'detail': 'Piece has no states.'}
 
-    def test_invalid_additional_fields_returns_400(self, client, piece):
-        # additional_fields must be a JSON object — passing a list should fail validation
+    def test_invalid_custom_fields_returns_400(self, client, piece):
+        # custom_fields must be a JSON object — passing a list should fail validation
         response = client.patch(
             f'/api/pieces/{piece.id}/state/',
-            {'additional_fields': ['not', 'an', 'object']},
+            {'custom_fields': ['not', 'an', 'object']},
             format='json',
         )
         assert response.status_code == 400
@@ -172,12 +172,12 @@ class TestPatchCurrentState:
 
         response = client.patch(
             f'/api/pieces/{piece.id}/state/',
-            {'additional_fields': {'glaze_combination': None}},
+            {'custom_fields': {'glaze_combination': None}},
             format='json',
         )
 
         assert response.status_code == 200
-        assert 'glaze_combination' not in response.json()['current_state']['additional_fields']
+        assert 'glaze_combination' not in response.json()['current_state']['custom_fields']
         assert not ref_model.objects.filter(
             piece_state=state,
             field_name='glaze_combination',
@@ -198,7 +198,7 @@ class TestPatchCurrentState:
             f'/api/pieces/{piece.id}/states/',
             {
                 'state': 'glazed',
-                'additional_fields': {'glaze_combination': str(combo.pk)},
+                'custom_fields': {'glaze_combination': str(combo.pk)},
             },
             format='json',
         )
@@ -224,19 +224,19 @@ class TestPatchCurrentState:
 
         response = client.patch(
             f'/api/pieces/{piece.id}/state/',
-            {'additional_fields': {}},
+            {'custom_fields': {}},
             format='json',
         )
 
         assert response.status_code == 200
-        assert response.json()['current_state']['additional_fields']['glaze_combination']['id'] == str(combo.pk)
+        assert response.json()['current_state']['custom_fields']['glaze_combination']['id'] == str(combo.pk)
         assert ref_model.objects.filter(
             piece_state=current,
             field_name='glaze_combination',
             glaze_combination=combo,
         ).exists()
 
-    def test_update_validation_error_when_additional_fields_save_fails(self, piece, monkeypatch):
+    def test_update_validation_error_when_custom_fields_save_fails(self, piece, monkeypatch):
         state = piece.current_state
 
         def fail_save(*args, **kwargs):
@@ -246,9 +246,9 @@ class TestPatchCurrentState:
         serializer = PieceStateUpdateSerializer()
 
         with pytest.raises(ValidationError) as exc:
-            serializer.update(state, {'additional_fields': {'unexpected': 'value'}})
+            serializer.update(state, {'custom_fields': {'unexpected': 'value'}})
 
-        assert exc.value.detail == {'additional_fields': 'bad additional fields'}
+        assert exc.value.detail == {'custom_fields': 'bad additional fields'}
 
     def test_update_validation_error_when_plain_save_fails(self, piece, monkeypatch):
         state = piece.current_state
@@ -262,7 +262,7 @@ class TestPatchCurrentState:
         with pytest.raises(ValidationError) as exc:
             serializer.update(state, {'notes': 'changed'})
 
-        assert exc.value.detail == {'additional_fields': 'bad plain save'}
+        assert exc.value.detail == {'custom_fields': 'bad plain save'}
 
     def test_cannot_patch_past_state_via_endpoint(self, client, piece):
         """Transitioning seals the old state; PATCH endpoint targets the new current state."""
@@ -356,7 +356,7 @@ class TestWriteGlobalRefRowsClearFields:
         c.force_authenticate(user=user)
         resp = c.patch(
             f'/api/pieces/{piece.id}/state/',
-            {'additional_fields': {'loc_ref': None}},
+            {'custom_fields': {'loc_ref': None}},
             format='json',
         )
         assert resp.status_code == 200

@@ -203,7 +203,7 @@ export default function WorkflowState({
     const payload = {
       notes,
       images,
-      additional_fields: normalizedAdditionalFields,
+      custom_fields: normalizedAdditionalFields,
     };
     const result = await updateCurrentState(pieceId, payload);
     dispatch({ type: "replace_base_state", pieceState: result.current_state });
@@ -221,7 +221,7 @@ export default function WorkflowState({
       JSON.stringify({
         notes,
         images,
-        additional_fields: normalizedAdditionalFields,
+        custom_fields: normalizedAdditionalFields,
       }),
     [images, normalizedAdditionalFields, notes],
   );
@@ -335,7 +335,7 @@ export default function WorkflowState({
           updateCurrentState(pieceId, {
             notes,
             images: [...images, newImage],
-            additional_fields: normalizedAdditionalFields,
+            custom_fields: normalizedAdditionalFields,
           })
             .then((result) => {
               dispatch({

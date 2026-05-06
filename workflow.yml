@@ -10,7 +10,7 @@ version: "0.0.3"
 # and the subset of its fields exposed to the field DSL.
 #
 # api/models.py is the source of truth for these types. The globals section
-# exists so that workflow.yml can reference them in additional_fields and so
+# exists so that workflow.yml can reference them in fields and so
 # that tests/test_workflow.py can verify the declared fields actually exist on
 # the corresponding Django models.
 #
@@ -56,7 +56,7 @@ version: "0.0.3"
 # Referential rules (enforced in tests/test_workflow.py):
 #   State refs:
 #     - <state_id> must be a known state
-#     - <field_name> must be declared in that state's additional_fields
+#     - <field_name> must be declared in that state's fields
 #     - <state_id> must be a reachable ancestor of this state
 #       (there must be a path from <state_id> to this state through successors)
 #   Global refs:

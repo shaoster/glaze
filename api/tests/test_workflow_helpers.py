@@ -334,7 +334,7 @@ def test_resolve_image_type_maps_to_object_schema(monkeypatch):
         },
     })
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
-    schema = workflow_module.build_additional_fields_schema('photo_state')
+    schema = workflow_module.build_custom_fields_schema('photo_state')
     image_schema = schema['properties']['thumbnail']
     assert image_schema['type'] == 'object'
     assert 'url' in image_schema['properties']
@@ -342,24 +342,24 @@ def test_resolve_image_type_maps_to_object_schema(monkeypatch):
     assert image_schema['required'] == ['url']
 
 
-def test_build_additional_fields_schema_unknown_state_is_empty_object(monkeypatch):
+def test_build_custom_fields_schema_unknown_state_is_empty_object(monkeypatch):
     monkeypatch.setattr(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP)
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
 
-    assert workflow_module.build_additional_fields_schema('unknown_state') == {
+    assert workflow_module.build_custom_fields_schema('unknown_state') == {
         'type': 'object',
         'properties': {},
         'additionalProperties': False,
     }
 
 
-def test_build_additional_fields_schema_resolves_global_refs(monkeypatch):
+def test_build_custom_fields_schema_resolves_global_refs(monkeypatch):
     # Global ref fields are stored in junction tables — they are excluded from
     # the inline JSON schema entirely.
     monkeypatch.setattr(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP)
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
 
-    schema = workflow_module.build_additional_fields_schema('submitted_to_bisque_fire')
+    schema = workflow_module.build_custom_fields_schema('submitted_to_bisque_fire')
     assert schema == {
         'type': 'object',
         'properties': {},
@@ -367,11 +367,11 @@ def test_build_additional_fields_schema_resolves_global_refs(monkeypatch):
     }
 
 
-def test_build_additional_fields_schema_resolves_state_refs_recursively(monkeypatch):
+def test_build_custom_fields_schema_resolves_state_refs_recursively(monkeypatch):
     monkeypatch.setattr(workflow_module, '_STATE_MAP', _MOCK_STATE_MAP)
     monkeypatch.setattr(workflow_module, '_GLOBALS_MAP', _MOCK_GLOBALS_MAP)
 
-    schema = workflow_module.build_additional_fields_schema('glaze_fired')
+    schema = workflow_module.build_custom_fields_schema('glaze_fired')
     assert schema == {
         'type': 'object',
         'properties': {

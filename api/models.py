@@ -36,7 +36,7 @@ from .workflow import (
 )
 from .workflow import (
     WORKFLOW_VERSION,
-    build_additional_fields_schema,
+    build_custom_fields_schema,
     get_compose_from,
     get_global_config,
     get_global_names,
@@ -159,7 +159,7 @@ class PieceState(models.Model):
     images = models.JSONField(default=list)
     # Inline (non-global-ref) state-specific fields for this state.
     # Global ref fields are stored in per-type junction tables (PieceState*Ref models).
-    additional_fields = models.JSONField(default=dict)
+    custom_fields = models.JSONField(default=dict)
 
     @property
     def workflow_version(self) -> str:
@@ -171,7 +171,7 @@ class PieceState(models.Model):
 
     def save(self, *args, allow_sealed_edit: bool = False, **kwargs):
         """
-        Validates inline additional_fields against the workflow DSL for this state,
+        Validates inline custom_fields against the workflow DSL for this state,
         then enforces the sealed-state invariant.
 
         Global ref fields are stored in junction tables and validated separately by
@@ -184,14 +184,14 @@ class PieceState(models.Model):
         if self.user_id is None and self.piece_id:
             self.user = self.piece.user
 
-        # Validate inline additional_fields against the DSL schema for this state.
+        # Validate inline custom_fields against the DSL schema for this state.
         # Global ref fields are excluded from this schema (they live in junction tables).
-        schema = build_additional_fields_schema(self.state)
+        schema = build_custom_fields_schema(self.state)
         try:
-            jsonschema.validate(instance=self.additional_fields, schema=schema)
+            jsonschema.validate(instance=self.custom_fields, schema=schema)
         except jsonschema.ValidationError as exc:
             raise ValueError(
-                f"additional_fields validation failed for state '{self.state}': {exc.message}"
+                f"custom_fields validation failed for state '{self.state}': {exc.message}"
             ) from exc
 
         if not self._state.adding and not allow_sealed_edit:
