@@ -1,6 +1,7 @@
 import pytest
+from django.core.management import call_command
 
-from api.models import GlazeCombination, GlazeType
+from api.models import GlazeCombination, GlazeType, Image, Piece
 from api.utils import (
     cloudinary_getinfo_url,
     crop_to_dict,
@@ -99,6 +100,86 @@ class TestCloudinaryCropParsing:
         assert fetch_cloudinary_auto_crop("", "pieces/mug") is None
         assert fetch_cloudinary_auto_crop("demo", "") is None
         assert calls == []
+
+
+@pytest.mark.django_db
+class TestBackpopulateCropsCommand:
+    def _make_cloudinary_image(self):
+        return Image.objects.create(
+            url="https://res.cloudinary.com/demo/image/upload/v1/pieces/mug.jpg",
+            cloud_name="demo",
+            cloudinary_public_id="pieces/mug",
+        )
+
+    def test_skips_images_with_existing_crop_by_default(self, monkeypatch):
+        image = self._make_cloudinary_image()
+        existing_crop = {"x": 0.1, "y": 0.2, "width": 0.5, "height": 0.6}
+        fetched = []
+
+        def fake_fetch(cloud_name, cloudinary_public_id, **kwargs):
+            fetched.append((cloud_name, cloudinary_public_id))
+            return {"x": 0.3, "y": 0.4, "width": 0.4, "height": 0.5}
+
+        monkeypatch.setattr(
+            "api.management.commands.backpopulate_crops.fetch_cloudinary_auto_crop",
+            fake_fetch,
+        )
+
+        from django.contrib.auth.models import User
+
+        user = User.objects.create(username="u@example.com", email="u@example.com")
+        piece = Piece.objects.create(
+            user=user, name="Mug", thumbnail=image, thumbnail_crop=existing_crop
+        )
+
+        call_command("backpopulate_crops", "--delay-ms=0")
+
+        piece.refresh_from_db()
+        assert piece.thumbnail_crop == existing_crop
+
+    def test_force_overwrites_existing_crops(self, monkeypatch):
+        image = self._make_cloudinary_image()
+        existing_crop = {"x": 0.1, "y": 0.2, "width": 0.5, "height": 0.6}
+        new_crop = {"x": 0.3, "y": 0.4, "width": 0.4, "height": 0.5}
+
+        monkeypatch.setattr(
+            "api.management.commands.backpopulate_crops.fetch_cloudinary_auto_crop",
+            lambda cloud_name, cloudinary_public_id, **kwargs: new_crop,
+        )
+
+        from django.contrib.auth.models import User
+
+        user = User.objects.create(username="u@example.com", email="u@example.com")
+        piece = Piece.objects.create(
+            user=user, name="Mug", thumbnail=image, thumbnail_crop=existing_crop
+        )
+
+        call_command("backpopulate_crops", "--delay-ms=0", "--force")
+
+        piece.refresh_from_db()
+        assert piece.thumbnail_crop == new_crop
+
+    def test_dry_run_does_not_write(self, monkeypatch):
+        image = self._make_cloudinary_image()
+        monkeypatch.setattr(
+            "api.management.commands.backpopulate_crops.fetch_cloudinary_auto_crop",
+            lambda cloud_name, cloudinary_public_id, **kwargs: {
+                "x": 0.1,
+                "y": 0.1,
+                "width": 0.5,
+                "height": 0.5,
+            },
+        )
+
+        from django.contrib.auth.models import User
+
+        user = User.objects.create(username="u@example.com", email="u@example.com")
+        piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
+
+        call_command("backpopulate_crops", "--delay-ms=0", "--dry-run")
+
+        piece.refresh_from_db()
+        assert piece.thumbnail_crop is None
 
 
 @pytest.mark.django_db
