@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 
@@ -10,6 +11,10 @@ from api.admin import (
     _image_url,
 )
 
+ADMIN_WIDGET_JS = (
+    Path(__file__).parents[1] / "static/admin/js/cloudinary_image_widget.js"
+)
+
 HEIC_URL = (
     "https://res.cloudinary.com/demo-cloud/image/upload"
     "/v1776304349/glaze_public/eyy9whpmb5wajybtfk3p.heic"
@@ -17,6 +22,13 @@ HEIC_URL = (
 HEIC_PUBLIC_ID = "glaze_public/eyy9whpmb5wajybtfk3p"
 
 HEIC_IMAGE_DICT = {"url": HEIC_URL, "cloudinary_public_id": HEIC_PUBLIC_ID}
+HEIC_IMAGE_JSON = json.dumps(
+    {
+        "url": HEIC_URL,
+        "cloudinary_public_id": HEIC_PUBLIC_ID,
+        "cloud_name": "demo-cloud",
+    }
+)
 
 
 class TestCloudinaryPublicId:
@@ -48,6 +60,9 @@ class TestImageUrl:
             _image_url("https://example.com/img.jpg") == "https://example.com/img.jpg"
         )
 
+    def test_extracts_url_from_prepared_json_string(self):
+        assert _image_url(HEIC_IMAGE_JSON) == HEIC_URL
+
     def test_returns_empty_string_for_none(self):
         assert _image_url(None) == ""
 
@@ -71,6 +86,14 @@ class TestCloudinaryPreviewUrl:
         assert result.endswith(".jpg")
         assert "w_200" in result
         # public_id used directly from dict — no URL parsing needed
+        assert HEIC_PUBLIC_ID.split("/")[-1] in result
+
+    def test_returns_jpg_thumbnail_url_from_prepared_json_string(self, monkeypatch):
+        monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
+        result = _cloudinary_preview_url(HEIC_IMAGE_JSON)
+        assert result.startswith("https://res.cloudinary.com/demo-cloud/")
+        assert result.endswith(".jpg")
+        assert "w_200" in result
         assert HEIC_PUBLIC_ID.split("/")[-1] in result
 
     def test_uses_stored_cloud_name_from_dict(self, monkeypatch):
@@ -122,6 +145,12 @@ class TestCloudinaryLightboxUrl:
         result = _cloudinary_lightbox_url(HEIC_IMAGE_DICT)
         assert result.endswith(".jpg")
         assert result.startswith("https://")
+
+    def test_returns_jpg_url_from_prepared_json_string(self, monkeypatch):
+        monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
+        result = _cloudinary_lightbox_url(HEIC_IMAGE_JSON)
+        assert result.startswith("https://res.cloudinary.com/demo-cloud/")
+        assert result.endswith(".jpg")
 
     def test_dict_value_must_include_public_id_key(self, monkeypatch):
         monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
@@ -229,6 +258,20 @@ class TestCloudinaryImageWidgetRender:
         assert "data-full-url" in html
         assert ".heic" not in html.split("src=")[1].split('"')[1]
 
+    def test_prepared_json_string_value_renders_jpg_preview(self, monkeypatch):
+        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "configured-cloud")
+        monkeypatch.setenv("CLOUDINARY_API_KEY", "api-key")
+        monkeypatch.setenv("CLOUDINARY_PUBLIC_UPLOAD_FOLDER", "glaze-public")
+
+        html = CloudinaryImageWidget().render(
+            "test_tile_image", HEIC_IMAGE_JSON, attrs={"id": "id_test_tile_image"}
+        )
+
+        assert "cloudinary-preview" in html
+        assert "res.cloudinary.com/demo-cloud" in html
+        assert "w_200" in html
+        assert ".heic" not in html.split("src=")[1].split('"')[1]
+
     def test_dict_value_stored_as_json_in_input(self, monkeypatch):
         monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
         monkeypatch.setenv("CLOUDINARY_API_KEY", "api-key")
@@ -268,3 +311,14 @@ class TestCloudinaryImageWidgetRender:
         )
 
         assert "display:block" in html
+
+
+class TestCloudinaryImageWidgetJavascript:
+    def test_upload_success_writes_image_json_payload(self):
+        script = ADMIN_WIDGET_JS.read_text()
+
+        assert "function buildImagePayload(info, fallbackCloudName)" in script
+        assert "inp.value = JSON.stringify(imagePayload);" in script
+        assert "cloudinary_public_id: info.public_id || null" in script
+        assert "url: info.secure_url || info.url || ''" in script
+        assert "inp.value = rawUrl" not in script

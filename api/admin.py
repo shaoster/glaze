@@ -111,24 +111,42 @@ def _cloudinary_public_id(url: str) -> str | None:
     return match.group(1) if match else None
 
 
+def _json_image_payload(value: str) -> dict | None:
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
 def _image_url(value: dict | str | None) -> str:
     """Extract a plain URL string from an image field value.
 
     Accepts the new dict format ``{"url": "...", "cloudinary_public_id": "..."}``
-    as well as legacy plain URL strings (for robustness during any transition).
+    as well as its prepared JSON-string form and legacy plain URL strings.
     Returns an empty string for missing/None values.
     """
     if not value:
         return ""
+    if isinstance(value, str):
+        parsed = _json_image_payload(value)
+        if isinstance(parsed, dict):
+            return _image_url(parsed)
+        return value  # legacy string
     image_payload = image_to_dict(value)
     if image_payload:
         return image_payload.get("url", "")
     if isinstance(value, dict):
         return value.get("url", "")
-    return value  # legacy string
+    return ""
 
 
 def _image_cloud_name(value: dict | str | None) -> str:
+    if isinstance(value, str):
+        parsed = _json_image_payload(value)
+        if isinstance(parsed, dict):
+            return _image_cloud_name(parsed)
+        return os.environ.get("CLOUDINARY_CLOUD_NAME", "")
     image_payload = image_to_dict(value)
     if image_payload:
         return image_payload.get("cloud_name") or os.environ.get(
@@ -145,6 +163,10 @@ def _cloudinary_preview_url(value: dict | str | None) -> str:
     cloud_name = _image_cloud_name(value)
     if not url or not cloud_name:
         return url
+    if isinstance(value, str):
+        parsed = _json_image_payload(value)
+        if isinstance(parsed, dict):
+            value = parsed
     image_payload = image_to_dict(value)
     public_id = (
         (value.get("cloudinary_public_id") if isinstance(value, dict) else None)
@@ -165,6 +187,10 @@ def _cloudinary_lightbox_url(value: dict | str | None) -> str:
     cloud_name = _image_cloud_name(value)
     if not url or not cloud_name:
         return url
+    if isinstance(value, str):
+        parsed = _json_image_payload(value)
+        if isinstance(parsed, dict):
+            value = parsed
     image_payload = image_to_dict(value)
     if isinstance(value, dict) and "cloudinary_public_id" not in value:
         raise AssertionError("image values must include cloudinary_public_id")

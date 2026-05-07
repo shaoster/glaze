@@ -2,7 +2,7 @@
  * Cloudinary upload widget integration for Django admin image fields.
  *
  * Attaches a Cloudinary Upload Widget to every button rendered by
- * CloudinaryImageWidget.  On successful upload the secure_url is written
+ * CloudinaryImageWidget.  On successful upload an image JSON payload is written
  * into the associated text input and a live preview image is updated.
  *
  * Configuration (cloud_name, api_key, folder) is read from data-attributes set by
@@ -43,17 +43,12 @@
     return withTransform(rawUrl, 'f_jpg');
   }
 
-  /**
-   * Extract the plain URL from an image field value.
-   * Accepts a JSON string {"url":"...","cloudinary_public_id":"..."} or a bare URL.
-   */
-  function extractUrl(inputValue) {
-    if (!inputValue) { return ''; }
-    try {
-      var parsed = JSON.parse(inputValue);
-      if (parsed && typeof parsed === 'object') { return parsed.url || ''; }
-    } catch (e) { /* not JSON — treat as plain URL */ }
-    return inputValue;
+  function buildImagePayload(info, fallbackCloudName) {
+    return {
+      url: info.secure_url || info.url || '',
+      cloudinary_public_id: info.public_id || null,
+      cloud_name: info.cloud_name || fallbackCloudName || null,
+    };
   }
 
   /** Open a full-screen lightbox showing the given image URL. */
@@ -116,17 +111,15 @@
       widgetOptions,
       function (error, result) {
         if (!error && result && result.event === 'success') {
-          var rawUrl = result.info.secure_url;
-          var publicId = result.info.public_id || null;
-          inp.value = JSON.stringify({
-            url: rawUrl,
-            cloudinary_public_id: publicId,
-            cloud_name: inp.dataset.cloudinaryCloudName || null,
-          });
+          var imagePayload = buildImagePayload(
+            result.info,
+            inp.dataset.cloudinaryCloudName
+          );
+          inp.value = JSON.stringify(imagePayload);
           var preview = document.getElementById(previewId);
           if (preview) {
-            preview.src = getPreviewUrl(rawUrl);
-            preview.dataset.fullUrl = getLightboxUrl(rawUrl);
+            preview.src = getPreviewUrl(imagePayload.url);
+            preview.dataset.fullUrl = getLightboxUrl(imagePayload.url);
             preview.style.display = 'block';
           }
         }

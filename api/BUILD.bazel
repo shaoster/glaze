@@ -199,7 +199,9 @@ py_test(
         "api/tests/test_cloudinary_image_widget.py",
         "api/tests/test_cloudinary_upload_signature.py",
     ],
-    data = _TEST_DATA,
+    data = _TEST_DATA + [
+        "static/admin/js/cloudinary_image_widget.js",
+    ],
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
