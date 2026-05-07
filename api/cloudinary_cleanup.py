@@ -2,7 +2,7 @@ import logging
 import os
 import posixpath
 from collections import Counter
-from collections.abc import AsyncIterator
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any, cast
 from urllib.parse import urlparse
@@ -305,11 +305,11 @@ class _StreamingZipBuffer:
         return None
 
 
-async def stream_cloudinary_cleanup_archive(
+def stream_cloudinary_cleanup_archive(
     assets: list[CloudinaryCleanupAsset],
-) -> AsyncIterator[bytes]:
+) -> Iterator[bytes]:
     buffer = _StreamingZipBuffer()
-    async with httpx.AsyncClient(timeout=60) as client:
+    with httpx.Client(timeout=60) as client:
         with ZipFile(cast(Any, buffer), "w", ZIP_DEFLATED) as archive:
             used_names: set[str] = set()
             for asset in assets:
@@ -324,10 +324,10 @@ async def stream_cloudinary_cleanup_archive(
                     member_name = f"{stem}-{index}{extension}"
                 used_names.add(member_name)
 
-                async with client.stream("GET", asset.url) as response:
+                with client.stream("GET", asset.url) as response:
                     response.raise_for_status()
                     with archive.open(member_name, "w") as member:
-                        async for chunk in response.aiter_bytes(1024 * 1024):
+                        for chunk in response.iter_bytes(1024 * 1024):
                             member.write(chunk)
                             for c in buffer.flush_chunks():
                                 yield c
