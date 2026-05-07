@@ -6,7 +6,7 @@ import CloudinaryImage from "../CloudinaryImage";
 const cloudinaryMocks = vi.hoisted(() => ({
   resize: vi.fn(),
   cropAddFlag: vi.fn(),
-  fillGravity: vi.fn(),
+  fillGravity: vi.fn(), // retained to confirm gravity is never called
 }));
 
 vi.mock("@cloudinary/react", () => ({
@@ -116,10 +116,6 @@ vi.mock("@cloudinary/url-gen/qualifiers/quality", () => ({
   auto: vi.fn(),
 }));
 
-vi.mock("@cloudinary/url-gen/qualifiers/gravity", () => ({
-  autoGravity: vi.fn(),
-}));
-
 vi.mock("@cloudinary/url-gen/qualifiers/flag", () => ({
   relative: () => "relative",
 }));
@@ -206,7 +202,8 @@ describe("CloudinaryImage", () => {
     expect(cloudinaryMocks.resize).toHaveBeenCalledTimes(2);
   });
 
-  it("does not call fill.gravity when a stored crop is present (prevents double-crop)", () => {
+  it("never calls fill.gravity — always uses center fill to avoid face-detection zoom", () => {
+    // With crop
     render(
       <CloudinaryImage
         url="https://res.cloudinary.com/demo/image/upload/v1/pottery/sample.jpg"
@@ -218,9 +215,8 @@ describe("CloudinaryImage", () => {
       />,
     );
     expect(cloudinaryMocks.fillGravity).not.toHaveBeenCalled();
-  });
 
-  it("calls fill.gravity with autoGravity when no stored crop is present", () => {
+    // Without crop
     render(
       <CloudinaryImage
         url="https://res.cloudinary.com/demo/image/upload/v1/pottery/sample.jpg"
@@ -230,7 +226,7 @@ describe("CloudinaryImage", () => {
         context="thumbnail"
       />,
     );
-    expect(cloudinaryMocks.fillGravity).toHaveBeenCalledTimes(1);
+    expect(cloudinaryMocks.fillGravity).not.toHaveBeenCalled();
   });
 
   it("resets loading state when only the crop changes", () => {

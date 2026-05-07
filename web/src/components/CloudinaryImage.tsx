@@ -18,7 +18,6 @@ import { crop as cropAction, fill, fit } from "@cloudinary/url-gen/actions/resiz
 import { format, quality } from "@cloudinary/url-gen/actions/delivery";
 import { auto as autoFormat, jpg } from "@cloudinary/url-gen/qualifiers/format";
 import { auto as autoQuality } from "@cloudinary/url-gen/qualifiers/quality";
-import { autoGravity } from "@cloudinary/url-gen/qualifiers/gravity";
 import { relative } from "@cloudinary/url-gen/qualifiers/flag";
 import { AdvancedImage } from "@cloudinary/react";
 import { Box, CircularProgress } from "@mui/material";
@@ -217,15 +216,11 @@ export default function CloudinaryImage({
         context === "gallery" ? (requestedWidth ?? 320) : THUMBNAIL_SIZE;
       const targetHeight =
         context === "gallery" ? (requestedHeight ?? 240) : THUMBNAIL_SIZE;
-      // When a stored crop is present the subject is already isolated — use
-      // center fill to avoid running auto gravity a second time on the cropped
-      // image, which would cause a second round of subject detection and
-      // hyper-zoom.  Without a stored crop, let auto gravity pick the subject.
-      img.resize(
-        crop
-          ? fill().width(targetWidth).height(targetHeight)
-          : fill().width(targetWidth).height(targetHeight).gravity(autoGravity()),
-      );
+      // Always use center fill — no auto gravity. g_auto prioritizes face
+      // detection and hyper-zooms into photographer reflections/backgrounds
+      // rather than the pottery subject. Center fill is more reliable for
+      // pottery photos where the subject is nearly always centered in the frame.
+      img.resize(fill().width(targetWidth).height(targetHeight));
     }
 
     // Thumbnail and preview contexts request JPG explicitly — consistent
