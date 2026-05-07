@@ -41,16 +41,18 @@ class Command(BaseCommand):
         skipped = 0
 
         for image in images.iterator():
-            cloud_name = image.cloud_name
-            public_id = image.cloudinary_public_id
-            if not cloud_name or not public_id:
+            if not image.cloud_name or not image.cloudinary_public_id:
                 skipped += 1
                 continue
             try:
-                crop = fetch_cloudinary_auto_crop(cloud_name, public_id)
+                crop = fetch_cloudinary_auto_crop(
+                    image.cloud_name, image.cloudinary_public_id
+                )
             except Exception as exc:  # noqa: BLE001
                 skipped += 1
-                self.stderr.write(f"Skipping {cloud_name}/{public_id}: {exc}")
+                self.stderr.write(
+                    f"Skipping {image.cloud_name}/{image.cloudinary_public_id}: {exc}"
+                )
                 continue
 
             if crop is None:

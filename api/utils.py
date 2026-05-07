@@ -6,6 +6,7 @@ workflow-state-machine logic derived from workflow.yml).
 """
 
 import requests
+from cloudinary import CloudinaryImage
 from django.apps import apps
 from django.conf import settings
 from django.db import transaction
@@ -146,10 +147,19 @@ def parse_cloudinary_getinfo_crop(payload: object) -> dict | None:
     return crop_to_dict(crop)
 
 
-def cloudinary_getinfo_url(cloud_name: str, public_id: str) -> str:
-    return (
-        f"https://res.cloudinary.com/{cloud_name}/image/upload/"
-        f"fl_getinfo,g_auto,c_crop/{public_id}.json"
+def cloudinary_getinfo_url(
+    cloud_name: str, public_id: str, *, width: int = 750
+) -> str | None:
+    """Return a Cloudinary fl_getinfo URL for an uploaded image asset."""
+    if not cloud_name or not public_id:
+        return None
+    return CloudinaryImage(public_id).build_url(
+        cloud_name=cloud_name,
+        secure=True,
+        transformation=[
+            {"crop": "crop", "gravity": "auto", "width": width},
+            {"flags": "getinfo"},
+        ],
     )
 
 
@@ -157,9 +167,10 @@ def fetch_cloudinary_auto_crop(
     cloud_name: str, public_id: str, *, timeout: float = 10
 ) -> dict | None:
     """Fetch Cloudinary's g_auto crop suggestion for an existing asset."""
-    response = requests.get(
-        cloudinary_getinfo_url(cloud_name, public_id), timeout=timeout
-    )
+    getinfo_url = cloudinary_getinfo_url(cloud_name, public_id)
+    if getinfo_url is None:
+        return None
+    response = requests.get(getinfo_url, timeout=timeout)
     response.raise_for_status()
     return parse_cloudinary_getinfo_crop(response.json())
 

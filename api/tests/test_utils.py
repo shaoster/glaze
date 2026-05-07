@@ -57,6 +57,14 @@ class TestCloudinaryCropParsing:
     def test_returns_none_when_getinfo_has_no_crop(self):
         assert parse_cloudinary_getinfo_crop({"input": {"width": 100}}) is None
 
+    def test_cloudinary_getinfo_url_uses_documented_transform(self):
+        assert cloudinary_getinfo_url("demo", "pieces/mug") == (
+            "https://res.cloudinary.com/demo/image/upload/"
+            "c_crop,g_auto,w_750/fl_getinfo/v1/pieces/mug"
+        )
+        assert cloudinary_getinfo_url("", "pieces/mug") is None
+        assert cloudinary_getinfo_url("demo", "") is None
+
     def test_fetch_cloudinary_auto_crop_uses_getinfo_url(self, monkeypatch):
         calls = []
 
@@ -83,6 +91,14 @@ class TestCloudinaryCropParsing:
             (cloudinary_getinfo_url("demo", "pieces/mug"), 3),
             "raise_for_status",
         ]
+
+    def test_fetch_cloudinary_auto_crop_skips_missing_identity(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr("api.utils.requests.get", lambda *args: calls.append(args))
+
+        assert fetch_cloudinary_auto_crop("", "pieces/mug") is None
+        assert fetch_cloudinary_auto_crop("demo", "") is None
+        assert calls == []
 
 
 @pytest.mark.django_db
