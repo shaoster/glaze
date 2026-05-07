@@ -601,30 +601,6 @@ describe("upload endpoints", () => {
     ).toBeNull();
   });
 
-  it("fetchCloudinaryAutoCrop fetches getinfo JSON and returns null for non-ok responses", async () => {
-    const { fetchCloudinaryAutoCrop } = await loadApiModule();
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: vi.fn().mockResolvedValue({
-          crop: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
-        }),
-      })
-      .mockResolvedValueOnce({ ok: false });
-    vi.stubGlobal("fetch", fetchMock);
-
-    await expect(
-      fetchCloudinaryAutoCrop({ cloudName: "demo", publicId: "pieces/mug" }),
-    ).resolves.toEqual({ x: 0.1, y: 0.2, width: 0.3, height: 0.4 });
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://res.cloudinary.com/demo/image/upload/fl_getinfo,g_auto,c_crop/pieces/mug.json",
-    );
-    await expect(
-      fetchCloudinaryAutoCrop({ cloudName: "demo", publicId: "pieces/mug" }),
-    ).resolves.toBeNull();
-  });
-
   it("importManualSquareCropRecords posts multipart data with payload and matching files", async () => {
     const { importManualSquareCropRecords } = await loadApiModule();
     mockClient.post.mockResolvedValue({

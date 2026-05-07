@@ -548,16 +548,6 @@ export async function signCloudinaryWidgetParams(
   return data.signature;
 }
 
-export async function fetchCloudinaryAutoCrop(params: {
-  cloudName: string;
-  publicId: string;
-}): Promise<ImageCrop | null> {
-  const url = `https://res.cloudinary.com/${params.cloudName}/image/upload/fl_getinfo,g_auto,c_crop/${params.publicId}.json`;
-  const response = await fetch(url);
-  if (!response.ok) return null;
-  return parseCloudinaryAutoCrop((await response.json()) as CloudinaryAutoCropInfo);
-}
-
 export type ManualSquareCropImportRecordPayload = {
   client_id: string;
   filename: string;

@@ -5,7 +5,6 @@ of the api app but do not belong in workflow.py (which is reserved for
 workflow-state-machine logic derived from workflow.yml).
 """
 
-import requests
 from django.apps import apps
 from django.conf import settings
 from django.db import transaction
@@ -144,24 +143,6 @@ def parse_cloudinary_getinfo_crop(payload: object) -> dict | None:
             "height": crop["height"] / input_height,
         }
     return crop_to_dict(crop)
-
-
-def cloudinary_getinfo_url(cloud_name: str, public_id: str) -> str:
-    return (
-        f"https://res.cloudinary.com/{cloud_name}/image/upload/"
-        f"fl_getinfo,g_auto,c_crop/{public_id}.json"
-    )
-
-
-def fetch_cloudinary_auto_crop(
-    cloud_name: str, public_id: str, *, timeout: float = 10
-) -> dict | None:
-    """Fetch Cloudinary's g_auto crop suggestion for an existing asset."""
-    response = requests.get(
-        cloudinary_getinfo_url(cloud_name, public_id), timeout=timeout
-    )
-    response.raise_for_status()
-    return parse_cloudinary_getinfo_crop(response.json())
 
 
 def normalize_image_payload(payload: object, user=None):

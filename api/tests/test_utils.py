@@ -2,9 +2,7 @@ import pytest
 
 from api.models import GlazeCombination, GlazeType
 from api.utils import (
-    cloudinary_getinfo_url,
     crop_to_dict,
-    fetch_cloudinary_auto_crop,
     parse_cloudinary_getinfo_crop,
     sync_glaze_type_singleton_combination,
 )
@@ -56,33 +54,6 @@ class TestCloudinaryCropParsing:
 
     def test_returns_none_when_getinfo_has_no_crop(self):
         assert parse_cloudinary_getinfo_crop({"input": {"width": 100}}) is None
-
-    def test_fetch_cloudinary_auto_crop_uses_getinfo_url(self, monkeypatch):
-        calls = []
-
-        class Response:
-            def raise_for_status(self):
-                calls.append("raise_for_status")
-
-            def json(self):
-                return {"crop": {"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.4}}
-
-        def fake_get(url, timeout):
-            calls.append((url, timeout))
-            return Response()
-
-        monkeypatch.setattr("api.utils.requests.get", fake_get)
-
-        assert fetch_cloudinary_auto_crop("demo", "pieces/mug", timeout=3) == {
-            "x": 0.1,
-            "y": 0.2,
-            "width": 0.3,
-            "height": 0.4,
-        }
-        assert calls == [
-            (cloudinary_getinfo_url("demo", "pieces/mug"), 3),
-            "raise_for_status",
-        ]
 
 
 @pytest.mark.django_db

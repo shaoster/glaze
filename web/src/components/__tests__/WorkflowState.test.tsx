@@ -175,9 +175,6 @@ vi.mock("../../util/api", () => ({
   fetchCloudinaryWidgetConfig: vi
     .fn()
     .mockResolvedValue({ cloud_name: "demo", api_key: "123456" }),
-  fetchCloudinaryAutoCrop: vi
-    .fn()
-    .mockResolvedValue({ x: 0.1, y: 0.2, width: 0.7, height: 0.6 }),
   signCloudinaryWidgetParams: vi.fn().mockResolvedValue("mock-signature"),
 }));
 
@@ -854,36 +851,6 @@ describe("WorkflowState", () => {
     });
     render(<WorkflowState {...defaultProps} />);
     fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
-    await waitFor(() =>
-      expect(api.updateCurrentState).toHaveBeenCalledWith(
-        "test-piece-id",
-        expect.objectContaining({
-          images: expect.arrayContaining([
-            expect.objectContaining({
-              url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-              cloudinary_public_id: "sample",
-              crop: { x: 0.1, y: 0.2, width: 0.7, height: 0.6 },
-            }),
-          ]),
-        }),
-      ),
-    );
-  });
-
-  it("still saves uploaded images when Cloudinary crop detection fails", async () => {
-    const updated = makePieceDetail();
-    vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
-    vi.mocked(api.fetchCloudinaryAutoCrop).mockRejectedValueOnce(
-      new Error("getinfo failed"),
-    );
-    setupUploadWidget({
-      secure_url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      public_id: "sample",
-    });
-
-    render(<WorkflowState {...defaultProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
-
     await waitFor(() =>
       expect(api.updateCurrentState).toHaveBeenCalledWith(
         "test-piece-id",
