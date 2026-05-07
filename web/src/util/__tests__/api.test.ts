@@ -79,10 +79,12 @@ beforeEach(() => {
   mockClient.delete.mockReset();
   mockClient.defaults = {};
   delete process.env.EXPO_PUBLIC_API_BASE_URL;
+  vi.unstubAllGlobals();
 });
 
 afterEach(() => {
   delete process.env.EXPO_PUBLIC_API_BASE_URL;
+  vi.unstubAllGlobals();
 });
 
 describe("client setup", () => {
@@ -581,6 +583,46 @@ describe("upload endpoints", () => {
         g_auto_info: { x: 100, y: 80, width: 500, height: 400 },
       }),
     ).toEqual({ x: 0.1, y: 0.1, width: 0.5, height: 0.5 });
+  });
+
+  it("parseCloudinaryAutoCrop handles nested w/h crops and invalid payloads", async () => {
+    const { parseCloudinaryAutoCrop } = await loadApiModule();
+
+    expect(
+      parseCloudinaryAutoCrop({
+        nested: [{ ignored: true }, { x: 0.2, y: 0.3, w: 0.4, h: 0.5 }],
+      }),
+    ).toEqual({ x: 0.2, y: 0.3, width: 0.4, height: 0.5 });
+    expect(parseCloudinaryAutoCrop({ input: { width: 100, height: 100 } })).toBeNull();
+    expect(
+      parseCloudinaryAutoCrop({
+        crop: { x: "bad", y: 0, width: 1, height: 1 },
+      }),
+    ).toBeNull();
+  });
+
+  it("fetchCloudinaryAutoCrop fetches getinfo JSON and returns null for non-ok responses", async () => {
+    const { fetchCloudinaryAutoCrop } = await loadApiModule();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          crop: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+        }),
+      })
+      .mockResolvedValueOnce({ ok: false });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchCloudinaryAutoCrop({ cloudName: "demo", publicId: "pieces/mug" }),
+    ).resolves.toEqual({ x: 0.1, y: 0.2, width: 0.3, height: 0.4 });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://res.cloudinary.com/demo/image/upload/fl_getinfo,g_auto,c_crop/pieces/mug.json",
+    );
+    await expect(
+      fetchCloudinaryAutoCrop({ cloudName: "demo", publicId: "pieces/mug" }),
+    ).resolves.toBeNull();
   });
 
   it("importManualSquareCropRecords posts multipart data with payload and matching files", async () => {

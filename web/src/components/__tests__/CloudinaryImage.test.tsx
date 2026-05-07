@@ -204,6 +204,35 @@ describe("CloudinaryImage", () => {
     expect(cloudinaryMocks.resize).toHaveBeenCalledTimes(2);
   });
 
+  it("resets loading state when only the crop changes", () => {
+    const { rerender } = render(
+      <CloudinaryImage
+        url="https://res.cloudinary.com/demo/image/upload/v1/pottery/sample.jpg"
+        cloud_name="demo"
+        cloudinary_public_id="pottery/sample"
+        crop={{ x: 0.1, y: 0.2, width: 0.6, height: 0.7 }}
+        alt="Cloudinary pot"
+        context="gallery"
+      />,
+    );
+
+    fireEvent.load(screen.getByAltText("Cloudinary pot"));
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+
+    rerender(
+      <CloudinaryImage
+        url="https://res.cloudinary.com/demo/image/upload/v1/pottery/sample.jpg"
+        cloud_name="demo"
+        cloudinary_public_id="pottery/sample"
+        crop={{ x: 0.2, y: 0.2, width: 0.6, height: 0.7 }}
+        alt="Cloudinary pot"
+        context="gallery"
+      />,
+    );
+
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+  });
+
 
   it("renders and clears loading state for lightbox-context images", () => {
     render(

@@ -870,6 +870,36 @@ describe("WorkflowState", () => {
     );
   });
 
+  it("still saves uploaded images when Cloudinary crop detection fails", async () => {
+    const updated = makePieceDetail();
+    vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
+    vi.mocked(api.fetchCloudinaryAutoCrop).mockRejectedValueOnce(
+      new Error("getinfo failed"),
+    );
+    setupUploadWidget({
+      secure_url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+      public_id: "sample",
+    });
+
+    render(<WorkflowState {...defaultProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
+
+    await waitFor(() =>
+      expect(api.updateCurrentState).toHaveBeenCalledWith(
+        "test-piece-id",
+        expect.objectContaining({
+          images: expect.arrayContaining([
+            expect.objectContaining({
+              url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+              cloudinary_public_id: "sample",
+              crop: null,
+            }),
+          ]),
+        }),
+      ),
+    );
+  });
+
   it("widget upload error shows error message", async () => {
     const { triggerError } = setupControllableWidget();
     render(<WorkflowState {...defaultProps} />);
