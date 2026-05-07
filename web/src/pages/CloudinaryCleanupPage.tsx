@@ -19,12 +19,14 @@ import {
   TableHead,
   TablePagination,
   TableRow,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SearchIcon from "@mui/icons-material/Search";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 import {
   deleteCloudinaryCleanupAssets,
@@ -55,6 +57,50 @@ function formatCreatedAt(value: string | null) {
 
 function formatCloudinaryLocation(asset: CloudinaryCleanupAsset) {
   return [asset.cloud_name, asset.path_prefix].filter(Boolean).join(" / ");
+}
+
+function ReferencedBreakdown({
+  summary,
+}: {
+  summary: CloudinaryCleanupScanResponse["summary"];
+}) {
+  const warnings = summary.reference_warnings ?? [];
+  const breakdown = summary.referenced_breakdown ?? [];
+
+  return (
+    <Stack spacing={0.75}>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Typography variant="h5">{summary.referenced}</Typography>
+        {warnings.length > 0 && (
+          <Tooltip title={warnings.join(" ")}>
+            <WarningAmberIcon color="warning" fontSize="small" />
+          </Tooltip>
+        )}
+      </Stack>
+      {breakdown.length > 0 && (
+        <Stack spacing={0.25}>
+          {breakdown.map((source) => (
+            <Typography
+              key={source.key}
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}
+            >
+              <span>{source.label}</span>
+              <Box component="span" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                {source.count}
+              </Box>
+            </Typography>
+          ))}
+        </Stack>
+      )}
+      {warnings.map((warning) => (
+        <Typography key={warning} variant="caption" color="warning.main">
+          {warning}
+        </Typography>
+      ))}
+    </Stack>
+  );
 }
 
 export default function CloudinaryCleanupPage() {
@@ -122,6 +168,8 @@ export default function CloudinaryCleanupPage() {
             total: current.summary.total - publicIds.length,
             referenced: current.summary.referenced,
             unused: remaining.length,
+            referenced_breakdown: current.summary.referenced_breakdown,
+            reference_warnings: current.summary.reference_warnings,
           },
         };
       });
@@ -200,9 +248,7 @@ export default function CloudinaryCleanupPage() {
             <Typography variant="caption" color="text.secondary">
               Referenced
             </Typography>
-            <Typography variant="h5">
-              {scanResult.summary.referenced}
-            </Typography>
+            <ReferencedBreakdown summary={scanResult.summary} />
           </Paper>
           <Paper sx={{ px: 2, py: 1.5, flex: 1 }}>
             <Typography variant="caption" color="text.secondary">

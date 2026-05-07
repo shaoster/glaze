@@ -650,6 +650,12 @@ export type CloudinaryCleanupScanResponse = {
     total: number;
     referenced: number;
     unused: number;
+    referenced_breakdown: {
+      key: string;
+      label: string;
+      count: number;
+    }[];
+    reference_warnings: string[];
   };
 };
 

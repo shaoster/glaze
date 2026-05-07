@@ -707,7 +707,15 @@ describe("upload endpoints", () => {
           created_at: "2026-05-06T12:00:00Z",
         },
       ],
-      summary: { total: 1, referenced: 0, unused: 1 },
+      summary: {
+        total: 1,
+        referenced: 0,
+        unused: 1,
+        referenced_breakdown: [
+          { key: "piece_list", label: "PieceList", count: 0 },
+        ],
+        reference_warnings: [],
+      },
     };
     mockClient.get.mockResolvedValue({ data: payload });
 

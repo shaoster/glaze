@@ -78,6 +78,8 @@ clay_weight_grams:
 
 The `image` type is a DSL-level annotation: at the model layer it is stored as a `JSONField` containing `{"url": "...", "cloudinary_public_id": "..."}` (both fields required; `cloudinary_public_id` is nullable for URL-only images). `_resolve_field_def` resolves it to a JSON Schema object with `url` and `cloudinary_public_id` properties so validation enforces the correct structure. The Django admin renders a Cloudinary upload widget instead of a plain text input, and the widget stores the complete object on upload. Use `image` for any field that holds a Cloudinary-hosted image — the stored `cloudinary_public_id` enables enumerating all referenced assets for cleanup workflows.
 
+When adding a new `type: image` field to `workflow.yml`, update the Cloudinary cleanup referenced-source breakdown in `api/cloudinary_cleanup.py` at the same time. `api/tests/test_cloudinary_cleanup.py::TestCloudinaryCleanup::test_reference_breakdown_covers_every_workflow_image_field` intentionally fails when workflow image paths are not listed in the breakdown coverage set.
+
 _Ref field_ — two sub-forms, distinguished by the `@` prefix:
 
 ```yaml
