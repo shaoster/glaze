@@ -75,11 +75,10 @@ export default function CloudinaryCleanupPage() {
   const allPageSelected =
     pageAssets.length > 0 && pageAssets.every((a) => selected.has(a.public_id));
   const somePageSelected = pageAssets.some((a) => selected.has(a.public_id));
-  const selectedAssets = useMemo(
-    () => assets.filter((asset) => selected.has(asset.public_id)),
-    [selected, assets],
+  const selectedPageAssets = useMemo(
+    () => pageAssets.filter((asset) => selected.has(asset.public_id)),
+    [selected, pageAssets],
   );
-
   async function handleScan() {
     setLoading(true);
     setError(null);
@@ -97,7 +96,7 @@ export default function CloudinaryCleanupPage() {
   }
 
   async function handleDelete() {
-    const publicIds = selectedAssets.map((asset) => asset.public_id);
+    const publicIds = selectedPageAssets.map((asset) => asset.public_id);
     if (!publicIds.length) return;
     setDeleting(true);
     setError(null);
@@ -225,9 +224,9 @@ export default function CloudinaryCleanupPage() {
               color="error"
               startIcon={<DeleteIcon />}
               onClick={() => setConfirmOpen(true)}
-              disabled={!selectedAssets.length || deleting}
+              disabled={!selectedPageAssets.length || deleting}
             >
-              Delete Selected ({selectedAssets.length})
+              Delete Selected ({selectedPageAssets.length})
             </Button>
           </Stack>
 
@@ -264,10 +263,10 @@ export default function CloudinaryCleanupPage() {
                     </TableCell>
                     <TableCell>
                       <Stack direction="row" alignItems="center" spacing={1.5}>
-                        {asset.url ? (
+                        {asset.thumbnail_url ? (
                           <Box
                             component="img"
-                            src={asset.url}
+                            src={asset.thumbnail_url}
                             alt=""
                             sx={{
                               width: 48,
@@ -318,8 +317,9 @@ export default function CloudinaryCleanupPage() {
         <DialogTitle>Delete selected assets?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            This will permanently delete {selectedAssets.length} unused
-            Cloudinary assets. Referenced assets are blocked by the backend.
+            This will permanently delete {selectedPageAssets.length} unused
+            Cloudinary assets from the current page. Referenced assets are
+            blocked by the backend.
           </DialogContentText>
         </DialogContent>
         <DialogActions>

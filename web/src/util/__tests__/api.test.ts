@@ -700,9 +700,9 @@ describe("upload endpoints", () => {
         {
           public_id: "piece/orphan",
           url: "https://example.com/orphan.jpg",
+          thumbnail_url: "https://example.com/orphan-thumb.jpg",
           bytes: 2048,
           created_at: "2026-05-06T12:00:00Z",
-
         },
       ],
       summary: { total: 1, referenced: 0, unused: 1 },

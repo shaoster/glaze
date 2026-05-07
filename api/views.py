@@ -713,6 +713,7 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
                     {
                         "public_id": asset.public_id,
                         "url": asset.url,
+                        "thumbnail_url": asset.thumbnail_url,
                         "bytes": asset.bytes,
                         "created_at": asset.created_at,
                     }
@@ -739,11 +740,13 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
         deleted = delete_cloudinary_assets(public_ids)
     except ValueError as exc:
         message = str(exc)
-        response_status = (
-            status.HTTP_503_SERVICE_UNAVAILABLE
-            if message == "Cloudinary is not configured on the server."
-            else status.HTTP_400_BAD_REQUEST
-        )
+        service_unavailable_messages = {
+            "Cloudinary is not configured on the server.",
+            "Unable to delete Cloudinary assets.",
+        }
+        response_status: int = status.HTTP_400_BAD_REQUEST
+        if message in service_unavailable_messages:
+            response_status = status.HTTP_503_SERVICE_UNAVAILABLE
         return Response({"detail": message}, status=response_status)
 
     return Response({"deleted": deleted})
