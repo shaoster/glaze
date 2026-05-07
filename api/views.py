@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import os
@@ -798,6 +799,14 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
 
 
 @extend_schema(
+    parameters=[
+        OpenApiParameter(
+            name="unreferenced_only",
+            type=bool,
+            location=OpenApiParameter.QUERY,
+            description="Restrict the archive to assets not referenced by PotterDoc. Defaults to false (all assets).",
+        ),
+    ],
     responses={
         200: {"type": "string", "format": "binary"},
         503: {"type": "object"},
@@ -805,24 +814,32 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
 )
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
-def admin_cloudinary_cleanup_archive(
+async def admin_cloudinary_cleanup_archive(
     request: Request,
 ) -> StreamingHttpResponse | Response:
+    unreferenced_only = request.query_params.get("unreferenced_only", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
     try:
-        assets = list_cloudinary_assets()
-        unused = [asset for asset in assets if not asset.referenced]
+        assets = await asyncio.to_thread(list_cloudinary_assets)
     except ValueError as exc:
         return Response(
             {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
         )
 
+    selected = [a for a in assets if not a.referenced] if unreferenced_only else assets
+    filename = (
+        "cloudinary-unreferenced-images.zip"
+        if unreferenced_only
+        else "cloudinary-all-images.zip"
+    )
     response = StreamingHttpResponse(
-        stream_cloudinary_cleanup_archive(unused),
+        stream_cloudinary_cleanup_archive(selected),
         content_type="application/zip",
     )
-    response["Content-Disposition"] = (
-        'attachment; filename="cloudinary-cleanup-unused-images.zip"'
-    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 
 

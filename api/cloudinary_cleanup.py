@@ -2,17 +2,17 @@ import logging
 import os
 import posixpath
 from collections import Counter
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, cast
 from urllib.parse import urlparse
-from urllib.request import urlopen
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import cloudinary
 import cloudinary.api
 import cloudinary.exceptions
 from cloudinary import CloudinaryImage
+import httpx
 
 from .models import GlazeCombination, GlazeType, Image, Piece, PieceStateImage
 
@@ -297,40 +297,45 @@ class _StreamingZipBuffer:
         self._chunks.append(bytes(data))
         return len(data)
 
-    def flush_chunks(self) -> Iterator[bytes]:
-        while self._chunks:
-            yield self._chunks.pop(0)
+    def flush_chunks(self) -> list[bytes]:
+        chunks, self._chunks = self._chunks, []
+        return chunks
 
     def flush(self) -> None:
         return None
 
 
-def stream_cloudinary_cleanup_archive(
+async def stream_cloudinary_cleanup_archive(
     assets: list[CloudinaryCleanupAsset],
-) -> Iterator[bytes]:
+) -> AsyncIterator[bytes]:
     buffer = _StreamingZipBuffer()
-    with ZipFile(cast(Any, buffer), "w", ZIP_DEFLATED) as archive:
-        used_names: set[str] = set()
-        for asset in assets:
-            if not asset.url:
-                continue
-            member_name = _archive_member_name(asset)
-            if member_name in used_names:
-                stem, extension = posixpath.splitext(member_name)
-                index = 2
-                while f"{stem}-{index}{extension}" in used_names:
-                    index += 1
-                member_name = f"{stem}-{index}{extension}"
-            used_names.add(member_name)
+    async with httpx.AsyncClient(timeout=60) as client:
+        with ZipFile(cast(Any, buffer), "w", ZIP_DEFLATED) as archive:
+            used_names: set[str] = set()
+            for asset in assets:
+                if not asset.url:
+                    continue
+                member_name = _archive_member_name(asset)
+                if member_name in used_names:
+                    stem, extension = posixpath.splitext(member_name)
+                    index = 2
+                    while f"{stem}-{index}{extension}" in used_names:
+                        index += 1
+                    member_name = f"{stem}-{index}{extension}"
+                used_names.add(member_name)
 
-            with urlopen(asset.url, timeout=30) as response:
-                with archive.open(member_name, "w") as member:
-                    while chunk := response.read(1024 * 1024):
-                        member.write(chunk)
-                        yield from buffer.flush_chunks()
-            yield from buffer.flush_chunks()
+                async with client.stream("GET", asset.url) as response:
+                    response.raise_for_status()
+                    with archive.open(member_name, "w") as member:
+                        async for chunk in response.aiter_bytes(1024 * 1024):
+                            member.write(chunk)
+                            for c in buffer.flush_chunks():
+                                yield c
+                for c in buffer.flush_chunks():
+                    yield c
 
-    yield from buffer.flush_chunks()
+    for c in buffer.flush_chunks():
+        yield c
 
 
 def delete_cloudinary_assets(public_ids: list[str]) -> dict[str, str]:
