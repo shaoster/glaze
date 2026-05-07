@@ -241,3 +241,6 @@ pages/index.html
 # Bazel's aspect_rules tempdir
 .aspect
 bazel-*
+
+# Profile data
+prof/
