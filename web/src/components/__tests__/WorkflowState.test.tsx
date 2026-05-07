@@ -373,17 +373,15 @@ describe("WorkflowState", () => {
   it("buildDraftState ignores non-string objects for inline fields", () => {
     const draft = buildDraftState(
       makeState({
-        state: "bisque_fired",
+        state: "wheel_thrown",
         custom_fields: {
-          kiln_temperature_c: { bad: "shape" },
-          cone: { name: 4 },
+          clay_weight_lbs: { bad: "shape" },
         } as PieceState["custom_fields"],
       }),
     );
-    expect(draft.additionalFieldInputs).toEqual({
-      kiln_temperature_c: "",
-      cone: "",
-    });
+    // Only assert the field under test — other fields vary as workflow.yml evolves.
+    expect(draft.additionalFieldInputs).toMatchObject({ clay_weight_lbs: "" });
+    expect(draft.additionalFieldInputs["clay_weight_lbs"]).not.toEqual({ bad: "shape" });
   });
 
   it("normalizeAdditionalFieldPayload trims and parses boolean strings", () => {
