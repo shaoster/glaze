@@ -358,6 +358,8 @@ class TestCloudinaryCleanup:
 
         assert response.status_code == 200
         assert response["Content-Type"] == "application/zip"
+        assert response["Cache-Control"] == "no-store"
+        assert response["X-Accel-Buffering"] == "no"
         archive_bytes = b"".join(response.streaming_content)
         with ZipFile(BytesIO(archive_bytes)) as archive:
             assert sorted(archive.namelist()) == [

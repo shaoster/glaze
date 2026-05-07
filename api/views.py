@@ -839,6 +839,8 @@ def admin_cloudinary_cleanup_archive(
         content_type="application/zip",
     )
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["Cache-Control"] = "no-store"
+    response["X-Accel-Buffering"] = "no"
     return response
 
 
