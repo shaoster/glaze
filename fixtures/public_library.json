@@ -18,7 +18,11 @@
     "fields": {
       "name": "Albany Blue Slip",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988117/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988117/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": false,
@@ -31,7 +35,11 @@
     "fields": {
       "name": "Albany Green Slip",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988116/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988116/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": false,
@@ -44,7 +52,11 @@
     "fields": {
       "name": "Albany Manganese Slip",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": false,
@@ -57,7 +69,11 @@
     "fields": {
       "name": "Amber",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_public/naxk2tch9yg5lbfde5ff"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -70,7 +86,11 @@
     "fields": {
       "name": "Breakthrough Blue",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": false,
@@ -83,7 +103,11 @@
     "fields": {
       "name": "Breakthrough White",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988119/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988119/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -96,7 +120,11 @@
     "fields": {
       "name": "Celadon",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf"
+      },
       "is_food_safe": null,
       "runs": null,
       "highlights_grooves": null,
@@ -109,7 +137,11 @@
     "fields": {
       "name": "Choy",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": true,
@@ -122,7 +154,11 @@
     "fields": {
       "name": "Clear Crackle",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -135,7 +171,11 @@
     "fields": {
       "name": "Cobalt Blue Green",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": true,
@@ -148,7 +188,11 @@
     "fields": {
       "name": "Cornwall",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988114/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988114/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": true,
@@ -161,7 +205,11 @@
     "fields": {
       "name": "Creamy Red",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776823398/glaze_public/zotiqbcrfmdfxtty2wmv.heic",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776823398/glaze_public/zotiqbcrfmdfxtty2wmv.heic",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_public/zotiqbcrfmdfxtty2wmv"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -174,7 +222,11 @@
     "fields": {
       "name": "Dragon Green",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3"
+      },
       "is_food_safe": false,
       "runs": false,
       "highlights_grooves": true,
@@ -187,7 +239,11 @@
     "fields": {
       "name": "French Blue",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -200,7 +256,11 @@
     "fields": {
       "name": "French Green",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988122/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988122/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -213,7 +273,11 @@
     "fields": {
       "name": "Gloss White",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": true,
@@ -226,7 +290,11 @@
     "fields": {
       "name": "Ismael's Clear",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -239,7 +307,11 @@
     "fields": {
       "name": "Oribe",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152844/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152844/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -252,7 +324,11 @@
     "fields": {
       "name": "Pharsalia",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -265,7 +341,11 @@
     "fields": {
       "name": "Pussywillow",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152848/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152848/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -278,7 +358,11 @@
     "fields": {
       "name": "Ragnar's Blue",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152847/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152847/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f"
+      },
       "is_food_safe": false,
       "runs": true,
       "highlights_grooves": null,
@@ -291,7 +375,11 @@
     "fields": {
       "name": "Red Brown",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -304,7 +392,11 @@
     "fields": {
       "name": "Silky Black",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9"
+      },
       "is_food_safe": false,
       "runs": false,
       "highlights_grooves": true,
@@ -330,7 +422,11 @@
     "fields": {
       "name": "Turquoise",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": true,
@@ -343,7 +439,11 @@
     "fields": {
       "name": "Volcanic Ash",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304349/glaze_public/eyy9whpmb5wajybtfk3p.heic",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304349/glaze_public/eyy9whpmb5wajybtfk3p.heic",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_public/eyy9whpmb5wajybtfk3p"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -356,7 +456,11 @@
     "fields": {
       "name": "Wild Hare Fur",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304189/glaze_public/jvrmpfxkjjhniqpqzqrs.heic",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304189/glaze_public/jvrmpfxkjjhniqpqzqrs.heic",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_public/jvrmpfxkjjhniqpqzqrs"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -369,7 +473,11 @@
     "fields": {
       "name": "Xavier Green",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152845/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152845/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -382,7 +490,11 @@
     "fields": {
       "name": "Yellow Orange",
       "short_description": "",
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": true,
@@ -395,7 +507,11 @@
     "fields": {
       "name": "Albany Blue Slip",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988117/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988117/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": false,
@@ -408,7 +524,11 @@
     "fields": {
       "name": "Albany Blue Slip!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334466/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143829-86d206b5.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334466/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143829-86d206b5.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143829-86d206b5"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -421,7 +541,11 @@
     "fields": {
       "name": "Albany Blue Slip!Choy",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334463/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143837-92445703.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334463/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143837-92445703.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143837-92445703"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -434,7 +558,11 @@
     "fields": {
       "name": "Albany Blue Slip!Cornwall",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334462/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143845-32ec039e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334462/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143845-32ec039e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143845-32ec039e"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -447,7 +575,11 @@
     "fields": {
       "name": "Albany Blue Slip!French Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777329433/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143616-c93add06.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777329433/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143616-c93add06.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143616-c93add06"
+      },
       "is_food_safe": null,
       "runs": null,
       "highlights_grooves": null,
@@ -460,7 +592,11 @@
     "fields": {
       "name": "Albany Blue Slip!Turquoise",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334468/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143635-9800dbcc.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334468/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143635-9800dbcc.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143635-9800dbcc"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -473,7 +609,11 @@
     "fields": {
       "name": "Albany Green Slip",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988116/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988116/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": false,
@@ -486,7 +626,11 @@
     "fields": {
       "name": "Albany Green Slip!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334466/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143832-5a9d2a40.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334466/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143832-5a9d2a40.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143832-5a9d2a40"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -499,7 +643,11 @@
     "fields": {
       "name": "Albany Green Slip!Choy",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334463/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143841-7c59b827.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334463/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143841-7c59b827.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143841-7c59b827"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -512,7 +660,11 @@
     "fields": {
       "name": "Albany Green Slip!Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334462/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143848-2271612c.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334462/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143848-2271612c.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143848-2271612c"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -525,7 +677,11 @@
     "fields": {
       "name": "Albany Green Slip!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334465/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143722-2-9189734a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334465/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143722-2-9189734a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143722-2-9189734a"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -538,7 +694,11 @@
     "fields": {
       "name": "Albany Green Slip!Turquoise",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334467/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143640-00fc2556.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334467/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143640-00fc2556.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143640-00fc2556"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -551,7 +711,11 @@
     "fields": {
       "name": "Albany Green Slip!Yellow Orange",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334464/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143637-f6d7a94f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334464/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143637-f6d7a94f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143637-f6d7a94f"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -564,7 +728,11 @@
     "fields": {
       "name": "Albany Manganese Slip",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": false,
@@ -577,7 +745,11 @@
     "fields": {
       "name": "Amber",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_public/naxk2tch9yg5lbfde5ff"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -590,7 +762,11 @@
     "fields": {
       "name": "Amber!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336845/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143922-77c875ba.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336845/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143922-77c875ba.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143922-77c875ba"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -603,7 +779,11 @@
     "fields": {
       "name": "Amber!Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336846/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143927-27923e92.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336846/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143927-27923e92.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143927-27923e92"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -616,7 +796,11 @@
     "fields": {
       "name": "Amber!Dragon Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336845/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143931-ea84d64d.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336845/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143931-ea84d64d.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143931-ea84d64d"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -629,7 +813,11 @@
     "fields": {
       "name": "Amber!French Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336844/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143941-68464664.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336844/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143941-68464664.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143941-68464664"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -642,7 +830,11 @@
     "fields": {
       "name": "Amber!French Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336843/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143934-23acc3a3.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336843/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143934-23acc3a3.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143934-23acc3a3"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -655,7 +847,11 @@
     "fields": {
       "name": "Amber!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336841/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143945-7934ecc5.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336841/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143945-7934ecc5.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143945-7934ecc5"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -668,7 +864,11 @@
     "fields": {
       "name": "Amber!Pussywillow",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336842/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143953-994eefe3.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336842/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143953-994eefe3.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143953-994eefe3"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -681,7 +881,11 @@
     "fields": {
       "name": "Amber!Red Brown",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143956-e7b3dca4.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143956-e7b3dca4.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143956-e7b3dca4"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -694,7 +898,11 @@
     "fields": {
       "name": "Amber!Turquoise",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336840/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143959-5567b16c.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336840/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143959-5567b16c.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143959-5567b16c"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -707,7 +915,11 @@
     "fields": {
       "name": "Amber!Wild Hare Fur",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336838/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144003-25b0011f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336838/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144003-25b0011f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144003-25b0011f"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -720,7 +932,11 @@
     "fields": {
       "name": "Amber!Yellow Orange",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336836/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144005-dbe4f8e0.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336836/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144005-dbe4f8e0.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144005-dbe4f8e0"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -733,7 +949,11 @@
     "fields": {
       "name": "Breakthrough Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": false,
@@ -746,7 +966,11 @@
     "fields": {
       "name": "Breakthrough White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988119/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988119/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -759,7 +983,11 @@
     "fields": {
       "name": "Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf"
+      },
       "is_food_safe": null,
       "runs": null,
       "highlights_grooves": null,
@@ -772,7 +1000,11 @@
     "fields": {
       "name": "Celadon!Volcanic Ash",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304417/glaze_public/j3gz35q5fecp48ncy2qp.heic",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304417/glaze_public/j3gz35q5fecp48ncy2qp.heic",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_public/j3gz35q5fecp48ncy2qp"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": false,
@@ -785,7 +1017,11 @@
     "fields": {
       "name": "Choy",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": true,
@@ -798,7 +1034,11 @@
     "fields": {
       "name": "Choy!Amber",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336837/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144058-bd8a1b6a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336837/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144058-bd8a1b6a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144058-bd8a1b6a"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -811,7 +1051,11 @@
     "fields": {
       "name": "Choy!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336835/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144101-7b631b97.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336835/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144101-7b631b97.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144101-7b631b97"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -824,7 +1068,11 @@
     "fields": {
       "name": "Choy!Cornwall",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336838/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144104-4aa50658.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336838/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144104-4aa50658.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144104-4aa50658"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -837,7 +1085,11 @@
     "fields": {
       "name": "Choy!Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418635/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144107-2e3380d3.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418635/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144107-2e3380d3.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144107-2e3380d3"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -850,7 +1102,11 @@
     "fields": {
       "name": "Choy!French Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418632/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144111-a155e660.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418632/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144111-a155e660.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144111-a155e660"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -863,7 +1119,11 @@
     "fields": {
       "name": "Choy!French Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418635/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144117-cab91cc3.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418635/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144117-cab91cc3.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144117-cab91cc3"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -876,7 +1136,11 @@
     "fields": {
       "name": "Choy!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418633/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144119-700686e8.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418633/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144119-700686e8.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144119-700686e8"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -889,7 +1153,11 @@
     "fields": {
       "name": "Choy!Oribe",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418634/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144122-81bc3ac9.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418634/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144122-81bc3ac9.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144122-81bc3ac9"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -902,7 +1170,11 @@
     "fields": {
       "name": "Choy!Pharsalia",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418632/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144130-87d21c7e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418632/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144130-87d21c7e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144130-87d21c7e"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -915,7 +1187,11 @@
     "fields": {
       "name": "Choy!Red Brown",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418629/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144134-c36e6f40.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418629/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144134-c36e6f40.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144134-c36e6f40"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -928,7 +1204,11 @@
     "fields": {
       "name": "Choy!Turquoise",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418631/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144141-07350804.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418631/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144141-07350804.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144141-07350804"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -941,7 +1221,11 @@
     "fields": {
       "name": "Choy!Yellow Orange",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418630/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144137-87daa020.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418630/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144137-87daa020.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144137-87daa020"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -954,7 +1238,11 @@
     "fields": {
       "name": "Clear Crackle",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -967,7 +1255,11 @@
     "fields": {
       "name": "Cobalt Blue Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": true,
@@ -980,7 +1272,11 @@
     "fields": {
       "name": "Cornwall",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988114/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988114/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": true,
@@ -993,7 +1289,11 @@
     "fields": {
       "name": "Cornwall!Amber",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422290/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144356-5013d58d.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422290/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144356-5013d58d.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144356-5013d58d"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1006,7 +1306,11 @@
     "fields": {
       "name": "Cornwall!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422288/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144358-8d13990e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422288/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144358-8d13990e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144358-8d13990e"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1019,7 +1323,11 @@
     "fields": {
       "name": "Cornwall!Choy",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422287/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144403-8a715bfa.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422287/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144403-8a715bfa.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144403-8a715bfa"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1032,7 +1340,11 @@
     "fields": {
       "name": "Cornwall!Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422286/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144401-7646404c.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422286/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144401-7646404c.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144401-7646404c"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1045,7 +1357,11 @@
     "fields": {
       "name": "Cornwall!French Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422283/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144407-681de3f6.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422283/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144407-681de3f6.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144407-681de3f6"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1058,7 +1374,11 @@
     "fields": {
       "name": "Cornwall!French Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422285/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144412-44d52168.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422285/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144412-44d52168.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144412-44d52168"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1071,7 +1391,11 @@
     "fields": {
       "name": "Cornwall!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422284/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144409-7baa7a5b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422284/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144409-7baa7a5b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144409-7baa7a5b"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1084,7 +1408,11 @@
     "fields": {
       "name": "Cornwall!Oribe",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422286/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144420-3e0c4b05.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422286/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144420-3e0c4b05.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144420-3e0c4b05"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1097,7 +1425,11 @@
     "fields": {
       "name": "Cornwall!Pharsalia",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422284/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144426-ef4b0e8b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422284/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144426-ef4b0e8b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144426-ef4b0e8b"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1110,7 +1442,11 @@
     "fields": {
       "name": "Cornwall!Pussywillow",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422280/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144423-f460d42f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422280/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144423-f460d42f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144423-f460d42f"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1123,7 +1459,11 @@
     "fields": {
       "name": "Cornwall!Red Brown",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422282/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144437-b0815439.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422282/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144437-b0815439.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144437-b0815439"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1136,7 +1476,11 @@
     "fields": {
       "name": "Cornwall!Yellow Orange",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422282/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144439-adda2541.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422282/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144439-adda2541.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144439-adda2541"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1149,7 +1493,11 @@
     "fields": {
       "name": "Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776823398/glaze_public/zotiqbcrfmdfxtty2wmv.heic",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776823398/glaze_public/zotiqbcrfmdfxtty2wmv.heic",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_public/zotiqbcrfmdfxtty2wmv"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -1162,7 +1510,11 @@
     "fields": {
       "name": "Creamy Red!Albany Blue Slip",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422281/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144456-e479ab6e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422281/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144456-e479ab6e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144456-e479ab6e"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1175,7 +1527,11 @@
     "fields": {
       "name": "Creamy Red!Amber",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424348/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144459-cc8197ac.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424348/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144459-cc8197ac.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144459-cc8197ac"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1188,7 +1544,11 @@
     "fields": {
       "name": "Creamy Red!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424348/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144501-94a9c3f0.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424348/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144501-94a9c3f0.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144501-94a9c3f0"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1201,7 +1561,11 @@
     "fields": {
       "name": "Creamy Red!Choy",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424346/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144504-29e1237d.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424346/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144504-29e1237d.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144504-29e1237d"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1214,7 +1578,11 @@
     "fields": {
       "name": "Creamy Red!Cornwall",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424349/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144506-ed08aeef.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424349/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144506-ed08aeef.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144506-ed08aeef"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1227,7 +1595,11 @@
     "fields": {
       "name": "Creamy Red!Dragon Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424347/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144512-dbe4c552.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424347/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144512-dbe4c552.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144512-dbe4c552"
+      },
       "is_food_safe": false,
       "runs": false,
       "highlights_grooves": null,
@@ -1240,7 +1612,11 @@
     "fields": {
       "name": "Creamy Red!French Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424345/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144515-5aec76d9.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424345/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144515-5aec76d9.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144515-5aec76d9"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1253,7 +1629,11 @@
     "fields": {
       "name": "Creamy Red!French Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424346/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144517-713ef1b4.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424346/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144517-713ef1b4.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144517-713ef1b4"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1266,7 +1646,11 @@
     "fields": {
       "name": "Creamy Red!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424344/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144544-9f19268b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424344/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144544-9f19268b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144544-9f19268b"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1279,7 +1663,11 @@
     "fields": {
       "name": "Creamy Red!Oribe",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424344/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144548-7b6f52ab.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424344/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144548-7b6f52ab.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144548-7b6f52ab"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1292,7 +1680,11 @@
     "fields": {
       "name": "Creamy Red!Pharsalia",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424342/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144555-49b704b5.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424342/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144555-49b704b5.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144555-49b704b5"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1305,7 +1697,11 @@
     "fields": {
       "name": "Creamy Red!Pussywillow",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424340/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144553-4129fe18.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424340/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144553-4129fe18.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144553-4129fe18"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1318,7 +1714,11 @@
     "fields": {
       "name": "Creamy Red!Red Brown",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424343/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144551-163ae058.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424343/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144551-163ae058.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144551-163ae058"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1331,7 +1731,11 @@
     "fields": {
       "name": "Creamy Red!Tenmoku",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424640/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144615-3638fa8e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424640/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144615-3638fa8e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144615-3638fa8e"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1344,7 +1748,11 @@
     "fields": {
       "name": "Creamy Red!Turquoise",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424341/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144619-7b002ab2.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424341/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144619-7b002ab2.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144619-7b002ab2"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1357,7 +1765,11 @@
     "fields": {
       "name": "Creamy Red!Volcanic Ash",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424338/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144625-46e1bb86.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424338/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144625-46e1bb86.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144625-46e1bb86"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1370,7 +1782,11 @@
     "fields": {
       "name": "Creamy Red!Wild Hare Fur",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424340/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144623-0b319ef7.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424340/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144623-0b319ef7.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144623-0b319ef7"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1383,7 +1799,11 @@
     "fields": {
       "name": "Creamy Red!Yellow Orange",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424342/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144621-ccf59b69.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424342/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144621-ccf59b69.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144621-ccf59b69"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1396,7 +1816,11 @@
     "fields": {
       "name": "Dragon Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3"
+      },
       "is_food_safe": false,
       "runs": false,
       "highlights_grooves": true,
@@ -1409,7 +1833,11 @@
     "fields": {
       "name": "French Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -1422,7 +1850,11 @@
     "fields": {
       "name": "French Blue!Albany Blue Slip",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427623/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145203-d4d25819.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427623/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145203-d4d25819.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145203-d4d25819"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1435,7 +1867,11 @@
     "fields": {
       "name": "French Blue!Amber",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427624/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145207-615da555.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427624/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145207-615da555.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145207-615da555"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1448,7 +1884,11 @@
     "fields": {
       "name": "French Blue!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427619/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145219-254df0d2.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427619/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145219-254df0d2.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145219-254df0d2"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1461,7 +1901,11 @@
     "fields": {
       "name": "French Blue!Choy",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427620/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145217-a368f014.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427620/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145217-a368f014.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145217-a368f014"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1474,7 +1918,11 @@
     "fields": {
       "name": "French Blue!Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427620/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145221-fd891171.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427620/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145221-fd891171.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145221-fd891171"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1487,7 +1935,11 @@
     "fields": {
       "name": "French Blue!Dragon Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428030/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145234-25e81ca8.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428030/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145234-25e81ca8.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145234-25e81ca8"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1500,7 +1952,11 @@
     "fields": {
       "name": "French Blue!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428065/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145232-8b19a30b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428065/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145232-8b19a30b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145232-8b19a30b"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1513,7 +1969,11 @@
     "fields": {
       "name": "French Blue!Pharsalia",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428031/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145242-8c098253.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428031/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145242-8c098253.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145242-8c098253"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1526,7 +1986,11 @@
     "fields": {
       "name": "French Blue!Red Brown",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428029/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145243-b1507425.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428029/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145243-b1507425.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145243-b1507425"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1539,7 +2003,11 @@
     "fields": {
       "name": "French Blue!Turquoise",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428028/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145252-6048fa9b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428028/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145252-6048fa9b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145252-6048fa9b"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1552,7 +2020,11 @@
     "fields": {
       "name": "French Blue!Volcanic Ash",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428027/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145256-875c705e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428027/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145256-875c705e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145256-875c705e"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1565,7 +2037,11 @@
     "fields": {
       "name": "French Blue!Yellow Orange",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428026/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145258-40753975.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428026/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145258-40753975.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145258-40753975"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1578,7 +2054,11 @@
     "fields": {
       "name": "French Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988122/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988122/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -1591,7 +2071,11 @@
     "fields": {
       "name": "French Green!Albany Blue Slip",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427621/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145210-8777b172.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427621/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145210-8777b172.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145210-8777b172"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1604,7 +2088,11 @@
     "fields": {
       "name": "French Green!Albany Green Slip",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427621/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145211-0e6e70a6.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427621/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145211-0e6e70a6.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145211-0e6e70a6"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1617,7 +2105,11 @@
     "fields": {
       "name": "French Green!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427622/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145215-436c7b1e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427622/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145215-436c7b1e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145215-436c7b1e"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1630,7 +2122,11 @@
     "fields": {
       "name": "French Green!Choy",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427623/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145214-63d483f5.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427623/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145214-63d483f5.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145214-63d483f5"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1643,7 +2139,11 @@
     "fields": {
       "name": "French Green!Cornwall",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427618/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145224-99622915.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427618/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145224-99622915.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145224-99622915"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1656,7 +2156,11 @@
     "fields": {
       "name": "French Green!Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427618/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145226-e976b11a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427618/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145226-e976b11a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145226-e976b11a"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1669,7 +2173,11 @@
     "fields": {
       "name": "French Green!French Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428032/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145229-8d0e5228.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428032/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145229-8d0e5228.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145229-8d0e5228"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1682,7 +2190,11 @@
     "fields": {
       "name": "French Green!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428030/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145245-01e8c3e8.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428030/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145245-01e8c3e8.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145245-01e8c3e8"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1695,7 +2207,11 @@
     "fields": {
       "name": "French Green!Pharsalia",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428027/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145251-ac2366c0.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428027/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145251-ac2366c0.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145251-ac2366c0"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1708,7 +2224,11 @@
     "fields": {
       "name": "French Green!Volcanic Ash",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428025/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145300-3502783a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428025/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145300-3502783a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145300-3502783a"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1721,7 +2241,11 @@
     "fields": {
       "name": "French Green!Wild Hare Fur",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428545/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145303-88d1e395.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428545/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145303-88d1e395.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145303-88d1e395"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1734,7 +2258,11 @@
     "fields": {
       "name": "Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": true,
@@ -1747,7 +2275,11 @@
     "fields": {
       "name": "Ismael's Clear",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1760,7 +2292,11 @@
     "fields": {
       "name": "Oribe",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152844/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152844/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -1773,7 +2309,11 @@
     "fields": {
       "name": "Oribe!Albany Blue Slip",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150022-f45e2d27.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150022-f45e2d27.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150022-f45e2d27"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1786,7 +2326,11 @@
     "fields": {
       "name": "Oribe!Amber",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429135/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150025-86e639aa.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429135/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150025-86e639aa.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150025-86e639aa"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1799,7 +2343,11 @@
     "fields": {
       "name": "Oribe!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429566/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150036-af4d5e40.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429566/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150036-af4d5e40.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150036-af4d5e40"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1812,7 +2360,11 @@
     "fields": {
       "name": "Oribe!Choy",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429565/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150033-7f972249.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429565/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150033-7f972249.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150033-7f972249"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1825,7 +2377,11 @@
     "fields": {
       "name": "Oribe!Cornwall",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429563/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150038-f00acdf0.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429563/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150038-f00acdf0.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150038-f00acdf0"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1838,7 +2394,11 @@
     "fields": {
       "name": "Oribe!Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429562/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150040-a1f1f04f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429562/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150040-a1f1f04f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150040-a1f1f04f"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1851,7 +2411,11 @@
     "fields": {
       "name": "Oribe!French Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429560/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150052-32f820b7.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429560/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150052-32f820b7.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150052-32f820b7"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1864,7 +2428,11 @@
     "fields": {
       "name": "Oribe!French Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429560/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150056-3a4f9c2e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429560/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150056-3a4f9c2e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150056-3a4f9c2e"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1877,7 +2445,11 @@
     "fields": {
       "name": "Oribe!Pharsalia",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429557/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150058-2580d2a4.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429557/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150058-2580d2a4.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150058-2580d2a4"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1890,7 +2462,11 @@
     "fields": {
       "name": "Oribe!Pussywillow",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430198/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150108-29d1ffc7.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430198/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150108-29d1ffc7.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150108-29d1ffc7"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1903,7 +2479,11 @@
     "fields": {
       "name": "Oribe!Red Brown",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430200/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150106-54a37710.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430200/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150106-54a37710.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150106-54a37710"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1916,7 +2496,11 @@
     "fields": {
       "name": "Oribe!Turquoise",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430199/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150110-aa7d0c55.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430199/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150110-aa7d0c55.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150110-aa7d0c55"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1929,7 +2513,11 @@
     "fields": {
       "name": "Oribe!Yellow Orange",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430199/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150111-be1ac37e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430199/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150111-be1ac37e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150111-be1ac37e"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1942,7 +2530,11 @@
     "fields": {
       "name": "Pharsalia",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -1955,7 +2547,11 @@
     "fields": {
       "name": "Pharsalia!Amber",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429101/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150027-4cc00d72.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429101/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150027-4cc00d72.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150027-4cc00d72"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1968,7 +2564,11 @@
     "fields": {
       "name": "Pharsalia!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429100/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150028-3cfd6d1a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429100/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150028-3cfd6d1a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150028-3cfd6d1a"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -1981,7 +2581,11 @@
     "fields": {
       "name": "Pharsalia!Choy",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429565/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150032-fdc73e56.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429565/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150032-fdc73e56.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150032-fdc73e56"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -1994,7 +2598,11 @@
     "fields": {
       "name": "Pharsalia!Cornwall",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429099/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150030-3752c5c6.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429099/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150030-3752c5c6.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150030-3752c5c6"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2007,7 +2615,11 @@
     "fields": {
       "name": "Pharsalia!Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429561/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150041-b30b0bd4.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429561/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150041-b30b0bd4.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150041-b30b0bd4"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2020,7 +2632,11 @@
     "fields": {
       "name": "Pharsalia!French Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429559/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150048-ac6c34b8.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429559/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150048-ac6c34b8.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150048-ac6c34b8"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2033,7 +2649,11 @@
     "fields": {
       "name": "Pharsalia!French Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429563/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150046-f7233cee.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429563/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150046-f7233cee.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150046-f7233cee"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2046,7 +2666,11 @@
     "fields": {
       "name": "Pharsalia!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429559/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150100-89228486.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429559/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150100-89228486.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150100-89228486"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2059,7 +2683,11 @@
     "fields": {
       "name": "Pharsalia!Oribe",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430201/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150105-783d34aa.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430201/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150105-783d34aa.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150105-783d34aa"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2072,7 +2700,11 @@
     "fields": {
       "name": "Pharsalia!Pussywillow",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429558/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150103-e71850c8.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429558/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150103-e71850c8.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150103-e71850c8"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2085,7 +2717,11 @@
     "fields": {
       "name": "Pharsalia!Red Brown",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430198/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150113-05548c1a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430198/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150113-05548c1a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150113-05548c1a"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2098,7 +2734,11 @@
     "fields": {
       "name": "Pharsalia!Volcanic Ash",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430197/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150115-b9fbdcfc.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430197/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150115-b9fbdcfc.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150115-b9fbdcfc"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2111,7 +2751,11 @@
     "fields": {
       "name": "Pussywillow",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152848/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152848/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -2124,7 +2768,11 @@
     "fields": {
       "name": "Pussywillow!Amber",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150133-20ce746e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150133-20ce746e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150133-20ce746e"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2137,7 +2785,11 @@
     "fields": {
       "name": "Pussywillow!Cornwall",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430195/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150134-f5fbe972.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430195/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150134-f5fbe972.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150134-f5fbe972"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2150,7 +2802,11 @@
     "fields": {
       "name": "Pussywillow!Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430193/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150136-bfaef1d7.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430193/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150136-bfaef1d7.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150136-bfaef1d7"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2163,7 +2819,11 @@
     "fields": {
       "name": "Pussywillow!Pharsalia",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430195/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150146-7b8cb6b2.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430195/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150146-7b8cb6b2.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150146-7b8cb6b2"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2176,7 +2836,11 @@
     "fields": {
       "name": "Pussywillow!Red Brown",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150148-1dc36cbd.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150148-1dc36cbd.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150148-1dc36cbd"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2189,7 +2853,11 @@
     "fields": {
       "name": "Pussywillow!Turquoise",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430194/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150150-d3b6c87f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430194/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150150-d3b6c87f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150150-d3b6c87f"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2202,7 +2870,11 @@
     "fields": {
       "name": "Pussywillow!Volcanic Ash",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430192/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150156-98c19838.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430192/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150156-98c19838.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150156-98c19838"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2215,7 +2887,11 @@
     "fields": {
       "name": "Pussywillow!Wild Hare Fur",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430193/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150154-487dce3d.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430193/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150154-487dce3d.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150154-487dce3d"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2228,7 +2904,11 @@
     "fields": {
       "name": "Ragnar's Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152847/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152847/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f"
+      },
       "is_food_safe": false,
       "runs": true,
       "highlights_grooves": null,
@@ -2241,7 +2921,11 @@
     "fields": {
       "name": "Red Brown",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2254,7 +2938,11 @@
     "fields": {
       "name": "Red Brown!Albany Green Slip",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428593/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145635-adc3c925.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428593/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145635-adc3c925.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145635-adc3c925"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2267,7 +2955,11 @@
     "fields": {
       "name": "Red Brown!Amber",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428543/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145644-89adced9.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428543/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145644-89adced9.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145644-89adced9"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2280,7 +2972,11 @@
     "fields": {
       "name": "Red Brown!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428541/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145652-72a144ff.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428541/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145652-72a144ff.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145652-72a144ff"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2293,7 +2989,11 @@
     "fields": {
       "name": "Red Brown!Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428542/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145647-4ac821d5.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428542/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145647-4ac821d5.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145647-4ac821d5"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2306,7 +3006,11 @@
     "fields": {
       "name": "Red Brown!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428541/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145657-70565f3c.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428541/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145657-70565f3c.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145657-70565f3c"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2319,7 +3023,11 @@
     "fields": {
       "name": "Red Brown!Ismael's Clear",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428540/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145706-d74e8f82.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428540/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145706-d74e8f82.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145706-d74e8f82"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2332,7 +3040,11 @@
     "fields": {
       "name": "Red Brown!Oribe",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428538/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145710-ab07707d.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428538/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145710-ab07707d.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145710-ab07707d"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2345,7 +3057,11 @@
     "fields": {
       "name": "Red Brown!Pharsalia",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428539/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145712-e62b3fda.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428539/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145712-e62b3fda.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145712-e62b3fda"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2358,7 +3074,11 @@
     "fields": {
       "name": "Red Brown!Pussywillow",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429104/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145720-d5825c31.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429104/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145720-d5825c31.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145720-d5825c31"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2371,7 +3091,11 @@
     "fields": {
       "name": "Red Brown!Volcanic Ash",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429106/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145724-424bb99c.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429106/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145724-424bb99c.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145724-424bb99c"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2384,7 +3108,11 @@
     "fields": {
       "name": "Red Brown!Yellow Orange",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429103/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145726-3fa92de0.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429103/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145726-3fa92de0.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145726-3fa92de0"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2397,7 +3125,11 @@
     "fields": {
       "name": "Silky Black",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9"
+      },
       "is_food_safe": false,
       "runs": false,
       "highlights_grooves": true,
@@ -2423,7 +3155,11 @@
     "fields": {
       "name": "Tenmoku!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428544/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145640-90d65369.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428544/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145640-90d65369.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145640-90d65369"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2436,7 +3172,11 @@
     "fields": {
       "name": "Tenmoku!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428543/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145648-be150d84.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428543/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145648-be150d84.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145648-be150d84"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2449,7 +3189,11 @@
     "fields": {
       "name": "Tenmoku!Pharsalia",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428539/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145700-72828cf7.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428539/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145700-72828cf7.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145700-72828cf7"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2462,7 +3206,11 @@
     "fields": {
       "name": "Tenmoku!Turquoise",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429105/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145714-f69083cd.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429105/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145714-f69083cd.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145714-f69083cd"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2475,7 +3223,11 @@
     "fields": {
       "name": "Tenmoku!Wild Hare Fur",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145718-7dd4211f.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145718-7dd4211f.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145718-7dd4211f"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2488,7 +3240,11 @@
     "fields": {
       "name": "Tenmoku!Yellow Orange",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429103/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145729-6a61888c.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429103/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145729-6a61888c.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145729-6a61888c"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2501,7 +3257,11 @@
     "fields": {
       "name": "Turquoise",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": true,
@@ -2514,7 +3274,11 @@
     "fields": {
       "name": "Turquoise!Albany Green Slip",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418629/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144254-0342678b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418629/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144254-0342678b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144254-0342678b"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2527,7 +3291,11 @@
     "fields": {
       "name": "Turquoise!Amber",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418628/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144257-b246c6ed.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418628/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144257-b246c6ed.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144257-b246c6ed"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2540,7 +3308,11 @@
     "fields": {
       "name": "Turquoise!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418624/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144306-2303dd53.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418624/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144306-2303dd53.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144306-2303dd53"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2553,7 +3325,11 @@
     "fields": {
       "name": "Turquoise!Choy",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418625/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144303-45995e9a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418625/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144303-45995e9a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144303-45995e9a"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2566,7 +3342,11 @@
     "fields": {
       "name": "Turquoise!Cornwall",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418627/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144308-6ec4760c.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418627/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144308-6ec4760c.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144308-6ec4760c"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2579,7 +3359,11 @@
     "fields": {
       "name": "Turquoise!Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418624/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144310-c66e5ee4.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418624/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144310-c66e5ee4.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144310-c66e5ee4"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2592,7 +3376,11 @@
     "fields": {
       "name": "Turquoise!French Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418625/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144313-b903d90b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418625/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144313-b903d90b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144313-b903d90b"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2605,7 +3393,11 @@
     "fields": {
       "name": "Turquoise!French Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418623/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144320-2efd0cd7.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418623/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144320-2efd0cd7.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144320-2efd0cd7"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2618,7 +3410,11 @@
     "fields": {
       "name": "Turquoise!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418627/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144317-1ffede1a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418627/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144317-1ffede1a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144317-1ffede1a"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2631,7 +3427,11 @@
     "fields": {
       "name": "Turquoise!Oribe",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422289/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144322-0f0bf696.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422289/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144322-0f0bf696.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144322-0f0bf696"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2644,7 +3444,11 @@
     "fields": {
       "name": "Turquoise!Red Brown",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422291/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144325-8ecb7315.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422291/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144325-8ecb7315.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144325-8ecb7315"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2657,7 +3461,11 @@
     "fields": {
       "name": "Turquoise!Volcanic Ash",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422288/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144330-0728eff3.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422288/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144330-0728eff3.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144330-0728eff3"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2670,7 +3478,11 @@
     "fields": {
       "name": "Turquoise!Yellow Orange",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422290/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144328-f7e8f8dd.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422290/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144328-f7e8f8dd.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144328-f7e8f8dd"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2683,7 +3495,11 @@
     "fields": {
       "name": "Volcanic Ash",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304349/glaze_public/eyy9whpmb5wajybtfk3p.heic",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304349/glaze_public/eyy9whpmb5wajybtfk3p.heic",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_public/eyy9whpmb5wajybtfk3p"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -2696,7 +3512,11 @@
     "fields": {
       "name": "Volcanic Ash!Albany Green Slip",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424339/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144651-ea71a9c3.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424339/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144651-ea71a9c3.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144651-ea71a9c3"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2709,7 +3529,11 @@
     "fields": {
       "name": "Volcanic Ash!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424338/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144655-fbd68b16.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424338/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144655-fbd68b16.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144655-fbd68b16"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2722,7 +3546,11 @@
     "fields": {
       "name": "Volcanic Ash!Choy",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144729-b4db7a04.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144729-b4db7a04.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144729-b4db7a04"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2735,7 +3563,11 @@
     "fields": {
       "name": "Volcanic Ash!Cornwall",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426111/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144727-a392b53d.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426111/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144727-a392b53d.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144727-a392b53d"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2748,7 +3580,11 @@
     "fields": {
       "name": "Volcanic Ash!French Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426110/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144736-abea325b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426110/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144736-abea325b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144736-abea325b"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2761,7 +3597,11 @@
     "fields": {
       "name": "Volcanic Ash!French Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426105/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144756-8df368da.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426105/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144756-8df368da.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144756-8df368da"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2774,7 +3614,11 @@
     "fields": {
       "name": "Volcanic Ash!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426106/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144754-0f5dbe35.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426106/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144754-0f5dbe35.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144754-0f5dbe35"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2787,7 +3631,11 @@
     "fields": {
       "name": "Volcanic Ash!Pussywillow",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426106/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144921-e79ae7b3.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426106/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144921-e79ae7b3.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144921-e79ae7b3"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2800,7 +3648,11 @@
     "fields": {
       "name": "Volcanic Ash!Red Brown",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426105/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144922-6d3c1338.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426105/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144922-6d3c1338.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144922-6d3c1338"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2813,7 +3665,11 @@
     "fields": {
       "name": "Volcanic Ash!Tenmoku",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144942-11a94386.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144942-11a94386.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144942-11a94386"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2826,7 +3682,11 @@
     "fields": {
       "name": "Volcanic Ash!Turquoise",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427193/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144943-2875c39a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427193/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144943-2875c39a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144943-2875c39a"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2839,7 +3699,11 @@
     "fields": {
       "name": "Volcanic Ash!Yellow Orange",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427192/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144945-9f9f9c33.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427192/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144945-9f9f9c33.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144945-9f9f9c33"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2852,7 +3716,11 @@
     "fields": {
       "name": "Wild Hare Fur",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304189/glaze_public/jvrmpfxkjjhniqpqzqrs.heic",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304189/glaze_public/jvrmpfxkjjhniqpqzqrs.heic",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "glaze_public/jvrmpfxkjjhniqpqzqrs"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2865,7 +3733,11 @@
     "fields": {
       "name": "Wild Hare Fur!Amber",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426115/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144658-f5c04a76.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426115/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144658-f5c04a76.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144658-f5c04a76"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2878,7 +3750,11 @@
     "fields": {
       "name": "Wild Hare Fur!Celadon",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426188/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144701-f4986bf1.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426188/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144701-f4986bf1.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144701-f4986bf1"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2891,7 +3767,11 @@
     "fields": {
       "name": "Wild Hare Fur!Choy",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426113/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144724-4b167952.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426113/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144724-4b167952.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144724-4b167952"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2904,7 +3784,11 @@
     "fields": {
       "name": "Wild Hare Fur!Cornwall",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426113/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144722-cd3b896b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426113/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144722-cd3b896b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144722-cd3b896b"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2917,7 +3801,11 @@
     "fields": {
       "name": "Wild Hare Fur!Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426110/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144738-361f9b9e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426110/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144738-361f9b9e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144738-361f9b9e"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -2930,7 +3818,11 @@
     "fields": {
       "name": "Wild Hare Fur!French Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426107/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144752-40359ede.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426107/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144752-40359ede.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144752-40359ede"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2943,7 +3835,11 @@
     "fields": {
       "name": "Wild Hare Fur!French Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144750-dcad8e1a.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144750-dcad8e1a.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144750-dcad8e1a"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2956,7 +3852,11 @@
     "fields": {
       "name": "Wild Hare Fur!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426103/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144929-2f4ccc10.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426103/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144929-2f4ccc10.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144929-2f4ccc10"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2969,7 +3869,11 @@
     "fields": {
       "name": "Wild Hare Fur!Pussywillow",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427194/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144939-426c4a2e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427194/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144939-426c4a2e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144939-426c4a2e"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2982,7 +3886,11 @@
     "fields": {
       "name": "Wild Hare Fur!Red Brown",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427194/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144936-d406de3b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427194/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144936-d406de3b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144936-d406de3b"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -2995,7 +3903,11 @@
     "fields": {
       "name": "Wild Hare Fur!Volcanic Ash",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427190/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144946-f8807a74.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427190/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144946-f8807a74.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144946-f8807a74"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -3008,7 +3920,11 @@
     "fields": {
       "name": "Wild Hare Fur!Yellow Orange",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427191/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144949-8d076bfe.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427191/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144949-8d076bfe.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144949-8d076bfe"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -3021,7 +3937,11 @@
     "fields": {
       "name": "Xavier Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152845/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152845/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b"
+      },
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": true,
@@ -3034,7 +3954,11 @@
     "fields": {
       "name": "Yellow Orange",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": true,
@@ -3047,7 +3971,11 @@
     "fields": {
       "name": "Yellow Orange!Amber",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426116/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144704-7ce58703.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426116/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144704-7ce58703.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144704-7ce58703"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -3060,7 +3988,11 @@
     "fields": {
       "name": "Yellow Orange!Choy",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426114/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144707-c1ff4642.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426114/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144707-c1ff4642.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144707-c1ff4642"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -3073,7 +4005,11 @@
     "fields": {
       "name": "Yellow Orange!Cornwall",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426112/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144719-bcf23991.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426112/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144719-bcf23991.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144719-bcf23991"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -3086,7 +4022,11 @@
     "fields": {
       "name": "Yellow Orange!Creamy Red",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426114/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144716-76c982cb.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426114/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144716-76c982cb.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144716-76c982cb"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -3099,7 +4039,11 @@
     "fields": {
       "name": "Yellow Orange!Dragon Green",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426109/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144742-549cba9e.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426109/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144742-549cba9e.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144742-549cba9e"
+      },
       "is_food_safe": false,
       "runs": true,
       "highlights_grooves": null,
@@ -3112,7 +4056,11 @@
     "fields": {
       "name": "Yellow Orange!French Blue",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426109/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144746-f7b27016.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426109/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144746-f7b27016.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144746-f7b27016"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -3125,7 +4073,11 @@
     "fields": {
       "name": "Yellow Orange!Gloss White",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426108/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144744-89cde587.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426108/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144744-89cde587.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144744-89cde587"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -3138,7 +4090,11 @@
     "fields": {
       "name": "Yellow Orange!Ismael's Clear",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426104/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144932-8f101692.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426104/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144932-8f101692.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144932-8f101692"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -3151,7 +4107,11 @@
     "fields": {
       "name": "Yellow Orange!Pussywillow",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427195/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144933-ec3a64f5.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427195/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144933-ec3a64f5.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144933-ec3a64f5"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -3164,7 +4124,11 @@
     "fields": {
       "name": "Yellow Orange!Red Brown",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144935-b6902246.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144935-b6902246.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144935-b6902246"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -3177,7 +4141,11 @@
     "fields": {
       "name": "Yellow Orange!Volcanic Ash",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427189/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144950-6b27ffd4.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427189/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144950-6b27ffd4.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144950-6b27ffd4"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
@@ -3190,7 +4158,11 @@
     "fields": {
       "name": "Yellow Orange!Wild Hare Fur",
       "firing_temperature": null,
-      "test_tile_image": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427191/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144952-2496de7d.webp",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427191/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144952-2496de7d.webp",
+        "cloud_name": "dxpnyhe1f",
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144952-2496de7d"
+      },
       "is_food_safe": true,
       "runs": true,
       "highlights_grooves": null,
