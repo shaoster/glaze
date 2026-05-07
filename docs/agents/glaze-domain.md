@@ -260,6 +260,13 @@ All API endpoints are registered in `backend/urls.py`.
 | `CLOUDINARY_CLOUD_NAME` / `API_KEY` / `API_SECRET` | _(same names)_                | Empty — widget-config returns 503           | Set to enable Cloudinary uploads                                  |
 | `CLOUDINARY_UPLOAD_FOLDER`                         | `CLOUDINARY_UPLOAD_FOLDER`    | Not set                                     | Optional subfolder for uploaded images                            |
 
+**Image FK normalization (`ImageForeignKey` / `ImageForwardDescriptor`):** `type: image` fields on global models are stored as FKs to the `api.Image` table, not as raw JSON. `ImageForeignKey` (defined in `api/model_factories.py`) swaps in `ImageForwardDescriptor` as its accessor, which intercepts every assignment and calls `normalize_image_payload` when the incoming value is a `str` or `dict`:
+
+- **String value** (plain URL): creates or retrieves an `Image` row keyed by URL, with `cloud_name=None` and `cloudinary_public_id=None`. **This breaks the image metadata contract** and should not be used for Cloudinary-hosted images.
+- **Dict value** `{"url": ..., "cloud_name": ..., "cloudinary_public_id": ...}`: creates or retrieves an `Image` row keyed by `(cloud_name, cloudinary_public_id)` with all metadata populated. This is the correct format for Cloudinary images.
+
+**Fixture format requirement:** `fixtures/public_library.json` stores `type: image` fields as dicts, not plain URLs, so that `ImageForwardDescriptor` creates fully-populated `Image` rows on `loaddata`. The fixture must stay in dict form — reverting to URL strings will silently break the metadata contract for every fresh environment that loads the fixture.
+
 **Model factory pattern** (`api/model_factories.py` → re-exported from `api/models.py`): global domain models are generated at import time from `workflow.yml` declarations — no hand-written model class is needed for new globals. Three factories handle every case:
 
 - **`make_simple_global_model(global_name)`** — generates a `GlobalModel` subclass for any non-`compose_from` global. Fields, the `user` FK, and `UniqueConstraint`s are derived entirely from the `workflow.yml` declaration. Only a `makemigrations` run is required to add a new simple global.
