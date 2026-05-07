@@ -23,6 +23,7 @@ djangorestframework-stubs==3.16.9
 drf-spectacular==0.29.0
 google-auth==2.49.1
 gunicorn==23.0.0
+httpx==0.28.1
 h11==0.16.0
 idna==3.11
 inflection==0.5.1

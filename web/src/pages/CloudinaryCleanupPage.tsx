@@ -278,7 +278,16 @@ export default function CloudinaryCleanupPage() {
                 startIcon={<DownloadIcon />}
                 disabled={!assets.length || loading || deleting}
               >
-                Download Archive
+                Download All
+              </Button>
+              <Button
+                component="a"
+                href="/api/admin/cloudinary-cleanup/archive/?unreferenced_only=true"
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                disabled={!assets.length || loading || deleting}
+              >
+                Download Unused
               </Button>
             </Stack>
             <Button

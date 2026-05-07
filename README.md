@@ -309,7 +309,7 @@ The repo uses [`docker-compose.yml`](docker-compose.yml) for self-hosting on a s
 
 **Architecture:**
 
-- `web` — Gunicorn serving Django + the Vite-built frontend via WhiteNoise on port 8000
+- `web` — Gunicorn + uvicorn workers (ASGI) serving Django + the Vite-built frontend via WhiteNoise on port 8000
 - `db` — Postgres 17 with a named volume for persistence
 
 **How it works:**
