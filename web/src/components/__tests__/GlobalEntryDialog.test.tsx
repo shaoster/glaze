@@ -288,7 +288,7 @@ describe("GlobalEntryDialog", () => {
       }),
       { target: { value: "Iron" } },
     );
-    await userEvent.click(screen.getByRole("option", { name: "Iron Red" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Iron Red" }));
 
     await waitFor(() =>
       expect(api.fetchGlobalEntriesWithFilters).toHaveBeenLastCalledWith(
@@ -312,7 +312,7 @@ describe("GlobalEntryDialog", () => {
       screen.getByRole("combobox", { name: "Firing Temperature" }),
       { target: { value: "Cone" } },
     );
-    await userEvent.click(screen.getByRole("option", { name: "Cone 6" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Cone 6" }));
 
     await waitFor(() =>
       expect(api.fetchGlobalEntriesWithFilters).toHaveBeenLastCalledWith(
@@ -456,13 +456,13 @@ describe("GlobalEntryDialog", () => {
       screen.getByRole("combobox", { name: "Layer 1" }),
       { target: { value: "Iron" } },
     );
-    await userEvent.click(screen.getByRole("option", { name: "Iron Red" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Iron Red" }));
     await userEvent.click(screen.getByRole("button", { name: "Add layer" }));
     fireEvent.change(
       screen.getByRole("combobox", { name: "Layer 2" }),
       { target: { value: "Clear" } },
     );
-    await userEvent.click(screen.getByRole("option", { name: "Clear" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Clear" }));
     await userEvent.click(
       screen.getByRole("button", { name: "Create Glaze Combination" }),
     );
@@ -521,13 +521,13 @@ describe("GlobalEntryDialog", () => {
       screen.getByRole("combobox", { name: "Layer 1" }),
       { target: { value: "Iron" } },
     );
-    await userEvent.click(screen.getByRole("option", { name: "Iron Red" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Iron Red" }));
     await userEvent.click(screen.getByRole("button", { name: "Add layer" }));
     fireEvent.change(
       screen.getByRole("combobox", { name: "Layer 2" }),
       { target: { value: "Clear" } },
     );
-    await userEvent.click(screen.getByRole("option", { name: "Clear" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Clear" }));
 
     const removeButtons = screen.getAllByRole("button", { name: "Remove" });
     await userEvent.click(removeButtons[1]);
