@@ -14,10 +14,6 @@
  * this module.
  */
 import axios from "axios";
-import { Cloudinary } from "@cloudinary/url-gen";
-import { crop as cropAction } from "@cloudinary/url-gen/actions/resize";
-import { getInfo } from "@cloudinary/url-gen/qualifiers/flag";
-import { autoGravity } from "@cloudinary/url-gen/qualifiers/gravity";
 import type {
   CaptionedImage,
   FiringTemperatureRef,
@@ -60,11 +56,6 @@ export type CloudinaryWidgetConfig = {
   api_key: string;
   folder?: string;
   upload_preset?: string;
-};
-
-export type CloudinaryAutoCropInfo = {
-  input?: { width?: number; height?: number };
-  [key: string]: unknown;
 };
 
 // ---------------------------------------------------------------------------
@@ -118,57 +109,6 @@ function normalizeCrop(value: unknown): ImageCrop | null {
   };
 }
 
-function readCropCandidate(value: unknown): Record<string, unknown> | null {
-  if (Array.isArray(value)) {
-    for (const entry of value) {
-      const crop = readCropCandidate(entry);
-      if (crop) return crop;
-    }
-    return null;
-  }
-  if (!value || typeof value !== "object") return null;
-  const record = value as Record<string, unknown>;
-  if (
-    ("x" in record && "y" in record && "width" in record && "height" in record) ||
-    ("x" in record && "y" in record && "w" in record && "h" in record)
-  ) {
-    return record;
-  }
-  for (const nested of Object.values(record)) {
-    const crop = readCropCandidate(nested);
-    if (crop) return crop;
-  }
-  return null;
-}
-
-export function parseCloudinaryAutoCrop(info: CloudinaryAutoCropInfo): ImageCrop | null {
-  const candidate = readCropCandidate(info);
-  if (!candidate) return null;
-  const inputWidth = Number(info.input?.width);
-  const inputHeight = Number(info.input?.height);
-  const raw = {
-    x: Number(candidate.x),
-    y: Number(candidate.y),
-    width: Number(candidate.width ?? candidate.w),
-    height: Number(candidate.height ?? candidate.h),
-  };
-  if (![raw.x, raw.y, raw.width, raw.height].every(Number.isFinite)) {
-    return null;
-  }
-  if (
-    inputWidth > 1 &&
-    inputHeight > 1 &&
-    (raw.x > 1 || raw.y > 1 || raw.width > 1 || raw.height > 1)
-  ) {
-    return normalizeCrop({
-      x: raw.x / inputWidth,
-      y: raw.y / inputHeight,
-      width: raw.width / inputWidth,
-      height: raw.height / inputHeight,
-    });
-  }
-  return normalizeCrop(raw);
-}
 
 function mapStateSummary(raw: Wire<StateSummary>): StateSummary {
   return { state: raw.state as State };
@@ -550,36 +490,6 @@ export async function signCloudinaryWidgetParams(
     },
   );
   return data.signature;
-}
-
-export function cloudinaryGetinfoUrl(params: {
-  cloudName: string;
-  publicId: string;
-  width?: number;
-}): string | null {
-  const cloudName = params.cloudName.trim();
-  const publicId = params.publicId.trim();
-  if (!cloudName || !publicId) return null;
-  const cld = new Cloudinary({
-    cloud: { cloudName },
-    url: { analytics: false },
-  });
-  return cld
-    .image(publicId)
-    .resize(cropAction().width(params.width ?? 750).gravity(autoGravity()))
-    .addFlag(getInfo())
-    .toURL();
-}
-
-export async function fetchCloudinaryAutoCrop(params: {
-  cloudName: string;
-  publicId: string;
-}): Promise<ImageCrop | null> {
-  const url = cloudinaryGetinfoUrl(params);
-  if (!url) return null;
-  const response = await fetch(url);
-  if (!response.ok) return null;
-  return parseCloudinaryAutoCrop((await response.json()) as CloudinaryAutoCropInfo);
 }
 
 export type ManualSquareCropImportRecordPayload = {

@@ -574,69 +574,6 @@ describe("upload endpoints", () => {
     expect(signature).toBe("signed-value");
   });
 
-  it("parseCloudinaryAutoCrop normalizes pixel getinfo coordinates", async () => {
-    const { parseCloudinaryAutoCrop } = await loadApiModule();
-
-    expect(
-      parseCloudinaryAutoCrop({
-        input: { width: 1000, height: 800 },
-        g_auto_info: { x: 100, y: 80, width: 500, height: 400 },
-      }),
-    ).toEqual({ x: 0.1, y: 0.1, width: 0.5, height: 0.5 });
-  });
-
-  it("parseCloudinaryAutoCrop handles nested w/h crops and invalid payloads", async () => {
-    const { parseCloudinaryAutoCrop } = await loadApiModule();
-
-    expect(
-      parseCloudinaryAutoCrop({
-        nested: [{ ignored: true }, { x: 0.2, y: 0.3, w: 0.4, h: 0.5 }],
-      }),
-    ).toEqual({ x: 0.2, y: 0.3, width: 0.4, height: 0.5 });
-    expect(parseCloudinaryAutoCrop({ input: { width: 100, height: 100 } })).toBeNull();
-    expect(
-      parseCloudinaryAutoCrop({
-        crop: { x: "bad", y: 0, width: 1, height: 1 },
-      }),
-    ).toBeNull();
-  });
-
-  it("fetchCloudinaryAutoCrop fetches getinfo JSON and returns null for non-ok responses", async () => {
-    const { cloudinaryGetinfoUrl, fetchCloudinaryAutoCrop } = await loadApiModule();
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: vi.fn().mockResolvedValue({
-          crop: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
-        }),
-      })
-      .mockResolvedValueOnce({ ok: false });
-    vi.stubGlobal("fetch", fetchMock);
-    const params = { cloudName: "demo", publicId: "pieces/mug" };
-
-    expect(cloudinaryGetinfoUrl(params)).toBe(
-      "https://res.cloudinary.com/demo/image/upload/c_crop,g_auto,w_750/fl_getinfo/v1/pieces/mug",
-    );
-    expect(cloudinaryGetinfoUrl({ cloudName: "", publicId: "pieces/mug" })).toBeNull();
-    expect(cloudinaryGetinfoUrl({ cloudName: "demo", publicId: "" })).toBeNull();
-
-    await expect(fetchCloudinaryAutoCrop(params)).resolves.toEqual({
-      x: 0.1,
-      y: 0.2,
-      width: 0.3,
-      height: 0.4,
-    });
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://res.cloudinary.com/demo/image/upload/c_crop,g_auto,w_750/fl_getinfo/v1/pieces/mug",
-    );
-    await expect(fetchCloudinaryAutoCrop(params)).resolves.toBeNull();
-    await expect(
-      fetchCloudinaryAutoCrop({ cloudName: "", publicId: "pieces/mug" }),
-    ).resolves.toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
-
   it("importManualSquareCropRecords posts multipart data with payload and matching files", async () => {
     const { importManualSquareCropRecords } = await loadApiModule();
     mockClient.post.mockResolvedValue({
