@@ -284,7 +284,7 @@ export default function WorkflowState({
         ...(config.folder ? { folder: config.folder } : {}),
         ...(config.upload_preset ? { uploadPreset: config.upload_preset } : {}),
         sources: ["local", "camera"],
-        multiple: false,
+        multiple: true,
         resourceType: "image",
         styles: {
           palette: {
