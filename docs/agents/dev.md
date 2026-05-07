@@ -131,6 +131,33 @@ When multiple agents (Claude, Codex, etc.) are working on separate PRs in parall
 
 7. **Agent-initiated `gz_start` is unnecessary.** `gz_start` is a single shell command; the lifecycle problem (who stops the servers?) is already solved by the EXIT trap on terminal close. Just run `gz_start` manually in the worktree's tab.
 
+### Explicit `/do #<issue>` agent flow
+
+For new issue work, use the `do-issue-worktree` skill. A prompt such as
+`/do #292` means the agent must create and announce a repo-local worktree before
+issue analysis or code changes:
+
+```text
+Worktree: /home/phil/code/glaze/.agent-worktrees/codex/issue-292-vibe-coding-flow
+```
+
+Use `.agent-worktrees/<agent>/issue-<N>-<slug>` for the worktree and
+`issue/<N>-<slug>` for the branch. The developer can then open a new terminal
+tab, run `gz_cd <N>`, and use `gz_start` there if they want to review the app.
+
+After the PR is merged or the branch is abandoned, stop servers in that
+worktree's terminal and remove the local worktree:
+
+```bash
+gz_stop
+git worktree remove .agent-worktrees/<agent>/issue-<N>-<slug>
+git worktree prune
+git branch -d issue/<N>-<slug>
+```
+
+Use `git branch -D` only for abandoned unmerged work after confirming the branch
+is no longer needed.
+
 ### Adding a new Python package
 
 Bazel resolves Python packages from `requirements.lock` (pin-compiled from `requirements-dev.txt`). Three steps are required when adding a new package:
@@ -233,6 +260,13 @@ Reusable agent skills live in [`.agents/skills/`](../../.agents/skills/). Each s
 | ----------- | -------------------------------------------------------------------------------------------------------------------- |
 | Codex       | Reads `.agents/skills/` natively — no setup needed                                                                   |
 | Claude Code | Reads `.claude/<name>.md`; each skill has a git-tracked symlink there pointing into `.agents/skills/<name>/SKILL.md` |
+
+Key local skills:
+
+| Skill                         | Use                                                                                          |
+| ----------------------------- | -------------------------------------------------------------------------------------------- |
+| `do-issue-worktree`           | Start a single issue or PR-sized change with `/do #<issue>` and an immediate worktree setup. |
+| `git-worktree-agent-workflow` | Coordinate parallel worktrees or recover mixed work that needs to be split into focused PRs. |
 
 ### Adding a new skill
 
