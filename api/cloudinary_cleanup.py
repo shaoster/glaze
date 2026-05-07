@@ -1,4 +1,5 @@
 import os
+import logging
 from dataclasses import dataclass
 
 import cloudinary
@@ -7,6 +8,8 @@ import cloudinary.exceptions
 from cloudinary import CloudinaryImage
 
 from .models import Image
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -110,6 +113,10 @@ def delete_cloudinary_assets(public_ids: list[str]) -> dict[str, str]:
     try:
         result = cloudinary.api.delete_resources(public_ids, resource_type="image")
     except cloudinary.exceptions.Error as exc:
+        logger.exception(
+            "Cloudinary delete_resources failed for %d cleanup assets.",
+            len(public_ids),
+        )
         raise ValueError("Unable to delete Cloudinary assets.") from exc
     deleted = result.get("deleted", {})
     if not isinstance(deleted, dict):
