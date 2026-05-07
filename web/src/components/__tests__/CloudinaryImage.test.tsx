@@ -1,7 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { forwardRef, useImperativeHandle, useRef } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import CloudinaryImage from "../CloudinaryImage";
+
+const cloudinaryMocks = vi.hoisted(() => ({
+  resize: vi.fn(),
+  cropAddFlag: vi.fn(),
+}));
 
 vi.mock("@cloudinary/react", () => ({
   AdvancedImage: forwardRef(function MockAdvancedImage(
@@ -46,9 +51,9 @@ vi.mock("@cloudinary/url-gen", () => ({
     image(publicId: string) {
       return {
         publicId,
-        resize() {
+        resize: cloudinaryMocks.resize.mockImplementation(function resize() {
           return this;
-        },
+        }),
         delivery() {
           return this;
         },
@@ -58,6 +63,23 @@ vi.mock("@cloudinary/url-gen", () => ({
 }));
 
 vi.mock("@cloudinary/url-gen/actions/resize", () => ({
+  crop: () => ({
+    width() {
+      return this;
+    },
+    height() {
+      return this;
+    },
+    x() {
+      return this;
+    },
+    y() {
+      return this;
+    },
+    addFlag: cloudinaryMocks.cropAddFlag.mockImplementation(function addFlag() {
+      return this;
+    }),
+  }),
   fill: () => ({
     width() {
       return this;
@@ -97,7 +119,16 @@ vi.mock("@cloudinary/url-gen/qualifiers/gravity", () => ({
   autoGravity: vi.fn(),
 }));
 
+vi.mock("@cloudinary/url-gen/qualifiers/flag", () => ({
+  relative: () => "relative",
+}));
+
 describe("CloudinaryImage", () => {
+  beforeEach(() => {
+    cloudinaryMocks.resize.mockClear();
+    cloudinaryMocks.cropAddFlag.mockClear();
+  });
+
   it("shows a spinner until a fallback image loads", () => {
     render(
       <CloudinaryImage
@@ -156,6 +187,52 @@ describe("CloudinaryImage", () => {
 
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
+
+  it("applies a relative crop before context sizing when crop is present", () => {
+    render(
+      <CloudinaryImage
+        url="https://res.cloudinary.com/demo/image/upload/v1/pottery/sample.jpg"
+        cloud_name="demo"
+        cloudinary_public_id="pottery/sample"
+        crop={{ x: 0.1, y: 0.2, width: 0.6, height: 0.7 }}
+        alt="Cloudinary pot"
+        context="gallery"
+      />,
+    );
+
+    expect(cloudinaryMocks.cropAddFlag).toHaveBeenCalledWith("relative");
+    expect(cloudinaryMocks.resize).toHaveBeenCalledTimes(2);
+  });
+
+  it("resets loading state when only the crop changes", () => {
+    const { rerender } = render(
+      <CloudinaryImage
+        url="https://res.cloudinary.com/demo/image/upload/v1/pottery/sample.jpg"
+        cloud_name="demo"
+        cloudinary_public_id="pottery/sample"
+        crop={{ x: 0.1, y: 0.2, width: 0.6, height: 0.7 }}
+        alt="Cloudinary pot"
+        context="gallery"
+      />,
+    );
+
+    fireEvent.load(screen.getByAltText("Cloudinary pot"));
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+
+    rerender(
+      <CloudinaryImage
+        url="https://res.cloudinary.com/demo/image/upload/v1/pottery/sample.jpg"
+        cloud_name="demo"
+        cloudinary_public_id="pottery/sample"
+        crop={{ x: 0.2, y: 0.2, width: 0.6, height: 0.7 }}
+        alt="Cloudinary pot"
+        context="gallery"
+      />,
+    );
+
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+  });
+
 
   it("renders and clears loading state for lightbox-context images", () => {
     render(

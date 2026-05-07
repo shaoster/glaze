@@ -1,7 +1,88 @@
 import pytest
 
 from api.models import GlazeCombination, GlazeType
-from api.utils import sync_glaze_type_singleton_combination
+from api.utils import (
+    cloudinary_getinfo_url,
+    crop_to_dict,
+    fetch_cloudinary_auto_crop,
+    parse_cloudinary_getinfo_crop,
+    sync_glaze_type_singleton_combination,
+)
+
+
+class TestCloudinaryCropParsing:
+    def test_crop_to_dict_rejects_missing_and_invalid_values(self):
+        assert crop_to_dict(None) is None
+        assert crop_to_dict({"x": 0, "y": 0, "width": 0, "height": 1}) is None
+        assert crop_to_dict({"x": "bad", "y": 0, "width": 1, "height": 1}) is None
+
+    def test_crop_to_dict_clamps_relative_values(self):
+        assert crop_to_dict({"x": -0.2, "y": 1.2, "width": 1.5, "height": 0.5}) == {
+            "x": 0.0,
+            "y": 1.0,
+            "width": 1.0,
+            "height": 0.5,
+        }
+
+    def test_normalizes_pixel_coordinates_from_getinfo(self):
+        payload = {
+            "input": {"width": 1000, "height": 800},
+            "g_auto_info": {"x": 100, "y": 80, "width": 500, "height": 400},
+        }
+
+        assert parse_cloudinary_getinfo_crop(payload) == {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.5,
+            "height": 0.5,
+        }
+
+    def test_accepts_nested_w_h_crop_coordinates(self):
+        payload = {
+            "info": {
+                "coordinates": [
+                    {"ignored": True},
+                    {"x": 0.2, "y": 0.3, "w": 0.4, "h": 0.5},
+                ]
+            }
+        }
+
+        assert parse_cloudinary_getinfo_crop(payload) == {
+            "x": 0.2,
+            "y": 0.3,
+            "width": 0.4,
+            "height": 0.5,
+        }
+
+    def test_returns_none_when_getinfo_has_no_crop(self):
+        assert parse_cloudinary_getinfo_crop({"input": {"width": 100}}) is None
+
+    def test_fetch_cloudinary_auto_crop_uses_getinfo_url(self, monkeypatch):
+        calls = []
+
+        class Response:
+            def raise_for_status(self):
+                calls.append("raise_for_status")
+
+            def json(self):
+                return {"crop": {"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.4}}
+
+        def fake_get(url, timeout):
+            calls.append((url, timeout))
+            return Response()
+
+        monkeypatch.setattr("api.utils.requests.get", fake_get)
+
+        assert fetch_cloudinary_auto_crop("demo", "pieces/mug", timeout=3) == {
+            "x": 0.1,
+            "y": 0.2,
+            "width": 0.3,
+            "height": 0.4,
+        }
+        assert calls == [
+            (cloudinary_getinfo_url("demo", "pieces/mug"), 3),
+            "raise_for_status",
+        ]
 
 
 @pytest.mark.django_db

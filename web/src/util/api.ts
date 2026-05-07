@@ -27,6 +27,7 @@ import type {
   StateSummary,
   TagEntry,
   Thumbnail,
+  ImageCrop,
 } from "./types";
 
 export type AuthUser = {
@@ -55,6 +56,11 @@ export type CloudinaryWidgetConfig = {
   api_key: string;
   folder?: string;
   upload_preset?: string;
+};
+
+export type CloudinaryAutoCropInfo = {
+  input?: { width?: number; height?: number };
+  [key: string]: unknown;
 };
 
 // ---------------------------------------------------------------------------
@@ -87,7 +93,77 @@ function mapImage(raw: Wire<CaptionedImage>): CaptionedImage {
     created: new Date(raw.created ?? ""),
     cloudinary_public_id: raw.cloudinary_public_id ?? null,
     cloud_name: raw.cloud_name ?? null,
+    crop: normalizeCrop(raw.crop),
   };
+}
+
+function normalizeCrop(value: unknown): ImageCrop | null {
+  if (!value || typeof value !== "object") return null;
+  const crop = value as Partial<Record<keyof ImageCrop, unknown>>;
+  const x = Number(crop.x);
+  const y = Number(crop.y);
+  const width = Number(crop.width);
+  const height = Number(crop.height);
+  if (![x, y, width, height].every(Number.isFinite)) return null;
+  if (width <= 0 || height <= 0) return null;
+  return {
+    x: Math.min(Math.max(x, 0), 1),
+    y: Math.min(Math.max(y, 0), 1),
+    width: Math.min(Math.max(width, 0), 1),
+    height: Math.min(Math.max(height, 0), 1),
+  };
+}
+
+function readCropCandidate(value: unknown): Record<string, unknown> | null {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const crop = readCropCandidate(entry);
+      if (crop) return crop;
+    }
+    return null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  if (
+    ("x" in record && "y" in record && "width" in record && "height" in record) ||
+    ("x" in record && "y" in record && "w" in record && "h" in record)
+  ) {
+    return record;
+  }
+  for (const nested of Object.values(record)) {
+    const crop = readCropCandidate(nested);
+    if (crop) return crop;
+  }
+  return null;
+}
+
+export function parseCloudinaryAutoCrop(info: CloudinaryAutoCropInfo): ImageCrop | null {
+  const candidate = readCropCandidate(info);
+  if (!candidate) return null;
+  const inputWidth = Number(info.input?.width);
+  const inputHeight = Number(info.input?.height);
+  const raw = {
+    x: Number(candidate.x),
+    y: Number(candidate.y),
+    width: Number(candidate.width ?? candidate.w),
+    height: Number(candidate.height ?? candidate.h),
+  };
+  if (![raw.x, raw.y, raw.width, raw.height].every(Number.isFinite)) {
+    return null;
+  }
+  if (
+    inputWidth > 1 &&
+    inputHeight > 1 &&
+    (raw.x > 1 || raw.y > 1 || raw.width > 1 || raw.height > 1)
+  ) {
+    return normalizeCrop({
+      x: raw.x / inputWidth,
+      y: raw.y / inputHeight,
+      width: raw.width / inputWidth,
+      height: raw.height / inputHeight,
+    });
+  }
+  return normalizeCrop(raw);
 }
 
 function mapStateSummary(raw: Wire<StateSummary>): StateSummary {
@@ -275,6 +351,7 @@ export type UpdateStatePayload = {
     caption: string;
     cloudinary_public_id?: string | null;
     cloud_name?: string | null;
+    crop?: ImageCrop | null;
   }>;
   custom_fields?: Record<string, string | number | boolean | null>;
 };
@@ -469,6 +546,16 @@ export async function signCloudinaryWidgetParams(
     },
   );
   return data.signature;
+}
+
+export async function fetchCloudinaryAutoCrop(params: {
+  cloudName: string;
+  publicId: string;
+}): Promise<ImageCrop | null> {
+  const url = `https://res.cloudinary.com/${params.cloudName}/image/upload/fl_getinfo,g_auto,c_crop/${params.publicId}.json`;
+  const response = await fetch(url);
+  if (!response.ok) return null;
+  return parseCloudinaryAutoCrop((await response.json()) as CloudinaryAutoCropInfo);
 }
 
 export type ManualSquareCropImportRecordPayload = {
