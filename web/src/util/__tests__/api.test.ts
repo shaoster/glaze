@@ -637,7 +637,7 @@ describe("upload endpoints", () => {
           url: "https://example.com/orphan.jpg",
           bytes: 2048,
           created_at: "2026-05-06T12:00:00Z",
-          referenced: false,
+
         },
       ],
       summary: { total: 1, referenced: 0, unused: 1 },

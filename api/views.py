@@ -715,9 +715,8 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
                         "url": asset.url,
                         "bytes": asset.bytes,
                         "created_at": asset.created_at,
-                        "referenced": asset.referenced,
                     }
-                    for asset in assets
+                    for asset in unused
                 ],
                 "summary": {
                     "total": len(assets),

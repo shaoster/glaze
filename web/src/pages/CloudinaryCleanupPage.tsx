@@ -17,6 +17,7 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   Typography,
 } from "@mui/material";
@@ -30,6 +31,8 @@ import {
   type CloudinaryCleanupAsset,
   type CloudinaryCleanupScanResponse,
 } from "../util/api";
+
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 function formatBytes(bytes: number | null) {
   if (bytes === null) return "Unknown";
@@ -58,17 +61,24 @@ export default function CloudinaryCleanupPage() {
   const [error, setError] = useState<string | null>(null);
   const [deletedCount, setDeletedCount] = useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(PAGE_SIZE_OPTIONS[0]);
 
-  const unusedAssets = useMemo(
-    () => scanResult?.assets.filter((asset) => !asset.referenced) ?? [],
+  const assets = useMemo(
+    () => scanResult?.assets ?? [],
     [scanResult],
   );
-  const selectedAssets = useMemo(
-    () => unusedAssets.filter((asset) => selected.has(asset.public_id)),
-    [selected, unusedAssets],
+  const pageAssets = useMemo(
+    () => assets.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [assets, page, rowsPerPage],
   );
-  const allUnusedSelected =
-    unusedAssets.length > 0 && selected.size === unusedAssets.length;
+  const allPageSelected =
+    pageAssets.length > 0 && pageAssets.every((a) => selected.has(a.public_id));
+  const somePageSelected = pageAssets.some((a) => selected.has(a.public_id));
+  const selectedAssets = useMemo(
+    () => assets.filter((asset) => selected.has(asset.public_id)),
+    [selected, assets],
+  );
 
   async function handleScan() {
     setLoading(true);
@@ -77,11 +87,8 @@ export default function CloudinaryCleanupPage() {
     try {
       const result = await scanCloudinaryCleanupAssets();
       setScanResult(result);
-      setSelected(
-        new Set(
-          result.assets.filter((a) => !a.referenced).map((a) => a.public_id),
-        ),
-      );
+      setSelected(new Set(result.assets.map((a) => a.public_id)));
+      setPage(0);
     } catch {
       setError("Unable to scan Cloudinary assets.");
     } finally {
@@ -102,19 +109,19 @@ export default function CloudinaryCleanupPage() {
       setScanResult((current) => {
         if (!current) return current;
         const deleted = new Set(publicIds);
-        const assets = current.assets.filter(
+        const remaining = current.assets.filter(
           (asset) => !deleted.has(asset.public_id),
         );
-        const unused = assets.filter((asset) => !asset.referenced).length;
         return {
-          assets,
+          assets: remaining,
           summary: {
-            total: assets.length,
-            referenced: assets.length - unused,
-            unused,
+            total: current.summary.total - publicIds.length,
+            referenced: current.summary.referenced,
+            unused: remaining.length,
           },
         };
       });
+      setPage(0);
     } catch {
       setError("Unable to delete the selected assets.");
     } finally {
@@ -123,7 +130,6 @@ export default function CloudinaryCleanupPage() {
   }
 
   function toggleAsset(asset: CloudinaryCleanupAsset) {
-    if (asset.referenced) return;
     setSelected((current) => {
       const next = new Set(current);
       if (next.has(asset.public_id)) {
@@ -135,12 +141,16 @@ export default function CloudinaryCleanupPage() {
     });
   }
 
-  function toggleAllUnused() {
-    setSelected(
-      allUnusedSelected
-        ? new Set()
-        : new Set(unusedAssets.map((asset) => asset.public_id)),
-    );
+  function togglePageSelection() {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (allPageSelected) {
+        pageAssets.forEach((a) => next.delete(a.public_id));
+      } else {
+        pageAssets.forEach((a) => next.add(a.public_id));
+      }
+      return next;
+    });
   }
 
   return (
@@ -178,7 +188,7 @@ export default function CloudinaryCleanupPage() {
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
           <Paper sx={{ px: 2, py: 1.5, flex: 1 }}>
             <Typography variant="caption" color="text.secondary">
-              Total
+              Total in Cloud
             </Typography>
             <Typography variant="h5">{scanResult.summary.total}</Typography>
           </Paper>
@@ -217,7 +227,7 @@ export default function CloudinaryCleanupPage() {
               onClick={() => setConfirmOpen(true)}
               disabled={!selectedAssets.length || deleting}
             >
-              Delete Selected
+              Delete Selected ({selectedAssets.length})
             </Button>
           </Stack>
 
@@ -227,29 +237,26 @@ export default function CloudinaryCleanupPage() {
                 <TableRow>
                   <TableCell padding="checkbox">
                     <Checkbox
-                      checked={allUnusedSelected}
-                      indeterminate={
-                        selected.size > 0 && selected.size < unusedAssets.length
-                      }
-                      onChange={toggleAllUnused}
-                      disabled={!unusedAssets.length || deleting}
-                      inputProps={{ "aria-label": "Select all unused assets" }}
+                      checked={allPageSelected}
+                      indeterminate={somePageSelected && !allPageSelected}
+                      onChange={togglePageSelection}
+                      disabled={!pageAssets.length || deleting}
+                      inputProps={{ "aria-label": "Select all on this page" }}
                     />
                   </TableCell>
                   <TableCell>Asset</TableCell>
-                  <TableCell>Status</TableCell>
                   <TableCell>Size</TableCell>
                   <TableCell>Created</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {scanResult.assets.map((asset) => (
+                {pageAssets.map((asset) => (
                   <TableRow key={asset.public_id} hover>
                     <TableCell padding="checkbox">
                       <Checkbox
                         checked={selected.has(asset.public_id)}
                         onChange={() => toggleAsset(asset)}
-                        disabled={asset.referenced || deleting}
+                        disabled={deleting}
                         inputProps={{
                           "aria-label": `Select ${asset.public_id}`,
                         }}
@@ -276,24 +283,33 @@ export default function CloudinaryCleanupPage() {
                         </Typography>
                       </Stack>
                     </TableCell>
-                    <TableCell>
-                      {asset.referenced ? "Referenced" : "Unused"}
-                    </TableCell>
                     <TableCell>{formatBytes(asset.bytes)}</TableCell>
                     <TableCell>{formatCreatedAt(asset.created_at)}</TableCell>
                   </TableRow>
                 ))}
-                {!scanResult.assets.length && (
+                {!assets.length && (
                   <TableRow>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={4}>
                       <Typography color="text.secondary" textAlign="center">
-                        No Cloudinary assets found.
+                        No unused Cloudinary assets found.
                       </Typography>
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+            <TablePagination
+              component="div"
+              count={assets.length}
+              page={page}
+              onPageChange={(_e, newPage) => setPage(newPage)}
+              rowsPerPage={rowsPerPage}
+              rowsPerPageOptions={PAGE_SIZE_OPTIONS}
+              onRowsPerPageChange={(e) => {
+                setRowsPerPage(parseInt(e.target.value, 10));
+                setPage(0);
+              }}
+            />
           </TableContainer>
         </Stack>
       )}
