@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.db.models import DateTimeField, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce, Greatest
+from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
@@ -22,7 +23,11 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .cloudinary_cleanup import delete_cloudinary_assets, list_cloudinary_assets
+from .cloudinary_cleanup import (
+    delete_cloudinary_assets,
+    list_cloudinary_assets,
+    stream_cloudinary_cleanup_archive,
+)
 from .manual_tile_imports import import_manual_tile_records
 from .models import (
     FavoriteGlazeCombination,
@@ -669,6 +674,7 @@ def cloudinary_widget_sign(request: Request) -> Response:
                             "cloud_name": {"type": "string"},
                             "path_prefix": {"type": ["string", "null"]},
                             "url": {"type": "string"},
+                            "thumbnail_url": {"type": "string"},
                             "bytes": {"type": ["integer", "null"]},
                             "created_at": {"type": ["string", "null"]},
                             "referenced": {"type": "boolean"},
@@ -754,6 +760,33 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
         return Response({"detail": message}, status=response_status)
 
     return Response({"deleted": deleted})
+
+
+@extend_schema(
+    responses={
+        200: {"type": "string", "format": "binary"},
+        503: {"type": "object"},
+    },
+)
+@api_view(["GET"])
+@permission_classes([IsAdminUser])
+def admin_cloudinary_cleanup_archive(
+    request: Request,
+) -> StreamingHttpResponse | Response:
+    try:
+        assets = list_cloudinary_assets()
+        unused = [asset for asset in assets if not asset.referenced]
+    except ValueError as exc:
+        return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    response = StreamingHttpResponse(
+        stream_cloudinary_cleanup_archive(unused),
+        content_type="application/zip",
+    )
+    response["Content-Disposition"] = (
+        'attachment; filename="cloudinary-cleanup-unused-images.zip"'
+    )
+    return response
 
 
 @extend_schema(request=None, responses={204: None})

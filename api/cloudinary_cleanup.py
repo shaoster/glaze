@@ -1,6 +1,12 @@
 import os
 import logging
+import posixpath
+from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import Any, cast
+from urllib.parse import urlparse
+from urllib.request import urlopen
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import cloudinary
 import cloudinary.api
@@ -19,6 +25,7 @@ class CloudinaryCleanupAsset:
     path_prefix: str | None
     url: str
     thumbnail_url: str
+    format: str | None
     bytes: int | None
     created_at: str | None
     referenced: bool
@@ -87,6 +94,11 @@ def list_cloudinary_assets(max_results: int = 500) -> list[CloudinaryCleanupAsse
                         format="jpg",
                         secure=True,
                     ),
+                    format=resource.get("format")
+                    if isinstance(resource.get("format"), str)
+                    else _extension_from_url(
+                        str(resource.get("secure_url") or resource.get("url") or "")
+                    ),
                     bytes=resource.get("bytes")
                     if isinstance(resource.get("bytes"), int)
                     else None,
@@ -102,6 +114,67 @@ def list_cloudinary_assets(max_results: int = 500) -> list[CloudinaryCleanupAsse
             break
 
     return assets
+
+
+def _extension_from_url(url: str) -> str | None:
+    suffix = posixpath.splitext(urlparse(url).path)[1].lstrip(".").lower()
+    return suffix or None
+
+
+def _archive_member_name(asset: CloudinaryCleanupAsset) -> str:
+    prefix = (asset.path_prefix or "").strip("/")
+    cloud_id = asset.public_id.strip("/")
+    if prefix and cloud_id == prefix:
+        cloud_id = posixpath.basename(cloud_id)
+    elif prefix and cloud_id.startswith(f"{prefix}/"):
+        cloud_id = cloud_id[len(prefix) + 1 :]
+
+    extension = (asset.format or _extension_from_url(asset.url) or "bin").lstrip(".")
+    return posixpath.join(asset.cloud_name, prefix, f"{cloud_id}.{extension}")
+
+
+class _StreamingZipBuffer:
+    def __init__(self) -> None:
+        self._chunks: list[bytes] = []
+
+    def write(self, data: bytes) -> int:
+        self._chunks.append(bytes(data))
+        return len(data)
+
+    def flush_chunks(self) -> Iterator[bytes]:
+        while self._chunks:
+            yield self._chunks.pop(0)
+
+    def flush(self) -> None:
+        return None
+
+
+def stream_cloudinary_cleanup_archive(
+    assets: list[CloudinaryCleanupAsset],
+) -> Iterator[bytes]:
+    buffer = _StreamingZipBuffer()
+    with ZipFile(cast(Any, buffer), "w", ZIP_DEFLATED) as archive:
+        used_names: set[str] = set()
+        for asset in assets:
+            if not asset.url:
+                continue
+            member_name = _archive_member_name(asset)
+            if member_name in used_names:
+                stem, extension = posixpath.splitext(member_name)
+                index = 2
+                while f"{stem}-{index}{extension}" in used_names:
+                    index += 1
+                member_name = f"{stem}-{index}{extension}"
+            used_names.add(member_name)
+
+            with urlopen(asset.url, timeout=30) as response:
+                with archive.open(member_name, "w") as member:
+                    while chunk := response.read(1024 * 1024):
+                        member.write(chunk)
+                        yield from buffer.flush_chunks()
+            yield from buffer.flush_chunks()
+
+    yield from buffer.flush_chunks()
 
 
 def delete_cloudinary_assets(public_ids: list[str]) -> dict[str, str]:

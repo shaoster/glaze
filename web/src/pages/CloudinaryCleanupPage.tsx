@@ -22,6 +22,7 @@ import {
   Typography,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DownloadIcon from "@mui/icons-material/Download";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SearchIcon from "@mui/icons-material/Search";
 
@@ -215,14 +216,25 @@ export default function CloudinaryCleanupPage() {
       {scanResult && (
         <Stack spacing={1.5}>
           <Stack direction="row" justifyContent="space-between" spacing={1}>
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={handleScan}
-              disabled={loading || deleting}
-            >
-              Refresh
-            </Button>
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={handleScan}
+                disabled={loading || deleting}
+              >
+                Refresh
+              </Button>
+              <Button
+                component="a"
+                href="/api/admin/cloudinary-cleanup/archive/"
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                disabled={!assets.length || loading || deleting}
+              >
+                Download Archive
+              </Button>
+            </Stack>
             <Button
               variant="contained"
               color="error"

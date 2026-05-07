@@ -1,10 +1,17 @@
 import pytest
 import cloudinary.exceptions
 from django.contrib.auth.models import User
+from io import BytesIO
+from zipfile import ZipFile
 
+from api.cloudinary_cleanup import (
+    CloudinaryCleanupAsset,
+    stream_cloudinary_cleanup_archive,
+)
 from api.models import Image
 
 URL = "/api/admin/cloudinary-cleanup/"
+ARCHIVE_URL = "/api/admin/cloudinary-cleanup/archive/"
 
 
 @pytest.mark.django_db
@@ -153,3 +160,143 @@ class TestCloudinaryCleanup:
 
         assert response.status_code == 503
         assert response.json() == {"detail": "Unable to delete Cloudinary assets."}
+
+    def test_archive_streams_all_unused_assets_with_cloudinary_paths(
+        self, client, user, monkeypatch
+    ):
+        admin = User.objects.create(
+            username="admin@example.com",
+            email="admin@example.com",
+            is_staff=True,
+        )
+        client.force_authenticate(user=admin)
+        Image.objects.create(
+            user=user,
+            url="https://res.cloudinary.com/demo/image/upload/glaze_dev/used.jpg",
+            cloud_name="demo",
+            cloudinary_public_id="glaze_dev/used",
+        )
+        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo")
+        monkeypatch.setenv("CLOUDINARY_API_KEY", "api-key")
+        monkeypatch.setenv("CLOUDINARY_API_SECRET", "api-secret")
+        monkeypatch.setenv("CLOUDINARY_UPLOAD_FOLDER", "glaze_dev")
+
+        def fake_resources(**kwargs):
+            return {
+                "resources": [
+                    {
+                        "public_id": "glaze_dev/used",
+                        "secure_url": "https://example.com/used.jpg",
+                        "format": "jpg",
+                    },
+                    {
+                        "public_id": "glaze_dev/piece/orphan",
+                        "secure_url": "https://example.com/orphan.heic",
+                        "format": "heic",
+                    },
+                    {
+                        "public_id": "glaze_dev/piece/another",
+                        "secure_url": "https://example.com/another.webp",
+                        "format": "webp",
+                    },
+                ]
+            }
+
+        class FakeDownload:
+            def __init__(self, body: bytes):
+                self._body = body
+                self._offset = 0
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return None
+
+            def read(self, size=-1):
+                if size == -1:
+                    size = len(self._body) - self._offset
+                chunk = self._body[self._offset : self._offset + size]
+                self._offset += len(chunk)
+                return chunk
+
+        def fake_urlopen(url, timeout):
+            assert timeout == 30
+            bodies = {
+                "https://example.com/orphan.heic": b"orphan-bytes",
+                "https://example.com/another.webp": b"another-bytes",
+            }
+            return FakeDownload(bodies[url])
+
+        monkeypatch.setattr(
+            "api.cloudinary_cleanup.cloudinary.api.resources", fake_resources
+        )
+        monkeypatch.setattr("api.cloudinary_cleanup.urlopen", fake_urlopen)
+
+        response = client.get(ARCHIVE_URL)
+
+        assert response.status_code == 200
+        assert response["Content-Type"] == "application/zip"
+        archive_bytes = b"".join(response.streaming_content)
+        with ZipFile(BytesIO(archive_bytes)) as archive:
+            assert sorted(archive.namelist()) == [
+                "demo/glaze_dev/piece/another.webp",
+                "demo/glaze_dev/piece/orphan.heic",
+            ]
+            assert archive.read("demo/glaze_dev/piece/orphan.heic") == b"orphan-bytes"
+
+    def test_archive_iterator_fetches_assets_lazily(self, monkeypatch):
+        opened_urls = []
+
+        class FakeDownload:
+            def __init__(self, url: str):
+                self.url = url
+                self._sent = False
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return None
+
+            def read(self, size=-1):
+                if self._sent:
+                    return b""
+                self._sent = True
+                return f"bytes from {self.url}".encode()
+
+        def fake_urlopen(url, timeout):
+            opened_urls.append(url)
+            return FakeDownload(url)
+
+        assets = [
+            CloudinaryCleanupAsset(
+                public_id="glaze_dev/first",
+                cloud_name="demo",
+                path_prefix="glaze_dev",
+                url="https://example.com/first.jpg",
+                thumbnail_url="",
+                format="jpg",
+                bytes=None,
+                created_at=None,
+                referenced=False,
+            ),
+            CloudinaryCleanupAsset(
+                public_id="glaze_dev/second",
+                cloud_name="demo",
+                path_prefix="glaze_dev",
+                url="https://example.com/second.jpg",
+                thumbnail_url="",
+                format="jpg",
+                bytes=None,
+                created_at=None,
+                referenced=False,
+            ),
+        ]
+        monkeypatch.setattr("api.cloudinary_cleanup.urlopen", fake_urlopen)
+
+        stream = stream_cloudinary_cleanup_archive(assets)
+        first_chunk = next(stream)
+
+        assert first_chunk
+        assert opened_urls == ["https://example.com/first.jpg"]
