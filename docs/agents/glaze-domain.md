@@ -247,6 +247,8 @@ These supplement the generic Django/DRF conventions.
 
 All API endpoints are registered in `backend/urls.py`.
 
+**ASGI server:** Production runs gunicorn with `uvicorn.workers.UvicornWorker` pointed at `backend.asgi:application` (see [`docker-entrypoint.sh`](../../docker-entrypoint.sh)). Django runs all sync views transparently in a thread pool — no per-view changes are required. Write a view as `async def` only when it performs long-running or streaming I/O that would otherwise block the worker heartbeat (e.g. the Cloudinary archive endpoint). Wrap any sync ORM or SDK calls inside an async view with `asyncio.to_thread(...)`. Use `httpx.AsyncClient` for outbound HTTP inside async views instead of `urllib.request.urlopen`.
+
 **Module boundaries — what goes in `api/workflow.py` vs. `api/utils.py`:**
 
 - `api/workflow.py` is reserved strictly for helpers that read from the workflow state machine (`workflow.yml`) — state lookups, successor queries, globals-map queries, field-definition resolution, and JSON Schema generation. Do not add domain helpers unrelated to the state machine here, even if both `admin.py` and another module need them.
