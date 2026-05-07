@@ -55,9 +55,9 @@ export default defineConfig({
       allow: [".."],
     },
     proxy: {
-      "/api": "http://localhost:8080",
-      "/admin": "http://localhost:8080",
-      "/static": "http://localhost:8080",
+      "/api": `http://localhost:${process.env.BACKEND_PORT ?? "8080"}`,
+      "/admin": `http://localhost:${process.env.BACKEND_PORT ?? "8080"}`,
+      "/static": `http://localhost:${process.env.BACKEND_PORT ?? "8080"}`,
       // Rewrite any request for /favicon.ico to /favicon.svg
       "/favicon.ico": {
         target: "http://localhost:5173", // Your dev server address

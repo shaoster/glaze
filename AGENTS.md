@@ -16,6 +16,14 @@ When asked to work on a PR or implement a feature branch, always create a git wo
 
 Prefer repo-local worktree roots over system temp directories: use `.agent-worktrees/{agent-name}` under the repo so the worktree stays near the shared repo bootstrap, secrets fallback, and editable files without colliding with tool-reserved paths like `.codex`. For example, Claude should open worktrees at `.agent-worktrees/claude/` and codex should open worktrees at `.agent-worktrees/codex/`.
 
+**Announce the worktree path at the start of every session**, before any code changes. Use a clearly labeled, copy-friendly absolute path so the user can open a terminal for it without hunting through scrollback. Example:
+
+```
+Worktree: /home/phil/code/glaze/.agent-worktrees/claude/issue-123-fix-foo
+```
+
+The user has `gz_cd <pattern>` to navigate there, but only if the path was announced early and visibly.
+
 ## Instruction Priority
 
 When a referenced agent doc specifies setup, test, build, or verification commands, use those documented commands exactly by default.
