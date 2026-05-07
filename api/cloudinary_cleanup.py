@@ -46,15 +46,13 @@ def list_cloudinary_assets(max_results: int = 500) -> list[CloudinaryCleanupAsse
     next_cursor = None
 
     while True:
-        params = {
+        params: dict[str, object] = {
             "resource_type": "image",
             "type": "upload",
             "max_results": min(max_results, 500),
-            "prefix": os.environ.get("CLOUDINARY_UPLOAD_FOLDER", "").strip() or None,
         }
         if next_cursor:
             params["next_cursor"] = next_cursor
-        params = {key: value for key, value in params.items() if value is not None}
 
         result = cloudinary.api.resources(**params)
         resources = result.get("resources", [])

@@ -13,9 +13,7 @@ class TestCloudinaryCleanup:
 
         assert response.status_code == 403
 
-    def test_scan_returns_cloudinary_assets_with_reference_status(
-        self, client, user, monkeypatch
-    ):
+    def test_scan_returns_unused_assets_only(self, client, user, monkeypatch):
         admin = User.objects.create(
             username="admin@example.com",
             email="admin@example.com",
@@ -66,18 +64,10 @@ class TestCloudinaryCleanup:
         assert response.json() == {
             "assets": [
                 {
-                    "public_id": "piece/used",
-                    "url": "https://example.com/used.jpg",
-                    "bytes": 1234,
-                    "created_at": "2026-05-06T12:00:00Z",
-                    "referenced": True,
-                },
-                {
                     "public_id": "piece/orphan",
                     "url": "https://example.com/orphan.jpg",
                     "bytes": 5678,
                     "created_at": "2026-05-06T12:05:00Z",
-                    "referenced": False,
                 },
             ],
             "summary": {"total": 2, "referenced": 1, "unused": 1},

@@ -528,7 +528,6 @@ export type CloudinaryCleanupAsset = {
   url: string;
   bytes: number | null;
   created_at: string | null;
-  referenced: boolean;
 };
 
 export type CloudinaryCleanupScanResponse = {
