@@ -21,10 +21,16 @@ class Command(BaseCommand):
             action="store_true",
             help="Fetch crops and report counts without writing changes.",
         )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Overwrite existing crops (default skips images that already have a crop).",
+        )
 
     def handle(self, *args, **options):
         delay_seconds = max(options["delay_ms"], 0) / 1000
         dry_run = options["dry_run"]
+        force = options["force"]
         images = (
             Image.objects.filter(
                 cloud_name__isnull=False,
@@ -60,9 +66,15 @@ class Command(BaseCommand):
                 continue
 
             fetched += 1
-            link_qs = PieceStateImage.objects.filter(image=image, crop__isnull=True)
-            piece_qs = Piece.objects.filter(
-                thumbnail=image, thumbnail_crop__isnull=True
+            link_qs = (
+                PieceStateImage.objects.filter(image=image)
+                if force
+                else PieceStateImage.objects.filter(image=image, crop__isnull=True)
+            )
+            piece_qs = (
+                Piece.objects.filter(thumbnail=image)
+                if force
+                else Piece.objects.filter(thumbnail=image, thumbnail_crop__isnull=True)
             )
             link_count = link_qs.count()
             piece_count = piece_qs.count()
