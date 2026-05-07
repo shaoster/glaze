@@ -19,6 +19,7 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         "//backend:backend_lib",
+        requirement("httpx"),
     ],
 )
 
