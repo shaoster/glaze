@@ -1,3 +1,5 @@
+import asyncio
+from collections.abc import AsyncIterable
 from io import BytesIO
 from zipfile import ZipFile
 
@@ -16,6 +18,10 @@ from api.workflow import _workflow
 
 URL = "/api/admin/cloudinary-cleanup/"
 ARCHIVE_URL = "/api/admin/cloudinary-cleanup/archive/"
+
+
+async def _collect_async_bytes(chunks: AsyncIterable[bytes]) -> bytes:
+    return b"".join([chunk async for chunk in chunks])
 
 
 @pytest.mark.django_db
@@ -327,23 +333,23 @@ class TestCloudinaryCleanup:
             def raise_for_status(self) -> None:
                 pass
 
-            def iter_bytes(self, chunk_size: int):
+            async def aiter_bytes(self, chunk_size: int):
                 yield self._body
 
-            def __enter__(self):
+            async def __aenter__(self):
                 return self
 
-            def __exit__(self, *args):
+            async def __aexit__(self, *args):
                 pass
 
         class FakeClient:
             def __init__(self, timeout: int):
                 pass
 
-            def __enter__(self):
+            async def __aenter__(self):
                 return self
 
-            def __exit__(self, *args):
+            async def __aexit__(self, *args):
                 pass
 
             def stream(self, method: str, url: str):
@@ -352,13 +358,16 @@ class TestCloudinaryCleanup:
         monkeypatch.setattr(
             "api.cloudinary_cleanup.cloudinary.api.resources", fake_resources
         )
-        monkeypatch.setattr("api.cloudinary_cleanup.httpx.Client", FakeClient)
+        monkeypatch.setattr("api.cloudinary_cleanup.httpx.AsyncClient", FakeClient)
 
         response = client.get(ARCHIVE_URL + "?unreferenced_only=true")
 
         assert response.status_code == 200
         assert response["Content-Type"] == "application/zip"
-        archive_bytes = b"".join(response.streaming_content)
+        assert response["Cache-Control"] == "no-store"
+        assert response["X-Accel-Buffering"] == "no"
+        assert response.is_async
+        archive_bytes = asyncio.run(_collect_async_bytes(response.streaming_content))
         with ZipFile(BytesIO(archive_bytes)) as archive:
             assert sorted(archive.namelist()) == [
                 "demo/glaze_dev/piece/another.webp",
@@ -376,24 +385,24 @@ class TestCloudinaryCleanup:
             def raise_for_status(self) -> None:
                 pass
 
-            def iter_bytes(self, chunk_size: int):
+            async def aiter_bytes(self, chunk_size: int):
                 yield f"bytes from {self._url}".encode()
 
-            def __enter__(self):
+            async def __aenter__(self):
                 opened_urls.append(self._url)
                 return self
 
-            def __exit__(self, *args):
+            async def __aexit__(self, *args):
                 pass
 
         class FakeClient:
             def __init__(self, timeout: int):
                 pass
 
-            def __enter__(self):
+            async def __aenter__(self):
                 return self
 
-            def __exit__(self, *args):
+            async def __aexit__(self, *args):
                 pass
 
             def stream(self, method: str, url: str):
@@ -423,9 +432,14 @@ class TestCloudinaryCleanup:
                 referenced=False,
             ),
         ]
-        monkeypatch.setattr("api.cloudinary_cleanup.httpx.Client", FakeClient)
+        monkeypatch.setattr("api.cloudinary_cleanup.httpx.AsyncClient", FakeClient)
 
-        first_chunk = next(stream_cloudinary_cleanup_archive(assets), b"")
+        async def first_archive_chunk() -> bytes:
+            async for chunk in stream_cloudinary_cleanup_archive(assets):
+                return chunk
+            return b""
+
+        first_chunk = asyncio.run(first_archive_chunk())
 
         assert first_chunk
         assert opened_urls == ["https://example.com/first.jpg"]
