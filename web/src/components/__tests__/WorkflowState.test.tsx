@@ -855,6 +855,11 @@ describe("WorkflowState", () => {
     render(<WorkflowState {...defaultProps} />);
     fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
     await waitFor(() =>
+      expect(api.fetchCloudinaryAutoCrop).toHaveBeenCalledWith(
+        { cloudName: "demo", publicId: "sample" },
+      ),
+    );
+    await waitFor(() =>
       expect(api.updateCurrentState).toHaveBeenCalledWith(
         "test-piece-id",
         expect.objectContaining({
