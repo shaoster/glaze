@@ -14,6 +14,10 @@
  * this module.
  */
 import axios from "axios";
+import { Cloudinary } from "@cloudinary/url-gen";
+import { crop as cropAction } from "@cloudinary/url-gen/actions/resize";
+import { getInfo } from "@cloudinary/url-gen/qualifiers/flag";
+import { autoGravity } from "@cloudinary/url-gen/qualifiers/gravity";
 import type {
   CaptionedImage,
   FiringTemperatureRef,
@@ -548,11 +552,31 @@ export async function signCloudinaryWidgetParams(
   return data.signature;
 }
 
+export function cloudinaryGetinfoUrl(params: {
+  cloudName: string;
+  publicId: string;
+  width?: number;
+}): string | null {
+  const cloudName = params.cloudName.trim();
+  const publicId = params.publicId.trim();
+  if (!cloudName || !publicId) return null;
+  const cld = new Cloudinary({
+    cloud: { cloudName },
+    url: { analytics: false },
+  });
+  return cld
+    .image(publicId)
+    .resize(cropAction().width(params.width ?? 750).gravity(autoGravity()))
+    .addFlag(getInfo())
+    .toURL();
+}
+
 export async function fetchCloudinaryAutoCrop(params: {
   cloudName: string;
   publicId: string;
 }): Promise<ImageCrop | null> {
-  const url = `https://res.cloudinary.com/${params.cloudName}/image/upload/fl_getinfo,g_auto,c_crop/${params.publicId}.json`;
+  const url = cloudinaryGetinfoUrl(params);
+  if (!url) return null;
   const response = await fetch(url);
   if (!response.ok) return null;
   return parseCloudinaryAutoCrop((await response.json()) as CloudinaryAutoCropInfo);
