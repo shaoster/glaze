@@ -1,4 +1,5 @@
 import pytest
+import cloudinary.exceptions
 from django.contrib.auth.models import User
 
 from api.models import Image
@@ -66,6 +67,10 @@ class TestCloudinaryCleanup:
                 {
                     "public_id": "piece/orphan",
                     "url": "https://example.com/orphan.jpg",
+                    "thumbnail_url": (
+                        "https://res.cloudinary.com/demo/image/upload/"
+                        "c_fill,h_96,w_96/v1/piece/orphan.jpg"
+                    ),
                     "bytes": 5678,
                     "created_at": "2026-05-06T12:05:00Z",
                 },
@@ -122,3 +127,27 @@ class TestCloudinaryCleanup:
 
         assert response.status_code == 200
         assert response.json() == {"deleted": {"piece/orphan": "deleted"}}
+
+    def test_delete_cloudinary_error_returns_503(self, client, monkeypatch):
+        admin = User.objects.create(
+            username="admin@example.com",
+            email="admin@example.com",
+            is_staff=True,
+        )
+        client.force_authenticate(user=admin)
+        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo")
+        monkeypatch.setenv("CLOUDINARY_API_KEY", "api-key")
+        monkeypatch.setenv("CLOUDINARY_API_SECRET", "api-secret")
+
+        def fake_delete_resources(public_ids, **kwargs):
+            raise cloudinary.exceptions.Error("boom")
+
+        monkeypatch.setattr(
+            "api.cloudinary_cleanup.cloudinary.api.delete_resources",
+            fake_delete_resources,
+        )
+
+        response = client.delete(URL, {"public_ids": ["piece/orphan"]}, format="json")
+
+        assert response.status_code == 503
+        assert response.json() == {"detail": "Unable to delete Cloudinary assets."}

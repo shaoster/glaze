@@ -1,16 +1,22 @@
 import os
+import logging
 from dataclasses import dataclass
 
 import cloudinary
 import cloudinary.api
+import cloudinary.exceptions
+from cloudinary import CloudinaryImage
 
 from .models import Image
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
 class CloudinaryCleanupAsset:
     public_id: str
     url: str
+    thumbnail_url: str
     bytes: int | None
     created_at: str | None
     referenced: bool
@@ -69,6 +75,13 @@ def list_cloudinary_assets(max_results: int = 500) -> list[CloudinaryCleanupAsse
                 CloudinaryCleanupAsset(
                     public_id=public_id,
                     url=str(resource.get("secure_url") or resource.get("url") or ""),
+                    thumbnail_url=CloudinaryImage(public_id).build_url(
+                        width=96,
+                        height=96,
+                        crop="fill",
+                        format="jpg",
+                        secure=True,
+                    ),
                     bytes=resource.get("bytes")
                     if isinstance(resource.get("bytes"), int)
                     else None,
@@ -97,7 +110,14 @@ def delete_cloudinary_assets(public_ids: list[str]) -> dict[str, str]:
     if not public_ids:
         return {}
 
-    result = cloudinary.api.delete_resources(public_ids, resource_type="image")
+    try:
+        result = cloudinary.api.delete_resources(public_ids, resource_type="image")
+    except cloudinary.exceptions.Error as exc:
+        logger.exception(
+            "Cloudinary delete_resources failed for %d cleanup assets.",
+            len(public_ids),
+        )
+        raise ValueError("Unable to delete Cloudinary assets.") from exc
     deleted = result.get("deleted", {})
     if not isinstance(deleted, dict):
         raise ValueError("Cloudinary returned an unexpected delete payload.")
