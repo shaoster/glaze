@@ -666,6 +666,8 @@ def cloudinary_widget_sign(request: Request) -> Response:
                         "type": "object",
                         "properties": {
                             "public_id": {"type": "string"},
+                            "cloud_name": {"type": "string"},
+                            "path_prefix": {"type": ["string", "null"]},
                             "url": {"type": "string"},
                             "bytes": {"type": ["integer", "null"]},
                             "created_at": {"type": ["string", "null"]},
@@ -712,6 +714,8 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
                 "assets": [
                     {
                         "public_id": asset.public_id,
+                        "cloud_name": asset.cloud_name,
+                        "path_prefix": asset.path_prefix,
                         "url": asset.url,
                         "thumbnail_url": asset.thumbnail_url,
                         "bytes": asset.bytes,

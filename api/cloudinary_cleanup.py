@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class CloudinaryCleanupAsset:
     public_id: str
+    cloud_name: str
+    path_prefix: str | None
     url: str
     thumbnail_url: str
     bytes: int | None
@@ -22,7 +24,7 @@ class CloudinaryCleanupAsset:
     referenced: bool
 
 
-def configure_cloudinary_admin() -> None:
+def configure_cloudinary_admin() -> tuple[str, str | None]:
     cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME")
     api_key = os.environ.get("CLOUDINARY_API_KEY")
     api_secret = os.environ.get("CLOUDINARY_API_SECRET")
@@ -34,6 +36,7 @@ def configure_cloudinary_admin() -> None:
         api_secret=api_secret,
         secure=True,
     )
+    return cloud_name, os.environ.get("CLOUDINARY_UPLOAD_FOLDER") or None
 
 
 def list_referenced_public_ids() -> set[str]:
@@ -46,7 +49,7 @@ def list_referenced_public_ids() -> set[str]:
 
 
 def list_cloudinary_assets(max_results: int = 500) -> list[CloudinaryCleanupAsset]:
-    configure_cloudinary_admin()
+    cloud_name, path_prefix = configure_cloudinary_admin()
     referenced_public_ids = list_referenced_public_ids()
     assets: list[CloudinaryCleanupAsset] = []
     next_cursor = None
@@ -74,6 +77,8 @@ def list_cloudinary_assets(max_results: int = 500) -> list[CloudinaryCleanupAsse
             assets.append(
                 CloudinaryCleanupAsset(
                     public_id=public_id,
+                    cloud_name=cloud_name,
+                    path_prefix=path_prefix,
                     url=str(resource.get("secure_url") or resource.get("url") or ""),
                     thumbnail_url=CloudinaryImage(public_id).build_url(
                         width=96,

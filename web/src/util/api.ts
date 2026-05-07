@@ -636,6 +636,8 @@ export async function importManualSquareCropRecords(
 
 export type CloudinaryCleanupAsset = {
   public_id: string;
+  cloud_name: string;
+  path_prefix: string | null;
   url: string;
   thumbnail_url: string;
   bytes: number | null;

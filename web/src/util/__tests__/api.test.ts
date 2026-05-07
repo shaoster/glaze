@@ -699,6 +699,8 @@ describe("upload endpoints", () => {
       assets: [
         {
           public_id: "piece/orphan",
+          cloud_name: "demo",
+          path_prefix: "glaze_dev",
           url: "https://example.com/orphan.jpg",
           thumbnail_url: "https://example.com/orphan-thumb.jpg",
           bytes: 2048,

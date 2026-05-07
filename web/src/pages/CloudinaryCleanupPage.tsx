@@ -52,6 +52,10 @@ function formatCreatedAt(value: string | null) {
   });
 }
 
+function formatCloudinaryLocation(asset: CloudinaryCleanupAsset) {
+  return [asset.cloud_name, asset.path_prefix].filter(Boolean).join(" / ");
+}
+
 export default function CloudinaryCleanupPage() {
   const [scanResult, setScanResult] =
     useState<CloudinaryCleanupScanResponse | null>(null);
@@ -243,7 +247,7 @@ export default function CloudinaryCleanupPage() {
                       inputProps={{ "aria-label": "Select all on this page" }}
                     />
                   </TableCell>
-                  <TableCell>Asset</TableCell>
+                  <TableCell>Asset name</TableCell>
                   <TableCell>Size</TableCell>
                   <TableCell>Created</TableCell>
                 </TableRow>
@@ -277,9 +281,18 @@ export default function CloudinaryCleanupPage() {
                             }}
                           />
                         ) : null}
-                        <Typography sx={{ wordBreak: "break-word" }}>
-                          {asset.public_id}
-                        </Typography>
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography sx={{ wordBreak: "break-word" }}>
+                            {asset.public_id}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: "block", wordBreak: "break-word" }}
+                          >
+                            {formatCloudinaryLocation(asset)}
+                          </Typography>
+                        </Box>
                       </Stack>
                     </TableCell>
                     <TableCell>{formatBytes(asset.bytes)}</TableCell>

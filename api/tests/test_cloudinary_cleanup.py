@@ -30,7 +30,7 @@ class TestCloudinaryCleanup:
         monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo")
         monkeypatch.setenv("CLOUDINARY_API_KEY", "api-key")
         monkeypatch.setenv("CLOUDINARY_API_SECRET", "api-secret")
-        monkeypatch.delenv("CLOUDINARY_UPLOAD_FOLDER", raising=False)
+        monkeypatch.setenv("CLOUDINARY_UPLOAD_FOLDER", "glaze_dev")
 
         def fake_resources(**kwargs):
             assert kwargs == {
@@ -66,6 +66,8 @@ class TestCloudinaryCleanup:
             "assets": [
                 {
                     "public_id": "piece/orphan",
+                    "cloud_name": "demo",
+                    "path_prefix": "glaze_dev",
                     "url": "https://example.com/orphan.jpg",
                     "thumbnail_url": (
                         "https://res.cloudinary.com/demo/image/upload/"
