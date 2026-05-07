@@ -73,6 +73,18 @@ class TestCloudinaryPreviewUrl:
         # public_id used directly from dict — no URL parsing needed
         assert HEIC_PUBLIC_ID.split("/")[-1] in result
 
+    def test_uses_stored_cloud_name_from_dict(self, monkeypatch):
+        monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
+        result = _cloudinary_preview_url(
+            {
+                "url": HEIC_URL,
+                "cloudinary_public_id": HEIC_PUBLIC_ID,
+                "cloud_name": "demo-cloud",
+            }
+        )
+        assert result.startswith("https://res.cloudinary.com/demo-cloud/")
+        assert result.endswith(".jpg")
+
     def test_dict_uses_stored_public_id_not_url_parse(self, monkeypatch):
         monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
         img = {"url": HEIC_URL, "cloudinary_public_id": "explicit/public-id"}

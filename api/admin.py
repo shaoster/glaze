@@ -128,10 +128,21 @@ def _image_url(value: dict | str | None) -> str:
     return value  # legacy string
 
 
+def _image_cloud_name(value: dict | str | None) -> str:
+    image_payload = image_to_dict(value)
+    if image_payload:
+        return image_payload.get("cloud_name") or os.environ.get(
+            "CLOUDINARY_CLOUD_NAME", ""
+        )
+    if isinstance(value, dict):
+        return value.get("cloud_name") or os.environ.get("CLOUDINARY_CLOUD_NAME", "")
+    return os.environ.get("CLOUDINARY_CLOUD_NAME", "")
+
+
 def _cloudinary_preview_url(value: dict | str | None) -> str:
     """Return a JPG thumbnail URL (200×200 fill) for a Cloudinary delivery URL."""
     url = _image_url(value)
-    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
+    cloud_name = _image_cloud_name(value)
     if not url or not cloud_name:
         return url
     image_payload = image_to_dict(value)
@@ -151,7 +162,7 @@ def _cloudinary_preview_url(value: dict | str | None) -> str:
 def _cloudinary_lightbox_url(value: dict | str | None) -> str:
     """Return a full-size JPG URL suitable for a lightbox modal."""
     url = _image_url(value)
-    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
+    cloud_name = _image_cloud_name(value)
     if not url or not cloud_name:
         return url
     image_payload = image_to_dict(value)
@@ -166,6 +177,22 @@ def _cloudinary_lightbox_url(value: dict | str | None) -> str:
         return url
     cloudinary.config(cloud_name=cloud_name)
     return CloudinaryImage(public_id).build_url(format="jpg", secure=True)
+
+
+def _admin_image_preview(value: dict | str | None) -> str:
+    if not value:
+        return "—"
+    preview_src = _cloudinary_preview_url(value)
+    lightbox_src = _cloudinary_lightbox_url(value)
+    if not preview_src:
+        return "—"
+    return format_html(
+        '<img src="{}" data-full-url="{}" class="cloudinary-preview"'
+        ' style="display:block;max-height:48px;max-width:64px;object-fit:cover;'
+        'cursor:pointer;border-radius:4px;" alt="preview">',
+        preview_src,
+        lightbox_src,
+    )
 
 
 class CloudinaryImageWidget(widgets.TextInput):
@@ -350,6 +377,16 @@ class GlazeTypeAdmin(PublicLibraryAdmin):
       renamed as well.
     """
 
+    list_display: ClassVar[tuple[str, ...]] = (  # type: ignore[misc]
+        "name",
+        "test_tile_image_preview",
+        "is_public_entry",
+    )
+
+    @admin.display(description="Test tile image")
+    def test_tile_image_preview(self, obj: GlazeType) -> str:
+        return _admin_image_preview(obj.test_tile_image)
+
     def save_model(
         self, request: HttpRequest, obj: GlazeType, form, change: bool
     ) -> None:
@@ -429,6 +466,7 @@ class GlazeCombinationAdmin(SortableAdminBase, PublicLibraryAdmin):
 
     list_display: ClassVar[tuple[str, ...]] = (  # type: ignore[misc]
         "__str__",
+        "test_tile_image_preview",
         "firing_temperature",
         "is_food_safe",
         "runs",
@@ -446,6 +484,10 @@ class GlazeCombinationAdmin(SortableAdminBase, PublicLibraryAdmin):
     search_fields = ("name",)
     exclude = ("user", "name")
     inlines = [GlazeCombinationLayerInline]
+
+    @admin.display(description="Test tile image")
+    def test_tile_image_preview(self, obj: GlazeCombination) -> str:
+        return _admin_image_preview(obj.test_tile_image)
 
     def formfield_for_foreignkey(self, db_field, request: HttpRequest, **kwargs):
         if db_field.name == "firing_temperature":

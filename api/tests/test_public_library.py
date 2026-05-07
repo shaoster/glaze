@@ -330,6 +330,31 @@ class TestGlazeAdminSite:
 
 @pytest.mark.django_db
 class TestGlazeTypeAdmin:
+    def test_list_display_includes_test_tile_preview(self):
+        from api.admin import GlazeTypeAdmin
+
+        assert "test_tile_image_preview" in GlazeTypeAdmin.list_display
+
+    def test_test_tile_image_preview_renders_json_image(self, monkeypatch):
+        from api.admin import GlazeTypeAdmin
+
+        monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
+        ma = GlazeTypeAdmin(GlazeType, AdminSite())
+        glaze_type = GlazeType(
+            name="Admin Celadon",
+            test_tile_image={
+                "url": "https://res.cloudinary.com/demo/image/upload/test/tile.heic",
+                "cloudinary_public_id": "test/tile",
+                "cloud_name": "demo",
+            },
+        )
+
+        html = ma.test_tile_image_preview(glaze_type)
+
+        assert "cloudinary-preview" in html
+        assert "res.cloudinary.com/demo" in html
+        assert "test/tile" in html
+
     def test_save_model_syncs_singleton_combination(self):
         from api.admin import GlazeTypeAdmin
 
@@ -352,3 +377,8 @@ class TestGlazeTypeAdmin:
         assert list(combo.layers.values_list("glaze_type_id", flat=True)) == [
             glaze_type.pk
         ]
+
+    def test_glaze_combination_list_display_includes_test_tile_preview(self):
+        from api.admin import GlazeCombinationAdmin
+
+        assert "test_tile_image_preview" in GlazeCombinationAdmin.list_display
