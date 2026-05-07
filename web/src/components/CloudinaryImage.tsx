@@ -14,14 +14,16 @@
  *   preview   — 64×64 fill, used for the upload preview before saving
  */
 import { Cloudinary } from "@cloudinary/url-gen";
-import { fill, fit } from "@cloudinary/url-gen/actions/resize";
+import { crop as cropAction, fill, fit } from "@cloudinary/url-gen/actions/resize";
 import { format, quality } from "@cloudinary/url-gen/actions/delivery";
 import { auto as autoFormat, jpg } from "@cloudinary/url-gen/qualifiers/format";
 import { auto as autoQuality } from "@cloudinary/url-gen/qualifiers/quality";
 import { autoGravity } from "@cloudinary/url-gen/qualifiers/gravity";
+import { relative } from "@cloudinary/url-gen/qualifiers/flag";
 import { AdvancedImage } from "@cloudinary/react";
 import { Box, CircularProgress } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
+import type { ImageCrop } from "../util/types";
 
 const THUMBNAIL_SIZE = 64;
 const LIGHTBOX_MAX_WIDTH = "90vw";
@@ -65,6 +67,7 @@ export type CloudinaryImageProps = {
   alt?: string;
   /** Rendering context determines the requested dimensions. */
   context: CloudinaryImageContext;
+  crop?: ImageCrop | null;
   requestedWidth?: number;
   requestedHeight?: number;
   style?: React.CSSProperties;
@@ -80,6 +83,7 @@ export default function CloudinaryImage({
   cloudinary_public_id,
   alt = "",
   context,
+  crop,
   requestedWidth,
   requestedHeight,
   style,
@@ -95,7 +99,10 @@ export default function CloudinaryImage({
   // in state (not a ref) is the React-documented pattern for deriving state from
   // props during render — refs must not be read during render.
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
-  const currentKey = `${url}__${cloudinary_public_id}__${context}`;
+  const cropKey = crop
+    ? `${crop.x}:${crop.y}:${crop.width}:${crop.height}`
+    : "";
+  const currentKey = `${url}__${cloudinary_public_id}__${context}__${cropKey}`;
   const [prevKey, setPrevKey] = useState(currentKey);
   if (prevKey !== currentKey) {
     setPrevKey(currentKey);
@@ -118,7 +125,7 @@ export default function CloudinaryImage({
       window.removeEventListener("pageshow", syncLoadedStateFromDom);
       document.removeEventListener("visibilitychange", syncLoadedStateFromDom);
     };
-  }, [url, cloudinary_public_id, context]);
+  }, [url, cloudinary_public_id, context, cropKey]);
 
   function handleLoad(event: React.SyntheticEvent<HTMLImageElement>) {
     setIsLoading(false);
@@ -186,6 +193,17 @@ export default function CloudinaryImage({
     const cld = new Cloudinary({ cloud: { cloudName } });
     const img = cld.image(publicId);
 
+    if (crop) {
+      img.resize(
+        cropAction()
+          .width(crop.width)
+          .height(crop.height)
+          .x(crop.x)
+          .y(crop.y)
+          .addFlag(relative()),
+      );
+    }
+
     if (context === "lightbox") {
       const vw = Math.round(viewport.width * viewport.pixelRatio * 0.9);
       const vh = Math.round(viewport.height * viewport.pixelRatio * 0.8);
@@ -199,12 +217,14 @@ export default function CloudinaryImage({
         context === "gallery" ? (requestedWidth ?? 320) : THUMBNAIL_SIZE;
       const targetHeight =
         context === "gallery" ? (requestedHeight ?? 240) : THUMBNAIL_SIZE;
-      // thumbnail, gallery, or preview — cropped fill with auto gravity
+      // When a stored crop is present the subject is already isolated — use
+      // center fill to avoid running auto gravity a second time on the cropped
+      // image, which would cause a second round of subject detection and
+      // hyper-zoom.  Without a stored crop, let auto gravity pick the subject.
       img.resize(
-        fill()
-          .width(targetWidth)
-          .height(targetHeight)
-          .gravity(autoGravity()),
+        crop
+          ? fill().width(targetWidth).height(targetHeight)
+          : fill().width(targetWidth).height(targetHeight).gravity(autoGravity()),
       );
     }
 

@@ -5,6 +5,8 @@ of the api app but do not belong in workflow.py (which is reserved for
 workflow-state-machine logic derived from workflow.yml).
 """
 
+import requests
+from cloudinary import CloudinaryImage
 from django.apps import apps
 from django.conf import settings
 from django.db import transaction
@@ -69,6 +71,110 @@ def image_to_dict(image) -> dict | None:
     }
 
 
+def crop_to_dict(crop: object) -> dict | None:
+    """Normalize crop payloads to relative {x, y, width, height} coordinates."""
+    if not isinstance(crop, dict):
+        return None
+    try:
+        normalized = {
+            "x": float(crop["x"]),
+            "y": float(crop["y"]),
+            "width": float(crop["width"]),
+            "height": float(crop["height"]),
+        }
+    except (KeyError, TypeError, ValueError):
+        return None
+    if normalized["width"] <= 0 or normalized["height"] <= 0:
+        return None
+    return {key: min(max(value, 0.0), 1.0) for key, value in normalized.items()}
+
+
+def _first_crop_candidate(value: object) -> dict | None:
+    if isinstance(value, dict):
+        if {"x", "y", "width", "height"}.issubset(value):
+            try:
+                return {
+                    "x": float(value["x"]),
+                    "y": float(value["y"]),
+                    "width": float(value["width"]),
+                    "height": float(value["height"]),
+                }
+            except (TypeError, ValueError):
+                return None
+        if {"x", "y", "w", "h"}.issubset(value):
+            try:
+                return {
+                    "x": float(value["x"]),
+                    "y": float(value["y"]),
+                    "width": float(value["w"]),
+                    "height": float(value["h"]),
+                }
+            except (TypeError, ValueError):
+                return None
+        for nested in value.values():
+            crop = _first_crop_candidate(nested)
+            if crop is not None:
+                return crop
+    if isinstance(value, list):
+        for nested in value:
+            crop = _first_crop_candidate(nested)
+            if crop is not None:
+                return crop
+    return None
+
+
+def parse_cloudinary_getinfo_crop(payload: object) -> dict | None:
+    """Extract Cloudinary fl_getinfo g_auto crop coordinates as relative values."""
+    crop = _first_crop_candidate(payload)
+    if crop is None:
+        return None
+    input_info = payload.get("input") if isinstance(payload, dict) else None
+    input_width = input_info.get("width") if isinstance(input_info, dict) else None
+    input_height = input_info.get("height") if isinstance(input_info, dict) else None
+    if (
+        isinstance(input_width, int | float)
+        and isinstance(input_height, int | float)
+        and input_width > 1
+        and input_height > 1
+        and (crop["x"] > 1 or crop["y"] > 1 or crop["width"] > 1 or crop["height"] > 1)
+    ):
+        crop = {
+            "x": crop["x"] / input_width,
+            "y": crop["y"] / input_height,
+            "width": crop["width"] / input_width,
+            "height": crop["height"] / input_height,
+        }
+    return crop_to_dict(crop)
+
+
+def cloudinary_getinfo_url(
+    cloud_name: str, public_id: str, *, width: int = 750
+) -> str | None:
+    """Return a Cloudinary fl_getinfo URL for an uploaded image asset."""
+    if not cloud_name or not public_id:
+        return None
+    return CloudinaryImage(public_id).build_url(
+        cloud_name=cloud_name,
+        secure=True,
+        transformation=[
+            {"crop": "crop", "gravity": "auto", "width": width},
+            {"flags": "getinfo"},
+        ],
+    )
+
+
+def fetch_cloudinary_auto_crop(
+    cloud_name: str, public_id: str, *, timeout: float = 10
+) -> dict | None:
+    """Fetch Cloudinary's g_auto crop suggestion for an existing asset."""
+    getinfo_url = cloudinary_getinfo_url(cloud_name, public_id)
+    if getinfo_url is None:
+        return None
+    response = requests.get(getinfo_url, timeout=timeout)
+    response.raise_for_status()
+    return parse_cloudinary_getinfo_crop(response.json())
+
+
 def normalize_image_payload(payload: object, user=None):
     """Return an Image row for an API/admin image payload.
 
@@ -119,6 +225,7 @@ def captioned_image_to_dict(link) -> dict:
     return {
         **image_payload,
         "caption": link.caption,
+        "crop": link.crop,
         "created": link.created,
     }
 
@@ -138,6 +245,7 @@ def replace_piece_state_images(piece_state, images: list[dict], user=None) -> No
             piece_state=piece_state,
             image=image,
             caption=payload.get("caption") or "",
+            crop=crop_to_dict(payload.get("crop")),
             created=created_val,
             order=order,
         )

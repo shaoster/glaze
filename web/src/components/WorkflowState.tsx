@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import type { PieceDetail, PieceState } from "../util/types";
 import {
+  fetchCloudinaryAutoCrop,
   fetchCloudinaryWidgetConfig,
   signCloudinaryWidgetParams,
   updateCurrentState,
@@ -337,11 +338,18 @@ export default function WorkflowState({
           };
           setSavingImage(true);
           setImageError(null);
-          updateCurrentState(pieceId, {
-            notes,
-            images: [...images, newImage],
-            custom_fields: normalizedAdditionalFields,
+          fetchCloudinaryAutoCrop({
+            cloudName: config.cloud_name,
+            publicId: result.info.public_id,
           })
+            .catch(() => null)
+            .then((crop) =>
+              updateCurrentState(pieceId, {
+                notes,
+                images: [...images, { ...newImage, crop }],
+                custom_fields: normalizedAdditionalFields,
+              }),
+            )
             .then((result) => {
               dispatch({
                 type: "replace_base_state",

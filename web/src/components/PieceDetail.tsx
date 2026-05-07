@@ -455,6 +455,7 @@ function PieceDetailContent({
                     url={piece.thumbnail.url}
                     cloud_name={piece.thumbnail.cloud_name}
                     cloudinary_public_id={piece.thumbnail.cloudinary_public_id}
+                    crop={piece.thumbnail.crop}
                     alt={piece.name}
                     context="detail"
                     style={{
