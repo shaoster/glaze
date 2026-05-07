@@ -798,7 +798,7 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
     return Response({"deleted": deleted})
 
 
-@extend_schema(
+@extend_schema(  # type: ignore[type-var]
     parameters=[
         OpenApiParameter(
             name="unreferenced_only",
@@ -812,7 +812,7 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
         503: {"type": "object"},
     },
 )
-@api_view(["GET"])  # type: ignore[arg-type]
+@api_view(["GET"])
 @permission_classes([IsAdminUser])
 async def admin_cloudinary_cleanup_archive(
     request: Request,
