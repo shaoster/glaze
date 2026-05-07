@@ -64,6 +64,49 @@ This keeps worktrees close to the repo-local bootstrap, makes cleanup easier, an
 
 When you do want a truly separate dependency environment inside the worktree, run `gz_setup --isolated` to replace any shared `.venv` or `web/node_modules` symlinks with local worktree-specific installs.
 
+### Adding a new Python package
+
+Bazel resolves Python packages from `requirements.lock` (pin-compiled from `requirements-dev.txt`). Three steps are required when adding a new package:
+
+**1. Add to `requirements.txt`** (runtime dep) or `requirements-dev.txt` (dev/lint/test only):
+
+```bash
+# Edit requirements.txt or requirements-dev.txt, then regenerate the lock.
+# Always run pip-compile from the repo root using requirements-dev.txt so that
+# dev deps (pytest-django, mypy stubs, etc.) are preserved in the lock file.
+pip-compile --generate-hashes --output-file=requirements.lock requirements-dev.txt
+```
+
+If working in a worktree, run from the worktree root after copying or symlinking `requirements-dev.txt` there — the `-r requirements.txt` inside it is a relative path that must resolve to the worktree's own `requirements.txt`.
+
+**2. Install locally** so the running dev server and tests pick it up:
+
+```bash
+pip install -r requirements.txt
+```
+
+**3. Add `requirement("package-name")` to the right `BUILD.bazel` target.**
+
+Bazel sandboxes don't inherit the venv — every package a target imports must be declared in its `deps`. The key target is `api_lib` in [`api/BUILD.bazel`](../../api/BUILD.bazel):
+
+```python
+deps = [
+    "//backend:backend_lib",
+    requirement("httpx"),   # ← add runtime packages here
+],
+```
+
+Test-only packages (e.g. `pytest-django`) are already declared in `_TEST_DEPS` and don't need to be added again. Verify the target builds in the sandbox before committing:
+
+```bash
+rtk bazel build //api:api_lib
+rtk bazel test //api:api_test //api:api_mypy
+```
+
+Commit `requirements.txt`, `requirements.lock`, `MODULE.bazel.lock` (updated automatically by Bazel), and the `BUILD.bazel` change together.
+
+---
+
 ### Updating pnpm-lock.yaml after npm installs
 
 Bazel resolves npm packages from `web/pnpm-lock.yaml`. After any `npm install` that adds or removes packages, regenerate the lockfile with `pnpm import` so Bazel picks up the change:
@@ -81,6 +124,8 @@ git add web/package.json web/package-lock.json web/pnpm-lock.yaml
 ```
 
 `pnpm` is available at `~/.nvm/versions/node/*/bin/pnpm` when nvm is active. If `env-agent.sh` has sourced `.nvm/nvm.sh`, the `pnpm` binary is on `$PATH` and the `(cd web && pnpm import)` subshell inherits it.
+
+After updating the lockfile, check whether the new package needs to be added to a `js_library` `srcs` or `deps` in the relevant `BUILD.bazel`. Use `rtk bazel query 'labels(srcs, <library-target>)'` to inspect what a target currently includes, and add the package to the appropriate `BUILD.bazel` entry if Bazel tests fail with a missing module error.
 
 ---
 
