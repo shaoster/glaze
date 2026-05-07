@@ -40,7 +40,10 @@ EOF
 
 _gz_is_running() {   # _gz_is_running <name>
     local pidfile="$_GLAZE_PIDS/$1.pid"
-    [[ -f "$pidfile" ]] && kill -0 "$(cat "$pidfile")" 2>/dev/null
+    [[ -f "$pidfile" ]] || return 1
+    local pid
+    pid=$(cat "$pidfile")
+    kill -0 "$pid" 2>/dev/null || kill -0 -- -"$pid" 2>/dev/null
 }
 
 _gz_start() {        # _gz_start <name> <logfile> <cmd...>
@@ -56,12 +59,19 @@ _gz_start() {        # _gz_start <name> <logfile> <cmd...>
 
 _gz_stop() {         # _gz_stop <name>
     local pidfile="$_GLAZE_PIDS/$1.pid"
-    if _gz_is_running "$1"; then
-        local pid
+    if [[ -f "$pidfile" ]]; then
+        local pid i
         pid=$(cat "$pidfile")
         # Kill the entire process group so child processes don't get orphaned when
         # the bash wrapper shell exits (e.g. on Ctrl+C from gz_start)
-        kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null
+        kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
+        for i in {1..10}; do
+            kill -0 -- -"$pid" 2>/dev/null || break
+            sleep 0.1
+        done
+        if kill -0 -- -"$pid" 2>/dev/null; then
+            kill -KILL -- -"$pid" 2>/dev/null || true
+        fi
         echo "$1: stopped"
     else
         echo "$1: not running"
@@ -389,20 +399,24 @@ gz_deploy() {
 # ---------------------------------------------------------------------------
 
 gz_backend() {
-    local venv_root env_root port
+    local venv_root env_root port web_port app_origin
     venv_root="$(_gz_venv_root)"
     env_root="$(_gz_preferred_root_for ".env.local")"
     port=$(_gz_find_free_port 8080)
+    web_port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || echo 5173)
+    app_origin="http://localhost:$web_port"
     echo "$port" > "$_GLAZE_PIDS/backend.port"
     _gz_start backend "$_GLAZE_LOGS/backend.log" \
-        bash -c "source '$venv_root/.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$env_root/.env.local' ] && source '$env_root/.env.local'; set +a && python manage.py load_public_library --skip-if-missing && python manage.py runserver $port"
+        bash -c "source '$venv_root/.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$env_root/.env.local' ] && source '$env_root/.env.local'; set +a && export APP_ORIGIN='$app_origin' && python manage.py load_public_library --skip-if-missing && python manage.py runserver $port"
 }
 
 gz_web() {
-    local backend_port
+    local backend_port port
     backend_port=$(cat "$_GLAZE_PIDS/backend.port" 2>/dev/null || echo 8080)
+    port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || _gz_find_free_port 5173)
+    echo "$port" > "$_GLAZE_PIDS/web.port"
     BACKEND_PORT="$backend_port" _gz_start web "$_GLAZE_LOGS/web.log" \
-        bash -c "cd '$GLAZE_ROOT/web' && BACKEND_PORT=$backend_port npm run dev"
+        bash -c "cd '$GLAZE_ROOT/web' && BACKEND_PORT=$backend_port npm run dev -- --port $port --strictPort"
 
     # Wait for Vite to print the chosen port (up to 10 s)
     local i=0
@@ -411,7 +425,6 @@ gz_web() {
         (( i++ ))
         (( i >= 50 )) && break
     done
-    local port
     port=$(grep 'Local:' "$_GLAZE_LOGS/web.log" | tail -1 | grep -oE ':[0-9]+/' | tr -d ':/')
     [[ -n "$port" ]] && echo "$port" > "$_GLAZE_PIDS/web.port"
     [[ -n "$port" ]] && echo "web: http://localhost:$port"
@@ -432,6 +445,7 @@ gz_open() {
 
 gz_start() {
     _gz_rotate_log backend
+    _gz_find_free_port 5173 > "$_GLAZE_PIDS/web.port"
     gz_backend
     _gz_rotate_log web
     gz_web
@@ -516,12 +530,35 @@ gz_cd() {   # gz_cd <pattern> — cd to a matching worktree and re-source env.sh
     cd "$target" && source "$target/env.sh"
 }
 
-gz_logs() {    # gz_logs [backend|web]  — defaults to both
-    case "${1:-all}" in
-        backend)  tail -f "$_GLAZE_LOGS/backend.log" ;;
-        web) tail -f "$_GLAZE_LOGS/web.log" ;;
-        *)        tail -f "$_GLAZE_LOGS/backend.log" "$_GLAZE_LOGS/web.log" ;;
+gz_logs() {    # gz_logs [backend|web|all]  — defaults to running servers
+    local target="${1:-running}"
+    local logs=()
+    case "$target" in
+        backend|web)
+            if _gz_is_running "$target"; then
+                logs+=("$_GLAZE_LOGS/$target.log")
+            else
+                echo "$target: not running"
+                return 1
+            fi
+            ;;
+        all)
+            logs=("$_GLAZE_LOGS/backend.log" "$_GLAZE_LOGS/web.log")
+            ;;
+        running)
+            _gz_is_running backend && logs+=("$_GLAZE_LOGS/backend.log")
+            _gz_is_running web && logs+=("$_GLAZE_LOGS/web.log")
+            ;;
+        *)
+            echo "Usage: gz_logs [backend|web|all]"
+            return 2
+            ;;
     esac
+    if [[ ${#logs[@]} -eq 0 ]]; then
+        echo "No servers running in $GLAZE_ROOT"
+        return 1
+    fi
+    tail -f "${logs[@]}"
 }
 
 # ---------------------------------------------------------------------------
@@ -568,7 +605,7 @@ _GZ_SHORTCUTS=(
     "gz_status         — show what services are running (with ports)"
     "gz_worktrees      — list all worktrees with branch, path, and running-server indicator"
     "gz_cd <pattern>   — cd to a matching worktree and re-source env.sh (guards against mid-session switch)"
-    "gz_logs [backend|web] — stream backend and/or web logs"
+    "gz_logs [backend|web|all] — stream logs for running servers (or a selected service)"
 )
 
 gz_help() {
