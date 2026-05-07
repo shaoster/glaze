@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTheme } from "@mui/material";
 import {
@@ -27,6 +34,7 @@ import AutosaveStatus from "./AutosaveStatus";
 import { useAutosave } from "./useAutosave";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
 import {
+  type ImageEntry,
   buildDraftState,
   draftReducer,
   normalizeAdditionalFieldPayload,
@@ -192,8 +200,14 @@ export default function WorkflowState({
 
   const [savingImage, setSavingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
+  const latestImagesRef = useRef<ImageEntry[]>(images);
+  const imageSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const isDirty = notes !== baseState.notes || additionalFieldsDirty;
+
+  useEffect(() => {
+    latestImagesRef.current = images;
+  }, [images]);
 
   useEffect(() => {
     onDirtyChange?.(readOnly ? false : isDirty);
@@ -233,6 +247,40 @@ export default function WorkflowState({
     delayMs: autosaveDelayMs,
   });
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
+
+  const saveUploadedImage = useCallback(
+    (newImage: ImageEntry) => {
+      setSavingImage(true);
+      setImageError(null);
+      const queuedSave = imageSaveQueueRef.current
+        .catch(() => undefined)
+        .then(async () => {
+          const nextImages = [...latestImagesRef.current, newImage];
+          const result = await updateCurrentState(pieceId, {
+            notes,
+            images: nextImages,
+            custom_fields: normalizedAdditionalFields,
+          });
+          latestImagesRef.current = result.current_state.images;
+          dispatch({
+            type: "replace_base_state",
+            pieceState: result.current_state,
+          });
+          onSaved(result);
+        });
+      imageSaveQueueRef.current = queuedSave;
+      queuedSave
+        .catch(() =>
+          setImageError("Failed to save image. Please try again."),
+        )
+        .finally(() => {
+          if (imageSaveQueueRef.current === queuedSave) {
+            setSavingImage(false);
+          }
+        });
+    },
+    [normalizedAdditionalFields, notes, onSaved, pieceId],
+  );
 
   useEffect(() => {
     pieceDetailSaveStatus?.publishWorkflowStatus({
@@ -340,25 +388,9 @@ export default function WorkflowState({
             caption: "",
             cloudinary_public_id: result.info.public_id,
             cloud_name: config.cloud_name,
+            crop: null,
           };
-          setSavingImage(true);
-          setImageError(null);
-          updateCurrentState(pieceId, {
-            notes,
-            images: [...images, { ...newImage, crop: null }],
-            custom_fields: normalizedAdditionalFields,
-          })
-            .then((result) => {
-              dispatch({
-                type: "replace_base_state",
-                pieceState: result.current_state,
-              });
-              onSaved(result);
-            })
-            .catch(() =>
-              setImageError("Failed to save image. Please try again."),
-            )
-            .finally(() => setSavingImage(false));
+          saveUploadedImage(newImage);
         }
       },
     );

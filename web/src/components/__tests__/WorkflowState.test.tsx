@@ -17,6 +17,7 @@ import {
 } from "../workflowStateDraft";
 import type { PieceState, PieceDetail } from "../../util/types";
 import * as api from "../../util/api";
+import type { UpdateStatePayload } from "../../util/api";
 
 const { mockWorkflow } = vi.hoisted(() => ({
   mockWorkflow: {
@@ -862,6 +863,51 @@ describe("WorkflowState", () => {
               crop: null,
             }),
           ]),
+        }),
+      ),
+    );
+  });
+
+  it("appends every image from a multi-image widget upload", async () => {
+    vi.mocked(api.updateCurrentState).mockImplementation(
+      async (_pieceId: string, payload: UpdateStatePayload) => {
+        const currentState = makeState({ images: payload.images ?? [] });
+        return makePieceDetail({
+          current_state: currentState,
+          history: [currentState],
+        });
+      },
+    );
+    const { triggerEvent } = setupControllableWidget();
+    render(<WorkflowState {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
+
+    await waitFor(() =>
+      expect(window.cloudinary!.createUploadWidget).toHaveBeenCalled(),
+    );
+    await act(async () => {
+      triggerEvent("success", {
+        secure_url: "https://res.cloudinary.com/demo/image/upload/one.jpg",
+        public_id: "one",
+        resource_type: "image",
+      });
+      triggerEvent("success", {
+        secure_url: "https://res.cloudinary.com/demo/image/upload/two.jpg",
+        public_id: "two",
+        resource_type: "image",
+      });
+    });
+
+    await waitFor(() => expect(api.updateCurrentState).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(api.updateCurrentState).toHaveBeenLastCalledWith(
+        "test-piece-id",
+        expect.objectContaining({
+          images: [
+            expect.objectContaining({ url: expect.stringContaining("one.jpg") }),
+            expect.objectContaining({ url: expect.stringContaining("two.jpg") }),
+          ],
         }),
       ),
     );
