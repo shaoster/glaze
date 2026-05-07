@@ -1,4 +1,4 @@
-import type { ImageCrop, PieceState } from "../util/types";
+import type { PieceState } from "../util/types";
 import {
   type ResolvedAdditionalField,
   getAdditionalFieldDefinitions,
@@ -9,7 +9,6 @@ export type ImageEntry = {
   caption: string;
   cloudinary_public_id?: string | null;
   cloud_name?: string | null;
-  crop?: ImageCrop | null;
 };
 
 type AdditionalFieldInputMap = Record<string, string>;
@@ -138,7 +137,6 @@ function stateImages(pieceState: PieceState): ImageEntry[] {
     caption: img.caption,
     cloudinary_public_id: img.cloudinary_public_id ?? null,
     cloud_name: img.cloud_name ?? null,
-    crop: img.crop ?? null,
   }));
 }
 

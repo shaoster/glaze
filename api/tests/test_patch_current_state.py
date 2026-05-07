@@ -44,12 +44,10 @@ class TestPatchCurrentState:
         assert response.json()["current_state"]["notes"] == "Updated notes  "
 
     def test_update_images(self, client, piece):
-        crop = {"x": 0.1, "y": 0.2, "width": 0.7, "height": 0.6}
         images = [
             {
                 "url": "http://example.com/img.jpg",
                 "caption": "Test",
-                "crop": crop,
                 "created": "2024-01-01T00:00:00Z",
             }
         ]
@@ -62,7 +60,6 @@ class TestPatchCurrentState:
         result_images = response.json()["current_state"]["images"]
         assert len(result_images) == 1
         assert result_images[0]["url"] == "http://example.com/img.jpg"
-        assert result_images[0]["crop"] == crop
 
     def test_update_images_empty_caption(self, client, piece):
         images = [{"url": "http://example.com/img.jpg", "caption": ""}]

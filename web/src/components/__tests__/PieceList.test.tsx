@@ -7,26 +7,8 @@ import PieceList from "../PieceList";
 import type { PieceSummary } from "../../util/types";
 
 vi.mock("../CloudinaryImage", () => ({
-  default: ({
-    crop,
-    requestedHeight,
-    requestedWidth,
-    url,
-    alt,
-  }: {
-    crop?: unknown;
-    requestedHeight?: number;
-    requestedWidth?: number;
-    url: string;
-    alt?: string;
-  }) => (
-    <img
-      src={url}
-      alt={alt ?? ""}
-      data-crop={crop ? "yes" : "no"}
-      data-requested-height={requestedHeight}
-      data-requested-width={requestedWidth}
-    />
+  default: ({ url, alt }: { url: string; alt?: string }) => (
+    <img src={url} alt={alt ?? ""} />
   ),
 }));
 
@@ -115,24 +97,6 @@ describe("PieceList", () => {
           (img) => img.getAttribute("src") === "https://example.com/bowl.jpg",
         ),
       ).toBe(true);
-    });
-
-    it("sizes Cloudinary thumbnail requests from the crop aspect ratio", () => {
-      const { container } = renderPieceList([
-        makePiece({
-          thumbnail: {
-            url: "https://example.com/tall.jpg",
-            cloudinary_public_id: "pieces/tall",
-            cloud_name: "demo",
-            crop: { x: 0, y: 0, width: 0.5, height: 1 },
-          },
-        }),
-      ]);
-
-      const image = container.querySelector("img")!;
-      expect(image.getAttribute("data-crop")).toBe("yes");
-      expect(image.getAttribute("data-requested-width")).toBe("240");
-      expect(image.getAttribute("data-requested-height")).toBe("220");
     });
 
     it("card links to piece detail page", () => {

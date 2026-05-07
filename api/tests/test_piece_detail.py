@@ -174,7 +174,6 @@ class TestPieceDetail:
             "url": "https://example.com/thumb.jpg",
             "cloudinary_public_id": "pieces/thumb",
             "cloud_name": "demo-cloud",
-            "crop": {"x": 0.15, "y": 0.1, "width": 0.6, "height": 0.75},
         }
 
         response = client.patch(
@@ -186,12 +185,7 @@ class TestPieceDetail:
         assert response.status_code == 200
         assert response.json()["thumbnail"] == thumbnail
         piece.refresh_from_db()
-        assert piece.thumbnail == {
-            "url": thumbnail["url"],
-            "cloudinary_public_id": thumbnail["cloudinary_public_id"],
-            "cloud_name": thumbnail["cloud_name"],
-        }
-        assert piece.thumbnail_crop == thumbnail["crop"]
+        assert piece.thumbnail == thumbnail
 
     def test_owner_can_share_completed_piece(self, client, piece):
         PieceState.objects.create(

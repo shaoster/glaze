@@ -119,7 +119,6 @@ export default function ImageLightbox({
               url={image.url}
               cloud_name={image.cloud_name}
               cloudinary_public_id={image.cloudinary_public_id}
-              crop={image.crop}
               alt={image.caption || "Pottery image"}
               context="lightbox"
               style={{

@@ -1,6 +1,5 @@
 import CloseIcon from "@mui/icons-material/Close";
 import { Box, IconButton, Typography } from "@mui/material";
-import type { ImageCrop } from "../util/types";
 import CloudinaryImage from "./CloudinaryImage";
 
 type PiecePhotoGalleryGridImage = {
@@ -8,7 +7,6 @@ type PiecePhotoGalleryGridImage = {
   caption: string;
   cloudinary_public_id?: string | null;
   cloud_name?: string | null;
-  crop?: ImageCrop | null;
   stateLabel: string;
   editableCurrentStateIndex: number | null;
 };
@@ -80,7 +78,6 @@ export default function PiecePhotoGalleryGrid({
                 url={image.url}
                 cloud_name={image.cloud_name}
                 cloudinary_public_id={image.cloudinary_public_id}
-                crop={image.crop}
                 alt={image.caption || "Piece photo"}
                 context="gallery"
                 requestedWidth={requestedWidth}

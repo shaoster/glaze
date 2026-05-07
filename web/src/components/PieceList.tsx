@@ -76,23 +76,24 @@ function daysSince(date: Date): number {
   return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function thumbHeight(piece: PieceSummary, cardWidth: number): number {
-  const crop = piece.thumbnail?.crop;
-  if (!crop || crop.width <= 0 || crop.height <= 0) return 150;
-  return Math.min(Math.max(cardWidth * (crop.height / crop.width), 100), 220);
+// Variable card thumbnail height based on recency
+function thumbHeight(days: number, isTerminal: boolean): number {
+  if (isTerminal) return 110;
+  if (days <= 2) return 180;
+  if (days < 14) return 140;
+  return 110;
 }
 
 interface PieceCardProps {
   piece: PieceSummary;
-  width: number;
 }
 
-const PieceCard = ({ piece, width }: PieceCardProps) => {
+const PieceCard = ({ piece }: PieceCardProps) => {
   const theme = useTheme();
   const isTerminal = isTerminalState(piece.current_state.state);
   const days = daysSince(new Date(piece.last_modified));
   const isStale = days >= 14 && !isTerminal;
-  const h = thumbHeight(piece, width);
+  const h = thumbHeight(days, isTerminal);
   const label = formatState(piece.current_state.state);
   const detailPath = `/pieces/${piece.id}`;
 
@@ -133,10 +134,9 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
           url={piece.thumbnail?.url ?? DEFAULT_THUMBNAIL}
           cloud_name={piece.thumbnail?.cloud_name}
           cloudinary_public_id={piece.thumbnail?.cloudinary_public_id}
-          crop={piece.thumbnail?.crop}
           context="gallery"
-          requestedWidth={Math.round(width)}
-          requestedHeight={h}
+          requestedWidth={300}
+          requestedHeight={200}
           style={{
             width: "100%",
             height: "100%",
@@ -279,8 +279,8 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
   );
 };
 
-function MasonryPieceCard({ data, width }: RenderComponentProps<PieceSummary>) {
-  return <PieceCard piece={data} width={width} />;
+function MasonryPieceCard({ data }: RenderComponentProps<PieceSummary>) {
+  return <PieceCard piece={data} />;
 }
 
 type PieceListProps = {

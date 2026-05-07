@@ -188,7 +188,6 @@ class Piece(models.Model):
         to="api.Image",
         related_name="thumbnail_for_pieces",
     )
-    thumbnail_crop = models.JSONField(null=True, blank=True, default=None)
     shared = models.BooleanField(default=False)
     current_location = models.ForeignKey(
         "Location",
@@ -316,7 +315,6 @@ class PieceStateImage(models.Model):
         related_name="piece_state_links",
     )
     caption = models.CharField(max_length=1024, blank=True, default="")
-    crop = models.JSONField(null=True, blank=True, default=None)
     created = models.DateTimeField(default=timezone.now)
     order = models.PositiveSmallIntegerField()
 

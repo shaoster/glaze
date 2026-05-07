@@ -174,7 +174,6 @@ describe("PiecePhotoGallery", () => {
             caption: "Updated caption",
             cloudinary_public_id: "piece/a",
             cloud_name: null,
-            crop: null,
           },
         ] satisfies EditablePiecePhoto[],
       }),
@@ -246,7 +245,6 @@ describe("PiecePhotoGallery", () => {
             caption: "Wheel detail",
             cloudinary_public_id: "piece/a",
             cloud_name: null,
-            crop: null,
           },
         ] satisfies EditablePiecePhoto[],
       }),
@@ -437,7 +435,6 @@ describe("PiecePhotoGallery", () => {
           url: "https://example.com/a.jpg",
           cloudinary_public_id: "piece/a",
           cloud_name: null,
-          crop: null,
         },
       }),
     );
