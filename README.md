@@ -113,6 +113,54 @@ source env.sh
 
 **AI coding agents (Claude Code, Codex, Cursor agent):** a companion script [`env-agent.sh`](env-agent.sh) provides a silent, lightweight bootstrap (venv activation + `.env.local` loading) for non-interactive shells. Claude Code picks it up via `.claude/settings.json`; Codex and other agents inherit it through `BASH_ENV` when launched from an `env.sh`-sourced terminal. Prefer repo-local worktrees under `.agent-worktrees/...` instead of `/tmp`; the bootstrap detects the active git worktree root automatically and falls back to the main checkout's `.env.local` and `.venv` when the worktree does not have its own yet. `gz_setup` reuses the shared `.venv` and `web/node_modules` by default, and `gz_setup --isolated` creates worktree-local dependency installs when a branch is changing Python or Node packages. Keep repo-local Codex-specific config in `.agent-config/codex/` rather than `.codex`, which may be reserved by the local Codex installation. See [`docs/agents/dev.md`](docs/agents/dev.md) for details.
 
+### Vibe Coding With Agents
+
+When you want an agent to implement an issue or start a PR-sized change, use the
+explicit issue flow:
+
+```text
+/do #292
+```
+
+That prompt tells the agent to create a branch like `issue/292-vibe-coding-flow`
+and a repo-local worktree like
+`.agent-worktrees/codex/issue-292-vibe-coding-flow` before it analyzes or edits
+anything. The agent should immediately print a copy-friendly line:
+
+```text
+Worktree: /home/phil/code/glaze/.agent-worktrees/codex/issue-292-vibe-coding-flow
+```
+
+Open a dedicated terminal tab for that worktree and jump into it with:
+
+```bash
+gz_cd 292
+```
+
+From there, use the normal helpers:
+
+```bash
+gz_setup
+gz_start
+```
+
+Each agent gets its own worktree under `.agent-worktrees/<agent>/...`, and each
+issue gets its own branch. Keep one terminal per worktree so `gz_start`,
+`gz_stop`, logs, and port files stay scoped to the right code checkout.
+
+After the PR is merged or abandoned, stop any servers from that worktree's
+terminal and clean up the local checkout:
+
+```bash
+gz_stop
+git worktree remove .agent-worktrees/codex/issue-292-vibe-coding-flow
+git worktree prune
+git branch -d issue/292-vibe-coding-flow
+```
+
+Use `git branch -D` only for an abandoned unmerged branch after confirming the
+work is no longer needed.
+
 ### Local secrets and config (git-safe)
 
 Keep local-only settings in `.env.local` files; they are gitignored by default:
