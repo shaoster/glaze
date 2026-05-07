@@ -6,6 +6,7 @@ import CloudinaryImage from "../CloudinaryImage";
 const cloudinaryMocks = vi.hoisted(() => ({
   resize: vi.fn(),
   cropAddFlag: vi.fn(),
+  fillGravity: vi.fn(),
 }));
 
 vi.mock("@cloudinary/react", () => ({
@@ -87,9 +88,9 @@ vi.mock("@cloudinary/url-gen/actions/resize", () => ({
     height() {
       return this;
     },
-    gravity() {
+    gravity: cloudinaryMocks.fillGravity.mockImplementation(function gravity() {
       return this;
-    },
+    }),
   }),
   fit: () => ({
     width() {
@@ -127,6 +128,7 @@ describe("CloudinaryImage", () => {
   beforeEach(() => {
     cloudinaryMocks.resize.mockClear();
     cloudinaryMocks.cropAddFlag.mockClear();
+    cloudinaryMocks.fillGravity.mockClear();
   });
 
   it("shows a spinner until a fallback image loads", () => {
@@ -202,6 +204,33 @@ describe("CloudinaryImage", () => {
 
     expect(cloudinaryMocks.cropAddFlag).toHaveBeenCalledWith("relative");
     expect(cloudinaryMocks.resize).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not call fill.gravity when a stored crop is present (prevents double-crop)", () => {
+    render(
+      <CloudinaryImage
+        url="https://res.cloudinary.com/demo/image/upload/v1/pottery/sample.jpg"
+        cloud_name="demo"
+        cloudinary_public_id="pottery/sample"
+        crop={{ x: 0.1, y: 0.2, width: 0.6, height: 0.7 }}
+        alt="Cloudinary pot"
+        context="thumbnail"
+      />,
+    );
+    expect(cloudinaryMocks.fillGravity).not.toHaveBeenCalled();
+  });
+
+  it("calls fill.gravity with autoGravity when no stored crop is present", () => {
+    render(
+      <CloudinaryImage
+        url="https://res.cloudinary.com/demo/image/upload/v1/pottery/sample.jpg"
+        cloud_name="demo"
+        cloudinary_public_id="pottery/sample"
+        alt="Cloudinary pot"
+        context="thumbnail"
+      />,
+    );
+    expect(cloudinaryMocks.fillGravity).toHaveBeenCalledTimes(1);
   });
 
   it("resets loading state when only the crop changes", () => {

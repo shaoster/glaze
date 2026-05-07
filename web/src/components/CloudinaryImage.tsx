@@ -217,12 +217,14 @@ export default function CloudinaryImage({
         context === "gallery" ? (requestedWidth ?? 320) : THUMBNAIL_SIZE;
       const targetHeight =
         context === "gallery" ? (requestedHeight ?? 240) : THUMBNAIL_SIZE;
-      // thumbnail, gallery, or preview — cropped fill with auto gravity
+      // When a stored crop is present the subject is already isolated — use
+      // center fill to avoid running auto gravity a second time on the cropped
+      // image, which would cause a second round of subject detection and
+      // hyper-zoom.  Without a stored crop, let auto gravity pick the subject.
       img.resize(
-        fill()
-          .width(targetWidth)
-          .height(targetHeight)
-          .gravity(autoGravity()),
+        crop
+          ? fill().width(targetWidth).height(targetHeight)
+          : fill().width(targetWidth).height(targetHeight).gravity(autoGravity()),
       );
     }
 
