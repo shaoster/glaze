@@ -71,6 +71,9 @@ _gz_load_preferred_env_file ".env.local"
 _gz_load_preferred_env_file "web/.env.local"
 _gz_load_preferred_env_file "mobile/.env.local"
 
+# Prevent Rust/rtk stack overflows from crashing the WSL2 VM
+ulimit -s unlimited 2>/dev/null || true
+
 # Propagate to child processes so agents spawned from an interactive shell
 # (Codex, etc.) also get this bootstrap without per-tool config.
 export BASH_ENV="$_GLAZE_SCRIPT_DIR/env-agent.sh"
