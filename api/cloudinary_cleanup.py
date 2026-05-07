@@ -1,6 +1,7 @@
-import os
 import logging
+import os
 import posixpath
+from collections import Counter
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any, cast
@@ -13,9 +14,16 @@ import cloudinary.api
 import cloudinary.exceptions
 from cloudinary import CloudinaryImage
 
-from .models import Image
+from .models import GlazeCombination, GlazeType, Image, Piece, PieceStateImage
 
 logger = logging.getLogger(__name__)
+
+REFERENCED_BREAKDOWN_WORKFLOW_IMAGE_PATHS = frozenset(
+    {
+        "globals.glaze_type.test_tile_image",
+        "globals.glaze_combination.test_tile_image",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -29,6 +37,19 @@ class CloudinaryCleanupAsset:
     bytes: int | None
     created_at: str | None
     referenced: bool
+
+
+@dataclass(frozen=True)
+class CloudinaryCleanupReferenceBreakdownItem:
+    key: str
+    label: str
+    count: int
+
+
+@dataclass(frozen=True)
+class CloudinaryCleanupReferenceBreakdown:
+    sources: list[CloudinaryCleanupReferenceBreakdownItem]
+    warnings: list[str]
 
 
 def configure_cloudinary_admin() -> tuple[str, str | None]:
@@ -53,6 +74,141 @@ def list_referenced_public_ids() -> set[str]:
         .values_list("cloudinary_public_id", flat=True)
     )
     return {public_id for public_id in public_ids if public_id is not None}
+
+
+def summarize_referenced_public_ids(
+    scanned_public_ids: set[str] | None = None,
+) -> CloudinaryCleanupReferenceBreakdown:
+    source_counts: Counter[str] = Counter()
+    warnings: list[str] = []
+
+    piece_thumbnail_refs = (
+        Piece.objects.exclude(thumbnail__isnull=True)
+        .exclude(thumbnail__cloudinary_public_id__isnull=True)
+        .exclude(thumbnail__cloudinary_public_id="")
+    )
+    piece_state_image_refs = PieceStateImage.objects.exclude(
+        image__cloudinary_public_id__isnull=True
+    ).exclude(image__cloudinary_public_id="")
+    glaze_tile_image_refs = (
+        GlazeType.objects.exclude(test_tile_image__isnull=True)
+        .exclude(test_tile_image__cloudinary_public_id__isnull=True)
+        .exclude(test_tile_image__cloudinary_public_id="")
+    )
+    glaze_combination_image_refs = (
+        GlazeCombination.objects.exclude(test_tile_image__isnull=True)
+        .exclude(test_tile_image__cloudinary_public_id__isnull=True)
+        .exclude(test_tile_image__cloudinary_public_id="")
+    )
+
+    if scanned_public_ids is not None:
+        piece_thumbnail_refs = piece_thumbnail_refs.filter(
+            thumbnail__cloudinary_public_id__in=scanned_public_ids
+        )
+        piece_state_image_refs = piece_state_image_refs.filter(
+            image__cloudinary_public_id__in=scanned_public_ids
+        )
+        glaze_tile_image_refs = glaze_tile_image_refs.filter(
+            test_tile_image__cloudinary_public_id__in=scanned_public_ids
+        )
+        glaze_combination_image_refs = glaze_combination_image_refs.filter(
+            test_tile_image__cloudinary_public_id__in=scanned_public_ids
+        )
+
+    glaze_tile_count = GlazeType.objects.count()
+    glaze_tile_image_count = (
+        GlazeType.objects.exclude(test_tile_image__isnull=True)
+        .exclude(test_tile_image__cloudinary_public_id__isnull=True)
+        .exclude(test_tile_image__cloudinary_public_id="")
+        .count()
+    )
+    glaze_combination_count = GlazeCombination.objects.count()
+    glaze_combination_image_count = (
+        GlazeCombination.objects.exclude(test_tile_image__isnull=True)
+        .exclude(test_tile_image__cloudinary_public_id__isnull=True)
+        .exclude(test_tile_image__cloudinary_public_id="")
+        .count()
+    )
+
+    source_counts["piece_list"] = piece_thumbnail_refs.count()
+    source_counts["piece_state_images"] = piece_state_image_refs.count()
+    source_counts["glaze_tiles"] = glaze_tile_image_refs.count()
+    source_counts["glaze_combinations"] = glaze_combination_image_refs.count()
+
+    covered_public_ids = (
+        set(
+            piece_thumbnail_refs.values_list(
+                "thumbnail__cloudinary_public_id", flat=True
+            )
+        )
+        | set(
+            piece_state_image_refs.values_list("image__cloudinary_public_id", flat=True)
+        )
+        | set(
+            glaze_tile_image_refs.values_list(
+                "test_tile_image__cloudinary_public_id", flat=True
+            )
+        )
+        | set(
+            glaze_combination_image_refs.values_list(
+                "test_tile_image__cloudinary_public_id", flat=True
+            )
+        )
+    )
+    if scanned_public_ids is None:
+        unknown_referenced_public_ids: set[str] = set()
+    else:
+        unknown_referenced_public_ids = (
+            scanned_public_ids & list_referenced_public_ids()
+        ) - covered_public_ids
+    source_counts["unknown_referenced_assets"] = len(unknown_referenced_public_ids)
+
+    if glaze_tile_image_count < glaze_tile_count:
+        warnings.append(
+            f"Found fewer references than glaze tiles "
+            f"({glaze_tile_image_count} of {glaze_tile_count})."
+        )
+    if glaze_combination_image_count < glaze_combination_count:
+        warnings.append(
+            f"Found fewer references than glaze combinations "
+            f"({glaze_combination_image_count} of {glaze_combination_count})."
+        )
+    if unknown_referenced_public_ids:
+        warnings.append(
+            f"Found {len(unknown_referenced_public_ids)} referenced assets "
+            f"not explained by known source paths."
+        )
+
+    return CloudinaryCleanupReferenceBreakdown(
+        sources=[
+            CloudinaryCleanupReferenceBreakdownItem(
+                key="piece_list",
+                label="PieceList",
+                count=source_counts["piece_list"],
+            ),
+            CloudinaryCleanupReferenceBreakdownItem(
+                key="piece_state_images",
+                label="Piece State Images",
+                count=source_counts["piece_state_images"],
+            ),
+            CloudinaryCleanupReferenceBreakdownItem(
+                key="glaze_tiles",
+                label="Glaze Tiles",
+                count=source_counts["glaze_tiles"],
+            ),
+            CloudinaryCleanupReferenceBreakdownItem(
+                key="glaze_combinations",
+                label="Glaze Combinations",
+                count=source_counts["glaze_combinations"],
+            ),
+            CloudinaryCleanupReferenceBreakdownItem(
+                key="unknown_referenced_assets",
+                label="Unknown Referenced Assets",
+                count=source_counts["unknown_referenced_assets"],
+            ),
+        ],
+        warnings=warnings,
+    )
 
 
 def list_cloudinary_assets(max_results: int = 500) -> list[CloudinaryCleanupAsset]:

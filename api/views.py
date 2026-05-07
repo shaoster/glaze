@@ -27,6 +27,7 @@ from .cloudinary_cleanup import (
     delete_cloudinary_assets,
     list_cloudinary_assets,
     stream_cloudinary_cleanup_archive,
+    summarize_referenced_public_ids,
 )
 from .manual_tile_imports import import_manual_tile_records
 from .models import (
@@ -681,7 +682,29 @@ def cloudinary_widget_sign(request: Request) -> Response:
                         },
                     },
                 },
-                "summary": {"type": "object"},
+                "summary": {
+                    "type": "object",
+                    "properties": {
+                        "total": {"type": "integer"},
+                        "referenced": {"type": "integer"},
+                        "unused": {"type": "integer"},
+                        "referenced_breakdown": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "key": {"type": "string"},
+                                    "label": {"type": "string"},
+                                    "count": {"type": "integer"},
+                                },
+                            },
+                        },
+                        "reference_warnings": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                    },
+                },
             },
         },
         503: {"type": "object"},
@@ -715,6 +738,9 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
                 {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
         unused = [asset for asset in assets if not asset.referenced]
+        referenced_breakdown = summarize_referenced_public_ids(
+            {asset.public_id for asset in assets}
+        )
         return Response(
             {
                 "assets": [
@@ -733,6 +759,15 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
                     "total": len(assets),
                     "referenced": len(assets) - len(unused),
                     "unused": len(unused),
+                    "referenced_breakdown": [
+                        {
+                            "key": source.key,
+                            "label": source.label,
+                            "count": source.count,
+                        }
+                        for source in referenced_breakdown.sources
+                    ],
+                    "reference_warnings": referenced_breakdown.warnings,
                 },
             }
         )
@@ -777,7 +812,9 @@ def admin_cloudinary_cleanup_archive(
         assets = list_cloudinary_assets()
         unused = [asset for asset in assets if not asset.referenced]
     except ValueError as exc:
-        return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(
+            {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
 
     response = StreamingHttpResponse(
         stream_cloudinary_cleanup_archive(unused),
