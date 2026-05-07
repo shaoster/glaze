@@ -277,6 +277,8 @@ class TestCloudinaryCleanup:
     def test_archive_streams_all_unused_assets_with_cloudinary_paths(
         self, client, user, monkeypatch
     ):
+        import asyncio
+
         admin = User.objects.create(
             username="admin@example.com",
             email="admin@example.com",
@@ -315,36 +317,44 @@ class TestCloudinaryCleanup:
                 ]
             }
 
-        class FakeDownload:
-            def __init__(self, body: bytes):
-                self._body = body
-                self._offset = 0
+        bodies = {
+            "https://example.com/orphan.heic": b"orphan-bytes",
+            "https://example.com/another.webp": b"another-bytes",
+        }
 
-            def __enter__(self):
+        class FakeAsyncResponse:
+            def __init__(self, url: str):
+                self._body = bodies[url]
+
+            async def raise_for_status(self) -> None:
+                pass
+
+            async def aiter_bytes(self, chunk_size: int):
+                yield self._body
+
+            async def __aenter__(self):
                 return self
 
-            def __exit__(self, *args):
-                return None
+            async def __aexit__(self, *args):
+                pass
 
-            def read(self, size=-1):
-                if size == -1:
-                    size = len(self._body) - self._offset
-                chunk = self._body[self._offset : self._offset + size]
-                self._offset += len(chunk)
-                return chunk
+        class FakeAsyncClient:
+            def __init__(self, timeout: int):
+                pass
 
-        def fake_urlopen(url, timeout):
-            assert timeout == 30
-            bodies = {
-                "https://example.com/orphan.heic": b"orphan-bytes",
-                "https://example.com/another.webp": b"another-bytes",
-            }
-            return FakeDownload(bodies[url])
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            def stream(self, method: str, url: str):
+                return FakeAsyncResponse(url)
 
         monkeypatch.setattr(
             "api.cloudinary_cleanup.cloudinary.api.resources", fake_resources
         )
-        monkeypatch.setattr("api.cloudinary_cleanup.urlopen", fake_urlopen)
+        monkeypatch.setattr("api.cloudinary_cleanup.httpx.AsyncClient", FakeAsyncClient)
 
         response = client.get(ARCHIVE_URL)
 
@@ -359,28 +369,39 @@ class TestCloudinaryCleanup:
             assert archive.read("demo/glaze_dev/piece/orphan.heic") == b"orphan-bytes"
 
     def test_archive_iterator_fetches_assets_lazily(self, monkeypatch):
-        opened_urls = []
+        import asyncio
 
-        class FakeDownload:
+        opened_urls: list[str] = []
+
+        class FakeAsyncResponse:
             def __init__(self, url: str):
-                self.url = url
-                self._sent = False
+                self._url = url
 
-            def __enter__(self):
+            async def raise_for_status(self) -> None:
+                pass
+
+            async def aiter_bytes(self, chunk_size: int):
+                yield f"bytes from {self._url}".encode()
+
+            async def __aenter__(self):
+                opened_urls.append(self._url)
                 return self
 
-            def __exit__(self, *args):
-                return None
+            async def __aexit__(self, *args):
+                pass
 
-            def read(self, size=-1):
-                if self._sent:
-                    return b""
-                self._sent = True
-                return f"bytes from {self.url}".encode()
+        class FakeAsyncClient:
+            def __init__(self, timeout: int):
+                pass
 
-        def fake_urlopen(url, timeout):
-            opened_urls.append(url)
-            return FakeDownload(url)
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            def stream(self, method: str, url: str):
+                return FakeAsyncResponse(url)
 
         assets = [
             CloudinaryCleanupAsset(
@@ -406,10 +427,14 @@ class TestCloudinaryCleanup:
                 referenced=False,
             ),
         ]
-        monkeypatch.setattr("api.cloudinary_cleanup.urlopen", fake_urlopen)
+        monkeypatch.setattr("api.cloudinary_cleanup.httpx.AsyncClient", FakeAsyncClient)
 
-        stream = stream_cloudinary_cleanup_archive(assets)
-        first_chunk = next(stream)
+        async def collect_first_chunk() -> bytes:
+            async for chunk in stream_cloudinary_cleanup_archive(assets):
+                return chunk
+            return b""
+
+        first_chunk = asyncio.run(collect_first_chunk())
 
         assert first_chunk
         assert opened_urls == ["https://example.com/first.jpg"]

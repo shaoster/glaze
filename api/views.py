@@ -812,7 +812,7 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
         503: {"type": "object"},
     },
 )
-@api_view(["GET"])
+@api_view(["GET"])  # type: ignore[arg-type]
 @permission_classes([IsAdminUser])
 async def admin_cloudinary_cleanup_archive(
     request: Request,
