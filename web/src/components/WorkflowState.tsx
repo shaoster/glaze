@@ -261,14 +261,17 @@ export default function WorkflowState({
       setUploadError("Failed to load upload configuration. Please try again.");
       return;
     }
+    // Keeps the iframe hidden until it is ready (removed on display-changed: shown).
     const hideStyle = document.createElement("style");
-    hideStyle.textContent = [
-      'iframe[title="Upload Widget"] { opacity: 0; }',
-      // On iOS PWA with viewport-fit=cover the status bar overlays the page.
-      // Push the widget iframe below it so its header controls are reachable.
-      'iframe[title="Upload Widget"] { top: env(safe-area-inset-top) !important; height: calc(100dvh - env(safe-area-inset-top)) !important; }',
-    ].join("\n");
+    hideStyle.textContent = 'iframe[title="Upload Widget"] { opacity: 0; }';
     document.head.appendChild(hideStyle);
+    // On iOS PWA with viewport-fit=cover the status bar overlays the page.
+    // Push the widget iframe below it so its header controls are reachable.
+    // This style must persist for the widget's lifetime (not removed with hideStyle).
+    const safeAreaStyle = document.createElement("style");
+    safeAreaStyle.textContent =
+      'iframe[title="Upload Widget"] { top: env(safe-area-inset-top) !important; height: calc(100dvh - env(safe-area-inset-top)) !important; }';
+    document.head.appendChild(safeAreaStyle);
 
     const uploadWidget = window.cloudinary?.createUploadWidget(
       {
@@ -321,11 +324,14 @@ export default function WorkflowState({
               iframe.style.transition = "opacity 0.15s ease-in";
               iframe.style.opacity = "1";
             }
+          } else if (state === "hidden" || state === "destroyed") {
+            safeAreaStyle.remove();
           }
         }
         if (error) {
           setWidgetLoading(false);
           hideStyle.remove();
+          safeAreaStyle.remove();
           setUploadError("Upload failed. Please try again.");
           return;
         }
