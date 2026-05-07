@@ -572,6 +572,17 @@ describe("upload endpoints", () => {
     expect(signature).toBe("signed-value");
   });
 
+  it("parseCloudinaryAutoCrop normalizes pixel getinfo coordinates", async () => {
+    const { parseCloudinaryAutoCrop } = await loadApiModule();
+
+    expect(
+      parseCloudinaryAutoCrop({
+        input: { width: 1000, height: 800 },
+        g_auto_info: { x: 100, y: 80, width: 500, height: 400 },
+      }),
+    ).toEqual({ x: 0.1, y: 0.1, width: 0.5, height: 0.5 });
+  });
+
   it("importManualSquareCropRecords posts multipart data with payload and matching files", async () => {
     const { importManualSquareCropRecords } = await loadApiModule();
     mockClient.post.mockResolvedValue({

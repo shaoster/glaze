@@ -175,6 +175,9 @@ vi.mock("../../util/api", () => ({
   fetchCloudinaryWidgetConfig: vi
     .fn()
     .mockResolvedValue({ cloud_name: "demo", api_key: "123456" }),
+  fetchCloudinaryAutoCrop: vi
+    .fn()
+    .mockResolvedValue({ x: 0.1, y: 0.2, width: 0.7, height: 0.6 }),
   signCloudinaryWidgetParams: vi.fn().mockResolvedValue("mock-signature"),
 }));
 
@@ -859,6 +862,7 @@ describe("WorkflowState", () => {
             expect.objectContaining({
               url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
               cloudinary_public_id: "sample",
+              crop: { x: 0.1, y: 0.2, width: 0.7, height: 0.6 },
             }),
           ]),
         }),

@@ -57,6 +57,7 @@ from .models import (
 from .serializer_registry import _GLOBAL_ENTRY_SERIALIZERS, global_entry_serializer
 from .utils import (
     captioned_image_to_dict,
+    crop_to_dict,
     get_or_create_location,
     image_to_dict,
     normalize_image_payload,
@@ -230,6 +231,7 @@ class CaptionedImageSerializer(serializers.Serializer):
         allow_blank=True, required=False, default=None, allow_null=True
     )
     cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
+    crop = serializers.JSONField(required=False, allow_null=True, default=None)
 
 
 class PieceStateSerializer(serializers.ModelSerializer):
@@ -321,6 +323,7 @@ class ThumbnailSerializer(serializers.Serializer):
         allow_blank=True, allow_null=True, default=None
     )
     cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
+    crop = serializers.JSONField(required=False, allow_null=True, default=None)
 
 
 @add_tags(Piece)
@@ -373,7 +376,10 @@ class PieceSummarySerializer(serializers.ModelSerializer):
 
     @extend_schema_field(ThumbnailSerializer(allow_null=True))
     def get_thumbnail(self, obj: Piece) -> dict | None:
-        return image_to_dict(obj.thumbnail)
+        thumbnail = image_to_dict(obj.thumbnail)
+        if thumbnail is None:
+            return None
+        return {**thumbnail, "crop": obj.thumbnail_crop}
 
 
 class PieceDetailSerializer(PieceSummarySerializer):
@@ -663,8 +669,14 @@ class PieceUpdateSerializer(serializers.Serializer):
                 self.context["request"].user, validated_data["current_location"]
             )
         if "thumbnail" in validated_data:
+            thumbnail_payload = validated_data["thumbnail"]
             instance.thumbnail = normalize_image_payload(
-                validated_data["thumbnail"], user=instance.user
+                thumbnail_payload, user=instance.user
+            )
+            instance.thumbnail_crop = (
+                crop_to_dict(thumbnail_payload.get("crop"))
+                if thumbnail_payload is not None
+                else None
             )
         if "shared" in validated_data:
             instance.shared = validated_data["shared"]

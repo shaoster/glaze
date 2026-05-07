@@ -28,7 +28,7 @@ export type PiecePhotoGalleryImage = CaptionedImage & {
 
 export type EditablePiecePhoto = Pick<
   CaptionedImage,
-  "url" | "caption" | "cloudinary_public_id" | "cloud_name"
+  "url" | "caption" | "cloudinary_public_id" | "cloud_name" | "crop"
 >;
 
 type PiecePhotoGalleryProps = {
@@ -112,11 +112,12 @@ export default function PiecePhotoGallery({
   const editableCurrentStateImages = images
     .filter(isEditableImage)
     .sort((left, right) => left.editableCurrentStateIndex - right.editableCurrentStateIndex)
-    .map(({ url, caption, cloudinary_public_id, cloud_name }) => ({
+    .map(({ url, caption, cloudinary_public_id, cloud_name, crop }) => ({
       url,
       caption,
       cloudinary_public_id: cloudinary_public_id ?? null,
       cloud_name: cloud_name ?? null,
+      crop: crop ?? null,
     }));
 
   function stopEditingCaption() {
@@ -141,6 +142,7 @@ export default function PiecePhotoGallery({
         caption: image.caption,
         cloudinary_public_id: image.cloudinary_public_id ?? null,
         cloud_name: image.cloud_name ?? null,
+        crop: image.crop ?? null,
       })),
       custom_fields: normalizeFields(currentStateAdditionalFields ?? {}),
     });
@@ -156,6 +158,7 @@ export default function PiecePhotoGallery({
         url: image.url,
         cloudinary_public_id: image.cloudinary_public_id ?? null,
         cloud_name: image.cloud_name ?? null,
+        crop: image.crop ?? null,
       },
     });
     onPieceUpdated(updated);

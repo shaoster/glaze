@@ -1,7 +1,25 @@
 import pytest
 
 from api.models import GlazeCombination, GlazeType
-from api.utils import sync_glaze_type_singleton_combination
+from api.utils import (
+    parse_cloudinary_getinfo_crop,
+    sync_glaze_type_singleton_combination,
+)
+
+
+class TestCloudinaryCropParsing:
+    def test_normalizes_pixel_coordinates_from_getinfo(self):
+        payload = {
+            "input": {"width": 1000, "height": 800},
+            "g_auto_info": {"x": 100, "y": 80, "width": 500, "height": 400},
+        }
+
+        assert parse_cloudinary_getinfo_crop(payload) == {
+            "x": 0.1,
+            "y": 0.1,
+            "width": 0.5,
+            "height": 0.5,
+        }
 
 
 @pytest.mark.django_db

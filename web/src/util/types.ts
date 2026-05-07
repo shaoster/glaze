@@ -32,6 +32,13 @@ export const SUCCESSORS: Record<string, string[]> = Object.fromEntries(
 // State type from the generated schema — stays in sync with backend validation.
 export type State = components["schemas"]["StateEnum"];
 
+export type ImageCrop = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 // ---------------------------------------------------------------------------
 // Domain types
 //
@@ -41,11 +48,18 @@ export type State = components["schemas"]["StateEnum"];
 // No Omit<> is required anywhere in this file.
 // ---------------------------------------------------------------------------
 
-// CaptionedImage is correct as-is — direct re-export.
-export type CaptionedImage = components["schemas"]["CaptionedImage"];
+// CaptionedImage narrows JSONField-backed crop to the normalized crop shape.
+export type CaptionedImage = Omit<
+  components["schemas"]["CaptionedImage"],
+  "crop"
+> & {
+  crop?: ImageCrop | null;
+};
 
 // Thumbnail stored on a Piece. Distinct from CaptionedImage — no caption field.
-export type Thumbnail = components["schemas"]["Thumbnail"];
+export type Thumbnail = Omit<components["schemas"]["Thumbnail"], "crop"> & {
+  crop?: ImageCrop | null;
+};
 
 // Minimal state shape returned in list responses.
 // Intersection narrows state: string → state: State.
@@ -56,14 +70,19 @@ export type StateSummary = components["schemas"]["StateSummary"] & {
 
 // Full state record returned in detail responses.
 // Intersection narrows state: string → state: State.
-export type PieceState = components["schemas"]["PieceState"] & {
+export type PieceState = Omit<components["schemas"]["PieceState"], "images"> & {
   state: State;
+  images: CaptionedImage[];
   custom_fields: Record<string, unknown>;
 };
 
 // Piece list entry. Intersection narrows current_state to use our typed StateSummary.
-export type PieceSummary = components["schemas"]["PieceSummary"] & {
+export type PieceSummary = Omit<
+  components["schemas"]["PieceSummary"],
+  "current_state" | "thumbnail"
+> & {
   current_state: StateSummary;
+  thumbnail: Thumbnail | null;
   shared: boolean;
   can_edit: boolean;
   tags: TagEntry[];
