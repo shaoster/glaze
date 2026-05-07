@@ -585,9 +585,9 @@ describe("WorkflowState", () => {
       screen.getByRole("button", { name: "Browse Kiln Location" }),
     );
     await userEvent.click(screen.getByRole("tab", { name: "Create" }));
-    await userEvent.type(
+    fireEvent.change(
       screen.getByRole("textbox", { name: "Location" }),
-      "New Kiln",
+      { target: { value: "New Kiln" } },
     );
     await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
     await waitFor(() =>
