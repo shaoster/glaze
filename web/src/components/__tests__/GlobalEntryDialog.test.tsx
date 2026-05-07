@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import GlobalEntryDialog from "../GlobalEntryDialog";
 import * as api from "../../util/api";
@@ -282,11 +282,11 @@ describe("GlobalEntryDialog", () => {
       ),
     );
 
-    await userEvent.type(
+    fireEvent.change(
       screen.getByRole("combobox", {
         name: "Contains glaze types (all must match)",
       }),
-      "Iron",
+      { target: { value: "Iron" } },
     );
     await userEvent.click(screen.getByRole("option", { name: "Iron Red" }));
 
@@ -308,9 +308,9 @@ describe("GlobalEntryDialog", () => {
       />,
     );
 
-    await userEvent.type(
+    fireEvent.change(
       screen.getByRole("combobox", { name: "Firing Temperature" }),
-      "Cone",
+      { target: { value: "Cone" } },
     );
     await userEvent.click(screen.getByRole("option", { name: "Cone 6" }));
 
@@ -390,9 +390,9 @@ describe("GlobalEntryDialog", () => {
     );
 
     await userEvent.click(screen.getByRole("tab", { name: "Create" }));
-    await userEvent.type(
+    fireEvent.change(
       screen.getByRole("textbox", { name: "Location" }),
-      "Studio K",
+      { target: { value: "Studio K" } },
     );
     await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
 
@@ -419,9 +419,9 @@ describe("GlobalEntryDialog", () => {
     );
 
     await userEvent.click(screen.getByRole("tab", { name: "Create" }));
-    await userEvent.type(
+    fireEvent.change(
       screen.getByRole("textbox", { name: "Location" }),
-      "Studio K",
+      { target: { value: "Studio K" } },
     );
     await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
 
@@ -452,15 +452,15 @@ describe("GlobalEntryDialog", () => {
     );
 
     await userEvent.click(screen.getByRole("tab", { name: "Create" }));
-    await userEvent.type(
+    fireEvent.change(
       screen.getByRole("combobox", { name: "Layer 1" }),
-      "Iron",
+      { target: { value: "Iron" } },
     );
     await userEvent.click(screen.getByRole("option", { name: "Iron Red" }));
     await userEvent.click(screen.getByRole("button", { name: "Add layer" }));
-    await userEvent.type(
+    fireEvent.change(
       screen.getByRole("combobox", { name: "Layer 2" }),
-      "Clear",
+      { target: { value: "Clear" } },
     );
     await userEvent.click(screen.getByRole("option", { name: "Clear" }));
     await userEvent.click(
@@ -517,15 +517,15 @@ describe("GlobalEntryDialog", () => {
     );
 
     await userEvent.click(screen.getByRole("tab", { name: "Create" }));
-    await userEvent.type(
+    fireEvent.change(
       screen.getByRole("combobox", { name: "Layer 1" }),
-      "Iron",
+      { target: { value: "Iron" } },
     );
     await userEvent.click(screen.getByRole("option", { name: "Iron Red" }));
     await userEvent.click(screen.getByRole("button", { name: "Add layer" }));
-    await userEvent.type(
+    fireEvent.change(
       screen.getByRole("combobox", { name: "Layer 2" }),
-      "Clear",
+      { target: { value: "Clear" } },
     );
     await userEvent.click(screen.getByRole("option", { name: "Clear" }));
 
