@@ -28,6 +28,8 @@ import type {
   TagEntry,
   Thumbnail,
   ImageCrop,
+  AsyncTask,
+  AsyncTaskStatus,
 } from "./types";
 
 export type AuthUser = {
@@ -156,6 +158,19 @@ function mapPieceDetail(raw: Wire<PieceDetail>): PieceDetail {
     ...mapPieceSummary(raw),
     current_state: mapPieceState(raw.current_state),
     history: raw.history.map(mapPieceState),
+  };
+}
+
+function mapTask(raw: Wire<AsyncTask>): AsyncTask {
+  return {
+    id: raw.id,
+    status: raw.status as AsyncTaskStatus,
+    task_type: raw.task_type,
+    input_params: raw.input_params,
+    result: raw.result,
+    error: raw.error ?? null,
+    created: new Date(raw.created),
+    last_modified: new Date(raw.last_modified),
   };
 }
 
@@ -490,6 +505,46 @@ export async function signCloudinaryWidgetParams(
     },
   );
   return data.signature;
+}
+
+export async function submitTask(
+  taskType: string,
+  inputParams: Record<string, unknown> = {},
+): Promise<AsyncTask> {
+  const { data } = await client.post<Wire<AsyncTask>>("tasks/", {
+    task_type: taskType,
+    input_params: inputParams,
+  });
+  return mapTask(data);
+}
+
+export async function fetchTask(taskId: string): Promise<AsyncTask> {
+  const { data } = await client.get<Wire<AsyncTask>>(`tasks/${taskId}/`);
+  return mapTask(data);
+}
+
+/**
+ * Polls a task until it reaches a terminal state (success or failure).
+ *
+ * Implements exponential backoff: starts at 1s, doubling up to a max of 10s.
+ */
+export async function pollTask(
+  taskId: string,
+  onUpdate?: (task: AsyncTask) => void,
+): Promise<AsyncTask> {
+  let delay = 1000;
+  while (true) {
+    const task = await fetchTask(taskId);
+
+    onUpdate?.(task);
+
+    if (task.status === "success" || task.status === "failure") {
+      return task;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    delay = Math.min(delay * 2, 10000);
+  }
 }
 
 export type ManualSquareCropImportRecordPayload = {

@@ -36,6 +36,7 @@ from .models import (
     Piece,
     PieceState,
     UserProfile,
+    AsyncTask,
 )
 from .serializer_registry import (
     _GLOBAL_ENTRY_SERIALIZERS,  # auto-generated in _register_globals(); hand-written serializers overwrite
@@ -53,6 +54,8 @@ from .serializers import (
     PieceSummarySerializer,
     PieceUpdateSerializer,
     RegisterSerializer,
+    TaskSubmissionSerializer,
+    AsyncTaskSerializer,
 )
 from .utils import bootstrap_dev_user
 from .workflow import (
@@ -879,6 +882,44 @@ def auth_login(request: Request) -> Response:
 def auth_logout(request: Request) -> Response:
     logout(request)
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+from .tasks import get_task_interface
+
+
+@extend_schema(
+    request=TaskSubmissionSerializer,
+    responses={202: AsyncTaskSerializer},
+    summary="Submit an asynchronous background task",
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def submit_task(request: Request) -> Response:
+    serializer = TaskSubmissionSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    task = AsyncTask.objects.create(
+        user=request.user,
+        task_type=serializer.validated_data["task_type"],
+        input_params=serializer.validated_data.get("input_params", {}),
+    )
+
+    # Hand off to the swappable background runner.
+    get_task_interface().submit(task)
+
+    return Response(AsyncTaskSerializer(task).data, status=status.HTTP_202_ACCEPTED)
+
+
+@extend_schema(
+    responses={200: AsyncTaskSerializer},
+    summary="Get status and result of an asynchronous task",
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def task_detail(request: Request, task_id: str) -> Response:
+    # Scope to current user to prevent leaking task state between accounts.
+    task = get_object_or_404(AsyncTask, id=task_id, user=request.user)
+    return Response(AsyncTaskSerializer(task).data)
 
 
 @extend_schema(request=None, responses={200: AuthUserSerializer, 401: None})

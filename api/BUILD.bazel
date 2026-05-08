@@ -242,6 +242,19 @@ py_test(
     ],
 )
 
+py_test(
+    name = "api_task_test",
+    size = "medium",
+    srcs = _CONFTEST + [
+        "tests/test_async_tasks.py",
+    ],
+    args = ["api/tests/test_async_tasks.py"],
+    data = _TEST_DATA,
+    env = _TEST_ENV,
+    main = "//tools:pytest_main.py",
+    deps = _TEST_DEPS,
+)
+
 # ── API test suite ────────────────────────────────────────────────────────────
 # Aggregate target: `bazel test //api:api_test` runs all API tests.
 # Individual targets above run only when their inputs change.
@@ -254,6 +267,7 @@ test_suite(
         ":api_glaze_test",
         ":api_model_test",
         ":api_piece_test",
+        ":api_task_test",
         ":api_workflow_test",
     ],
 )

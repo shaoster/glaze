@@ -95,6 +95,14 @@ export type PieceDetail = PieceSummary & {
   history: PieceState[];
 };
 
+// Status type for asynchronous tasks.
+export type AsyncTaskStatus = components["schemas"]["StatusEnum"];
+
+// Full record for an asynchronous background task.
+export type AsyncTask = components["schemas"]["AsyncTask"] & {
+  status: AsyncTaskStatus;
+};
+
 // GlazeCombination entry and related types — derived from generated OpenAPI types.
 export type GlazeTypeRef = components["schemas"]["GlazeTypeRef"];
 export type FiringTemperatureRef =

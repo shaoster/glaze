@@ -52,6 +52,7 @@ from .models import (
     Piece,
     PieceState,
     UserProfile,
+    AsyncTask,
     models,
 )
 from .serializer_registry import _GLOBAL_ENTRY_SERIALIZERS, global_entry_serializer
@@ -708,7 +709,28 @@ def _replace_piece_tags(piece: Piece, user, tag_ids: list[str]) -> None:
         piece_tag_model.objects.create(piece=piece, tag=tags_by_id[tag_id], order=order)
 
 
+class AsyncTaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsyncTask
+        fields = [
+            "id",
+            "status",
+            "task_type",
+            "input_params",
+            "result",
+            "error",
+            "created",
+            "last_modified",
+        ]
+
+
+class TaskSubmissionSerializer(serializers.Serializer):
+    task_type = serializers.CharField(max_length=255)
+    input_params = serializers.JSONField(required=False, default=dict)
+
+
 class AuthUserSerializer(serializers.Serializer):
+
     id = serializers.IntegerField(read_only=True)
     email = serializers.EmailField(read_only=True)
     first_name = serializers.CharField(read_only=True, allow_blank=True)

@@ -677,3 +677,83 @@ describe("upload endpoints", () => {
     );
   });
 });
+
+describe("task endpoints", () => {
+  const wireTask = {
+    id: "task-1",
+    status: "pending",
+    task_type: "ping",
+    input_params: { foo: "bar" },
+    result: null,
+    error: null,
+    created: "2024-01-01T00:00:00Z",
+    last_modified: "2024-01-01T00:00:00Z",
+  };
+
+  it("submitTask posts the task type and params", async () => {
+    const { submitTask } = await loadApiModule();
+    mockClient.post.mockResolvedValue({ data: { ...wireTask, status: "pending" } });
+
+    const result = await submitTask("ping", { foo: "bar" });
+
+    expect(mockClient.post).toHaveBeenCalledWith("tasks/", {
+      task_type: "ping",
+      input_params: { foo: "bar" },
+    });
+    expect(result.status).toBe("pending");
+  });
+
+  it("fetchTask returns a mapped task", async () => {
+    const { fetchTask } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: wireTask });
+
+    const result = await fetchTask("task-1");
+
+    expect(mockClient.get).toHaveBeenCalledWith("tasks/task-1/");
+    expect(result.created).toBeInstanceOf(Date);
+  });
+
+  it("pollTask continues fetching until terminal state", async () => {
+    const { pollTask } = await loadApiModule();
+
+    // First call: pending
+    mockClient.get.mockResolvedValueOnce({
+      data: { ...wireTask, status: "pending" },
+    });
+    // Second call: running
+    mockClient.get.mockResolvedValueOnce({
+      data: { ...wireTask, status: "running" },
+    });
+    // Third call: success
+    mockClient.get.mockResolvedValueOnce({
+      data: { ...wireTask, status: "success", result: { done: true } },
+    });
+
+    vi.useFakeTimers();
+    const onUpdate = vi.fn();
+    const pollPromise = pollTask("task-1", onUpdate);
+
+    // Initial fetch
+    await vi.runOnlyPendingTimersAsync();
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "pending" }),
+    );
+
+    // Second fetch
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "running" }),
+    );
+
+    // Third fetch
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "success" }),
+    );
+
+    const result = await pollPromise;
+    expect(result.status).toBe("success");
+    expect(mockClient.get).toHaveBeenCalledTimes(3);
+    vi.useRealTimers();
+  });
+});
