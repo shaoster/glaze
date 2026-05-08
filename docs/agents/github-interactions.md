@@ -61,7 +61,7 @@ Create the label if it doesn't exist: `gh label create <agent-name> --color 5319
 Before opening or pushing to a PR, verify every item:
 
 - Check for redundant or copy-pasted code at every new or modified call site — confirm whether information passed at the call site is already known by the callee and can be removed.
-- Add the appropriate `Co-authored-by:` tag to commits (e.g. `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`). Include the model version when possible.
+- During every commit, explicitly append the `Co-authored-by: <model-name> <noreply@google.com>` tag to the commit message. The agent is responsible for identifying its current model (e.g., `gemini-3.1-flash-lite-preview`) and ensuring this tag is present before finalizing the commit.
 - Every commit should have a short descriptive title with detailed bullets in the body explaining what was done and why.
 - If a PR includes refactoring alongside functional changes, describe both clearly in the commit and PR body.
 - All test suites pass: `bazel test //...`
