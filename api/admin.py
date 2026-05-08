@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from typing import ClassVar
+from typing import Any, ClassVar, cast
 
 import cloudinary
 from adminsortable2.admin import SortableAdminBase, SortableInlineAdminMixin
@@ -22,6 +22,7 @@ from .models import (
     GlazeType,
     Piece,
     PieceState,
+    PieceStateImage,
     UserProfile,
 )
 from .serializers import PieceStateSerializer
@@ -552,6 +553,7 @@ for _model_cls in get_public_global_models():
 class PieceStateInline(admin.TabularInline):
     model = PieceState
     extra = 0
+    show_change_link = True
     readonly_fields = (
         "id",
         "state",
@@ -719,6 +721,75 @@ class PieceAdmin(ExportMixin, admin.ModelAdmin):
         return cs.state if cs else "—"
 
 
+class PieceStateImageAdminForm(forms.ModelForm):
+    image = CloudinaryImageFormField(required=False)
+
+    class Meta:
+        model = PieceStateImage
+        fields = "__all__"
+
+
+class PieceStateImageInline(SortableInlineAdminMixin, admin.TabularInline):
+    model = PieceStateImage
+    form = PieceStateImageAdminForm
+    extra = 1
+
+    class Media:
+        css = {"all": ("admin/css/sortable_inline.css",)}
+        js = ("admin/js/sortable_inline_notice.js",)
+
+
+def _get_custom_form_fields(state_id: str) -> dict[str, forms.Field]:
+    from django.apps import apps
+    from .workflow import build_custom_fields_schema, get_global_config, get_global_ref_fields_for_state
+
+    schema = build_custom_fields_schema(state_id)
+    properties = schema.get("properties", {})
+    required_list = schema.get("required", [])
+
+    declared_fields: dict[str, forms.Field] = {}
+    for field_name, field_def in properties.items():
+        field_type = field_def.get("type")
+        is_required = field_name in required_list
+        label = field_name.replace("_", " ").capitalize()
+        form_field_name = f"custom_{field_name}"
+
+        if field_type == "boolean":
+            declared_fields[form_field_name] = forms.BooleanField(
+                required=False, label=label
+            )
+        elif field_type == "integer":
+            declared_fields[form_field_name] = forms.IntegerField(
+                required=is_required, label=label
+            )
+        elif field_type == "number":
+            declared_fields[form_field_name] = forms.FloatField(
+                required=is_required, label=label
+            )
+        else:
+            declared_fields[form_field_name] = forms.CharField(
+                required=is_required, label=label
+            )
+
+    # Add global ref fields
+    global_ref_fields = get_global_ref_fields_for_state(state_id)
+    for field_name, global_name in global_ref_fields.items():
+        form_field_name = f"custom_{field_name}"
+        if form_field_name in declared_fields:
+            continue
+
+        config = get_global_config(global_name)
+        model_cls = apps.get_model("api", config["model"])
+        label = field_name.replace("_", " ").capitalize()
+        declared_fields[form_field_name] = forms.ModelChoiceField(
+            queryset=model_cls.objects.all(),
+            required=False,  # DSL doesn't easily expose 'required' for refs yet
+            label=label,
+        )
+
+    return declared_fields
+
+
 class PieceStateAdminForm(forms.ModelForm):
     allow_sealed_edit = forms.BooleanField(
         required=False,
@@ -733,14 +804,122 @@ class PieceStateAdminForm(forms.ModelForm):
         model = PieceState
         fields = "__all__"
 
+    def __init__(self, *args, **kwargs):
+        from django.apps import apps
+        from .workflow import get_global_ref_fields_for_state, get_global_config
+
+        super().__init__(*args, **kwargs)
+        self.custom_field_names = [
+            name
+            for name in self.fields
+            if name.startswith("custom_") and name != "custom_fields"
+        ]
+
+        if self.custom_field_names:
+            # Hide the raw JSON field if we have typed fields for it
+            if "custom_fields" in self.fields:
+                self.fields["custom_fields"].widget = forms.HiddenInput()
+                self.fields["custom_fields"].required = False
+
+            instance = self.instance
+            if isinstance(instance, PieceState):
+                # Populating initial values from custom_fields blob (inline fields)
+                if isinstance(instance.custom_fields, dict):
+                    for form_field_name in self.custom_field_names:
+                        field_name = form_field_name[7:]  # strip 'custom_'
+                        if field_name in instance.custom_fields:
+                            self.initial[form_field_name] = instance.custom_fields[
+                                field_name
+                            ]
+
+                # Populating initial values for relational fields (junction tables)
+                if instance.state:
+                    global_ref_fields = get_global_ref_fields_for_state(instance.state)
+                    for field_name, global_name in global_ref_fields.items():
+                        form_field_name = f"custom_{field_name}"
+                        if form_field_name not in self.fields:
+                            continue
+
+                        config = get_global_config(global_name)
+                        ref_model_cls = apps.get_model(
+                            "api", f"PieceState{config['model']}Ref"
+                        )
+                        try:
+                            ref_obj = ref_model_cls.objects.get(
+                                piece_state=instance, field_name=field_name
+                            )
+                            self.initial[form_field_name] = getattr(
+                                ref_obj, f"{global_name}_id"
+                            )
+                        except ref_model_cls.DoesNotExist:
+                            pass
+
+    def clean(self):
+        from .workflow import get_global_ref_fields_for_state
+
+        cleaned_data = super().clean()
+        if hasattr(self, "custom_field_names") and self.custom_field_names:
+            instance = self.instance
+            custom_data: dict[str, Any] = {}
+            if isinstance(instance, PieceState):
+                instance_custom_fields = instance.custom_fields
+                if isinstance(instance_custom_fields, dict):
+                    custom_data = dict(instance_custom_fields)
+
+            # Relational fields are stored in junction tables, NOT in the JSON blob.
+            global_ref_fields = (
+                get_global_ref_fields_for_state(instance.state)
+                if isinstance(instance, PieceState) and instance.state
+                else {}
+            )
+
+            for form_field_name in self.custom_field_names:
+                field_name = form_field_name[7:]  # strip 'custom_' prefix
+                if field_name in global_ref_fields:
+                    continue
+
+                if form_field_name in cleaned_data:  # type: ignore[operator]
+                    val = cleaned_data[form_field_name]  # type: ignore[index]
+                    if val not in (None, ""):
+                        custom_data[field_name] = val
+                    elif field_name in custom_data:
+                        del custom_data[field_name]
+            cleaned_data["custom_fields"] = custom_data  # type: ignore[index]
+        return cleaned_data
+
 
 @admin.register(PieceState)
-class PieceStateAdmin(ExportMixin, admin.ModelAdmin):
+class PieceStateAdmin(ExportMixin, SortableAdminBase, admin.ModelAdmin):
     resource_classes = [PieceStateResource]
     form = PieceStateAdminForm
     list_display = ("piece", "state", "created", "last_modified")
     readonly_fields = ("id", "piece", "created", "last_modified")
     list_select_related = ("piece",)
+    inlines = [PieceStateImageInline]
+
+    def get_fields(
+        self, request: HttpRequest, obj: PieceState | None = None
+    ) -> Any:
+        fields = list(super().get_fields(request, obj))
+        if obj and obj.state:
+            custom_fields = _get_custom_form_fields(obj.state)
+            for custom_name in custom_fields:
+                if custom_name not in fields:
+                    fields.append(custom_name)
+        return fields
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        if obj and obj.state:
+            custom_fields = _get_custom_form_fields(obj.state)
+            if custom_fields:
+                # Create a dynamic subclass of the form with these fields declared
+                # so that modelform_factory (called by super().get_form) accepts them.
+                dynamic_form = type(
+                    f"Dynamic{self.form.__name__}", (self.form,), custom_fields
+                )
+                kwargs["form"] = dynamic_form
+
+        return super().get_form(request, obj, change, **kwargs)
 
     def save_model(
         self,
@@ -749,5 +928,28 @@ class PieceStateAdmin(ExportMixin, admin.ModelAdmin):
         form: PieceStateAdminForm,
         change: bool,
     ) -> None:
+        from .serializers import _write_global_ref_rows
+        from .workflow import get_global_ref_fields_for_state
+
         allow_sealed = form.cleaned_data.get("allow_sealed_edit", False)
         obj.save(allow_sealed_edit=bool(allow_sealed))
+
+        # Save relational fields (junction tables)
+        global_ref_fields = get_global_ref_fields_for_state(obj.state)
+        global_ref_pks = {}
+        clear_fields = set()
+
+        for field_name in global_ref_fields:
+            form_field_name = f"custom_{field_name}"
+            if form_field_name in form.cleaned_data:
+                val = form.cleaned_data[form_field_name]
+                if val:
+                    # val is a model instance from ModelChoiceField
+                    global_ref_pks[field_name] = str(val.pk)
+                else:
+                    clear_fields.add(field_name)
+
+        if global_ref_pks or clear_fields:
+            _write_global_ref_rows(
+                obj, global_ref_fields, global_ref_pks, clear_fields
+            )
