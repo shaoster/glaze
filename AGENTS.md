@@ -1,43 +1,83 @@
 # Glaze — Agent Guide
 
-`PotterDoc` is the external product/brand name. `glaze` remains the internal repository and project name for code, paths, and internal documentation unless a task explicitly changes those identifiers too.
+`PotterDoc` is the external product name. `glaze` remains the internal name for code, paths, and docs.
 
-@docs/agents/glaze-domain.md
-@docs/agents/django-drf-python.md
-@docs/agents/typescript-react-vite.md
-@docs/agents/github-interactions.md
-@docs/agents/dev.md
+Use American English throughout — "behavior", "initialize", "labeled", "analyze".
 
 ---
 
 ## Git Worktree Policy
 
-When asked to work on a PR or implement a feature branch, always create a git worktree first (using the `EnterWorktree` tool if available, or `git worktree add` otherwise) rather than modifying the current branch directly. Ask before proceeding if worktree creation would be inappropriate (e.g. the user explicitly wants to work on the current branch).
-
-Prefer repo-local worktree roots over system temp directories: use `.agent-worktrees/{agent-name}` under the repo so the worktree stays near the shared repo bootstrap, secrets fallback, and editable files without colliding with tool-reserved paths like `.codex`. For example, Claude should open worktrees at `.agent-worktrees/claude/` and codex should open worktrees at `.agent-worktrees/codex/`.
-
-**Announce the worktree path at the start of every session**, before any code changes. Use a clearly labeled, copy-friendly absolute path so the user can open a terminal for it without hunting through scrollback. Example:
+Always create a repo-local worktree before implementing any issue or feature branch.
+Use `.agent-worktrees/{agent-name}/{branch}` under the repo root. Announce the absolute
+path before any code changes:
 
 ```
 Worktree: /home/phil/code/glaze/.agent-worktrees/claude/issue-123-fix-foo
 ```
 
-The user has `gz_cd <pattern>` to navigate there, but only if the path was announced early and visibly.
+Use `git worktree add .agent-worktrees/claude/issue-<N>-<slug> -b issue/<N>-<slug> main`.
+The user has `gz_cd <pattern>` to navigate there.
+
+When operating inside an existing worktree, managing multiple worktrees, or recovering
+from branch contamination, read `docs/agents/worktrees.md`.
 
 ## Instruction Priority
 
-When a referenced agent doc specifies setup, test, build, or verification commands, use those documented commands exactly by default.
-Do not substitute "equivalent" commands or skip wrapper scripts unless the documented command is blocked or fails in the current environment.
-If you must deviate, say so explicitly in your user update and final response, including why the documented command could not be used.
+When a skill specifies setup, test, build, or verification commands, use those exactly.
+Do not substitute equivalent commands or skip wrapper scripts unless the documented
+command fails. State any deviation explicitly.
 
-## What goes where
+## Key Invariants
 
-Agent documentation is split across five files so that the generic stack guides can be reused in other projects without modification. When editing or adding documentation, put content in the right file:
+- `workflow.yml` is the single source of truth for states and transitions — never hardcode state names or transition rules anywhere
+- `PieceState` history is append-only — past states cannot be edited; only `current_state` is writable
+- Public library objects (`user=NULL`) are managed via Django admin only — regular API users cannot create, edit, or delete them
+- `POST /api/pieces/` always initializes a piece in the `designed` state
+- State names and transitions must be derived from `workflow.yml` on both backend and frontend
 
-| File                                                                           | Contents                                                                                                                                                                                                                                                                                                                        |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`docs/agents/glaze-domain.md`](docs/agents/glaze-domain.md)                   | Everything specific to this project: the workflow state machine, `custom_fields` DSL, data model, key constraints, and Glaze-specific conventions layered on top of each stack (Django model patterns, frontend module aliases, component inventory, Cloudinary/OAuth flows, protected files, project-specific DoD checks). |
-| [`docs/agents/django-drf-python.md`](docs/agents/django-drf-python.md)         | Generic Django + DRF conventions reusable in any project: serializer rules, CORS setup, session auth, user-isolation patterns, test approach. No Glaze-specific models, endpoints, or admin customization.                                                                                                                      |
-| [`docs/agents/typescript-react-vite.md`](docs/agents/typescript-react-vite.md) | Generic React + TypeScript + Vite conventions reusable in any project: MUI usage, strict TS rules, theming tokens, Axios usage, async test patterns. No Glaze-specific components, aliases, or data pipelines.                                                                                                                  |
-| [`docs/agents/github-interactions.md`](docs/agents/github-interactions.md)     | Generic GitHub agent conventions reusable in any project: `--body-file` pattern, branch naming, scope-limit categories, PR ownership labels, definition-of-done checklist. No Glaze-specific file paths.                                                                                                                        |
-| [`docs/agents/dev.md`](docs/agents/dev.md)                                     | Glaze-specific development setup and test commands: how to start the backend and web, all three test suites, CI configuration, and the per-layer "what to test" checklist.                                                                                                                                                      |
+## Scope Limits — Ask Before Acting
+
+- Modifying `workflow.yml` (state definitions, transitions, successors)
+- Modifying `.github/workflows/` (CI/CD configuration)
+- Adding or removing Python dependencies (`requirements*.txt`)
+- Adding or removing npm dependencies (`package.json`)
+- Writing or altering database migrations
+- Modifying `backend/settings.py`, `build.sh`, or other deployment configuration
+
+---
+
+## Agent Resources
+
+Three user-invocable skills: `/do` (implement an issue), `/spec` (draft and file a new issue), and `/audit` (test performance audit).
+
+All other resources are loaded on demand via the `Read` tool. Load what the task touches —
+typically 2–4 files. The `/do` flow scouts dependencies and announces which to load.
+
+| Task | Read |
+|---|---|
+| Workflow state machine, globals DSL, `workflow.yml` changes | `.agents/skills/glaze-workflow/SKILL.md` |
+| Backend: Glaze models, API endpoints, image FK, admin, Cloudinary | `.agents/skills/glaze-backend/SKILL.md` |
+| Frontend: Glaze components, type pipeline, state chips, Cloudinary upload | `.agents/skills/glaze-frontend/SKILL.md` |
+| Django/DRF: serializers, auth, user isolation, CORS, production settings | `.agents/skills/django-api/SKILL.md` |
+| Django admin: custom widgets, inlines, static files, FK wrapping | `.agents/skills/django-admin/SKILL.md` |
+| React: component patterns, state shape, reducer migration, MUI conventions | `.agents/skills/react-conventions/SKILL.md` |
+| Frontend testing: async assertions, mock boundaries, Autocomplete wrappers | `.agents/skills/react-testing/SKILL.md` |
+| Opening PRs, issue bodies, DoD checklist, branch naming, scope limits | `.agents/skills/github-pr/SKILL.md` |
+| Modifying ci.yml, cd.yml, or static.yml | `.agents/skills/github-actions/SKILL.md` |
+| Dev environment setup, shell bootstrap, worktree navigation, server info | `.agents/skills/dev-environment/SKILL.md` |
+| Running tests, Bazel commands, linters, CI failures | `.agents/skills/dev-testing/SKILL.md` |
+| Adding Python or npm packages, lock files, BUILD.bazel | `.agents/skills/dev-packages/SKILL.md` |
+| Bazel build optimization, remote caching, .bazelrc | `.agents/skills/bazel-build-optimization/SKILL.md` |
+
+## What Goes Where (for editing agent docs)
+
+| File | Contents |
+|---|---|
+| `docs/agents/glaze-domain.md` | Glaze-specific domain: state machine, DSL, data model, backend/frontend conventions, component inventory, API endpoints |
+| `docs/agents/django-drf-python.md` | Generic Django + DRF conventions reusable in any project |
+| `docs/agents/typescript-react-vite.md` | Generic React + TypeScript + Vite conventions reusable in any project |
+| `docs/agents/github-interactions.md` | Generic GitHub agent conventions reusable in any project |
+| `docs/agents/dev.md` | Glaze-specific dev setup, test commands, CI configuration |
+| `.agents/skills/*/SKILL.md` | Agent-loadable resources — granular reference docs loaded on demand via `Read` |
+| `.claude/issue.md`, `.claude/audit.md` | User-invocable skills only — everything else has no `.claude/` symlink |

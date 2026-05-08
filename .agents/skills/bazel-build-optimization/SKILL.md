@@ -1,6 +1,12 @@
 ---
 name: bazel-build-optimization
-description: Optimize Bazel builds for large-scale monorepos. Use when configuring Bazel, implementing remote execution, or optimizing build performance for enterprise codebases.
+description: |
+  Generic Bazel optimization patterns: remote caching, query analysis, performance
+  profiling, custom rules, and .bazelrc configuration. In Glaze, invoke when modifying
+  .bazelrc, MODULE.bazel, or lint.bzl; diagnosing slow or cache-missing CI builds;
+  or writing a new Bazel rule or aspect. For routine BUILD.bazel source-file additions
+  (new test srcs, new js_library targets), use /dev-testing instead.
+source: https://github.com/wshobson/agents/tree/main/plugins/developer-essentials/skills/bazel-build-optimization
 ---
 
 # Bazel Build Optimization
@@ -49,91 +55,26 @@ workspace/
 
 ## Templates
 
-### Template 1: WORKSPACE Configuration
-
-```python
-# WORKSPACE.bazel
-workspace(name = "myproject")
-
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-# Rules for JavaScript/TypeScript
-http_archive(
-    name = "aspect_rules_js",
-    sha256 = "...",
-    strip_prefix = "rules_js-1.34.0",
-    url = "https://github.com/aspect-build/rules_js/releases/download/v1.34.0/rules_js-v1.34.0.tar.gz",
-)
-
-load("@aspect_rules_js//js:repositories.bzl", "rules_js_dependencies")
-rules_js_dependencies()
-
-load("@rules_nodejs//nodejs:repositories.bzl", "nodejs_register_toolchains")
-nodejs_register_toolchains(
-    name = "nodejs",
-    node_version = "20.9.0",
-)
-
-load("@aspect_rules_js//npm:repositories.bzl", "npm_translate_lock")
-npm_translate_lock(
-    name = "npm",
-    pnpm_lock = "//:pnpm-lock.yaml",
-    verify_node_modules_ignored = "//:.bazelignore",
-)
-
-load("@npm//:repositories.bzl", "npm_repositories")
-npm_repositories()
-
-# Rules for Python
-http_archive(
-    name = "rules_python",
-    sha256 = "...",
-    strip_prefix = "rules_python-0.27.0",
-    url = "https://github.com/bazelbuild/rules_python/releases/download/0.27.0/rules_python-0.27.0.tar.gz",
-)
-
-load("@rules_python//python:repositories.bzl", "py_repositories")
-py_repositories()
-```
-
-### Template 2: .bazelrc Configuration
+### Template 1: .bazelrc — Remote Caching and CI
 
 ```bash
-# .bazelrc
-
-# Build settings
-build --enable_platform_specific_config
-build --incompatible_enable_cc_toolchain_resolution
-build --experimental_strict_conflict_checks
-
 # Performance
 build --jobs=auto
 build --local_cpu_resources=HOST_CPUS*.75
 build --local_ram_resources=HOST_RAM*.75
 
-# Caching
+# Local caching
 build --disk_cache=~/.cache/bazel-disk
 build --repository_cache=~/.cache/bazel-repo
 
-# Remote caching (optional)
+# Remote caching
 build:remote-cache --remote_cache=grpcs://cache.example.com
 build:remote-cache --remote_upload_local_results=true
 build:remote-cache --remote_timeout=3600
 
-# Remote execution (optional)
-build:remote-exec --remote_executor=grpcs://remote.example.com
-build:remote-exec --remote_instance_name=projects/myproject/instances/default
-build:remote-exec --jobs=500
-
-# Platform configurations
-build:linux --platforms=//platforms:linux_x86_64
-build:macos --platforms=//platforms:macos_arm64
-
-# CI configuration
+# CI — enable remote cache, tag builds for BES
 build:ci --config=remote-cache
 build:ci --build_metadata=ROLE=CI
-build:ci --bes_results_url=https://results.example.com/invocation/
-build:ci --bes_backend=grpcs://bes.example.com
 
 # Test settings
 test --test_output=errors
@@ -143,15 +84,10 @@ test --test_summary=detailed
 coverage --combined_report=lcov
 coverage --instrumentation_filter="//..."
 
-# Convenience aliases
-build:opt --compilation_mode=opt
-build:dbg --compilation_mode=dbg
-
-# Import user settings
 try-import %workspace%/user.bazelrc
 ```
 
-### Template 3: TypeScript Library BUILD
+### Template 2: TypeScript Library BUILD
 
 ```python
 # libs/utils/BUILD.bazel
@@ -227,122 +163,6 @@ py_binary(
     srcs = ["train.py"],
     deps = [":ml"],
     data = ["//data:training_data"],
-)
-```
-
-### Template 5: Custom Rule for Docker
-
-```python
-# tools/bazel/rules/docker.bzl
-def _docker_image_impl(ctx):
-    dockerfile = ctx.file.dockerfile
-    base_image = ctx.attr.base_image
-    layers = ctx.files.layers
-
-    # Build the image
-    output = ctx.actions.declare_file(ctx.attr.name + ".tar")
-
-    args = ctx.actions.args()
-    args.add("--dockerfile", dockerfile)
-    args.add("--output", output)
-    args.add("--base", base_image)
-    args.add_all("--layer", layers)
-
-    ctx.actions.run(
-        inputs = [dockerfile] + layers,
-        outputs = [output],
-        executable = ctx.executable._builder,
-        arguments = [args],
-        mnemonic = "DockerBuild",
-        progress_message = "Building Docker image %s" % ctx.label,
-    )
-
-    return [DefaultInfo(files = depset([output]))]
-
-docker_image = rule(
-    implementation = _docker_image_impl,
-    attrs = {
-        "dockerfile": attr.label(
-            allow_single_file = [".dockerfile", "Dockerfile"],
-            mandatory = True,
-        ),
-        "base_image": attr.string(mandatory = True),
-        "layers": attr.label_list(allow_files = True),
-        "_builder": attr.label(
-            default = "//tools/docker:builder",
-            executable = True,
-            cfg = "exec",
-        ),
-    },
-)
-```
-
-### Template 6: Query and Dependency Analysis
-
-```bash
-# Find all dependencies of a target
-bazel query "deps(//apps/web:web)"
-
-# Find reverse dependencies (what depends on this)
-bazel query "rdeps(//..., //libs/utils:utils)"
-
-# Find all targets in a package
-bazel query "//libs/..."
-
-# Find changed targets since commit
-bazel query "rdeps(//..., set($(git diff --name-only HEAD~1 | sed 's/.*/"&"/' | tr '\n' ' ')))"
-
-# Generate dependency graph
-bazel query "deps(//apps/web:web)" --output=graph | dot -Tpng > deps.png
-
-# Find all test targets
-bazel query "kind('.*_test', //...)"
-
-# Find targets with specific tag
-bazel query "attr(tags, 'integration', //...)"
-
-# Compute build graph size
-bazel query "deps(//...)" --output=package | wc -l
-```
-
-### Template 7: Remote Execution Setup
-
-```python
-# platforms/BUILD.bazel
-platform(
-    name = "linux_x86_64",
-    constraint_values = [
-        "@platforms//os:linux",
-        "@platforms//cpu:x86_64",
-    ],
-    exec_properties = {
-        "container-image": "docker://gcr.io/myproject/bazel-worker:latest",
-        "OSFamily": "Linux",
-    },
-)
-
-platform(
-    name = "remote_linux",
-    parents = [":linux_x86_64"],
-    exec_properties = {
-        "Pool": "default",
-        "dockerNetwork": "standard",
-    },
-)
-
-# toolchains/BUILD.bazel
-toolchain(
-    name = "cc_toolchain_linux",
-    exec_compatible_with = [
-        "@platforms//os:linux",
-        "@platforms//cpu:x86_64",
-    ],
-    target_compatible_with = [
-        "@platforms//os:linux",
-        "@platforms//cpu:x86_64",
-    ],
-    toolchain = "@remotejdk11_linux//:jdk",
-    toolchain_type = "@bazel_tools//tools/jdk:runtime_toolchain_type",
 )
 ```
 

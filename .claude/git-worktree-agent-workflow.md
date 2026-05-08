@@ -1,1 +1,0 @@
-../.agents/skills/git-worktree-agent-workflow/SKILL.md

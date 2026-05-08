@@ -17,7 +17,7 @@ allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 Use this skill for the explicit Glaze agent invocation:
 
 ```text
-/do #292
+/do #42
 ```
 
 The point is to make the worktree contract impossible to miss. Before analysis,
@@ -50,11 +50,70 @@ Keep it on its own line so the developer can copy it or use `gz_cd <pattern>`.
 ## Flow
 
 1. Read the issue title and body from GitHub.
-2. Create a short slug from the issue title.
-3. Create the branch as `issue/<N>-<slug>`.
-4. Create the worktree at `.agent-worktrees/<agent>/issue-<N>-<slug>`.
-5. Announce the absolute worktree path.
-6. Continue all analysis, edits, tests, commits, pushes, and PR work from that
+2. **Dependency scout** — use Bazel to confirm which layers the issue touches, then
+   announce and invoke the appropriate skills before writing any code.
+
+   ### Key targets
+
+   | Target | What it covers |
+   |---|---|
+   | `//:workflow_files` | `workflow.yml` + `workflow.schema.yml` — Python data dep |
+   | `//:workflow_js` | `workflow.yml` — frontend JS dep |
+   | `//api:api_lib` | All non-test, non-migration `.py` files in `api/` |
+   | `//web:util_lib` | `web/src/util/**/*.ts` (excluding tests + generated-types) |
+   | `//web:web_lib` | All web source files — the build target |
+   | `//web:generated_types` | TypeScript types generated from the OpenAPI schema |
+   | `//web:openapi_schema` | OpenAPI JSON generated from Django; always rdeps on `//api:api_lib` |
+
+   ### Scouting queries
+
+   ```bash
+   # Find which target owns a changed file
+   rtk bazel query 'attr(srcs, "api/views.py", //...)'
+   rtk bazel query 'attr(srcs, "web/src/components/Foo.tsx", //...)'
+
+   # Check whether workflow.yml is in the change set
+   # If yes → invoke /glaze-workflow unconditionally
+   rtk bazel query 'rdeps(//..., //:workflow_files)'
+   rtk bazel query 'rdeps(//..., //:workflow_js)'
+
+   # Find what immediately depends on a target (depth 1 avoids the always-true
+   # openapi_schema transitive chain — use this to spot genuine cross-layer deps)
+   rtk bazel query 'rdeps(//..., //api:api_lib, 1)'
+   rtk bazel query 'rdeps(//..., //web:util_lib, 1)'
+
+   # On an existing branch: map all changed files to targets in one query
+   rtk bazel query "rdeps(//..., set($(git diff --name-only main | sed 's/.*/"&"/' | tr '\n' ' ')), 1)"
+
+   # When depth-1 rdeps is ambiguous, find the exact dependency path
+   rtk bazel query 'somepath(//api:api_lib, //web:openapi_schema)'
+   ```
+
+   ### Dispatch rules
+
+   | Signal | Read |
+   |---|---|
+   | `workflow.yml` in the change set | `glaze-workflow` unconditionally |
+   | Files under `api/` (non-test, non-migration) | `glaze-backend` + `django-api` |
+   | Backend change also adds/removes serializer fields | add `glaze-frontend` (type pipeline regeneration needed) |
+   | Files only under `web/src/` | `glaze-frontend` + `react-conventions` |
+   | Django admin widgets or inlines | add `django-admin` |
+   | Frontend tests needed | add `react-testing` |
+   | Adding/removing packages | add `dev-packages` |
+   | Any PR | add `github-pr` + `dev-testing` |
+
+   All resources live under `.agents/skills/<name>/SKILL.md`. Load them with the `Read` tool.
+
+   `//web:openapi_schema` always rdeps on `//api:api_lib` (schema is generated from
+   Django), so a full transitive rdeps query will always show frontend impact. Use
+   depth-1 rdeps or check whether serializer fields actually changed to avoid
+   spuriously loading frontend resources for backend-only fixes.
+
+3. Create a short slug from the issue title.
+4. Create the branch as `issue/<N>-<slug>`.
+5. Create the worktree at `.agent-worktrees/<agent>/issue-<N>-<slug>`.
+6. Announce the absolute worktree path.
+7. Continue all analysis, edits, tests, commits, pushes, and PR work from that
    worktree root.
 
 Example:
@@ -67,56 +126,14 @@ git worktree add .agent-worktrees/codex/issue-292-vibe-coding-flow \
 Use the agent name that matches the running tool, such as `codex`, `claude`, or
 `cursor`.
 
-## Worktree Setup
+## After Creating the Worktree
 
-After creating the worktree:
+Run all subsequent commands from the worktree root. Invoke `/dev-environment`
+if environment setup is needed. Do not edit files outside the worktree unless
+the user explicitly asks.
 
-- Run commands from the worktree root.
-- Use `source env.sh && gz_setup` before verification in a new environment.
-- Use plain `gz_setup` for the normal shared `.venv` and `web/node_modules`
-  flow.
-- Use `gz_setup --isolated` only when changing Python or Node dependencies.
-- If starting servers manually, open a dedicated terminal tab for that worktree
-  and run `gz_start` there.
+## Handoff
 
-Do not re-source `env.sh` from a different worktree in an existing terminal that
-already has servers running.
-
-## Implementation Rules
-
-- Keep one issue per worktree and one focused branch per issue.
-- Do not edit files outside the announced worktree unless the user explicitly
-  asks.
-- Use the documented Glaze commands from `docs/agents/dev.md`.
-- Keep `workflow.yml`, migrations, dependency files, CI, and deployment config
-  within the protected-change rules in the agent docs.
-- When opening a PR, include `Closes #<N>` in the PR body and apply the agent's
-  ownership label.
-
-## Cleanup
-
-Clean up after the PR is merged or the branch is abandoned:
-
-```bash
-gz_stop
-git worktree remove .agent-worktrees/<agent>/issue-<N>-<slug>
-git worktree prune
-git branch -d issue/<N>-<slug>
-```
-
-Use `git branch -D` only for an abandoned unmerged branch after confirming the
-work is no longer needed.
-
-If a local server is still running in the worktree, stop it first with `gz_stop`
-from that worktree's terminal. `git worktree remove` should not be forced over
-running or dirty worktrees.
-
-## Quick Developer Handoff
-
-When handing the worktree back to the developer, include:
-
-- the worktree path
-- the branch name
-- any server URL if one was started
-- the exact verification command(s) run
-- cleanup commands if the PR is merged or abandoned
+When returning control to the developer, include: worktree path, branch name,
+verification commands run, and — if the PR is merged or abandoned — the cleanup
+commands from `/dev-environment`.

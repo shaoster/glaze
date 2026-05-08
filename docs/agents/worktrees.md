@@ -1,19 +1,3 @@
----
-model: opus
-created: 2026-02-02
-modified: 2026-02-10
-reviewed: 2026-02-10
-name: git-worktree-agent-workflow
-description: |
-  Parallel agent workflows using git worktrees for isolated, concurrent issue work.
-  Use when multiple issues get mixed into a single branch (contamination), when you
-  need parallel work on independent issues, or when separating mixed commits into
-  clean single-purpose PRs. Enables launching subagents with isolated working
-  directories that can work simultaneously without conflicts. For a normal
-  single-issue start such as /do #292, use do-issue-worktree instead.
-allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Task, TodoWrite
----
-
 # Git Worktree Agent Workflow
 
 Orchestrate parallel agent workflows using git worktrees for isolated, concurrent issue resolution.
@@ -287,22 +271,6 @@ Each subagent handles:
 | Run tests in worktree | `source env.sh && gz_test` from the worktree root |
 | Push worktree branch | `git push -u origin issue/N-slug` |
 
-## Quick Reference
-
-| Operation | Command |
-|-----------|---------|
-| Add worktree | `git worktree add <path> -b <branch> <start-point>` |
-| List worktrees | `git worktree list` |
-| Remove worktree | `git worktree remove <path>` |
-| Prune stale | `git worktree prune` |
-| Lock worktree | `git worktree lock <path>` |
-| Unlock worktree | `git worktree unlock <path>` |
-| Move worktree | `git worktree move <path> <new-path>` |
-| Format patches | `git format-patch <base>..<head> -o <dir>` |
-| Apply patch series | `git am <patches>` |
-| Apply single patch | `git apply <patch>` |
-| Show commit as patch | `git show <commit> --format=email` |
-
 ## Example Coordination Flow
 
 ```
@@ -338,8 +306,4 @@ Orchestrator (main repo)
               +-- rmdir .agent-worktrees/<agent> (if empty)
 ```
 
-## Related Skills
-
-- [git-branch-pr-workflow](../git-branch-pr-workflow/SKILL.md) - Standard branch workflows
-- [git-rebase-patterns](../git-rebase-patterns/SKILL.md) - Advanced rebase techniques
 - [multi-agent-workflows](../../../agent-patterns-plugin/skills/multi-agent-workflows/SKILL.md) - General agent orchestration
