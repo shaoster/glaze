@@ -183,8 +183,8 @@ The app runs without any credentials — both optional services degrade graceful
 
 ### Setup
 
-| Command    | Description                                                                                                             |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Command    | Description                                                                                                                                                                                                             |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `gz_setup` | Setup helper: reuses shared deps by default in repo-local worktrees, or use `gz_setup --isolated` for fresh worktree-local `.venv` and `web/node_modules`. Also runs DB migrations and installs Node via nvm if needed. |
 
 ### Servers
@@ -251,8 +251,8 @@ RSS; large `StreamingHttpResponse` bodies should use async iterators.
 
 ### Type generation
 
-| Command       | Description                                                                                                                                                                              |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Command       | Description                                                                                                                                                                |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `gz_gentypes` | Regenerate [`web/src/util/generated-types.ts`](web/src/util/generated-types.ts) from the live OpenAPI schema. Starts the backend temporarily if it is not already running. |
 
 Run `gz_help` to print the full list of shortcuts at any time.
@@ -322,7 +322,8 @@ Set these in `.env.local` before starting Django:
 export CLOUDINARY_CLOUD_NAME=<your-cloud-name>
 export CLOUDINARY_API_KEY=<your-api-key>
 export CLOUDINARY_API_SECRET=<your-api-secret>
-export CLOUDINARY_UPLOAD_FOLDER=glaze   # optional; images are placed in this folder
+export CLOUDINARY_UPLOAD_FOLDER=glaze   # optional; user-uploaded images are placed in this folder
+export CLOUDINARY_PUBLIC_UPLOAD_FOLDER=glaze_public   # optional; public library images are placed in this folder
 ```
 
 **How it works:**
@@ -506,13 +507,13 @@ After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` fr
 
 Agent and contributor documentation lives in [`docs/agents/`](docs/agents/) and is split across five files so that the generic stack guides can be reused in other projects. [`AGENTS.md`](AGENTS.md) at the repo root is a slim wrapper that imports all five via `@` directives.
 
-| File                                                                           | Contents                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| File                                                                           | Contents                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`docs/agents/glaze-domain.md`](docs/agents/glaze-domain.md)                   | Everything specific to this project: workflow state machine, `custom_fields` DSL, data model, key constraints, and Glaze-specific conventions layered on top of each stack (Django model patterns, frontend module aliases, component inventory, Cloudinary/OAuth flows, protected files, project-specific definition-of-done checks). **Add content here** when it is specific to Glaze's domain, data model, or architecture. |
-| [`docs/agents/django-drf-python.md`](docs/agents/django-drf-python.md)         | Generic Django + DRF conventions reusable in any project: serializer rules, CORS, session auth, user-isolation patterns, test approach. **Add content here** only if it applies to Django/DRF projects in general, with no Glaze-specific models or endpoints.                                                                                                                                                                      |
-| [`docs/agents/typescript-react-vite.md`](docs/agents/typescript-react-vite.md) | Generic React + TypeScript + Vite conventions reusable in any project: MUI usage, strict TS rules, theming tokens, Axios usage, async test patterns. **Add content here** only if it applies to React/TS/Vite projects in general, with no Glaze-specific components or data pipelines.                                                                                                                                             |
-| [`docs/agents/github-interactions.md`](docs/agents/github-interactions.md)     | Generic GitHub agent conventions reusable in any project: `--body-file` pattern, branch naming, scope-limit categories, PR ownership labels, definition-of-done checklist. **Add content here** only if it applies to any GitHub-hosted project.                                                                                                                                                                                    |
-| [`docs/agents/dev.md`](docs/agents/dev.md)                                     | Glaze-specific development setup and test commands: starting the backend and web, all three test suites, CI, and per-layer "what to test" checklists. **Add content here** for setup steps, test commands, or CI details specific to this repo.                                                                                                                                                                                     |
+| [`docs/agents/django-drf-python.md`](docs/agents/django-drf-python.md)         | Generic Django + DRF conventions reusable in any project: serializer rules, CORS, session auth, user-isolation patterns, test approach. **Add content here** only if it applies to Django/DRF projects in general, with no Glaze-specific models or endpoints.                                                                                                                                                                  |
+| [`docs/agents/typescript-react-vite.md`](docs/agents/typescript-react-vite.md) | Generic React + TypeScript + Vite conventions reusable in any project: MUI usage, strict TS rules, theming tokens, Axios usage, async test patterns. **Add content here** only if it applies to React/TS/Vite projects in general, with no Glaze-specific components or data pipelines.                                                                                                                                         |
+| [`docs/agents/github-interactions.md`](docs/agents/github-interactions.md)     | Generic GitHub agent conventions reusable in any project: `--body-file` pattern, branch naming, scope-limit categories, PR ownership labels, definition-of-done checklist. **Add content here** only if it applies to any GitHub-hosted project.                                                                                                                                                                                |
+| [`docs/agents/dev.md`](docs/agents/dev.md)                                     | Glaze-specific development setup and test commands: starting the backend and web, all three test suites, CI, and per-layer "what to test" checklists. **Add content here** for setup steps, test commands, or CI details specific to this repo.                                                                                                                                                                                 |
 
 ## Vibe coding / Contributing
 
