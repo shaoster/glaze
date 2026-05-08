@@ -87,6 +87,10 @@ globals:
       name:
         type: string
         description: The piece's display name.
+      current_location:
+        $ref: "@location.name"
+        description: The piece's current physical location.
+        can_create: true
       thumbnail:
         type: string
         description: URL of the piece's thumbnail image.
@@ -178,7 +182,23 @@ globals:
       cone:
         type: string
         description: Orton cone designation.
-        enum: ["04", "03", "02", "01", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+        enum:
+          [
+            "04",
+            "03",
+            "02",
+            "01",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+          ]
       temperature_c:
         type: integer
         description: Peak temperature in degrees Celsius.
@@ -375,7 +395,23 @@ states:
       cone:
         type: string
         description: Orton cone rating used for this firing.
-        enum: ["04", "03", "02", "01", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+        enum:
+          [
+            "04",
+            "03",
+            "02",
+            "01",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+          ]
       planned_glaze:
         $ref: "@glaze_combination.name"
         label: Planned Glaze

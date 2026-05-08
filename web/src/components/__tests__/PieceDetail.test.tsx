@@ -296,19 +296,6 @@ describe("PieceDetail", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps current location browse-only when create is not enabled by workflow metadata", async () => {
-    await renderPieceDetail();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Browse Current location" }),
-    );
-    expect(
-      screen.queryByRole("tab", { name: "Create" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Create Location" }),
-    ).not.toBeInTheDocument();
-  });
-
   it("saves location updates when confirmed", async () => {
     const updated = makePiece({ current_location: "Studio 7" });
     vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
