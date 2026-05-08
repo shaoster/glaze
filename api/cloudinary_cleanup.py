@@ -2,7 +2,7 @@ import logging
 import os
 import posixpath
 from collections import Counter
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, cast
 from urllib.parse import urlparse
@@ -11,8 +11,8 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import cloudinary
 import cloudinary.api
 import cloudinary.exceptions
-from cloudinary import CloudinaryImage
 import httpx
+from cloudinary import CloudinaryImage
 
 from .models import GlazeCombination, GlazeType, Image, Piece, PieceStateImage
 
@@ -305,11 +305,11 @@ class _StreamingZipBuffer:
         return None
 
 
-def stream_cloudinary_cleanup_archive(
+async def stream_cloudinary_cleanup_archive(
     assets: list[CloudinaryCleanupAsset],
-) -> Iterator[bytes]:
+) -> AsyncIterator[bytes]:
     buffer = _StreamingZipBuffer()
-    with httpx.Client(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=60) as client:
         with ZipFile(cast(Any, buffer), "w", ZIP_DEFLATED) as archive:
             used_names: set[str] = set()
             for asset in assets:
@@ -324,10 +324,10 @@ def stream_cloudinary_cleanup_archive(
                     member_name = f"{stem}-{index}{extension}"
                 used_names.add(member_name)
 
-                with client.stream("GET", asset.url) as response:
+                async with client.stream("GET", asset.url) as response:
                     response.raise_for_status()
                     with archive.open(member_name, "w") as member:
-                        for chunk in response.iter_bytes(1024 * 1024):
+                        async for chunk in response.aiter_bytes(1024 * 1024):
                             member.write(chunk)
                             for c in buffer.flush_chunks():
                                 yield c
