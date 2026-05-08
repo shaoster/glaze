@@ -8,7 +8,7 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py runserver 8080  # or any free port; gz_start picks one automatically
+uvicorn backend.asgi:application --port 8080 --reload  # or any free port; gz_start picks one automatically
 
 # Web (separate terminal)
 cd web
@@ -78,7 +78,7 @@ Use `gz_status` to see what is running and on which ports in the current worktre
 
 ```bash
 gz_worktrees               # all worktrees; ● marks those with running servers
-pgrep -a -f "manage.py runserver"   # all Django instances (cross-worktree)
+pgrep -a -f "uvicorn"                # all uvicorn instances (cross-worktree)
 ss -tlnp | grep -E 'node|python'    # all bound ports with owning process
 ```
 
@@ -297,13 +297,13 @@ In another terminal, find the active backend port and Django process:
 
 ```bash
 BACKEND_PORT=$(cat .dev-pids/backend.port)
-pgrep -a -f "manage.py runserver.*${BACKEND_PORT}"
+pgrep -a -f "uvicorn.*${BACKEND_PORT}"
 ```
 
 Watch the backend RSS while exercising the download:
 
 ```bash
-BACKEND_PID=$(pgrep -f "manage.py runserver.*$(cat .dev-pids/backend.port)")
+BACKEND_PID=$(pgrep -f "uvicorn.*$(cat .dev-pids/backend.port)")
 watch -n 1 "ps -o pid,rss,vsz,cmd -p ${BACKEND_PID}"
 ```
 
