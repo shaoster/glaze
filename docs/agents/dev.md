@@ -276,6 +276,64 @@ Key local skills:
 
 ---
 
+## Streaming download smoke tests
+
+Use this check when changing large download endpoints, especially
+`StreamingHttpResponse` paths that run in production under ASGI. The local
+`gz_start` backend uses Django's development server rather than Gunicorn/Uvicorn,
+so this does not prove production worker memory behavior by itself. It does
+confirm the endpoint streams lazily in local development and gives reviewers a
+repeatable way to catch obvious buffering regressions before deploy.
+
+Start the app from a dedicated terminal:
+
+```bash
+source env.sh
+gz_setup
+gz_start
+```
+
+In another terminal, find the active backend port and Django process:
+
+```bash
+BACKEND_PORT=$(cat .dev-pids/backend.port)
+pgrep -a -f "manage.py runserver.*${BACKEND_PORT}"
+```
+
+Watch the backend RSS while exercising the download:
+
+```bash
+BACKEND_PID=$(pgrep -f "manage.py runserver.*$(cat .dev-pids/backend.port)")
+watch -n 1 "ps -o pid,rss,vsz,cmd -p ${BACKEND_PID}"
+```
+
+Then use the browser opened by `gz_start` to log in as an admin and trigger the
+same large download three times. For the Cloudinary cleanup archive, scan assets
+from the admin cleanup page and use the archive download action.
+
+Expected result:
+
+- RSS may rise and remain at a high-water mark after the first download.
+- Repeated same-size downloads should plateau instead of ratcheting upward by
+  roughly the archive size.
+- The ASGI production logs should not contain Django's warning:
+  `StreamingHttpResponse must consume synchronous iterators in order to serve them asynchronously.`
+
+For production parity, repeat the same browser flow against a Docker/staging
+deployment and watch the Gunicorn/Uvicorn worker RSS:
+
+```bash
+docker compose exec web ps -o pid,rss,vsz,cmd
+docker compose logs web | grep -i 'StreamingHttpResponse\|synchronous iterators'
+```
+
+For large downloads served by ASGI, use async generators and async clients such
+as `httpx.AsyncClient`. Stable RSS after repeated downloads is part of the
+definition of done; RSS that keeps climbing across identical downloads means the
+response is probably being buffered or retained.
+
+---
+
 ## Environment variables
 
 All vars are optional. The app runs without any of them; each missing group degrades gracefully.

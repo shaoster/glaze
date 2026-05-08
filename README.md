@@ -200,6 +200,21 @@ The app runs without any credentials — both optional services degrade graceful
 
 Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`.
 
+### Smoke-test large downloads with `gz_start`
+
+When changing large download endpoints, run the app locally with `gz_start`,
+trigger the same download three times in the browser, and watch the backend RSS:
+
+```bash
+BACKEND_PID=$(pgrep -f "manage.py runserver.*$(cat .dev-pids/backend.port)")
+watch -n 1 "ps -o pid,rss,vsz,cmd -p ${BACKEND_PID}"
+```
+
+RSS may stay at a high-water mark after the first run, but repeated same-size
+downloads should plateau rather than ratchet upward. For ASGI production parity,
+repeat the check against Docker/staging and watch the Gunicorn/Uvicorn worker
+RSS; large `StreamingHttpResponse` bodies should use async iterators.
+
 ### Django management
 
 | Command                   | Description                     |
