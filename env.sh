@@ -407,7 +407,7 @@ gz_backend() {
     app_origin="http://localhost:$web_port"
     echo "$port" > "$_GLAZE_PIDS/backend.port"
     _gz_start backend "$_GLAZE_LOGS/backend.log" \
-        bash -c "source '$venv_root/.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$env_root/.env.local' ] && source '$env_root/.env.local'; set +a && export APP_ORIGIN='$app_origin' && python manage.py load_public_library --skip-if-missing && python manage.py runserver $port"
+        bash -c "source '$venv_root/.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$env_root/.env.local' ] && source '$env_root/.env.local'; set +a && export APP_ORIGIN='$app_origin' && python manage.py load_public_library --skip-if-missing && uvicorn backend.asgi:application --host 127.0.0.1 --port $port --reload"
 }
 
 gz_web() {

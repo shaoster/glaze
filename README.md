@@ -206,7 +206,7 @@ When changing large download endpoints, run the app locally with `gz_start`,
 trigger the same download three times in the browser, and watch the backend RSS:
 
 ```bash
-BACKEND_PID=$(pgrep -f "manage.py runserver.*$(cat .dev-pids/backend.port)")
+BACKEND_PID=$(pgrep -f "uvicorn.*$(cat .dev-pids/backend.port)")
 watch -n 1 "ps -o pid,rss,vsz,cmd -p ${BACKEND_PID}"
 ```
 
@@ -267,7 +267,7 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
 python manage.py migrate
-python manage.py runserver 8080
+uvicorn backend.asgi:application --port 8080 --reload
 
 # Web (separate terminal)
 cd web
@@ -683,7 +683,7 @@ Some global types (currently **Clay Bodies** and **Glaze Types**) support a shar
 
 ### Getting to the admin
 
-1. Start the backend (`gz_backend` or `python manage.py runserver 8080`).
+1. Start the backend (`gz_backend` or `uvicorn backend.asgi:application --port 8080 --reload`).
 2. Go to `http://localhost:8080/admin/` and sign in with a Django superuser account.
    - To create a superuser: `gz_manage createsuperuser` (or `python manage.py createsuperuser`).
 

@@ -16,7 +16,7 @@ python manage.py startapp api
 
 python manage.py migrate
 python manage.py createsuperuser
-python manage.py runserver 8080
+uvicorn backend.asgi:application --port 8080 --reload
 ```
 
 ## Stack
