@@ -24,6 +24,13 @@ The point is to make the worktree contract impossible to miss. Before analysis,
 implementation, tests, or GitHub comments, create an isolated repo-local
 worktree and print the path in a copy-friendly form.
 
+## Mandatory Enforcement
+
+For any session initialized with the `/do` skill:
+1. **Verify your location:** You MUST be within `.agent-worktrees/` before executing ANY write operation.
+2. **Prohibition:** Modifying the `main` workspace branch is strictly forbidden.
+3. **Recovery:** If you are currently in `main`, stop immediately, create a worktree, and move your work there.
+
 ## Trigger
 
 Use this skill when the prompt asks to:
