@@ -1,4 +1,10 @@
-import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ComponentProps,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Alert,
   alpha,
@@ -15,7 +21,10 @@ import CloseIcon from "@mui/icons-material/Close";
 import { useBlocker } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
 import { formatState, isTerminalState } from "../util/types";
-import { getAdditionalFieldDefinitions, getStateSummaryDefinition } from "../util/workflow";
+import {
+  getAdditionalFieldDefinitions,
+  getStateSummaryDefinition,
+} from "../util/workflow";
 import { addPieceState, updateCurrentState, updatePiece } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
 import NavigationBlocker from "./NavigationBlocker";
@@ -44,12 +53,7 @@ type SectionCardProps = {
   children: ReactNode;
 };
 
-function SectionCard({
-  eyebrow,
-  title,
-  subtitle,
-  children,
-}: SectionCardProps) {
+function SectionCard({ eyebrow, title, subtitle, children }: SectionCardProps) {
   return (
     <Box
       sx={(theme) => ({
@@ -122,10 +126,7 @@ export default function PieceDetail({
   );
 }
 
-function PieceDetailContent({
-  piece,
-  onPieceUpdated,
-}: PieceDetailProps) {
+function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   const theme = useTheme();
   const [isDirty, setIsDirty] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
@@ -140,7 +141,8 @@ function PieceDetailContent({
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
   const currentState = piece.current_state;
   const isTerminal = isTerminalState(currentState.state);
-  const hasStateSummary = getStateSummaryDefinition(currentState.state).length > 0;
+  const hasStateSummary =
+    getStateSummaryDefinition(currentState.state).length > 0;
   const canEdit = piece.can_edit;
   const hasWorkflowContent =
     canEdit || getAdditionalFieldDefinitions(currentState.state).length > 0;
@@ -153,16 +155,19 @@ function PieceDetailContent({
   }
   const createdLabel = formatDate(piece.created);
   const modifiedLabel = formatDate(piece.last_modified);
-  const galleryImages: PiecePhotoGalleryImage[] = piece.history.flatMap((state) => {
-    const isCurrentState =
-      state.created.getTime() === currentState.created.getTime() &&
-      state.state === currentState.state;
-    return state.images.map((image, imageIndex) => ({
-      ...image,
-      stateLabel: formatState(state.state),
-      editableCurrentStateIndex: canEdit && isCurrentState ? imageIndex : null,
-    }));
-  });
+  const galleryImages: PiecePhotoGalleryImage[] = piece.history.flatMap(
+    (state) => {
+      const isCurrentState =
+        state.created.getTime() === currentState.created.getTime() &&
+        state.state === currentState.state;
+      return state.images.map((image, imageIndex) => ({
+        ...image,
+        stateLabel: formatState(state.state),
+        editableCurrentStateIndex:
+          canEdit && isCurrentState ? imageIndex : null,
+      }));
+    },
+  );
   const editButtonSx = {
     width: 22,
     height: 22,
@@ -188,9 +193,9 @@ function PieceDetailContent({
       if (i === 0) img.fetchPriority = "high";
       img.src = url;
     });
-  // galleryImages is recomputed every render but its identity changes with piece,
-  // so depend only on piece to avoid re-running on every render.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // galleryImages is recomputed every render but its identity changes with piece,
+    // so depend only on piece to avoid re-running on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [piece]);
 
   async function handleTransition(nextState: string) {
@@ -248,7 +253,9 @@ function PieceDetailContent({
     }
   }
 
-  async function handleLocationSelect(entry: { id: string; name: string } | null) {
+  async function handleLocationSelect(
+    entry: { id: string; name: string } | null,
+  ) {
     setLocationSaving(true);
     setLocationError(null);
     try {
@@ -426,6 +433,7 @@ function PieceDetailContent({
                   disabled={!canEdit}
                   hideActionWhenDisabled
                   sx={{ opacity: locationSaving ? 0.7 : 1 }}
+                  canCreate
                 />
                 {locationError && (
                   <Typography variant="body2" color="error" sx={{ mt: 0.75 }}>
@@ -486,18 +494,22 @@ function PieceDetailContent({
                   p: { xs: 1.5, sm: 2 },
                 }}
               >
-                <PiecePhotoGallery
-                  {...galleryProps}
-                />
+                <PiecePhotoGallery {...galleryProps} />
               </Box>
             </Box>
             {/* Photo gallery + upload trigger — below hero on desktop only */}
-            <Box sx={{ display: { xs: "none", md: "flex" }, alignItems: "center", gap: 1, mt: 1 }}>
+            <Box
+              sx={{
+                display: { xs: "none", md: "flex" },
+                alignItems: "center",
+                gap: 1,
+                mt: 1,
+              }}
+            >
               <Box id="piece-upload-trigger" />
               <PiecePhotoGallery {...galleryProps} />
             </Box>
           </Box>
-
         </Box>
 
         {hasWorkflowContent && (
@@ -526,7 +538,10 @@ function PieceDetailContent({
         {isTerminal && hasStateSummary && (
           <Box sx={{ mb: 2.5 }}>
             <SectionCard title="Summary">
-              <WorkflowSummary stateId={currentState.state} history={piece.history} />
+              <WorkflowSummary
+                stateId={currentState.state}
+                history={piece.history}
+              />
             </SectionCard>
           </Box>
         )}
