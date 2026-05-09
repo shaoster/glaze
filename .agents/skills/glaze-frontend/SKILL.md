@@ -115,7 +115,7 @@ concept in multiple places, extract a reusable component in `web/src/components/
 ## Workflow Config Interface (`workflow.ts`)
 
 `web/src/util/workflow.ts` loads `workflow.yml` at build time and exposes typed helpers:
-- `getAdditionalFieldDefinitions(stateId)` — resolves per-state additional field definitions into form-ready structure
+- `getCustomFieldDefinitions(stateId)` — resolves per-state custom field definitions into form-ready structure
 - `getGlobalDisplayField(globalName)` — returns display field name for a globals entry
 - `formatWorkflowFieldLabel(fieldName)` — converts snake_case DSL names to Title Case
 

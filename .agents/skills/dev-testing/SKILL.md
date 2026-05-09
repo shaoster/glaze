@@ -91,7 +91,7 @@ Three parallel jobs on every push and PR (see `.github/workflows/ci.yml`):
 |---|---|
 | `test` | `bazel test --config=ci //...` — all test suites |
 | `lint` | `bazel build --config=ci --config=lint //...` — ruff, eslint, tsc, mypy |
-| `coverage` | `pytest api/ tests/ --cov` + `npm test --coverage` — feeds Codecov |
+| `coverage` | `bazel coverage --config=ci --combined_report=lcov //...` — feeds Codecov |
 
 A PR should not be merged if any job is red.
 

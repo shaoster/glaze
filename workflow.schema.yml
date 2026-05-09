@@ -243,11 +243,148 @@ $defs:
       - $ref: "#/$defs/inline_field"
       - $ref: "#/$defs/state_ref_field"
       - $ref: "#/$defs/global_ref_field"
+      - $ref: "#/$defs/calculated_field"
 
   global_field_def:
     oneOf:
       - $ref: "#/$defs/inline_field"
       - $ref: "#/$defs/global_ref_field"
+
+  calculated_field:
+    type: object
+    required: [compute]
+    additionalProperties: false
+    description: |
+      A read-only field whose value is computed from other fields in the
+      piece's history using a recursive AST.
+    properties:
+      compute:
+        $ref: "#/$defs/ast_node"
+      description:
+        type: string
+        description: Human-readable description of the calculated field.
+      label:
+        type: string
+        description: Human-readable label for the field in UIs.
+      unit:
+        type: string
+        description: Optional unit suffix for the computed value (e.g. "lbs", "in").
+      decimals:
+        type: integer
+        description: Number of decimal places to round the result to.
+        minimum: 0
+        maximum: 6
+      display_as:
+        type: string
+        description: |
+          Optional display format for numeric fields.
+          Currently supported: "percent" — value is multiplied by 100 and
+          displayed with a % suffix.
+        enum: [percent]
+    if:
+      properties:
+        display_as: { const: percent }
+    then:
+      properties:
+        compute:
+          $ref: "#/$defs/numeric_node"
+
+  ast_node:
+    oneOf:
+      - $ref: "#/$defs/numeric_node"
+      - $ref: "#/$defs/string_node"
+
+  numeric_node:
+    oneOf:
+      - type: object
+        required: [constant]
+        additionalProperties: false
+        properties:
+          constant: { type: number }
+      - allOf:
+          - $ref: "#/$defs/ast_field_node"
+          - properties:
+              return_type: { enum: [number, integer] }
+      - $ref: "#/$defs/numeric_op_node"
+
+  string_node:
+    oneOf:
+      - type: object
+        required: [constant]
+        additionalProperties: false
+        properties:
+          constant: { type: string }
+      - allOf:
+          - $ref: "#/$defs/ast_field_node"
+          - properties:
+              return_type: { const: string }
+
+  numeric_op_node:
+    oneOf:
+      - $ref: "#/$defs/sum_op"
+      - $ref: "#/$defs/product_op"
+      - $ref: "#/$defs/difference_op"
+      - $ref: "#/$defs/ratio_op"
+
+  sum_op:
+    type: object
+    required: [op, args]
+    additionalProperties: false
+    properties:
+      op: { const: sum }
+      args:
+        type: array
+        minItems: 2
+        items: { $ref: "#/$defs/numeric_node" }
+
+  product_op:
+    type: object
+    required: [op, args]
+    additionalProperties: false
+    properties:
+      op: { const: product }
+      args:
+        type: array
+        minItems: 2
+        items: { $ref: "#/$defs/numeric_node" }
+
+  difference_op:
+    type: object
+    required: [op, args]
+    additionalProperties: false
+    properties:
+      op: { const: difference }
+      args:
+        type: array
+        minItems: 2
+        maxItems: 2
+        items: { $ref: "#/$defs/numeric_node" }
+
+  ratio_op:
+    type: object
+    required: [op, args]
+    additionalProperties: false
+    properties:
+      op: { const: ratio }
+      args:
+        type: array
+        minItems: 2
+        maxItems: 2
+        items: { $ref: "#/$defs/numeric_node" }
+
+  ast_field_node:
+    type: object
+    required: [field, return_type]
+    additionalProperties: false
+    properties:
+      field:
+        type: string
+        description: |
+          Reference to a field on a state in the form: <state_id>.<field_name>
+        pattern: '^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$'
+      return_type:
+        type: string
+        enum: [string, number, integer, boolean, array, object, image]
 
   state_summary:
     type: object
@@ -429,6 +566,21 @@ $defs:
           readable controls without hardcoding labels in components.
           If not provided, the field name is converted to title case and used as a label.
           E.g. "firing_temperature" → "Firing Temperature".
+      display_as:
+        type: string
+        description: |
+          Optional display format for numeric fields.
+          Currently supported: "percent" — value is multiplied by 100 and
+          displayed with a % suffix.
+        enum: [percent]
+    if:
+      required: [display_as]
+      properties:
+        display_as: { const: percent }
+    then:
+      properties:
+        type: { enum: [number, integer] }
+
   state_ref_field:
     type: object
     required: [$ref]
@@ -455,6 +607,10 @@ $defs:
           Optional override of the referenced field's UI label. If omitted,
           consumers fall back to the referenced field's label or the field name
           converted to title case.
+      display_as:
+        type: string
+        description: Optional override of the display format.
+        enum: [percent]
 
   global_ref_field:
     type: object

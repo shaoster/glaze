@@ -82,14 +82,14 @@ py_test(
     name = "api_workflow_test",
     size = "medium",
     srcs = _CONFTEST + [
-        "tests/test_additional_fields.py",
+        "tests/test_custom_fields.py",
         "tests/test_workflow_globals.py",
         "tests/test_workflow_helpers.py",
     ],
     args = [
         "api/tests/test_workflow_helpers.py",
         "api/tests/test_workflow_globals.py",
-        "api/tests/test_additional_fields.py",
+        "api/tests/test_custom_fields.py",
     ],
     data = _TEST_DATA,
     env = _TEST_ENV,

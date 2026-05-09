@@ -5,7 +5,7 @@ Three test classes cover different validation layers:
 
   TestSchemaValidation     — structural: jsonschema against workflow.schema.yml.
   TestReferentialIntegrity — semantic: state graph rules JSON Schema cannot express.
-  TestAdditionalFieldsDSL  — semantic: field DSL referential integrity.
+  TestCustomFieldsDSL  — semantic: field DSL referential integrity.
 
 Django-backed tests (TestGlobals, TestComposeFrom) live in api/tests/test_workflow_globals.py.
 """
@@ -152,7 +152,11 @@ def _resolved_field_def(workflow, state_id, field_name, seen=None):
         return None
     if "type" in field_def:
         return field_def
-    ref = field_def["$ref"]
+    if "compute" in field_def:
+        return {"type": "number"}
+    ref = field_def.get("$ref")
+    if not ref:
+        return None
     if ref.startswith("@"):
         global_name, global_field_name = ref[1:].split(".", 1)
         return (
@@ -310,6 +314,75 @@ class TestSchemaValidation:
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(instance=bad, schema=schema)
+
+    def test_calculated_field_arity_fails(self, schema):
+        """Calculated fields must respect op-specific arity (e.g. ratio=2)."""
+        # 1. Ratio with 3 args (max 2)
+        bad_ratio = {
+            "version": "1.0.0",
+            "states": [
+                _state(
+                    "a",
+                    fields={
+                        "x": {
+                            "compute": {
+                                "op": "ratio",
+                                "args": [
+                                    {"constant": 1},
+                                    {"constant": 2},
+                                    {"constant": 3},
+                                ],
+                            }
+                        }
+                    },
+                ),
+                _state("b", terminal=True),
+            ],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad_ratio, schema=schema)
+
+        # 2. Difference with 1 arg (min 2)
+        bad_diff = {
+            "version": "1.0.0",
+            "states": [
+                _state(
+                    "a",
+                    fields={
+                        "x": {
+                            "compute": {
+                                "op": "difference",
+                                "args": [{"constant": 1}],
+                            }
+                        }
+                    },
+                ),
+                _state("b", terminal=True),
+            ],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad_diff, schema=schema)
+
+        # 3. Sum with 1 arg (min 2)
+        bad_sum = {
+            "version": "1.0.0",
+            "states": [
+                _state(
+                    "a",
+                    fields={
+                        "x": {
+                            "compute": {
+                                "op": "sum",
+                                "args": [{"constant": 1}],
+                            }
+                        }
+                    },
+                ),
+                _state("b", terminal=True),
+            ],
+        }
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance=bad_sum, schema=schema)
 
     def test_plural_accepted_on_global_def(self, schema):
         """plural: string must be accepted on a global definition."""
@@ -791,7 +864,7 @@ class TestReferentialIntegrity:
 # ---------------------------------------------------------------------------
 
 
-class TestAdditionalFieldsDSL:
+class TestCustomFieldsDSL:
     def test_enum_only_on_string_type(self, workflow):
         """enum is only meaningful on type: string fields."""
         for context, field_name, field_def in _all_inline_fields(workflow):
@@ -809,6 +882,19 @@ class TestAdditionalFieldsDSL:
                     f"Field '{field_name}' in {context} declares format but type is "
                     f"'{field_def.get('type')}' — format is only valid on type: string"
                 )
+
+    def test_display_as_percent_only_on_numeric_type(self, workflow):
+        """display_as: percent is only meaningful on numeric fields."""
+        for state in workflow["states"]:
+            state_id = state["id"]
+            for field_name, field_def in state.get("fields", {}).items():
+                if field_def.get("display_as") == "percent":
+                    resolved = _resolved_field_def(workflow, state_id, field_name)
+                    assert resolved and resolved.get("type") in {"number", "integer"}, (
+                        f"Field '{field_name}' in state '{state_id}' declares "
+                        f"display_as: percent but resolved type is "
+                        f"'{resolved.get('type') if resolved else 'unknown'}'"
+                    )
 
     def test_state_ref_state_exists(self, workflow, state_ids):
         """The state_id in a state ref must be a known state."""

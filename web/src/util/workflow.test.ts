@@ -232,6 +232,25 @@ vi.mock("../../../workflow.yml", () => ({
             $ref: "bisque_fired.kiln_location",
             description: "Carried-forward kiln location",
           },
+          volume_shrinkage: {
+            label: "Volume Shrinkage",
+            unit: "%",
+            decimals: 1,
+            display_as: "percent",
+            compute: {
+              op: "product",
+              args: [
+                {
+                  op: "ratio",
+                  args: [
+                    { constant: 512 },
+                    { constant: 1000 },
+                  ],
+                },
+                { constant: 100 },
+              ],
+            },
+          },
         },
       },
       {
@@ -315,7 +334,7 @@ import {
   formatPastState,
   formatWorkflowFieldLabel,
   getStateDescription,
-  getAdditionalFieldDefinitions,
+  getCustomFieldDefinitions,
   getFilterableFields,
   getGlobalComposeFrom,
   getGlobalDisplayField,
@@ -482,18 +501,18 @@ describe("getGlobalPickerFilters", () => {
   });
 });
 
-describe("getAdditionalFieldDefinitions", () => {
+describe("getCustomFieldDefinitions", () => {
   it("returns an empty array for a state with no additional fields", () => {
-    expect(getAdditionalFieldDefinitions("designed")).toEqual([]);
+    expect(getCustomFieldDefinitions("designed")).toEqual([]);
   });
 
   it("returns an empty array for an unknown state", () => {
-    expect(getAdditionalFieldDefinitions("nonexistent")).toEqual([]);
+    expect(getCustomFieldDefinitions("nonexistent")).toEqual([]);
   });
 
   describe("inline fields", () => {
     it("resolves type, description, and required flag", () => {
-      const fields = getAdditionalFieldDefinitions("wheel_thrown");
+      const fields = getCustomFieldDefinitions("wheel_thrown");
       const f = fields.find((f) => f.name === "clay_weight_lbs")!;
       expect(f.type).toBe("number");
       expect(f.label).toBe("Clay Weight Lbs");
@@ -503,13 +522,13 @@ describe("getAdditionalFieldDefinitions", () => {
     });
 
     it("defaults required to false when not declared", () => {
-      const fields = getAdditionalFieldDefinitions("wheel_thrown");
+      const fields = getCustomFieldDefinitions("wheel_thrown");
       const f = fields.find((f) => f.name === "clay_weight_lbs")!;
       expect(f.required).toBe(false);
     });
 
     it("keeps required=true when declared inline", () => {
-      const fields = getAdditionalFieldDefinitions("edge_cases");
+      const fields = getCustomFieldDefinitions("edge_cases");
       const f = fields.find((field) => field.name === "required_notes")!;
       expect(f.required).toBe(true);
       expect(f.description).toBe("Must always be filled");
@@ -518,7 +537,7 @@ describe("getAdditionalFieldDefinitions", () => {
 
   describe("global ref fields", () => {
     it("sets isGlobalRef, globalName, and globalField", () => {
-      const fields = getAdditionalFieldDefinitions("submitted_to_bisque_fire");
+      const fields = getCustomFieldDefinitions("submitted_to_bisque_fire");
       const f = fields.find((f) => f.name === "kiln_location")!;
       expect(f.isGlobalRef).toBe(true);
       expect(f.globalName).toBe("location");
@@ -526,26 +545,26 @@ describe("getAdditionalFieldDefinitions", () => {
     });
 
     it("sets canCreate true when declared", () => {
-      const fields = getAdditionalFieldDefinitions("submitted_to_bisque_fire");
+      const fields = getCustomFieldDefinitions("submitted_to_bisque_fire");
       expect(fields.find((f) => f.name === "kiln_location")!.canCreate).toBe(
         true,
       );
     });
 
     it("resolves the type from the referenced global field", () => {
-      const fields = getAdditionalFieldDefinitions("wheel_thrown");
+      const fields = getCustomFieldDefinitions("wheel_thrown");
       expect(fields.find((f) => f.name === "clay_body")!.type).toBe("string");
     });
 
     it("falls back to a formatted label when neither ref nor target declare one", () => {
-      const fields = getAdditionalFieldDefinitions("edge_cases");
+      const fields = getCustomFieldDefinitions("edge_cases");
       const f = fields.find((field) => field.name === "clay_body_default_label")!;
       expect(f.label).toBe("Clay Body Default Label");
       expect(f.canCreate).toBe(false);
     });
 
     it("falls back to string metadata for malformed or missing global refs", () => {
-      const fields = getAdditionalFieldDefinitions("edge_cases");
+      const fields = getCustomFieldDefinitions("edge_cases");
       const malformed = fields.find((field) => field.name === "malformed_global_ref")!;
       const missing = fields.find((field) => field.name === "missing_global_target")!;
       expect(malformed.type).toBe("string");
@@ -559,34 +578,34 @@ describe("getAdditionalFieldDefinitions", () => {
 
   describe("state ref fields", () => {
     it("resolves the type from the referenced state field", () => {
-      const fields = getAdditionalFieldDefinitions("trimmed");
+      const fields = getCustomFieldDefinitions("trimmed");
       const f = fields.find((f) => f.name === "pre_trim_weight_lbs")!;
       expect(f.type).toBe("number");
       expect(f.label).toBe("Pre-trim Weight Lbs");
     });
 
     it("uses the overridden description from the ref field", () => {
-      const fields = getAdditionalFieldDefinitions("trimmed");
+      const fields = getCustomFieldDefinitions("trimmed");
       const f = fields.find((f) => f.name === "pre_trim_weight_lbs")!;
       expect(f.description).toBe("Weight after trimming");
     });
 
     it("is not marked as a global ref", () => {
-      const fields = getAdditionalFieldDefinitions("trimmed");
+      const fields = getCustomFieldDefinitions("trimmed");
       expect(
         fields.find((f) => f.name === "pre_trim_weight_lbs")!.isGlobalRef,
       ).toBe(false);
     });
 
     it("is marked as a state ref", () => {
-      const fields = getAdditionalFieldDefinitions("trimmed");
+      const fields = getCustomFieldDefinitions("trimmed");
       expect(
         fields.find((f) => f.name === "pre_trim_weight_lbs")!.isStateRef,
       ).toBe(true);
     });
 
     it("carries enum values through transitive state refs", () => {
-      const fields = getAdditionalFieldDefinitions("glaze_fired");
+      const fields = getCustomFieldDefinitions("glaze_fired");
       expect(fields.find((f) => f.name === "cone")!.enum).toEqual([
         "04",
         "03",
@@ -596,7 +615,7 @@ describe("getAdditionalFieldDefinitions", () => {
     });
 
     it("inherits description metadata when the ref field does not override it", () => {
-      const fields = getAdditionalFieldDefinitions("trimmed");
+      const fields = getCustomFieldDefinitions("trimmed");
       expect(
         fields.find((field) => field.name === "inherited_weight_lbs")!
           .description,
@@ -604,14 +623,14 @@ describe("getAdditionalFieldDefinitions", () => {
     });
 
     it("lets the ref field override a required target back to false", () => {
-      const fields = getAdditionalFieldDefinitions("edge_cases");
+      const fields = getCustomFieldDefinitions("edge_cases");
       expect(fields.find((field) => field.name === "optional_copy")!.required).toBe(
         false,
       );
     });
 
     it("state ref chaining to a global ref is treated as a global ref, not a plain state ref", () => {
-      const fields = getAdditionalFieldDefinitions("glaze_fired");
+      const fields = getCustomFieldDefinitions("glaze_fired");
       const f = fields.find((f) => f.name === "kiln_location")!;
       expect(f.isGlobalRef).toBe(true);
       expect(f.isStateRef).toBe(false);
@@ -620,18 +639,18 @@ describe("getAdditionalFieldDefinitions", () => {
     });
 
     it("state ref chaining to a global ref uses the overriding description", () => {
-      const fields = getAdditionalFieldDefinitions("glaze_fired");
+      const fields = getCustomFieldDefinitions("glaze_fired");
       const f = fields.find((f) => f.name === "kiln_location")!;
       expect(f.description).toBe("Carried-forward kiln location");
     });
 
     it("state ref chaining to a global ref defaults canCreate to false (no can_create on the ref)", () => {
-      const fields = getAdditionalFieldDefinitions("glaze_fired");
+      const fields = getCustomFieldDefinitions("glaze_fired");
       expect(fields.find((f) => f.name === "kiln_location")!.canCreate).toBe(false);
     });
 
     it("falls back to string metadata for malformed, missing, or cyclic state refs", () => {
-      const fields = getAdditionalFieldDefinitions("edge_cases");
+      const fields = getCustomFieldDefinitions("edge_cases");
       expect(fields.find((field) => field.name === "malformed_state_ref")!.type).toBe(
         "string",
       );
@@ -647,9 +666,28 @@ describe("getAdditionalFieldDefinitions", () => {
     });
   });
 
+  describe("calculated fields", () => {
+    it("sets isCalculated to true and preserves unit/decimals", () => {
+      const fields = getCustomFieldDefinitions("glaze_fired");
+      const f = fields.find((f) => f.name === "volume_shrinkage")!;
+      expect(f.isCalculated).toBe(true);
+      expect(f.type).toBe("number");
+      expect(f.unit).toBe("%");
+      expect(f.decimals).toBe(1);
+    });
+
+    it("is not marked as a state ref or global ref", () => {
+      const fields = getCustomFieldDefinitions("glaze_fired");
+      const f = fields.find((f) => f.name === "volume_shrinkage")!;
+      expect(f.isStateRef).toBe(false);
+      expect(f.isGlobalRef).toBe(false);
+    });
+  });
+
   describe("inline fields are not state refs", () => {
+
     it("inline field has isStateRef false", () => {
-      const fields = getAdditionalFieldDefinitions("wheel_thrown");
+      const fields = getCustomFieldDefinitions("wheel_thrown");
       expect(
         fields.find((f) => f.name === "clay_weight_lbs")!.isStateRef,
       ).toBe(false);
@@ -658,7 +696,7 @@ describe("getAdditionalFieldDefinitions", () => {
 
   describe("global ref fields are not state refs", () => {
     it("global ref field has isStateRef false", () => {
-      const fields = getAdditionalFieldDefinitions("submitted_to_bisque_fire");
+      const fields = getCustomFieldDefinitions("submitted_to_bisque_fire");
       expect(fields.find((f) => f.name === "kiln_location")!.isStateRef).toBe(
         false,
       );
@@ -666,7 +704,7 @@ describe("getAdditionalFieldDefinitions", () => {
   });
 
   it("uses the workflow label for inline fields", () => {
-    const fields = getAdditionalFieldDefinitions("submitted_to_bisque_fire");
+    const fields = getCustomFieldDefinitions("submitted_to_bisque_fire");
     expect(fields.find((f) => f.name === "firing_fee_usd")!.label).toBe(
       "Firing Fee (USD)",
     );

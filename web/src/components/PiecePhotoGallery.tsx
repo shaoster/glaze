@@ -35,7 +35,7 @@ type PiecePhotoGalleryProps = {
   images: PiecePhotoGalleryImage[];
   pieceId?: string;
   currentStateNotes?: string;
-  currentStateAdditionalFields?: Record<string, unknown>;
+  currentStateCustomFields?: Record<string, unknown>;
   currentThumbnailUrl?: string;
   onPieceUpdated?: (updated: PieceDetail) => void;
   updatePieceFn?: typeof updatePiece;
@@ -63,7 +63,7 @@ export default function PiecePhotoGallery({
   images,
   pieceId,
   currentStateNotes,
-  currentStateAdditionalFields,
+  currentStateCustomFields,
   currentThumbnailUrl,
   onPieceUpdated,
   updatePieceFn,
@@ -144,7 +144,7 @@ export default function PiecePhotoGallery({
         cloud_name: image.cloud_name ?? null,
         crop: image.crop ?? null,
       })),
-      custom_fields: normalizeFields(currentStateAdditionalFields ?? {}),
+      custom_fields: normalizeFields(currentStateCustomFields ?? {}),
     });
     onPieceUpdated(updated);
   }

@@ -27,6 +27,7 @@ interface InlineFieldDef {
   filterable?: boolean;
   use_as_thumbnail?: boolean;
   label?: string;
+  display_as?: "percent";
 }
 
 interface StateRefFieldDef {
@@ -34,6 +35,7 @@ interface StateRefFieldDef {
   description?: string;
   required?: boolean;
   label?: string;
+  display_as?: "percent";
 }
 
 interface GlobalRefFieldDef {
@@ -45,7 +47,33 @@ interface GlobalRefFieldDef {
   filterable?: boolean;
 }
 
-type FieldDefinition = InlineFieldDef | StateRefFieldDef | GlobalRefFieldDef;
+export type SummaryComputeOp = "product" | "difference" | "sum" | "ratio";
+
+export type WorkflowASTLeafNode =
+  | { field: string }
+  | { constant: number | string | boolean };
+
+export interface WorkflowASTOpNode {
+  op: SummaryComputeOp;
+  args: WorkflowASTNode[];
+}
+
+export type WorkflowASTNode = WorkflowASTLeafNode | WorkflowASTOpNode;
+
+interface CalculatedFieldDef {
+  compute: WorkflowASTNode;
+  description?: string;
+  label?: string;
+  unit?: string;
+  decimals?: number;
+  display_as?: "percent";
+}
+
+type FieldDefinition =
+  | InlineFieldDef
+  | StateRefFieldDef
+  | GlobalRefFieldDef
+  | CalculatedFieldDef;
 
 interface WorkflowStateDefinition {
   id: string;
@@ -95,7 +123,7 @@ function toTitleWords(value: string): string {
     .join(" ");
 }
 
-export type ResolvedAdditionalField = {
+export type ResolvedCustomField = {
   name: string;
   label: string;
   type: FieldType;
@@ -104,9 +132,13 @@ export type ResolvedAdditionalField = {
   enum?: string[];
   isGlobalRef: boolean;
   isStateRef: boolean;
+  isCalculated: boolean;
   canCreate?: boolean;
   globalName?: string;
   globalField?: string;
+  unit?: string;
+  decimals?: number;
+  displayAs?: "percent";
 };
 
 export interface WorkflowStateMetadata {
@@ -116,8 +148,6 @@ export interface WorkflowStateMetadata {
   description: string;
   isTerminal: boolean;
 }
-
-export type SummaryComputeOp = "product" | "difference" | "sum" | "ratio";
 
 export interface WorkflowSummaryCondition {
   state_exists?: string;
@@ -158,7 +188,7 @@ export interface WorkflowSummaryValueItem {
   ref: string;
   stateId: string;
   fieldName: string;
-  field: ResolvedAdditionalField;
+  field: ResolvedCustomField;
   when?: WorkflowSummaryCondition;
 }
 
@@ -342,15 +372,15 @@ export function getGlobalDisplayField(globalName: string): string {
 }
 
 /**
- * Returns the fully resolved additional field definitions for a given state,
+ * Returns the fully resolved custom field definitions for a given state,
  * ready for rendering in a form. Each entry has its type, label metadata,
  * required flag, and — for global refs — the global name and whether inline
  * creation is permitted. Used by `WorkflowState` to render per-state form
  * fields without hardcoding any state-specific logic in the component.
  */
-export function getAdditionalFieldDefinitions(
+export function getCustomFieldDefinitions(
   stateId: string,
-): ResolvedAdditionalField[] {
+): ResolvedCustomField[] {
   const state = STATE_MAP.get(stateId);
   if (!state) {
     return [];
@@ -434,14 +464,16 @@ function isStateRefField(def: FieldDefinition): boolean {
 function buildResolvedField(
   name: string,
   fieldDef: FieldDefinition,
-): ResolvedAdditionalField {
+): ResolvedCustomField {
   const inline = resolveInlineField(fieldDef);
   const isDirectGlobalRef = isGlobalRefField(fieldDef);
   const stateRef = isStateRefField(fieldDef);
+  const isCalculated = "compute" in fieldDef;
+
   // A state ref that ultimately chains to a global ref should render as an
   // editable global-entry picker rather than a disabled plain text field.
   const resolvedGlobal = isDirectGlobalRef
-    ? fieldDef
+    ? (fieldDef as GlobalRefFieldDef)
     : stateRef
       ? resolveStateRefToGlobalRef(fieldDef, new Set())
       : null;
@@ -449,18 +481,30 @@ function buildResolvedField(
   const [globalName, globalField] = globalRef
     ? parseGlobalRef(resolvedGlobal!)
     : [undefined, undefined];
+
+  const calc = isCalculated ? (fieldDef as CalculatedFieldDef) : undefined;
+
   return {
     name,
     label: fieldDef.label ?? inline.label ?? formatWorkflowFieldLabel(name),
     type: inline.type,
     description: fieldDef.description ?? inline.description,
-    required: fieldDef.required ?? inline.required ?? false,
+    required: (fieldDef as InlineFieldDef).required ?? inline.required ?? false,
     enum: inline.enum,
     isGlobalRef: globalRef,
     isStateRef: stateRef && !globalRef,
-    canCreate: globalRef ? ((fieldDef as GlobalRefFieldDef).can_create ?? false) : undefined,
+    isCalculated,
+    canCreate: globalRef
+      ? ((fieldDef as GlobalRefFieldDef).can_create ?? false)
+      : undefined,
     globalName,
     globalField,
+    unit: calc?.unit,
+    decimals: calc?.decimals,
+    displayAs:
+      (fieldDef as CalculatedFieldDef).display_as ??
+      (fieldDef as StateRefFieldDef).display_as ??
+      inline.display_as,
   };
 }
 
@@ -485,6 +529,11 @@ function resolveInlineField(
 ): InlineFieldDef {
   if ("type" in fieldDef) {
     return fieldDef;
+  }
+
+  if ("compute" in fieldDef) {
+    const type = resolveASTType(fieldDef.compute, seen);
+    return { type, display_as: (fieldDef as CalculatedFieldDef).display_as };
   }
 
   const ref = fieldDef.$ref;
@@ -517,6 +566,27 @@ function resolveInlineField(
     return { type: "string" };
   }
   return resolveInlineField(target, nextSeen);
+}
+
+function resolveASTType(node: WorkflowASTNode, seen: Set<string>): FieldType {
+  if ("op" in node) {
+    if (["sum", "product", "difference", "ratio"].includes(node.op)) {
+      return "number";
+    }
+    return "string";
+  }
+  if ("constant" in node) {
+    if (typeof node.constant === "number") return "number";
+    if (typeof node.constant === "boolean") return "boolean";
+    return "string";
+  }
+  if ("field" in node) {
+    const [stateId, fieldName] = node.field.split(".", 2);
+    const target = STATE_MAP.get(stateId)?.fields?.[fieldName];
+    if (!target) return "string";
+    return resolveInlineField(target, seen).type;
+  }
+  return "string";
 }
 
 function isGlobalRefField(def: FieldDefinition): def is GlobalRefFieldDef {
@@ -578,7 +648,7 @@ function buildSummaryItem(
 
 function resolveStateFieldRef(
   ref: string,
-): { stateId: string; fieldName: string; field: ResolvedAdditionalField } | null {
+): { stateId: string; fieldName: string; field: ResolvedCustomField } | null {
   const [stateId, fieldName] = ref.split(".", 2);
   if (!stateId || !fieldName) {
     return null;

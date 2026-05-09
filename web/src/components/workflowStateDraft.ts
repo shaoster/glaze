@@ -1,7 +1,7 @@
 import type { ImageCrop, PieceState } from "../util/types";
 import {
-  type ResolvedAdditionalField,
-  getAdditionalFieldDefinitions,
+  type ResolvedCustomField,
+  getCustomFieldDefinitions,
 } from "../util/workflow";
 
 export type ImageEntry = {
@@ -12,30 +12,30 @@ export type ImageEntry = {
   crop?: ImageCrop | null;
 };
 
-type AdditionalFieldInputMap = Record<string, string>;
+type CustomFieldInputMap = Record<string, string>;
 type GlobalRefPkMap = Record<string, string>;
 
 export type DraftState = {
   baseState: PieceState;
   notes: string;
   images: ImageEntry[];
-  additionalFieldInputs: AdditionalFieldInputMap;
+  customFieldInputs: CustomFieldInputMap;
   globalRefPks: GlobalRefPkMap;
 };
 
 export type DraftAction =
   | { type: "replace_base_state"; pieceState: PieceState }
   | { type: "set_notes"; notes: string }
-  | { type: "set_additional_field"; name: string; value: string }
+  | { type: "set_custom_field"; name: string; value: string }
   | { type: "set_global_ref_pks"; globalRefPks: GlobalRefPkMap };
 
 function assertNever(value: never): never {
   throw new Error(`Unhandled DraftAction: ${JSON.stringify(value)}`);
 }
 
-function formatAdditionalFieldValue(
+function formatCustomFieldValue(
   value: unknown,
-  type: ResolvedAdditionalField["type"],
+  type: ResolvedCustomField["type"],
 ): string {
   if (value === null || value === undefined) {
     return "";
@@ -61,19 +61,19 @@ function extractGlobalRefPk(value: unknown): string | undefined {
   return undefined;
 }
 
-export function buildAdditionalFieldInputMap(
-  defs: ResolvedAdditionalField[],
+export function buildCustomFieldInputMap(
+  defs: ResolvedCustomField[],
   values: Record<string, unknown>,
-): AdditionalFieldInputMap {
-  const map: AdditionalFieldInputMap = {};
+): CustomFieldInputMap {
+  const map: CustomFieldInputMap = {};
   defs.forEach((def) => {
-    map[def.name] = formatAdditionalFieldValue(values[def.name], def.type);
+    map[def.name] = formatCustomFieldValue(values[def.name], def.type);
   });
   return map;
 }
 
 export function buildGlobalRefPkMap(
-  defs: ResolvedAdditionalField[],
+  defs: ResolvedCustomField[],
   values: Record<string, unknown>,
 ): GlobalRefPkMap {
   const map: GlobalRefPkMap = {};
@@ -86,13 +86,16 @@ export function buildGlobalRefPkMap(
   return map;
 }
 
-export function normalizeAdditionalFieldPayload(
-  defs: ResolvedAdditionalField[],
-  inputs: AdditionalFieldInputMap,
+export function normalizeCustomFieldPayload(
+  defs: ResolvedCustomField[],
+  inputs: CustomFieldInputMap,
   globalRefPks: GlobalRefPkMap,
 ): Record<string, string | number | boolean | null> {
   const payload: Record<string, string | number | boolean | null> = {};
   defs.forEach((def) => {
+    if (def.isCalculated) {
+      return;
+    }
     if (def.isGlobalRef) {
       const pk = globalRefPks[def.name];
       payload[def.name] = pk || null;
@@ -143,17 +146,17 @@ function stateImages(pieceState: PieceState): ImageEntry[] {
 }
 
 export function buildDraftState(pieceState: PieceState): DraftState {
-  const additionalFieldDefs = getAdditionalFieldDefinitions(pieceState.state);
-  const additionalFields = pieceState.custom_fields;
+  const customFieldDefs = getCustomFieldDefinitions(pieceState.state);
+  const customFields = pieceState.custom_fields;
   return {
     baseState: pieceState,
     notes: pieceState.notes,
     images: stateImages(pieceState),
-    additionalFieldInputs: buildAdditionalFieldInputMap(
-      additionalFieldDefs,
-      additionalFields,
+    customFieldInputs: buildCustomFieldInputMap(
+      customFieldDefs,
+      customFields,
     ),
-    globalRefPks: buildGlobalRefPkMap(additionalFieldDefs, additionalFields),
+    globalRefPks: buildGlobalRefPkMap(customFieldDefs, customFields),
   };
 }
 
@@ -163,11 +166,11 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
       return buildDraftState(action.pieceState);
     case "set_notes":
       return { ...state, notes: action.notes };
-    case "set_additional_field":
+    case "set_custom_field":
       return {
         ...state,
-        additionalFieldInputs: {
-          ...state.additionalFieldInputs,
+        customFieldInputs: {
+          ...state.customFieldInputs,
           [action.name]: action.value,
         },
       };

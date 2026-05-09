@@ -169,7 +169,7 @@ class TestPatchCurrentState:
         )
         assert response.status_code == 400
 
-    def test_null_global_ref_additional_field_clears_junction_row(self, client, piece):
+    def test_null_global_ref_custom_field_clears_junction_row(self, client, piece):
         glaze = GlazeType.objects.create(user=None, name="Iron Red")
         combo, _ = GlazeCombination.get_or_create_with_components(
             user=None, glaze_types=[glaze]

@@ -448,7 +448,7 @@ GitHub Actions runs three parallel jobs on every push and pull request — see [
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `test`     | `bazel test --config=ci //...` — all test suites                                                                                                                |
 | `lint`     | `bazel build --config=ci --config=lint //...` — ruff, eslint, tsc, mypy                                                                                         |
-| `coverage` | `pytest api/ tests/ --cov` + `npm test --coverage` — feeds Codecov (separate from Bazel until [#159](https://github.com/shaoster/glaze/issues/159) is resolved) |
+| `coverage` | `bazel coverage --config=ci --combined_report=lcov //...` — feeds Codecov |
 
 Coverage reports are uploaded to [Codecov](https://codecov.io). Codecov posts a summary comment on each PR.
 
