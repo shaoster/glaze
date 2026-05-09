@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PotterDoc — Showcase Field Selection · Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=Architects+Daughter&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #ece9df; min-height: 100vh; }
+  body { font-family: 'Architects Daughter', cursive; color: #1a1a1a; }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="showcase-field-selection-options.jsx"></script>
+<script type="text/babel" src="showcase-config-frame-options.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+  const { DesignCanvas, DCSection, DCArtboard } = window;
+
+  function App() {
+    const wrap = (Comp) => (
+      <IOSDevice width={390} height={844} dark={false}>
+        <Comp />
+      </IOSDevice>
+    );
+    return (
+      <DesignCanvas
+        title="Showcase Field Selection"
+        subtitle="Standalone setup frame + earlier in-PieceDetail explorations · issue #315"
+        background="#ece9df"
+      >
+        <DCSection
+          id="setup-frame"
+          title="Showcase setup — standalone frame"
+          subtitle="A separate screen reached from PieceDetail. Field picker (from A) + live public preview (from C). Pencil icon on the preview opens inline Showcase Story editor. Piece name / state / dates intentionally omitted — they live on PieceDetail."
+        >
+          <DCArtboard id="setup" label="Showcase setup frame" width={390} height={844}>
+            {wrap(ShowcaseConfig)}
+          </DCArtboard>
+        </DCSection>
+        <DCSection
+          id="terminal"
+          title="Earlier explorations — in-PieceDetail (for reference)"
+          subtitle="Original 4 wireframes that lived inside PieceDetail at terminal state."
+        >
+          <DCArtboard id="a" label="A · inline checkboxes" width={390} height={844}>
+            {wrap(VariantA)}
+          </DCArtboard>
+          <DCArtboard id="b" label="B · shared / hidden columns" width={390} height={844}>
+            {wrap(VariantB)}
+          </DCArtboard>
+          <DCArtboard id="c" label="C · live public preview" width={390} height={844}>
+            {wrap(VariantC)}
+          </DCArtboard>
+          <DCArtboard id="d" label="D · grouped bottom sheet" width={390} height={844}>
+            {wrap(VariantD)}
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
