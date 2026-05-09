@@ -338,7 +338,10 @@ class PieceState(models.Model):
             if computed_val is not None:
                 decimals = field_def.get("decimals")
                 if decimals is not None:
-                    return round(computed_val, decimals)
+                    effective_decimals = (
+                        decimals + 2 if field_def.get("display_as") == "percent" else decimals
+                    )
+                    return round(computed_val, effective_decimals)
             return computed_val
 
         # Not in custom_fields or calculated. Check junction tables for global refs.

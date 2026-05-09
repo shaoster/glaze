@@ -85,6 +85,17 @@ _MOCK_STATE_MAP = {
                     ],
                 }
             },
+            "percent_ab": {
+                "compute": {
+                    "op": "ratio",
+                    "args": [
+                        {"field": "mock_calculated.a", "return_type": "number"},
+                        {"field": "mock_calculated.b", "return_type": "number"},
+                    ],
+                },
+                "display_as": "percent",
+                "decimals": 1,
+            },
         },
     },
     "mock_no_fields": {
@@ -250,6 +261,9 @@ class TestCalculatedFields:
             # 1.12 + 2.23 = 3.35 -> rounded to 1 decimal = 3.4
             ps = _make_piece_with_state("mock_calculated", {"a": 1.12, "b": 2.23})
             assert ps.resolve_custom_field("sum_ab") == 3.4
+
+            # 1.12 / 2.23 = 0.50224... -> rounded to 1 + 2 = 3 decimals = 0.502
+            assert ps.resolve_custom_field("percent_ab") == 0.502
 
     def test_recursive_calculation(self, client, piece):
         """Test that complex recursive ASTs are evaluated correctly."""
