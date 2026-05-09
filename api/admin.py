@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 import cloudinary
 from adminsortable2.admin import SortableAdminBase, SortableInlineAdminMixin
@@ -741,7 +741,12 @@ class PieceStateImageInline(SortableInlineAdminMixin, admin.TabularInline):
 
 def _get_custom_form_fields(state_id: str) -> dict[str, forms.Field]:
     from django.apps import apps
-    from .workflow import build_custom_fields_schema, get_global_config, get_global_ref_fields_for_state
+
+    from .workflow import (
+        build_custom_fields_schema,
+        get_global_config,
+        get_global_ref_fields_for_state,
+    )
 
     schema = build_custom_fields_schema(state_id)
     properties = schema.get("properties", {})
@@ -806,7 +811,8 @@ class PieceStateAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         from django.apps import apps
-        from .workflow import get_global_ref_fields_for_state, get_global_config
+
+        from .workflow import get_global_config, get_global_ref_fields_for_state
 
         super().__init__(*args, **kwargs)
         self.custom_field_names = [
@@ -897,9 +903,7 @@ class PieceStateAdmin(ExportMixin, SortableAdminBase, admin.ModelAdmin):
     list_select_related = ("piece",)
     inlines = [PieceStateImageInline]
 
-    def get_fields(
-        self, request: HttpRequest, obj: PieceState | None = None
-    ) -> Any:
+    def get_fields(self, request: HttpRequest, obj: PieceState | None = None) -> Any:
         fields = list(super().get_fields(request, obj))
         if obj and obj.state:
             custom_fields = _get_custom_form_fields(obj.state)
@@ -950,6 +954,4 @@ class PieceStateAdmin(ExportMixin, SortableAdminBase, admin.ModelAdmin):
                     clear_fields.add(field_name)
 
         if global_ref_pks or clear_fields:
-            _write_global_ref_rows(
-                obj, global_ref_fields, global_ref_pks, clear_fields
-            )
+            _write_global_ref_rows(obj, global_ref_fields, global_ref_pks, clear_fields)

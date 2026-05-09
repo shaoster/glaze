@@ -252,10 +252,10 @@ class TestPatchCurrentState:
         assert response.json()["current_state"]["custom_fields"]["glaze_combination"][
             "id"
         ] == str(combo.pk)
-        assert ref_model.objects.filter(
+        # With lazy resolution, no junction row is created for state-refs.
+        assert not ref_model.objects.filter(
             piece_state=current,
             field_name="glaze_combination",
-            glaze_combination=combo,
         ).exists()
 
     def test_update_validation_error_when_custom_fields_save_fails(

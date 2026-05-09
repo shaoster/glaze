@@ -211,9 +211,9 @@ class TestPieceStates:
             == 1000
         )
 
-    def test_state_ref_client_value_not_overridden(self, client, piece):
-        # If the client explicitly supplies a value for a state ref field, the
-        # auto-population should not override it.
+    def test_state_ref_client_value_ignored(self, client, piece):
+        # Fields defined as state-refs are read-only: client input is ignored
+        # and the marker is always used.
         client.post(
             f"/api/pieces/{piece.id}/states/",
             {"state": "wheel_thrown", "custom_fields": {"clay_weight_lbs": 1000}},
@@ -225,9 +225,10 @@ class TestPieceStates:
             format="json",
         )
         assert response.status_code == 201
+        # It should resolve to 1000 (from ancestor) NOT 999 (client input)
         assert (
             response.json()["current_state"]["custom_fields"]["pre_trim_weight_lbs"]
-            == 999
+            == 1000
         )
 
     def test_global_ref_state_ref_auto_populated_on_transition(self, client, piece):

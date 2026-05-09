@@ -2,6 +2,7 @@ import uuid
 from typing import TYPE_CHECKING, Any
 
 import jsonschema
+from django.apps import apps
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
@@ -45,6 +46,7 @@ from .workflow import (
     get_compose_from,
     get_global_config,
     get_global_names,
+    get_global_ref_fields_for_state,
     get_state_global_ref_map,
     get_taggable_globals,
     is_factory_global,
@@ -302,6 +304,44 @@ class PieceState(models.Model):
 
     def __str__(self) -> str:
         return f"{self.piece.name} → {self.state}"
+
+    def resolve_custom_field(self, field_name: str) -> Any:
+        """Resolve a field value, following state-ref markers transitively.
+
+        Checks ``custom_fields`` for the field or a marker string. If a marker
+        is found, traverses history to find the authoritative ancestor. If
+        not in ``custom_fields``, checks global-ref junction tables.
+        """
+        val = self.custom_fields.get(field_name)
+        if isinstance(val, str) and val.startswith("[") and val.endswith("]"):
+            marker = val[1:-1]
+            if "." in marker:
+                src_state_id, src_field_name = marker.split(".", 1)
+                ancestor = (
+                    self.piece.states.filter(state=src_state_id)
+                    .order_by("-created")
+                    .first()
+                )
+                if ancestor:
+                    return ancestor.resolve_custom_field(src_field_name)
+
+        if val is not None:
+            return val
+
+        # Not in custom_fields. Check junction tables for global refs.
+        global_ref_map = get_global_ref_fields_for_state(self.state)
+        if field_name in global_ref_map:
+            global_name = global_ref_map[field_name]
+            config = get_global_config(global_name)
+            ref_model = apps.get_model("api", f"PieceState{config['model']}Ref")
+            try:
+                ref_row = ref_model.objects.select_related(global_name).get(
+                    piece_state=self, field_name=field_name
+                )
+                return getattr(ref_row, global_name)
+            except ref_model.DoesNotExist:
+                return None
+        return None
 
 
 class PieceStateImage(models.Model):

@@ -396,8 +396,18 @@ def test_build_custom_fields_schema_resolves_state_refs_recursively(monkeypatch)
     assert schema == {
         "type": "object",
         "properties": {
-            "kiln_temperature_c": {"type": "integer"},
-            "cone": {"type": "string", "enum": ["04", "03", "02", "01"]},
+            "kiln_temperature_c": {
+                "anyOf": [
+                    {"type": "integer"},
+                    {"pattern": r"^\[[a-z_]+\.[a-z_]+\]$", "type": "string"},
+                ]
+            },
+            "cone": {
+                "anyOf": [
+                    {"enum": ["04", "03", "02", "01"], "type": "string"},
+                    {"pattern": r"^\[[a-z_]+\.[a-z_]+\]$", "type": "string"},
+                ]
+            },
         },
         "additionalProperties": False,
     }

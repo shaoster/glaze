@@ -87,6 +87,9 @@ class GlobalModel(models.Model):
     # names remain safe to embed in a composite name.
     _computed_name: ClassVar[bool] = False
 
+    # Every concrete subclass is guaranteed to have a name (field or property).
+    name: str
+
     class Meta:
         abstract = True
 
