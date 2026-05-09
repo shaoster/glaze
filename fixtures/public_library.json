@@ -20,8 +20,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988117/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -37,8 +37,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988116/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -54,8 +54,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -71,8 +71,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_public/naxk2tch9yg5lbfde5ff"
+        "cloudinary_public_id": "glaze_public/naxk2tch9yg5lbfde5ff",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -84,12 +84,29 @@
   {
     "model": "api.glazetype",
     "fields": {
+      "name": "American Blue",
+      "short_description": "",
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1778344113/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-03-18-171815-9a0f1468.webp",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-03-18-171815-9a0f1468",
+        "cloud_name": "dxpnyhe1f"
+      },
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": null,
+      "is_different_on_white_and_brown_clay": null,
+      "apply_thin": null
+    }
+  },
+  {
+    "model": "api.glazetype",
+    "fields": {
       "name": "Breakthrough Blue",
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -105,8 +122,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988119/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -122,8 +139,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": null,
       "runs": null,
@@ -139,8 +156,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -156,8 +173,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -173,8 +190,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -190,8 +207,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988114/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -207,8 +224,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776823398/glaze_public/zotiqbcrfmdfxtty2wmv.heic",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_public/zotiqbcrfmdfxtty2wmv"
+        "cloudinary_public_id": "glaze_public/zotiqbcrfmdfxtty2wmv",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -224,8 +241,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": false,
       "runs": false,
@@ -241,8 +258,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -258,8 +275,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988122/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -275,8 +292,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -292,8 +309,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -309,8 +326,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152844/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -326,8 +343,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -343,8 +360,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152848/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -360,8 +377,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152847/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": false,
       "runs": true,
@@ -377,8 +394,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -394,8 +411,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": false,
       "runs": false,
@@ -409,7 +426,7 @@
     "fields": {
       "name": "Tenmoku",
       "short_description": "",
-      "test_tile_image": "",
+      "test_tile_image": null,
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -424,8 +441,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -441,8 +458,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304349/glaze_public/eyy9whpmb5wajybtfk3p.heic",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_public/eyy9whpmb5wajybtfk3p"
+        "cloudinary_public_id": "glaze_public/eyy9whpmb5wajybtfk3p",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -458,8 +475,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304189/glaze_public/jvrmpfxkjjhniqpqzqrs.heic",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_public/jvrmpfxkjjhniqpqzqrs"
+        "cloudinary_public_id": "glaze_public/jvrmpfxkjjhniqpqzqrs",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -475,8 +492,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152845/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -492,8 +509,8 @@
       "short_description": "",
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -509,8 +526,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988117/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -526,8 +543,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334466/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143829-86d206b5.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143829-86d206b5"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143829-86d206b5",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -543,8 +560,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334463/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143837-92445703.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143837-92445703"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143837-92445703",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -560,8 +577,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334462/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143845-32ec039e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143845-32ec039e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143845-32ec039e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -577,8 +594,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777329433/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143616-c93add06.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143616-c93add06"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143616-c93add06",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": null,
       "runs": null,
@@ -594,8 +611,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334468/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143635-9800dbcc.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143635-9800dbcc"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143635-9800dbcc",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -611,8 +628,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988116/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -628,8 +645,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334466/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143832-5a9d2a40.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143832-5a9d2a40"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143832-5a9d2a40",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -645,8 +662,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334463/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143841-7c59b827.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143841-7c59b827"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143841-7c59b827",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -662,8 +679,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334462/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143848-2271612c.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143848-2271612c"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143848-2271612c",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -679,8 +696,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334465/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143722-2-9189734a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143722-2-9189734a"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143722-2-9189734a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -696,8 +713,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334467/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143640-00fc2556.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143640-00fc2556"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143640-00fc2556",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -713,8 +730,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334464/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143637-f6d7a94f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143637-f6d7a94f"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143637-f6d7a94f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -730,8 +747,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -747,8 +764,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_public/naxk2tch9yg5lbfde5ff"
+        "cloudinary_public_id": "glaze_public/naxk2tch9yg5lbfde5ff",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -764,8 +781,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336845/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143922-77c875ba.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143922-77c875ba"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143922-77c875ba",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -781,8 +798,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336846/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143927-27923e92.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143927-27923e92"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143927-27923e92",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -798,8 +815,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336845/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143931-ea84d64d.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143931-ea84d64d"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143931-ea84d64d",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -815,8 +832,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336844/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143941-68464664.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143941-68464664"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143941-68464664",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -832,8 +849,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336843/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143934-23acc3a3.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143934-23acc3a3"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143934-23acc3a3",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -849,8 +866,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336841/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143945-7934ecc5.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143945-7934ecc5"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143945-7934ecc5",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -866,8 +883,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336842/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143953-994eefe3.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143953-994eefe3"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143953-994eefe3",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -883,8 +900,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143956-e7b3dca4.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143956-e7b3dca4"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143956-e7b3dca4",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -900,8 +917,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336840/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143959-5567b16c.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143959-5567b16c"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143959-5567b16c",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -917,8 +934,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336838/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144003-25b0011f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144003-25b0011f"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144003-25b0011f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -934,8 +951,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336836/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144005-dbe4f8e0.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144005-dbe4f8e0"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144005-dbe4f8e0",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -947,12 +964,29 @@
   {
     "model": "api.glazecombination",
     "fields": {
+      "name": "American Blue",
+      "firing_temperature": null,
+      "test_tile_image": {
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1778344113/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-03-18-171815-9a0f1468.webp",
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-03-18-171815-9a0f1468",
+        "cloud_name": "dxpnyhe1f"
+      },
+      "is_food_safe": true,
+      "runs": false,
+      "highlights_grooves": true,
+      "is_different_on_white_and_brown_clay": true,
+      "apply_thin": false
+    }
+  },
+  {
+    "model": "api.glazecombination",
+    "fields": {
       "name": "Breakthrough Blue",
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -968,8 +1002,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988119/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -985,8 +1019,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": null,
       "runs": null,
@@ -1002,8 +1036,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304417/glaze_public/j3gz35q5fecp48ncy2qp.heic",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_public/j3gz35q5fecp48ncy2qp"
+        "cloudinary_public_id": "glaze_public/j3gz35q5fecp48ncy2qp",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1019,8 +1053,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1036,8 +1070,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336837/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144058-bd8a1b6a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144058-bd8a1b6a"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144058-bd8a1b6a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1053,8 +1087,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336835/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144101-7b631b97.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144101-7b631b97"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144101-7b631b97",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1070,8 +1104,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336838/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144104-4aa50658.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144104-4aa50658"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144104-4aa50658",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1087,8 +1121,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418635/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144107-2e3380d3.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144107-2e3380d3"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144107-2e3380d3",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1104,8 +1138,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418632/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144111-a155e660.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144111-a155e660"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144111-a155e660",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1121,8 +1155,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418635/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144117-cab91cc3.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144117-cab91cc3"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144117-cab91cc3",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1138,8 +1172,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418633/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144119-700686e8.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144119-700686e8"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144119-700686e8",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1155,8 +1189,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418634/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144122-81bc3ac9.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144122-81bc3ac9"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144122-81bc3ac9",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1172,8 +1206,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418632/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144130-87d21c7e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144130-87d21c7e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144130-87d21c7e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1189,8 +1223,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418629/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144134-c36e6f40.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144134-c36e6f40"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144134-c36e6f40",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1206,8 +1240,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418631/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144141-07350804.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144141-07350804"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144141-07350804",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1223,8 +1257,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418630/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144137-87daa020.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144137-87daa020"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144137-87daa020",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1240,8 +1274,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1257,8 +1291,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1274,8 +1308,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988114/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1291,8 +1325,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422290/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144356-5013d58d.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144356-5013d58d"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144356-5013d58d",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1308,8 +1342,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422288/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144358-8d13990e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144358-8d13990e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144358-8d13990e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1325,8 +1359,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422287/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144403-8a715bfa.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144403-8a715bfa"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144403-8a715bfa",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1342,8 +1376,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422286/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144401-7646404c.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144401-7646404c"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144401-7646404c",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1359,8 +1393,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422283/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144407-681de3f6.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144407-681de3f6"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144407-681de3f6",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1376,8 +1410,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422285/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144412-44d52168.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144412-44d52168"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144412-44d52168",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1393,8 +1427,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422284/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144409-7baa7a5b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144409-7baa7a5b"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144409-7baa7a5b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1410,8 +1444,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422286/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144420-3e0c4b05.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144420-3e0c4b05"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144420-3e0c4b05",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1427,8 +1461,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422284/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144426-ef4b0e8b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144426-ef4b0e8b"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144426-ef4b0e8b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1444,8 +1478,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422280/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144423-f460d42f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144423-f460d42f"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144423-f460d42f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1461,8 +1495,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422282/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144437-b0815439.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144437-b0815439"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144437-b0815439",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1478,8 +1512,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422282/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144439-adda2541.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144439-adda2541"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144439-adda2541",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1495,8 +1529,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776823398/glaze_public/zotiqbcrfmdfxtty2wmv.heic",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_public/zotiqbcrfmdfxtty2wmv"
+        "cloudinary_public_id": "glaze_public/zotiqbcrfmdfxtty2wmv",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1512,8 +1546,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422281/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144456-e479ab6e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144456-e479ab6e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144456-e479ab6e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1529,8 +1563,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424348/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144459-cc8197ac.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144459-cc8197ac"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144459-cc8197ac",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1546,8 +1580,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424348/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144501-94a9c3f0.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144501-94a9c3f0"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144501-94a9c3f0",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1563,8 +1597,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424346/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144504-29e1237d.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144504-29e1237d"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144504-29e1237d",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1580,8 +1614,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424349/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144506-ed08aeef.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144506-ed08aeef"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144506-ed08aeef",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1597,8 +1631,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424347/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144512-dbe4c552.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144512-dbe4c552"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144512-dbe4c552",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": false,
       "runs": false,
@@ -1614,8 +1648,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424345/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144515-5aec76d9.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144515-5aec76d9"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144515-5aec76d9",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1631,8 +1665,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424346/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144517-713ef1b4.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144517-713ef1b4"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144517-713ef1b4",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1648,8 +1682,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424344/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144544-9f19268b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144544-9f19268b"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144544-9f19268b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1665,8 +1699,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424344/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144548-7b6f52ab.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144548-7b6f52ab"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144548-7b6f52ab",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1682,8 +1716,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424342/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144555-49b704b5.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144555-49b704b5"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144555-49b704b5",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1699,8 +1733,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424340/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144553-4129fe18.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144553-4129fe18"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144553-4129fe18",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1716,8 +1750,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424343/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144551-163ae058.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144551-163ae058"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144551-163ae058",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1733,8 +1767,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424640/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144615-3638fa8e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144615-3638fa8e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144615-3638fa8e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1750,8 +1784,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424341/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144619-7b002ab2.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144619-7b002ab2"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144619-7b002ab2",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1767,8 +1801,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424338/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144625-46e1bb86.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144625-46e1bb86"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144625-46e1bb86",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1784,8 +1818,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424340/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144623-0b319ef7.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144623-0b319ef7"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144623-0b319ef7",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1801,8 +1835,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424342/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144621-ccf59b69.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144621-ccf59b69"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144621-ccf59b69",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1818,8 +1852,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": false,
       "runs": false,
@@ -1835,8 +1869,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1852,8 +1886,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427623/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145203-d4d25819.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145203-d4d25819"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145203-d4d25819",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1869,8 +1903,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427624/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145207-615da555.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145207-615da555"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145207-615da555",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1886,8 +1920,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427619/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145219-254df0d2.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145219-254df0d2"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145219-254df0d2",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1903,8 +1937,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427620/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145217-a368f014.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145217-a368f014"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145217-a368f014",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1920,8 +1954,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427620/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145221-fd891171.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145221-fd891171"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145221-fd891171",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1937,8 +1971,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428030/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145234-25e81ca8.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145234-25e81ca8"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145234-25e81ca8",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1954,8 +1988,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428065/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145232-8b19a30b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145232-8b19a30b"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145232-8b19a30b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -1971,8 +2005,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428031/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145242-8c098253.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145242-8c098253"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145242-8c098253",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -1988,8 +2022,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428029/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145243-b1507425.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145243-b1507425"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145243-b1507425",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2005,8 +2039,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428028/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145252-6048fa9b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145252-6048fa9b"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145252-6048fa9b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2022,8 +2056,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428027/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145256-875c705e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145256-875c705e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145256-875c705e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2039,8 +2073,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428026/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145258-40753975.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145258-40753975"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145258-40753975",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2056,8 +2090,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988122/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2073,8 +2107,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427621/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145210-8777b172.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145210-8777b172"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145210-8777b172",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2090,8 +2124,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427621/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145211-0e6e70a6.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145211-0e6e70a6"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145211-0e6e70a6",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2107,8 +2141,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427622/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145215-436c7b1e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145215-436c7b1e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145215-436c7b1e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2124,8 +2158,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427623/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145214-63d483f5.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145214-63d483f5"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145214-63d483f5",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2141,8 +2175,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427618/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145224-99622915.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145224-99622915"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145224-99622915",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2158,8 +2192,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427618/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145226-e976b11a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145226-e976b11a"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145226-e976b11a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2175,8 +2209,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428032/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145229-8d0e5228.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145229-8d0e5228"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145229-8d0e5228",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2192,8 +2226,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428030/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145245-01e8c3e8.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145245-01e8c3e8"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145245-01e8c3e8",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2209,8 +2243,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428027/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145251-ac2366c0.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145251-ac2366c0"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145251-ac2366c0",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2226,8 +2260,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428025/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145300-3502783a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145300-3502783a"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145300-3502783a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2243,8 +2277,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428545/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145303-88d1e395.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145303-88d1e395"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145303-88d1e395",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2260,8 +2294,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2277,8 +2311,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2294,8 +2328,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152844/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2311,8 +2345,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150022-f45e2d27.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150022-f45e2d27"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150022-f45e2d27",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2328,8 +2362,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429135/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150025-86e639aa.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150025-86e639aa"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150025-86e639aa",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2345,8 +2379,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429566/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150036-af4d5e40.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150036-af4d5e40"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150036-af4d5e40",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2362,8 +2396,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429565/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150033-7f972249.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150033-7f972249"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150033-7f972249",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2379,8 +2413,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429563/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150038-f00acdf0.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150038-f00acdf0"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150038-f00acdf0",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2396,8 +2430,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429562/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150040-a1f1f04f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150040-a1f1f04f"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150040-a1f1f04f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2413,8 +2447,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429560/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150052-32f820b7.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150052-32f820b7"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150052-32f820b7",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2430,8 +2464,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429560/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150056-3a4f9c2e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150056-3a4f9c2e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150056-3a4f9c2e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2447,8 +2481,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429557/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150058-2580d2a4.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150058-2580d2a4"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150058-2580d2a4",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2464,8 +2498,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430198/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150108-29d1ffc7.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150108-29d1ffc7"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150108-29d1ffc7",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2481,8 +2515,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430200/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150106-54a37710.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150106-54a37710"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150106-54a37710",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2498,8 +2532,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430199/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150110-aa7d0c55.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150110-aa7d0c55"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150110-aa7d0c55",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2515,8 +2549,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430199/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150111-be1ac37e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150111-be1ac37e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150111-be1ac37e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2532,8 +2566,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2549,8 +2583,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429101/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150027-4cc00d72.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150027-4cc00d72"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150027-4cc00d72",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2566,8 +2600,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429100/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150028-3cfd6d1a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150028-3cfd6d1a"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150028-3cfd6d1a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2583,8 +2617,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429565/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150032-fdc73e56.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150032-fdc73e56"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150032-fdc73e56",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2600,8 +2634,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429099/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150030-3752c5c6.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150030-3752c5c6"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150030-3752c5c6",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2617,8 +2651,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429561/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150041-b30b0bd4.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150041-b30b0bd4"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150041-b30b0bd4",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2634,8 +2668,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429559/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150048-ac6c34b8.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150048-ac6c34b8"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150048-ac6c34b8",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2651,8 +2685,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429563/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150046-f7233cee.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150046-f7233cee"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150046-f7233cee",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2668,8 +2702,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429559/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150100-89228486.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150100-89228486"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150100-89228486",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2685,8 +2719,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430201/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150105-783d34aa.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150105-783d34aa"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150105-783d34aa",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2702,8 +2736,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429558/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150103-e71850c8.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150103-e71850c8"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150103-e71850c8",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2719,8 +2753,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430198/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150113-05548c1a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150113-05548c1a"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150113-05548c1a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2736,8 +2770,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430197/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150115-b9fbdcfc.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150115-b9fbdcfc"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150115-b9fbdcfc",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2753,8 +2787,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152848/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2770,8 +2804,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150133-20ce746e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150133-20ce746e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150133-20ce746e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2787,8 +2821,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430195/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150134-f5fbe972.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150134-f5fbe972"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150134-f5fbe972",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2804,8 +2838,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430193/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150136-bfaef1d7.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150136-bfaef1d7"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150136-bfaef1d7",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2821,8 +2855,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430195/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150146-7b8cb6b2.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150146-7b8cb6b2"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150146-7b8cb6b2",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2838,8 +2872,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150148-1dc36cbd.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150148-1dc36cbd"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150148-1dc36cbd",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2855,8 +2889,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430194/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150150-d3b6c87f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150150-d3b6c87f"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150150-d3b6c87f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2872,8 +2906,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430192/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150156-98c19838.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150156-98c19838"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150156-98c19838",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2889,8 +2923,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430193/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150154-487dce3d.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150154-487dce3d"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150154-487dce3d",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2906,8 +2940,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152847/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": false,
       "runs": true,
@@ -2923,8 +2957,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2940,8 +2974,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428593/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145635-adc3c925.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145635-adc3c925"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145635-adc3c925",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -2957,8 +2991,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428543/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145644-89adced9.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145644-89adced9"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145644-89adced9",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2974,8 +3008,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428541/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145652-72a144ff.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145652-72a144ff"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145652-72a144ff",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -2991,8 +3025,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428542/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145647-4ac821d5.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145647-4ac821d5"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145647-4ac821d5",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3008,8 +3042,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428541/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145657-70565f3c.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145657-70565f3c"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145657-70565f3c",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3025,8 +3059,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428540/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145706-d74e8f82.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145706-d74e8f82"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145706-d74e8f82",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3042,8 +3076,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428538/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145710-ab07707d.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145710-ab07707d"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145710-ab07707d",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3059,8 +3093,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428539/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145712-e62b3fda.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145712-e62b3fda"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145712-e62b3fda",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3076,8 +3110,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429104/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145720-d5825c31.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145720-d5825c31"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145720-d5825c31",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3093,8 +3127,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429106/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145724-424bb99c.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145724-424bb99c"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145724-424bb99c",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3110,8 +3144,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429103/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145726-3fa92de0.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145726-3fa92de0"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145726-3fa92de0",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3127,8 +3161,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": false,
       "runs": false,
@@ -3142,7 +3176,7 @@
     "fields": {
       "name": "Tenmoku",
       "firing_temperature": null,
-      "test_tile_image": "",
+      "test_tile_image": null,
       "is_food_safe": true,
       "runs": false,
       "highlights_grooves": null,
@@ -3157,8 +3191,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428544/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145640-90d65369.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145640-90d65369"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145640-90d65369",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3174,8 +3208,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428543/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145648-be150d84.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145648-be150d84"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145648-be150d84",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3191,8 +3225,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428539/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145700-72828cf7.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145700-72828cf7"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145700-72828cf7",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3208,8 +3242,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429105/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145714-f69083cd.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145714-f69083cd"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145714-f69083cd",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3225,8 +3259,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145718-7dd4211f.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145718-7dd4211f"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145718-7dd4211f",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3242,8 +3276,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429103/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145729-6a61888c.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145729-6a61888c"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145729-6a61888c",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3259,8 +3293,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a"
+        "cloudinary_public_id": "glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3276,8 +3310,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418629/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144254-0342678b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144254-0342678b"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144254-0342678b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3293,8 +3327,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418628/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144257-b246c6ed.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144257-b246c6ed"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144257-b246c6ed",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3310,8 +3344,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418624/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144306-2303dd53.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144306-2303dd53"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144306-2303dd53",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3327,8 +3361,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418625/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144303-45995e9a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144303-45995e9a"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144303-45995e9a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3344,8 +3378,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418627/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144308-6ec4760c.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144308-6ec4760c"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144308-6ec4760c",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3361,8 +3395,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418624/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144310-c66e5ee4.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144310-c66e5ee4"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144310-c66e5ee4",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3378,8 +3412,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418625/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144313-b903d90b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144313-b903d90b"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144313-b903d90b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3395,8 +3429,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418623/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144320-2efd0cd7.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144320-2efd0cd7"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144320-2efd0cd7",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3412,8 +3446,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418627/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144317-1ffede1a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144317-1ffede1a"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144317-1ffede1a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3429,8 +3463,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422289/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144322-0f0bf696.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144322-0f0bf696"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144322-0f0bf696",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3446,8 +3480,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422291/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144325-8ecb7315.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144325-8ecb7315"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144325-8ecb7315",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3463,8 +3497,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422288/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144330-0728eff3.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144330-0728eff3"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144330-0728eff3",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3480,8 +3514,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422290/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144328-f7e8f8dd.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144328-f7e8f8dd"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144328-f7e8f8dd",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3497,8 +3531,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304349/glaze_public/eyy9whpmb5wajybtfk3p.heic",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_public/eyy9whpmb5wajybtfk3p"
+        "cloudinary_public_id": "glaze_public/eyy9whpmb5wajybtfk3p",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3514,8 +3548,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424339/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144651-ea71a9c3.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144651-ea71a9c3"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144651-ea71a9c3",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3531,8 +3565,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424338/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144655-fbd68b16.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144655-fbd68b16"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144655-fbd68b16",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3548,8 +3582,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144729-b4db7a04.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144729-b4db7a04"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144729-b4db7a04",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3565,8 +3599,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426111/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144727-a392b53d.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144727-a392b53d"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144727-a392b53d",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3582,8 +3616,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426110/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144736-abea325b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144736-abea325b"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144736-abea325b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3599,8 +3633,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426105/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144756-8df368da.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144756-8df368da"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144756-8df368da",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3616,8 +3650,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426106/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144754-0f5dbe35.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144754-0f5dbe35"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144754-0f5dbe35",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3633,8 +3667,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426106/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144921-e79ae7b3.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144921-e79ae7b3"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144921-e79ae7b3",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3650,8 +3684,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426105/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144922-6d3c1338.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144922-6d3c1338"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144922-6d3c1338",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3667,8 +3701,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144942-11a94386.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144942-11a94386"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144942-11a94386",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3684,8 +3718,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427193/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144943-2875c39a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144943-2875c39a"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144943-2875c39a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3701,8 +3735,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427192/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144945-9f9f9c33.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144945-9f9f9c33"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144945-9f9f9c33",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3718,8 +3752,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304189/glaze_public/jvrmpfxkjjhniqpqzqrs.heic",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "glaze_public/jvrmpfxkjjhniqpqzqrs"
+        "cloudinary_public_id": "glaze_public/jvrmpfxkjjhniqpqzqrs",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3735,8 +3769,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426115/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144658-f5c04a76.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144658-f5c04a76"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144658-f5c04a76",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3752,8 +3786,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426188/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144701-f4986bf1.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144701-f4986bf1"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144701-f4986bf1",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3769,8 +3803,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426113/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144724-4b167952.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144724-4b167952"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144724-4b167952",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3786,8 +3820,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426113/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144722-cd3b896b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144722-cd3b896b"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144722-cd3b896b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3803,8 +3837,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426110/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144738-361f9b9e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144738-361f9b9e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144738-361f9b9e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3820,8 +3854,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426107/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144752-40359ede.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144752-40359ede"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144752-40359ede",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3837,8 +3871,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144750-dcad8e1a.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144750-dcad8e1a"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144750-dcad8e1a",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3854,8 +3888,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426103/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144929-2f4ccc10.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144929-2f4ccc10"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144929-2f4ccc10",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3871,8 +3905,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427194/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144939-426c4a2e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144939-426c4a2e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144939-426c4a2e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3888,8 +3922,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427194/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144936-d406de3b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144936-d406de3b"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144936-d406de3b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3905,8 +3939,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427190/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144946-f8807a74.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144946-f8807a74"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144946-f8807a74",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3922,8 +3956,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427191/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144949-8d076bfe.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144949-8d076bfe"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144949-8d076bfe",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3939,8 +3973,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152845/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": false,
@@ -3956,8 +3990,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3973,8 +4007,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426116/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144704-7ce58703.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144704-7ce58703"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144704-7ce58703",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -3990,8 +4024,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426114/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144707-c1ff4642.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144707-c1ff4642"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144707-c1ff4642",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -4007,8 +4041,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426112/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144719-bcf23991.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144719-bcf23991"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144719-bcf23991",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -4024,8 +4058,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426114/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144716-76c982cb.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144716-76c982cb"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144716-76c982cb",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -4041,8 +4075,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426109/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144742-549cba9e.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144742-549cba9e"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144742-549cba9e",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": false,
       "runs": true,
@@ -4058,8 +4092,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426109/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144746-f7b27016.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144746-f7b27016"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144746-f7b27016",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -4075,8 +4109,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426108/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144744-89cde587.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144744-89cde587"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144744-89cde587",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -4092,8 +4126,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426104/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144932-8f101692.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144932-8f101692"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144932-8f101692",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -4109,8 +4143,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427195/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144933-ec3a64f5.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144933-ec3a64f5"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144933-ec3a64f5",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -4126,8 +4160,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144935-b6902246.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144935-b6902246"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144935-b6902246",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -4143,8 +4177,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427189/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144950-6b27ffd4.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144950-6b27ffd4"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144950-6b27ffd4",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
@@ -4160,8 +4194,8 @@
       "firing_temperature": null,
       "test_tile_image": {
         "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427191/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144952-2496de7d.webp",
-        "cloud_name": "dxpnyhe1f",
-        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144952-2496de7d"
+        "cloudinary_public_id": "manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144952-2496de7d",
+        "cloud_name": "dxpnyhe1f"
       },
       "is_food_safe": true,
       "runs": true,
