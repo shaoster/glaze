@@ -9,7 +9,7 @@ Use this skill to assess test coverage and create actionable tasks to improve it
 
 ## Quick Start
 
-1. **Run Coverage**: Execute `bazel coverage --combined_report=lcov //...`.
+1. **Run Coverage**: Execute `rtk bazel coverage --combined_report=lcov //...`.
 2. **Review**: Check the summary coverage reports (usually in `bazel-out/_coverage/_coverage_report.dat` or similar).
 3. **Analyze by File**: Check the individual coverage reports by file (`find -L bazel-testlogs -name "coverage.dat"`).
 4. **Spec Issue**: Invoke this skill with `/cover` to analyze the results and draft a GitHub issue for coverage improvements, including:
