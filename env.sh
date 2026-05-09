@@ -502,7 +502,75 @@ gz_clean() {         # purge all PID and port files in current worktree
     rm -f "$_GLAZE_PIDS"/*.pid "$_GLAZE_PIDS"/*.port
 }
 
-gz_worktrees() {   # list all worktrees with branch, path, and running-server indicator
+_gz_worktrees_purge() {
+    echo "=== Purging agent worktrees ==="
+    local wt_path="" wt_branch=""
+    while IFS= read -r line; do
+        if [[ "$line" == worktree\ * ]]; then
+            wt_path="${line#worktree }"
+        elif [[ "$line" == branch\ * ]]; then
+            wt_branch="${line#branch refs/heads/}"
+        elif [[ -z "$line" && -n "$wt_path" ]]; then
+            # Only target agent-managed worktrees
+            if [[ "$wt_path" =~ \.agent-worktrees/|\.claude/worktrees/ ]]; then
+                local skip=0
+                echo "Checking $wt_branch ($wt_path)..."
+
+                # 1. Check for open PRs
+                if command -v gh &>/dev/null; then
+                    if gh pr list --head "$wt_branch" --json number --jq '.[].number' | grep -q .; then
+                        echo "  [SKIP] Branch '$wt_branch' has an open PR."
+                        skip=1
+                    fi
+                fi
+
+                # 2. Check for unpushed changes
+                if [[ $skip -eq 0 ]]; then
+                    local upstream
+                    upstream=$(git -C "$GLAZE_SHARED_ROOT" rev-parse --abbrev-ref "$wt_branch@{u}" 2>/dev/null || echo "")
+                    if [[ -n "$upstream" ]]; then
+                        if [[ -n $(git -C "$GLAZE_SHARED_ROOT" rev-list "$upstream..$wt_branch") ]]; then
+                            echo "  [SKIP] Branch '$wt_branch' has unpushed commits."
+                            skip=1
+                        fi
+                    else
+                         # No upstream, check if it's merged into main
+                         if ! git -C "$GLAZE_SHARED_ROOT" merge-base --is-ancestor "$wt_branch" main 2>/dev/null; then
+                             echo "  [SKIP] Branch '$wt_branch' has no upstream and is not merged into main."
+                             skip=1
+                         fi
+                    fi
+                fi
+
+                if [[ $skip -eq 0 ]]; then
+                    echo "  Removing..."
+                    # Stop servers if running
+                    (cd "$wt_path" && source env.sh && gz_stop >/dev/null 2>&1)
+                    git -C "$GLAZE_SHARED_ROOT" worktree remove --force "$wt_path"
+                fi
+            fi
+            wt_path="" wt_branch=""
+        fi
+    done < <(git -C "$GLAZE_SHARED_ROOT" worktree list --porcelain; echo)
+
+    # Cleanup empty parent dirs
+    [[ -d "$GLAZE_SHARED_ROOT/.agent-worktrees" ]] && find "$GLAZE_SHARED_ROOT/.agent-worktrees" -type d -empty -delete 2>/dev/null
+    [[ -d "$GLAZE_SHARED_ROOT/.claude/worktrees" ]] && find "$GLAZE_SHARED_ROOT/.claude/worktrees" -type d -empty -delete 2>/dev/null
+    echo "=== Purge complete ==="
+}
+
+gz_worktrees() {   # list or purge worktrees
+    if [[ "${1:-}" == "--purge" ]]; then
+        _gz_worktrees_purge
+        return 0
+    fi
+
+    local pr_branches=""
+    if command -v gh &>/dev/null; then
+        # Cache open PR branches to avoid N network calls
+        pr_branches=$(gh pr list --limit 100 --json headRefName --jq '.[].headRefName' 2>/dev/null)
+    fi
+
     local wt_path="" wt_branch=""
     while IFS= read -r line; do
         if [[ "$line" == worktree\ * ]]; then
@@ -512,23 +580,55 @@ gz_worktrees() {   # list all worktrees with branch, path, and running-server in
         elif [[ "$line" == HEAD\ * ]]; then
             wt_branch="(detached)"
         elif [[ -z "$line" && -n "$wt_path" ]]; then
-            local indicator=""
+            local indicators=()
+
+            # 1. Running check
             if [[ -f "$wt_path/.dev-pids/backend.pid" || -f "$wt_path/.dev-pids/web.pid" ]]; then
-                indicator=" ●"
+                indicators+=("●")
             fi
-            printf "  %-50s  %s%s\n" "${wt_branch:-?}" "$wt_path" "$indicator"
+
+            if [[ "$wt_branch" != "(detached)" ]]; then
+                # 2. PR check
+                if echo "$pr_branches" | grep -qFx "$wt_branch"; then
+                    indicators+=("PR")
+                fi
+
+                # 3. Unpushed check
+                local upstream
+                upstream=$(git -C "$GLAZE_SHARED_ROOT" rev-parse --abbrev-ref "$wt_branch@{u}" 2>/dev/null || echo "")
+                if [[ -n "$upstream" ]]; then
+                    if [[ -n $(git -C "$GLAZE_SHARED_ROOT" rev-list "$upstream..$wt_branch") ]]; then
+                        indicators+=("↑")
+                    fi
+                elif ! git -C "$GLAZE_SHARED_ROOT" merge-base --is-ancestor "$wt_branch" main 2>/dev/null; then
+                    # No upstream, check if it's merged into main
+                    indicators+=("↑")
+                fi
+            fi
+
+            local ind_str=""
+            if [[ ${#indicators[@]} -gt 0 ]]; then
+                # Join with spaces
+                ind_str=" $(IFS=" "; echo "${indicators[*]}")"
+            fi
+
+            printf "  %-50s  %s%s\n" "${wt_branch:-?}" "$wt_path" "$ind_str"
             wt_path="" wt_branch=""
         fi
     done < <(git -C "$GLAZE_SHARED_ROOT" worktree list --porcelain; echo)
 }
 
-gz_cd() {   # gz_cd <pattern> — cd to a matching worktree and re-source env.sh
-    local pattern="${1:-}"
-    if [[ -z "$pattern" ]]; then
-        echo "Usage: gz_cd <pattern>"
-        gz_worktrees
-        return 1
+gz_cd() {   # gz_cd [pattern] — cd to a matching worktree (defaults to root) and re-source env.sh
+    local pattern="${1:-/}"
+
+    # Shortcut for repo root
+    if [[ "$pattern" == "/" || "$pattern" == "root" ]]; then
+        local target="$GLAZE_SHARED_ROOT"
+        echo "→ $target"
+        cd "$target" && source "$target/env.sh"
+        return
     fi
+
     if _gz_is_running backend || _gz_is_running web; then
         echo "Servers are running in this terminal — run 'gz_stop' before switching worktrees,"
         echo "or open a new terminal tab for the target worktree."
@@ -538,7 +638,11 @@ gz_cd() {   # gz_cd <pattern> — cd to a matching worktree and re-source env.sh
     matches=$(git -C "$GLAZE_SHARED_ROOT" worktree list --porcelain \
         | grep '^worktree ' | cut -d' ' -f2- | grep -i "$pattern" || true)
     local count
-    count=$(echo "$matches" | grep -c . 2>/dev/null || echo 0)
+    if [[ -z "$matches" ]]; then
+        count=0
+    else
+        count=$(echo "$matches" | grep -c '^')
+    fi
     if [[ $count -eq 0 ]]; then
         echo "No worktree matching '$pattern'"
         gz_worktrees
@@ -626,8 +730,8 @@ _GZ_SHORTCUTS=(
     "gz_start/stop     — start or stop backend + web (gz_start opens browser, registers EXIT cleanup)"
     "gz_open           — open the web UI in the browser (if servers already running)"
     "gz_status         — show what services are running (with ports)"
-    "gz_worktrees      — list all worktrees with branch, path, and running-server indicator"
-    "gz_cd <pattern>   — cd to a matching worktree and re-source env.sh (guards against mid-session switch)"
+    "gz_worktrees [--purge] — list all worktrees (●:running, ↑:unpushed, PR:open-pr) or purge safe agent ones"
+    "gz_cd [pattern]   — cd to a matching worktree (defaults to root) and re-source env.sh"
     "gz_logs [backend|web|all] — stream logs for running servers (or a selected service)"
 )
 
@@ -655,6 +759,7 @@ _gz_cd_complete() {
             /^branch /   { branch = substr($0, 8); gsub("refs/heads/", "", branch) }
             /^$/         { if (path) { print basename; if (branch != "" && branch != basename) print branch }; path=""; branch="" }
         ')
+    candidates="root / $candidates"
     # shellcheck disable=SC2207
     COMPREPLY=( $(compgen -W "$candidates" -- "$cur") )
 }
