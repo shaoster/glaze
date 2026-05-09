@@ -244,3 +244,6 @@ bazel-*
 
 # Profile data
 prof/
+
+# gz_start
+nohup.out

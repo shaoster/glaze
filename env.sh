@@ -43,7 +43,9 @@ _gz_is_running() {   # _gz_is_running <name>
     [[ -f "$pidfile" ]] || return 1
     local pid
     pid=$(cat "$pidfile")
-    kill -0 "$pid" 2>/dev/null || kill -0 -- -"$pid" 2>/dev/null
+    [[ -n "$pid" ]] || return 1
+    # Check if PID exists and is not a zombie
+    ps -p "$pid" -o state= 2>/dev/null | grep -qv "Z"
 }
 
 _gz_start() {        # _gz_start <name> <logfile> <cmd...>
@@ -52,9 +54,17 @@ _gz_start() {        # _gz_start <name> <logfile> <cmd...>
         echo "$name: already running (PID $(cat "$_GLAZE_PIDS/$name.pid"))"
         return 0
     fi
-    setsid "$@" >> "$logfile" 2>&1 &
-    echo $! > "$_GLAZE_PIDS/$name.pid"
-    echo "$name: started (PID $!) — logs: $logfile"
+    # Use direct backgrounding. monitor mode ensures a new process group.
+    # We use a subshell to avoid affecting the main shell state.
+    (
+        set -m
+        "$@" >> "$logfile" 2>&1 &
+        echo $! > "$_GLAZE_PIDS/$name.pid"
+    )
+    # Wait a moment to ensure the PID file is written
+    sleep 0.1
+    local pid=$(cat "$_GLAZE_PIDS/$name.pid" 2>/dev/null)
+    echo "$name: started (PID ${pid:-unknown}) — logs: $logfile"
 }
 
 _gz_stop() {         # _gz_stop <name>
@@ -62,6 +72,7 @@ _gz_stop() {         # _gz_stop <name>
     if [[ -f "$pidfile" ]]; then
         local pid i
         pid=$(cat "$pidfile")
+        echo "Stopping $1 (PID $pid)..."
         # Kill the entire process group so child processes don't get orphaned when
         # the bash wrapper shell exits (e.g. on Ctrl+C from gz_start)
         kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
@@ -432,15 +443,19 @@ gz_web() {
 }
 
 gz_open() {
-    local port
-    port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || grep 'Local:' "$_GLAZE_LOGS/web.log" 2>/dev/null | tail -1 | grep -oE ':[0-9]+/' | tr -d ':/')
-    local url="http://localhost:${port:-5173}"
-    echo "Opening $url"
-    if command -v wslview &>/dev/null; then
-        wslview "$url"
-    else
-        xdg-open "$url" 2>/dev/null || true
-    fi
+    (
+        # Give servers a moment to settle
+        sleep 1
+        local port
+        port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || grep 'Local:' "$_GLAZE_LOGS/web.log" 2>/dev/null | tail -1 | grep -oE ':[0-9]+/' | tr -d ':/')
+        local url="http://localhost:${port:-5173}"
+        echo "Opening $url"
+        if command -v wslview &>/dev/null; then
+            wslview "$url"
+        else
+            xdg-open "$url" 2>/dev/null || true
+        fi
+    ) &
 }
 
 gz_start() {
@@ -473,10 +488,18 @@ gz_status() {
             else
                 echo "$name: running (PID $pid)"
             fi
+        elif [[ -f "$_GLAZE_PIDS/$name.pid" ]]; then
+            local pid=$(cat "$_GLAZE_PIDS/$name.pid" 2>/dev/null)
+            echo "$name: died (stale PID file: ${pid:-empty})"
         else
-            echo "$name: stopped"
+            echo "$name: not running"
         fi
     done
+}
+
+gz_clean() {         # purge all PID and port files in current worktree
+    echo "Cleaning server state in $GLAZE_ROOT..."
+    rm -f "$_GLAZE_PIDS"/*.pid "$_GLAZE_PIDS"/*.port
 }
 
 gz_worktrees() {   # list all worktrees with branch, path, and running-server indicator
