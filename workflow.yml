@@ -476,6 +476,48 @@ states:
       glaze_combination:
         $ref: "glazed.glaze_combination"
         description: Glaze combination carried forward from the glazing stage.
+      length_in:
+        type: number
+        label: Length (in)
+        description: Length of the fired piece, in inches.
+      width_in:
+        type: number
+        label: Width (in)
+        description: Width of the fired piece, in inches.
+      height_in:
+        type: number
+        label: Height (in)
+        description: Height of the fired piece, in inches.
+      volume_shrinkage:
+        label: Volume Shrinkage
+        description: Calculated clay volume shrinkage from dry to glaze-fired state.
+        decimals: 1
+        display_as: percent
+        compute:
+          op: difference
+          args:
+            - constant: 1
+            - op: ratio
+              args:
+                - op: product
+                  args:
+                    - { field: glaze_fired.length_in, return_type: number }
+                    - { field: glaze_fired.width_in, return_type: number }
+                    - { field: glaze_fired.height_in, return_type: number }
+                - op: product
+                  args:
+                    - {
+                        field: submitted_to_bisque_fire.length_in,
+                        return_type: number,
+                      }
+                    - {
+                        field: submitted_to_bisque_fire.width_in,
+                        return_type: number,
+                      }
+                    - {
+                        field: submitted_to_bisque_fire.height_in,
+                        return_type: number,
+                      }
 
   - id: sanded
     visible: true

@@ -34,7 +34,7 @@ The source of truth for piece states is [`workflow.yml`](../../workflow.yml) at 
 
 - **Structural** (`TestSchemaValidation`): runs `jsonschema.validate` against `workflow.schema.yml`, and verifies that malformed inputs (missing fields, bad version format, invalid ID patterns, duplicate successors, unknown keys) are correctly rejected.
 - **Semantic** (`TestReferentialIntegrity`): enforces rules JSON Schema cannot express — every successor ID references a real state, terminal states have no successors, non-terminal states have at least one successor, all state IDs are unique, no state lists itself as a successor.
-- **DSL referential integrity** (`TestAdditionalFieldsDSL`): enforces `custom_fields` rules — `enum` only on `type: string` fields; state refs point to known states with declared fields that are reachable ancestors; global refs point to declared globals with declared fields.
+- **DSL referential integrity** (`TestCustomFieldsDSL`): enforces `custom_fields` rules — `enum` only on `type: string` fields; state refs point to known states with declared fields that are reachable ancestors; global refs point to declared globals with declared fields.
 - **Global/model alignment** (`TestGlobals`): verifies every `globals` entry maps to a real Django model in `api/models.py`, every field declared in that global exists on the model, and every global with `public: true` has a nullable `user` field on its model.
 
 **`globals` section:** The optional top-level `globals` map registers named domain types backed by Django models. Each entry declares the model class name (PascalCase, verified against `api/models.py` by tests) and a subset of its fields exposed to the field DSL. `api/models.py` remains the authoritative source of truth — `globals` is a DSL-level view of those models, kept in sync by tests.
@@ -74,6 +74,7 @@ clay_weight_grams:
   required: true # optional, default false
   enum: [a, b, c] # optional; only valid when type: string
   format: hex_color # optional; only valid when type: string — enforces a CSS hex color pattern (#RGB / #RRGGBB / #RGBA / #RRGGBBAA)
+  display_as: percent # optional; multiplies by 100 and adds % suffix in UI
 ```
 
 The `image` type is a DSL-level annotation: at the model layer it is stored as a `JSONField` containing `{"url": "...", "cloudinary_public_id": "..."}` (both fields required; `cloudinary_public_id` is nullable for URL-only images). `_resolve_field_def` resolves it to a JSON Schema object with `url` and `cloudinary_public_id` properties so validation enforces the correct structure. The Django admin renders a Cloudinary upload widget instead of a plain text input, and the widget stores the complete object on upload. Use `image` for any field that holds a Cloudinary-hosted image — the stored `cloudinary_public_id` enables enumerating all referenced assets for cleanup workflows.
@@ -88,6 +89,27 @@ pre_trim_weight_grams:
   $ref: "wheel_thrown.clay_weight_grams"
   description: "..." # optional override
   required: false # optional override
+  display_as: percent # optional override
+
+# Calculated field — read-only computed value:
+volume_shrinkage:
+  label: Volume Shrinkage
+  decimals: 1
+  display_as: percent
+  compute:
+    op: difference
+    args:
+      - constant: 1
+      - op: ratio
+        args:
+          - { field: glaze_fired.length_in, return_type: number }
+          - { field: submitted_to_bisque_fire.length_in, return_type: number }
+
+- Evaluated read-only on the backend (traverses history to find latest ancestor state).
+- Recursive, strictly typed AST supporting `sum`, `product`, `difference` (2 args), `ratio` (2 args).
+- Operands: `field` references (e.g. `{ field: state_id.field_name, return_type: number }`) or `constant` numbers/strings/booleans.
+- Schema groups nodes by guaranteed return type (`numeric_node`, `string_node`).
+- Excluded from write validation schemas.
 
 # Global ref — foreign-key reference to a field on a globals entry
 # (backed by a Django model). @ marks this as a global ref:
@@ -98,11 +120,11 @@ kiln_location:
   can_create: true # optional; default false — allows inline creation of a new global instance
 ```
 
-Referential rules enforced by `TestAdditionalFieldsDSL`:
+Referential rules enforced by `TestCustomFieldsDSL`:
 
 - **State refs** (`state_id.field_name`): state must exist, field must be declared on it, state must be a reachable ancestor (path through the successor graph from that state to this one).
 - **Global refs** (`@global_name.field_name`): global must be declared in `globals`, field must be declared in that global's `fields`.
-- **`format` only on strings**: if a field declares `format`, its `type` must be `string` — enforced by `TestAdditionalFieldsDSL.test_format_only_on_string_type`.
+- **`format` only on strings**: if a field declares `format`, its `type` must be `string` — enforced by `TestCustomFieldsDSL.test_format_only_on_string_type`.
 - **`format: hex_color`**: `_resolve_field_def` emits a JSON Schema `pattern` constraint so the backend rejects any value that is not a valid CSS hex color code; `_global_entries_impl` also validates this in the globals POST path and returns HTTP 400 with a human-readable error.
 
 **Terminal state summaries:** Terminal states may declare a read-only `summary`
@@ -391,7 +413,7 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 **Workflow config interface (`workflow.ts`):**
 [`web/src/util/workflow.ts`](../../web/src/util/workflow.ts) loads `workflow.yml` at build time and exposes typed helpers — do not duplicate state or globals data elsewhere.
 
-- `getAdditionalFieldDefinitions(stateId)` — resolves per-state additional field definitions into a form-ready structure; used by `WorkflowState` to render dynamic fields.
+- `getCustomFieldDefinitions(stateId)` — resolves per-state additional field definitions into a form-ready structure; used by `WorkflowState` to render dynamic fields.
 - `getGlobalDisplayField(globalName)` — returns the display field name for a globals entry; used by `GlobalEntryDialog` to determine which field to write on create.
 - `formatWorkflowFieldLabel(fieldName)` — converts snake_case DSL names to Title Case UI labels.
 

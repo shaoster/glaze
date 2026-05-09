@@ -758,23 +758,23 @@ def _get_custom_form_fields(state_id: str) -> dict[str, forms.Field]:
         is_required = field_name in required_list
         label = field_name.replace("_", " ").capitalize()
         form_field_name = f"custom_{field_name}"
+        is_percent = field_def.get("display_as") == "percent"
+
+        kwargs: dict[str, Any] = {"required": is_required, "label": label}
+        if is_percent:
+            kwargs["disabled"] = True
+            kwargs["help_text"] = "Displayed as percentage (x100%) in the main UI."
 
         if field_type == "boolean":
             declared_fields[form_field_name] = forms.BooleanField(
                 required=False, label=label
             )
         elif field_type == "integer":
-            declared_fields[form_field_name] = forms.IntegerField(
-                required=is_required, label=label
-            )
+            declared_fields[form_field_name] = forms.IntegerField(**kwargs)
         elif field_type == "number":
-            declared_fields[form_field_name] = forms.FloatField(
-                required=is_required, label=label
-            )
+            declared_fields[form_field_name] = forms.FloatField(**kwargs)
         else:
-            declared_fields[form_field_name] = forms.CharField(
-                required=is_required, label=label
-            )
+            declared_fields[form_field_name] = forms.CharField(**kwargs)
 
     # Add global ref fields
     global_ref_fields = get_global_ref_fields_for_state(state_id)

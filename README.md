@@ -473,7 +473,48 @@ After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` fr
 
 ### What is tested
 
-**Common** ([`tests/test_workflow.py`](tests/test_workflow.py)): structural validation of [`workflow.yml`](workflow.yml) against [`workflow.schema.yml`](workflow.schema.yml), semantic/referential integrity (successor references, reachability, terminal-state rules), `custom_fields` DSL rules (enum constraints, ref targets), and global/model alignment against [`api/models.py`](api/models.py).
+**Common** ([`tests/test_workflow.py`](tests/test_workflow.py)): structural validation of [`workflow.yml`](workflow.yml) against [`workflow.schema.yml`](workflow.schema.yml), semantic/referential integrity (successor references, reachability, terminal-state rules), `custom_fields` DSL rules (enum constraints, ref targets, calculated fields), and global/model alignment against [`api/models.py`](api/models.py).
+
+### Calculated Fields
+
+The field DSL supports read-only calculated fields using a recursive, strictly typed AST. These are evaluated on the backend and displayed in the frontend.
+
+```yaml
+fields:
+  volume_shrinkage:
+    label: Volume Shrinkage
+    decimals: 1
+    display_as: percent
+    compute:
+      op: difference
+      args:
+        - constant: 1
+        - op: ratio
+          args:
+            - op: product
+              args:
+                - { field: glaze_fired.length_in, return_type: number }
+                - { field: glaze_fired.width_in, return_type: number }
+                - { field: glaze_fired.height_in, return_type: number }
+            - op: product
+              args:
+                - {
+                    field: submitted_to_bisque_fire.length_in,
+                    return_type: number,
+                  }
+                - {
+                    field: submitted_to_bisque_fire.width_in,
+                    return_type: number,
+                  }
+                - {
+                    field: submitted_to_bisque_fire.height_in,
+                    return_type: number,
+                  }
+```
+
+Supported operations: `sum`, `product`, `difference` (2 args), `ratio` (2 args).
+Leaf nodes: `field` (e.g. `{ field: state_id.field_name, return_type: number }`) or `constant`.
+Display options: `display_as: percent` (multiplies by 100 and adds `%`).
 
 **Backend** (`api/tests/`):
 | File | What it covers |
@@ -492,7 +533,7 @@ After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` fr
 **Web** (`web/src/`):
 | File | What it covers |
 |---|---|
-| [`web/src/util/workflow.test.ts`](web/src/util/workflow.test.ts) | `formatWorkflowFieldLabel`, `getGlobalDisplayField`, `getAdditionalFieldDefinitions` (inline, state ref, global ref) — decoupled from real `workflow.yml` via `vi.mock` |
+| [`web/src/util/workflow.test.ts`](web/src/util/workflow.test.ts) | `formatWorkflowFieldLabel`, `getGlobalDisplayField`, `getCustomFieldDefinitions` (inline, state ref, global ref) — decoupled from real `workflow.yml` via `vi.mock` |
 | [`web/src/util/__tests__/api.test.ts`](web/src/util/__tests__/api.test.ts) | HTTP functions (fetchPieces, fetchPiece, createPiece, transitions, globals, auth) — axios mocked via `vi.mock` |
 | [`__tests__/GlobalEntryDialog.test.tsx`](web/src/components/__tests__/GlobalEntryDialog.test.tsx) | Rendering, search/filter, create sentinel, inline creation (success/error), selecting existing entries |
 | [`__tests__/PieceList.test.tsx`](web/src/components/__tests__/PieceList.test.tsx) | Column headers, empty state, per-row data, links |
@@ -587,7 +628,7 @@ The workflow state machine and all valid transitions are defined in [`workflow.y
 
 ### Authoring `custom_fields`
 
-When you add an `custom_fields` entry to a state in `workflow.yml`, the web automatically renders the inputs for you inside the `WorkflowState` component. Inline JSON primitives, state references, and global references are all interpreted through the helper utilities in [`web/src/util/workflow.ts`](web/src/util/workflow.ts) (`getAdditionalFieldDefinitions`, `formatWorkflowFieldLabel`, etc.) so the DSL does not need to be mentioned elsewhere in the code.
+When you add an `custom_fields` entry to a state in `workflow.yml`, the web automatically renders the inputs for you inside the `WorkflowState` component. Inline JSON primitives, state references, and global references are all interpreted through the helper utilities in [`web/src/util/workflow.ts`](web/src/util/workflow.ts) (`getCustomFieldDefinitions`, `formatWorkflowFieldLabel`, etc.) so the DSL does not need to be mentioned elsewhere in the code.
 
 1. **Inline fields** (give the field a `type`, optional `description`, `required`, `enum`, and/or `format`). They render as `TextField`s—numbers as numeric inputs, booleans as selects with `True`/`False`, enums as dropdowns—directly below Notes and above the image list. The `format: hex_color` annotation (valid on `type: string` only) adds a backend pattern constraint that rejects values which are not valid CSS hex color codes (`#RGB`, `#RRGGBB`, `#RGBA`, or `#RRGGBBAA`).
 2. **State refs** (`$ref: “ancestor_state.field_name”`) carry a value forward from a reachable ancestor state; they render the referenced value while still allowing edits and backend validation just like inline fields.

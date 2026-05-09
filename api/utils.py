@@ -421,10 +421,12 @@ def _seed_dev_pieces(user) -> None:
         )
 
     def _bisque_fields(r, _clay, _combo):
+        l, w, h = r.randint(3, 12), r.randint(3, 12), r.randint(2, 18)
         return (
             {
-                "kiln_temperature_c": r.randint(960, 1020),
-                "cone": r.choice(["04", "03"]),
+                "length_in": float(l),
+                "width_in": float(w),
+                "height_in": float(h),
             },
             {"kiln_location": ("location", bisque_kiln)},
         )
@@ -445,8 +447,18 @@ def _seed_dev_pieces(user) -> None:
         return (None, {"kiln_location": ("location", glaze_kiln)})
 
     def _glaze_fired_fields(r, _clay, combo):
+        # Retrieve dimensions from dry state if possible, or just generate new ones.
+        # For seeding, it's easier to just generate consistent-ish ones.
+        l, w, h = r.randint(3, 12), r.randint(3, 12), r.randint(2, 18)
+        shrink = r.uniform(0.85, 0.92)
         return (
-            {"kiln_temperature_c": r.randint(1220, 1260), "cone": r.choice(["5", "6"])},
+            {
+                "kiln_temperature_c": r.randint(1220, 1260),
+                "cone": r.choice(["5", "6"]),
+                "length_in": round(l * shrink, 2),
+                "width_in": round(w * shrink, 2),
+                "height_in": round(h * shrink, 2),
+            },
             {"glaze_combination": ("glaze_combination", combo)},
         )
 
@@ -458,7 +470,7 @@ def _seed_dev_pieces(user) -> None:
         ("trimmed", _trimmed_fields, None),
         (
             "submitted_to_bisque_fire",
-            lambda r, c, g: (None, {"kiln_location": ("location", bisque_kiln)}),
+            _bisque_fields,
             None,
         ),
         ("bisque_fired", _bisque_fired_fields, None),
@@ -470,10 +482,14 @@ def _seed_dev_pieces(user) -> None:
 
     HANDBUILT_PATH = [
         ("designed", None, None),
-        ("handbuilt", lambda r, c, g: (None, {"clay_body": ("clay_body", c)}), None),
+        (
+            "handbuilt",
+            lambda r, clay, _combo: (None, {"clay_body": ("clay_body", clay)}),
+            None,
+        ),
         (
             "submitted_to_bisque_fire",
-            lambda r, c, g: (None, {"kiln_location": ("location", bisque_kiln)}),
+            _bisque_fields,
             None,
         ),
         ("bisque_fired", _bisque_fired_fields, None),

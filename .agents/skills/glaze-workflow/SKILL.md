@@ -29,7 +29,7 @@ constraining `workflow.yml`. Required top-level fields: `version` (semver) and `
 - `TestSchemaValidation` — jsonschema validation + malformed-input rejection
 - `TestReferentialIntegrity` — successor IDs reference real states, terminal states
   have no successors, non-terminal states have ≥ 1 successor, unique IDs, no self-refs
-- `TestAdditionalFieldsDSL` — custom_fields referential integrity
+- `TestCustomFieldsDSL` — custom_fields referential integrity
 - `TestGlobals` — globals entries map to real Django models; `public: true` globals
   have nullable `user` fields
 
@@ -102,6 +102,7 @@ clay_weight_grams:
   required: true        # optional, default false
   enum: [a, b, c]      # optional; only valid when type: string
   format: hex_color     # optional; only valid when type: string
+  display_as: percent   # optional; multiplies by 100 and adds % suffix
 ```
 
 The `image` type stores as `JSONField` containing `{"url": "...", "cloudinary_public_id": "..."}`.
@@ -116,7 +117,28 @@ pre_trim_weight_grams:
   $ref: "wheel_thrown.clay_weight_grams"
   description: "..."    # optional override
   required: false       # optional override
+  display_as: percent   # optional override
 ```
+
+**Calculated field** (read-only computed value):
+```yaml
+volume_shrinkage:
+  label: Volume Shrinkage
+  decimals: 1
+  display_as: percent
+  compute:
+    op: difference
+    args:
+      - constant: 1
+      - op: ratio
+        args:
+          - { field: glaze_fired.length_in, return_type: number }
+          - { field: submitted_to_bisque_fire.length_in, return_type: number }
+```
+
+Recursive, strictly typed AST supporting `sum`, `product`, `difference` (2 args), and `ratio` (2 args).
+Operands: `field` refs (e.g. `{ field: state_id.field_name, return_type: number }`) or `constant` numbers/strings/booleans.
+Evaluated on backend; read-only in UI.
 
 **Ref field — global ref** (FK reference to a globals entry):
 ```yaml

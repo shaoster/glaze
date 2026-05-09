@@ -47,6 +47,7 @@ from .workflow import (
     get_global_config,
     get_global_names,
     get_global_ref_fields_for_state,
+    get_state_config,
     get_state_global_ref_map,
     get_taggable_globals,
     is_factory_global,
@@ -310,7 +311,8 @@ class PieceState(models.Model):
 
         Checks ``custom_fields`` for the field or a marker string. If a marker
         is found, traverses history to find the authoritative ancestor. If
-        not in ``custom_fields``, checks global-ref junction tables.
+        not in ``custom_fields``, checks global-ref junction tables or
+        evaluates calculated fields.
         """
         val = self.custom_fields.get(field_name)
         if isinstance(val, str) and val.startswith("[") and val.endswith("]"):
@@ -328,7 +330,18 @@ class PieceState(models.Model):
         if val is not None:
             return val
 
-        # Not in custom_fields. Check junction tables for global refs.
+        # Not in custom_fields. Check if it's a calculated field.
+        state_config = get_state_config(self.state)
+        field_def = state_config.get("fields", {}).get(field_name, {})
+        if "compute" in field_def:
+            computed_val = self._evaluate_compute(field_def["compute"])
+            if computed_val is not None:
+                decimals = field_def.get("decimals")
+                if decimals is not None:
+                    return round(computed_val, decimals)
+            return computed_val
+
+        # Not in custom_fields or calculated. Check junction tables for global refs.
         global_ref_map = get_global_ref_fields_for_state(self.state)
         if field_name in global_ref_map:
             global_name = global_ref_map[field_name]
@@ -341,6 +354,66 @@ class PieceState(models.Model):
                 return getattr(ref_row, global_name)
             except ref_model.DoesNotExist:
                 return None
+        return None
+
+    def _evaluate_compute(self, node: dict) -> float | None:
+        """Recursively evaluate a numeric computation AST."""
+        if "constant" in node:
+            val = node["constant"]
+            return float(val) if isinstance(val, (int, float)) else None
+
+        if "field" in node:
+            ref = node["field"]
+            return_type = node.get("return_type")
+            if return_type not in {"number", "integer"}:
+                return None
+
+            state_id, field_name = ref.split(".", 1)
+            # Find the state in history.
+            if state_id == self.state:
+                val = self.resolve_custom_field(field_name)
+            else:
+                ancestor = (
+                    self.piece.states.filter(state=state_id)
+                    .order_by("-created")
+                    .first()
+                )
+                if not ancestor:
+                    return None
+                val = ancestor.resolve_custom_field(field_name)
+
+            try:
+                return float(val) if val is not None else None
+            except (ValueError, TypeError):
+                return None
+
+        if "op" in node:
+            op = node["op"]
+            # Current ops are all numeric.
+            if op not in {"sum", "product", "difference", "ratio"}:
+                return None
+
+            args = [self._evaluate_compute(arg) for arg in node.get("args", [])]
+            if any(arg is None for arg in args):
+                return None
+
+            # Narrow types for mypy; the check above ensures all args are floats.
+            valid_args: list[float] = [a for a in args if a is not None]
+
+            if op == "sum":
+                return sum(valid_args)
+            if op == "product":
+                result = 1.0
+                for arg in valid_args:
+                    result *= arg
+                return result
+            if op == "difference":
+                return valid_args[0] - valid_args[1]
+            if op == "ratio":
+                if valid_args[1] == 0:
+                    return None
+                return valid_args[0] / valid_args[1]
+
         return None
 
 

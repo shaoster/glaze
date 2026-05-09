@@ -8,12 +8,12 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import WorkflowState from "../WorkflowState";
-import type { ResolvedAdditionalField } from "../../util/workflow";
+import type { ResolvedCustomField } from "../../util/workflow";
 import {
-  buildAdditionalFieldInputMap,
+  buildCustomFieldInputMap,
   buildDraftState,
   draftReducer,
-  normalizeAdditionalFieldPayload,
+  normalizeCustomFieldPayload,
 } from "../workflowStateDraft";
 import type { PieceState, PieceDetail } from "../../util/types";
 import * as api from "../../util/api";
@@ -313,7 +313,7 @@ beforeEach(() => {
 describe("WorkflowState", () => {
   it("buildDraftState leaves additional field maps empty for states without additional fields", () => {
     const draft = buildDraftState(makeState({ state: "designed" }));
-    expect(draft.additionalFieldInputs).toEqual({});
+    expect(draft.customFieldInputs).toEqual({});
     expect(draft.globalRefPks).toEqual({});
   });
 
@@ -326,14 +326,14 @@ describe("WorkflowState", () => {
         },
       }),
     );
-    expect(draft.additionalFieldInputs).toEqual(
+    expect(draft.customFieldInputs).toEqual(
       expect.objectContaining({ kiln_location: "Kiln A" }),
     );
     expect(draft.globalRefPks).toEqual({ kiln_location: "loc-1" });
   });
 
-  it("buildAdditionalFieldInputMap stringifies boolean values for boolean fields", () => {
-    const defs: ResolvedAdditionalField[] = [
+  it("buildCustomFieldInputMap stringifies boolean values for boolean fields", () => {
+    const defs: ResolvedCustomField[] = [
       {
         name: "food_safe",
         label: "Food Safe",
@@ -344,13 +344,13 @@ describe("WorkflowState", () => {
       },
     ];
     expect(
-      buildAdditionalFieldInputMap(defs, {
+      buildCustomFieldInputMap(defs, {
         food_safe: true,
       }),
     ).toEqual({ food_safe: "true" });
 
     expect(
-      buildAdditionalFieldInputMap(defs, {
+      buildCustomFieldInputMap(defs, {
         food_safe: false,
       }),
     ).toEqual({ food_safe: "false" });
@@ -365,7 +365,7 @@ describe("WorkflowState", () => {
         } as PieceState["custom_fields"],
       }),
     );
-    expect(draft.additionalFieldInputs).toEqual(
+    expect(draft.customFieldInputs).toEqual(
       expect.objectContaining({ kiln_location: "Unsaved Kiln" }),
     );
     expect(draft.globalRefPks).toEqual({});
@@ -381,12 +381,12 @@ describe("WorkflowState", () => {
       }),
     );
     // Only assert the field under test — other fields vary as workflow.yml evolves.
-    expect(draft.additionalFieldInputs).toMatchObject({ clay_weight_lbs: "" });
-    expect(draft.additionalFieldInputs["clay_weight_lbs"]).not.toEqual({ bad: "shape" });
+    expect(draft.customFieldInputs).toMatchObject({ clay_weight_lbs: "" });
+    expect(draft.customFieldInputs["clay_weight_lbs"]).not.toEqual({ bad: "shape" });
   });
 
-  it("normalizeAdditionalFieldPayload trims and parses boolean strings", () => {
-    const defs: ResolvedAdditionalField[] = [
+  it("normalizeCustomFieldPayload trims and parses boolean strings", () => {
+    const defs: ResolvedCustomField[] = [
       {
         name: "food_safe",
         label: "Food Safe",
@@ -397,7 +397,7 @@ describe("WorkflowState", () => {
       },
     ];
     expect(
-      normalizeAdditionalFieldPayload(
+      normalizeCustomFieldPayload(
         defs,
         {
           food_safe: " true ",
@@ -406,7 +406,7 @@ describe("WorkflowState", () => {
       ),
     ).toEqual({ food_safe: true });
     expect(
-      normalizeAdditionalFieldPayload(
+      normalizeCustomFieldPayload(
         defs,
         {
           food_safe: "false",
@@ -416,8 +416,8 @@ describe("WorkflowState", () => {
     ).toEqual({ food_safe: false });
   });
 
-  it("normalizeAdditionalFieldPayload tolerates sparse input maps", () => {
-    const defs: ResolvedAdditionalField[] = [
+  it("normalizeCustomFieldPayload tolerates sparse input maps", () => {
+    const defs: ResolvedCustomField[] = [
       {
         name: "notes_label",
         label: "Notes Label",
@@ -427,11 +427,11 @@ describe("WorkflowState", () => {
         isStateRef: false,
       },
     ];
-    expect(normalizeAdditionalFieldPayload(defs, {}, {})).toEqual({});
+    expect(normalizeCustomFieldPayload(defs, {}, {})).toEqual({});
   });
 
-  it("normalizeAdditionalFieldPayload drops NaN integers and numbers", () => {
-    const defs: ResolvedAdditionalField[] = [
+  it("normalizeCustomFieldPayload drops NaN integers and numbers", () => {
+    const defs: ResolvedCustomField[] = [
       {
         name: "kiln_temperature_c",
         label: "Kiln Temperature C",
@@ -442,7 +442,7 @@ describe("WorkflowState", () => {
       },
     ];
     expect(
-      normalizeAdditionalFieldPayload(
+      normalizeCustomFieldPayload(
         defs,
         {
           kiln_temperature_c: "twelve hundred",
@@ -451,7 +451,7 @@ describe("WorkflowState", () => {
       ),
     ).toEqual({});
 
-    const numberDefs: ResolvedAdditionalField[] = [
+    const numberDefs: ResolvedCustomField[] = [
       {
         name: "clay_weight_lbs",
         label: "Clay Weight Lbs",
@@ -462,7 +462,7 @@ describe("WorkflowState", () => {
       },
     ];
     expect(
-      normalizeAdditionalFieldPayload(
+      normalizeCustomFieldPayload(
         numberDefs,
         {
           clay_weight_lbs: "not-a-number",

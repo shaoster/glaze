@@ -26,7 +26,7 @@ import {
   updateCurrentState,
 } from "../util/api";
 import {
-  getAdditionalFieldDefinitions,
+  getCustomFieldDefinitions,
 } from "../util/workflow";
 import { entryNameOrEmpty } from "../util/optionalValues";
 import GlobalEntryField from "./GlobalEntryField";
@@ -37,7 +37,7 @@ import {
   type ImageEntry,
   buildDraftState,
   draftReducer,
-  normalizeAdditionalFieldPayload,
+  normalizeCustomFieldPayload,
 } from "./workflowStateDraft";
 
 type WorkflowStateProps = {
@@ -167,33 +167,33 @@ export default function WorkflowState({
     initialPieceState,
     buildDraftState,
   );
-  const { baseState, notes, images, additionalFieldInputs, globalRefPks } = draft;
+  const { baseState, notes, images, customFieldInputs, globalRefPks } = draft;
   const baseDraft = useMemo(() => buildDraftState(baseState), [baseState]);
-  const additionalFieldDefs = useMemo(
-    () => getAdditionalFieldDefinitions(baseState.state),
+  const customFieldDefs = useMemo(
+    () => getCustomFieldDefinitions(baseState.state),
     [baseState.state],
   );
-  const normalizedAdditionalFields = useMemo(
+  const normalizedCustomFields = useMemo(
     () =>
-      normalizeAdditionalFieldPayload(
-        additionalFieldDefs,
-        additionalFieldInputs,
+      normalizeCustomFieldPayload(
+        customFieldDefs,
+        customFieldInputs,
         globalRefPks,
       ),
-    [additionalFieldDefs, additionalFieldInputs, globalRefPks],
+    [customFieldDefs, customFieldInputs, globalRefPks],
   );
-  const normalizedBaseAdditionalFields = useMemo(
+  const normalizedBaseCustomFields = useMemo(
     () =>
-      normalizeAdditionalFieldPayload(
-        additionalFieldDefs,
-        baseDraft.additionalFieldInputs,
+      normalizeCustomFieldPayload(
+        customFieldDefs,
+        baseDraft.customFieldInputs,
         baseDraft.globalRefPks,
       ),
-    [additionalFieldDefs, baseDraft.additionalFieldInputs, baseDraft.globalRefPks],
+    [customFieldDefs, baseDraft.customFieldInputs, baseDraft.globalRefPks],
   );
-  const additionalFieldsDirty =
-    JSON.stringify(normalizedAdditionalFields) !==
-    JSON.stringify(normalizedBaseAdditionalFields);
+  const customFieldsDirty =
+    JSON.stringify(normalizedCustomFields) !==
+    JSON.stringify(normalizedBaseCustomFields);
 
   const theme = useTheme();
   const isMobileLayout = useMediaQuery(theme.breakpoints.down("sm"));
@@ -203,7 +203,7 @@ export default function WorkflowState({
   const latestImagesRef = useRef<ImageEntry[]>(images);
   const imageSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
 
-  const isDirty = notes !== baseState.notes || additionalFieldsDirty;
+  const isDirty = notes !== baseState.notes || customFieldsDirty;
 
   useEffect(() => {
     latestImagesRef.current = images;
@@ -217,7 +217,7 @@ export default function WorkflowState({
     const payload = {
       notes,
       images,
-      custom_fields: normalizedAdditionalFields,
+      custom_fields: normalizedCustomFields,
     };
     const result = await updateCurrentState(pieceId, payload);
     dispatch({ type: "replace_base_state", pieceState: result.current_state });
@@ -225,7 +225,7 @@ export default function WorkflowState({
   }, [
     pieceId,
     images,
-    normalizedAdditionalFields,
+    normalizedCustomFields,
     notes,
     onSaved,
   ]);
@@ -235,10 +235,11 @@ export default function WorkflowState({
       JSON.stringify({
         notes,
         images,
-        custom_fields: normalizedAdditionalFields,
+        custom_fields: normalizedCustomFields,
       }),
-    [images, normalizedAdditionalFields, notes],
+    [images, normalizedCustomFields, notes],
   );
+
 
   const autosave = useAutosave({
     dirty: !readOnly && isDirty,
@@ -259,7 +260,7 @@ export default function WorkflowState({
           const result = await updateCurrentState(pieceId, {
             notes,
             images: nextImages,
-            custom_fields: normalizedAdditionalFields,
+            custom_fields: normalizedCustomFields,
           });
           latestImagesRef.current = result.current_state.images;
           dispatch({
@@ -279,7 +280,7 @@ export default function WorkflowState({
           }
         });
     },
-    [normalizedAdditionalFields, notes, onSaved, pieceId],
+    [normalizedCustomFields, notes, onSaved, pieceId],
   );
 
   useEffect(() => {
@@ -398,7 +399,7 @@ export default function WorkflowState({
   }
 
   function handleFieldChange(name: string, value: string) {
-    dispatch({ type: "set_additional_field", name, value });
+    dispatch({ type: "set_custom_field", name, value });
   }
 
   return (
@@ -422,7 +423,7 @@ export default function WorkflowState({
           fullWidth
         />
       )}
-      {additionalFieldDefs.length > 0 && (
+      {customFieldDefs.length > 0 && (
         <Box>
           <Box
             sx={{
@@ -431,21 +432,32 @@ export default function WorkflowState({
               gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
             }}
           >
-            {additionalFieldDefs.map((field) => {
-              const value = additionalFieldInputs[field.name] ?? "";
+            {customFieldDefs.map((field) => {
+              const value = customFieldInputs[field.name] ?? "";
               const helperText = field.description;
               const label = field.label;
-              if (field.isStateRef) {
+              if (field.isStateRef || field.isCalculated) {
+                const isPercent = field.displayAs === "percent";
+                const valueNum = Number(value);
+                const displayValue =
+                  isPercent && !Number.isNaN(valueNum)
+                    ? (valueNum * 100).toFixed(field.decimals ?? 0)
+                    : value;
+
+                const hasUnit = isPercent || !!(field.unit && value);
+                const unit = isPercent ? "%" : field.unit;
+                const formattedValue = hasUnit ? `${displayValue} ${unit}` : value;
                 return (
                   <TextField
                     key={field.name}
                     label={label}
                     type={
-                      field.type === "number" || field.type === "integer"
+                      !hasUnit &&
+                      (field.type === "number" || field.type === "integer")
                         ? "number"
                         : "text"
                     }
-                    value={value}
+                    value={formattedValue}
                     disabled
                     helperText={helperText}
                     fullWidth

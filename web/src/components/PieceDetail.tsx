@@ -22,7 +22,7 @@ import { useBlocker } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
 import { formatState, isTerminalState } from "../util/types";
 import {
-  getAdditionalFieldDefinitions,
+  getCustomFieldDefinitions,
   getStateSummaryDefinition,
 } from "../util/workflow";
 import { addPieceState, updateCurrentState, updatePiece } from "../util/api";
@@ -145,7 +145,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     getStateSummaryDefinition(currentState.state).length > 0;
   const canEdit = piece.can_edit;
   const hasWorkflowContent =
-    canEdit || getAdditionalFieldDefinitions(currentState.state).length > 0;
+    canEdit || getCustomFieldDefinitions(currentState.state).length > 0;
   const pastHistory = piece.history.slice(0, -1);
   function formatDate(d: Date): string {
     const y = d.getFullYear();
@@ -278,7 +278,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     images: galleryImages,
     pieceId: piece.id,
     currentStateNotes: currentState.notes,
-    currentStateAdditionalFields: currentState.custom_fields ?? {},
+    currentStateCustomFields: currentState.custom_fields ?? {},
     currentThumbnailUrl: piece.thumbnail?.url,
     onPieceUpdated,
     updatePieceFn: canEdit ? updatePiece : undefined,

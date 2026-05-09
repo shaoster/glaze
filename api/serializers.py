@@ -481,7 +481,7 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         piece: Piece = self.context["piece"]
         incoming: dict = dict(validated_data.pop("custom_fields", {}))
         inline_fields, global_ref_fields, global_ref_pks, clear_global_ref_fields = (
-            _resolve_additional_field_payload(piece, new_state_id, incoming)
+            _resolve_custom_field_payload(piece, new_state_id, incoming)
         )
 
         validated_data["custom_fields"] = inline_fields
@@ -502,7 +502,7 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         return piece_state
 
 
-def _resolve_additional_field_payload(
+def _resolve_custom_field_payload(
     piece: Piece,
     state_id: str,
     incoming: dict,
@@ -608,7 +608,7 @@ class PieceStateUpdateSerializer(serializers.Serializer):
                 global_ref_fields,
                 global_ref_pks,
                 clear_global_ref_fields,
-            ) = _resolve_additional_field_payload(
+            ) = _resolve_custom_field_payload(
                 instance.piece,
                 instance.state,
                 incoming,
