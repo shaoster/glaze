@@ -34,6 +34,14 @@ gh issue create --title "..." --body-file /tmp/body.md
 Always refer to PRs and issues as Markdown links using the full URL.
 Never use bold text as a substitute for a link.
 
+## PR Synchronization
+
+When asked to "Update the PR," "Wrap up the PR," or similar, always perform these mechanical steps:
+
+- **New commits**: `git push origin <branch-name>`
+- **Amended history**: `git push origin <branch-name> --force-with-lease` (always prefer force-with-lease over force).
+- **Body updates**: If functional changes were added, update the PR description using `gh pr edit --body-file` to keep the context accurate for reviewers.
+
 ## Branch Naming
 
 - Issue work: `issue/<N>-short-slug` (e.g. `issue/42-fix-auth-flow`)
@@ -64,6 +72,9 @@ Before opening or pushing to a PR, verify every item:
 - [ ] Serializer output matches TypeScript types in `web/src/util/types.ts`
 - [ ] State names and transitions derived from `workflow.yml`, not hardcoded
 - [ ] If `AGENTS.md` was modified, check whether `README.md` needs a corresponding update
+- [ ] PR description updated to reflect all functional changes (use `gh pr edit`)
+- [ ] All local commits pushed to the remote branch
+- [ ] Remote PR state verified (e.g., via `gh pr view` or by checking the URL)
 - [ ] If conventions or constraints changed during PR work, append them to the relevant file under `docs/agents/`
 
 ## Scope Limits — Ask Before Acting
@@ -76,4 +87,4 @@ Confirm with the user before touching any of these:
 - `package.json` (adding or removing npm dependencies)
 - Database migrations
 - `backend/settings.py`, `build.sh`, or other deployment configuration
-- Destructive git operations (force push, branch deletion)
+- Destructive git operations (force pushing to `main`, branch deletion). *Note: Force-pushing to your own feature/issue branch after an amend is encouraged to keep history clean, but always use `--force-with-lease`.*
