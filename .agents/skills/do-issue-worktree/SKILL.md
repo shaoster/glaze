@@ -21,15 +21,18 @@ Use this skill for the explicit Glaze agent invocation:
 ```
 
 The point is to make the worktree contract impossible to miss. Before analysis,
-implementation, tests, or GitHub comments, create an isolated repo-local
-worktree and print the path in a copy-friendly form.
+implementation, tests, or GitHub comments, you MUST use Plan mode for research
+and design. Only after the plan is approved and the worktree is created should
+implementation begin.
 
 ## Mandatory Enforcement
 
 For any session initialized with the `/do` skill:
-1. **Verify your location:** You MUST be within `.agent-worktrees/` before executing ANY write operation.
-2. **Prohibition:** Modifying the `main` workspace branch is strictly forbidden.
-3. **Recovery:** If you are currently in `main`, stop immediately, create a worktree, and move your work there.
+1. **Plan Mode First:** You MUST use `enter_plan_mode` to research the issue and design the solution before any write operations or worktree creation.
+2. **Issue Commenting:** Post the approved plan as a comment on the linked issue. One agent session MUST own exactly one comment; update the same comment for refinements.
+3. **Verify your location:** You MUST be within `.agent-worktrees/` before executing ANY write operation.
+4. **Implementation Delegation:** If sub-agent capability is available, you MUST delegate the implementation to a sub-agent spawned inside the worktree.
+5. **Prohibition:** Modifying the `main` workspace branch is strictly forbidden.
 
 ## Trigger
 
@@ -44,23 +47,35 @@ Use this skill when the prompt asks to:
 If the user explicitly asks to work in the current checkout, ask for
 confirmation before skipping the worktree.
 
-## Required First Output
-
-Print this before any code changes:
-
-```text
-Worktree: /absolute/path/to/glaze/.agent-worktrees/<agent>/issue-<N>-<slug>
-```
-
-Keep it on its own line so the developer can copy it or use `gz_cd <pattern>`.
-
 ## Flow
 
-1. Read the issue title and body from GitHub.
-2. **Dependency scout** — use Bazel to confirm which layers the issue touches, then
-   announce and invoke the appropriate skills before writing any code.
+1. **Research & Design (Plan Mode):**
+   - Immediately use `enter_plan_mode`.
+   - Read the issue title and body from GitHub.
+   - **Dependency scout** — use Bazel to confirm which layers the issue touches (see Scouting Queries below).
+   - Formulate a detailed plan including implementation steps and testing strategy.
+   - Present the plan to the user for approval.
 
-   ### Key targets
+2. **Issue Commenting:**
+   - Once the plan is approved, post it as a comment on the linked issue.
+   - Use a hidden marker `<!-- glaze-agent-plan -->` at the end of the comment for UI discoverability.
+   - **Persistence:** Store the created comment ID in your session memory. For any subsequent plan refinements in the same session, use this ID with `gh issue comment --edit <id>` to update the existing comment rather than creating a new one.
+
+3. **Worktree Creation:**
+   - Create a short slug from the issue title.
+   - Create the branch as `issue/<N>-slug`.
+   - Create the worktree at `.agent-worktrees/<agent>/issue-<N>-slug`.
+   - **Print the worktree path** on its own line:
+     ```text
+     Worktree: /absolute/path/to/glaze/.agent-worktrees/<agent>/issue-<N>-slug
+     ```
+
+4. **Delegation:**
+   - If `invoke_agent` is available, spawn a `generalist` or `codebase_investigator` sub-agent, or whichever agent type is allowed to make local branch changes and submit PRs.
+   - **Prompt:** Provide the distilled plan, the absolute worktree path, and instructions to ONLY work within that worktree.
+   - If delegation is not possible, continue analysis and implementation from within the worktree.
+
+## Scouting Queries
 
    | Target | What it covers |
    |---|---|
@@ -115,13 +130,6 @@ Keep it on its own line so the developer can copy it or use `gz_cd <pattern>`.
    Django), so a full transitive rdeps query will always show frontend impact. Use
    depth-1 rdeps or check whether serializer fields actually changed to avoid
    spuriously loading frontend resources for backend-only fixes.
-
-3. Create a short slug from the issue title.
-4. Create the branch as `issue/<N>-<slug>`.
-5. Create the worktree at `.agent-worktrees/<agent>/issue-<N>-<slug>`.
-6. Announce the absolute worktree path.
-7. Continue all analysis, edits, tests, commits, pushes, and PR work from that
-   worktree root.
 
 Example:
 
