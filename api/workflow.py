@@ -443,9 +443,25 @@ def build_custom_fields_schema(state_id: str) -> dict:
     required: list[str] = []
 
     for field_name, field_def in dsl_fields.items():
-        if _resolve_to_global_ref(field_def) is not None:
+        # Global refs (starting with @) are stored in junction tables and excluded
+        # from the inline custom_fields schema. State refs are now stored as
+        # markers in custom_fields and must be included.
+        is_direct_global_ref = "$ref" in field_def and field_def["$ref"].startswith("@")
+        if is_direct_global_ref:
             continue
-        properties[field_name] = _resolve_field_def(field_def)
+
+        field_schema = _resolve_field_def(field_def)
+        # If it's a state-ref, allow either the resolved type OR a marker string.
+        if "$ref" in field_def and not field_def["$ref"].startswith("@"):
+            properties[field_name] = {
+                "anyOf": [
+                    field_schema,
+                    {"type": "string", "pattern": r"^\[[a-z_]+\.[a-z_]+\]$"},
+                ]
+            }
+        else:
+            properties[field_name] = field_schema
+
         if field_def.get("required", False):
             required.append(field_name)
 

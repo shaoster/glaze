@@ -260,22 +260,27 @@ class PieceStateSerializer(serializers.ModelSerializer):
     def get_custom_fields(self, obj: PieceState) -> dict:
         """Merge inline JSON blob with global-ref junction table lookups.
 
+        Follows state-ref markers to resolve live values from ancestors.
         Global ref fields are returned as {id, name} objects; inline fields
         are returned as their raw JSON values.
         """
-        result = dict(obj.custom_fields or {})
-        global_ref_fields = get_global_ref_fields_for_state(obj.state)
-        for field_name, global_name in global_ref_fields.items():
-            config = get_global_config(global_name)
-            ref_model = apps.get_model("api", f"PieceState{config['model']}Ref")
-            try:
-                ref_row = ref_model.objects.select_related(global_name).get(
-                    piece_state=obj, field_name=field_name
-                )
-                global_obj = getattr(ref_row, global_name)
-                result[field_name] = {"id": str(global_obj.pk), "name": global_obj.name}
-            except ref_model.DoesNotExist:
-                pass
+        from .models import GlobalModel
+
+        result = {}
+        # Iterate over all fields defined for this state in the workflow.
+        from .workflow import _STATE_MAP
+
+        state_config = _STATE_MAP.get(obj.state, {})
+        fields = state_config.get("fields", {})
+        for field_name in fields:
+            val = obj.resolve_custom_field(field_name)
+            if val is None:
+                continue
+
+            if isinstance(val, GlobalModel):
+                result[field_name] = {"id": str(val.pk), "name": val.name}
+            else:
+                result[field_name] = val
         return result
 
     @extend_schema_field(serializers.CharField(allow_null=True))
@@ -504,7 +509,7 @@ def _resolve_additional_field_payload(
     *,
     clear_empty_refs: bool = False,
 ) -> tuple[dict, dict[str, str], dict[str, str], set[str]]:
-    """Split inline JSON fields from global refs and copy state-ref defaults."""
+    """Split inline JSON fields from global refs and copy state-ref markers."""
     global_ref_fields = get_global_ref_fields_for_state(state_id)
     inline_fields: dict = {}
     global_ref_pks: dict[str, str] = {}
@@ -522,30 +527,15 @@ def _resolve_additional_field_payload(
 
     state_refs = get_state_ref_fields(state_id)
     for field_name, (source_state_id, source_field_name) in state_refs.items():
-        ancestor = (
-            piece.states.filter(state=source_state_id).order_by("-created").first()
-        )
-        if ancestor is None:
-            continue
-        if field_name in global_ref_fields:
-            if field_name in global_ref_pks or field_name in clear_global_ref_fields:
-                continue
-            src_global_name = global_ref_fields[field_name]
-            src_config = get_global_config(src_global_name)
-            src_ref_model = apps.get_model("api", f"PieceState{src_config['model']}Ref")
-            try:
-                src_row = src_ref_model.objects.get(
-                    piece_state=ancestor, field_name=source_field_name
-                )
-                global_ref_pks[field_name] = str(
-                    getattr(src_row, f"{src_global_name}_id")
-                )
-            except src_ref_model.DoesNotExist:
-                pass
-        elif field_name not in inline_fields and source_field_name in (
-            ancestor.custom_fields or {}
-        ):
-            inline_fields[field_name] = ancestor.custom_fields[source_field_name]
+        # Force marker for ALL state-refs, ignoring client input for those fields.
+        inline_fields[field_name] = f"[{source_state_id}.{source_field_name}]"
+
+        # Ensure state-refs are not written to junction tables even if they
+        # resolve to global refs. They will be resolved lazily instead.
+        if field_name in global_ref_pks:
+            del global_ref_pks[field_name]
+        if field_name in clear_global_ref_fields:
+            clear_global_ref_fields.remove(field_name)
 
     return inline_fields, global_ref_fields, global_ref_pks, clear_global_ref_fields
 
