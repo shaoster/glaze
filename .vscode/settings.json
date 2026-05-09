@@ -22,4 +22,6 @@
   "coverage-gutters.coverageFileNames": [
     "_coverage_report.dat",
   ],
+  "python.analysis.exclude": ["**/venv", "**/.venv", "**/node_modules", "**/data", "**/dist"],
+  "files.watcherExclude": { "**/venv/**": true, "**/.venv/**/": true, "**/node_modules/**": true, "**/data/**": true, "**/dist/**": true, "**bazel-out/**": true }
 }
