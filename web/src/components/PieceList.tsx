@@ -34,11 +34,17 @@ interface FilterOption {
   label: string;
 }
 
-const FILTER_OPTIONS: FilterOption[] = [
+const STATE_FILTER_OPTIONS: FilterOption[] = [
   { value: "wip", label: "Active" },
   { value: "completed", label: "Completed" },
   { value: "discarded", label: "Recycled" },
-  { value: "shared", label: "Shared" },
+];
+
+const SHARED_FILTER_OPTION: FilterOption = { value: "shared", label: "Shared" };
+
+const FILTER_OPTIONS: FilterOption[] = [
+  ...STATE_FILTER_OPTIONS,
+  SHARED_FILTER_OPTION,
 ];
 
 function matchesFilter(piece: PieceSummary, filter: FilterCategory): boolean {
@@ -353,17 +359,26 @@ const PieceList = (props: PieceListProps) => {
 
   const filteredPieces = useMemo(() => {
     return pieces.filter((piece) => {
+      const stateFilters = activeFilters.filter((f) => f !== "shared");
+      const sharedFilterActive = activeFilters.includes("shared");
+
       const matchesState =
-        activeFilters.length === 0
+        stateFilters.length === 0
           ? true
-          : activeFilters.some((filter) => matchesFilter(piece, filter));
+          : stateFilters.some((filter) => matchesFilter(piece, filter));
+
+      const matchesShared = sharedFilterActive
+        ? matchesFilter(piece, "shared")
+        : true;
+
       const matchesTags =
         activeTagIds.length === 0
           ? true
           : activeTagIds.every((id) =>
               (piece.tags ?? []).some((pieceTag) => pieceTag.id === id),
             );
-      return matchesState && matchesTags;
+
+      return matchesState && matchesShared && matchesTags;
     });
   }, [pieces, activeFilters, activeTagIds]);
 
@@ -542,8 +557,15 @@ const PieceList = (props: PieceListProps) => {
             }}
           >
             {/* Status filter chips */}
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-              {FILTER_OPTIONS.map((opt) => {
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 0.75,
+                alignItems: "center",
+              }}
+            >
+              {STATE_FILTER_OPTIONS.map((opt) => {
                 const active = activeFilters.includes(opt.value);
                 return (
                   <Chip
@@ -564,6 +586,39 @@ const PieceList = (props: PieceListProps) => {
                   />
                 );
               })}
+
+              <Box
+                sx={{
+                  width: "1px",
+                  bgcolor: "divider",
+                  mx: 0.5,
+                  alignSelf: "stretch",
+                  minHeight: "16px",
+                }}
+              />
+
+              <Chip
+                key={SHARED_FILTER_OPTION.value}
+                label={SHARED_FILTER_OPTION.label}
+                size="small"
+                onClick={() => toggleFilter(SHARED_FILTER_OPTION.value)}
+                sx={{
+                  cursor: "pointer",
+                  bgcolor: activeFilters.includes(SHARED_FILTER_OPTION.value)
+                    ? "primary.main"
+                    : alpha("#000", 0.18),
+                  color: activeFilters.includes(SHARED_FILTER_OPTION.value)
+                    ? "primary.contrastText"
+                    : "text.secondary",
+                  border: "1px solid",
+                  borderColor: activeFilters.includes(SHARED_FILTER_OPTION.value)
+                    ? "primary.main"
+                    : "divider",
+                  fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+                  fontSize: "0.6875rem",
+                  "&:hover": { filter: "brightness(1.12)" },
+                }}
+              />
             </Box>
 
             {/* Tag filter: chips for active tags + "+ tag" button to open picker */}

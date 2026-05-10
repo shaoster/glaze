@@ -339,6 +339,45 @@ describe("PieceList", () => {
       });
       expect(screen.getByText("Mug")).toBeInTheDocument();
     });
+
+    it("filters pieces using AND between state and shared filters", async () => {
+      const user = userEvent.setup();
+      const pieces = [
+        makePiece({
+          id: "id-1",
+          name: "Active Shared",
+          current_state: { state: "designed" } as any,
+          shared: true,
+        }),
+        makePiece({
+          id: "id-2",
+          name: "Active Not Shared",
+          current_state: { state: "designed" } as any,
+          shared: false,
+        }),
+        makePiece({
+          id: "id-3",
+          name: "Completed Shared",
+          current_state: { state: "completed" } as any,
+          shared: true,
+        }),
+      ];
+      renderPieceList(pieces);
+
+      await openFilters(user);
+
+      // Select "Active"
+      const activeChip = screen.getAllByText("Active").find((el) => el.closest('[role="button"]'));
+      await user.click(activeChip!.closest('[role="button"]')!);
+
+      // Select "Shared"
+      const sharedChip = screen.getAllByText("Shared").find((el) => el.closest('[role="button"]'));
+      await user.click(sharedChip!.closest('[role="button"]')!);
+
+      expect(screen.getByText("Active Shared")).toBeInTheDocument();
+      expect(screen.queryByText("Active Not Shared")).not.toBeInTheDocument();
+      expect(screen.queryByText("Completed Shared")).not.toBeInTheDocument();
+    });
   });
 
   describe("tag filtering", () => {
