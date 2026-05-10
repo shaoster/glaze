@@ -415,11 +415,22 @@ js_library(
 )
 
 js_library(
+    name = "process_summary_src",
+    srcs = ["src/components/ProcessSummary.tsx"],
+    deps = [
+        ":node_modules",
+        ":util_lib",
+    ],
+)
+
+js_library(
     name = "public_piece_shell_src",
     srcs = ["src/components/PublicPieceShell.tsx"],
     deps = [
+        ":cloudinary_image_src",
         ":node_modules",
         ":primitive_src",
+        ":process_summary_src",
     ],
 )
 
@@ -428,7 +439,6 @@ js_library(
     srcs = [
         "src/components/NavigationBlocker.tsx",
         "src/components/PieceDetail.tsx",
-        "src/components/WorkflowSummary.tsx",
     ],
     deps = [
         ":autosave_src",
@@ -439,6 +449,7 @@ js_library(
         ":piece_photo_gallery_src",
         ":piece_share_controls_src",
         ":primitive_src",
+        ":process_summary_src",
         ":state_transition_src",
         ":tag_manager_src",
         ":util_lib",
@@ -656,7 +667,7 @@ vitest_test(
 vitest_test(
     name = "web_workflow_summary_test",
     srcs = [
-        "src/components/__tests__/WorkflowSummary.test.tsx",
+        "src/components/__tests__/ProcessSummary.test.tsx",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [

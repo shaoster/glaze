@@ -84,7 +84,6 @@ interface WorkflowStateDefinition {
   terminal?: boolean;
   successors?: string[];
   fields?: Record<string, FieldDefinition>;
-  summary?: WorkflowStateSummaryDefinition;
 }
 
 export interface ComposeFromEntry {
@@ -106,6 +105,7 @@ interface WorkflowDefinition {
   version: string;
   globals?: Record<string, WorkflowGlobalDefinition>;
   states: WorkflowStateDefinition[];
+  process_summary?: WorkflowSummaryDefinition;
 }
 
 // The workflow.yml is expected to be well-formed and is controlled by us and
@@ -174,7 +174,7 @@ interface WorkflowSummaryItemDefinition {
   when?: WorkflowSummaryCondition;
 }
 
-interface WorkflowStateSummaryDefinition {
+interface WorkflowSummaryDefinition {
   sections: Array<{
     title: string;
     fields: WorkflowSummaryItemDefinition[];
@@ -442,10 +442,8 @@ export function getStateMetadata(
   };
 }
 
-export function getStateSummaryDefinition(
-  stateId: string,
-): WorkflowSummarySection[] {
-  const summary = STATE_MAP.get(stateId)?.summary;
+export function getProcessSummaryDefinition(): WorkflowSummarySection[] {
+  const summary = workflowDef.process_summary;
   if (!summary) {
     return [];
   }

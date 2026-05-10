@@ -148,6 +148,8 @@ function mapPieceSummary(raw: Wire<PieceSummary>): PieceSummary {
     current_state: mapStateSummary(raw.current_state),
     current_location: raw.current_location ?? "",
     tags: (raw.tags ?? []).map(mapTagEntry),
+    showcase_story: raw.showcase_story ?? "",
+    showcase_fields: (raw.showcase_fields as string[]) ?? [],
   };
 }
 
@@ -317,6 +319,8 @@ export type UpdatePiecePayload = {
   thumbnail?: Thumbnail | null;
   shared?: boolean;
   tags?: string[];
+  showcase_story?: string;
+  showcase_fields?: string[];
 };
 
 export async function updatePiece(

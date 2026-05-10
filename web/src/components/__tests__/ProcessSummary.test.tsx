@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import WorkflowSummary from "../WorkflowSummary";
+import ProcessSummary from "../ProcessSummary";
 import type { PieceState } from "../../util/types";
 
 function makeState(
@@ -17,11 +17,10 @@ function makeState(
   } as PieceState;
 }
 
-describe("WorkflowSummary", () => {
+describe("ProcessSummary", () => {
   it("renders direct values, computed values, and conditional text", () => {
     render(
-      <WorkflowSummary
-        stateId="completed"
+      <ProcessSummary
         history={[
           makeState("wheel_thrown", {
             clay_weight_lbs: 4,
@@ -59,8 +58,7 @@ describe("WorkflowSummary", () => {
 
   it("honors state_exists and state_missing visibility", () => {
     render(
-      <WorkflowSummary
-        stateId="completed"
+      <ProcessSummary
         history={[
           makeState("wheel_thrown", { clay_weight_lbs: 4 }),
           makeState("trimmed", { trimmed_weight_lbs: 3.25 }),
@@ -76,8 +74,7 @@ describe("WorkflowSummary", () => {
 
   it("uses the latest matching state value and hides empty sections", () => {
     const { container } = render(
-      <WorkflowSummary
-        stateId="completed"
+      <ProcessSummary
         history={[
           makeState("wheel_thrown", { clay_weight_lbs: 4 }),
           makeState("wheel_thrown", { clay_weight_lbs: "5.5" }),
@@ -93,7 +90,6 @@ describe("WorkflowSummary", () => {
 
   it("renders nothing when a state has no summary", () => {
     const { container } = render(
-      <WorkflowSummary stateId="recycled" history={[makeState("recycled")]} />,
     );
 
     expect(container).toBeEmptyDOMElement();

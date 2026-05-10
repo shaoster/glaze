@@ -350,6 +350,8 @@ class PieceSummarySerializer(serializers.ModelSerializer):
             "last_modified",
             "thumbnail",
             "shared",
+            "showcase_story",
+            "showcase_fields",
             "can_edit",
             "current_state",
             "current_location",
@@ -642,6 +644,8 @@ class PieceUpdateSerializer(serializers.Serializer):
     thumbnail = ThumbnailSerializer(required=False, allow_null=True)
     shared = serializers.BooleanField(required=False)
     tags = serializers.ListField(child=serializers.CharField(), required=False)
+    showcase_story = serializers.CharField(required=False, allow_blank=True)
+    showcase_fields = serializers.JSONField(required=False)
 
     def validate_shared(self, value: bool) -> bool:
         if not value:
@@ -650,6 +654,11 @@ class PieceUpdateSerializer(serializers.Serializer):
         current = instance.current_state if instance is not None else None
         if current is None or current.state not in TERMINAL_STATES:
             raise serializers.ValidationError("Only terminal pieces can be shared.")
+        return value
+
+    def validate_showcase_fields(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError("Must be a JSON array.")
         return value
 
     def update(self, instance: Piece, validated_data: dict) -> Piece:
@@ -671,6 +680,10 @@ class PieceUpdateSerializer(serializers.Serializer):
             )
         if "shared" in validated_data:
             instance.shared = validated_data["shared"]
+        if "showcase_story" in validated_data:
+            instance.showcase_story = validated_data["showcase_story"]
+        if "showcase_fields" in validated_data:
+            instance.showcase_fields = validated_data["showcase_fields"]
         instance.save()
         if "tags" in validated_data:
             tag_ids = [str(tag_id) for tag_id in validated_data["tags"]]

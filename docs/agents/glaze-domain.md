@@ -127,14 +127,14 @@ Referential rules enforced by `TestCustomFieldsDSL`:
 - **`format` only on strings**: if a field declares `format`, its `type` must be `string` — enforced by `TestCustomFieldsDSL.test_format_only_on_string_type`.
 - **`format: hex_color`**: `_resolve_field_def` emits a JSON Schema `pattern` constraint so the backend rejects any value that is not a valid CSS hex color code; `_global_entries_impl` also validates this in the globals POST path and returns HTTP 400 with a human-readable error.
 
-**Terminal state summaries:** Terminal states may declare a read-only `summary`
-section that promotes useful data from prior states without creating new
-persisted fields on the terminal state. Summary items are display metadata for
-existing workflow data, so they belong in `workflow.yml` when the selected
-information is part of the domain contract for a finished piece.
+**Process Summary DSL:** `workflow.yml` may declare a top-level `process_summary`
+section that defines how a piece's history is summarized across different
+production paths. Summary items are display metadata for existing workflow data,
+so they belong in `workflow.yml` when the selected information is part of the
+domain contract for summarizing a piece.
 
 ```yaml
-summary:
+process_summary:
   sections:
     - title: Making
       fields:
@@ -166,7 +166,8 @@ Summary items support exactly one of:
 Optional `when` clauses currently support `state_exists` and `state_missing`.
 This is intentionally conditional visibility, not a general expression language:
 use separate summary items for path-specific display instead of ternary-style
-logic. Summary computations are display-only; they are not persisted.
+logic. Summary computations are display-only; they are not persisted. Rendered
+by the `ProcessSummary.tsx` component.
 
 **States** (in rough lifecycle order):
 
@@ -442,9 +443,9 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 - [`CloudinaryImage.tsx`](../../web/src/components/CloudinaryImage.tsx) — renders a `CaptionedImage` via `@cloudinary/url-gen` + `@cloudinary/react` when available; falls back to a plain `<img>`. Sizing context: `thumbnail`/`preview` (64×64 fill), `lightbox` (90vw×80vh fit).
 - [`ImageLightbox.tsx`](../../web/src/components/ImageLightbox.tsx) — full-screen modal image viewer with caption and keyboard/touch navigation
 - [`StateChip.tsx`](../../web/src/components/StateChip.tsx) — shared workflow-state token. Takes `variant: 'current' | 'past' | 'future'` plus `isTerminal` and optional interaction hooks so list/detail/timeline UIs stay in one visual family.
-- [`WorkflowSummary.tsx`](../../web/src/components/WorkflowSummary.tsx) — renders the read-only `summary` section declared on terminal states in `workflow.yml`. Displays promoted field values, computed numeric results (`product`, `difference`, `sum`, `ratio`), and static text with optional `when` (state_exists / state_missing) visibility. Rendered by `PieceDetail` when the piece is in a terminal state.
+- [`ProcessSummary.tsx`](../../web/src/components/ProcessSummary.tsx) — renders the read-only `process_summary` section declared at the top level of `workflow.yml`. Displays sections of fields, promoted values, computed numeric results (`product`, `difference`, `sum`, `ratio`), and static text with optional `when` (`state_exists` / `state_missing`) visibility. Rendered by `PieceDetail` and `PublicPieceShell`.
 - [`PieceShareControls.tsx`](../../web/src/components/PieceShareControls.tsx) — owner-only sharing controls shown on terminal pieces. Renders a toggle to make the piece publicly accessible and a copyable share link; hidden from non-owners and non-terminal pieces.
-- [`PublicPieceShell.tsx`](../../web/src/components/PublicPieceShell.tsx) — thin unauthenticated route wrapper that renders `PieceDetailPage` for publicly shared terminal pieces without the main app shell. The backend decides readability; shared pieces load read-only with notes and owner controls suppressed.
+- [`PublicPieceShell.tsx`](../../web/src/components/PublicPieceShell.tsx) — unauthenticated route that acts as the **Showcase View** for publicly shared pieces. Displays the piece's curated content (name, thumbnail, story, and selected fields) without exposing the full potter-facing timeline or private notes.
 
 **Visual design system — state chips and state flow:**
 
@@ -537,6 +538,17 @@ The endpoint is implemented in `api/manual_tile_imports.py`. For each `glaze_typ
 ### Protected files for this feature
 
 `api/manual_tile_imports.py` and `web/src/pages/GlazeImportToolPage.tsx` are the two primary implementation files. `api/tests/test_manual_square_crop_import.py` must be kept in sync with any import-logic changes.
+
+---
+
+## Showcase View
+
+The **Showcase View** is the public, marketing-facing presence of a piece. It is controlled by two fields on the `Piece` model:
+
+- `showcase_story`: A multiline text field where the potter can write a narrative about the piece once it reaches a terminal state.
+- `showcase_fields`: A list of field identifiers (from the `process_summary` definition) that should be visible to external viewers.
+
+The `PublicPieceShell` component renders this view for any piece where `shared=true`. It fetches the piece data (via a public-safe API endpoint) and displays the story and selected fields, providing a "curated" look compared to the internal technical history shown in `PieceDetail`.
 
 ---
 

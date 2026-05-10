@@ -166,6 +166,8 @@ class TestGlobalEntries:
                 "last_modified": piece.last_modified.isoformat().replace("+00:00", "Z"),
                 "thumbnail": None,
                 "shared": False,
+                "showcase_story": "",
+                "showcase_fields": [],
                 "can_edit": True,
                 "current_state": {"state": "designed"},
                 "current_location": None,

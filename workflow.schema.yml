@@ -37,6 +37,9 @@ properties:
     items:
       $ref: "#/$defs/state"
 
+  process_summary:
+    $ref: "#/$defs/state_summary"
+
 $defs:
 
   # ---------------------------------------------------------------------------
@@ -227,8 +230,6 @@ $defs:
           pattern: '^[a-z][a-z0-9_]*$'
         additionalProperties:
           $ref: "#/$defs/field_def"
-      summary:
-        $ref: "#/$defs/state_summary"
 
   # ---------------------------------------------------------------------------
   # Field DSL

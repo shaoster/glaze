@@ -39,6 +39,8 @@ class TestPiecesList:
             "can_edit",
             "current_state",
             "tags",
+            "showcase_story",
+            "showcase_fields",
         }
 
     def test_does_not_include_other_users_pieces(self, client, other_user):

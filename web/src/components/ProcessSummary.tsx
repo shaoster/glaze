@@ -1,14 +1,13 @@
 import { Box, Typography } from "@mui/material";
 import type { PieceState } from "../util/types";
 import {
-  getStateSummaryDefinition,
+  getProcessSummaryDefinition,
   type WorkflowSummaryComputeDefinition,
   type WorkflowSummaryCondition,
   type WorkflowSummaryItem,
 } from "../util/workflow";
 
-type WorkflowSummaryProps = {
-  stateId: string;
+type ProcessSummaryProps = {
   history: PieceState[];
 };
 
@@ -18,11 +17,10 @@ type RenderedSummaryItem = {
   description?: string;
 };
 
-export default function WorkflowSummary({
-  stateId,
+export default function ProcessSummary({
   history,
-}: WorkflowSummaryProps) {
-  const sections = getStateSummaryDefinition(stateId)
+}: ProcessSummaryProps) {
+  const sections = getProcessSummaryDefinition()
     .map((section) => ({
       title: section.title,
       fields: section.fields
