@@ -1,7 +1,8 @@
 import CloseIcon from "@mui/icons-material/Close";
-import { Box, IconButton, Typography } from "@mui/material";
+import { Box, IconButton, Typography, useTheme, useMediaQuery } from "@mui/material";
 import type { ImageCrop } from "../util/types";
 import CloudinaryImage from "./CloudinaryImage";
+import { Masonry } from "masonic";
 
 type PiecePhotoGalleryGridImage = {
   url: string;
@@ -15,8 +16,6 @@ type PiecePhotoGalleryGridImage = {
 
 type PiecePhotoGalleryGridProps = {
   images: PiecePhotoGalleryGridImage[];
-  requestedWidth: number;
-  requestedHeight: number;
   canDeleteImages: boolean;
   onOpenImage: (index: number) => void;
   onRequestDelete: (index: number) => void;
@@ -24,12 +23,13 @@ type PiecePhotoGalleryGridProps = {
 
 export default function PiecePhotoGalleryGrid({
   images,
-  requestedWidth,
-  requestedHeight,
   canDeleteImages,
   onOpenImage,
   onRequestDelete,
 }: PiecePhotoGalleryGridProps) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   if (images.length === 0) {
     return (
       <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -38,86 +38,86 @@ export default function PiecePhotoGalleryGrid({
     );
   }
 
-  return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: {
-          xs: "repeat(2, minmax(0, 1fr))",
-          sm: "repeat(3, minmax(0, 1fr))",
-        },
-        gap: 1.25,
-      }}
-    >
-      {images.map((image, index) => (
+  const MasonryTile = ({ data: image, index, width }: { data: PiecePhotoGalleryGridImage; index: number; width: number }) => {
+    return (
+      <Box
+        sx={{
+          position: "relative",
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: "8px",
+          overflow: "hidden",
+        }}
+      >
         <Box
-          key={`${image.url}-${index}`}
+          component="button"
+          type="button"
+          onClick={() => onOpenImage(index)}
+          aria-label={`Open piece photo ${index + 1}`}
           sx={{
-            position: "relative",
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: "8px",
-            overflow: "hidden",
+            p: 0,
+            border: "none",
+            width: "100%",
+            background: "transparent",
+            display: "block",
+            lineHeight: 0,
+            cursor: "pointer",
           }}
         >
-          <Box
-            component="button"
-            type="button"
-            onClick={() => onOpenImage(index)}
-            aria-label={`Open piece photo ${index + 1}`}
+          <Box sx={{ position: "relative", width: "100%" }}>
+            <CloudinaryImage
+              url={image.url}
+              cloud_name={image.cloud_name}
+              cloudinary_public_id={image.cloudinary_public_id}
+              crop={image.crop}
+              alt={image.caption || "Piece photo"}
+              context="gallery"
+              requestedWidth={Math.round(width * (globalThis.window?.devicePixelRatio ?? 1))}
+              style={{
+                width: "100%",
+                height: "auto",
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+          </Box>
+        </Box>
+        {image.editableCurrentStateIndex !== null && canDeleteImages && (
+          <IconButton
+            aria-label={`Delete piece photo ${index + 1}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRequestDelete(index);
+            }}
+            size="small"
             sx={{
-              p: 0,
-              border: "none",
-              width: "100%",
-              background: "transparent",
-              display: "block",
-              lineHeight: 0,
-              cursor: "pointer",
+              position: "absolute",
+              top: 8,
+              right: 8,
+              width: 28,
+              height: 28,
+              color: "common.white",
+              backgroundColor: "rgba(0,0,0,0.52)",
+              backdropFilter: "blur(6px)",
+              "&:hover": {
+                backgroundColor: "rgba(0,0,0,0.68)",
+              },
             }}
           >
-            <Box sx={{ position: "relative", aspectRatio: "5 / 4" }}>
-              <CloudinaryImage
-                url={image.url}
-                cloud_name={image.cloud_name}
-                cloudinary_public_id={image.cloudinary_public_id}
-                crop={image.crop}
-                alt={image.caption || "Piece photo"}
-                context="gallery"
-                requestedWidth={requestedWidth}
-                requestedHeight={requestedHeight}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                }}
-              />
-            </Box>
-          </Box>
-          {image.editableCurrentStateIndex !== null && canDeleteImages && (
-            <IconButton
-              aria-label={`Delete piece photo ${index + 1}`}
-              onClick={() => onRequestDelete(index)}
-              size="small"
-              sx={{
-                position: "absolute",
-                top: 8,
-                right: 8,
-                width: 28,
-                height: 28,
-                color: "common.white",
-                backgroundColor: "rgba(0,0,0,0.52)",
-                backdropFilter: "blur(6px)",
-                "&:hover": {
-                  backgroundColor: "rgba(0,0,0,0.68)",
-                },
-              }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          )}
-        </Box>
-      ))}
-    </Box>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        )}
+      </Box>
+    );
+  };
+
+  return (
+    <Masonry
+      items={images}
+      render={MasonryTile}
+      columnCount={isMobile ? 2 : 3}
+      columnGutter={6}
+      rowGutter={6}
+    />
   );
 }

@@ -15,13 +15,30 @@ vi.mock("../CloudinaryImage", () => ({
   }) => <img alt={alt} src={url} style={style} />,
 }));
 
+vi.mock("masonic", () => ({
+  Masonry: ({
+    items,
+    render: RenderComponent,
+  }: {
+    items: any[];
+    render: React.ComponentType<{ data: any; index: number; width: number }>;
+  }) => (
+    <div data-testid="masonry-grid">
+      {items.map((item, index) => (
+        <div key={index}>
+          <RenderComponent data={item} index={index} width={320} />
+        </div>
+      ))}
+    </div>
+  ),
+}));
+
 describe("PiecePhotoGalleryGrid", () => {
   it("shows an empty state when there are no images", () => {
     render(
       <PiecePhotoGalleryGrid
         images={[]}
         requestedWidth={320}
-        requestedHeight={240}
         canDeleteImages={false}
         onOpenImage={vi.fn()}
         onRequestDelete={vi.fn()}
@@ -46,7 +63,6 @@ describe("PiecePhotoGalleryGrid", () => {
           },
         ]}
         requestedWidth={320}
-        requestedHeight={240}
         canDeleteImages
         onOpenImage={vi.fn()}
         onRequestDelete={vi.fn()}

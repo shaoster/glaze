@@ -14,7 +14,7 @@
  *   preview   — 64×64 fill, used for the upload preview before saving
  */
 import { Cloudinary } from "@cloudinary/url-gen";
-import { crop as cropAction, fill, fit } from "@cloudinary/url-gen/actions/resize";
+import { crop as cropAction, fill, fit, scale } from "@cloudinary/url-gen/actions/resize";
 import { format, quality } from "@cloudinary/url-gen/actions/delivery";
 import { auto as autoFormat, jpg } from "@cloudinary/url-gen/qualifiers/format";
 import { auto as autoQuality } from "@cloudinary/url-gen/qualifiers/quality";
@@ -212,15 +212,21 @@ export default function CloudinaryImage({
       const vh = Math.round(viewport.height * viewport.pixelRatio * 0.65);
       img.resize(fit().width(vw).height(vh));
     } else {
-      const targetWidth =
-        context === "gallery" ? (requestedWidth ?? 320) : THUMBNAIL_SIZE;
-      const targetHeight =
-        context === "gallery" ? (requestedHeight ?? 240) : THUMBNAIL_SIZE;
-      // Always use center fill — no auto gravity. g_auto prioritizes face
-      // detection and hyper-zooms into photographer reflections/backgrounds
-      // rather than the pottery subject. Center fill is more reliable for
-      // pottery photos where the subject is nearly always centered in the frame.
-      img.resize(fill().width(targetWidth).height(targetHeight));
+      const targetWidth = Math.round(
+        context === "gallery" ? (requestedWidth ?? 320) : THUMBNAIL_SIZE,
+      );
+      
+      if (crop) {
+        // We already cropped perfectly to the subject. Scale the width to match the column,
+        // and let Cloudinary naturally infer the exact height based on the crop's intrinsic ratio.
+        img.resize(scale().width(targetWidth));
+      } else {
+        const targetHeight = Math.round(
+          context === "gallery" ? (requestedHeight ?? 240) : THUMBNAIL_SIZE,
+        );
+        // Without a subject crop, fill the bounds (may trim edges to fit).
+        img.resize(fill().width(targetWidth).height(targetHeight));
+      }
     }
 
     // Thumbnail and preview contexts request JPG explicitly — consistent

@@ -78,3 +78,91 @@ class InMemoryTaskInterface:
 # Global interface instance.
 # In the future, this can be swapped for CeleryTaskInterface based on settings.
 get_task_interface: Callable[[], TaskInterface] = lambda: InMemoryTaskInterface()
+
+
+@TaskRegistry.register("ping")
+def ping_task(task: AsyncTask) -> Dict[str, str]:
+    """A simple demonstrator task that returns a pong result."""
+    import time
+
+    # Simulate some work.
+    time.sleep(1)
+    return {"message": "pong", "input": task.input_params}
+
+
+@TaskRegistry.register("detect_subject_crop")
+def detect_subject_crop(task: AsyncTask) -> dict | None:
+    """Download an image, calculate its subject crop, and update the target model."""
+    import requests
+    from cloudinary import CloudinaryImage
+
+    from .models import Image, Piece, PieceStateImage
+    from .utils import calculate_subject_crop
+
+    params = task.input_params or {}
+    image_id = params.get("image_id")
+    piece_id = params.get("piece_id")
+    piece_state_image_id = params.get("piece_state_image_id")
+
+    if not image_id:
+        raise ValueError("Missing image_id in task params")
+
+    image = Image.objects.get(id=image_id)
+
+    # Cloudinary-backed assets only (as per constraints)
+    if not image.cloud_name or not image.cloudinary_public_id:
+        return {"status": "skipped", "reason": "Not a Cloudinary image"}
+
+    # Download image bytes. We request a JPG version from Cloudinary to ensure
+    # compatibility with Pillow/rembg and reduce bandwidth for large raw uploads.
+    download_url = CloudinaryImage(image.cloudinary_public_id).build_url(
+        cloud_name=image.cloud_name,
+        secure=True,
+        format="jpg",
+        quality="auto",
+        width=1500,
+        crop="limit",
+    )
+    response = requests.get(download_url, timeout=30)
+    response.raise_for_status()
+
+    crop = calculate_subject_crop(response.content)
+    if not crop:
+        return {"status": "skipped", "reason": "No subject detected"}
+
+    updated = False
+    if piece_id:
+        with transaction.atomic():
+            piece = Piece.objects.select_for_update().get(id=piece_id)
+            if piece.thumbnail_crop is None:
+                piece.thumbnail_crop = crop
+                piece.save(update_fields=["thumbnail_crop"])
+                updated = True
+            else:
+                return {
+                    "status": "skipped",
+                    "reason": "Piece already has a thumbnail crop",
+                }
+
+    if piece_state_image_id:
+        try:
+            with transaction.atomic():
+                psi = PieceStateImage.objects.select_for_update().get(
+                    id=piece_state_image_id
+                )
+                if psi.crop is None:
+                    psi.crop = crop
+                    psi.save(update_fields=["crop"])
+                    updated = True
+                else:
+                    return {
+                        "status": "skipped",
+                        "reason": "PieceStateImage already has a crop",
+                    }
+        except PieceStateImage.DoesNotExist:
+            return {
+                "status": "skipped",
+                "reason": f"PieceStateImage {piece_state_image_id} not found",
+            }
+
+    return {"status": "success", "crop": crop, "updated": updated}

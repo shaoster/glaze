@@ -17,7 +17,6 @@ import { formatState, isTerminalState, SUCCESSORS } from "../util/types";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import { Masonry } from "masonic";
-import type { RenderComponentProps } from "masonic";
 import { Link, useSearchParams } from "react-router-dom";
 import CloudinaryImage from "./CloudinaryImage";
 import TagAutocomplete from "./TagAutocomplete";
@@ -82,12 +81,6 @@ function daysSince(date: Date): number {
   return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function thumbHeight(piece: PieceSummary, cardWidth: number): number {
-  const crop = piece.thumbnail?.crop;
-  if (!crop || crop.width <= 0 || crop.height <= 0) return 150;
-  return Math.min(Math.max(cardWidth * (crop.height / crop.width), 100), 220);
-}
-
 interface PieceCardProps {
   piece: PieceSummary;
   width: number;
@@ -98,7 +91,6 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
   const isTerminal = isTerminalState(piece.current_state.state);
   const days = daysSince(new Date(piece.last_modified));
   const isStale = days >= 14 && !isTerminal;
-  const h = thumbHeight(piece, width);
   const label = formatState(piece.current_state.state);
   const detailPath = `/pieces/${piece.id}`;
 
@@ -134,7 +126,7 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
       }}
     >
       {/* Thumbnail area */}
-      <Box sx={{ height: h, position: "relative", overflow: "hidden" }}>
+      <Box sx={{ position: "relative", overflow: "hidden" }}>
         <CloudinaryImage
           url={piece.thumbnail?.url ?? DEFAULT_THUMBNAIL}
           cloud_name={piece.thumbnail?.cloud_name}
@@ -142,11 +134,9 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
           crop={piece.thumbnail?.crop}
           context="gallery"
           requestedWidth={Math.round(width)}
-          requestedHeight={h}
           style={{
             width: "100%",
-            height: "100%",
-            objectFit: "cover",
+            height: "auto",
             display: "block",
           }}
         />
@@ -285,7 +275,7 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
   );
 };
 
-function MasonryPieceCard({ data, width }: RenderComponentProps<PieceSummary>) {
+function MasonryPieceCard({ data, width }: { data: PieceSummary; index: number; width: number }) {
   return <PieceCard piece={data} width={width} />;
 }
 

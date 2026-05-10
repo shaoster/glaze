@@ -42,17 +42,6 @@ type PiecePhotoGalleryProps = {
   updateCurrentStateFn?: typeof updateCurrentState;
 };
 
-const DEFAULT_VIEWPORT_WIDTH = 768;
-const DEFAULT_PIXEL_RATIO = 1;
-
-function getBrowserViewportWidth(): number {
-  return globalThis.window?.innerWidth ?? DEFAULT_VIEWPORT_WIDTH;
-}
-
-function getBrowserPixelRatio(): number {
-  return Math.max(globalThis.window?.devicePixelRatio ?? DEFAULT_PIXEL_RATIO, 1);
-}
-
 function isEditableImage(
   image: PiecePhotoGalleryImage,
 ): image is PiecePhotoGalleryImage & { editableCurrentStateIndex: number } {
@@ -78,16 +67,6 @@ export default function PiecePhotoGallery({
   const [captionSaveError, setCaptionSaveError] = useState<string | null>(null);
   const [deleteDialogIndex, setDeleteDialogIndex] = useState<number | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
-  const [viewportWidth, setViewportWidth] = useState(getBrowserViewportWidth);
-  const pixelRatio = getBrowserPixelRatio();
-
-  useEffect(() => {
-    function syncWidth() {
-      setViewportWidth(window.innerWidth);
-    }
-    window.addEventListener("resize", syncWidth);
-    return () => window.removeEventListener("resize", syncWidth);
-  }, []);
 
   useEffect(() => {
     if (lightboxIndex === null) return;
@@ -97,13 +76,6 @@ export default function PiecePhotoGallery({
   }, [images, lightboxIndex]);
 
   const photoCount = images.length;
-  const columns = viewportWidth < 600 ? 2 : 3;
-  const tileWidth = Math.max(
-    120,
-    Math.floor((Math.min(viewportWidth, 900) - 32 - (columns - 1) * 10) / columns),
-  );
-  const requestedWidth = Math.round(tileWidth * pixelRatio);
-  const requestedHeight = Math.round(tileWidth * 0.8 * pixelRatio);
 
   const activeImage =
     lightboxIndex !== null ? images[lightboxIndex] : null;
@@ -369,8 +341,6 @@ export default function PiecePhotoGallery({
         <DialogContent sx={{ p: 2 }}>
           <PiecePhotoGalleryGrid
             images={images}
-            requestedWidth={requestedWidth}
-            requestedHeight={requestedHeight}
             canDeleteImages={canMutateCurrentStateImages}
             onOpenImage={setLightboxIndex}
             onRequestDelete={setDeleteDialogIndex}
