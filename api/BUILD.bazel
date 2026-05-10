@@ -20,6 +20,7 @@ py_library(
     deps = [
         "//backend:backend_lib",
         requirement("httpx"),
+        requirement("logtail-python"),
     ],
 )
 
