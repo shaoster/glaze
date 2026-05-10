@@ -416,11 +416,15 @@ export default function WorkflowState({
         <TextField
           label="Notes"
           multiline
-          minRows={3}
           value={notes}
           onChange={(e) => dispatch({ type: "set_notes", notes: e.target.value })}
           slotProps={{ htmlInput: { maxLength: 2000 } }}
           fullWidth
+          sx={{
+            mb: 1.5,
+            "& .MuiInputBase-root": { fontSize: "0.875rem" },
+            "& .MuiInputLabel-root": { fontSize: "0.875rem" },
+          }}
         />
       )}
       {customFieldDefs.length > 0 && (
