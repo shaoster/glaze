@@ -322,6 +322,22 @@ describe("App auth flow", () => {
     });
   });
 
+  it("shows the Admin Tool menu item only for admin users and redirects to /admin/", async () => {
+    vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_ADMIN_USER);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /new piece/i }),
+      ).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText("Pat Potter"));
+    const adminLink = screen.getByText("Admin Tool").closest("a");
+    expect(adminLink).toHaveAttribute("href", "/admin/");
+  });
+
   it("does not show the manual crop tool menu item for non-admin users", async () => {
     vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_USER);
 

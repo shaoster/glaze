@@ -37,6 +37,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
 import CropFreeIcon from "@mui/icons-material/CropFree";
 import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import { alpha, ThemeProvider, createTheme } from "@mui/material/styles";
 
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
@@ -633,6 +634,16 @@ function AppShell({
                   <CleaningServicesIcon fontSize="small" />
                 </ListItemIcon>
                 Cloudinary Cleanup
+              </MenuItem>
+              <MenuItem
+                component="a"
+                href="/admin/"
+                onClick={() => setMenuAnchor(null)}
+              >
+                <ListItemIcon>
+                  <AdminPanelSettingsIcon fontSize="small" />
+                </ListItemIcon>
+                Admin Tool
               </MenuItem>
             </>
           ) : null}
