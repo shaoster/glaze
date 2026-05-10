@@ -123,3 +123,16 @@ export type GlazeCombinationImageEntry = {
   glaze_combination: GlazeCombinationEntry;
   pieces: GlazeCombinationImagePiece[];
 };
+
+export type AsyncTaskStatus = "pending" | "running" | "success" | "failure";
+
+export interface AsyncTask {
+  id: string;
+  status: AsyncTaskStatus;
+  task_type: string;
+  input_params: Record<string, unknown>;
+  result: unknown;
+  error: string | null;
+  created: string;
+  last_modified: string;
+}
