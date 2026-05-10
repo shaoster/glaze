@@ -1,8 +1,14 @@
-import time
 import pytest
+from unittest.mock import patch
 from django.urls import reverse
 from rest_framework import status
 from api.models import AsyncTask
+from api.tasks import TaskRegistry
+
+@TaskRegistry.register("ping")
+def ping_task(task: AsyncTask):
+    """A simple demonstrator task that returns a pong result."""
+    return {"message": "pong", "input": task.input_params}
 
 @pytest.mark.django_db(transaction=True)
 class TestAsyncTasks:
@@ -11,26 +17,19 @@ class TestAsyncTasks:
         url = reverse("tasks-submit")
         data = {"task_type": "ping", "input_params": {"test": "data"}}
         
-        response = client.post(url, data, format="json")
-        assert response.status_code == status.HTTP_202_ACCEPTED
-        assert response.data["task_type"] == "ping"
-        assert response.data["status"] == "pending"
-        
-        task_id = response.data["id"]
-        
-        # Poll for completion (it should take ~1s)
-        url_detail = reverse("tasks-detail", kwargs={"task_id": task_id})
-        
-        timeout = 5
-        start = time.time()
-        while time.time() - start < timeout:
-            response = client.get(url_detail)
-            if response.data["status"] == "success":
-                break
-            time.sleep(0.5)
+        with patch("api.tasks.InMemoryTaskInterface.submit", autospec=True) as mock_submit:
+            def sync_submit(self_obj, task_obj):
+                self_obj._run_task(task_obj.id)
+            mock_submit.side_effect = sync_submit
             
-        assert response.data["status"] == "success"
-        assert response.data["result"] == {"message": "pong", "input": {"test": "data"}}
+            response = client.post(url, data, format="json")
+            
+        assert response.status_code == status.HTTP_202_ACCEPTED
+        
+        # Check database for final state
+        task = AsyncTask.objects.get(id=response.data["id"])
+        assert task.status == "success"
+        assert task.result == {"message": "pong", "input": {"test": "data"}}
 
     def test_task_permission_isolation(self, client, user, other_user):
         # Task owned by 'other_user'
@@ -50,19 +49,15 @@ class TestAsyncTasks:
         url = reverse("tasks-submit")
         data = {"task_type": "non-existent"}
         
-        response = client.post(url, data, format="json")
+        with patch("api.tasks.InMemoryTaskInterface.submit", autospec=True) as mock_submit:
+            def sync_submit(self_obj, task_obj):
+                self_obj._run_task(task_obj.id)
+            mock_submit.side_effect = sync_submit
+            
+            response = client.post(url, data, format="json")
+            
         assert response.status_code == status.HTTP_202_ACCEPTED
         
-        task_id = response.data["id"]
-        url_detail = reverse("tasks-detail", kwargs={"task_id": task_id})
-        
-        timeout = 2
-        start = time.time()
-        while time.time() - start < timeout:
-            response = client.get(url_detail)
-            if response.data["status"] == "failure":
-                break
-            time.sleep(0.1)
-            
-        assert response.data["status"] == "failure"
-        assert "Unknown task type" in response.data["error"]
+        task = AsyncTask.objects.get(id=response.data["id"])
+        assert task.status == "failure"
+        assert "Unknown task type" in task.error

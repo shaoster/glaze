@@ -583,3 +583,64 @@ def test_get_filterable_compose_fields_returns_empty_when_no_compose_from(monkey
 def test_get_filterable_compose_fields_returns_empty_for_unknown_global(monkeypatch):
     monkeypatch.setattr(workflow_module, "_GLOBALS_MAP", _MOCK_GLOBALS_MAP)
     assert workflow_module.get_filterable_compose_fields("does_not_exist") == {}
+
+def test_resolve_field_def_covers_ast_nodes():
+    # Test ratio op
+    res = workflow_module._resolve_field_def({"compute": {"op": "ratio"}})
+    assert res["type"] == "number"
+    
+    # Test boolean constant
+    res = workflow_module._resolve_field_def({"compute": {"constant": True}})
+    assert res["type"] == "boolean"
+
+    # Test numeric constant
+    res = workflow_module._resolve_field_def({"compute": {"constant": 42}})
+    assert res["type"] == "number"
+
+    # Test string constant
+    res = workflow_module._resolve_field_def({"compute": {"constant": "foo"}})
+    assert res["type"] == "string"
+    
+    # Test display_as in computed field
+    res = workflow_module._resolve_field_def({"compute": {"constant": 1}, "display_as": "text"})
+    assert res["display_as"] == "text"
+
+
+def test_build_custom_fields_schema_covers_hex_color_format(monkeypatch):
+    monkeypatch.setattr(
+        workflow_module,
+        "_STATE_MAP",
+        {
+            "color_state": {
+                "id": "color_state",
+                "visible": True,
+                "fields": {
+                    "my_color": {"type": "string", "format": "hex_color"},
+                },
+            },
+        },
+    )
+    schema = workflow_module.build_custom_fields_schema("color_state")
+    assert "pattern" in schema["properties"]["my_color"]
+    assert schema["properties"]["my_color"]["pattern"] == "^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+
+
+def test_build_custom_fields_schema_covers_required_fields(monkeypatch):
+    monkeypatch.setattr(
+        workflow_module,
+        "_STATE_MAP",
+        {
+            "req_state": {
+                "id": "req_state",
+                "visible": True,
+                "fields": {
+                    "required_field": {"type": "string", "required": True},
+                    "optional_field": {"type": "string", "required": False},
+                },
+            },
+        },
+    )
+    schema = workflow_module.build_custom_fields_schema("req_state")
+    assert "required" in schema
+    assert "required_field" in schema["required"]
+    assert "optional_field" not in schema["required"]

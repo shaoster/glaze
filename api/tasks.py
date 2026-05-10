@@ -78,13 +78,3 @@ class InMemoryTaskInterface:
 # Global interface instance.
 # In the future, this can be swapped for CeleryTaskInterface based on settings.
 get_task_interface: Callable[[], TaskInterface] = lambda: InMemoryTaskInterface()
-
-
-@TaskRegistry.register("ping")
-def ping_task(task: AsyncTask) -> Dict[str, str]:
-    """A simple demonstrator task that returns a pong result."""
-    import time
-
-    # Simulate some work.
-    time.sleep(1)
-    return {"message": "pong", "input": task.input_params}
