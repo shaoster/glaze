@@ -449,6 +449,42 @@ class PieceStateImage(models.Model):
         return f"{self.piece_state} / image {self.order}"
 
 
+
+class AsyncTask(models.Model):
+    """
+    Tracks the lifecycle and result of an asynchronous background task.
+
+    This model provides a stable, persistent identifier for tasks across different
+    background worker implementations (e.g., ThreadPoolExecutor, Celery).
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        RUNNING = "running", "Running"
+        SUCCESS = "success", "Success"
+        FAILURE = "failure", "Failure"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="async_tasks"
+    )
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.PENDING
+    )
+    task_type = models.CharField(max_length=255)
+    input_params = models.JSONField(default=dict, blank=True)
+    result = models.JSONField(null=True, blank=True)
+    error = models.TextField(null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created"]
+
+    def __str__(self) -> str:
+        return f"AsyncTask({self.task_type}, {self.status}, {self.id})"
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"

@@ -51,6 +51,7 @@ from .models import (
     GlazeCombination,
     Piece,
     PieceState,
+    AsyncTask,
     UserProfile,
     models,
 )
@@ -744,3 +745,22 @@ class RegisterSerializer(serializers.Serializer):
         )
         UserProfile.objects.create(user=user)
         return user
+
+class AsyncTaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AsyncTask
+        fields = [
+            "id",
+            "status",
+            "task_type",
+            "input_params",
+            "result",
+            "error",
+            "created",
+            "last_modified",
+        ]
+
+
+class TaskSubmissionSerializer(serializers.Serializer):
+    task_type = serializers.CharField(max_length=255)
+    input_params = serializers.JSONField(required=False, default=dict)

@@ -33,3 +33,7 @@ def piece(user, db):
     p = Piece.objects.create(user=user, name="Test Bowl")
     PieceState.objects.create(piece=p, state=ENTRY_STATE)
     return p
+
+@pytest.fixture(autouse=True)
+def enable_db_access_for_all_tests(db):
+    pass
