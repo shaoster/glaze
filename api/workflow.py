@@ -541,13 +541,11 @@ def _get_validator(state_id: str):
     return jsonschema.validators.validator_for(schema)(schema)
 
 
-def validate_custom_fields(state_id: str, custom_fields: dict) -> None:
-    """Validate custom_fields against the workflow DSL for state_id.
-
-    Uses a cached, pre-compiled validator to avoid repetitive DSL parsing
-    and schema compilation overhead.
-    """
+@lru_cache(maxsize=1024)
+def _validate_custom_fields_cached(state_id: str, custom_fields_hashable: Any) -> None:
+    """Internal cached validator. Expects hashable custom_fields."""
     validator = _get_validator(state_id)
+    custom_fields = _unhashable(custom_fields_hashable)
     try:
         validator.validate(custom_fields)
     except jsonschema.ValidationError as exc:
@@ -556,8 +554,18 @@ def validate_custom_fields(state_id: str, custom_fields: dict) -> None:
         ) from exc
 
 
+def validate_custom_fields(state_id: str, custom_fields: dict) -> None:
+    """Validate custom_fields against the workflow DSL for state_id.
+
+    Uses a cached result for identical (state_id, payload) pairs to avoid
+    repetitive jsonschema validation overhead.
+    """
+    _validate_custom_fields_cached(state_id, _make_hashable(custom_fields))
+
+
 def clear_workflow_caches():
     """Clear all workflow-related lru_caches. Used by tests when mocking _workflow."""
     _resolve_field_def_cached.cache_clear()
     build_custom_fields_schema.cache_clear()
     _get_validator.cache_clear()
+    _validate_custom_fields_cached.cache_clear()
