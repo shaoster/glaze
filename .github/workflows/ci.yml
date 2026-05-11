@@ -14,6 +14,7 @@ on:
       - ".idea/**"
       - "LICENSE"
       - "LICENSE.*"
+      - "docker-compose.yml"
   pull_request:
 
 jobs:
@@ -41,8 +42,7 @@ jobs:
           bazel="$(sha256sum MODULE.bazel | cut -d' ' -f1)"
           py="$(sha256sum requirements.txt requirements-dev.txt | sha256sum | cut -d' ' -f1)"
           node="$(sha256sum web/pnpm-lock.yaml | cut -d' ' -f1)"
-          dc="$(sha256sum docker-compose.yml | cut -d' ' -f1)"
-          value="${tree}-${ci}-${bazel}-${py}-${node}-${dc}"
+          value="${tree}-${ci}-${bazel}-${py}-${node}"
           artifact_key="$(printf '%s' "$value" | sha256sum | cut -d' ' -f1)"
           echo "value=$value" >> "$GITHUB_OUTPUT"
           echo "artifact_key=$artifact_key" >> "$GITHUB_OUTPUT"
