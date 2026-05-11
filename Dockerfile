@@ -49,6 +49,8 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# Pre-download the rembg model to avoid runtime overhead and network hangs.
+RUN python -c 'from rembg import new_session; new_session("u2net")'
 
 # Python source
 COPY --from=builder /app/backend ./backend
