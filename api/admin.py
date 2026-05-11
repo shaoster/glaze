@@ -866,6 +866,17 @@ class PieceStateAdminForm(forms.ModelForm):
         from .workflow import get_global_ref_fields_for_state
 
         cleaned_data = super().clean()
+        
+        allow_sealed = cleaned_data.get("allow_sealed_edit", False) if isinstance(cleaned_data, dict) else False
+        instance = getattr(self, "instance", None)
+        if instance and instance.pk and not allow_sealed:
+            current = instance.piece.current_state
+            if current is None or current.pk != instance.pk:
+                raise forms.ValidationError(
+                    "This state is sealed: only the current state of a piece may be modified. "
+                    "Check 'Allow sealed edit' to override."
+                )
+
         if hasattr(self, "custom_field_names") and self.custom_field_names:
             instance = self.instance
             custom_data: dict[str, Any] = {}
