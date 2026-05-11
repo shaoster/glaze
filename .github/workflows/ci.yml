@@ -167,7 +167,7 @@ jobs:
   publish:
     name: Publish OCI image
     needs: [preflight, coverage, lint]
-    if: ${{ always() && (github.event_name == 'push' && ((needs.coverage.result == 'success' && needs.lint.result == 'success') || needs.preflight.outputs.skip_main == 'true')) }}
+    if: ${{ !cancelled() && (github.event_name == 'push' && ((needs.coverage.result == 'success' && needs.lint.result == 'success') || needs.preflight.outputs.skip_main == 'true')) }}
     runs-on: ubuntu-latest
     permissions:
       packages: write
