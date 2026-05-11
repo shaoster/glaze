@@ -78,14 +78,8 @@ jobs:
         run: |
           echo "" >> .bazelrc
           echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
-      - name: Run all linters
-        run: bazel build --config=ci --config=lint //...
-
-      - name: Run uncovered tests
-        run: bazel test --config=ci --test_tag_filters=+no-coverage //...
-
-      - name: Run all covered tests
-        run: bazel coverage --config=ci --combined_report=lcov //...
+      - name: Run all checks (Lint, Test, Coverage)
+        run: bazel coverage --config=ci --config=lint --combined_report=lcov //...
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
