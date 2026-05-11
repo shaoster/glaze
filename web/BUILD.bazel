@@ -465,6 +465,16 @@ js_library(
     ],
 )
 
+js_library(
+    name = "cloudinary_cleanup_page_src",
+    srcs = ["src/pages/CloudinaryCleanupPage.tsx"],
+    deps = [
+        ":node_modules",
+        ":util_lib",
+    ],
+)
+
+
 # ocrDetection.ts is the pure-logic module shared by GlazeImportToolPage and its unit tests.
 js_library(
     name = "ocr_detection_src",
@@ -720,6 +730,17 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_cloudinary_cleanup_test",
+    srcs = [
+        "src/pages/__tests__/CloudinaryCleanupPage.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":cloudinary_cleanup_page_src",
+    ],
+)
+
+vitest_test(
     name = "web_glaze_import_test",
     srcs = [
         "src/pages/__tests__/GlazeImportCropStage.test.tsx",
@@ -785,6 +806,17 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_format_test",
+    srcs = [
+        "src/util/__tests__/format.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":util_lib",
+    ],
+)
+
+vitest_test(
     name = "web_app_test",
     srcs = ["src/App.test.tsx"],
     tags = ["ibazel_notify_changes"],
@@ -802,6 +834,8 @@ test_suite(
     tests = [
         ":web_api_test",
         ":web_app_test",
+        ":web_cloudinary_cleanup_test",
+        ":web_format_test",
         ":web_glaze_gallery_test",
         ":web_glaze_import_test",
         ":web_image_lightbox_test",
