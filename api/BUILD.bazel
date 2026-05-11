@@ -1,6 +1,11 @@
 load("@pip//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 
+package(default_visibility = ["//visibility:public"])
+
+# ── API library ───────────────────────────────────────────────────────────────
+# All non-test, non-migration source files. Depends on backend_lib (Django
+# settings/URL conf) and the workflow YAML files read at import time.
 py_library(
     name = "api_workflow_lib",
     srcs = [
