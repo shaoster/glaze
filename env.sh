@@ -354,7 +354,8 @@ gz_test() {
     local coverage=false
     local usage="Usage: gz_test [--all|--affected|--coverage] [bazel args...]"
 
-    # Parse our custom flags first
+    local bazel_args=()
+    # Parse all flags
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --all)
@@ -374,15 +375,19 @@ gz_test() {
                 return 0
                 ;;
             -*)
-                # Stop parsing at first bazel flag
-                break
+                # Pass all other flags to bazel
+                bazel_args+=("$1")
+                shift
                 ;;
             *)
-                # Treat as target override if no flag matched
-                target="$1"
+                # Treat first non-flag as target override
+                if [[ "$mode" == "auto" ]]; then
+                    target="$1"
+                    mode="manual"
+                else
+                    bazel_args+=("$1")
+                fi
                 shift
-                mode="manual"
-                break
                 ;;
         esac
     done
@@ -443,18 +448,23 @@ gz_test() {
     fi
 
     if [ "$coverage" = true ]; then
-        echo "Running: bazel coverage --config=ci --combined_report=lcov $target"
-        (cd "$GLAZE_ROOT" && bazel coverage --config=ci --combined_report=lcov $target "$@")
+        echo "Running: bazel coverage --config=ci --combined_report=lcov $target ${bazel_args[*]}"
+        (cd "$GLAZE_ROOT" && bazel coverage --config=ci --combined_report=lcov $target "${bazel_args[@]}")
     else
-        echo "Running: bazel test $target"
-        (cd "$GLAZE_ROOT" && bazel test --test_output=errors $target "$@")
+        echo "Running: bazel test $target ${bazel_args[*]}"
+        (cd "$GLAZE_ROOT" && bazel test --test_output=errors $target "${bazel_args[@]}")
     fi
 }
 
 # CI-aligned: run ruff, eslint, tsc, and mypy via Bazel (same as CI).
 gz_lint() {
-    echo "Running: bazel build --config=lint //..."
-    (cd "$GLAZE_ROOT" && bazel build --config=ci --config=lint //... "$@")
+    local bazel_args=()
+    while [[ $# -gt 0 ]]; do
+        bazel_args+=("$1")
+        shift
+    done
+    echo "Running: bazel build --config=lint //... ${bazel_args[*]}"
+    (cd "$GLAZE_ROOT" && bazel build --config=ci --config=lint //... "${bazel_args[@]}")
 }
 
 # Auto-fix: reformat Python files and apply ruff auto-fixes in one step.
