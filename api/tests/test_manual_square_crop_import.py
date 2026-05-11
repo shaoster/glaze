@@ -265,7 +265,7 @@ class TestManualSquareCropImport:
         client = APIClient()
         client.force_authenticate(user=admin)
         monkeypatch.setattr(
-            "api.views.import_manual_tile_records",
+            "api.manual_tile_imports.import_manual_tile_records",
             lambda records, uploaded_files: (_ for _ in ()).throw(
                 ValueError("bad import")
             ),
