@@ -969,5 +969,13 @@ _gz_get_all_sources() {
 _gz_get_affected_targets() {
     local filter="$1"
     local bazel_files="$2"
-    bazel query "kind($filter, rdeps(//..., set($bazel_files)))" 2>/dev/null
+    local all_targets=""
+    for file in $bazel_files; do
+        local targets
+        targets=$(bazel query "kind($filter, rdeps(//..., $file))" 2>/dev/null)
+        if [[ -n "$targets" ]]; then
+            all_targets="$all_targets $targets"
+        fi
+    done
+    echo "$all_targets" | tr ' ' '\n' | sort -u
 }
