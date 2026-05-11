@@ -9,6 +9,5 @@ PASSWORD_HASHERS = [
 DEV_BOOTSTRAP_ENABLED = False
 
 # Prevent WhiteNoise from rescanning the static file tree on every middleware
-# instantiation. Each API test request triggers load_middleware, and without
-# this flag WhiteNoise calls update_files_dictionary (~0.013s) every time.
-WHITENOISE_AUTOREFRESH = False
+# instantiation. API tests do not serve static files.
+MIDDLEWARE = [m for m in MIDDLEWARE if "WhiteNoiseMiddleware" not in m]  # noqa: F405

@@ -93,7 +93,8 @@ class InMemoryTaskInterface:
 
 # Global interface instance.
 # In the future, this can be swapped for CeleryTaskInterface based on settings.
-get_task_interface: Callable[[], TaskInterface] = lambda: InMemoryTaskInterface()
+def get_task_interface() -> TaskInterface:
+    return InMemoryTaskInterface()
 
 
 @TaskRegistry.register("ping")

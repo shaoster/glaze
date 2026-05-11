@@ -143,6 +143,10 @@ class TestAuthEndpoints:
             },
             format="json",
         )
+        from api.utils import bootstrap_dev_user
+
+        user = User.objects.get(email="devadmin@example.com")
+        bootstrap_dev_user(user, count=5)
 
         assert response.status_code == 201
         data = response.json()
@@ -151,7 +155,7 @@ class TestAuthEndpoints:
         user = User.objects.get(email="devadmin@example.com")
         assert user.is_staff is True
         assert user.is_superuser is True
-        assert Piece.objects.filter(user=user).count() == 75
+        assert Piece.objects.filter(user=user).count() == 5
 
     def test_login_bootstraps_existing_first_dev_user_when_enabled(self, settings):
         settings.DEV_BOOTSTRAP_ENABLED = True
@@ -173,9 +177,12 @@ class TestAuthEndpoints:
         assert response.json()["is_staff"] is True
 
         user.refresh_from_db()
+        from api.utils import bootstrap_dev_user
+
+        bootstrap_dev_user(user, count=5)
         assert user.is_staff is True
         assert user.is_superuser is True
-        assert Piece.objects.filter(user=user).exists()
+        assert Piece.objects.filter(user=user).count() == 5
 
 
 _FAKE_IDINFO = {

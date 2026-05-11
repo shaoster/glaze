@@ -6,6 +6,7 @@ workflow-state-machine logic derived from workflow.yml).
 """
 
 import logging
+import os
 from typing import Any
 
 import requests
@@ -363,7 +364,7 @@ def sync_glaze_type_singleton_combination(
         )
 
 
-def bootstrap_dev_user(user) -> None:
+def bootstrap_dev_user(user, count: int | None = None) -> None:
     """Make a fresh DEBUG-only account immediately usable in local development.
 
     The first dev account in a database without any existing superuser is
@@ -386,14 +387,19 @@ def bootstrap_dev_user(user) -> None:
     from .models import Piece  # noqa: PLC0415
 
     if not Piece.objects.exists() and not Piece.objects.filter(user=user).exists():
-        _seed_dev_pieces(user)
+        if count is None:
+            try:
+                count = int(os.environ.get("GLAZE_BOOTSTRAP_COUNT", "75"))
+            except (ValueError, TypeError):
+                count = 75
+        _seed_dev_pieces(user, count=count)
 
 
-def _seed_dev_pieces(user) -> None:
-    """Create 75 pieces in random workflow states for a bootstrapped dev user.
+def _seed_dev_pieces(user, count: int = 75) -> None:
+    """Create *count* pieces in random workflow states for a bootstrapped dev user.
 
-    75 pieces fills three full pages of 24 so infinite-scroll pagination is
-    immediately exercisable.  A seeded RNG makes the output reproducible across
+    Defaults to 75 pieces to fill three full pages of 24.
+    A seeded RNG makes the output reproducible across
     dev database resets.
     """
     import random  # noqa: PLC0415
@@ -480,10 +486,10 @@ def _seed_dev_pieces(user) -> None:
         )
 
     def _bisque_fields(r, _clay, _combo):
-        l, w, h = r.randint(3, 12), r.randint(3, 12), r.randint(2, 18)
+        length, w, h = r.randint(3, 12), r.randint(3, 12), r.randint(2, 18)
         return (
             {
-                "length_in": float(l),
+                "length_in": float(length),
                 "width_in": float(w),
                 "height_in": float(h),
             },
@@ -508,13 +514,13 @@ def _seed_dev_pieces(user) -> None:
     def _glaze_fired_fields(r, _clay, combo):
         # Retrieve dimensions from dry state if possible, or just generate new ones.
         # For seeding, it's easier to just generate consistent-ish ones.
-        l, w, h = r.randint(3, 12), r.randint(3, 12), r.randint(2, 18)
+        length, w, h = r.randint(3, 12), r.randint(3, 12), r.randint(2, 18)
         shrink = r.uniform(0.85, 0.92)
         return (
             {
                 "kiln_temperature_c": r.randint(1220, 1260),
                 "cone": r.choice(["5", "6"]),
-                "length_in": round(l * shrink, 2),
+                "length_in": round(length * shrink, 2),
                 "width_in": round(w * shrink, 2),
                 "height_in": round(h * shrink, 2),
             },
@@ -614,7 +620,7 @@ def _seed_dev_pieces(user) -> None:
         )
         tags.append(tag)
 
-    for i in range(75):
+    for i in range(count):
         adj = rng.choice(ADJECTIVES)
         form, thumb = rng.choice(FORMS)
         clay = rng.choice(clay_bodies)

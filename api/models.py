@@ -1,7 +1,6 @@
 import uuid
 from typing import TYPE_CHECKING, Any
 
-import jsonschema
 from django.apps import apps
 from django.conf import settings
 from django.db import models
@@ -42,7 +41,6 @@ from .workflow import (
 )
 from .workflow import (
     WORKFLOW_VERSION,
-    build_custom_fields_schema,
     get_compose_from,
     get_global_config,
     get_global_names,
@@ -283,13 +281,9 @@ class PieceState(models.Model):
 
         # Validate inline custom_fields against the DSL schema for this state.
         # Global ref fields are excluded from this schema (they live in junction tables).
-        schema = build_custom_fields_schema(self.state)
-        try:
-            jsonschema.validate(instance=self.custom_fields, schema=schema)
-        except jsonschema.ValidationError as exc:
-            raise ValueError(
-                f"custom_fields validation failed for state '{self.state}': {exc.message}"
-            ) from exc
+        from .workflow import validate_custom_fields
+
+        validate_custom_fields(self.state, self.custom_fields)
 
         if not self._state.adding and not allow_sealed_edit:
             current = self.piece.current_state

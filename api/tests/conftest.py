@@ -36,5 +36,10 @@ def piece(user, db):
 
 
 @pytest.fixture(autouse=True)
-def enable_db_access_for_all_tests(db):
-    pass
+def clear_caches():
+    """Ensure lru_caches are cleared for every test to avoid cross-test pollution."""
+    from api.workflow import clear_workflow_caches
+
+    clear_workflow_caches()
+    yield
+    clear_workflow_caches()
