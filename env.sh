@@ -414,7 +414,7 @@ gz_test() {
                     local BAZEL_FILES
                     BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
                     if [[ -n "$BAZEL_FILES" ]]; then
-                        target=$(_gz_get_affected_targets "test" "$BAZEL_FILES")
+                        target=$(_gz_get_affected_targets 'kind(test, //...)' "$BAZEL_FILES")
                         if [[ -n "$target" ]]; then
                              target=$(echo "$target" | tr '\n' ' ')
                              echo "Testing $(echo "$target" | wc -w) affected target(s)."
@@ -967,15 +967,13 @@ _gz_get_all_sources() {
 }
 
 _gz_get_affected_targets() {
-    local filter="$1"
+    local filter_query="$1"
     local bazel_files="$2"
-    local all_targets=""
-    for file in $bazel_files; do
-        local targets
-        targets=$(bazel query "kind($filter, rdeps(//..., $file))" 2>/dev/null)
-        if [[ -n "$targets" ]]; then
-            all_targets="$all_targets $targets"
-        fi
-    done
-    echo "$all_targets" | tr ' ' '\n' | sort -u
+    
+    # 1. Get all potential targets matching the filter
+    local all_candidates
+    all_candidates=$(bazel query "$filter_query" 2>/dev/null)
+    
+    # 2. Find targets that depend on the changed files, intersected with our candidates
+    bazel query "set($all_candidates) intersect rdeps(//..., set($bazel_files))" 2>/dev/null
 }
