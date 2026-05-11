@@ -354,6 +354,7 @@ gz_test() {
     local coverage=false
     local usage="Usage: gz_test [--all|--affected|--coverage] [bazel args...]"
 
+    local targets=()
     local bazel_args=()
     # Parse all flags
     while [[ $# -gt 0 ]]; do
@@ -380,13 +381,9 @@ gz_test() {
                 shift
                 ;;
             *)
-                # Treat first non-flag as target override
-                if [[ "$mode" == "auto" ]]; then
-                    target="$1"
-                    mode="manual"
-                else
-                    bazel_args+=("$1")
-                fi
+                # Treat non-flags as targets
+                targets+=("$1")
+                mode="manual"
                 shift
                 ;;
         esac
@@ -403,7 +400,12 @@ gz_test() {
         fi
     fi
 
-    if [[ "$mode" == "affected" ]]; then
+    local target_list=""
+    if [[ "$mode" == "all" ]]; then
+        target_list="//..."
+    elif [[ "$mode" == "manual" ]]; then
+        target_list="${targets[*]}"
+    elif [[ "$mode" == "affected" ]]; then
         local diff_base="main"
         # Handle cases where main is not available or we are on main
         if ! git rev-parse --verify "$diff_base" &>/dev/null; then
@@ -421,10 +423,10 @@ gz_test() {
                     local BAZEL_FILES
                     BAZEL_FILES=$(_gz_filter_known_targets "$EXISTING")
                     if [[ -n "$BAZEL_FILES" ]]; then
-                        target=$(_gz_get_affected_targets 'kind(test, //...)' "$BAZEL_FILES")
-                        if [[ -n "$target" ]]; then
-                             target=$(echo "$target" | tr '\n' ' ')
-                             echo "Testing $(echo "$target" | wc -w) affected target(s)."
+                        target_list=$(_gz_get_affected_targets 'kind(test, //...)' "$BAZEL_FILES")
+                        if [[ -n "$target_list" ]]; then
+                             target_list=$(echo "$target_list" | tr '\n' ' ')
+                             echo "Testing $(echo "$target_list" | wc -w) affected target(s)."
                         else
                              echo "No tests affected by these changes. Use 'gz_test --all' if you want to run everything."
                              return 0
@@ -439,20 +441,20 @@ gz_test() {
                 fi
             else
                 echo "No differences from $diff_base. Running all tests."
-                target="//..."
+                target_list="//..."
             fi
         else
              echo "Warning: Could not find base branch '$diff_base'. Running all tests."
-             target="//..."
+             target_list="//..."
         fi
     fi
 
     if [ "$coverage" = true ]; then
-        echo "Running: bazel coverage --config=ci --combined_report=lcov $target ${bazel_args[*]}"
-        (cd "$GLAZE_ROOT" && bazel coverage --config=ci --combined_report=lcov $target "${bazel_args[@]}")
+        echo "Running: bazel coverage --config=ci --combined_report=lcov $target_list ${bazel_args[*]}"
+        (cd "$GLAZE_ROOT" && bazel coverage --config=ci --combined_report=lcov $target_list "${bazel_args[@]}")
     else
-        echo "Running: bazel test --config=ci --test_output=errors $target ${bazel_args[*]}"
-        (cd "$GLAZE_ROOT" && bazel test --config=ci --test_output=errors $target "${bazel_args[@]}")
+        echo "Running: bazel test --config=ci --test_output=errors $target_list ${bazel_args[*]}"
+        (cd "$GLAZE_ROOT" && bazel test --config=ci --test_output=errors $target_list "${bazel_args[@]}")
     fi
 }
 
