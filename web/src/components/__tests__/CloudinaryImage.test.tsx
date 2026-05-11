@@ -64,6 +64,14 @@ vi.mock("@cloudinary/url-gen", () => ({
 }));
 
 vi.mock("@cloudinary/url-gen/actions/resize", () => ({
+  scale: () => ({
+    width() {
+      return this;
+    },
+    height() {
+      return this;
+    },
+  }),
   crop: () => ({
     width() {
       return this;

@@ -18,6 +18,24 @@ import type {
 } from "../../util/types";
 import * as api from "../../util/api";
 
+vi.mock("masonic", () => ({
+  Masonry: ({
+    items,
+    render: RenderComponent,
+  }: {
+    items: any[];
+    render: React.ComponentType<{ data: any; index: number; width: number }>;
+  }) => (
+    <div data-testid="masonry-grid">
+      {items.map((item, index) => (
+        <div key={index}>
+          <RenderComponent data={item} index={index} width={300} />
+        </div>
+      ))}
+    </div>
+  ),
+}));
+
 const { mockWorkflow } = vi.hoisted(() => ({
   mockWorkflow: {
     version: "test",

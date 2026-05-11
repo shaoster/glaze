@@ -443,6 +443,26 @@ class PieceCreateSerializer(serializers.ModelSerializer):
         PieceState.objects.create(
             user=user, piece=piece, state=ENTRY_STATE, notes=notes
         )
+
+        # Queue auto-detection for thumbnail if Cloudinary and no crop provided.
+        if (
+            thumbnail
+            and thumbnail.cloud_name
+            and thumbnail.cloudinary_public_id
+            and piece.thumbnail_crop is None
+        ):
+            from .tasks import get_task_interface
+
+            task = AsyncTask.objects.create(
+                user=user,
+                task_type="detect_subject_crop",
+                input_params={
+                    "image_id": str(thumbnail.id),
+                    "piece_id": str(piece.id),
+                },
+            )
+            get_task_interface().submit(task)
+
         return piece
 
 
@@ -653,28 +673,49 @@ class PieceUpdateSerializer(serializers.Serializer):
         return value
 
     def update(self, instance: Piece, validated_data: dict) -> Piece:
+        user = self.context["request"].user
         if "name" in validated_data:
             instance.name = validated_data["name"]
         if "current_location" in validated_data:
             instance.current_location = get_or_create_location(
-                self.context["request"].user, validated_data["current_location"]
+                user, validated_data["current_location"]
             )
         if "thumbnail" in validated_data:
             thumbnail_payload = validated_data["thumbnail"]
             instance.thumbnail = normalize_image_payload(
                 thumbnail_payload, user=instance.user
             )
-            instance.thumbnail_crop = (
+            crop = (
                 crop_to_dict(thumbnail_payload.get("crop"))
                 if thumbnail_payload is not None
                 else None
             )
+            instance.thumbnail_crop = crop
+
+            # Queue auto-detection if it's a new Cloudinary thumbnail without a crop.
+            if (
+                instance.thumbnail
+                and instance.thumbnail.cloud_name
+                and instance.thumbnail.cloudinary_public_id
+                and crop is None
+            ):
+                from .tasks import get_task_interface
+
+                task = AsyncTask.objects.create(
+                    user=user,
+                    task_type="detect_subject_crop",
+                    input_params={
+                        "image_id": str(instance.thumbnail.id),
+                        "piece_id": str(instance.id),
+                    },
+                )
+                get_task_interface().submit(task)
         if "shared" in validated_data:
             instance.shared = validated_data["shared"]
         instance.save()
         if "tags" in validated_data:
             tag_ids = [str(tag_id) for tag_id in validated_data["tags"]]
-            _replace_piece_tags(instance, self.context["request"].user, tag_ids)
+            _replace_piece_tags(instance, user, tag_ids)
         return instance
 
 

@@ -21,6 +21,8 @@ py_library(
         "//backend:backend_lib",
         requirement("httpx"),
         requirement("logtail-python"),
+        requirement("rembg"),
+        requirement("onnxruntime"),
     ],
 )
 

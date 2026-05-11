@@ -25,7 +25,6 @@ py_library(
         requirement("jsonschema"),
         requirement("jsonschema-specifications"),
         requirement("referencing"),
-        requirement("pillow-heif"),
         requirement("Pillow"),
         requirement("psycopg2-binary"),
         requirement("django-import-export"),

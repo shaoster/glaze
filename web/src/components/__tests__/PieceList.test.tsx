@@ -117,7 +117,7 @@ describe("PieceList", () => {
       ).toBe(true);
     });
 
-    it("sizes Cloudinary thumbnail requests from the crop aspect ratio", () => {
+    it("sizes Cloudinary thumbnail requests to the column width", () => {
       const { container } = renderPieceList([
         makePiece({
           thumbnail: {
@@ -132,7 +132,7 @@ describe("PieceList", () => {
       const image = container.querySelector("img")!;
       expect(image.getAttribute("data-crop")).toBe("yes");
       expect(image.getAttribute("data-requested-width")).toBe("240");
-      expect(image.getAttribute("data-requested-height")).toBe("220");
+      expect(image.hasAttribute("data-requested-height")).toBe(false);
     });
 
     it("card links to piece detail page", () => {

@@ -15,11 +15,13 @@ from import_export import fields, resources
 from import_export.admin import ExportMixin
 
 from .models import (
+    AsyncTask,
     FiringTemperature,
     GlazeCombination,
     GlazeCombinationLayer,
     GlazeMethod,
     GlazeType,
+    Image,
     Piece,
     PieceState,
     PieceStateImage,
@@ -955,3 +957,33 @@ class PieceStateAdmin(ExportMixin, SortableAdminBase, admin.ModelAdmin):
 
         if global_ref_pks or clear_fields:
             _write_global_ref_rows(obj, global_ref_fields, global_ref_pks, clear_fields)
+
+@admin.action(description="Re-run selected tasks")
+def rerun_tasks(modeladmin, request, queryset):
+    from .tasks import get_task_interface
+
+    interface = get_task_interface()
+    count = 0
+    for task in queryset:
+        task.status = AsyncTask.Status.PENDING
+        task.error = None
+        task.result = None
+        task.save(update_fields=["status", "error", "result"])
+        interface.submit(task)
+        count += 1
+    modeladmin.message_user(request, f"Successfully re-queued {count} tasks.")
+
+
+@admin.register(AsyncTask)
+class AsyncTaskAdmin(admin.ModelAdmin):
+    list_display = ("task_type", "status", "user", "created", "last_modified")
+    list_filter = ("status", "task_type", "created")
+    search_fields = ("user__email", "user__username", "id")
+    readonly_fields = ("id", "created", "last_modified")
+    actions = [rerun_tasks]
+
+@admin.register(Image)
+class ImageAdmin(admin.ModelAdmin):
+    list_display = ("id", "cloud_name", "cloudinary_public_id", "url", "created")
+    search_fields = ("cloudinary_public_id", "url")
+    readonly_fields = ("id", "created", "last_modified")

@@ -34,6 +34,34 @@ SHARED_GLAZE_FIELDS: tuple[str, ...] = (
 )
 
 
+def calculate_subject_crop(image_bytes: bytes) -> dict | None:
+    """Detect the main subject in an image and return a relative crop box."""
+    import io
+    from rembg import remove
+    from PIL import Image
+    import numpy as np
+
+    # 1. Remove background
+    input_image = Image.open(io.BytesIO(image_bytes))
+    output_image = remove(input_image)
+
+    # 2. Find non-transparent bounds
+    alpha = output_image.getchannel("A")
+    bbox = alpha.getbbox()
+    if not bbox:
+        return None
+    
+    # 3. Convert to relative crop coordinates
+    width, height = input_image.size
+    left, upper, right, lower = bbox
+    
+    return {
+        "x": left / width,
+        "y": upper / height,
+        "width": (right - left) / width,
+        "height": (lower - upper) / height,
+    }
+
 def get_or_create_location(user, name: str | None):
     """Return a Location for *user* with the given *name*, creating it if needed.
 
