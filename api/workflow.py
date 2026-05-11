@@ -424,7 +424,11 @@ def _resolve_field_def(field_def: dict) -> dict:
         node = field_def["compute"]
         # In the hierarchical AST, the type is fixed per op group.
         if "op" in node:
-            json_type = "number" if node["op"] in {"sum", "product", "difference", "ratio"} else "string"
+            json_type = (
+                "number"
+                if node["op"] in {"sum", "product", "difference", "ratio"}
+                else "string"
+            )
         elif "constant" in node:
             val = node["constant"]
             if isinstance(val, bool):

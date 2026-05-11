@@ -31,11 +31,11 @@ from .cloudinary_cleanup import (
 )
 from .manual_tile_imports import import_manual_tile_records
 from .models import (
+    AsyncTask,
     FavoriteGlazeCombination,
     GlazeCombination,
     Piece,
     PieceState,
-    AsyncTask,
     UserProfile,
 )
 from .serializer_registry import (
@@ -1194,8 +1194,9 @@ def admin_manual_square_crop_import(request: Request) -> Response:
         return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(result)
 
+
+from .serializers import AsyncTaskSerializer, TaskSubmissionSerializer
 from .tasks import get_task_interface
-from .serializers import TaskSubmissionSerializer, AsyncTaskSerializer
 
 
 @extend_schema(

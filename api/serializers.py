@@ -47,11 +47,11 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import (
+    AsyncTask,
     FiringTemperature,
     GlazeCombination,
     Piece,
     PieceState,
-    AsyncTask,
     UserProfile,
     models,
 )
@@ -799,6 +799,7 @@ class RegisterSerializer(serializers.Serializer):
         )
         UserProfile.objects.create(user=user)
         return user
+
 
 class AsyncTaskSerializer(serializers.ModelSerializer):
     class Meta:

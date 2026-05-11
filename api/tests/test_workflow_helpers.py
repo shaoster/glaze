@@ -584,11 +584,12 @@ def test_get_filterable_compose_fields_returns_empty_for_unknown_global(monkeypa
     monkeypatch.setattr(workflow_module, "_GLOBALS_MAP", _MOCK_GLOBALS_MAP)
     assert workflow_module.get_filterable_compose_fields("does_not_exist") == {}
 
+
 def test_resolve_field_def_covers_ast_nodes():
     # Test ratio op
     res = workflow_module._resolve_field_def({"compute": {"op": "ratio"}})
     assert res["type"] == "number"
-    
+
     # Test boolean constant
     res = workflow_module._resolve_field_def({"compute": {"constant": True}})
     assert res["type"] == "boolean"
@@ -600,9 +601,11 @@ def test_resolve_field_def_covers_ast_nodes():
     # Test string constant
     res = workflow_module._resolve_field_def({"compute": {"constant": "foo"}})
     assert res["type"] == "string"
-    
+
     # Test display_as in computed field
-    res = workflow_module._resolve_field_def({"compute": {"constant": 1}, "display_as": "text"})
+    res = workflow_module._resolve_field_def(
+        {"compute": {"constant": 1}, "display_as": "text"}
+    )
     assert res["display_as"] == "text"
 
 
@@ -622,7 +625,10 @@ def test_build_custom_fields_schema_covers_hex_color_format(monkeypatch):
     )
     schema = workflow_module.build_custom_fields_schema("color_state")
     assert "pattern" in schema["properties"]["my_color"]
-    assert schema["properties"]["my_color"]["pattern"] == "^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+    assert (
+        schema["properties"]["my_color"]["pattern"]
+        == "^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+    )
 
 
 def test_build_custom_fields_schema_covers_required_fields(monkeypatch):

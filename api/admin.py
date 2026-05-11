@@ -958,6 +958,7 @@ class PieceStateAdmin(ExportMixin, SortableAdminBase, admin.ModelAdmin):
         if global_ref_pks or clear_fields:
             _write_global_ref_rows(obj, global_ref_fields, global_ref_pks, clear_fields)
 
+
 @admin.action(description="Re-run selected tasks")
 def rerun_tasks(modeladmin, request, queryset):
     from .tasks import get_task_interface
@@ -981,6 +982,7 @@ class AsyncTaskAdmin(admin.ModelAdmin):
     search_fields = ("user__email", "user__username", "id")
     readonly_fields = ("id", "created", "last_modified")
     actions = [rerun_tasks]
+
 
 @admin.register(Image)
 class ImageAdmin(admin.ModelAdmin):
