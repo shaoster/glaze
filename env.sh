@@ -410,9 +410,7 @@ gz_test() {
                     echo "Determining affected tests (comparing with $diff_base)..."
                     # Filter existing files to only those Bazel knows about to avoid query errors (exit code 7)
                     local ALL_SOURCES
-                    echo "DEBUG: Starting ALL_SOURCES query at $(date +%s)"
-                    ALL_SOURCES=$(bazel query --profile=$PWD/bazel_query_profile.json --output=label 'kind("source file", //...:* )' 2> >(tee -a /dev/stderr) | sed 's|^//||; s|:|/|')
-                    echo "DEBUG: Finished ALL_SOURCES query at $(date +%s). Sources found: $(echo "$ALL_SOURCES" | wc -l)"
+                    ALL_SOURCES=$(_gz_get_all_sources)
                     local BAZEL_FILES
                     BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
                     if [[ -n "$BAZEL_FILES" ]]; then
@@ -510,9 +508,7 @@ gz_lint() {
                     echo "Determining affected lint targets (comparing with $diff_base)..."
                     # Filter existing files to only those Bazel knows about to avoid query errors (exit code 7)
                     local ALL_SOURCES
-                    echo "DEBUG: Starting ALL_SOURCES query at $(date +%s)"
-                    ALL_SOURCES=$(bazel query --profile=$PWD/bazel_query_profile.json --output=label 'kind("source file", //...:* )' 2> >(tee -a /dev/stderr) | sed 's|^//||; s|:|/|')
-                    echo "DEBUG: Finished ALL_SOURCES query at $(date +%s). Sources found: $(echo "$ALL_SOURCES" | wc -l)"
+                    ALL_SOURCES=$(_gz_get_all_sources)
                     local BAZEL_FILES
                     BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
                     if [[ -n "$BAZEL_FILES" ]]; then
@@ -958,3 +954,11 @@ complete -F _gz_cd_complete gz_cd
 # ---------------------------------------------------------------------------
 
 echo "Glaze ready — run 'gz_help' for shortcuts, 'gz_setup' for first-time install."
+_gz_get_all_sources() {
+    local profile="$PWD/bazel_query_profile.json"
+    echo "DEBUG: Starting ALL_SOURCES query at $(date +%s)"
+    local sources
+    sources=$(bazel query --profile="$profile" --output=label 'kind("source file", //...:* )' 2> >(tee -a /dev/stderr) | sed 's|^//||; s|:|/|')
+    echo "DEBUG: Finished ALL_SOURCES query at $(date +%s). Sources found: $(echo "$sources" | wc -l)"
+    echo "$sources"
+}
