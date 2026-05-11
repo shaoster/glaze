@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+rembg
+opencv-python-headless
+pillow-heif
+pillow
+requests
+urllib3
+httpx
+pytest

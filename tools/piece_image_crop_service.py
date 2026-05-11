@@ -7,7 +7,7 @@ Deployment (Modal):
     2. modal deploy tools/piece_image_crop_service.py
 
 Usage (Local):
-    pip install fastapi uvicorn rembg onnxruntime pillow pillow-heif requests opencv-python-headless numpy urllib3
+    pip install fastapi uvicorn rembg onnxruntime pillow pillow-heif
     uvicorn tools.piece_image_crop_service:fastapi_app --port 8080
 """
 
@@ -24,10 +24,7 @@ try:
 
     image = (
         modal.Image.debian_slim()
-        .pip_install(
-            "fastapi", "uvicorn", "rembg", "onnxruntime", "pillow", 
-            "pillow-heif", "requests", "opencv-python-headless", "numpy"
-        )
+        .pip_install("fastapi", "uvicorn", "rembg", "onnxruntime", "pillow", "pillow-heif", "requests")
         # Pre-download the model into the image to reduce cold start latency
         # We use the full 'u2net' model for better accuracy than the 'u2netp' lite version.
         .run_commands("python -c \"from rembg import new_session; new_session('u2net')\"")
@@ -56,8 +53,6 @@ def create_app():
     import requests
     from urllib3.util import Retry
     from requests.adapters import HTTPAdapter
-    import cv2
-    import numpy as np
 
     # Register HEIF support (HEIC conversion handled here)
     register_heif_opener()
@@ -128,47 +123,31 @@ def create_app():
 
             # 1. Remove background
             logger.info(f"Processing image: {width}x{height}")
-            # Alpha matting helps smooth out edges, which can prevent undercropping on complex textures.
-            output_image = remove(
-                input_image, 
-                session=_SESSION,
-                alpha_matting=True,
-                alpha_matting_foreground_threshold=240,
-                alpha_matting_background_threshold=10,
-                alpha_matting_erode_size=10
-            )
+            output_image = remove(input_image, session=_SESSION)
 
-            # 2. Extract alpha mask and convert to numpy array
+            # 2. Find non-transparent bounds
             alpha = output_image.getchannel("A")
-            alpha_np = np.array(alpha)
+            bbox = alpha.getbbox()
 
-            # 3. Use OpenCV to find contours and filter out noise
-            # Threshold to ensure binary mask
-            _, binary_mask = cv2.threshold(alpha_np, 127, 255, cv2.THRESH_BINARY)
-            contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-            if not contours:
+            if not bbox:
                 logger.info("No subject detected.")
                 return {"x": 0, "y": 0, "width": 0, "height": 0}
 
-            # Find the largest contour by area (ignore small background noise/shadows to prevent overcropping)
-            largest_contour = max(contours, key=cv2.contourArea)
-            
-            # 4. Compute bounding box of the largest contour
-            x, y, w, h = cv2.boundingRect(largest_contour)
-            left, upper, right, lower = x, y, x + w, y + h
+            left, upper, right, lower = bbox
 
-            # 5. Apply Padding to prevent "aggressive" cropping
+            # 3. Apply Padding to prevent "aggressive" cropping
             # We add 10% of the subject's dimensions as a safety margin.
-            pad_w = int(w * 0.10)
-            pad_h = int(h * 0.10)
+            subj_w = right - left
+            subj_h = lower - upper
+            pad_w = int(subj_w * 0.10)
+            pad_h = int(subj_h * 0.10)
             
             left = max(0, left - pad_w)
             upper = max(0, upper - pad_h)
             right = min(width, right + pad_w)
             lower = min(height, lower + pad_h)
 
-            # 6. Return relative coordinates
+            # 4. Return relative coordinates
             return {
                 "x": left / width,
                 "y": upper / height,
@@ -187,14 +166,9 @@ def create_app():
 
 
 # --- Local Entry Point ---
-try:
-    fastapi_app = create_app()
-except ImportError:
-    fastapi_app = None
-
+# NOTE: Do NOT call create_app() at module level — heavy deps (rembg, fastapi)
+# may not be present in the importing process's environment.  When run via
+# `bazel run //tools:piece_image_crop_service`, __main__ is the entry point.
 if __name__ == "__main__":
     import uvicorn
-    if fastapi_app:
-        uvicorn.run(fastapi_app, host="0.0.0.0", port=8080)
-    else:
-        print("Required packages (fastapi, rembg, pillow) not installed locally.")
+    uvicorn.run(create_app(), host="0.0.0.0", port=8080)

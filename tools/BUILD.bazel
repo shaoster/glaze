@@ -1,5 +1,6 @@
-load("@rules_python//python:defs.bzl", "py_binary")
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
 load("@pip//:requirements.bzl", "requirement")
+load("@tools_pip//:requirements.bzl", requirement_tools = "requirement")
 
 # ── Pytest runner ─────────────────────────────────────────────────────────────
 # Shared entry point for all py_test targets. Each test BUILD file lists this
@@ -16,7 +17,7 @@ py_binary(
     srcs = ["generate_schema.py"],
     data = ["//:workflow_files"],
     deps = [
-        "//api:api_schema_lib",
+        "//api:api_lib",
         "//backend:backend_lib",
         requirement("django"),
         requirement("djangorestframework"),
@@ -24,6 +25,60 @@ py_binary(
         requirement("pyyaml"),
         requirement("google-auth"),
         requirement("requests"),
+    ],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "visualize_crops",
+    srcs = ["visualize_crops.py"],
+    deps = [
+        "//api:api_lib",
+        "//backend:backend_lib",
+        requirement("django"),
+        requirement("requests"),
+        requirement("pillow"),
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# ── Piece image crop service ───────────────────────────────────────────────────
+# Local dev entry point for the Modal remote cropping service.
+# Run with: bazel run //tools:piece_image_crop_service
+# The service will listen on port 8080 for crop requests.
+
+py_binary(
+    name = "piece_image_crop_service",
+    srcs = ["piece_image_crop_service.py"],
+    deps = [
+        requirement_tools("fastapi"),
+        requirement_tools("uvicorn"),
+        requirement_tools("rembg"),
+        requirement_tools("opencv-python-headless"),
+        requirement_tools("requests"),
+        requirement_tools("urllib3"),
+        requirement_tools("pillow"),
+        requirement_tools("pillow-heif"),
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# ── Crop service unit tests ────────────────────────────────────────────────────
+
+py_test(
+    name = "test_piece_image_crop_service",
+    srcs = ["tests/test_piece_image_crop_service.py"],
+    main = "tests/test_piece_image_crop_service.py",
+    deps = [
+        requirement_tools("fastapi"),
+        requirement_tools("httpx"),
+        requirement_tools("rembg"),
+        requirement_tools("opencv-python-headless"),
+        requirement_tools("requests"),
+        requirement_tools("urllib3"),
+        requirement_tools("pillow"),
+        requirement_tools("pillow-heif"),
+        requirement_tools("pytest"),
     ],
     visibility = ["//visibility:public"],
 )
