@@ -59,9 +59,30 @@ def _get_rembg_session(model_name: str = "u2net"):
         # to the session class. We attempt to bypass new_session() and use the
         # class directly to avoid this TypeError.
         try:
-            from rembg.sessions import sessions_names
+            from rembg import sessions as rembg_sessions_mod
 
-            session_class = sessions_names.get(model_name)
+            # 1. Try finding it in the sessions dict (standard in modern versions)
+            # Some versions have rembg.sessions.sessions, others might have it at rembg.sessions.
+            sessions_dict = getattr(rembg_sessions_mod, "sessions", None)
+            session_class = None
+
+            if isinstance(sessions_dict, dict):
+                session_class = sessions_dict.get(model_name)
+
+            # 2. If not found, try finding it in sessions_class list or legacy sessions_names
+            if not session_class:
+                sessions_class = getattr(rembg_sessions_mod, "sessions_class", [])
+                if isinstance(sessions_class, list):
+                    for sc in sessions_class:
+                        if hasattr(sc, "name") and sc.name() == model_name:
+                            session_class = sc
+                            break
+
+            if not session_class:
+                sessions_names = getattr(rembg_sessions_mod, "sessions_names", None)
+                if isinstance(sessions_names, dict):
+                    session_class = sessions_names.get(model_name)
+
             if session_class:
                 _REMBG_SESSIONS[model_name] = session_class(
                     model_name, sess_opts=opts, providers=["CPUExecutionProvider"]
@@ -70,7 +91,7 @@ def _get_rembg_session(model_name: str = "u2net"):
                 _REMBG_SESSIONS[model_name] = new_session(
                     model_name, providers=["CPUExecutionProvider"], sess_opts=opts
                 )
-        except (ImportError, TypeError):
+        except (ImportError, TypeError, AttributeError, KeyError):
             logger.warning(
                 "Direct rembg session instantiation failed; falling back to new_session."
             )
