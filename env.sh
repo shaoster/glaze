@@ -414,14 +414,13 @@ gz_test() {
                     local BAZEL_FILES
                     BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
                     if [[ -n "$BAZEL_FILES" ]]; then
-                        local QUERY_TARGETS
-                        QUERY_TARGETS=$(bazel query "kind(test, rdeps(//..., set($BAZEL_FILES)))" 2>/dev/null)
-                        if [[ -n "$QUERY_TARGETS" ]]; then
-                            target=$(echo "$QUERY_TARGETS" | tr '\n' ' ')
-                            echo "Testing $(echo $target | wc -w) affected target(s)."
+                        target=$(_gz_get_affected_targets "test" "$BAZEL_FILES")
+                        if [[ -n "$target" ]]; then
+                             target=$(echo "$target" | tr '\n' ' ')
+                             echo "Testing $(echo "$target" | wc -w) affected target(s)."
                         else
-                            echo "No tests affected by these changes. Use 'gz_test --all' if you want to run everything."
-                            return 0
+                             echo "No tests affected by these changes. Use 'gz_test --all' if you want to run everything."
+                             return 0
                         fi
                     else
                         echo "No Bazel-tracked code changes detected. Use 'gz_test --all' if you want to run everything."
@@ -512,14 +511,13 @@ gz_lint() {
                     local BAZEL_FILES
                     BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
                     if [[ -n "$BAZEL_FILES" ]]; then
-                        local QUERY_TARGETS
-                        QUERY_TARGETS=$(bazel query "rdeps(//..., set($BAZEL_FILES))" 2>/dev/null)
-                        if [[ -n "$QUERY_TARGETS" ]]; then
-                            target=$(echo "$QUERY_TARGETS" | tr '\n' ' ')
-                            echo "Linting $(echo $target | wc -w) affected target(s)."
+                        target=$(_gz_get_affected_targets ".*" "$BAZEL_FILES")
+                        if [[ -n "$target" ]]; then
+                             target=$(echo "$target" | tr '\n' ' ')
+                             echo "Linting $(echo "$target" | wc -w) affected target(s)."
                         else
-                            echo "No targets affected by these changes. Use 'gz_lint --all' if you want to lint everything."
-                            return 0
+                             echo "No targets affected by these changes. Use 'gz_lint --all' if you want to lint everything."
+                             return 0
                         fi
                     else
                         echo "No Bazel-tracked code changes detected. Use 'gz_lint --all' if you want to lint everything."
@@ -961,4 +959,10 @@ _gz_get_all_sources() {
     sources=$(bazel query --profile="$profile" --output=label 'kind("source file", //...:* )' 2> >(tee -a /dev/stderr) | sed 's|^//||; s|:|/|')
     echo "DEBUG: Finished ALL_SOURCES query at $(date +%s). Sources found: $(echo "$sources" | wc -l)"
     echo "$sources"
+}
+
+_gz_get_affected_targets() {
+    local filter="$1"
+    local bazel_files="$2"
+    bazel query "kind($filter, rdeps(//..., set($bazel_files)))" 2>/dev/null
 }
