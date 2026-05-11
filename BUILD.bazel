@@ -128,7 +128,7 @@ oci_image(
         ":web_dist_tar",
     ],
     env = {
-        "PYTHONPATH": "/app/site-packages",
+        "PYTHONPATH": "/app:/app/site-packages",
         "PYTHONDONTWRITEBYTECODE": "1",
         "PYTHONUNBUFFERED": "1",
         "DJANGO_SETTINGS_MODULE": "backend.settings",
