@@ -1,5 +1,9 @@
 name: CI
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
@@ -99,41 +103,11 @@ jobs:
         run: |
           echo "" >> .bazelrc
           echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
-      - name: Run Lint (Lints affected targets on PR, all targets on main)
+      - name: Run Lint
         shell: bash
         run: |
-          TARGETS="//..."
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "Calculating affected lint targets (comparing with origin/main)..."
-            FILES=$(git diff --name-only origin/main...HEAD)
-            if [[ -n "$FILES" ]]; then
-              EXISTING=""
-              for f in $FILES; do [[ -f "$f" ]] && EXISTING="$EXISTING $f"; done
-              if [[ -n "$EXISTING" ]]; then
-                ALL_SOURCES=$(bazel query 'kind("source file", //...)' 2>/dev/null | sed 's|^//||; s|:|/|')
-                BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
-                if [[ -n "$BAZEL_FILES" ]]; then
-                  QUERY_TARGETS=$(bazel query "rdeps(//..., set($BAZEL_FILES))" 2>/dev/null)
-                  if [[ -n "$QUERY_TARGETS" ]]; then
-                    TARGETS=$(echo "$QUERY_TARGETS" | tr '\n' ' ')
-                    echo "Linting $(echo $TARGETS | wc -w) affected target(s)."
-                  else
-                    echo "No targets affected by these changes. Skipping lint."
-                    exit 0
-                  fi
-                else
-                  echo "No Bazel-tracked code changes detected. Skipping lint."
-                  exit 0
-                fi
-              else
-                echo "No existing code changes detected. Skipping lint."
-                exit 0
-              fi
-            else
-              echo "No differences from main. Defaulting to //..."
-            fi
-          fi
-          bazel build --config=ci --config=lint $TARGETS
+          source env.sh
+          gz_lint
 
   coverage:
     name: Coverage & Test
@@ -162,53 +136,16 @@ jobs:
         run: |
           echo "" >> .bazelrc
           echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
-      - name: Run Coverage (Runs affected tests on PR, all tests on main)
+      - name: Run Coverage & Test
         shell: bash
         run: |
-          TARGETS="//..."
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "Calculating affected tests (comparing with origin/main)..."
-            FILES=$(git diff --name-only origin/main...HEAD)
-            if [[ -n "$FILES" ]]; then
-              EXISTING=""
-              for f in $FILES; do [[ -f "$f" ]] && EXISTING="$EXISTING $f"; done
-              if [[ -n "$EXISTING" ]]; then
-                ALL_SOURCES=$(bazel query 'kind("source file", //...)' 2>/dev/null | sed 's|^//||; s|:|/|')
-                BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
-                if [[ -n "$BAZEL_FILES" ]]; then
-                  QUERY_TARGETS=$(bazel query "kind(test, rdeps(//..., set($BAZEL_FILES)))" 2>/dev/null)
-                  if [[ -n "$QUERY_TARGETS" ]]; then
-                    TARGETS=$(echo "$QUERY_TARGETS" | tr '\n' ' ')
-                    echo "Testing $(echo $TARGETS | wc -w) affected target(s)."
-                  else
-                    echo "No tests affected by these changes. Skipping execution."
-                    exit 0
-                  fi
-                else
-                  echo "No Bazel-tracked code changes detected. Skipping execution."
-                  exit 0
-                fi
-              else
-                echo "No existing code changes detected. Skipping execution."
-                exit 0
-              fi
-            else
-              echo "No differences from main. Defaulting to //..."
-            fi
-          fi
-          bazel coverage --config=ci --combined_report=lcov $TARGETS
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: bazel-out/_coverage/_coverage_report.dat
-          flags: backend,frontend
-          fail_ci_if_error: false
+          source env.sh
+          gz_test --coverage
 
   publish:
     name: Publish OCI image
     needs: [preflight, coverage, lint]
-    if: ${{ always() && (github.event_name == 'push' && ((needs.coverage.result == 'success' && needs.lint.result == 'success') || needs.preflight.outputs.skip_main == 'true')) }}
+    if: ${{ always() && !cancelled() && (github.event_name == 'push' && ((needs.coverage.result == 'success' && needs.lint.result == 'success') || needs.preflight.outputs.skip_main == 'true')) }}
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -249,7 +186,7 @@ jobs:
 
       - name: Build and push OCI image
         run: |
-          bazel run --config=ci --stamp //:push -- \
+          bazel run --config=ci --stamp //...sh -- \
             --tag latest \
             --tag ${{ github.sha }}
 

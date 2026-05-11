@@ -29,7 +29,12 @@ pip.parse(
     python_version = "3.12",
     requirements_lock = "//:requirements.lock",
 )
-use_repo(pip, "pip")
+pip.parse(
+    hub_name = "tools_pip",
+    python_version = "3.12",
+    requirements_lock = "//tools:requirements.lock",
+)
+use_repo(pip, "pip", "tools_pip")
 
 # ── Node toolchain ────────────────────────────────────────────────────────────
 
