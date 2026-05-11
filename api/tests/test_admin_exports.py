@@ -133,3 +133,67 @@ class TestAdminExports:
 
         old_state.refresh_from_db()
         assert old_state.notes == "Corrected by admin"
+
+
+@pytest.mark.django_db
+class TestRerunTasksAdminAction:
+    """Covers the rerun_tasks admin action in api/admin.py."""
+
+    def _make_admin_client(self):
+        from django.contrib.auth import get_user_model
+        from django.test import Client
+
+        admin = get_user_model().objects.create_superuser(
+            username="admin2@example.com",
+            email="admin2@example.com",
+            password="x",
+        )
+        c = Client()
+        c.force_login(admin)
+        return c
+
+    def test_rerun_tasks_resets_status_and_resubmits(self, monkeypatch):
+        from django.contrib.auth import get_user_model
+        from django.urls import reverse
+
+        from api.models import AsyncTask
+
+        submitted = []
+        monkeypatch.setattr(
+            "api.tasks.InMemoryTaskInterface.submit",
+            lambda self, task: submitted.append(task.id),
+        )
+
+        owner = get_user_model().objects.create(
+            username="owner@example.com", email="owner@example.com"
+        )
+        t1 = AsyncTask.objects.create(
+            user=owner,
+            task_type="ping",
+            status=AsyncTask.Status.FAILURE,
+            error="old error",
+        )
+        t2 = AsyncTask.objects.create(
+            user=owner,
+            task_type="ping",
+            status=AsyncTask.Status.FAILURE,
+        )
+
+        client = self._make_admin_client()
+        url = reverse("admin:api_asynctask_changelist")
+        response = client.post(
+            url,
+            {
+                "action": "rerun_tasks",
+                "_selected_action": [str(t1.id), str(t2.id)],
+            },
+        )
+
+        assert response.status_code in (200, 302)
+
+        t1.refresh_from_db()
+        t2.refresh_from_db()
+        assert t1.status == AsyncTask.Status.PENDING
+        assert t1.error is None
+        assert t2.status == AsyncTask.Status.PENDING
+        assert len(submitted) == 2

@@ -217,7 +217,9 @@ class TestCustomFieldsValidation:
             patch.object(workflow_module, "_GLOBALS_MAP", _MOCK_GLOBALS_MAP),
         ):
             # sum_ab is calculated; it should NOT be allowed in the input blob.
-            ps = _make_piece_with_state("mock_calculated", {"a": 1, "b": 2, "sum_ab": 3})
+            ps = _make_piece_with_state(
+                "mock_calculated", {"a": 1, "b": 2, "sum_ab": 3}
+            )
             with pytest.raises(ValueError, match="custom_fields validation failed"):
                 ps.save()
 

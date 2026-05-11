@@ -341,7 +341,9 @@ class PieceState(models.Model):
                 decimals = field_def.get("decimals")
                 if decimals is not None:
                     effective_decimals = (
-                        decimals + 2 if field_def.get("display_as") == "percent" else decimals
+                        decimals + 2
+                        if field_def.get("display_as") == "percent"
+                        else decimals
                     )
                     return round(computed_val, effective_decimals)
             return computed_val
@@ -449,7 +451,6 @@ class PieceStateImage(models.Model):
 
     def __str__(self) -> str:
         return f"{self.piece_state} / image {self.order}"
-
 
 
 class AsyncTask(models.Model):
