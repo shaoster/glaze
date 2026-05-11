@@ -29,6 +29,14 @@ try:
         .run_commands("python -c \"from rembg import new_session; new_session('u2netp')\"")
     )
     modal_app = modal.App("glaze-rembg", image=image)
+
+    # We define the Modal function here at the top level (within the try block)
+    # so that the Modal CLI can discover it.
+    @modal_app.function()
+    @modal.asgi_app()
+    def web():
+        return create_app()
+
 except ImportError:
     modal_app = None
 
@@ -39,10 +47,10 @@ def create_app():
     from PIL import Image
     from rembg import new_session, remove
 
-    app = FastAPI(title="Glaze Remote rembg Service")
+    fastapi_app = FastAPI(title="Glaze Remote rembg Service")
     _SESSION = new_session("u2netp")
 
-    @app.post("/")
+    @fastapi_app.post("/")
     async def detect_crop(request: Request):
         """Receive image bytes and return a relative crop box."""
         image_bytes = await request.body()
@@ -78,20 +86,11 @@ def create_app():
             logger.exception("Error processing image")
             return Response(content=str(e), status_code=500)
 
-    @app.get("/health")
+    @fastapi_app.get("/health")
     def health():
         return {"status": "ok", "model": "u2netp"}
 
-    return app
-
-
-# --- Modal Entry Point ---
-if modal_app:
-
-    @modal_app.function()
-    @modal.asgi_app()
-    def web():
-        return create_app()
+    return fastapi_app
 
 
 # --- Local Entry Point ---
@@ -102,7 +101,7 @@ try:
 except ImportError:
     # This will be triggered during 'modal deploy' on a machine
     # without the heavy dependencies. That's fine as Modal uses
-    # the 'web' function above which runs inside the container.
+    # the 'web' function above.
     app = None
 
 if __name__ == "__main__":
