@@ -458,13 +458,69 @@ gz_test() {
 
 # CI-aligned: run ruff, eslint, tsc, and mypy via Bazel (same as CI).
 gz_lint() {
+    local mode="auto"
+    local usage="Usage: gz_lint [--all|--affected] [bazel args...]"
     local bazel_args=()
+
+    # Parse flags
     while [[ $# -gt 0 ]]; do
-        bazel_args+=("$1")
-        shift
+        case "$1" in
+            --all) mode="all"; shift ;;
+            --affected) mode="affected"; shift ;;
+            --help) echo "$usage"; return 0 ;;
+            -*) bazel_args+=("$1"); shift ;;
+            *) bazel_args+=("$1"); shift ;;
+        esac
     done
-    echo "Running: bazel build --config=lint //... ${bazel_args[*]}"
-    (cd "$GLAZE_ROOT" && bazel build --config=ci --config=lint //... "${bazel_args[@]}")
+
+    if [[ "$mode" == "auto" ]]; then
+        local current_branch
+        current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+        if [[ "$current_branch" != "main" && "$current_branch" != "HEAD" ]]; then
+            mode="affected"
+        else
+            mode="all"
+        fi
+    fi
+
+    local targets="//..."
+    if [[ "$mode" == "affected" ]]; then
+        local diff_base="main"
+        if ! git rev-parse --verify "$diff_base" &>/dev/null; then
+            diff_base="origin/main"
+        fi
+
+        if git rev-parse --verify "$diff_base" &>/dev/null; then
+            local FILES
+            FILES=$(git diff --name-only "$diff_base...HEAD" 2>/dev/null)
+            if [[ -n "$FILES" ]]; then
+                # Map files to top-level packages to avoid full query
+                local pkgs
+                pkgs=$(echo "$FILES" | cut -d/ -f1 | sort -u)
+                targets=""
+                for p in $pkgs; do
+                    if [[ -d "$p" && -f "$p/BUILD.bazel" ]]; then
+                        targets="$targets //$p/..."
+                    fi
+                done
+                # Always check root BUILD file if changed
+                if echo "$FILES" | grep -q "^BUILD.bazel$"; then
+                    targets="$targets //:all"
+                fi
+                
+                if [[ -z "$targets" ]]; then
+                    echo "No Bazel packages affected by these changes. Use 'gz_lint --all' if you want to lint everything."
+                    return 0
+                fi
+                echo "Linting affected packages: $targets"
+            else
+                echo "No differences from $diff_base. Linting all."
+            fi
+        fi
+    fi
+
+    echo "Running: bazel build --config=lint $targets ${bazel_args[*]}"
+    (cd "$GLAZE_ROOT" && bazel build --config=ci --config=lint $targets "${bazel_args[@]}")
 }
 
 # Auto-fix: reformat Python files and apply ruff auto-fixes in one step.
