@@ -17,7 +17,7 @@ npm run dev
 
 # Remote ML Offload (Optional, for 1GB RAM servers)
 pip install modal
-modal auth login
+modal setup
 modal deploy tools/remote_rembg_service.py
 ```
 
