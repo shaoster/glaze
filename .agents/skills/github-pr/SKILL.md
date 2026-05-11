@@ -66,6 +66,7 @@ Before opening or pushing to a PR, verify every item:
 - [ ] All tests pass: `rtk bazel test //...`
 - [ ] All linters pass: `rtk bazel build --config=lint //...`
 - [ ] Build succeeds: `gz_build`
+- [ ] Autoformat all touched files: `gz_format`
 - [ ] PR body contains `Closes #<N>` linking to the originating issue
 - [ ] PR title under 70 characters
 - [ ] No debug code, temporary workarounds, or stray `print`/`console.log` statements
