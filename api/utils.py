@@ -136,6 +136,35 @@ def calculate_subject_crop(image_bytes: bytes) -> dict | None:
     }
 
 
+def calculate_subject_crop_remote(image_bytes: bytes) -> dict | None:
+    """Offload subject detection to a remote ML service.
+
+    Expects a POST endpoint that takes image bytes and returns a JSON
+    relative crop box: {"x": float, "y": float, "width": float, "height": float}.
+    """
+    remote_url = getattr(settings, "REMOTE_REMBG_URL", None)
+    if not remote_url:
+        logger.warning(
+            "calculate_subject_crop_remote called but REMOTE_REMBG_URL is not set."
+        )
+        return None
+
+    logger.info(f"Offloading subject detection to remote service: {remote_url}")
+    try:
+        response = requests.post(
+            remote_url,
+            data=image_bytes,
+            headers={"Content-Type": "application/octet-stream"},
+            timeout=60,
+        )
+        response.raise_for_status()
+        crop = response.json()
+        return crop_to_dict(crop)
+    except Exception as e:
+        logger.error(f"Remote subject detection failed: {e}")
+        return None
+
+
 def get_or_create_location(user, name: str | None):
     """Return a Location for *user* with the given *name*, creating it if needed.
 

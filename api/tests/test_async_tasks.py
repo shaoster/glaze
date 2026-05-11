@@ -297,3 +297,68 @@ class TestDetectSubjectCropTask:
         assert task.status == AsyncTask.Status.SUCCESS
         assert task.result["status"] == "skipped"
         assert missing_psi_id in task.result["reason"]
+
+
+@pytest.mark.django_db(transaction=True)
+class TestRemoteDetectSubjectCrop:
+    """Verifies offloading to an external service via REMOTE_REMBG_URL."""
+
+    def test_calls_remote_service_when_configured(self, user, monkeypatch):
+        from django.conf import settings
+
+        from api.models import Image, Piece
+
+        image = Image.objects.create(
+            url="https://res.cloudinary.com/demo/image/upload/v1/pieces/mug.jpg",
+            cloud_name="demo",
+            cloudinary_public_id="pieces/mug",
+            user=user,
+        )
+        piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
+
+        # Configure remote URL
+        monkeypatch.setattr(settings, "REMOTE_REMBG_URL", "https://remote.ai/", raising=False)
+
+        # Mock image download
+        mock_response_get = type(
+            "R", (), {"raise_for_status": lambda self: None, "content": b"image_data"}
+        )()
+        monkeypatch.setattr("requests.get", lambda *a, **k: mock_response_get)
+
+        # Mock remote POST response
+        crop_data = {"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.4}
+        mock_response_post = type(
+            "R",
+            (),
+            {"raise_for_status": lambda self: None, "json": lambda self: crop_data},
+        )()
+
+        posted_data = []
+
+        def mock_post(url, data, headers, timeout):
+            posted_data.append((url, data, headers))
+            return mock_response_post
+
+        monkeypatch.setattr("requests.post", mock_post)
+
+        task = AsyncTask.objects.create(
+            user=user,
+            task_type="detect_subject_crop",
+            input_params={"image_id": str(image.id), "piece_id": str(piece.id)},
+        )
+
+        from api.tasks import InMemoryTaskInterface
+
+        InMemoryTaskInterface()._run_task(task.id)
+
+        # Verify remote service was called
+        assert len(posted_data) == 1
+        assert posted_data[0][0] == "https://remote.ai/"
+        assert posted_data[0][1] == b"image_data"
+
+        task.refresh_from_db()
+        assert task.status == AsyncTask.Status.SUCCESS
+        assert task.result["crop"] == crop_data
+
+        piece.refresh_from_db()
+        assert piece.thumbnail_crop == crop_data

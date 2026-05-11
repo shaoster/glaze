@@ -117,7 +117,7 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     from cloudinary import CloudinaryImage
 
     from .models import Image, Piece, PieceStateImage
-    from .utils import calculate_subject_crop
+    from .utils import calculate_subject_crop, calculate_subject_crop_remote
 
     params = task.input_params or {}
     image_id = params.get("image_id")
@@ -150,8 +150,14 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     response = requests.get(download_url, timeout=30)
     response.raise_for_status()
 
-    logger.info(f"Image downloaded ({len(response.content)} bytes). Starting rembg.")
-    crop = calculate_subject_crop(response.content)
+    from django.conf import settings
+
+    if getattr(settings, "REMOTE_REMBG_URL", None):
+        logger.info("Using remote service for subject detection.")
+        crop = calculate_subject_crop_remote(response.content)
+    else:
+        logger.info("Using local rembg for subject detection.")
+        crop = calculate_subject_crop(response.content)
     if not crop:
         return {"status": "skipped", "reason": "No subject detected"}
 
