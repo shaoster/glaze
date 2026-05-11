@@ -125,8 +125,35 @@ jobs:
         run: |
           echo "" >> .bazelrc
           echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
-      - name: Run Coverage (Runs all tests)
-        run: bazel coverage --config=ci --combined_report=lcov //...
+      - name: Run Coverage (Runs affected tests on PR, all tests on main)
+        shell: bash
+        run: |
+          TARGETS="//..."
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "Calculating affected tests (comparing with origin/main)..."
+            git fetch origin main --depth=1
+            FILES=$(git diff --name-only origin/main...HEAD)
+            if [[ -n "$FILES" ]]; then
+              EXISTING=""
+              for f in $FILES; do [[ -f "$f" ]] && EXISTING="$EXISTING $f"; done
+              if [[ -n "$EXISTING" ]]; then
+                QUERY_TARGETS=$(bazel query "kind(test, rdeps(//..., set($EXISTING)))" 2>/dev/null)
+                if [[ -n "$QUERY_TARGETS" ]]; then
+                  TARGETS=$(echo "$QUERY_TARGETS" | tr '\n' ' ')
+                  echo "Testing $(echo $TARGETS | wc -w) affected target(s)."
+                else
+                  echo "No tests affected by these changes. Skipping execution."
+                  exit 0
+                fi
+              else
+                echo "No existing code changes detected. Skipping execution."
+                exit 0
+              fi
+            else
+              echo "No differences from main. Defaulting to //..."
+            fi
+          fi
+          bazel coverage --config=ci --combined_report=lcov $TARGETS
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
