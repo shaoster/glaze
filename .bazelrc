@@ -32,3 +32,7 @@ common:ci --remote_cache=grpcs://remote.buildbuddy.io
 common:ci --remote_cache_compression
 common:ci --remote_timeout=10m
 common:ci --nolegacy_important_outputs
+
+# Optimize for GitHub Actions (network-limited, CPU-limited)
+# 1. Use a local disk cache (backed by actions/cache) to bypass network latency for hits.
+build:ci --disk_cache=~/.cache/bazel-disk-cache
