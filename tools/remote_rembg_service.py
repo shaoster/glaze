@@ -70,3 +70,22 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=8080)
+
+# ── Modal Deployment ─────────────────────────────────────────────────────────
+# To deploy: modal deploy tools/remote_rembg_service.py
+
+try:
+    import modal
+
+    image = modal.Image.debian_slim().pip_install(
+        "fastapi", "uvicorn", "rembg", "onnxruntime", "pillow"
+    )
+    modal_app = modal.App("glaze-rembg", image=image)
+
+    @modal_app.function()
+    @modal.asgi_app()
+    def web():
+        return app
+
+except ImportError:
+    pass
