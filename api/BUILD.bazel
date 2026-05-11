@@ -130,6 +130,7 @@ py_test(
         "tests/test_piece_states.py",
         "tests/test_pieces_create.py",
         "tests/test_pieces_list.py",
+        "tests/test_piece_showcase_validation.py",
         "tests/test_sealed_state.py",
     ],
     args = [
@@ -140,6 +141,7 @@ py_test(
         "api/tests/test_patch_current_state.py",
         "api/tests/test_sealed_state.py",
         "api/tests/test_analysis.py",
+        "api/tests/test_piece_showcase_validation.py",
     ],
     data = _TEST_DATA,
     env = _TEST_ENV,
