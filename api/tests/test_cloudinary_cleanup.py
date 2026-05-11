@@ -5,6 +5,7 @@ from zipfile import ZipFile
 
 import cloudinary.exceptions
 import pytest
+from asgiref.sync import sync_to_async
 from django.contrib.auth.models import User
 
 from api.cloudinary_cleanup import (
@@ -24,6 +25,47 @@ async def _collect_async_bytes(chunks: AsyncIterable[bytes]) -> bytes:
     return b"".join([chunk async for chunk in chunks])
 
 
+@pytest.fixture
+def cloudinary_env(monkeypatch):
+    monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo")
+    monkeypatch.setenv("CLOUDINARY_API_KEY", "api-key")
+    monkeypatch.setenv("CLOUDINARY_API_SECRET", "api-secret")
+    monkeypatch.setenv("CLOUDINARY_UPLOAD_FOLDER", "glaze_dev")
+
+
+class FakeHttpxResponse:
+    def __init__(self, body: bytes):
+        self._body = body
+
+    def raise_for_status(self) -> None:
+        pass
+
+    async def aiter_bytes(self, chunk_size: int):
+        yield self._body
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        pass
+
+
+class FakeHttpxClient:
+    def __init__(self, bodies: dict[str, bytes]):
+        self._bodies = bodies
+        self.opened_urls: list[str] = []
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        pass
+
+    def stream(self, method: str, url: str):
+        self.opened_urls.append(url)
+        return FakeHttpxResponse(self._bodies.get(url, b""))
+
+
 @pytest.mark.django_db
 class TestCloudinaryCleanup:
     def test_requires_admin_user(self, client):
@@ -31,7 +73,7 @@ class TestCloudinaryCleanup:
 
         assert response.status_code == 403
 
-    def test_scan_returns_unused_assets_only(self, client, user, monkeypatch):
+    def test_scan_returns_unused_assets_only(self, client, user, monkeypatch, cloudinary_env):
         admin = User.objects.create(
             username="admin@example.com",
             email="admin@example.com",
@@ -44,10 +86,6 @@ class TestCloudinaryCleanup:
             cloud_name="demo",
             cloudinary_public_id="piece/used",
         )
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "api-key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "api-secret")
-        monkeypatch.setenv("CLOUDINARY_UPLOAD_FOLDER", "glaze_dev")
 
         def fake_resources(**kwargs):
             assert kwargs == {
@@ -206,7 +244,7 @@ class TestCloudinaryCleanup:
 
         assert image_paths == REFERENCED_BREAKDOWN_WORKFLOW_IMAGE_PATHS
 
-    def test_delete_rejects_referenced_assets(self, client, user, monkeypatch):
+    def test_delete_rejects_referenced_assets(self, client, user, monkeypatch, cloudinary_env):
         admin = User.objects.create(
             username="admin@example.com",
             email="admin@example.com",
@@ -219,9 +257,6 @@ class TestCloudinaryCleanup:
             cloud_name="demo",
             cloudinary_public_id="piece/used",
         )
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "api-key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "api-secret")
 
         response = client.delete(URL, {"public_ids": ["piece/used"]}, format="json")
 
@@ -230,16 +265,13 @@ class TestCloudinaryCleanup:
             "detail": "Cannot delete referenced Cloudinary assets: piece/used"
         }
 
-    def test_delete_unused_assets(self, client, monkeypatch):
+    def test_delete_unused_assets(self, client, monkeypatch, cloudinary_env):
         admin = User.objects.create(
             username="admin@example.com",
             email="admin@example.com",
             is_staff=True,
         )
         client.force_authenticate(user=admin)
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "api-key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "api-secret")
 
         def fake_delete_resources(public_ids, **kwargs):
             assert public_ids == ["piece/orphan"]
@@ -256,16 +288,13 @@ class TestCloudinaryCleanup:
         assert response.status_code == 200
         assert response.json() == {"deleted": {"piece/orphan": "deleted"}}
 
-    def test_delete_cloudinary_error_returns_503(self, client, monkeypatch):
+    def test_delete_cloudinary_error_returns_503(self, client, monkeypatch, cloudinary_env):
         admin = User.objects.create(
             username="admin@example.com",
             email="admin@example.com",
             is_staff=True,
         )
         client.force_authenticate(user=admin)
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "api-key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "api-secret")
 
         def fake_delete_resources(public_ids, **kwargs):
             raise cloudinary.exceptions.Error("boom")
@@ -281,7 +310,7 @@ class TestCloudinaryCleanup:
         assert response.json() == {"detail": "Unable to delete Cloudinary assets."}
 
     def test_archive_streams_all_unused_assets_with_cloudinary_paths(
-        self, client, user, monkeypatch
+        self, client, user, monkeypatch, cloudinary_env
     ):
         admin = User.objects.create(
             username="admin@example.com",
@@ -295,10 +324,6 @@ class TestCloudinaryCleanup:
             cloud_name="demo",
             cloudinary_public_id="glaze_dev/used",
         )
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "api-key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "api-secret")
-        monkeypatch.setenv("CLOUDINARY_UPLOAD_FOLDER", "glaze_dev")
 
         def fake_resources(**kwargs):
             return {
@@ -325,40 +350,13 @@ class TestCloudinaryCleanup:
             "https://example.com/orphan.heic": b"orphan-bytes",
             "https://example.com/another.webp": b"another-bytes",
         }
-
-        class FakeResponse:
-            def __init__(self, url: str):
-                self._body = bodies[url]
-
-            def raise_for_status(self) -> None:
-                pass
-
-            async def aiter_bytes(self, chunk_size: int):
-                yield self._body
-
-            async def __aenter__(self):
-                return self
-
-            async def __aexit__(self, *args):
-                pass
-
-        class FakeClient:
-            def __init__(self, timeout: int):
-                pass
-
-            async def __aenter__(self):
-                return self
-
-            async def __aexit__(self, *args):
-                pass
-
-            def stream(self, method: str, url: str):
-                return FakeResponse(url)
-
         monkeypatch.setattr(
             "api.cloudinary_cleanup.cloudinary.api.resources", fake_resources
         )
-        monkeypatch.setattr("api.cloudinary_cleanup.httpx.AsyncClient", FakeClient)
+        monkeypatch.setattr(
+            "api.cloudinary_cleanup.httpx.AsyncClient",
+            lambda timeout: FakeHttpxClient(bodies),
+        )
 
         response = client.get(ARCHIVE_URL + "?unreferenced_only=true")
 
@@ -376,37 +374,14 @@ class TestCloudinaryCleanup:
             assert archive.read("demo/glaze_dev/piece/orphan.heic") == b"orphan-bytes"
 
     def test_archive_iterator_fetches_assets_lazily(self, monkeypatch):
-        opened_urls: list[str] = []
-
-        class FakeResponse:
-            def __init__(self, url: str):
-                self._url = url
-
-            def raise_for_status(self) -> None:
-                pass
-
-            async def aiter_bytes(self, chunk_size: int):
-                yield f"bytes from {self._url}".encode()
-
-            async def __aenter__(self):
-                opened_urls.append(self._url)
-                return self
-
-            async def __aexit__(self, *args):
-                pass
-
-        class FakeClient:
-            def __init__(self, timeout: int):
-                pass
-
-            async def __aenter__(self):
-                return self
-
-            async def __aexit__(self, *args):
-                pass
-
-            def stream(self, method: str, url: str):
-                return FakeResponse(url)
+        bodies = {
+            "https://example.com/first.jpg": b"bytes from https://example.com/first.jpg",
+            "https://example.com/second.jpg": b"bytes from https://example.com/second.jpg",
+        }
+        fake_client = FakeHttpxClient(bodies)
+        monkeypatch.setattr(
+            "api.cloudinary_cleanup.httpx.AsyncClient", lambda timeout: fake_client
+        )
 
         assets = [
             CloudinaryCleanupAsset(
@@ -432,7 +407,6 @@ class TestCloudinaryCleanup:
                 referenced=False,
             ),
         ]
-        monkeypatch.setattr("api.cloudinary_cleanup.httpx.AsyncClient", FakeClient)
 
         async def first_archive_chunk() -> bytes:
             async for chunk in stream_cloudinary_cleanup_archive(assets):
@@ -442,4 +416,4 @@ class TestCloudinaryCleanup:
         first_chunk = asyncio.run(first_archive_chunk())
 
         assert first_chunk
-        assert opened_urls == ["https://example.com/first.jpg"]
+        assert fake_client.opened_urls == ["https://example.com/first.jpg"]

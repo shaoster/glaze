@@ -801,7 +801,7 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
     return Response({"deleted": deleted})
 
 
-@extend_schema(  # type: ignore[type-var]
+@extend_schema(
     parameters=[
         OpenApiParameter(
             name="unreferenced_only",
@@ -817,7 +817,7 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
 )
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
-async def admin_cloudinary_cleanup_archive(
+def admin_cloudinary_cleanup_archive(
     request: Request,
 ) -> StreamingHttpResponse | Response:
     from asgiref.sync import sync_to_async
@@ -830,7 +830,7 @@ async def admin_cloudinary_cleanup_archive(
     )
     try:
         # list_cloudinary_assets does synchronous network I/O; run in a thread.
-        assets = await sync_to_async(list_cloudinary_assets)()
+        assets = list_cloudinary_assets()
     except ValueError as exc:
         return Response(
             {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
