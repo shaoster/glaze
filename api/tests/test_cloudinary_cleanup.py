@@ -5,7 +5,6 @@ from zipfile import ZipFile
 
 import cloudinary.exceptions
 import pytest
-from asgiref.sync import sync_to_async
 from django.contrib.auth.models import User
 
 from api.cloudinary_cleanup import (
@@ -73,7 +72,9 @@ class TestCloudinaryCleanup:
 
         assert response.status_code == 403
 
-    def test_scan_returns_unused_assets_only(self, client, user, monkeypatch, cloudinary_env):
+    def test_scan_returns_unused_assets_only(
+        self, client, user, monkeypatch, cloudinary_env
+    ):
         admin = User.objects.create(
             username="admin@example.com",
             email="admin@example.com",
@@ -244,7 +245,9 @@ class TestCloudinaryCleanup:
 
         assert image_paths == REFERENCED_BREAKDOWN_WORKFLOW_IMAGE_PATHS
 
-    def test_delete_rejects_referenced_assets(self, client, user, monkeypatch, cloudinary_env):
+    def test_delete_rejects_referenced_assets(
+        self, client, user, monkeypatch, cloudinary_env
+    ):
         admin = User.objects.create(
             username="admin@example.com",
             email="admin@example.com",
@@ -288,7 +291,9 @@ class TestCloudinaryCleanup:
         assert response.status_code == 200
         assert response.json() == {"deleted": {"piece/orphan": "deleted"}}
 
-    def test_delete_cloudinary_error_returns_503(self, client, monkeypatch, cloudinary_env):
+    def test_delete_cloudinary_error_returns_503(
+        self, client, monkeypatch, cloudinary_env
+    ):
         admin = User.objects.create(
             username="admin@example.com",
             email="admin@example.com",
