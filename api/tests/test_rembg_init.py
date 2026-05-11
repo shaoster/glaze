@@ -91,3 +91,37 @@ class TestRembgInit:
         session = api.utils._get_rembg_session("u2net")
 
         assert session == "emergency_session"
+
+    def test_get_rembg_session_defaults_to_u2netp(self, monkeypatch):
+        """Verify the default model is u2netp."""
+        mock_new_session = MagicMock()
+        mock_new_session.return_value = "default_session"
+        monkeypatch.setattr("rembg.new_session", mock_new_session)
+        monkeypatch.setattr("rembg.sessions", MagicMock(), raising=False)
+
+        session = api.utils._get_rembg_session()
+        assert session == "default_session"
+        # Check that it was called with u2netp
+        mock_new_session.assert_called_once()
+        args, kwargs = mock_new_session.call_args
+        assert args[0] == "u2netp"
+
+    def test_calculate_subject_crop_uses_u2netp(self, monkeypatch):
+        """Verify calculate_subject_crop calls _get_rembg_session with u2netp."""
+        from PIL import Image
+
+        mock_get_session = MagicMock()
+        monkeypatch.setattr("api.utils._get_rembg_session", mock_get_session)
+
+        mock_remove = MagicMock()
+        # Return a dummy image with an alpha channel
+        dummy_output = Image.new("RGBA", (100, 100), (0, 0, 0, 0))
+        mock_remove.return_value = dummy_output
+        monkeypatch.setattr("rembg.remove", mock_remove)
+
+        # 1x1 white pixel PNG
+        image_bytes = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xdcD\xfe\xe7\x00\x00\x00\x00IEND\xaeB`\x82"
+
+        api.utils.calculate_subject_crop(image_bytes)
+
+        mock_get_session.assert_called_with("u2netp")
