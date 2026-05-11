@@ -410,7 +410,9 @@ gz_test() {
                     echo "Determining affected tests (comparing with $diff_base)..."
                     # Filter existing files to only those Bazel knows about to avoid query errors (exit code 7)
                     local ALL_SOURCES
+                    echo "DEBUG: Starting ALL_SOURCES query at $(date +%s)"
                     ALL_SOURCES=$(bazel query 'kind("source file", //...:* )' 2>/dev/null | sed 's|^//||; s|:|/|')
+                    echo "DEBUG: Finished ALL_SOURCES query at $(date +%s)"
                     local BAZEL_FILES
                     BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
                     if [[ -n "$BAZEL_FILES" ]]; then
@@ -508,7 +510,9 @@ gz_lint() {
                     echo "Determining affected lint targets (comparing with $diff_base)..."
                     # Filter existing files to only those Bazel knows about to avoid query errors (exit code 7)
                     local ALL_SOURCES
+                    echo "DEBUG: Starting ALL_SOURCES query at $(date +%s)"
                     ALL_SOURCES=$(bazel query 'kind("source file", //...:* )' 2>/dev/null | sed 's|^//||; s|:|/|')
+                    echo "DEBUG: Finished ALL_SOURCES query at $(date +%s)"
                     local BAZEL_FILES
                     BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
                     if [[ -n "$BAZEL_FILES" ]]; then
