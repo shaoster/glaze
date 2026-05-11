@@ -239,7 +239,16 @@ LOGGING = {
             "formatter": "console",
         },
     },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
     "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": True,
+        },
         "django.request": {
             "handlers": ["console"],
             "level": "ERROR",
@@ -259,6 +268,8 @@ if LOGTAIL_SOURCE_TOKEN:
         "class": "logtail.LogtailHandler",
         "source_token": LOGTAIL_SOURCE_TOKEN,
     }
+    LOGGING["root"]["handlers"].append("logtail")
+    LOGGING["loggers"]["django"]["handlers"].append("logtail")
     LOGGING["loggers"]["django.request"]["handlers"].append("logtail")
     LOGGING["loggers"]["api"]["handlers"].append("logtail")
 
