@@ -1,7 +1,7 @@
 import logging
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any, Generator
+from typing import Generator
 
 # Context variable to hold the current task ID for log correlation.
 # Using contextvars ensures thread-safety when running tasks in a ThreadPoolExecutor.
