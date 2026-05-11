@@ -1,0 +1,4 @@
+.cache/
+.config/
+node_modules/
+.git/
