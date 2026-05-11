@@ -140,7 +140,7 @@ jobs:
         shell: bash
         run: |
           source env.sh
-          gz_test //api:api_workflow_test //api:api_model_test //api:api_piece_test //api:api_auth_test //api:api_glaze_test //api:api_admin_test --coverage
+          gz_test //api:api_workflow_test //api:api_model_test //api:api_pieces_test //api:api_auth_test //api:api_glaze_test //api:api_admin_test --coverage
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
