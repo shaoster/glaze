@@ -104,6 +104,7 @@ py_test(
     name = "api_model_test",
     size = "medium",
     srcs = _CONFTEST + [
+        "tests/test_async_maintenance.py",
         "tests/test_async_tasks.py",
         "tests/test_global_entries.py",
         "tests/test_globals.py",
@@ -112,6 +113,7 @@ py_test(
         "tests/test_utils.py",
     ],
     args = [
+        "api/tests/test_async_maintenance.py",
         "api/tests/test_async_tasks.py",
         "api/tests/test_model_factory.py",
         "api/tests/test_globals.py",

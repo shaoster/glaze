@@ -9,7 +9,7 @@ from .models import AsyncTask
 logger = logging.getLogger(__name__)
 
 # Single shared executor for background tasks in development.
-_executor = ThreadPoolExecutor(max_workers=4)
+_executor = ThreadPoolExecutor(max_workers=2)
 
 TaskCallable = Callable[[AsyncTask], Any]
 
@@ -46,33 +46,42 @@ class InMemoryTaskInterface:
         transaction.on_commit(lambda: _executor.submit(self._run_task, task.id))
 
     def _run_task(self, task_id: Any) -> None:
-        # Re-fetch task to ensure we have the latest state in this thread.
-        try:
-            task = AsyncTask.objects.get(id=task_id)
-        except AsyncTask.DoesNotExist:
-            logger.error(f"Async task {task_id} not found for execution.")
-            return
+        from django.db import close_old_connections
 
-        task.status = AsyncTask.Status.RUNNING
-        task.save(update_fields=["status", "last_modified"])
-
-        task_fn = TaskRegistry.get(task.task_type)
-        if not task_fn:
-            task.status = AsyncTask.Status.FAILURE
-            task.error = f"Unknown task type: {task.task_type}"
-            task.save(update_fields=["status", "error", "last_modified"])
-            return
+        # Close any stale connections before starting
+        close_old_connections()
 
         try:
-            result = task_fn(task)
-            task.status = AsyncTask.Status.SUCCESS
-            task.result = result
-            task.save(update_fields=["status", "result", "last_modified"])
-        except Exception as e:
-            logger.exception(f"Error executing task {task.task_type} ({task.id})")
-            task.status = AsyncTask.Status.FAILURE
-            task.error = str(e)
-            task.save(update_fields=["status", "error", "last_modified"])
+            # Re-fetch task to ensure we have the latest state in this thread.
+            try:
+                task = AsyncTask.objects.get(id=task_id)
+            except AsyncTask.DoesNotExist:
+                logger.error(f"Async task {task_id} not found for execution.")
+                return
+
+            task.status = AsyncTask.Status.RUNNING
+            task.save(update_fields=["status", "last_modified"])
+
+            task_fn = TaskRegistry.get(task.task_type)
+            if not task_fn:
+                task.status = AsyncTask.Status.FAILURE
+                task.error = f"Unknown task type: {task.task_type}"
+                task.save(update_fields=["status", "error", "last_modified"])
+                return
+
+            try:
+                result = task_fn(task)
+                task.status = AsyncTask.Status.SUCCESS
+                task.result = result
+                task.save(update_fields=["status", "result", "last_modified"])
+            except Exception as e:
+                logger.exception(f"Error executing task {task.task_type} ({task.id})")
+                task.status = AsyncTask.Status.FAILURE
+                task.error = str(e)
+                task.save(update_fields=["status", "error", "last_modified"])
+        finally:
+            # Clean up connections so the thread pool doesn't leak them
+            close_old_connections()
 
 
 # Global interface instance.
@@ -166,3 +175,26 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
             }
 
     return {"status": "success", "crop": crop, "updated": updated}
+
+
+def fail_stuck_tasks(hours: int = 1) -> int:
+    """Find and fail tasks stuck in RUNNING or PENDING for too long."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from .models import AsyncTask
+
+    threshold = timezone.now() - timedelta(hours=hours)
+    stuck_tasks = AsyncTask.objects.filter(
+        status__in=[AsyncTask.Status.RUNNING, AsyncTask.Status.PENDING],
+        last_modified__lt=threshold,
+    )
+    count = stuck_tasks.count()
+    if count > 0:
+        stuck_tasks.update(
+            status=AsyncTask.Status.FAILURE,
+            error="Task timed out or was orphaned during a server restart.",
+            last_modified=timezone.now(),
+        )
+    return count
