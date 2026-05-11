@@ -1,17 +1,13 @@
 load("@rules_python//python:defs.bzl", "py_library")
 load("@pip//:requirements.bzl", "requirement")
 
-# Django project settings, URL conf, WSGI/ASGI entry points.
-# Tracked as a separate target from //api so that changes here (rare) are
-# distinguished from API-layer changes in Bazel's dependency graph.
-# api/* depends on this; nothing else should.
-
 py_library(
     name = "backend_lib",
     srcs = [
         "__init__.py",
         "asgi.py",
         "settings.py",
+        "test_settings.py",
         "urls.py",
         "wsgi.py",
     ],
@@ -46,6 +42,7 @@ filegroup(
         "__init__.py",
         "asgi.py",
         "settings.py",
+        "test_settings.py",
         "urls.py",
         "wsgi.py",
     ],

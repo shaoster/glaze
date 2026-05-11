@@ -1,7 +1,10 @@
 #!/bin/bash
-# Smoke test to verify that the API package is importable.
-# This script is meant to be run in a context where the project code is available
-# (e.g. within a test environment).
+# Smoke test to verify that the API package exists as a package.
+
+export PYTHONPATH=$PYTHONPATH:.
+
+# We can't import api.models without Django configuration, but we can verify the directory
+# is a package by checking for __init__.py and importing the package root itself.
 
 python3 -c "import api; print('Successfully imported api module')"
 if [ $? -ne 0 ]; then

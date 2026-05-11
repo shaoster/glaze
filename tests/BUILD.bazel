@@ -1,10 +1,6 @@
 load("@rules_python//python:defs.bzl", "py_test")
 load("@pip//:requirements.bzl", "requirement")
 
-# Validates workflow.yml against workflow.schema.yml — both structurally
-# (jsonschema) and semantically (referential integrity). Depends only on the
-# workflow files and the dev venv; intentionally isolated from api/ and backend/.
-
 py_test(
     name = "common_test",
     size = "small",
@@ -29,6 +25,12 @@ py_test(
 sh_test(
     name = "container_smoke_test",
     srcs = ["test_container_smoke.sh"],
-    data = ["//api:api_runtime_files"],
-    args = ["$(locations //api:api_runtime_files)"],
+    data = [
+        "//api:api_runtime_files",
+        "//backend:backend_runtime_files",
+    ],
+    args = [
+        "$(locations //api:api_runtime_files)",
+        "$(locations //backend:backend_runtime_files)",
+    ],
 )
