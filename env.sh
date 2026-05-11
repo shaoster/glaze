@@ -401,28 +401,30 @@ gz_test() {
         fi
 
         if git rev-parse --verify "$diff_base" &>/dev/null; then
-            local files
-            files=$(git diff --name-only "$diff_base...HEAD" 2>/dev/null)
-            if [[ -n "$files" ]]; then
-                # Filter to existing files only
-                local existing_files=()
-                for f in $files; do
-                    [[ -f "$f" ]] && existing_files+=("$f")
-                done
-
-                if [[ ${#existing_files[@]} -gt 0 ]]; then
+            local FILES
+            FILES=$(git diff --name-only "$diff_base...HEAD" 2>/dev/null)
+            if [[ -n "$FILES" ]]; then
+                local EXISTING=""
+                for f in $FILES; do [[ -f "$f" ]] && EXISTING="$EXISTING $f"; done
+                if [[ -n "$EXISTING" ]]; then
                     echo "Determining affected tests (comparing with $diff_base)..."
-                    # Use set() for faster query performance with many files
-                    local query="kind(test, rdeps(//..., set(${existing_files[*]})))"
-                    local affected_targets
-                    affected_targets=$(bazel query "$query" 2>/dev/null)
-                    if [[ -n "$affected_targets" ]]; then
-                        target=$(echo "$affected_targets" | tr '\n' ' ')
-                        local count
-                        count=$(echo "$target" | wc -w)
-                        echo "Testing $count affected target(s)."
+                    # Filter existing files to only those Bazel knows about to avoid query errors (exit code 7)
+                    local ALL_SOURCES
+                    ALL_SOURCES=$(bazel query 'kind("source file", //...)' 2>/dev/null | sed 's|^//||; s|:|/|')
+                    local BAZEL_FILES
+                    BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
+                    if [[ -n "$BAZEL_FILES" ]]; then
+                        local QUERY_TARGETS
+                        QUERY_TARGETS=$(bazel query "kind(test, rdeps(//..., set($BAZEL_FILES)))" 2>/dev/null)
+                        if [[ -n "$QUERY_TARGETS" ]]; then
+                            target=$(echo "$QUERY_TARGETS" | tr '\n' ' ')
+                            echo "Testing $(echo $target | wc -w) affected target(s)."
+                        else
+                            echo "No tests affected by these changes. Use 'gz_test --all' if you want to run everything."
+                            return 0
+                        fi
                     else
-                        echo "No tests affected by these changes. Use 'gz_test --all' if you want to run everything."
+                        echo "No Bazel-tracked code changes detected. Use 'gz_test --all' if you want to run everything."
                         return 0
                     fi
                 else
@@ -497,28 +499,30 @@ gz_lint() {
         fi
 
         if git rev-parse --verify "$diff_base" &>/dev/null; then
-            local files
-            files=$(git diff --name-only "$diff_base...HEAD" 2>/dev/null)
-            if [[ -n "$files" ]]; then
-                # Filter to existing files only
-                local existing_files=()
-                for f in $files; do
-                    [[ -f "$f" ]] && existing_files+=("$f")
-                done
-
-                if [[ ${#existing_files[@]} -gt 0 ]]; then
+            local FILES
+            FILES=$(git diff --name-only "$diff_base...HEAD" 2>/dev/null)
+            if [[ -n "$FILES" ]]; then
+                local EXISTING=""
+                for f in $FILES; do [[ -f "$f" ]] && EXISTING="$EXISTING $f"; done
+                if [[ -n "$EXISTING" ]]; then
                     echo "Determining affected lint targets (comparing with $diff_base)..."
-                    # For linting, we want any target that depends on these files
-                    local query="rdeps(//..., set(${existing_files[*]}))"
-                    local affected_targets
-                    affected_targets=$(bazel query "$query" 2>/dev/null)
-                    if [[ -n "$affected_targets" ]]; then
-                        target=$(echo "$affected_targets" | tr '\n' ' ')
-                        local count
-                        count=$(echo "$target" | wc -w)
-                        echo "Linting $count affected target(s)."
+                    # Filter existing files to only those Bazel knows about to avoid query errors (exit code 7)
+                    local ALL_SOURCES
+                    ALL_SOURCES=$(bazel query 'kind("source file", //...)' 2>/dev/null | sed 's|^//||; s|:|/|')
+                    local BAZEL_FILES
+                    BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
+                    if [[ -n "$BAZEL_FILES" ]]; then
+                        local QUERY_TARGETS
+                        QUERY_TARGETS=$(bazel query "rdeps(//..., set($BAZEL_FILES))" 2>/dev/null)
+                        if [[ -n "$QUERY_TARGETS" ]]; then
+                            target=$(echo "$QUERY_TARGETS" | tr '\n' ' ')
+                            echo "Linting $(echo $target | wc -w) affected target(s)."
+                        else
+                            echo "No targets affected by these changes. Use 'gz_lint --all' if you want to lint everything."
+                            return 0
+                        fi
                     else
-                        echo "No targets affected by these changes. Use 'gz_lint --all' if you want to lint everything."
+                        echo "No Bazel-tracked code changes detected. Use 'gz_lint --all' if you want to lint everything."
                         return 0
                     fi
                 else
