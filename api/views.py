@@ -798,7 +798,7 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
     return Response({"deleted": deleted})
 
 
-@extend_schema(
+@extend_schema(  # type: ignore[type-var]
     parameters=[
         OpenApiParameter(
             name="unreferenced_only",
