@@ -25,3 +25,10 @@ py_test(
     ],
     env = {"DJANGO_SETTINGS_MODULE": "backend.test_settings"},
 )
+
+sh_test(
+    name = "container_smoke_test",
+    srcs = ["test_container_smoke.sh"],
+    data = ["//api:api_runtime_files"],
+    args = ["$(locations //api:api_runtime_files)"],
+)
