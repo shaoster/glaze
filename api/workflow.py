@@ -4,9 +4,11 @@ Loads workflow.yml once at import time and exposes typed constants and
 helper functions.  Has no dependency on Django ORM models.
 """
 
+from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+import jsonschema
 import yaml
 from django.apps import apps
 from django.db import models as django_models
@@ -390,16 +392,29 @@ def get_state_global_ref_map() -> dict[str, list[str]]:
     return result
 
 
-def _resolve_field_def(field_def: dict) -> dict:
-    """Recursively resolve a DSL field_def to its effective JSON Schema property dict.
+def _make_hashable(obj: Any) -> Any:
+    """Recursively convert lists/dicts to tuples/sorted-tuples for hashing."""
+    if isinstance(obj, dict):
+        return tuple(sorted((k, _make_hashable(v)) for k, v in obj.items()))
+    if isinstance(obj, list):
+        return tuple(_make_hashable(v) for v in obj)
+    return obj
 
-    Inline fields map directly; refs are followed transitively until an inline
-    field is reached.  Only `type` and `enum` are carried into the JSON Schema —
-    DSL-only keys like `description`, `required`, and `can_create` are not.
 
-    The `image` DSL type is stored as a URL string; it resolves to `string` in
-    JSON Schema so validation treats it as a plain string value.
-    """
+def _unhashable(obj: Any) -> Any:
+    """Recursively convert tuples back to lists/dicts."""
+    if isinstance(obj, tuple):
+        if all(isinstance(v, tuple) and len(v) == 2 for v in obj):
+            return {k: _unhashable(v) for k, v in obj}
+        return [_unhashable(v) for v in obj]
+    return obj
+
+
+@lru_cache(maxsize=None)
+def _resolve_field_def_cached(field_def_hashable: Any) -> dict:
+    """Internal cached helper for _resolve_field_def."""
+    field_def = _unhashable(field_def_hashable)
+
     if "type" in field_def:
         json_type = field_def["type"]
         if json_type == "image":
@@ -456,12 +471,18 @@ def _resolve_field_def(field_def: dict) -> dict:
         target = _STATE_MAP[state_id]["fields"][field_name]
 
     # Inherit display_as from the target if not locally overridden.
-    resolved = _resolve_field_def(target)
+    resolved = _resolve_field_def_cached(_make_hashable(target))
     if "display_as" in field_def:
         resolved["display_as"] = field_def["display_as"]
     return resolved
 
 
+def _resolve_field_def(field_def: dict) -> dict:
+    """Resolve a DSL field_def to its JSON Schema property dict."""
+    return _resolve_field_def_cached(_make_hashable(field_def))
+
+
+@lru_cache(maxsize=None)
 def build_custom_fields_schema(state_id: str) -> dict:
     """Return a JSON Schema that validates the inline_fields blob for a given state.
 
@@ -511,3 +532,32 @@ def build_custom_fields_schema(state_id: str) -> dict:
     if required:
         schema["required"] = required
     return schema
+
+
+@lru_cache(maxsize=None)
+def _get_validator(state_id: str):
+    """Return a pre-compiled JSON Schema validator for the given state."""
+    schema = build_custom_fields_schema(state_id)
+    return jsonschema.validators.validator_for(schema)(schema)
+
+
+def validate_custom_fields(state_id: str, custom_fields: dict) -> None:
+    """Validate custom_fields against the workflow DSL for state_id.
+
+    Uses a cached, pre-compiled validator to avoid repetitive DSL parsing
+    and schema compilation overhead.
+    """
+    validator = _get_validator(state_id)
+    try:
+        validator.validate(custom_fields)
+    except jsonschema.ValidationError as exc:
+        raise ValueError(
+            f"custom_fields validation failed for state '{state_id}': {exc.message}"
+        ) from exc
+
+
+def clear_workflow_caches():
+    """Clear all workflow-related lru_caches. Used by tests when mocking _workflow."""
+    _resolve_field_def_cached.cache_clear()
+    build_custom_fields_schema.cache_clear()
+    _get_validator.cache_clear()

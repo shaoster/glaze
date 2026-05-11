@@ -42,6 +42,7 @@ from .serializer_registry import (
     _GLOBAL_ENTRY_SERIALIZERS,  # auto-generated in _register_globals(); hand-written serializers overwrite
 )
 from .serializers import (
+    AsyncTaskSerializer,
     AuthUserSerializer,
     GlazeCombinationImageEntrySerializer,
     GoogleAuthSerializer,
@@ -54,7 +55,9 @@ from .serializers import (
     PieceSummarySerializer,
     PieceUpdateSerializer,
     RegisterSerializer,
+    TaskSubmissionSerializer,
 )
+from .tasks import get_task_interface
 from .utils import bootstrap_dev_user
 from .workflow import (
     get_glaze_image_qualifying_states,
@@ -1197,10 +1200,6 @@ def admin_manual_square_crop_import(request: Request) -> Response:
     except ValueError as exc:
         return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(result)
-
-
-from .serializers import AsyncTaskSerializer, TaskSubmissionSerializer
-from .tasks import get_task_interface
 
 
 @extend_schema(

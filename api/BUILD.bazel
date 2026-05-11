@@ -69,7 +69,11 @@ _TEST_DATA = [
     ":migrations",
 ]
 
-_TEST_ENV = {"DJANGO_SETTINGS_MODULE": "backend.test_settings"}
+_TEST_ENV = {
+    "DJANGO_SETTINGS_MODULE": "backend.test_settings",
+    "GLAZE_DEV_BOOTSTRAP": "0",
+    "GLAZE_BOOTSTRAP_COUNT": "5",
+}
 
 _CONFTEST = [
     "tests/__init__.py",
