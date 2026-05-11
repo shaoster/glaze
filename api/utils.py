@@ -4,9 +4,10 @@ This module holds business-logic helpers that are shared across multiple parts
 of the api app but do not belong in workflow.py (which is reserved for
 workflow-state-machine logic derived from workflow.yml).
 """
-from typing import Any
 
 import logging
+from typing import Any
+
 import requests
 from cloudinary import CloudinaryImage
 from django.apps import apps

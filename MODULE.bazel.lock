@@ -941,7 +941,7 @@
           "@@rules_python~//tools/publish/requirements_linux.txt": "d576e0d8542df61396a9b38deeaa183c24135ed5e8e73bb9622f298f2671811e",
           "@@rules_fuzzing~//fuzzing/requirements.txt": "ab04664be026b632a0d2a2446c4f65982b7654f5b6851d2f9d399a19b7242a5b",
           "@@rules_python~//tools/publish/requirements_windows.txt": "d18538a3982beab378fd5687f4db33162ee1ece69801f9a451661b1b64286b76",
-          "@@//requirements.lock": "890e778cdd043babc8bd93cc1763dc605dadcb8b224711b2aed413b9b2cef956",
+          "@@//requirements.lock": "bad64bbbbe681aa3337c5cdd016e17f4ccbae29060f434513235c1b9f48ee5a1",
           "@@protobuf~//python/requirements.txt": "983be60d3cec4b319dcab6d48aeb3f5b2f7c3350f26b3a9e97486c37967c73c5",
           "@@rules_python~//tools/publish/requirements_darwin.txt": "095d4a4f3d639dce831cd493367631cd51b53665292ab20194bac2c0c6458fa8"
         },
@@ -951,6 +951,16 @@
           "RULES_PYTHON_REPO_DEBUG_VERBOSITY": null
         },
         "generatedRepoSpecs": {
+          "pip_312_aiofiles": {
+            "bzlFile": "@@rules_python~//python/private/pypi:whl_library.bzl",
+            "ruleClassName": "whl_library",
+            "attributes": {
+              "dep_template": "@pip//{name}:{target}",
+              "python_interpreter_target": "@@rules_python~~python~python_3_12_host//:python",
+              "repo": "pip_312",
+              "requirement": "aiofiles==25.1.0 --hash=sha256:a8d728f0a29de45dc521f18f07297428d56992a742f0cd2701ba86e44d23d5b2 --hash=sha256:abe311e527c862958650f9438e859c1fa7568a141b22abcd015e120e86a85695"
+            }
+          },
           "pip_312_anyio": {
             "bzlFile": "@@rules_python~//python/private/pypi:whl_library.bzl",
             "ruleClassName": "whl_library",
@@ -4429,6 +4439,7 @@
               "repo_name": "pip",
               "extra_hub_aliases": {},
               "whl_map": {
+                "aiofiles": "{\"pip_312_aiofiles\":[{\"version\":\"3.12\"}]}",
                 "anyio": "{\"pip_312_anyio\":[{\"version\":\"3.12\"}]}",
                 "asgiref": "{\"pip_312_asgiref\":[{\"version\":\"3.12\"}]}",
                 "attrs": "{\"pip_312_attrs\":[{\"version\":\"3.12\"}]}",
@@ -4518,6 +4529,7 @@
                 "whitenoise": "{\"pip_312_whitenoise\":[{\"version\":\"3.12\"}]}"
               },
               "packages": [
+                "aiofiles",
                 "anyio",
                 "asgiref",
                 "attrs",
