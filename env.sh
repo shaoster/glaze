@@ -413,11 +413,8 @@ gz_test() {
                 for f in $FILES; do [[ -f "$f" ]] && EXISTING="$EXISTING $f"; done
                 if [[ -n "$EXISTING" ]]; then
                     echo "Determining affected tests (comparing with $diff_base)..."
-                    # Filter existing files to only those Bazel knows about to avoid query errors (exit code 7)
-                    local ALL_SOURCES
-                    ALL_SOURCES=$(_gz_get_all_sources)
                     local BAZEL_FILES
-                    BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
+                    BAZEL_FILES=$(_gz_filter_known_targets "$EXISTING")
                     if [[ -n "$BAZEL_FILES" ]]; then
                         target=$(_gz_get_affected_targets 'kind(test, //...)' "$BAZEL_FILES")
                         if [[ -n "$target" ]]; then
@@ -872,22 +869,24 @@ complete -F _gz_cd_complete gz_cd
 
 echo "Glaze ready — run 'gz_help' for shortcuts, 'gz_setup' for first-time install."
 _gz_get_all_sources() {
-    local profile="$PWD/bazel_query_profile.json"
-    echo "DEBUG: Starting ALL_SOURCES query at $(date +%s)"
-    local sources
-    sources=$(bazel query --profile="$profile" --output=label 'kind("source file", //...:* )' 2> >(tee -a /dev/stderr) | sed 's|^//||; s|:|/|')
-    echo "DEBUG: Finished ALL_SOURCES query at $(date +%s). Sources found: $(echo "$sources" | wc -l)"
-    echo "$sources"
+    # DEPRECATED: This is too slow. Use _gz_filter_known_targets instead.
+    git ls-files
+}
+
+_gz_filter_known_targets() {
+    local files="$1"
+    # Convert file paths to Bazel labels and check if they exist
+    local labels=""
+    for f in $files; do
+        labels="$labels //$f"
+    done
+    bazel query "set($labels)" 2>/dev/null | sed 's|^//||; s|:|/|'
 }
 
 _gz_get_affected_targets() {
     local filter_query="$1"
     local bazel_files="$2"
     
-    # 1. Get all potential targets matching the filter
-    local all_candidates
-    all_candidates=$(bazel query "$filter_query" 2>/dev/null)
-    
-    # 2. Find targets that depend on the changed files, intersected with our candidates
-    bazel query "set($all_candidates) intersect rdeps(//..., set($bazel_files))" 2>/dev/null
+    # Find targets that depend on the changed files, restricted by the filter
+    bazel query "rdeps(//..., set($bazel_files)) intersect $filter_query" 2>/dev/null
 }

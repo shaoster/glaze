@@ -5,6 +5,13 @@ build --workspace_status_command=tools/workspace_status.sh
 common --spawn_strategy=local
 build --incompatible_enable_cc_toolchain_resolution
 
+# Performance and Analysis
+startup --host_jvm_args=-Xmx8g
+build --nolegacy_external_runfiles
+build --loading_phase_threads=auto
+build --experimental_action_cache_store_output_metadata
+build --track_incremental_state
+
 # Coverage exclude tags
 # We don't care about gcov. We don't have any C++ code.
 coverage --test_env=IGNORE_COVERAGE_COLLECTION_FAILURES=1
@@ -35,4 +42,9 @@ common:ci --nolegacy_important_outputs
 
 # Optimize for GitHub Actions (network-limited, CPU-limited)
 # 1. Use a local disk cache (backed by actions/cache) to bypass network latency for hits.
+# 2. Disable incremental state tracking since CI servers are cold-started and never reused.
+# 3. Increase upload throughput for remote cache.
 build:ci --disk_cache=~/.cache/bazel-disk-cache
+build:ci --notrack_incremental_state
+build:ci --nokeep_state_after_build
+common:ci --remote_upload_local_results=true

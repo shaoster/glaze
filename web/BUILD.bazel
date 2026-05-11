@@ -183,6 +183,37 @@ js_library(
 # changes correctly. web_lib (used for build) remains the authoritative
 # all-sources target; these are testing-only slices of the same source tree.
 
+# Consolidated component library to reduce analysis overhead.
+js_library(
+    name = "web_components_lib",
+    srcs = glob(
+        ["src/components/**/*"],
+        exclude = ["src/components/__tests__/**/*"],
+    ),
+    visibility = ["//visibility:public"],
+    deps = [
+        ":generated_types",
+        ":node_modules",
+        ":util_lib",
+        "//:workflow_js",
+    ],
+)
+
+# Consolidated pages library.
+js_library(
+    name = "web_pages_lib",
+    srcs = glob(
+        ["src/pages/**/*"],
+        exclude = ["src/pages/__tests__/**/*"],
+    ),
+    visibility = ["//visibility:public"],
+    deps = [
+        ":node_modules",
+        ":util_lib",
+        ":web_components_lib",
+    ],
+)
+
 # Config files needed by every test target (tsconfig, package.json, etc.)
 js_library(
     name = "web_test_configs",
@@ -210,593 +241,29 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-# Leaf components: no local component deps.
-js_library(
-    name = "primitive_src",
-    srcs = [
-        "src/components/ErrorBoundary.tsx",
-        "src/components/StateChip.tsx",
-        "src/components/TagChip.tsx",
-        "src/components/tagPalette.ts",
-        "src/components/thumbnailConstants.ts",
-        "src/util/useAsync.ts",
-    ],
-    deps = [
-        ":generated_types",
-        ":node_modules",
-        ":util_lib",
-    ],
-)
-
-js_library(
-    name = "cloudinary_image_src",
-    srcs = ["src/components/CloudinaryImage.tsx"],
-    deps = [
-        ":generated_types",
-        ":node_modules",
-    ],
-)
-
-js_library(
-    name = "image_lightbox_src",
-    srcs = ["src/components/ImageLightbox.tsx"],
-    deps = [
-        ":cloudinary_image_src",
-        ":node_modules",
-    ],
-)
-
-js_library(
-    name = "autosave_src",
-    srcs = [
-        "src/components/AutosaveStatus.tsx",
-        "src/components/PieceDetailSaveStatusContext.tsx",
-        "src/components/usePieceDetailSaveStatus.ts",
-        "src/components/useAutosave.ts",
-    ],
-    deps = [
-        ":node_modules",
-    ],
-)
-
-# Tag components: TagAutocomplete and TagChipList depend on TagChip; CreateTagDialog depends on tagPalette.
-js_library(
-    name = "tag_src",
-    srcs = [
-        "src/components/CreateTagDialog.tsx",
-        "src/components/TagAutocomplete.tsx",
-        "src/components/TagChipList.tsx",
-    ],
-    deps = [
-        ":generated_types",
-        ":node_modules",
-        ":primitive_src",
-        ":util_lib",
-    ],
-)
-
-# Picker components: GlobalEntryDialog provides the dialog flow; GlobalEntryField
-# is the chip + button wrapper used by forms.
-js_library(
-    name = "global_picker_src",
-    srcs = [
-        "src/components/GlobalEntryDialog.tsx",
-        "src/components/GlobalEntryField.tsx",
-    ],
-    deps = [
-        ":autosave_src",
-        ":cloudinary_image_src",
-        ":generated_types",
-        ":node_modules",
-        ":primitive_src",
-        ":util_lib",
-    ],
-)
-
-js_library(
-    name = "glaze_gallery_src",
-    srcs = ["src/components/GlazeCombinationGallery.tsx"],
-    deps = [
-        ":cloudinary_image_src",
-        ":generated_types",
-        ":image_lightbox_src",
-        ":node_modules",
-        ":primitive_src",
-        ":util_lib",
-    ],
-)
-
-js_library(
-    name = "new_piece_dialog_src",
-    srcs = ["src/components/NewPieceDialog.tsx"],
-    deps = [
-        ":generated_types",
-        ":global_picker_src",
-        ":node_modules",
-        ":primitive_src",
-        ":util_lib",
-    ],
-)
-
-js_library(
-    name = "piece_list_src",
-    srcs = ["src/components/PieceList.tsx"],
-    deps = [
-        ":cloudinary_image_src",
-        ":generated_types",
-        ":node_modules",
-        ":primitive_src",
-        ":tag_src",
-        ":util_lib",
-    ],
-)
-
-js_library(
-    name = "piece_list_page_src",
-    srcs = ["src/pages/PieceListPage.tsx"],
-    deps = [
-        ":new_piece_dialog_src",
-        ":node_modules",
-        ":piece_list_src",
-        ":util_lib",
-    ],
-)
-
-js_library(
-    name = "workflow_state_src",
-    srcs = [
-        "src/components/WorkflowState.tsx",
-        "src/components/workflowStateDraft.ts",
-    ],
-    deps = [
-        ":autosave_src",
-        ":cloudinary_image_src",
-        ":generated_types",
-        ":global_picker_src",
-        ":image_lightbox_src",
-        ":node_modules",
-        ":util_lib",
-    ],
-)
-
-js_library(
-    name = "piece_photo_gallery_src",
-    srcs = [
-        "src/components/DeletePiecePhotoDialog.tsx",
-        "src/components/PiecePhotoGalleryGrid.tsx",
-        "src/components/PiecePhotoGallery.tsx",
-    ],
-    deps = [
-        ":cloudinary_image_src",
-        ":generated_types",
-        ":image_lightbox_src",
-        ":node_modules",
-        ":util_lib",
-    ],
-)
-
-js_library(
-    name = "tag_manager_src",
-    srcs = ["src/components/TagManager.tsx"],
-    deps = [
-        ":autosave_src",
-        ":generated_types",
-        ":node_modules",
-        ":tag_src",
-        ":util_lib",
-    ],
-)
-
-js_library(
-    name = "state_transition_src",
-    srcs = ["src/components/StateTransition.tsx"],
-    deps = [
-        ":node_modules",
-        ":primitive_src",
-        ":util_lib",
-    ],
-)
-
-js_library(
-    name = "piece_history_src",
-    srcs = ["src/components/PieceHistory.tsx"],
-    deps = [
-        ":cloudinary_image_src",
-        ":generated_types",
-        ":image_lightbox_src",
-        ":node_modules",
-        ":util_lib",
-    ],
-)
-
-js_library(
-    name = "piece_share_controls_src",
-    srcs = ["src/components/PieceShareControls.tsx"],
-    deps = [
-        ":generated_types",
-        ":node_modules",
-        ":util_lib",
-    ],
-)
-
-js_library(
-    name = "process_summary_src",
-    srcs = ["src/components/ProcessSummary.tsx"],
-    deps = [
-        ":node_modules",
-        ":util_lib",
-    ],
-)
-
-js_library(
-    name = "public_piece_shell_src",
-    srcs = ["src/components/PublicPieceShell.tsx"],
-    deps = [
-        ":cloudinary_image_src",
-        ":node_modules",
-        ":primitive_src",
-        ":process_summary_src",
-    ],
-)
-
-js_library(
-    name = "piece_detail_src",
-    srcs = [
-        "src/components/NavigationBlocker.tsx",
-        "src/components/PieceDetail.tsx",
-    ],
-    deps = [
-        ":autosave_src",
-        ":cloudinary_image_src",
-        ":generated_types",
-        ":node_modules",
-        ":piece_history_src",
-        ":piece_photo_gallery_src",
-        ":piece_share_controls_src",
-        ":primitive_src",
-        ":process_summary_src",
-        ":state_transition_src",
-        ":tag_manager_src",
-        ":util_lib",
-        ":workflow_state_src",
-    ],
-)
-
-js_library(
-    name = "piece_detail_page_src",
-    srcs = ["src/pages/PieceDetailPage.tsx"],
-    deps = [
-        ":piece_detail_src",
-    ],
-)
-
-js_library(
-    name = "cloudinary_cleanup_page_src",
-    srcs = ["src/pages/CloudinaryCleanupPage.tsx"],
-    deps = [
-        ":node_modules",
-        ":util_lib",
-    ],
-)
-
-
-# ocrDetection.ts is the pure-logic module shared by GlazeImportToolPage and its unit tests.
-js_library(
-    name = "ocr_detection_src",
-    srcs = ["src/pages/ocrDetection.ts"],
-    deps = [":node_modules"],
-)
-
-# GlazeImportToolPage depends on the extracted glaze-import modules plus
-# ocrDetection shared logic.
-js_library(
-    name = "glaze_import_src",
-    srcs = [
-        "src/pages/GlazeImportToolPage.tsx",
-        "src/pages/glazeImportTool/GlazeImportCropStage.tsx",
-        "src/pages/glazeImportTool/GlazeImportImportStage.tsx",
-        "src/pages/glazeImportTool/GlazeImportOcrStage.tsx",
-        "src/pages/glazeImportTool/GlazeImportProgressList.tsx",
-        "src/pages/glazeImportTool/GlazeImportRecordList.tsx",
-        "src/pages/glazeImportTool/GlazeImportReconcileStage.tsx",
-        "src/pages/glazeImportTool/GlazeImportReviewStage.tsx",
-        "src/pages/glazeImportTool/GlazeImportUploadStage.tsx",
-        "src/pages/glazeImportTool/glazeImportToolGeometry.ts",
-        "src/pages/glazeImportTool/glazeImportToolOcr.ts",
-        "src/pages/glazeImportTool/glazeImportToolProcessing.ts",
-        "src/pages/glazeImportTool/glazeImportToolTypes.ts",
-    ],
-    deps = [
-        ":generated_types",
-        ":node_modules",
-        ":ocr_detection_src",
-        ":util_lib",
-    ],
-)
 
 # ── Granular web test targets ─────────────────────────────────────────────────
 # Each target runs a focused subset of tests and depends only on the components
 # it exercises.  A change to an isolated component re-runs only the relevant
 # target(s) rather than the full suite.
 
+# Consolidated test targets.
 vitest_test(
-    name = "web_primitive_test",
-    srcs = [
-        "src/components/__tests__/ErrorBoundary.test.tsx",
-        "src/components/__tests__/StateChip.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":primitive_src",
-    ],
+    name = "web_components_test",
+    srcs = glob(["src/components/__tests__/*.test.tsx"]),
+    deps = [":web_components_lib"],
 )
 
 vitest_test(
-    name = "web_cloudinary_image_test",
-    srcs = [
-        "src/components/__tests__/CloudinaryImage.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":cloudinary_image_src",
-    ],
+    name = "web_pages_test",
+    srcs = glob(["src/pages/__tests__/*.test.tsx", "src/pages/__tests__/*.test.ts"]),
+    deps = [":web_pages_lib"],
 )
 
 vitest_test(
-    name = "web_image_lightbox_test",
-    srcs = [
-        "src/components/__tests__/ImageLightbox.test.tsx",
-        "src/components/__tests__/CloudinaryImage.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":cloudinary_image_src",
-        ":image_lightbox_src",
-    ],
-)
-
-vitest_test(
-    name = "web_tag_test",
-    srcs = [
-        "src/components/__tests__/TagComponents.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":tag_src",
-    ],
-)
-
-vitest_test(
-    name = "web_picker_test",
-    srcs = [
-        "src/components/__tests__/GlobalEntryDialog.test.tsx",
-        "src/components/__tests__/GlobalEntryField.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":global_picker_src",
-    ],
-)
-
-vitest_test(
-    name = "web_glaze_gallery_test",
-    srcs = [
-        "src/components/__tests__/GlazeCombinationGallery.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":glaze_gallery_src",
-    ],
-)
-
-vitest_test(
-    name = "web_new_piece_dialog_test",
-    srcs = [
-        "src/components/__tests__/NewPieceDialog.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":new_piece_dialog_src",
-    ],
-)
-
-vitest_test(
-    name = "web_piece_list_test",
-    srcs = [
-        "src/components/__tests__/PieceList.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":piece_list_src",
-    ],
-)
-
-vitest_test(
-    name = "web_workflow_state_test",
-    srcs = [
-        "src/components/__tests__/WorkflowState.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":workflow_state_src",
-    ],
-)
-
-vitest_test(
-    name = "web_piece_photo_gallery_test",
-    srcs = [
-        "src/components/__tests__/DeletePiecePhotoDialog.test.tsx",
-        "src/components/__tests__/PiecePhotoGallery.test.tsx",
-        "src/components/__tests__/PiecePhotoGalleryGrid.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":piece_photo_gallery_src",
-    ],
-)
-
-vitest_test(
-    name = "web_tag_manager_test",
-    srcs = [
-        "src/components/__tests__/TagManager.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":tag_manager_src",
-    ],
-)
-
-vitest_test(
-    name = "web_state_transition_test",
-    srcs = [
-        "src/components/__tests__/StateTransition.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":state_transition_src",
-    ],
-)
-
-vitest_test(
-    name = "web_piece_history_test",
-    srcs = [
-        "src/components/__tests__/PieceHistory.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":piece_history_src",
-    ],
-)
-
-vitest_test(
-    name = "web_piece_share_controls_test",
-    srcs = [
-        "src/components/__tests__/PieceShareControls.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":piece_share_controls_src",
-    ],
-)
-
-vitest_test(
-    name = "web_workflow_summary_test",
-    srcs = [
-        "src/components/__tests__/ProcessSummary.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":piece_detail_src",
-    ],
-)
-
-vitest_test(
-    name = "web_public_piece_shell_test",
-    srcs = [
-        "src/components/__tests__/PublicPieceShell.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":public_piece_shell_src",
-    ],
-)
-
-vitest_test(
-    name = "web_piece_detail_test",
-    srcs = [
-        "src/components/__tests__/PieceDetail.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":piece_detail_src",
-    ],
-)
-
-vitest_test(
-    name = "web_piece_detail_page_test",
-    srcs = [
-        "src/pages/__tests__/PieceDetailPage.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":piece_detail_page_src",
-    ],
-)
-
-vitest_test(
-    name = "web_piece_list_page_test",
-    srcs = [
-        "src/pages/__tests__/PieceListPage.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":piece_list_page_src",
-    ],
-)
-
-vitest_test(
-    name = "web_cloudinary_cleanup_test",
-    srcs = [
-        "src/pages/__tests__/CloudinaryCleanupPage.test.tsx",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":cloudinary_cleanup_page_src",
-    ],
-)
-
-vitest_test(
-    name = "web_glaze_import_test",
-    srcs = [
-        "src/pages/__tests__/GlazeImportCropStage.test.tsx",
-        "src/pages/__tests__/GlazeImportImportStage.test.tsx",
-        "src/pages/__tests__/GlazeImportOcrStage.test.tsx",
-        "src/pages/__tests__/GlazeImportReconcileStage.test.tsx",
-        "src/pages/__tests__/GlazeImportReviewStage.test.tsx",
-        "src/pages/__tests__/GlazeImportToolPage.test.tsx",
-        "src/pages/__tests__/GlazeImportUploadStage.test.tsx",
-        "src/pages/__tests__/glazeImportToolOcr.test.ts",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":glaze_import_src",
-    ],
-)
-
-vitest_test(
-    name = "web_ocr_detection_test",
-    srcs = [
-        "src/pages/__tests__/ocrDetection.test.ts",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        "public/test-images/test-tile-blank-label.png",
-        "public/test-images/test-tile-label.png",
-        "public/test-images/test-tile-no-label.png",
-        ":ocr_detection_src",
-    ],
-)
-
-vitest_test(
-    name = "workflow_test",
-    srcs = [
-        "src/util/workflow.test.ts",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":util_lib",
-    ],
-)
-
-vitest_test(
-    name = "web_api_test",
-    srcs = [
-        "src/util/__tests__/api.test.ts",
-    ],
-    tags = ["ibazel_notify_changes"],
-    deps = [
-        ":util_lib",
-    ],
+    name = "web_util_test",
+    srcs = glob(["src/util/__tests__/*.test.ts", "src/util/*.test.ts"]),
+    deps = [":util_lib"],
 )
 
 vitest_test(
@@ -837,31 +304,9 @@ vitest_test(
 test_suite(
     name = "web_test",
     tests = [
-        ":web_api_test",
-        ":web_app_test",
-        ":web_cloudinary_cleanup_test",
-        ":web_format_test",
-        ":web_glaze_gallery_test",
-        ":web_glaze_import_test",
-        ":web_image_lightbox_test",
-        ":web_new_piece_dialog_test",
-        ":web_normalize_workflow_fields_test",
-        ":web_ocr_detection_test",
-        ":web_picker_test",
-        ":web_piece_detail_page_test",
-        ":web_piece_detail_test",
-        ":web_piece_history_test",
-        ":web_piece_list_page_test",
-        ":web_piece_list_test",
-        ":web_piece_share_controls_test",
-        ":web_primitive_test",
-        ":web_public_piece_shell_test",
-        ":web_state_transition_test",
-        ":web_tag_manager_test",
-        ":web_tag_test",
-        ":web_workflow_state_test",
-        ":web_workflow_summary_test",
-        ":workflow_test",
+        ":web_components_test",
+        ":web_pages_test",
+        ":web_util_test",
     ],
 )
 
