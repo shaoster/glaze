@@ -3,7 +3,23 @@ import axios from "axios";
 import { submitTask, fetchTask, pollTask } from "../api";
 import { AsyncTask } from "../types";
 
-vi.mock("axios");
+vi.mock("axios", () => {
+  const mockAxios = {
+    create: vi.fn(() => mockAxios),
+    get: vi.fn(),
+    post: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+    defaults: {
+      withCredentials: false,
+      xsrfCookieName: "",
+      xsrfHeaderName: "",
+      baseURL: "",
+    },
+    isAxiosError: vi.fn(),
+  };
+  return { default: mockAxios };
+});
 const mockedAxios = vi.mocked(axios);
 
 describe("Async Task API", () => {

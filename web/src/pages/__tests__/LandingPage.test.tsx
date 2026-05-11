@@ -9,5 +9,6 @@ test('renders LandingPage and shows CTA buttons', () => {
       <LandingPage />
     </MemoryRouter>
   );
-  expect(screen.getByText(/Get Started/i)).toBeDefined();
+  expect(screen.getByText(/Pieces/i)).toBeDefined();
+  expect(screen.getByText(/Analyze/i)).toBeDefined();
 });

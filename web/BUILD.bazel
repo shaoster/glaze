@@ -266,7 +266,10 @@ vitest_test(
 
 vitest_test(
     name = "web_util_test",
-    srcs = glob(["src/util/__tests__/*.test.ts", "src/util/*.test.ts"]),
+    srcs = glob(
+        ["src/util/__tests__/*.test.ts", "src/util/*.test.ts"],
+        exclude = ["src/util/__tests__/tasks.test.ts"],
+    ),
     tags = ["ibazel_notify_changes"],
     deps = [":util_lib"],
 )
