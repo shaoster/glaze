@@ -35,8 +35,9 @@ class TestSealedState:
 
     def test_admin_form_rejects_sealed_state_without_override(self, piece):
         from django.contrib.admin.sites import AdminSite
+
         from api.admin import PieceStateAdmin
-        
+
         initial_state = piece.current_state
         PieceState.objects.create(piece=piece, state=SUCCESSORS[ENTRY_STATE][0])
         initial_state.refresh_from_db()
@@ -51,13 +52,17 @@ class TestSealedState:
                 "state": initial_state.state,
                 "notes": "Retroactive edit via form",
                 "allow_sealed_edit": False,
-            }
+            },
         )
         assert not form.is_valid()
-        assert "This state is sealed: only the current state of a piece may be modified." in form.errors["__all__"][0]
+        assert (
+            "This state is sealed: only the current state of a piece may be modified."
+            in form.errors["__all__"][0]
+        )
 
     def test_admin_form_allows_sealed_state_with_override(self, piece):
         from django.contrib.admin.sites import AdminSite
+
         from api.admin import PieceStateAdmin
 
         initial_state = piece.current_state
@@ -74,7 +79,7 @@ class TestSealedState:
                 "state": initial_state.state,
                 "notes": "Retroactive edit via form",
                 "allow_sealed_edit": True,
-            }
+            },
         )
         form.is_valid()
         if "__all__" in form.errors:

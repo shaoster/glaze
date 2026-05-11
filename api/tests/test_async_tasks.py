@@ -301,4 +301,3 @@ class TestDetectSubjectCropTask:
         assert task.status == AsyncTask.Status.SUCCESS
         assert task.result["status"] == "skipped"
         assert missing_psi_id in task.result["reason"]
-

@@ -76,7 +76,9 @@ class InMemoryTaskInterface:
                 task.status = AsyncTask.Status.SUCCESS
                 task.result = result
                 task.save(update_fields=["status", "result", "last_modified"])
-                logger.info(f"Successfully completed task {task.task_type} ({task.id}).")
+                logger.info(
+                    f"Successfully completed task {task.task_type} ({task.id})."
+                )
             except Exception as e:
                 logger.exception(
                     f"Fatal error executing task {task.task_type} ({task.id})"

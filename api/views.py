@@ -814,11 +814,9 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
 )
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
-async def admin_cloudinary_cleanup_archive(
+def admin_cloudinary_cleanup_archive(
     request: Request,
 ) -> StreamingHttpResponse | Response:
-    from asgiref.sync import sync_to_async
-
     unreferenced_only = request.query_params.get("unreferenced_only", "").lower() in (
         "1",
         "true",
@@ -826,8 +824,8 @@ async def admin_cloudinary_cleanup_archive(
         "on",
     )
     try:
-        # list_cloudinary_assets does synchronous network I/O; run in a thread.
-        assets = await sync_to_async(list_cloudinary_assets)()
+        # list_cloudinary_assets does synchronous network I/O.
+        assets = list_cloudinary_assets()
     except ValueError as exc:
         return Response(
             {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE

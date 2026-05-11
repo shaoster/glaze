@@ -114,9 +114,7 @@ class TestBackpopulateCropsCommand:
         )
 
     def _make_superuser(self, email="admin@example.com"):
-        return User.objects.create_superuser(
-            username=email, email=email, password="x"
-        )
+        return User.objects.create_superuser(username=email, email=email, password="x")
 
     def _make_user(self, email="u@example.com"):
         return User.objects.create(username=email, email=email)

@@ -1,11 +1,6 @@
 import logging
 
-from datetime import timedelta
-
 from django.core.management.base import BaseCommand
-from django.utils import timezone
-
-from api.models import AsyncTask
 
 logger = logging.getLogger(__name__)
 
@@ -62,5 +57,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("No stuck tasks found."))
         else:
             self.stdout.write(
-                self.style.SUCCESS(f"Successfully marked {count} stuck tasks as FAILED.")
+                self.style.SUCCESS(
+                    f"Successfully marked {count} stuck tasks as FAILED."
+                )
             )
