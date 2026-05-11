@@ -140,21 +140,7 @@ jobs:
         shell: bash
         run: |
           source env.sh
-          # Note: gz_test runs `bazel test`. We need `bazel coverage`.
-          # We'll use the logic from gz_test but run coverage.
-          # For now, let's keep it simple and just run coverage --config=ci.
-          # Actually, I'll update gz_test to support --coverage later if needed.
-          # For now, I'll retain the `bazel coverage` logic but make it cleaner.
-          
-          TARGETS="//..."
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            # We can use the logic provided by env.sh by calling gz_test --affected to calculate target
-            # But gz_test runs the test itself. 
-            # I will keep the custom logic for now as it needs `bazel coverage`.
-            echo "Calculating affected tests..."
-            # ... custom logic ...
-          fi
-          bazel coverage --config=ci --combined_report=lcov $TARGETS
+          gz_test --affected --coverage
 
       - name: Upload Bazel Query Profile
         uses: actions/upload-artifact@v4
