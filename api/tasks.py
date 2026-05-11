@@ -146,17 +146,17 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
         width=1500,
         crop="limit",
     )
-    logger.info(f"Downloading image from {download_url} (timeout=30s)")
-    response = requests.get(download_url, timeout=30)
-    response.raise_for_status()
-
     from django.conf import settings
 
     if getattr(settings, "REMOTE_REMBG_URL", None):
-        logger.info("Using remote service for subject detection.")
-        crop = calculate_subject_crop_remote(response.content)
+        logger.info("Using remote service for subject detection (offloading URL).")
+        # Offload the URL directly to Modal so it handles the download and processing.
+        # This saves the production host from downloading and then re-uploading the bytes.
+        crop = calculate_subject_crop_remote(image_url=download_url)
     else:
-        logger.info("Using local rembg for subject detection.")
+        logger.info(f"Downloading image from {download_url} for local processing (timeout=30s)")
+        response = requests.get(download_url, timeout=30)
+        response.raise_for_status()
         crop = calculate_subject_crop(response.content)
     if not crop:
         return {"status": "skipped", "reason": "No subject detected"}

@@ -333,10 +333,10 @@ class TestRemoteDetectSubjectCrop:
             {"raise_for_status": lambda self: None, "json": lambda self: crop_data},
         )()
 
-        posted_data = []
+        posted_calls = []
 
-        def mock_post(url, data, headers, timeout):
-            posted_data.append((url, data, headers))
+        def mock_post(url, data=None, json=None, headers=None, timeout=None):
+            posted_calls.append({"url": url, "data": data, "json": json, "headers": headers})
             return mock_response_post
 
         monkeypatch.setattr("requests.post", mock_post)
@@ -351,10 +351,11 @@ class TestRemoteDetectSubjectCrop:
 
         InMemoryTaskInterface()._run_task(task.id)
 
-        # Verify remote service was called
-        assert len(posted_data) == 1
-        assert posted_data[0][0] == "https://remote.ai/"
-        assert posted_data[0][1] == b"image_data"
+        # Verify remote service was called with URL, not bytes
+        assert len(posted_calls) == 1
+        assert posted_calls[0]["url"] == "https://remote.ai/"
+        assert posted_calls[0]["json"]["url"].startswith("https://res.cloudinary.com/")
+        assert posted_calls[0]["data"] is None  # Should not send bytes
 
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.SUCCESS
