@@ -74,27 +74,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-
-      - name: Mount Bazel repository cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/bazel-repo
-          key: bazel-repo-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'requirements.lock', 'web/pnpm-lock.yaml') }}
-          restore-keys: |
-            bazel-repo-${{ runner.os }}-
-
       - name: Inject secret into ~/.bazelrc
         run: |
           echo "" >> .bazelrc
           echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
-      - name: Run all linters
-        run: bazel build --config=ci --config=lint //...
-
-      - name: Run uncovered tests
-        run: bazel test --config=ci --test_tag_filters=+no-coverage //...
-
-      - name: Run all covered tests
-        run: bazel coverage --config=ci --combined_report=lcov //...
+      - name: Run all checks (Lint, Test, Coverage)
+        run: bazel coverage --config=ci --config=lint --combined_report=lcov //...
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -113,14 +98,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.sha }}
-
-      - name: Mount Bazel repository cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/bazel-repo
-          key: bazel-repo-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'requirements.lock', 'web/pnpm-lock.yaml') }}
-          restore-keys: |
-            bazel-repo-${{ runner.os }}-
 
       - name: Inject BuildBuddy API key into .bazelrc
         run: |

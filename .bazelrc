@@ -6,7 +6,6 @@ common --spawn_strategy=local
 build --incompatible_enable_cc_toolchain_resolution
 
 # Coverage exclude tags
-coverage --test_tag_filters=-no-coverage
 # We don't care about gcov. We don't have any C++ code.
 coverage --test_env=IGNORE_COVERAGE_COLLECTION_FAILURES=1
 
@@ -33,10 +32,3 @@ common:ci --remote_cache=grpcs://remote.buildbuddy.io
 common:ci --remote_cache_compression
 common:ci --remote_timeout=10m
 common:ci --nolegacy_important_outputs
-
-# GHA specific optimizations: cache external repositories and limit resources
-# to prevent OOM/swapping on standard runners.
-common:ci --repository_cache=~/.cache/bazel-repo
-common:ci --remote_download_toplevel
-build:ci --local_ram_resources=5120
-build:ci --local_cpu_resources=2

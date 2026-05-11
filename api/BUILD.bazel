@@ -232,11 +232,9 @@ py_test(
 # Bazel sandboxes. TODO: revisit with rules_mypy once resolved — see
 # https://github.com/shaoster/glaze/issues/157
 
-py_test(
-    name = "api_mypy",
-    size = "medium",
+py_binary(
+    name = "api_mypy_bin",
     srcs = ["//tools:mypy_main.py"],
-    args = ["api/"],
     data = [
         "//:mypy.ini",
         "//:workflow_files",
@@ -244,10 +242,6 @@ py_test(
     env = {"DJANGO_SETTINGS_MODULE": "backend.settings"},
     legacy_create_init = False,
     main = "//tools:mypy_main.py",
-    tags = [
-        "lint",
-        "no-coverage",
-    ],
     deps = [
         ":api_lib",
         requirement("mypy"),
@@ -256,6 +250,20 @@ py_test(
         requirement("django-stubs-ext"),
         requirement("djangorestframework-stubs"),
         requirement("types-requests"),
+    ],
+)
+
+sh_test(
+    name = "api_mypy",
+    size = "medium",
+    srcs = ["tests/mypy_test.sh"],
+    data = [
+        ":api_mypy_bin",
+        ":api_lib",
+    ],
+    tags = [
+        "lint",
+        "no-coverage",
     ],
 )
 
