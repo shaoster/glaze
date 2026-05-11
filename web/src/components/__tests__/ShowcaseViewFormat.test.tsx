@@ -20,6 +20,7 @@ describe("formatValue", () => {
 
   it("handles objects with a name property", () => {
     expect(formatValue({ name: "Location A" })).toBe("Location A");
+    expect(formatValue({ name: 123 })).toBe("");
   });
 
   it("throws error for unsupported types", () => {
