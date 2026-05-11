@@ -34,10 +34,16 @@ else:
 DEBUG = not IS_PRODUCTION
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
-# ALLOWED_HOST: single hostname for self-hosted deployments (e.g. myapp.example.com)
-_ALLOWED_HOST = os.environ.get("ALLOWED_HOST", "")
-if _ALLOWED_HOST:
-    ALLOWED_HOSTS.append(_ALLOWED_HOST)
+# ALLOWED_HOSTS: comma-separated hostnames (e.g. "potterdoc.com,www.potterdoc.com")
+_ALLOWED_HOSTS_ENV = os.environ.get("ALLOWED_HOSTS", os.environ.get("ALLOWED_HOST", ""))
+if _ALLOWED_HOSTS_ENV:
+    for host in _ALLOWED_HOSTS_ENV.split(","):
+        host = host.strip()
+        if host:
+            ALLOWED_HOSTS.append(host)
+            # Automatically allow 'www.' if a base domain is provided.
+            if "." in host and not host.startswith("www."):
+                ALLOWED_HOSTS.append(f"www.{host}")
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGIN_REGEXES = [

@@ -4,6 +4,7 @@ This module holds business-logic helpers that are shared across multiple parts
 of the api app but do not belong in workflow.py (which is reserved for
 workflow-state-machine logic derived from workflow.yml).
 """
+from typing import Any
 
 import logging
 import requests
@@ -15,6 +16,8 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+# Global cache for rembg sessions to avoid re-initializing ONNX for every task.
+_REMBG_SESSIONS: dict[str, Any] = {}
 DEV_THUMBNAIL_URLS = {
     "bowl": "/thumbnails/bowl.svg",
     "mug": "/thumbnails/mug.svg",
@@ -37,20 +40,35 @@ SHARED_GLAZE_FIELDS: tuple[str, ...] = (
 )
 
 
+def _get_rembg_session(model_name: str = "u2net"):
+    """Get or create a thread-safe rembg session with limited ONNX threads."""
+    import onnxruntime as ort
+    from rembg import new_session
+
+    if model_name not in _REMBG_SESSIONS:
+        logger.info(f"Initializing new rembg session for model: {model_name}")
+        # Limit threads to avoid CPU contention in a multi-worker environment.
+        opts = ort.SessionOptions()
+        opts.inter_op_num_threads = 1
+        opts.intra_op_num_threads = 1
+        _REMBG_SESSIONS[model_name] = new_session(
+            model_name, providers=["CPUExecutionProvider"], sess_opts=opts
+        )
+    return _REMBG_SESSIONS[model_name]
+
+
 def calculate_subject_crop(image_bytes: bytes) -> dict | None:
     """Detect the main subject in an image and return a relative crop box."""
     import io
 
     from PIL import Image
-    from rembg import new_session, remove
+    from rembg import remove
 
     # 1. Remove background
+    logger.info(f"Opening image for rembg ({len(image_bytes)} bytes)")
     input_image = Image.open(io.BytesIO(image_bytes))
-    
-    # Use a thread-local session to prevent ONNX Runtime deadlocks
-    # when run concurrently within the background ThreadPoolExecutor.
-    logger.info("Initializing new rembg session (u2net).")
-    session = new_session("u2net")
+    # Use a cached session with limited threads to prevent deadlocks and CPU contention.
+    session = _get_rembg_session("u2net")
     logger.info("Running rembg.remove()...")
     output_image = remove(input_image, session=session)
     logger.info("rembg.remove() completed.")
@@ -59,6 +77,7 @@ def calculate_subject_crop(image_bytes: bytes) -> dict | None:
     alpha = output_image.getchannel("A")
     bbox = alpha.getbbox()
     if not bbox:
+        logger.info("No non-transparent bounds found in image.")
         return None
 
     # 3. Convert to relative crop coordinates
