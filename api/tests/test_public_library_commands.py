@@ -9,6 +9,27 @@ from django.core.management.base import CommandError
 
 from api.models import COMPOSITE_NAME_SEPARATOR, ClayBody, GlazeCombination, GlazeType
 from api.utils import bootstrap_dev_user
+from api.management.commands.load_public_library import _extract_cloud_name
+
+
+class TestExtractCloudName:
+    def test_valid_url(self):
+        url = "https://res.cloudinary.com/demo/image/upload/v1/glaze/celadon.jpg"
+        assert _extract_cloud_name(url) == "demo"
+
+    def test_invalid_hostname(self):
+        url = "https://example.com/demo/image/upload/v1/glaze/celadon.jpg"
+        assert _extract_cloud_name(url) is None
+
+    def test_malformed_path(self):
+        url = "https://res.cloudinary.com/demo/image/"
+        assert _extract_cloud_name(url) is None
+
+    def test_not_a_url(self):
+        assert _extract_cloud_name("not_a_url") is None
+
+    def test_empty_string(self):
+        assert _extract_cloud_name("") is None
 
 
 @pytest.mark.django_db
@@ -276,6 +297,19 @@ class TestLoadPublicLibrary:
         )
 
         with pytest.raises(CommandError, match="Unknown model"):
+            call_command("load_public_library", fixture=str(fixture))
+
+    def test_raises_for_non_list_fixture(self, tmp_path):
+        fixture = self._write_fixture(tmp_path, {"model": "api.claybody", "fields": {"name": "X"}})
+        with pytest.raises(CommandError, match="Fixture must be a JSON array of records."):
+            call_command("load_public_library", fixture=str(fixture))
+
+    def test_raises_for_missing_name_field(self, tmp_path):
+        fixture = self._write_fixture(
+            tmp_path,
+            [{"model": "api.claybody", "fields": {"short_description": "A body"}}],
+        )
+        with pytest.raises(CommandError, match='Record for model api.claybody is missing a "name" field'):
             call_command("load_public_library", fixture=str(fixture))
 
     def test_roundtrip_dump_then_load(self, tmp_path, django_user_model):
