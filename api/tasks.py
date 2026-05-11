@@ -43,6 +43,7 @@ class InMemoryTaskInterface:
 
     def submit(self, task: AsyncTask) -> None:
         # Use on_commit to ensure the task record is visible to the background thread.
+        logger.info(f"Submitting task {task.task_type} ({task.id}) to thread pool.")
         transaction.on_commit(lambda: _executor.submit(self._run_task, task.id))
 
     def _run_task(self, task_id: Any) -> None:
@@ -59,6 +60,7 @@ class InMemoryTaskInterface:
                 logger.error(f"Async task {task_id} not found for execution.")
                 return
 
+            logger.info(f"Worker picking up task {task.task_type} ({task.id}).")
             task.status = AsyncTask.Status.RUNNING
             task.save(update_fields=["status", "last_modified"])
 
@@ -74,8 +76,11 @@ class InMemoryTaskInterface:
                 task.status = AsyncTask.Status.SUCCESS
                 task.result = result
                 task.save(update_fields=["status", "result", "last_modified"])
+                logger.info(f"Successfully completed task {task.task_type} ({task.id}).")
             except Exception as e:
-                logger.exception(f"Error executing task {task.task_type} ({task.id})")
+                logger.exception(
+                    f"Fatal error executing task {task.task_type} ({task.id})"
+                )
                 task.status = AsyncTask.Status.FAILURE
                 task.error = str(e)
                 task.save(update_fields=["status", "error", "last_modified"])
@@ -116,6 +121,9 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     if not image_id:
         raise ValueError("Missing image_id in task params")
 
+    logger.info(
+        f"Processing detect_subject_crop for image {image_id} (piece={piece_id}, psi={piece_state_image_id})"
+    )
     image = Image.objects.get(id=image_id)
 
     # Cloudinary-backed assets only (as per constraints)
@@ -132,9 +140,11 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
         width=1500,
         crop="limit",
     )
+    logger.info(f"Downloading image from {download_url} (timeout=30s)")
     response = requests.get(download_url, timeout=30)
     response.raise_for_status()
 
+    logger.info(f"Image downloaded ({len(response.content)} bytes). Starting rembg.")
     crop = calculate_subject_crop(response.content)
     if not crop:
         return {"status": "skipped", "reason": "No subject detected"}

@@ -5,12 +5,15 @@ of the api app but do not belong in workflow.py (which is reserved for
 workflow-state-machine logic derived from workflow.yml).
 """
 
+import logging
 import requests
 from cloudinary import CloudinaryImage
 from django.apps import apps
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 DEV_THUMBNAIL_URLS = {
     "bowl": "/thumbnails/bowl.svg",
@@ -46,8 +49,11 @@ def calculate_subject_crop(image_bytes: bytes) -> dict | None:
     
     # Use a thread-local session to prevent ONNX Runtime deadlocks
     # when run concurrently within the background ThreadPoolExecutor.
+    logger.info("Initializing new rembg session (u2net).")
     session = new_session("u2net")
+    logger.info("Running rembg.remove()...")
     output_image = remove(input_image, session=session)
+    logger.info("rembg.remove() completed.")
 
     # 2. Find non-transparent bounds
     alpha = output_image.getchannel("A")
