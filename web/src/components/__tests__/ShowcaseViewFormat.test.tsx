@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatValue } from "../PublicPieceShell";
+import { formatValue } from "../util/format";
 
 describe("formatValue", () => {
   it("handles null, undefined, and empty string", () => {
