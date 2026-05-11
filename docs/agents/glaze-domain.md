@@ -24,9 +24,10 @@ The app has two parts:
 
 To maintain stability on hardware with <1GB RAM, Glaze uses a remote offloading strategy for heavy ML tasks (specifically `rembg` background removal).
 
-- **Local Path**: Defaults to `u2netp` (memory-efficient) with pre-processing downscaling (640px max) to minimize RSS usage.
-- **Remote Path**: Activated via `REMOTE_REMBG_URL`. Offloads processing to a FastAPI microservice.
-- **Microservice**: Located at `tools/piece_image_crop_service.py`, designed for deployment to **Modal.com**. It supports native auto-scaling and "scale-to-zero" to minimize costs.
+- **Optimized Dispatch**: The backend offloads the **Cloudinary URL** of the image to the remote service. The Modal worker performs the download, completely bypassing local ML overhead and minimizing host-side bandwidth/memory usage.
+- **Local Path**: Defaults to `u2netp` (memory-efficient) with pre-processing downscaling (640px max) as a fallback if no remote URL is configured.
+- **Security**: The microservice validates an `X-API-Key` header against a `modal.Secret`.
+- **Microservice**: Located at `tools/piece_image_crop_service.py`, designed for deployment to **Modal.com**.
 
 ## Workflow State Machine
 

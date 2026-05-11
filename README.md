@@ -343,20 +343,24 @@ Cloudinary is optional — if the env vars are not set, the config endpoint retu
 
 ## Remote Rembg Offloading (Modal)
 
-When `REMOTE_REMBG_URL` is set, Glaze skips local ML processing and POSTs image data to this endpoint. If not set, it falls back to a local, memory-optimized `u2netp` model.
+To maintain stability on hardware with <1GB RAM, Glaze supports offloading the heavy `rembg` background removal task to a serverless microservice.
 
-### Deployment Runbook
+- **Optimized Dispatch**: The system offloads the **Cloudinary URL** directly to the remote service. This ensures the production host does not have to download or process the image bytes, saving bandwidth and memory.
+- **Security**: The service is secured with an API Key (`X-API-Key`) validated against a `modal.Secret`.
+- **Local Fallback**: If `REMOTE_REMBG_URL` is not configured, the system falls back to a local `u2netp` model with 640px downscaling.
 
 #### Step 1: Deploy the Microservice (Run from your LOCAL machine)
-1.  **Install Modal**: `pip install modal`
-2.  **Authenticate**: `modal setup` (or set `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` variables).
-3.  **Deploy**: `modal deploy tools/piece_image_crop_service.py`
-4.  **Capture the URL**: The output will provide a permanent URL, e.g., `https://your-workspace-name--crop.modal.run`.
+1.  **Set up Auth Token**: Create a Modal secret named `piece-image-crop-secret` with an `AUTH_TOKEN` key.
+2.  **Install Modal**: `pip install modal`
+3.  **Authenticate**: `modal setup`
+4.  **Deploy**: `modal deploy tools/piece_image_crop_service.py`
+5.  **Capture the URL**: The output will provide a permanent URL, e.g., `https://your-workspace-name--crop.modal.run`.
 
 #### Step 2: Configure the Backend (Run on the PRODUCTION host / Droplet)
-1.  **Update Environment**: Add the URL to your production `.env` file:
+1.  **Update Environment**: Add the URL and Token to your production `.env` file:
     ```bash
     REMOTE_REMBG_URL="https://your-workspace-name--crop.modal.run"
+    MODAL_AUTH_TOKEN="your-secret-token"
     ```
 2.  **Restart Service**: 
     ```bash
