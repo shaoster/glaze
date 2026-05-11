@@ -282,3 +282,7 @@ if LOGTAIL_SOURCE_TOKEN:
 # Security settings
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
+
+# Remote ML Offloading (Modal)
+REMOTE_REMBG_URL = os.environ.get("REMOTE_REMBG_URL", "")
+MODAL_AUTH_TOKEN = os.environ.get("MODAL_AUTH_TOKEN", "")
