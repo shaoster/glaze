@@ -18,6 +18,22 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+
+def get_rss() -> float:
+    """Return the current process Resident Set Size in MB."""
+    import gc
+
+    try:
+        gc.collect()
+        with open("/proc/self/status", "r") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    return int(line.split()[1]) / 1024
+    except (FileNotFoundError, IndexError, ValueError):
+        pass
+    return 0.0
+
+
 # Global cache for rembg sessions to avoid re-initializing ONNX for every task.
 _REMBG_SESSIONS: dict[str, Any] = {}
 DEV_THUMBNAIL_URLS = {
@@ -42,7 +58,7 @@ SHARED_GLAZE_FIELDS: tuple[str, ...] = (
 )
 
 
-def _get_rembg_session(model_name: str = "u2net"):
+def _get_rembg_session(model_name: str = "u2netp"):
     """Get or create a thread-safe rembg session with limited ONNX threads."""
     import onnxruntime as ort
     from rembg import new_session
@@ -111,28 +127,52 @@ def calculate_subject_crop(image_bytes: bytes) -> dict | None:
     # 1. Remove background
     logger.info(f"Opening image for rembg ({len(image_bytes)} bytes)")
     input_image = Image.open(io.BytesIO(image_bytes))
+    orig_width, orig_height = input_image.size
+
+    # Resize for processing to save memory. 640px is plenty for subject detection.
+    # We return relative coordinates, so the absolute size doesn't matter.
+    MAX_DIM = 640
+    process_image: Image.Image = input_image
+    if max(orig_width, orig_height) > MAX_DIM:
+        scale = MAX_DIM / max(orig_width, orig_height)
+        new_size = (int(orig_width * scale), int(orig_height * scale))
+        logger.info(
+            f"Resizing image from {orig_width}x{orig_height} to {new_size} for rembg"
+        )
+        process_image = input_image.resize(new_size, Image.Resampling.LANCZOS)
+
     # Use a cached session with limited threads to prevent deadlocks and CPU contention.
-    session = _get_rembg_session("u2net")
-    logger.info("Running rembg.remove()...")
-    output_image = remove(input_image, session=session)
+    # u2netp is the "portable" version, much smaller memory footprint.
+    session = _get_rembg_session("u2netp")
+    logger.info(f"Running rembg.remove(model=u2netp) on {process_image.size} image...")
+    output_image = remove(process_image, session=session)
     logger.info("rembg.remove() completed.")
 
     # 2. Find non-transparent bounds
     alpha = output_image.getchannel("A")
     bbox = alpha.getbbox()
+
+    # Capture size before closing for relative coordinate math
+    p_width, p_height = process_image.size
+
+    # Clean up intermediate images
+    if process_image != input_image:
+        process_image.close()
+    output_image.close()
+    input_image.close()
+
     if not bbox:
         logger.info("No non-transparent bounds found in image.")
         return None
 
     # 3. Convert to relative crop coordinates
-    width, height = input_image.size
     left, upper, right, lower = bbox
 
     return {
-        "x": left / width,
-        "y": upper / height,
-        "width": (right - left) / width,
-        "height": (lower - upper) / height,
+        "x": left / p_width,
+        "y": upper / p_height,
+        "width": (right - left) / p_width,
+        "height": (lower - upper) / p_height,
     }
 
 

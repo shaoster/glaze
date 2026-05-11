@@ -820,7 +820,6 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
 def admin_cloudinary_cleanup_archive(
     request: Request,
 ) -> StreamingHttpResponse | Response:
-
     unreferenced_only = request.query_params.get("unreferenced_only", "").lower() in (
         "1",
         "true",

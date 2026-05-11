@@ -63,7 +63,11 @@ class InMemoryTaskInterface:
                     logger.error(f"Async task {task_id} not found for execution.")
                     return
 
-                logger.info(f"Worker picking up task {task.task_type} ({task.id}).")
+                from .utils import get_rss
+
+                logger.info(
+                    f"Worker picking up task {task.task_type} ({task.id}). RSS: {get_rss():.2f}MB"
+                )
                 task.status = AsyncTask.Status.RUNNING
                 task.save(update_fields=["status", "last_modified"])
 
@@ -79,8 +83,10 @@ class InMemoryTaskInterface:
                     task.status = AsyncTask.Status.SUCCESS
                     task.result = result
                     task.save(update_fields=["status", "result", "last_modified"])
+                    from .utils import get_rss
+
                     logger.info(
-                        f"Successfully completed task {task.task_type} ({task.id})."
+                        f"Successfully completed task {task.task_type} ({task.id}). RSS: {get_rss():.2f}MB"
                     )
                 except Exception as e:
                     logger.exception(
