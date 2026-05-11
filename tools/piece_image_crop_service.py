@@ -7,7 +7,7 @@ Deployment (Modal):
     2. modal deploy tools/piece_image_crop_service.py
 
 Usage (Local):
-    pip install fastapi uvicorn rembg onnxruntime pillow
+    pip install fastapi uvicorn rembg onnxruntime pillow pillow-heif
     uvicorn tools.piece_image_crop_service:fastapi_app --port 8080
 """
 
@@ -24,7 +24,7 @@ try:
 
     image = (
         modal.Image.debian_slim()
-        .pip_install("fastapi", "uvicorn", "rembg", "onnxruntime", "pillow", "requests")
+        .pip_install("fastapi", "uvicorn", "rembg", "onnxruntime", "pillow", "pillow-heif", "requests")
         # Pre-download the model into the image to reduce cold start latency
         .run_commands("python -c \"from rembg import new_session; new_session('u2netp')\"")
     )
@@ -47,8 +47,12 @@ def create_app():
     """Factory to create the FastAPI app with heavy imports deferred."""
     from fastapi import FastAPI, Request, Response, Header, HTTPException
     from PIL import Image
+    from pillow_heif import register_heif_opener
     from rembg import new_session, remove
     import requests
+
+    # Register HEIF support (HEIC conversion handled here)
+    register_heif_opener()
 
     fastapi_instance = FastAPI(title="Piece Image Crop Service")
     _SESSION = new_session("u2netp")
@@ -75,7 +79,7 @@ def create_app():
                 if not url:
                     return Response(content="Missing url in JSON", status_code=400)
                 logger.info(f"Downloading image from URL: {url}")
-                resp = requests.get(url, timeout=20)
+                resp = requests.get(url, timeout=30)
                 resp.raise_for_status()
                 image_bytes = resp.content
             else:
@@ -85,7 +89,16 @@ def create_app():
             if not image_bytes:
                 return Response(content="Empty image data", status_code=400)
 
+            # HEIC -> JPG/RGBA conversion happens during Image.open thanks to register_heif_opener
             input_image = Image.open(io.BytesIO(image_bytes))
+            
+            # Implementation Detail: Optimized resizing for ML processing.
+            # We downscale to a reasonable max dimension to save memory and speed up rembg.
+            MAX_DIM = 1600
+            if max(input_image.size) > MAX_DIM:
+                logger.info(f"Resizing from {input_image.size} to max {MAX_DIM}")
+                input_image.thumbnail((MAX_DIM, MAX_DIM), Image.Resampling.LANCZOS)
+
             width, height = input_image.size
 
             # 1. Remove background

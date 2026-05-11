@@ -136,25 +136,25 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     if not image.cloud_name or not image.cloudinary_public_id:
         return {"status": "skipped", "reason": "Not a Cloudinary image"}
 
-    # Download image bytes. We request a JPG version from Cloudinary to ensure
-    # compatibility with Pillow/rembg and reduce bandwidth for large raw uploads.
-    download_url = CloudinaryImage(image.cloudinary_public_id).build_url(
-        cloud_name=image.cloud_name,
-        secure=True,
-        format="jpg",
-        quality="auto",
-        width=1500,
-        crop="limit",
-    )
     from django.conf import settings
 
     if getattr(settings, "REMOTE_REMBG_URL", None):
-        logger.info("Using remote service for subject detection (offloading URL).")
-        # Offload the URL directly to Modal so it handles the download and processing.
-        # This saves the production host from downloading and then re-uploading the bytes.
-        crop = calculate_subject_crop_remote(image_url=download_url)
+        logger.info("Using remote service (offloading base URL).")
+        # Offload the original URL. The remote service handles pre-processing,
+        # resizing, and format conversion (e.g. HEIC -> JPG).
+        crop = calculate_subject_crop_remote(image_url=image.url)
     else:
-        logger.info(f"Downloading image from {download_url} for local processing (timeout=30s)")
+        logger.info("Using local rembg. Optimizing download for constrained host.")
+        # Local fallback still uses Cloudinary optimizations to prevent OOM on the Droplet.
+        download_url = CloudinaryImage(image.cloudinary_public_id).build_url(
+            cloud_name=image.cloud_name,
+            secure=True,
+            format="jpg",
+            quality="auto",
+            width=1500,
+            crop="limit",
+        )
+        logger.info(f"Downloading optimized image from {download_url}")
         response = requests.get(download_url, timeout=30)
         response.raise_for_status()
         crop = calculate_subject_crop(response.content)

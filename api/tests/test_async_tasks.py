@@ -351,11 +351,12 @@ class TestRemoteDetectSubjectCrop:
 
         InMemoryTaskInterface()._run_task(task.id)
 
-        # Verify remote service was called with URL, not bytes
+        # Verify remote service was called with base URL, not bytes
         assert len(posted_calls) == 1
         assert posted_calls[0]["url"] == "https://remote.ai/"
-        assert posted_calls[0]["json"]["url"].startswith("https://res.cloudinary.com/")
-        assert posted_calls[0]["data"] is None  # Should not send bytes
+        # It should now send the base image.url directly
+        assert posted_calls[0]["json"]["url"] == "https://res.cloudinary.com/demo/image/upload/v1/pieces/mug.jpg"
+        assert posted_calls[0]["data"] is None
 
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.SUCCESS
