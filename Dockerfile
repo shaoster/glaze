@@ -47,6 +47,13 @@ FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
+# Limit ONNX Runtime and threading to prevent CPU contention and deadlocks
+# in multi-worker environments.
+ENV OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    ONNXRUNTIME_INTER_OP_NUM_THREADS=1 \
+    ONNXRUNTIME_INTRA_OP_NUM_THREADS=1
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 # Pre-download the rembg model to avoid runtime overhead and network hangs.

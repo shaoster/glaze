@@ -820,6 +820,8 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
 def admin_cloudinary_cleanup_archive(
     request: Request,
 ) -> StreamingHttpResponse | Response:
+    from asgiref.sync import sync_to_async
+
     unreferenced_only = request.query_params.get("unreferenced_only", "").lower() in (
         "1",
         "true",
@@ -827,7 +829,7 @@ def admin_cloudinary_cleanup_archive(
         "on",
     )
     try:
-        # list_cloudinary_assets does synchronous network I/O.
+        # list_cloudinary_assets does synchronous network I/O; run in a thread.
         assets = list_cloudinary_assets()
     except ValueError as exc:
         return Response(

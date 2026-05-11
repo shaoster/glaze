@@ -22,15 +22,14 @@ class TestAsyncTasks:
         url = reverse("tasks-submit")
         data = {"task_type": "ping", "input_params": {"test": "data"}}
 
+        def sync_submit(self_obj, task_obj):
+            self_obj._run_task(task_obj.id)
+
         with patch(
-            "api.tasks.InMemoryTaskInterface.submit", autospec=True
-        ) as mock_submit:
-
-            def sync_submit(self_obj, task_obj):
-                self_obj._run_task(task_obj.id)
-
-            mock_submit.side_effect = sync_submit
-
+            "api.tasks.InMemoryTaskInterface.submit",
+            autospec=True,
+            side_effect=sync_submit,
+        ):
             response = client.post(url, data, format="json")
 
         assert response.status_code == status.HTTP_202_ACCEPTED
@@ -55,15 +54,14 @@ class TestAsyncTasks:
         url = reverse("tasks-submit")
         data = {"task_type": "non-existent"}
 
+        def sync_submit(self_obj, task_obj):
+            self_obj._run_task(task_obj.id)
+
         with patch(
-            "api.tasks.InMemoryTaskInterface.submit", autospec=True
-        ) as mock_submit:
-
-            def sync_submit(self_obj, task_obj):
-                self_obj._run_task(task_obj.id)
-
-            mock_submit.side_effect = sync_submit
-
+            "api.tasks.InMemoryTaskInterface.submit",
+            autospec=True,
+            side_effect=sync_submit,
+        ):
             response = client.post(url, data, format="json")
 
         assert response.status_code == status.HTTP_202_ACCEPTED
@@ -77,20 +75,18 @@ class TestAsyncTasks:
 class TestRunTaskErrorPaths:
     """Covers _run_task branches not exercised by the submit-via-API tests."""
 
-    def _run_sync(self, task):
+    def _run_sync(self, task_id):
         """Helper: execute _run_task synchronously in the test thread."""
         from api.tasks import InMemoryTaskInterface
 
-        InMemoryTaskInterface()._run_task(task.id)
+        InMemoryTaskInterface()._run_task(task_id)
 
     def test_run_task_does_nothing_when_task_deleted(self, user):
         """If the AsyncTask row is deleted before execution, _run_task logs and returns."""
         task = AsyncTask.objects.create(user=user, task_type="ping")
         missing_id = uuid.uuid4()  # guaranteed not to exist
         # Should not raise
-        from api.tasks import InMemoryTaskInterface
-
-        InMemoryTaskInterface()._run_task(missing_id)
+        self._run_sync(missing_id)
         # Original task is unaffected
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.PENDING
@@ -104,7 +100,7 @@ class TestRunTaskErrorPaths:
             raise RuntimeError("kaboom")
 
         task = AsyncTask.objects.create(user=user, task_type="_test_raises")
-        self._run_sync(task)
+        self._run_sync(task.id)
 
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.FAILURE
@@ -130,14 +126,14 @@ class TestDetectSubjectCropTask:
         )
         return task
 
-    def _run_sync(self, task):
+    def _run_sync(self, task_id):
         from api.tasks import InMemoryTaskInterface
 
-        InMemoryTaskInterface()._run_task(task.id)
+        InMemoryTaskInterface()._run_task(task_id)
 
     def test_missing_image_id_raises(self, user):
         task = self._make_task(user, {})
-        self._run_sync(task)
+        self._run_sync(task.id)
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.FAILURE
         assert "Missing image_id" in task.error
@@ -151,7 +147,7 @@ class TestDetectSubjectCropTask:
             cloudinary_public_id=None,
         )
         task = self._make_task(user, {"image_id": str(image.id)})
-        self._run_sync(task)
+        self._run_sync(task.id)
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.SUCCESS
         assert task.result["status"] == "skipped"
@@ -167,7 +163,7 @@ class TestDetectSubjectCropTask:
         )
         monkeypatch.setattr("api.utils.calculate_subject_crop", lambda _: None)
         task = self._make_task(user, {"image_id": str(image.id)})
-        self._run_sync(task)
+        self._run_sync(task.id)
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.SUCCESS
         assert task.result["status"] == "skipped"
@@ -189,7 +185,7 @@ class TestDetectSubjectCropTask:
         task = self._make_task(
             user, {"image_id": str(image.id), "piece_id": str(piece.id)}
         )
-        self._run_sync(task)
+        self._run_sync(task.id)
         piece.refresh_from_db()
         assert piece.thumbnail_crop == crop
         task.refresh_from_db()
@@ -217,7 +213,7 @@ class TestDetectSubjectCropTask:
         task = self._make_task(
             user, {"image_id": str(image.id), "piece_id": str(piece.id)}
         )
-        self._run_sync(task)
+        self._run_sync(task.id)
         piece.refresh_from_db()
         assert piece.thumbnail_crop == existing  # unchanged
         task.refresh_from_db()
@@ -245,7 +241,7 @@ class TestDetectSubjectCropTask:
             user,
             {"image_id": str(image.id), "piece_state_image_id": str(psi.id)},
         )
-        self._run_sync(task)
+        self._run_sync(task.id)
         psi.refresh_from_db()
         assert psi.crop == crop
 
@@ -273,7 +269,7 @@ class TestDetectSubjectCropTask:
             user,
             {"image_id": str(image.id), "piece_state_image_id": str(psi.id)},
         )
-        self._run_sync(task)
+        self._run_sync(task.id)
         psi.refresh_from_db()
         assert psi.crop == existing  # unchanged
         task.refresh_from_db()
@@ -296,7 +292,7 @@ class TestDetectSubjectCropTask:
             user,
             {"image_id": str(image.id), "piece_state_image_id": missing_psi_id},
         )
-        self._run_sync(task)
+        self._run_sync(task.id)
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.SUCCESS
         assert task.result["status"] == "skipped"

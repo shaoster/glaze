@@ -1,48 +1,17 @@
-Migrate `backpopulate_crops` to the async task pipeline
+## Summary
+Finalize the stabilization of the asynchronous task queue by resolving persistent crashes, deadlocks, and resource contention. This PR re-introduces structured log correlation and implements robust resource management for production environments.
 
-The management command previously ran every crop detection synchronously
-in-process, blocking the shell for the entire run with no progress
-feedback. This PR routes all work through the production `AsyncTask`
-pipeline (`detect_subject_crop` task type) and adds basic progress output.
+## Changes
+- **Structured Log Correlation**: Added `api/logging.py` with `contextvars`-based `task_context` and `TaskCorrelationFilter` to automatically tag all logs within a background task with its `task_id`.
+- **rembg TypeError Fix**: Bypassed a known bug in `rembg.new_session` (present in v2.0.30) where passing `sess_opts` as a keyword argument causes a `TypeError`.
+- **System Thread Limits**: Set `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, and `ONNXRUNTIME_*_OP_NUM_THREADS` to `1` in the `Dockerfile` to prevent CPU over-subscription and deadlocks in multi-worker environments.
+- **Async Streaming**: Refined `admin_cloudinary_cleanup_archive` to use an async generator for ZIP streaming while maintaining synchronous view compatibility for the test suite.
+- **Task Lifecycle Improvements**: Integrated task correlation into `ApiConfig` and the `InMemoryTaskInterface` execution loop.
+- **Test Suite Refactoring**: Consolidated redundant async task test helpers and improved mock reliability in `api/tests/`.
 
-## What changed
+## Verification
+- Ran `bazel test //api:api_test` (All 7 targets PASSED).
+- Ran `bazel test //api:api_mypy` (PASSED).
+- Verified that logs are correctly correlated and `rembg` sessions initialize without error.
 
-### `api/management/commands/backpopulate_crops.py`
-- Removed direct calls to `calculate_subject_crop` / `requests.get`
-- Each qualifying `(image, piece)` and `(image, PieceStateImage)` pair is
-  now enqueued as an `AsyncTask` via `AsyncTask.objects.create` +
-  `get_task_interface().submit()`
-- Added required `--user <email>` argument to own the created task records
-  (raises `CommandError` if omitted in live mode or if the email is unknown)
-- `--dry-run` counts qualifying images and prints a summary without
-  touching the DB
-- `--force` semantics preserved: re-enqueues tasks even for images that
-  already have a crop
-- Inline progress counter (`Queued N / TOTAL tasks...`) uses a
-  carriage-return overwrite loop — no new dependencies required
-
-### `api/tests/test_utils.py`
-- Replaced three synchronous-write tests with six async-pipeline tests:
-  - `test_dry_run_does_not_enqueue_tasks`
-  - `test_live_mode_requires_user_arg`
-  - `test_live_mode_enqueues_task_for_missing_thumbnail_crop`
-  - `test_skips_images_with_existing_crop_by_default`
-  - `test_force_enqueues_tasks_for_existing_crops`
-  - `test_unknown_user_raises_command_error`
-
-## Usage
-
-```bash
-# Preview how many tasks would be enqueued
-python manage.py backpopulate_crops --dry-run
-
-# Enqueue tasks for all images missing a crop
-python manage.py backpopulate_crops --user admin@example.com
-
-# Re-enqueue even for images that already have a crop
-python manage.py backpopulate_crops --user admin@example.com --force
-```
-
-Monitor task progress at `/admin/api/asynctask/`.
-
-Closes #342
+Linked to #348.

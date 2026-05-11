@@ -49,46 +49,49 @@ class InMemoryTaskInterface:
     def _run_task(self, task_id: Any) -> None:
         from django.db import close_old_connections
 
-        # Close any stale connections before starting
-        close_old_connections()
+        from .logging import task_context
 
-        try:
-            # Re-fetch task to ensure we have the latest state in this thread.
-            try:
-                task = AsyncTask.objects.get(id=task_id)
-            except AsyncTask.DoesNotExist:
-                logger.error(f"Async task {task_id} not found for execution.")
-                return
-
-            logger.info(f"Worker picking up task {task.task_type} ({task.id}).")
-            task.status = AsyncTask.Status.RUNNING
-            task.save(update_fields=["status", "last_modified"])
-
-            task_fn = TaskRegistry.get(task.task_type)
-            if not task_fn:
-                task.status = AsyncTask.Status.FAILURE
-                task.error = f"Unknown task type: {task.task_type}"
-                task.save(update_fields=["status", "error", "last_modified"])
-                return
-
-            try:
-                result = task_fn(task)
-                task.status = AsyncTask.Status.SUCCESS
-                task.result = result
-                task.save(update_fields=["status", "result", "last_modified"])
-                logger.info(
-                    f"Successfully completed task {task.task_type} ({task.id})."
-                )
-            except Exception as e:
-                logger.exception(
-                    f"Fatal error executing task {task.task_type} ({task.id})"
-                )
-                task.status = AsyncTask.Status.FAILURE
-                task.error = str(e)
-                task.save(update_fields=["status", "error", "last_modified"])
-        finally:
-            # Clean up connections so the thread pool doesn't leak them
+        with task_context(str(task_id)):
+            # Close any stale connections before starting
             close_old_connections()
+
+            try:
+                # Re-fetch task to ensure we have the latest state in this thread.
+                try:
+                    task = AsyncTask.objects.get(id=task_id)
+                except AsyncTask.DoesNotExist:
+                    logger.error(f"Async task {task_id} not found for execution.")
+                    return
+
+                logger.info(f"Worker picking up task {task.task_type} ({task.id}).")
+                task.status = AsyncTask.Status.RUNNING
+                task.save(update_fields=["status", "last_modified"])
+
+                task_fn = TaskRegistry.get(task.task_type)
+                if not task_fn:
+                    task.status = AsyncTask.Status.FAILURE
+                    task.error = f"Unknown task type: {task.task_type}"
+                    task.save(update_fields=["status", "error", "last_modified"])
+                    return
+
+                try:
+                    result = task_fn(task)
+                    task.status = AsyncTask.Status.SUCCESS
+                    task.result = result
+                    task.save(update_fields=["status", "result", "last_modified"])
+                    logger.info(
+                        f"Successfully completed task {task.task_type} ({task.id})."
+                    )
+                except Exception as e:
+                    logger.exception(
+                        f"Fatal error executing task {task.task_type} ({task.id})"
+                    )
+                    task.status = AsyncTask.Status.FAILURE
+                    task.error = str(e)
+                    task.save(update_fields=["status", "error", "last_modified"])
+            finally:
+                # Clean up connections so the thread pool doesn't leak them
+                close_old_connections()
 
 
 # Global interface instance.
