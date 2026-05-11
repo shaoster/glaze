@@ -121,7 +121,7 @@ class TestBackpopulateCropsCommand:
             return {"x": 0.3, "y": 0.4, "width": 0.4, "height": 0.5}
 
         monkeypatch.setattr(
-            "api.management.commands.backpopulate_crops.fetch_cloudinary_auto_crop",
+            "api.management.commands.backpopulate_crops.calculate_subject_crop",
             fake_fetch,
         )
 
@@ -131,8 +131,9 @@ class TestBackpopulateCropsCommand:
         piece = Piece.objects.create(
             user=user, name="Mug", thumbnail=image, thumbnail_crop=existing_crop
         )
+        piece.save()
 
-        call_command("backpopulate_crops", "--delay-ms=0")
+        call_command("backpopulate_crops")
 
         piece.refresh_from_db()
         assert piece.thumbnail_crop == existing_crop
@@ -142,10 +143,7 @@ class TestBackpopulateCropsCommand:
         existing_crop = {"x": 0.1, "y": 0.2, "width": 0.5, "height": 0.6}
         new_crop = {"x": 0.3, "y": 0.4, "width": 0.4, "height": 0.5}
 
-        monkeypatch.setattr(
-            "api.management.commands.backpopulate_crops.fetch_cloudinary_auto_crop",
-            lambda cloud_name, cloudinary_public_id, **kwargs: new_crop,
-        )
+        monkeypatch.setattr("api.management.commands.backpopulate_crops.calculate_subject_crop", lambda image_bytes: new_crop); monkeypatch.setattr("api.management.commands.backpopulate_crops.requests.get", lambda url, timeout=30: type("Response", (), {"raise_for_status": lambda: None, "content": b"fake"}))
 
         from django.contrib.auth.models import User
 
@@ -153,8 +151,9 @@ class TestBackpopulateCropsCommand:
         piece = Piece.objects.create(
             user=user, name="Mug", thumbnail=image, thumbnail_crop=existing_crop
         )
+        piece.save()
 
-        call_command("backpopulate_crops", "--delay-ms=0", "--force")
+        call_command("backpopulate_crops", "--force")
 
         piece.refresh_from_db()
         assert piece.thumbnail_crop == new_crop
@@ -162,8 +161,8 @@ class TestBackpopulateCropsCommand:
     def test_dry_run_does_not_write(self, monkeypatch):
         image = self._make_cloudinary_image()
         monkeypatch.setattr(
-            "api.management.commands.backpopulate_crops.fetch_cloudinary_auto_crop",
-            lambda cloud_name, cloudinary_public_id, **kwargs: {
+            "api.management.commands.backpopulate_crops.calculate_subject_crop",
+            lambda image_bytes: {
                 "x": 0.1,
                 "y": 0.1,
                 "width": 0.5,
@@ -175,8 +174,9 @@ class TestBackpopulateCropsCommand:
 
         user = User.objects.create(username="u@example.com", email="u@example.com")
         piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
+        piece.save()
 
-        call_command("backpopulate_crops", "--delay-ms=0", "--dry-run")
+        call_command("backpopulate_crops", "--dry-run")
 
         piece.refresh_from_db()
         assert piece.thumbnail_crop is None
