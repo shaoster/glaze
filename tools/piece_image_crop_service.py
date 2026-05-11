@@ -50,6 +50,8 @@ def create_app():
     from pillow_heif import register_heif_opener
     from rembg import new_session, remove
     import requests
+    from urllib3.util import Retry
+    from requests.adapters import HTTPAdapter
 
     # Register HEIF support (HEIC conversion handled here)
     register_heif_opener()
@@ -63,6 +65,23 @@ def create_app():
     async def verify_auth(x_api_key: str):
         if EXPECTED_TOKEN and x_api_key != EXPECTED_TOKEN:
             raise HTTPException(status_code=403, detail="Invalid API Key")
+
+    def download_with_retry(url: str, timeout: int = 30, max_retries: int = 3):
+        session = requests.Session()
+        retry_strategy = Retry(
+            total=max_retries,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            # Handle ConnectionResetError / ProtocolError
+            raise_on_status=True,
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        
+        resp = session.get(url, timeout=timeout)
+        resp.raise_for_status()
+        return resp.content
 
     @fastapi_instance.post("/")
     async def detect_crop(request: Request, x_api_key: str = Header(None)):
@@ -79,9 +98,7 @@ def create_app():
                 if not url:
                     return Response(content="Missing url in JSON", status_code=400)
                 logger.info(f"Downloading image from URL: {url}")
-                resp = requests.get(url, timeout=30)
-                resp.raise_for_status()
-                image_bytes = resp.content
+                image_bytes = download_with_retry(url)
             else:
                 # Handle raw bytes
                 image_bytes = await request.body()
