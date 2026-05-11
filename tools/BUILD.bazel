@@ -67,7 +67,10 @@ py_binary(
 
 py_test(
     name = "test_piece_image_crop_service",
-    srcs = ["tests/test_piece_image_crop_service.py"],
+    srcs = [
+        "piece_image_crop_service.py",
+        "tests/test_piece_image_crop_service.py",
+    ],
     main = "tests/test_piece_image_crop_service.py",
     deps = [
         requirement_tools("fastapi"),

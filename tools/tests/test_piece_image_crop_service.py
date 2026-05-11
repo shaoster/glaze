@@ -201,8 +201,7 @@ class TestAuthVerification(unittest.TestCase):
             os.environ["AUTH_TOKEN"] = token
 
         # Import inside test so the mock is already in sys.modules
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-        from piece_image_crop_service import create_app
+        from tools.piece_image_crop_service import create_app
         from fastapi.testclient import TestClient
         app = create_app()
         return TestClient(app)
