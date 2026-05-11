@@ -26,7 +26,8 @@ try:
         modal.Image.debian_slim()
         .pip_install("fastapi", "uvicorn", "rembg", "onnxruntime", "pillow", "pillow-heif", "requests")
         # Pre-download the model into the image to reduce cold start latency
-        .run_commands("python -c \"from rembg import new_session; new_session('u2netp')\"")
+        # We use the full 'u2net' model for better accuracy than the 'u2netp' lite version.
+        .run_commands("python -c \"from rembg import new_session; new_session('u2net')\"")
     )
     
     # We use a secret to protect the endpoint
@@ -55,7 +56,9 @@ def create_app():
     register_heif_opener()
 
     fastapi_instance = FastAPI(title="Piece Image Crop Service")
-    _SESSION = new_session("u2netp")
+    
+    # Using the full u2net model for improved accuracy (higher memory but better edge detection)
+    _SESSION = new_session("u2net")
     
     # Simple token-based auth
     EXPECTED_TOKEN = os.environ.get("AUTH_TOKEN")
@@ -115,7 +118,19 @@ def create_app():
 
             left, upper, right, lower = bbox
 
-            # 3. Return relative coordinates
+            # 3. Apply Padding to prevent "aggressive" cropping
+            # We add 10% of the subject's dimensions as a safety margin.
+            subj_w = right - left
+            subj_h = lower - upper
+            pad_w = int(subj_w * 0.10)
+            pad_h = int(subj_h * 0.10)
+            
+            left = max(0, left - pad_w)
+            upper = max(0, upper - pad_h)
+            right = min(width, right + pad_w)
+            lower = min(height, lower + pad_h)
+
+            # 4. Return relative coordinates
             return {
                 "x": left / width,
                 "y": upper / height,
@@ -128,7 +143,7 @@ def create_app():
 
     @fastapi_instance.get("/health")
     def health():
-        return {"status": "ok", "model": "u2netp"}
+        return {"status": "ok", "model": "u2net"}
 
     return fastapi_instance
 
