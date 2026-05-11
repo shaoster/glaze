@@ -39,11 +39,15 @@ def calculate_subject_crop(image_bytes: bytes) -> dict | None:
     import io
 
     from PIL import Image
-    from rembg import remove
+    from rembg import new_session, remove
 
     # 1. Remove background
     input_image = Image.open(io.BytesIO(image_bytes))
-    output_image = remove(input_image)
+    
+    # Use a thread-local session to prevent ONNX Runtime deadlocks
+    # when run concurrently within the background ThreadPoolExecutor.
+    session = new_session("u2net")
+    output_image = remove(input_image, session=session)
 
     # 2. Find non-transparent bounds
     alpha = output_image.getchannel("A")
