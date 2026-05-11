@@ -109,8 +109,8 @@ jobs:
           source env.sh
           gz_lint
 
-  coverage:
-    name: Coverage & Test
+  backend-test:
+    name: Backend Test
     needs: preflight
     if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
     runs-on: ubuntu-latest
@@ -128,24 +128,57 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/bazel-disk-cache
-          key: bazel-disk-coverage-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
+          key: bazel-disk-backend-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
           restore-keys: |
-            bazel-disk-coverage-${{ needs.preflight.outputs.deps_key }}-
+            bazel-disk-backend-${{ needs.preflight.outputs.deps_key }}-
             bazel-disk-
       - name: Inject secret into ~/.bazelrc
         run: |
           echo "" >> .bazelrc
           echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
-      - name: Run Coverage & Test
+      - name: Run Backend Tests
         shell: bash
         run: |
           source env.sh
-          gz_test --coverage
+          gz_test //api:api_test --coverage
+
+  frontend-test:
+    name: Frontend Test
+    needs: preflight
+    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Cache Bazel Repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel/_bazel_runner/cache/repos/v1
+          key: bazel-repo-${{ needs.preflight.outputs.deps_key }}
+          restore-keys: bazel-repo-
+      - name: Cache Bazel Disk
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel-disk-cache
+          key: bazel-disk-frontend-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
+          restore-keys: |
+            bazel-disk-frontend-${{ needs.preflight.outputs.deps_key }}-
+            bazel-disk-
+      - name: Inject secret into ~/.bazelrc
+        run: |
+          echo "" >> .bazelrc
+          echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
+      - name: Run Frontend Tests
+        shell: bash
+        run: |
+          source env.sh
+          gz_test //web:web_test --coverage
 
   publish:
     name: Publish OCI image
-    needs: [preflight, coverage, lint]
-    if: ${{ always() && !cancelled() && (github.event_name == 'push' && ((needs.coverage.result == 'success' && needs.lint.result == 'success') || needs.preflight.outputs.skip_main == 'true')) }}
+    needs: [preflight, backend-test, frontend-test, lint]
+    if: ${{ always() && !cancelled() && (github.event_name == 'push' && ((needs.backend-test.result == 'success' && needs.frontend-test.result == 'success' && needs.lint.result == 'success') || needs.preflight.outputs.skip_main == 'true')) }}
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -192,8 +225,8 @@ jobs:
 
   record-fingerprint:
     name: Record successful fingerprint
-    needs: [preflight, lint, coverage]
-    if: ${{ github.event_name == 'pull_request' && needs.lint.result == 'success' && needs.coverage.result == 'success' }}
+    needs: [preflight, lint, backend-test, frontend-test]
+    if: ${{ github.event_name == 'pull_request' && needs.lint.result == 'success' && needs.backend-test.result == 'success' && needs.frontend-test.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Write fingerprint marker

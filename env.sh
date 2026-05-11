@@ -887,6 +887,8 @@ _gz_get_affected_targets() {
     local filter_query="$1"
     local bazel_files="$2"
     
-    # Find targets that depend on the changed files, restricted by the filter
-    bazel query "rdeps(//..., set($bazel_files)) intersect $filter_query" 2>/dev/null
+    # Find targets that depend on the changed files, restricted by the filter.
+    # We restrict the universe to our main packages to avoid loading the whole repo.
+    local universe="//api/... + //web/... + //backend/... + //tools/... + //tests/... + //:*"
+    bazel query "rdeps($universe, set($bazel_files)) intersect $filter_query" 2>/dev/null
 }

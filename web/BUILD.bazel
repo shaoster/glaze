@@ -251,18 +251,21 @@ filegroup(
 vitest_test(
     name = "web_components_test",
     srcs = glob(["src/components/__tests__/*.test.tsx"]),
+    tags = ["ibazel_notify_changes"],
     deps = [":web_components_lib"],
 )
 
 vitest_test(
     name = "web_pages_test",
     srcs = glob(["src/pages/__tests__/*.test.tsx", "src/pages/__tests__/*.test.ts"]),
+    tags = ["ibazel_notify_changes"],
     deps = [":web_pages_lib"],
 )
 
 vitest_test(
     name = "web_util_test",
     srcs = glob(["src/util/__tests__/*.test.ts", "src/util/*.test.ts"]),
+    tags = ["ibazel_notify_changes"],
     deps = [":util_lib"],
 )
 
