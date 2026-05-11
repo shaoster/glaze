@@ -77,8 +77,11 @@ if __name__ == "__main__":
 try:
     import modal
 
-    image = modal.Image.debian_slim().pip_install(
-        "fastapi", "uvicorn", "rembg", "onnxruntime", "pillow"
+    image = (
+        modal.Image.debian_slim()
+        .pip_install("fastapi", "uvicorn", "rembg", "onnxruntime", "pillow")
+        # Pre-download the model into the image to reduce cold start latency
+        .run_commands("python -c \"from rembg import new_session; new_session('u2netp')\"")
     )
     modal_app = modal.App("glaze-rembg", image=image)
 
