@@ -18,7 +18,7 @@ npm run dev
 # Remote ML Offload (Optional, for 1GB RAM servers)
 pip install modal
 modal setup
-modal deploy tools/remote_rembg_service.py
+modal deploy tools/piece_image_crop_service.py
 ```
 
 See [`env.sh`](../../env.sh) for shell helpers (`gz_setup`, `gz_start`, etc.) that wrap these commands.

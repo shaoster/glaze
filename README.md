@@ -278,7 +278,7 @@ npm run dev
 # Remote ML Offload (Optional, for 1GB RAM servers)
 pip install modal
 modal setup
-modal deploy tools/remote_rembg_service.py
+modal deploy tools/piece_image_crop_service.py
 
 # Type generation (backend must be running on port 8080)
 cd web
@@ -350,7 +350,7 @@ When `REMOTE_REMBG_URL` is set, Glaze skips local ML processing and POSTs image 
 #### Step 1: Deploy the Microservice (Run from your LOCAL machine)
 1.  **Install Modal**: `pip install modal`
 2.  **Authenticate**: `modal setup` (or set `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` variables).
-3.  **Deploy**: `modal deploy tools/remote_rembg_service.py`
+3.  **Deploy**: `modal deploy tools/piece_image_crop_service.py`
 4.  **Capture the URL**: The output will provide a permanent URL, e.g., `https://shaoster--glaze-rembg-web.modal.run`.
 
 #### Step 2: Configure the Backend (Run on the PRODUCTION host / Droplet)

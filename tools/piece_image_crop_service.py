@@ -1,15 +1,15 @@
 """
-Standalone rembg microservice for remote offloading.
+Standalone piece image crop service for remote offloading.
 Can be deployed to Modal.com or run locally.
 
 Usage (Local):
     pip install fastapi uvicorn rembg onnxruntime pillow
-    uvicorn tools.remote_rembg_service:fastapi_app --port 8080
+    uvicorn tools.piece_image_crop_service:fastapi_app --port 8080
 
 Usage (Modal):
     pip install modal
     modal setup
-    modal deploy tools/remote_rembg_service.py
+    modal deploy tools/piece_image_crop_service.py
 """
 
 import io
@@ -46,7 +46,7 @@ def create_app():
     from PIL import Image
     from rembg import new_session, remove
 
-    fastapi_instance = FastAPI(title="Glaze Remote rembg Service")
+    fastapi_instance = FastAPI(title="Piece Image Crop Service")
     _SESSION = new_session("u2netp")
 
     @fastapi_instance.post("/")
