@@ -451,8 +451,8 @@ gz_test() {
         echo "Running: bazel coverage --config=ci --combined_report=lcov $target ${bazel_args[*]}"
         (cd "$GLAZE_ROOT" && bazel coverage --config=ci --combined_report=lcov $target "${bazel_args[@]}")
     else
-        echo "Running: bazel test $target ${bazel_args[*]}"
-        (cd "$GLAZE_ROOT" && bazel test --test_output=errors $target "${bazel_args[@]}")
+        echo "Running: bazel test --config=ci --test_output=errors $target ${bazel_args[*]}"
+        (cd "$GLAZE_ROOT" && bazel test --config=ci --test_output=errors $target "${bazel_args[@]}")
     fi
 }
 

@@ -6,7 +6,8 @@ common --spawn_strategy=local
 build --incompatible_enable_cc_toolchain_resolution
 
 # Performance and Analysis
-startup --host_jvm_args=-Xmx8g
+# 4GB is safe for GitHub-hosted runners (7GB total).
+startup --host_jvm_args=-Xmx4g
 build --nolegacy_external_runfiles
 build --loading_phase_threads=auto
 build --experimental_action_cache_store_output_metadata
