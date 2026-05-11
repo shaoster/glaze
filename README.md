@@ -351,12 +351,12 @@ When `REMOTE_REMBG_URL` is set, Glaze skips local ML processing and POSTs image 
 1.  **Install Modal**: `pip install modal`
 2.  **Authenticate**: `modal setup` (or set `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` variables).
 3.  **Deploy**: `modal deploy tools/piece_image_crop_service.py`
-4.  **Capture the URL**: The output will provide a permanent URL, e.g., `https://shaoster--glaze-rembg-web.modal.run`.
+4.  **Capture the URL**: The output will provide a permanent URL, e.g., `https://your-workspace-name--crop.modal.run`.
 
 #### Step 2: Configure the Backend (Run on the PRODUCTION host / Droplet)
 1.  **Update Environment**: Add the URL to your production `.env` file:
     ```bash
-    REMOTE_REMBG_URL="https://your-app-name.modal.run"
+    REMOTE_REMBG_URL="https://your-workspace-name--crop.modal.run"
     ```
 2.  **Restart Service**: 
     ```bash
