@@ -23,13 +23,6 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .cloudinary_cleanup import (
-    delete_cloudinary_assets,
-    list_cloudinary_assets,
-    stream_cloudinary_cleanup_archive,
-    summarize_referenced_public_ids,
-)
-from .manual_tile_imports import import_manual_tile_records
 from .models import (
     AsyncTask,
     FavoriteGlazeCombination,
@@ -57,7 +50,6 @@ from .serializers import (
     RegisterSerializer,
     TaskSubmissionSerializer,
 )
-from .tasks import get_task_interface
 from .utils import bootstrap_dev_user
 from .workflow import (
     get_glaze_image_qualifying_states,
@@ -734,6 +726,12 @@ def cloudinary_widget_sign(request: Request) -> Response:
 @api_view(["GET", "DELETE"])
 @permission_classes([IsAdminUser])
 def admin_cloudinary_cleanup(request: Request) -> Response:
+    from .cloudinary_cleanup import (
+        delete_cloudinary_assets,
+        list_cloudinary_assets,
+        summarize_referenced_public_ids,
+    )
+
     if request.method == "GET":
         try:
             assets = list_cloudinary_assets()
@@ -820,6 +818,11 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
 def admin_cloudinary_cleanup_archive(
     request: Request,
 ) -> StreamingHttpResponse | Response:
+    from .cloudinary_cleanup import (
+        list_cloudinary_assets,
+        stream_cloudinary_cleanup_archive,
+    )
+
     unreferenced_only = request.query_params.get("unreferenced_only", "").lower() in (
         "1",
         "true",
@@ -1157,6 +1160,8 @@ def auth_register(request: Request) -> Response:
 @permission_classes([IsAdminUser])
 @parser_classes([MultiPartParser, FormParser])
 def admin_manual_square_crop_import(request: Request) -> Response:
+    from .manual_tile_imports import import_manual_tile_records
+
     payload_raw = request.data.get("payload", "")
     if not payload_raw:
         return Response(
@@ -1210,6 +1215,8 @@ def admin_manual_square_crop_import(request: Request) -> Response:
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def submit_task(request: Request) -> Response:
+    from .tasks import get_task_interface
+
     serializer = TaskSubmissionSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 

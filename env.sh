@@ -349,12 +349,198 @@ gz_test_web() {
 }
 
 gz_test() {
-    (cd "$GLAZE_ROOT" && bazel test --test_output=errors //... "$@")
+    local target="//..."
+    local mode="auto"
+    local usage="Usage: gz_test [--all|--affected] [bazel args...]"
+
+    # Parse our custom flags first
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --all)
+                mode="all"
+                shift
+                ;;
+            --affected)
+                mode="affected"
+                shift
+                ;;
+            --help)
+                echo "$usage"
+                return 0
+                ;;
+            -*)
+                # Stop parsing at first bazel flag
+                break
+                ;;
+            *)
+                # Treat as target override if no flag matched
+                target="$1"
+                shift
+                mode="manual"
+                break
+                ;;
+        esac
+    done
+
+    if [[ "$mode" == "auto" ]]; then
+        # Default to affected if on a branch, otherwise all
+        local current_branch
+        current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+        if [[ "$current_branch" != "main" && "$current_branch" != "HEAD" ]]; then
+            mode="affected"
+        else
+            mode="all"
+        fi
+    fi
+
+    if [[ "$mode" == "affected" ]]; then
+        local diff_base="main"
+        # Handle cases where main is not available or we are on main
+        if ! git rev-parse --verify "$diff_base" &>/dev/null; then
+            diff_base="origin/main"
+        fi
+
+        if git rev-parse --verify "$diff_base" &>/dev/null; then
+            local FILES
+            FILES=$(git diff --name-only "$diff_base...HEAD" 2>/dev/null)
+            if [[ -n "$FILES" ]]; then
+                local EXISTING=""
+                for f in $FILES; do [[ -f "$f" ]] && EXISTING="$EXISTING $f"; done
+                if [[ -n "$EXISTING" ]]; then
+                    echo "Determining affected tests (comparing with $diff_base)..."
+                    # Filter existing files to only those Bazel knows about to avoid query errors (exit code 7)
+                    local ALL_SOURCES
+                    ALL_SOURCES=$(bazel query 'kind("source file", //...)' 2>/dev/null | sed 's|^//||; s|:|/|')
+                    local BAZEL_FILES
+                    BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
+                    if [[ -n "$BAZEL_FILES" ]]; then
+                        local QUERY_TARGETS
+                        QUERY_TARGETS=$(bazel query "kind(test, rdeps(//..., set($BAZEL_FILES)))" 2>/dev/null)
+                        if [[ -n "$QUERY_TARGETS" ]]; then
+                            target=$(echo "$QUERY_TARGETS" | tr '\n' ' ')
+                            echo "Testing $(echo $target | wc -w) affected target(s)."
+                        else
+                            echo "No tests affected by these changes. Use 'gz_test --all' if you want to run everything."
+                            return 0
+                        fi
+                    else
+                        echo "No Bazel-tracked code changes detected. Use 'gz_test --all' if you want to run everything."
+                        return 0
+                    fi
+                else
+                    echo "No code changes detected. Use 'gz_test --all' if you want to run everything."
+                    return 0
+                fi
+            else
+                echo "No differences from $diff_base. Running all tests."
+                target="//..."
+            fi
+        else
+             echo "Warning: Could not find base branch '$diff_base'. Running all tests."
+             target="//..."
+        fi
+    fi
+
+    echo "Running: bazel test $target"
+    (cd "$GLAZE_ROOT" && bazel test --test_output=errors $target "$@")
 }
 
 # CI-aligned: run ruff, eslint, tsc, and mypy via Bazel (same as CI).
 gz_lint() {
-    (cd "$GLAZE_ROOT" && bazel build --config=lint //...)
+    local target="//..."
+    local mode="auto"
+    local usage="Usage: gz_lint [--all|--affected] [bazel args...]"
+
+    # Parse our custom flags first
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --all)
+                mode="all"
+                shift
+                ;;
+            --affected)
+                mode="affected"
+                shift
+                ;;
+            --help)
+                echo "$usage"
+                return 0
+                ;;
+            -*)
+                # Stop parsing at first bazel flag
+                break
+                ;;
+            *)
+                # Treat as target override if no flag matched
+                target="$1"
+                shift
+                mode="manual"
+                break
+                ;;
+        esac
+    done
+
+    if [[ "$mode" == "auto" ]]; then
+        # Default to affected if on a branch, otherwise all
+        local current_branch
+        current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+        if [[ "$current_branch" != "main" && "$current_branch" != "HEAD" ]]; then
+            mode="affected"
+        else
+            mode="all"
+        fi
+    fi
+
+    if [[ "$mode" == "affected" ]]; then
+        local diff_base="main"
+        # Handle cases where main is not available or we are on main
+        if ! git rev-parse --verify "$diff_base" &>/dev/null; then
+            diff_base="origin/main"
+        fi
+
+        if git rev-parse --verify "$diff_base" &>/dev/null; then
+            local FILES
+            FILES=$(git diff --name-only "$diff_base...HEAD" 2>/dev/null)
+            if [[ -n "$FILES" ]]; then
+                local EXISTING=""
+                for f in $FILES; do [[ -f "$f" ]] && EXISTING="$EXISTING $f"; done
+                if [[ -n "$EXISTING" ]]; then
+                    echo "Determining affected lint targets (comparing with $diff_base)..."
+                    # Filter existing files to only those Bazel knows about to avoid query errors (exit code 7)
+                    local ALL_SOURCES
+                    ALL_SOURCES=$(bazel query 'kind("source file", //...)' 2>/dev/null | sed 's|^//||; s|:|/|')
+                    local BAZEL_FILES
+                    BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
+                    if [[ -n "$BAZEL_FILES" ]]; then
+                        local QUERY_TARGETS
+                        QUERY_TARGETS=$(bazel query "rdeps(//..., set($BAZEL_FILES))" 2>/dev/null)
+                        if [[ -n "$QUERY_TARGETS" ]]; then
+                            target=$(echo "$QUERY_TARGETS" | tr '\n' ' ')
+                            echo "Linting $(echo $target | wc -w) affected target(s)."
+                        else
+                            echo "No targets affected by these changes. Use 'gz_lint --all' if you want to lint everything."
+                            return 0
+                        fi
+                    else
+                        echo "No Bazel-tracked code changes detected. Use 'gz_lint --all' if you want to lint everything."
+                        return 0
+                    fi
+                else
+                    echo "No code changes detected. Use 'gz_lint --all' if you want to lint everything."
+                    return 0
+                fi
+            else
+                echo "No differences from $diff_base. Linting all targets."
+                target="//..."
+            fi
+        else
+             echo "Warning: Could not find base branch '$diff_base'. Linting all targets."
+             target="//..."
+        fi
+    fi
+
+    echo "Running: bazel build --config=lint $target"
+    (cd "$GLAZE_ROOT" && bazel build --config=ci --config=lint $target "$@")
 }
 
 # Auto-fix: reformat Python files and apply ruff auto-fixes in one step.
@@ -717,11 +903,11 @@ _GZ_SHORTCUTS=(
     "gz_prod <cmd>     — run any manage.py subcommand on production (requires GLAZE_PROD_HOST in .env.local)"
     "gz_prod_shell     — Django shell on production"
     "gz_prod_dbshell   — database shell on production"
-    "gz_test           — run all tests via Bazel (CI-aligned, shows errors only)"
+    "gz_test           — run affected tests via Bazel (smart detection on branches; --all to run everything)"
     "gz_test_common    — run workflow schema/integrity tests (pytest tests/)"
     "gz_test_backend   — run Django API tests (pytest api/)"
     "gz_test_web       — run the web tests only"
-    "gz_lint           — run all linters via Bazel: ruff, eslint, tsc, mypy"
+    "gz_lint           — run affected linters via Bazel (smart detection on branches; --all to lint everything)"
     "gz_format         — auto-fix: ruff format + ruff check --fix (Python)"
     "gz_build          — full production build via Bazel (//...); symlinks web/dist"
     "gz_gentypes       — regenerate TypeScript types via Bazel; symlinks into src/"

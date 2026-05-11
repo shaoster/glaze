@@ -49,8 +49,13 @@ ts_project(
     name = "tsc_typecheck",
     srcs = glob(
         [
-            "src/**/*.ts",
-            "src/**/*.tsx",
+            "src/*.ts",
+            "src/*.tsx",
+            "src/components/**/*.ts",
+            "src/components/**/*.tsx",
+            "src/pages/**/*.ts",
+            "src/pages/**/*.tsx",
+            "src/util/*.ts",
         ],
         exclude = [
             "src/**/*.test.ts",
@@ -122,15 +127,15 @@ js_library(
 
 js_library(
     name = "util_lib",
-    srcs = glob(
-        [
-            "src/util/**/*.ts",
-        ],
-        exclude = [
-            "src/util/**/*.test.ts",
-            "src/util/generated-types.ts",  # genrule output
-        ],
-    ),
+    srcs = [
+        "src/util/api.ts",
+        "src/util/format.ts",
+        "src/util/normalizeWorkflowFields.ts",
+        "src/util/optionalValues.ts",
+        "src/util/types.ts",
+        "src/util/useAsync.ts",
+        "src/util/workflow.ts",
+    ],
     deps = [
         ":generated_types",
         "//:workflow_js",
@@ -143,19 +148,19 @@ js_library(
     name = "web_lib",
     srcs = glob(
         [
-            "src/**/*.ts",
-            "src/**/*.tsx",
-            "src/**/*.css",
-            "src/**/*.svg",
+            "src/*.ts",
+            "src/*.tsx",
+            "src/assets/**/*",
+            "src/components/**/*",
+            "src/pages/**/*",
             "*.json",
             "*.config.*",
-            "*.ts",
-            "public/**",
+            "public/**/*",
         ],
         exclude = [
-            "src/util/**/*.ts",
             "src/**/*.test.ts",
             "src/**/*.test.tsx",
+            "src/util/**/*",
         ],
     ) + [
         "index.html",

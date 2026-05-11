@@ -16,7 +16,7 @@ py_binary(
     srcs = ["generate_schema.py"],
     data = ["//:workflow_files"],
     deps = [
-        "//api:api_lib",
+        "//api:api_schema_lib",
         "//backend:backend_lib",
         requirement("django"),
         requirement("djangorestframework"),

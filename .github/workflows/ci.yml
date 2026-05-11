@@ -27,6 +27,7 @@ jobs:
     outputs:
       fingerprint: ${{ steps.fingerprint.outputs.value }}
       artifact_key: ${{ steps.fingerprint.outputs.artifact_key }}
+      deps_key: ${{ steps.fingerprint.outputs.deps_key }}
       skip_main: ${{ steps.lookup.outputs.skip_main }}
     steps:
       - uses: actions/checkout@v5
@@ -43,9 +44,12 @@ jobs:
           py="$(sha256sum requirements.txt requirements-dev.txt | sha256sum | cut -d' ' -f1)"
           node="$(sha256sum web/pnpm-lock.yaml | cut -d' ' -f1)"
           value="${tree}-${ci}-${bazel}-${py}-${node}"
+          deps_value="${bazel}-${py}-${node}"
           artifact_key="$(printf '%s' "$value" | sha256sum | cut -d' ' -f1)"
+          deps_key="$(printf '%s' "$deps_value" | sha256sum | cut -d' ' -f1)"
           echo "value=$value" >> "$GITHUB_OUTPUT"
           echo "artifact_key=$artifact_key" >> "$GITHUB_OUTPUT"
+          echo "deps_key=$deps_key" >> "$GITHUB_OUTPUT"
 
       - id: lookup
         name: Check for prior successful PR validation
@@ -68,19 +72,131 @@ jobs:
             );
             core.setOutput('skip_main', match ? 'true' : 'false');
 
-  test:
-    name: Test
+  lint:
+    name: Lint
     needs: preflight
     if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Cache Bazel Repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel/_bazel_runner/cache/repos/v1
+          key: bazel-repo-${{ needs.preflight.outputs.deps_key }}
+          restore-keys: bazel-repo-
+      - name: Cache Bazel Disk
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel-disk-cache
+          key: bazel-disk-lint-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
+          restore-keys: |
+            bazel-disk-lint-${{ needs.preflight.outputs.deps_key }}-
+            bazel-disk-
       - name: Inject secret into ~/.bazelrc
         run: |
           echo "" >> .bazelrc
           echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
-      - name: Run all checks (Lint, Test, Coverage)
-        run: bazel coverage --config=ci --config=lint --combined_report=lcov //...
+      - name: Run Lint (Lints affected targets on PR, all targets on main)
+        shell: bash
+        run: |
+          TARGETS="//..."
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "Calculating affected lint targets (comparing with origin/main)..."
+            FILES=$(git diff --name-only origin/main...HEAD)
+            if [[ -n "$FILES" ]]; then
+              EXISTING=""
+              for f in $FILES; do [[ -f "$f" ]] && EXISTING="$EXISTING $f"; done
+              if [[ -n "$EXISTING" ]]; then
+                ALL_SOURCES=$(bazel query 'kind("source file", //...)' 2>/dev/null | sed 's|^//||; s|:|/|')
+                BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
+                if [[ -n "$BAZEL_FILES" ]]; then
+                  QUERY_TARGETS=$(bazel query "rdeps(//..., set($BAZEL_FILES))" 2>/dev/null)
+                  if [[ -n "$QUERY_TARGETS" ]]; then
+                    TARGETS=$(echo "$QUERY_TARGETS" | tr '\n' ' ')
+                    echo "Linting $(echo $TARGETS | wc -w) affected target(s)."
+                  else
+                    echo "No targets affected by these changes. Skipping lint."
+                    exit 0
+                  fi
+                else
+                  echo "No Bazel-tracked code changes detected. Skipping lint."
+                  exit 0
+                fi
+              else
+                echo "No existing code changes detected. Skipping lint."
+                exit 0
+              fi
+            else
+              echo "No differences from main. Defaulting to //..."
+            fi
+          fi
+          bazel build --config=ci --config=lint $TARGETS
+
+  coverage:
+    name: Coverage & Test
+    needs: preflight
+    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Cache Bazel Repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel/_bazel_runner/cache/repos/v1
+          key: bazel-repo-${{ needs.preflight.outputs.deps_key }}
+          restore-keys: bazel-repo-
+      - name: Cache Bazel Disk
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel-disk-cache
+          key: bazel-disk-coverage-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
+          restore-keys: |
+            bazel-disk-coverage-${{ needs.preflight.outputs.deps_key }}-
+            bazel-disk-
+      - name: Inject secret into ~/.bazelrc
+        run: |
+          echo "" >> .bazelrc
+          echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
+      - name: Run Coverage (Runs affected tests on PR, all tests on main)
+        shell: bash
+        run: |
+          TARGETS="//..."
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "Calculating affected tests (comparing with origin/main)..."
+            FILES=$(git diff --name-only origin/main...HEAD)
+            if [[ -n "$FILES" ]]; then
+              EXISTING=""
+              for f in $FILES; do [[ -f "$f" ]] && EXISTING="$EXISTING $f"; done
+              if [[ -n "$EXISTING" ]]; then
+                ALL_SOURCES=$(bazel query 'kind("source file", //...)' 2>/dev/null | sed 's|^//||; s|:|/|')
+                BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
+                if [[ -n "$BAZEL_FILES" ]]; then
+                  QUERY_TARGETS=$(bazel query "kind(test, rdeps(//..., set($BAZEL_FILES)))" 2>/dev/null)
+                  if [[ -n "$QUERY_TARGETS" ]]; then
+                    TARGETS=$(echo "$QUERY_TARGETS" | tr '\n' ' ')
+                    echo "Testing $(echo $TARGETS | wc -w) affected target(s)."
+                  else
+                    echo "No tests affected by these changes. Skipping execution."
+                    exit 0
+                  fi
+                else
+                  echo "No Bazel-tracked code changes detected. Skipping execution."
+                  exit 0
+                fi
+              else
+                echo "No existing code changes detected. Skipping execution."
+                exit 0
+              fi
+            else
+              echo "No differences from main. Defaulting to //..."
+            fi
+          fi
+          bazel coverage --config=ci --combined_report=lcov $TARGETS
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -88,10 +204,11 @@ jobs:
           files: bazel-out/_coverage/_coverage_report.dat
           flags: backend,frontend
           fail_ci_if_error: false
+
   publish:
     name: Publish OCI image
-    needs: [preflight, test]
-    if: ${{ always() && (github.event_name == 'push' && (needs.test.result == 'success' || needs.preflight.outputs.skip_main == 'true')) }}
+    needs: [preflight, coverage, lint]
+    if: ${{ always() && (github.event_name == 'push' && ((needs.coverage.result == 'success' && needs.lint.result == 'success') || needs.preflight.outputs.skip_main == 'true')) }}
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -99,6 +216,21 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.sha }}
+
+      - name: Cache Bazel Repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel/_bazel_runner/cache/repos/v1
+          key: bazel-repo-${{ needs.preflight.outputs.deps_key }}
+          restore-keys: bazel-repo-
+      - name: Cache Bazel Disk
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel-disk-cache
+          key: bazel-disk-publish-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
+          restore-keys: |
+            bazel-disk-publish-${{ needs.preflight.outputs.deps_key }}-
+            bazel-disk-
 
       - name: Inject BuildBuddy API key into .bazelrc
         run: |
@@ -123,8 +255,8 @@ jobs:
 
   record-fingerprint:
     name: Record successful fingerprint
-    needs: [preflight, test]
-    if: ${{ github.event_name == 'pull_request' && needs.test.result == 'success' }}
+    needs: [preflight, lint, coverage]
+    if: ${{ github.event_name == 'pull_request' && needs.lint.result == 'success' && needs.coverage.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Write fingerprint marker
