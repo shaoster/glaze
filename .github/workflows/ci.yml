@@ -186,7 +186,7 @@ jobs:
 
       - name: Build and push OCI image
         run: |
-          bazel run --config=ci --stamp //...sh -- \
+          bazel run --config=ci --stamp //:push -- \
             --tag latest \
             --tag ${{ github.sha }}
 
