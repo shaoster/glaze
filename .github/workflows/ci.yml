@@ -97,8 +97,35 @@ jobs:
         run: |
           echo "" >> .bazelrc
           echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
-      - name: Run Lint
-        run: bazel build --config=ci --config=lint //...
+      - name: Run Lint (Lints affected targets on PR, all targets on main)
+        shell: bash
+        run: |
+          TARGETS="//..."
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "Calculating affected lint targets (comparing with origin/main)..."
+            git fetch origin main --depth=1
+            FILES=$(git diff --name-only origin/main...HEAD)
+            if [[ -n "$FILES" ]]; then
+              EXISTING=""
+              for f in $FILES; do [[ -f "$f" ]] && EXISTING="$EXISTING $f"; done
+              if [[ -n "$EXISTING" ]]; then
+                QUERY_TARGETS=$(bazel query "rdeps(//..., set($EXISTING))" 2>/dev/null)
+                if [[ -n "$QUERY_TARGETS" ]]; then
+                  TARGETS=$(echo "$QUERY_TARGETS" | tr '\n' ' ')
+                  echo "Linting $(echo $TARGETS | wc -w) affected target(s)."
+                else
+                  echo "No targets affected by these changes. Skipping lint."
+                  exit 0
+                fi
+              else
+                echo "No existing code changes detected. Skipping lint."
+                exit 0
+              fi
+            else
+              echo "No differences from main. Defaulting to //..."
+            fi
+          fi
+          bazel build --config=ci --config=lint $TARGETS
 
   coverage:
     name: Coverage & Test

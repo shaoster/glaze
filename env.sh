@@ -445,7 +445,98 @@ gz_test() {
 
 # CI-aligned: run ruff, eslint, tsc, and mypy via Bazel (same as CI).
 gz_lint() {
-    (cd "$GLAZE_ROOT" && bazel build --config=lint //...)
+    local target="//..."
+    local mode="auto"
+    local usage="Usage: gz_lint [--all|--affected] [bazel args...]"
+
+    # Parse our custom flags first
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --all)
+                mode="all"
+                shift
+                ;;
+            --affected)
+                mode="affected"
+                shift
+                ;;
+            --help)
+                echo "$usage"
+                return 0
+                ;;
+            -*)
+                # Stop parsing at first bazel flag
+                break
+                ;;
+            *)
+                # Treat as target override if no flag matched
+                target="$1"
+                shift
+                mode="manual"
+                break
+                ;;
+        esac
+    done
+
+    if [[ "$mode" == "auto" ]]; then
+        # Default to affected if on a branch, otherwise all
+        local current_branch
+        current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+        if [[ "$current_branch" != "main" && "$current_branch" != "HEAD" ]]; then
+            mode="affected"
+        else
+            mode="all"
+        fi
+    fi
+
+    if [[ "$mode" == "affected" ]]; then
+        local diff_base="main"
+        # Handle cases where main is not available or we are on main
+        if ! git rev-parse --verify "$diff_base" &>/dev/null; then
+            diff_base="origin/main"
+        fi
+
+        if git rev-parse --verify "$diff_base" &>/dev/null; then
+            local files
+            files=$(git diff --name-only "$diff_base...HEAD" 2>/dev/null)
+            if [[ -n "$files" ]]; then
+                # Filter to existing files only
+                local existing_files=()
+                for f in $files; do
+                    [[ -f "$f" ]] && existing_files+=("$f")
+                done
+
+                if [[ ${#existing_files[@]} -gt 0 ]]; then
+                    echo "Determining affected lint targets (comparing with $diff_base)..."
+                    # For linting, we want any target that depends on these files
+                    local query="rdeps(//..., set(${existing_files[*]}))"
+                    local affected_targets
+                    affected_targets=$(bazel query "$query" 2>/dev/null)
+                    if [[ -n "$affected_targets" ]]; then
+                        target=$(echo "$affected_targets" | tr '\n' ' ')
+                        local count
+                        count=$(echo "$target" | wc -w)
+                        echo "Linting $count affected target(s)."
+                    else
+                        echo "No targets affected by these changes. Use 'gz_lint --all' if you want to lint everything."
+                        return 0
+                    fi
+                else
+                    echo "No code changes detected. Use 'gz_lint --all' if you want to lint everything."
+                    return 0
+                fi
+            else
+                echo "No differences from $diff_base. Linting all targets."
+                target="//..."
+            fi
+        else
+             echo "Warning: Could not find base branch '$diff_base'. Linting all targets."
+             target="//..."
+        fi
+    fi
+
+    echo "Running: bazel build --config=lint $target"
+    (cd "$GLAZE_ROOT" && bazel build --config=ci --config=lint $target "$@")
 }
 
 # Auto-fix: reformat Python files and apply ruff auto-fixes in one step.
@@ -812,7 +903,7 @@ _GZ_SHORTCUTS=(
     "gz_test_common    — run workflow schema/integrity tests (pytest tests/)"
     "gz_test_backend   — run Django API tests (pytest api/)"
     "gz_test_web       — run the web tests only"
-    "gz_lint           — run all linters via Bazel: ruff, eslint, tsc, mypy"
+    "gz_lint           — run affected linters via Bazel (smart detection on branches; --all to lint everything)"
     "gz_format         — auto-fix: ruff format + ruff check --fix (Python)"
     "gz_build          — full production build via Bazel (//...); symlinks web/dist"
     "gz_gentypes       — regenerate TypeScript types via Bazel; symlinks into src/"
