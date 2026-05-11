@@ -25,15 +25,20 @@ describe("PublicPieceShell", () => {
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
-  it("renders piece content when loaded", () => {
+  it("renders piece content with showcase story and custom fields when loaded", () => {
     (useAsync as any).mockReturnValue({
       data: {
         id: "piece-1",
         name: "Beautiful Bowl",
-        showcase_story: "This is a story.",
-        showcase_fields: [],
+        showcase_story: "This is a hand-crafted bowl.",
+        showcase_fields: ["state1.material"],
         thumbnail: null,
-        history: [],
+        history: [
+          {
+            state: "state1",
+            custom_fields: { material: "Clay" },
+          },
+        ],
       },
       loading: false,
       error: null,
@@ -42,6 +47,9 @@ describe("PublicPieceShell", () => {
     render(<PublicPieceShell />);
 
     expect(screen.getByText("Beautiful Bowl")).toBeInTheDocument();
-    expect(screen.getByText("This is a story.")).toBeInTheDocument();
+    expect(screen.getByText("This is a hand-crafted bowl.")).toBeInTheDocument();
+    expect(screen.getByText("Details")).toBeInTheDocument();
+    expect(screen.getByText("Material")).toBeInTheDocument();
+    expect(screen.getByText("Clay")).toBeInTheDocument();
   });
 });
