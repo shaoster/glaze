@@ -29,7 +29,7 @@ try:
         .run_commands("python -c \"from rembg import new_session; new_session('u2netp')\"")
     )
     # Modal CLI looks for a variable named 'app' by default.
-    app = modal.App("glaze-rembg", image=image)
+    app = modal.App("piece-image-crop-service", image=image)
 
     @app.function()
     @modal.asgi_app()
