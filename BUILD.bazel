@@ -132,6 +132,11 @@ oci_image(
         "PYTHONDONTWRITEBYTECODE": "1",
         "PYTHONUNBUFFERED": "1",
         "DJANGO_SETTINGS_MODULE": "backend.settings",
+        # Limit CPU contention and prevent deadlocks in multi-worker environments
+        "OMP_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "ONNXRUNTIME_INTER_OP_NUM_THREADS": "1",
+        "ONNXRUNTIME_INTRA_OP_NUM_THREADS": "1",
     },
     workdir = "/app",
     entrypoint = ["/bin/bash", "/app/docker-entrypoint.sh"],
