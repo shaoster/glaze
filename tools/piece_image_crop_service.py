@@ -31,8 +31,10 @@ try:
     # Modal CLI looks for a variable named 'app' by default.
     app = modal.App("piece-image-crop-service", image=image)
 
+    # By setting label="crop", the URL becomes:
+    # https://<workspace-name>--crop.modal.run
     @app.function()
-    @modal.asgi_app()
+    @modal.asgi_app(label="crop")
     def web():
         return create_app()
 
