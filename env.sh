@@ -516,7 +516,7 @@ gz_lint() {
                     local BAZEL_FILES
                     BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
                     if [[ -n "$BAZEL_FILES" ]]; then
-                        target=$(_gz_get_affected_targets ".*" "$BAZEL_FILES")
+                        target=$(_gz_get_affected_targets 'attr(tags, "lint", //...)' "$BAZEL_FILES")
                         if [[ -n "$target" ]]; then
                              target=$(echo "$target" | tr '\n' ' ')
                              echo "Linting $(echo "$target" | wc -w) affected target(s)."
