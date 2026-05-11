@@ -51,9 +51,30 @@ def _get_rembg_session(model_name: str = "u2net"):
         opts = ort.SessionOptions()
         opts.inter_op_num_threads = 1
         opts.intra_op_num_threads = 1
-        _REMBG_SESSIONS[model_name] = new_session(
-            model_name, providers=["CPUExecutionProvider"], sess_opts=opts
-        )
+
+        # Some versions of rembg (e.g. 2.0.30) have a bug where passing sess_opts
+        # as a keyword argument to new_session() causes it to be passed twice
+        # to the session class. We attempt to bypass new_session() and use the
+        # class directly to avoid this TypeError.
+        try:
+            from rembg.sessions import sessions_names
+
+            session_class = sessions_names.get(model_name)
+            if session_class:
+                _REMBG_SESSIONS[model_name] = session_class(
+                    model_name, sess_opts=opts, providers=["CPUExecutionProvider"]
+                )
+            else:
+                _REMBG_SESSIONS[model_name] = new_session(
+                    model_name, providers=["CPUExecutionProvider"], sess_opts=opts
+                )
+        except (ImportError, TypeError):
+            logger.warning(
+                "Direct rembg session instantiation failed; falling back to new_session."
+            )
+            _REMBG_SESSIONS[model_name] = new_session(
+                model_name, providers=["CPUExecutionProvider"], sess_opts=opts
+            )
     return _REMBG_SESSIONS[model_name]
 
 
