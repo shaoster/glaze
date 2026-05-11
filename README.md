@@ -357,11 +357,18 @@ To maintain stability on hardware with <1GB RAM, Glaze supports offloading the h
 5.  **Capture the URL**: The output will provide a permanent URL, e.g., `https://your-workspace-name--crop.modal.run`.
 
 #### Step 2: Configure the Backend (Run on the PRODUCTION host / Droplet)
-1.  **Update Environment**: Add the URL and Token to your production `.env` file:
-    ```bash
-    REMOTE_REMBG_URL="https://your-workspace-name--crop.modal.run"
-    MODAL_AUTH_TOKEN="your-secret-token"
-    ```
+Update your production `.env` file with the following variables:
+
+| Variable | Description |
+| :--- | :--- |
+| `REMOTE_REMBG_URL` | The URL of your deployed Modal service (e.g. `https://phil--crop.modal.run`). |
+| `MODAL_AUTH_TOKEN` | The secure token you generated for the `piece-image-crop-secret`. |
+
+```bash
+# Example .env additions
+REMOTE_REMBG_URL="https://your-workspace-name--crop.modal.run"
+MODAL_AUTH_TOKEN="your-secure-random-token"
+```
 2.  **Restart Service**: 
     ```bash
     cd ~/glaze
