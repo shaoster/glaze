@@ -141,6 +141,12 @@ jobs:
         run: |
           source env.sh
           gz_test //api/... --coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: bazel-out/_coverage/_coverage_report.dat
+          flags: backend
+          fail_ci_if_error: false
 
   frontend-test:
     name: Frontend Test
@@ -174,6 +180,12 @@ jobs:
         run: |
           source env.sh
           gz_test //web/... --coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: bazel-out/_coverage/_coverage_report.dat
+          flags: frontend
+          fail_ci_if_error: false
 
   publish:
     name: Publish OCI image
