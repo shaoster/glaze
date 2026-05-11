@@ -110,7 +110,7 @@ jobs:
               EXISTING=""
               for f in $FILES; do [[ -f "$f" ]] && EXISTING="$EXISTING $f"; done
               if [[ -n "$EXISTING" ]]; then
-                ALL_SOURCES=$(bazel query 'kind("source file", //...)' 2>/dev/null | sed 's|^//||; s|:|/|')
+                ALL_SOURCES=$(bazel query 'kind("source file", //...:* )' 2>/dev/null | sed 's|^//||; s|:|/|')
                 BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
                 if [[ -n "$BAZEL_FILES" ]]; then
                   QUERY_TARGETS=$(bazel query "rdeps(//..., set($BAZEL_FILES))" 2>/dev/null)
@@ -173,7 +173,7 @@ jobs:
               EXISTING=""
               for f in $FILES; do [[ -f "$f" ]] && EXISTING="$EXISTING $f"; done
               if [[ -n "$EXISTING" ]]; then
-                ALL_SOURCES=$(bazel query 'kind("source file", //...)' 2>/dev/null | sed 's|^//||; s|:|/|')
+                ALL_SOURCES=$(bazel query 'kind("source file", //...:* )' 2>/dev/null | sed 's|^//||; s|:|/|')
                 BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
                 if [[ -n "$BAZEL_FILES" ]]; then
                   QUERY_TARGETS=$(bazel query "kind(test, rdeps(//..., set($BAZEL_FILES)))" 2>/dev/null)
@@ -249,7 +249,7 @@ jobs:
 
       - name: Build and push OCI image
         run: |
-          bazel run --config=ci --stamp //:push -- \
+          bazel run --config=ci --stamp //...sh -- \
             --tag latest \
             --tag ${{ github.sha }}
 
