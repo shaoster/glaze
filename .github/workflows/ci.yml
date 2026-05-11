@@ -152,12 +152,13 @@ jobs:
           fi
           bazel coverage --config=ci --combined_report=lcov $TARGETS
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+      - name: Upload Bazel Query Profile
+        uses: actions/upload-artifact@v4
+        if: always()
         with:
-          files: bazel-out/_coverage/_coverage_report.dat
-          flags: backend,frontend
-          fail_ci_if_error: false
+          name: bazel-query-profile
+          path: bazel_query_profile.json
+          retention-days: 7
 
   publish:
     name: Publish OCI image
