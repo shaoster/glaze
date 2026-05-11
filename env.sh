@@ -349,7 +349,98 @@ gz_test_web() {
 }
 
 gz_test() {
-    (cd "$GLAZE_ROOT" && bazel test --test_output=errors //... "$@")
+    local target="//..."
+    local mode="auto"
+    local usage="Usage: gz_test [--all|--affected] [bazel args...]"
+
+    # Parse our custom flags first
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --all)
+                mode="all"
+                shift
+                ;;
+            --affected)
+                mode="affected"
+                shift
+                ;;
+            --help)
+                echo "$usage"
+                return 0
+                ;;
+            -*)
+                # Stop parsing at first bazel flag
+                break
+                ;;
+            *)
+                # Treat as target override if no flag matched
+                target="$1"
+                shift
+                mode="manual"
+                break
+                ;;
+        esac
+    done
+
+    if [[ "$mode" == "auto" ]]; then
+        # Default to affected if on a branch, otherwise all
+        local current_branch
+        current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+        if [[ "$current_branch" != "main" && "$current_branch" != "HEAD" ]]; then
+            mode="affected"
+        else
+            mode="all"
+        fi
+    fi
+
+    if [[ "$mode" == "affected" ]]; then
+        local diff_base="main"
+        # Handle cases where main is not available or we are on main
+        if ! git rev-parse --verify "$diff_base" &>/dev/null; then
+            diff_base="origin/main"
+        fi
+
+        if git rev-parse --verify "$diff_base" &>/dev/null; then
+            local files
+            files=$(git diff --name-only "$diff_base...HEAD" 2>/dev/null)
+            if [[ -n "$files" ]]; then
+                # Filter to existing files only
+                local existing_files=()
+                for f in $files; do
+                    [[ -f "$f" ]] && existing_files+=("$f")
+                done
+
+                if [[ ${#existing_files[@]} -gt 0 ]]; then
+                    echo "Determining affected tests (comparing with $diff_base)..."
+                    # Use set() for faster query performance with many files
+                    local query="kind(test, rdeps(//..., set(${existing_files[*]})))"
+                    local affected_targets
+                    affected_targets=$(bazel query "$query" 2>/dev/null)
+                    if [[ -n "$affected_targets" ]]; then
+                        target=$(echo "$affected_targets" | tr '\n' ' ')
+                        local count
+                        count=$(echo "$target" | wc -w)
+                        echo "Testing $count affected target(s)."
+                    else
+                        echo "No tests affected by these changes. Use 'gz_test --all' if you want to run everything."
+                        return 0
+                    fi
+                else
+                    echo "No code changes detected. Use 'gz_test --all' if you want to run everything."
+                    return 0
+                fi
+            else
+                echo "No differences from $diff_base. Running all tests."
+                target="//..."
+            fi
+        else
+             echo "Warning: Could not find base branch '$diff_base'. Running all tests."
+             target="//..."
+        fi
+    fi
+
+    echo "Running: bazel test $target"
+    (cd "$GLAZE_ROOT" && bazel test --test_output=errors $target "$@")
 }
 
 # CI-aligned: run ruff, eslint, tsc, and mypy via Bazel (same as CI).
@@ -717,7 +808,7 @@ _GZ_SHORTCUTS=(
     "gz_prod <cmd>     — run any manage.py subcommand on production (requires GLAZE_PROD_HOST in .env.local)"
     "gz_prod_shell     — Django shell on production"
     "gz_prod_dbshell   — database shell on production"
-    "gz_test           — run all tests via Bazel (CI-aligned, shows errors only)"
+    "gz_test           — run affected tests via Bazel (smart detection on branches; --all to run everything)"
     "gz_test_common    — run workflow schema/integrity tests (pytest tests/)"
     "gz_test_backend   — run Django API tests (pytest api/)"
     "gz_test_web       — run the web tests only"
