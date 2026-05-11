@@ -140,15 +140,7 @@ jobs:
         shell: bash
         run: |
           source env.sh
-          gz_test --affected --coverage
-
-      - name: Upload Bazel Query Profile
-        uses: actions/upload-artifact@v4
-        if: ${{ always() && !cancelled() }}
-        with:
-          name: bazel-query-profile
-          path: bazel_query_profile.json
-          retention-days: 7
+          gz_test --coverage
 
   publish:
     name: Publish OCI image
