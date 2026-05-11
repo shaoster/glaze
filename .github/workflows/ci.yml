@@ -107,7 +107,7 @@ jobs:
         shell: bash
         run: |
           source env.sh
-          gz_lint --affected
+          gz_lint
 
   coverage:
     name: Coverage & Test
