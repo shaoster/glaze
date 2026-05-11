@@ -440,8 +440,13 @@ gz_test() {
         fi
     fi
 
-    echo "Running: bazel test $target"
-    (cd "$GLAZE_ROOT" && bazel test --test_output=errors $target "$@")
+    if [ "$coverage" = true ]; then
+        echo "Running: bazel coverage --config=ci --combined_report=lcov $target"
+        (cd "$GLAZE_ROOT" && bazel coverage --config=ci --combined_report=lcov $target "$@")
+    else
+        echo "Running: bazel test $target"
+        (cd "$GLAZE_ROOT" && bazel test --test_output=errors $target "$@")
+    fi
 }
 
 # CI-aligned: run ruff, eslint, tsc, and mypy via Bazel (same as CI).
