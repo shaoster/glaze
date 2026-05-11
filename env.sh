@@ -351,7 +351,8 @@ gz_test_web() {
 gz_test() {
     local target="//..."
     local mode="auto"
-    local usage="Usage: gz_test [--all|--affected] [bazel args...]"
+    local coverage=false
+    local usage="Usage: gz_test [--all|--affected|--coverage] [bazel args...]"
 
     # Parse our custom flags first
     while [[ $# -gt 0 ]]; do
@@ -362,6 +363,10 @@ gz_test() {
                 ;;
             --affected)
                 mode="affected"
+                shift
+                ;;
+            --coverage)
+                coverage=true
                 shift
                 ;;
             --help)
