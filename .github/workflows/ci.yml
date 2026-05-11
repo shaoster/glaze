@@ -140,7 +140,7 @@ jobs:
         shell: bash
         run: |
           source env.sh
-          gz_test //api:api_test --coverage
+          gz_test //api/... --coverage
 
   frontend-test:
     name: Frontend Test
@@ -173,7 +173,7 @@ jobs:
         shell: bash
         run: |
           source env.sh
-          gz_test //web:web_test --coverage
+          gz_test //web/... --coverage
 
   publish:
     name: Publish OCI image
