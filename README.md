@@ -341,7 +341,7 @@ export CLOUDINARY_PUBLIC_UPLOAD_FOLDER=glaze_public   # optional; public library
 
 Cloudinary is optional — if the env vars are not set, the config endpoint returns 503 and the UI falls back to URL-paste mode.
 
-## Remote Rembg Offloading (Modal)
+## Remote Piece Image Crop Offloading (Modal)
 
 To maintain stability on hardware with <1GB RAM, Glaze supports offloading the heavy `rembg` background removal task to a serverless microservice.
 
