@@ -193,6 +193,8 @@ class Piece(models.Model):
     )
     thumbnail_crop = models.JSONField(null=True, blank=True, default=None)
     shared = models.BooleanField(default=False)
+    showcase_story = models.TextField(blank=True, default="")
+    showcase_fields = models.JSONField(default=list)
     current_location = models.ForeignKey(
         "Location",
         null=True,

@@ -23,7 +23,6 @@ import type { PieceDetail as PieceDetailType } from "../util/types";
 import { formatState, isTerminalState } from "../util/types";
 import {
   getCustomFieldDefinitions,
-  getStateSummaryDefinition,
 } from "../util/workflow";
 import { addPieceState, updateCurrentState, updatePiece } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
@@ -32,7 +31,7 @@ import WorkflowState from "./WorkflowState";
 import TagManager from "./TagManager";
 import StateTransition from "./StateTransition";
 import PieceHistory from "./PieceHistory";
-import WorkflowSummary from "./WorkflowSummary";
+import ProcessSummary from "./ProcessSummary";
 import GlobalEntryField from "./GlobalEntryField";
 import PiecePhotoGallery, {
   type PiecePhotoGalleryImage,
@@ -40,6 +39,8 @@ import PiecePhotoGallery, {
 import { PieceDetailSaveStatusProvider } from "./PieceDetailSaveStatusContext";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
 import ShareControls from "./PieceShareControls";
+import { useAutosave } from "./useAutosave";
+import AutosaveStatus from "./AutosaveStatus";
 
 type PieceDetailProps = {
   piece: PieceDetailType;
@@ -141,12 +142,29 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
   const currentState = piece.current_state;
   const isTerminal = isTerminalState(currentState.state);
-  const hasStateSummary =
-    getStateSummaryDefinition(currentState.state).length > 0;
   const canEdit = piece.can_edit;
   const hasWorkflowContent =
     canEdit || getCustomFieldDefinitions(currentState.state).length > 0;
   const pastHistory = piece.history.slice(0, -1);
+
+  const [showcaseStoryValue, setShowcaseStoryValue] = useState(
+    piece.showcase_story ?? "",
+  );
+
+  useEffect(() => {
+    setShowcaseStoryValue(piece.showcase_story ?? "");
+  }, [piece.showcase_story]);
+
+  const { status: showcaseAutosaveStatus } = useAutosave({
+    dirty: showcaseStoryValue !== (piece.showcase_story ?? ""),
+    saveKey: `piece-${piece.id}-showcase-story`,
+    save: async () => {
+      const updated = await updatePiece(piece.id, {
+        showcase_story: showcaseStoryValue,
+      });
+      onPieceUpdated(updated);
+    },
+  });
   function formatDate(d: Date): string {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -535,13 +553,46 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
           </Alert>
         )}
 
-        {isTerminal && hasStateSummary && (
+        <Box sx={{ mb: 2.5 }}>
+          <SectionCard title="Process Summary">
+            <ProcessSummary history={piece.history} />
+          </SectionCard>
+        </Box>
+
+        {isTerminal && canEdit && (
           <Box sx={{ mb: 2.5 }}>
-            <SectionCard title="Summary">
-              <WorkflowSummary
-                stateId={currentState.state}
-                history={piece.history}
-              />
+            <SectionCard title="Showcase">
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <Box>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography variant="subtitle2">Showcase Story</Typography>
+                    <AutosaveStatus status={showcaseAutosaveStatus} />
+                  </Box>
+                  <TextField
+                    multiline
+                    fullWidth
+                    rows={4}
+                    placeholder="Tell the story of this piece..."
+                    value={showcaseStoryValue}
+                    onChange={(e) => setShowcaseStoryValue(e.target.value)}
+                  />
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Showcase Fields
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    TODO: Showcase Field Selection
+                  </Typography>
+                </Box>
+              </Box>
             </SectionCard>
           </Box>
         )}

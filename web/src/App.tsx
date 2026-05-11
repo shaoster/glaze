@@ -513,11 +513,7 @@ function UnauthenticatedApp({
             />
             <Route
               path="/pieces/:id"
-              element={
-                <PublicPieceShell>
-                  <PieceDetailPage showBackToPieces={false} />
-                </PublicPieceShell>
-              }
+              element={<PublicPieceShell />}
             />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>,

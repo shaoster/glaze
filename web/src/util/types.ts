@@ -79,13 +79,14 @@ export type PieceState = Omit<components["schemas"]["PieceState"], "images"> & {
 // Piece list entry. Intersection narrows current_state to use our typed StateSummary.
 export type PieceSummary = Omit<
   components["schemas"]["PieceSummary"],
-  "current_state" | "thumbnail"
+  "current_state" | "thumbnail" | "showcase_fields"
 > & {
   current_state: StateSummary;
   thumbnail: Thumbnail | null;
   shared: boolean;
   can_edit: boolean;
   tags: TagEntry[];
+  showcase_fields: string[];
 };
 
 // Piece detail. Intersection narrows current_state to PieceState (subtype of StateSummary)

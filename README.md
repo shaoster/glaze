@@ -668,37 +668,45 @@ Example snippets from `workflow.yml`:
 
 [`workflow.schema.yml`](workflow.schema.yml) enforces structural rules with JSON Schema (Draft 2020-12); [`tests/test_workflow.py`](tests/test_workflow.py) enforces semantic and referential integrity rules, including verifying that every declared global and its fields match the corresponding Django model in `api/models.py`.
 
-### Terminal state summaries
+### Process Summary
 
-Terminal states (currently `completed`) may declare a read-only `summary` section in `workflow.yml` that promotes values from earlier states for display when a piece is finished. Summaries are display metadata only — they do not create new persisted fields.
+States may declare a read-only `process_summary` section in `workflow.yml` that promotes values from earlier states for display. These summaries are display metadata only — they do not create new persisted fields. Unlike the old `summary` section which only appeared on terminal states, the `process_summary` is available throughout the piece's lifecycle.
 
 ```yaml
-- id: completed
-  terminal: true
-  summary:
-    sections:
-      - title: Making
-        fields:
-          - label: Starting weight
-            value: wheel_thrown.clay_weight_lbs
-            when:
-              state_exists: wheel_thrown
-          - label: Trimming loss
-            compute:
-              op: difference
-              left: wheel_thrown.clay_weight_lbs
-              right: trimmed.trimmed_weight_lbs
-              unit: lb
-              decimals: 2
-            when:
-              state_exists: trimmed
-          - label: Wax resist
-            text: Not recorded
-            when:
-              state_missing: waxed
+process_summary:
+  sections:
+    - title: Making
+      fields:
+        - label: Starting weight
+          value: wheel_thrown.clay_weight_lbs
+          when:
+            state_exists: wheel_thrown
+        - label: Trimming loss
+          compute:
+            op: difference
+            left: wheel_thrown.clay_weight_lbs
+            right: trimmed.trimmed_weight_lbs
+            unit: lb
+            decimals: 2
+          when:
+            state_exists: trimmed
+        - label: Wax resist
+          text: Not recorded
+          when:
+            state_missing: waxed
 ```
 
-Each summary item uses exactly one of `value` (display a field from a prior state), `compute` (display a numeric result — `product`, `difference`, `sum`, or `ratio`), or `text` (static string). An optional `when` clause (`state_exists` or `state_missing`) hides the item when the condition is not met. `WorkflowSummary.tsx` renders the resulting sections when a piece reaches a terminal state.
+Each summary item uses exactly one of `value` (display a field from a prior state), `compute` (display a numeric result — `product`, `difference`, `sum`, or `ratio`), or `text` (static string). An optional `when` clause (`state_exists` or `state_missing`) hides the item when the condition is not met. `ProcessSummary.tsx` renders these sections in the piece detail and showcase views.
+
+### Showcase View
+
+The Showcase View is a high-fidelity, public-facing view of a piece, designed for sharing finished work. It separates the "Showcase" (result) from the "Process Summary" (how it was made).
+
+- **Showcase Story**: A long-form narrative about the piece, edited by the owner in the Piece Detail page.
+- **Showcase Fields**: A curated selection of fields from the piece's history to highlight in the showcase.
+- **Process Summary**: The full technical process summary is also included at the bottom of the Showcase View.
+
+Publicly shared pieces (available at `/pieces/:id`) default to the Showcase View for unauthenticated users. Owners can preview and edit the showcase elements directly from the Piece Detail page.
 
 ### Public sharing for terminal pieces
 
