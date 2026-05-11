@@ -275,6 +275,11 @@ cd web
 npm install
 npm run dev
 
+# Remote ML Offload (Optional, for 1GB RAM servers)
+pip install modal
+modal setup
+modal deploy tools/piece_image_crop_service.py
+
 # Type generation (backend must be running on port 8080)
 cd web
 npm run generate-types
@@ -335,6 +340,40 @@ export CLOUDINARY_PUBLIC_UPLOAD_FOLDER=glaze_public   # optional; public library
 4. Images are rendered via `CloudinaryImage`, which uses `public_id` to request viewport-appropriate renditions (auto format, auto quality, size-matched to context).
 
 Cloudinary is optional — if the env vars are not set, the config endpoint returns 503 and the UI falls back to URL-paste mode.
+
+## Remote Piece Image Crop Offloading (Modal)
+
+To maintain stability on hardware with <1GB RAM, Glaze supports offloading the heavy `rembg` background removal task to a serverless microservice.
+
+- **Optimized Dispatch**: The system offloads the **Cloudinary URL** directly to the remote service. This ensures the production host does not have to download or process the image bytes, saving bandwidth and memory.
+- **Security**: The service is secured with an API Key (`X-API-Key`) validated against a `modal.Secret`.
+- **Local Fallback**: If `REMOTE_REMBG_URL` is not configured, the system falls back to a local `u2netp` model with 640px downscaling.
+
+#### Step 1: Deploy the Microservice (Run from your LOCAL machine)
+1.  **Set up Auth Token**: Create a Modal secret named `piece-image-crop-secret` with an `AUTH_TOKEN` key.
+2.  **Install Modal**: `pip install modal`
+3.  **Authenticate**: `modal setup`
+4.  **Deploy**: `modal deploy tools/piece_image_crop_service.py`
+5.  **Capture the URL**: The output will provide a permanent URL, e.g., `https://your-workspace-name--crop.modal.run`.
+
+#### Step 2: Configure the Backend (Run on the PRODUCTION host / Droplet)
+Update your production `.env` file with the following variables:
+
+| Variable | Description |
+| :--- | :--- |
+| `REMOTE_REMBG_URL` | The URL of your deployed Modal service (e.g. `https://phil--crop.modal.run`). |
+| `MODAL_AUTH_TOKEN` | The secure token you generated for the `piece-image-crop-secret`. |
+
+```bash
+# Example .env additions
+REMOTE_REMBG_URL="https://your-workspace-name--crop.modal.run"
+MODAL_AUTH_TOKEN="your-secure-random-token"
+```
+2.  **Restart Service**: 
+    ```bash
+    cd ~/glaze
+    docker compose up -d
+    ```
 
 ## Google OAuth (web)
 

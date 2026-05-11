@@ -49,3 +49,26 @@ jobs:
             --title "Build ${{ env.DEPLOY_SHA }}" \
             --notes "Docker image: \`ghcr.io/shaoster/glaze:${{ env.DEPLOY_SHA }}\`" \
             --latest
+
+  deploy-modal:
+    name: Deploy ML Microservice to Modal
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Modal
+        run: pip install modal
+
+      - name: Deploy to Modal
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: modal deploy tools/piece_image_crop_service.py

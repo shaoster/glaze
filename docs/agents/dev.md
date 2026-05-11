@@ -14,7 +14,15 @@ uvicorn backend.asgi:application --port 8080 --reload  # or any free port; gz_st
 cd web
 npm install
 npm run dev
+
+# Remote ML Offload (Optional, for 1GB RAM servers)
+# 1. Create a secret 'piece-image-crop-secret' with AUTH_TOKEN=xxx
+pip install modal
+modal setup
+modal deploy tools/piece_image_crop_service.py
 ```
+
+Set `REMOTE_REMBG_URL` and `MODAL_AUTH_TOKEN` in your `.env` to enable offloading.
 
 See [`env.sh`](../../env.sh) for shell helpers (`gz_setup`, `gz_start`, etc.) that wrap these commands.
 In a new environment, always run `source env.sh` and `gz_setup` before trying to do anything else.

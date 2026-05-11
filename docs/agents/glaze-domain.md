@@ -16,8 +16,18 @@ The app has two parts:
 
 - **Backend** (`/backend/`, `/api/`): Django + Django REST Framework, serves JSON to the web
 - **Web** (`/web/`): React 19 + TypeScript + Vite + Material UI
+- **Remote ML** (`/tools/piece_image_crop_service.py`): Optional serverless offload via Modal.com
 
 ---
+
+## Remote ML Offloading
+
+To maintain stability on hardware with <1GB RAM, Glaze uses a remote offloading strategy for heavy ML tasks (specifically `rembg` background removal).
+
+- **Optimized Dispatch**: The backend offloads the **Cloudinary URL** of the image to the remote service. The Modal worker performs the download, completely bypassing local ML overhead and minimizing host-side bandwidth/memory usage.
+- **Local Path**: Defaults to `u2netp` (memory-efficient) with pre-processing downscaling (640px max) as a fallback if no remote URL is configured.
+- **Security**: The microservice validates an `X-API-Key` header against a `modal.Secret`.
+- **Microservice**: Located at `tools/piece_image_crop_service.py`, designed for deployment to **Modal.com**.
 
 ## Workflow State Machine
 

@@ -176,6 +176,51 @@ def calculate_subject_crop(image_bytes: bytes) -> dict | None:
     }
 
 
+def calculate_subject_crop_remote(
+    image_bytes: bytes | None = None, image_url: str | None = None
+) -> dict | None:
+    """Offload subject detection to a remote ML service.
+
+    Accepts either raw image bytes or a public image URL.
+    Returns a JSON relative crop box: {"x": float, "y": float, "width": float, "height": float}.
+    """
+    remote_url = getattr(settings, "REMOTE_REMBG_URL", None)
+    auth_token = getattr(settings, "MODAL_AUTH_TOKEN", None)
+
+    if not remote_url:
+        logger.warning(
+            "calculate_subject_crop_remote called but REMOTE_REMBG_URL is not set."
+        )
+        return None
+
+    logger.info(f"Offloading subject detection to remote service: {remote_url}")
+    headers = {}
+    if auth_token:
+        headers["X-API-Key"] = auth_token
+
+    try:
+        if image_url:
+            # URL-based dispatch (saves bandwidth and memory on the host)
+            response = requests.post(
+                remote_url, json={"url": image_url}, headers=headers, timeout=60
+            )
+        elif image_bytes:
+            # Fallback to byte-based dispatch
+            headers["Content-Type"] = "application/octet-stream"
+            response = requests.post(
+                remote_url, data=image_bytes, headers=headers, timeout=60
+            )
+        else:
+            raise ValueError("Either image_bytes or image_url must be provided")
+
+        response.raise_for_status()
+        crop = response.json()
+        return crop_to_dict(crop)
+    except Exception as e:
+        logger.error(f"Remote subject detection failed: {e}")
+        return None
+
+
 def get_or_create_location(user, name: str | None):
     """Return a Location for *user* with the given *name*, creating it if needed.
 
