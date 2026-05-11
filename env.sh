@@ -411,7 +411,7 @@ gz_test() {
                     # Filter existing files to only those Bazel knows about to avoid query errors (exit code 7)
                     local ALL_SOURCES
                     echo "DEBUG: Starting ALL_SOURCES query at $(date +%s)"
-                    ALL_SOURCES=$(bazel query --profile=/tmp/bazel_query_profile.json --output=label 'kind("source file", //...:* )' 2> >(tee -a /dev/stderr) | sed 's|^//||; s|:|/|')
+                    ALL_SOURCES=$(bazel query --profile=$PWD/bazel_query_profile.json --output=label 'kind("source file", //...:* )' 2> >(tee -a /dev/stderr) | sed 's|^//||; s|:|/|')
                     echo "DEBUG: Finished ALL_SOURCES query at $(date +%s). Sources found: $(echo "$ALL_SOURCES" | wc -l)"
                     local BAZEL_FILES
                     BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
@@ -511,7 +511,7 @@ gz_lint() {
                     # Filter existing files to only those Bazel knows about to avoid query errors (exit code 7)
                     local ALL_SOURCES
                     echo "DEBUG: Starting ALL_SOURCES query at $(date +%s)"
-                    ALL_SOURCES=$(bazel query --profile=/tmp/bazel_query_profile.json --output=label 'kind("source file", //...:* )' 2> >(tee -a /dev/stderr) | sed 's|^//||; s|:|/|')
+                    ALL_SOURCES=$(bazel query --profile=$PWD/bazel_query_profile.json --output=label 'kind("source file", //...:* )' 2> >(tee -a /dev/stderr) | sed 's|^//||; s|:|/|')
                     echo "DEBUG: Finished ALL_SOURCES query at $(date +%s). Sources found: $(echo "$ALL_SOURCES" | wc -l)"
                     local BAZEL_FILES
                     BAZEL_FILES=$(echo "$EXISTING" | tr ' ' '\n' | grep -Fxf <(echo "$ALL_SOURCES"))
