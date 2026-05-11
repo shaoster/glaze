@@ -5,24 +5,68 @@ load("@rules_python//python:defs.bzl", "py_library", "py_test")
 # All non-test, non-migration source files. Depends on backend_lib (Django
 # settings/URL conf) and the workflow YAML files read at import time.
 
+# ── API library ───────────────────────────────────────────────────────────────
+# All non-test, non-migration source files. Depends on backend_lib (Django
+# settings/URL conf) and the workflow YAML files read at import time.
+
 py_library(
-    name = "api_lib",
-    srcs = glob(
-        ["**/*.py"],
-        exclude = [
-            "tests/**",
-            "migrations/**",
-            "**/test_*.py",
-        ],
-    ),
-    data = ["//:workflow_files"],
-    visibility = ["//visibility:public"],
+    name = "api_workflow_lib",
+    srcs = [
+        "utils.py",
+        "workflow.py",
+    ],
     deps = [
         "//backend:backend_lib",
         requirement("httpx"),
-        requirement("logtail-python"),
         requirement("rembg"),
         requirement("onnxruntime"),
+    ],
+)
+
+py_library(
+    name = "api_lib",
+    srcs = [
+        "__init__.py",
+        "admin.py",
+        "apps.py",
+        "cloudinary_cleanup.py",
+        "logging.py",
+        "manual_tile_imports.py",
+        "model_factories.py",
+        "models.py",
+        "serializer_factories.py",
+        "serializer_registry.py",
+        "serializers.py",
+        "tasks.py",
+        "urls.py",
+        "views.py",
+    ],
+    data = [
+        ":api_commands",
+        "//:workflow_files",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":api_workflow_lib",
+        "//backend:backend_lib",
+        requirement("logtail-python"),
+    ],
+)
+
+# Management commands are discovered by Django at runtime via the 'management'
+# directory structure.
+filegroup(
+    name = "api_commands",
+    srcs = [
+        "management/__init__.py",
+        "management/commands/__init__.py",
+        "management/commands/backpopulate_crops.py",
+        "management/commands/clear_crops.py",
+        "management/commands/clear_stuck_tasks.py",
+        "management/commands/dump_public_library.py",
+        "management/commands/import_test_tile_images.py",
+        "management/commands/load_public_library.py",
+        "management/commands/restore_images_from_backup.py",
     ],
 )
 
@@ -30,24 +74,28 @@ py_library(
 # applied by Django at runtime, not imported by application logic.
 filegroup(
     name = "migrations",
-    srcs = glob(["migrations/**/*.py"]),
+    srcs = [
+        "migrations/0001_initial.py",
+        "migrations/0002_piece_shared.py",
+        "migrations/0003_rename_custom_fields.py",
+        "migrations/0004_normalize_images.py",
+        "migrations/0005_image_crops.py",
+        "migrations/0006_asynctask.py",
+        "migrations/0007_piece_showcase_fields_piece_showcase_story.py",
+        "migrations/__init__.py",
+    ],
     visibility = ["//visibility:public"],
 )
 
 # All runtime files needed in the OCI image layer (source + migrations + static).
 filegroup(
     name = "api_runtime_files",
-    srcs = glob(
-        [
-            "**/*.py",
-            "migrations/**",
-            "static/**",
-        ],
-        exclude = [
-            "tests/**",
-            "**/test_*.py",
-        ],
-    ),
+    srcs = [
+        ":api_lib",
+        ":api_commands",
+        ":migrations",
+        "static/admin/js/cloudinary_image_widget.js",
+    ],
     visibility = ["//visibility:public"],
 )
 
