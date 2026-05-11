@@ -343,15 +343,26 @@ Cloudinary is optional — if the env vars are not set, the config endpoint retu
 
 ## Remote Rembg Offloading (Modal)
 
-To avoid Out-of-Memory (OOM) errors on low-memory servers (e.g. 1GB RAM), Glaze supports offloading the background removal task to a remote microservice.
-
-### Modal.com Deployment
-
-1. **Setup**: `pip install modal && modal auth login` (or set `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`).
-2. **Deploy**: `modal deploy tools/remote_rembg_service.py`.
-3. **Configure**: Set `REMOTE_REMBG_URL="https://your-app-name.modal.run"` in your `.env.local` or production environment.
-
 When `REMOTE_REMBG_URL` is set, Glaze skips local ML processing and POSTs image data to this endpoint. If not set, it falls back to a local, memory-optimized `u2netp` model.
+
+### Deployment Runbook
+
+#### Step 1: Deploy the Microservice (Run from your LOCAL machine)
+1.  **Install Modal**: `pip install modal`
+2.  **Authenticate**: `modal auth login` (or set `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` variables).
+3.  **Deploy**: `modal deploy tools/remote_rembg_service.py`
+4.  **Capture the URL**: The output will provide a permanent URL, e.g., `https://shaoster--glaze-rembg-web.modal.run`.
+
+#### Step 2: Configure the Backend (Run on the PRODUCTION host / Droplet)
+1.  **Update Environment**: Add the URL to your production `.env` file:
+    ```bash
+    REMOTE_REMBG_URL="https://your-app-name.modal.run"
+    ```
+2.  **Restart Service**: 
+    ```bash
+    cd ~/glaze
+    docker compose up -d
+    ```
 
 ## Google OAuth (web)
 
@@ -571,12 +582,6 @@ Agent and contributor documentation lives in [`docs/agents/`](docs/agents/) and 
 | [`docs/agents/glaze-domain.md`](docs/agents/glaze-domain.md)                   | Everything specific to this project: workflow state machine, `custom_fields` DSL, data model, key constraints, and Glaze-specific conventions layered on top of each stack (Django model patterns, frontend module aliases, component inventory, Cloudinary/OAuth flows, protected files, project-specific definition-of-done checks). **Add content here** when it is specific to Glaze's domain, data model, or architecture. |
 | [`docs/agents/django-drf-python.md`](docs/agents/django-drf-python.md)         | Generic Django + DRF conventions reusable in any project: serializer rules, CORS, session auth, user-isolation patterns, test approach. **Add content here** only if it applies to Django/DRF projects in general, with no Glaze-specific models or endpoints.                                                                                                                                                                  |
 | [`docs/agents/typescript-react-vite.md`](docs/agents/typescript-react-vite.md) | Generic React + TypeScript + Vite conventions reusable in any project: MUI usage, strict TS rules, theming tokens, Axios usage, async test patterns. **Add content here** only if it applies to React/TS/Vite projects in general, with no Glaze-specific components or data pipelines.                                                                                                                                         |
-| [`docs/agents/github-interactions.md`](docs/agents/github-interactions.md)     | Generic GitHub agent conventions reusable in any project: `--body-file` pattern, branch naming, scope-limit categories, PR ownership labels, definition-of-done checklist. **Add content here** only if it applies to any GitHub-hosted project.                                                                                                                                                                                |
-| [`docs/agents/dev.md`](docs/agents/dev.md)                                     | Glaze-specific development setup and test commands: starting the backend and web, all three test suites, CI, and per-layer "what to test" checklists. **Add content here** for setup steps, test commands, or CI details specific to this repo.                                                                                                                                                                                 |
-
-- **Local Path**: Defaults to `u2netp` (memory-efficient) with pre-processing downscaling (640px max) to minimize RSS usage.
-- **Remote Path**: Activated via `REMOTE_REMBG_URL`. Offloads processing to a FastAPI microservice.
-- **Microservice**: Located at `tools/remote_rembg_service.py`, designed for deployment to **Modal.com**. It supports native auto-scaling and "scale-to-zero" to minimize costs. |
 | [`docs/agents/github-interactions.md`](docs/agents/github-interactions.md)     | Generic GitHub agent conventions reusable in any project: `--body-file` pattern, branch naming, scope-limit categories, PR ownership labels, definition-of-done checklist. **Add content here** only if it applies to any GitHub-hosted project.                                                                                                                                                                                |
 | [`docs/agents/dev.md`](docs/agents/dev.md)                                     | Glaze-specific development setup and test commands: starting the backend and web, all three test suites, CI, and per-layer "what to test" checklists. **Add content here** for setup steps, test commands, or CI details specific to this repo.                                                                                                                                                                                 |
 
