@@ -14,6 +14,11 @@ uvicorn backend.asgi:application --port 8080 --reload  # or any free port; gz_st
 cd web
 npm install
 npm run dev
+
+# Remote ML Offload (Optional, for 1GB RAM servers)
+pip install modal
+modal auth login
+modal deploy tools/remote_rembg_service.py
 ```
 
 See [`env.sh`](../../env.sh) for shell helpers (`gz_setup`, `gz_start`, etc.) that wrap these commands.

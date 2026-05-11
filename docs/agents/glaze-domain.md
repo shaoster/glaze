@@ -16,8 +16,17 @@ The app has two parts:
 
 - **Backend** (`/backend/`, `/api/`): Django + Django REST Framework, serves JSON to the web
 - **Web** (`/web/`): React 19 + TypeScript + Vite + Material UI
+- **Remote ML** (`/tools/remote_rembg_service.py`): Optional serverless offload via Modal.com
 
 ---
+
+## Remote ML Offloading
+
+To maintain stability on hardware with <1GB RAM, Glaze uses a remote offloading strategy for heavy ML tasks (specifically `rembg` background removal).
+
+- **Local Path**: Defaults to `u2netp` (memory-efficient) with pre-processing downscaling (640px max) to minimize RSS usage.
+- **Remote Path**: Activated via `REMOTE_REMBG_URL`. Offloads processing to a FastAPI microservice.
+- **Microservice**: Located at `tools/remote_rembg_service.py`, designed for deployment to **Modal.com**. It supports native auto-scaling and "scale-to-zero" to minimize costs.
 
 ## Workflow State Machine
 
