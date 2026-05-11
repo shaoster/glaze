@@ -79,16 +79,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Cache Bazel
+      - name: Cache Bazel Repository
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/bazel/_bazel_runner/cache/repos/v1
-            ~/.cache/bazel-disk-cache
-          key: bazel-lint-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
+          path: ~/.cache/bazel/_bazel_runner/cache/repos/v1
+          key: bazel-repo-${{ needs.preflight.outputs.deps_key }}
+          restore-keys: bazel-repo-
+      - name: Cache Bazel Disk
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel-disk-cache
+          key: bazel-disk-lint-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
           restore-keys: |
-            bazel-lint-${{ needs.preflight.outputs.deps_key }}-
-            bazel-lint-
+            bazel-disk-lint-${{ needs.preflight.outputs.deps_key }}-
+            bazel-disk-
       - name: Inject secret into ~/.bazelrc
         run: |
           echo "" >> .bazelrc
@@ -103,16 +107,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Cache Bazel
+      - name: Cache Bazel Repository
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/bazel/_bazel_runner/cache/repos/v1
-            ~/.cache/bazel-disk-cache
-          key: bazel-coverage-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
+          path: ~/.cache/bazel/_bazel_runner/cache/repos/v1
+          key: bazel-repo-${{ needs.preflight.outputs.deps_key }}
+          restore-keys: bazel-repo-
+      - name: Cache Bazel Disk
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel-disk-cache
+          key: bazel-disk-coverage-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
           restore-keys: |
-            bazel-coverage-${{ needs.preflight.outputs.deps_key }}-
-            bazel-coverage-
+            bazel-disk-coverage-${{ needs.preflight.outputs.deps_key }}-
+            bazel-disk-
       - name: Inject secret into ~/.bazelrc
         run: |
           echo "" >> .bazelrc
@@ -139,16 +147,20 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      - name: Cache Bazel
+      - name: Cache Bazel Repository
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/bazel/_bazel_runner/cache/repos/v1
-            ~/.cache/bazel-disk-cache
-          key: bazel-publish-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
+          path: ~/.cache/bazel/_bazel_runner/cache/repos/v1
+          key: bazel-repo-${{ needs.preflight.outputs.deps_key }}
+          restore-keys: bazel-repo-
+      - name: Cache Bazel Disk
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel-disk-cache
+          key: bazel-disk-publish-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
           restore-keys: |
-            bazel-publish-${{ needs.preflight.outputs.deps_key }}-
-            bazel-publish-
+            bazel-disk-publish-${{ needs.preflight.outputs.deps_key }}-
+            bazel-disk-
 
       - name: Inject BuildBuddy API key into .bazelrc
         run: |
