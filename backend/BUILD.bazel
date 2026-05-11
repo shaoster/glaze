@@ -8,7 +8,13 @@ load("@pip//:requirements.bzl", "requirement")
 
 py_library(
     name = "backend_lib",
-    srcs = glob(["*.py"]),
+    srcs = [
+        "__init__.py",
+        "asgi.py",
+        "settings.py",
+        "urls.py",
+        "wsgi.py",
+    ],
     data = ["//:workflow_files"],
     deps = [
         requirement("django"),
@@ -36,6 +42,12 @@ py_library(
 
 filegroup(
     name = "backend_runtime_files",
-    srcs = glob(["*.py"]),
+    srcs = [
+        "__init__.py",
+        "asgi.py",
+        "settings.py",
+        "urls.py",
+        "wsgi.py",
+    ],
     visibility = ["//visibility:public"],
 )

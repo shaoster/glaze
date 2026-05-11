@@ -23,23 +23,39 @@ py_library(
     ],
 )
 
+# Sliced library containing only what is needed for OpenAPI schema generation.
+# This prevents changes to admin, tasks, or management commands from invalidating
+# the frontend's analysis phase. Combined with lazy imports in views.py, this
+# provides a clean separation for Bazel's analysis graph.
 py_library(
-    name = "api_lib",
+    name = "api_schema_lib",
     srcs = [
         "__init__.py",
-        "admin.py",
         "apps.py",
-        "cloudinary_cleanup.py",
         "logging.py",
-        "manual_tile_imports.py",
-        "model_factories.py",
         "models.py",
         "serializer_factories.py",
         "serializer_registry.py",
         "serializers.py",
-        "tasks.py",
         "urls.py",
         "views.py",
+    ],
+    deps = [
+        ":api_workflow_lib",
+        "//backend:backend_lib",
+        requirement("logtail-python"),
+    ],
+)
+
+# Full API library for runtime and testing.
+py_library(
+    name = "api_lib",
+    srcs = [
+        "admin.py",
+        "cloudinary_cleanup.py",
+        "manual_tile_imports.py",
+        "model_factories.py",
+        "tasks.py",
     ],
     data = [
         ":api_commands",
@@ -47,9 +63,7 @@ py_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        ":api_workflow_lib",
-        "//backend:backend_lib",
-        requirement("logtail-python"),
+        ":api_schema_lib",
     ],
 )
 
