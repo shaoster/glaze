@@ -9,7 +9,7 @@ from .models import AsyncTask
 logger = logging.getLogger(__name__)
 
 # Single shared executor for background tasks in development.
-_executor = ThreadPoolExecutor(max_workers=2)
+_executor = ThreadPoolExecutor(max_workers=1)
 
 TaskCallable = Callable[[AsyncTask], Any]
 
