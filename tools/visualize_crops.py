@@ -19,7 +19,7 @@ import os
 import sys
 
 import requests
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 
 # Add the project root to the Python path (only used for DB mode)
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -53,6 +53,7 @@ def process_url(url: str, output_dir: str, label: str) -> None:
         # Download the original image
         img_resp = requests.get(url, timeout=30)
         img = Image.open(io.BytesIO(img_resp.content))
+        img = ImageOps.exif_transpose(img)
 
         # Convert relative → absolute pixel coordinates
         w, h = img.size

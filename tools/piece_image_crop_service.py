@@ -47,7 +47,7 @@ except ImportError:
 def create_app():
     """Factory to create the FastAPI app with heavy imports deferred."""
     from fastapi import FastAPI, Request, Response, Header, HTTPException
-    from PIL import Image
+    from PIL import Image, ImageOps
     from pillow_heif import register_heif_opener
     from rembg import new_session, remove
     import requests
@@ -111,6 +111,7 @@ def create_app():
 
             # HEIC -> JPG/RGBA conversion happens during Image.open thanks to register_heif_opener
             input_image = Image.open(io.BytesIO(image_bytes))
+            input_image = ImageOps.exif_transpose(input_image)
             
             # Implementation Detail: Optimized resizing for ML processing.
             # We downscale to a reasonable max dimension to save memory and speed up rembg.
@@ -126,6 +127,7 @@ def create_app():
             output_image = remove(input_image, session=_SESSION)
 
             # 2. Find non-transparent bounds
+            output_image = output_image.convert("RGBA")
             alpha = output_image.getchannel("A")
             bbox = alpha.getbbox()
 
