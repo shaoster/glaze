@@ -386,8 +386,8 @@ rtk bazel build --config=lint //...
 # Reformat Python files and apply ruff auto-fixes
 source env.sh && gz_format
 # equivalent to:
-ruff format .
-ruff check --fix .
+uv run ruff format .
+uv run ruff check --fix .
 ```
 
 Run from the repo root with the venv active. There is no Bazel-integrated auto-fix step.
@@ -469,7 +469,7 @@ Run `rtk bazel test //...` — it discovers and runs all affected tests automati
 In addition to the environment's RTK rules, make sure you use the `rtk` prefixed equivalents to common commands:
 
 For example:
-Instead of `pip`, run `rtk pip`. Also:
+Instead of `uv`, run `rtk uv`. Also:
 
 - cat -> rtk read
 - ls -> rtk ls

@@ -1,6 +1,4 @@
-load("@rules_python//python:defs.bzl", "py_binary", "py_test")
-load("@pip//:requirements.bzl", "requirement")
-load("@tools_pip//:requirements.bzl", requirement_tools = "requirement")
+load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_test")
 
 # ── Pytest runner ─────────────────────────────────────────────────────────────
 # Shared entry point for all py_test targets. Each test BUILD file lists this
@@ -19,12 +17,12 @@ py_binary(
     deps = [
         "//api:api_lib",
         "//backend:backend_lib",
-        requirement("django"),
-        requirement("djangorestframework"),
-        requirement("drf-spectacular"),
-        requirement("pyyaml"),
-        requirement("google-auth"),
-        requirement("requests"),
+        "@pypi//django",
+        "@pypi//djangorestframework",
+        "@pypi//drf_spectacular",
+        "@pypi//pyyaml",
+        "@pypi//google_auth",
+        "@pypi//requests",
     ],
     visibility = ["//visibility:public"],
 )
@@ -35,9 +33,9 @@ py_binary(
     deps = [
         "//api:api_lib",
         "//backend:backend_lib",
-        requirement("django"),
-        requirement("requests"),
-        requirement("pillow"),
+        "@pypi//django",
+        "@pypi//requests",
+        "@pypi//pillow",
     ],
     visibility = ["//visibility:public"],
 )
@@ -51,14 +49,14 @@ py_binary(
     name = "piece_image_crop_service",
     srcs = ["piece_image_crop_service.py"],
     deps = [
-        requirement_tools("fastapi"),
-        requirement_tools("uvicorn"),
-        requirement_tools("rembg"),
-        requirement_tools("opencv-python-headless"),
-        requirement_tools("requests"),
-        requirement_tools("urllib3"),
-        requirement_tools("pillow"),
-        requirement_tools("pillow-heif"),
+        "@pypi//fastapi",
+        "@pypi//uvicorn",
+        "@pypi//rembg",
+        "@pypi//opencv_python_headless",
+        "@pypi//requests",
+        "@pypi//urllib3",
+        "@pypi//pillow",
+        "@pypi//pillow_heif",
     ],
     visibility = ["//visibility:public"],
 )
@@ -73,15 +71,15 @@ py_test(
     ],
     main = "tests/test_piece_image_crop_service.py",
     deps = [
-        requirement_tools("fastapi"),
-        requirement_tools("httpx"),
-        requirement_tools("rembg"),
-        requirement_tools("opencv-python-headless"),
-        requirement_tools("requests"),
-        requirement_tools("urllib3"),
-        requirement_tools("pillow"),
-        requirement_tools("pillow-heif"),
-        requirement_tools("pytest"),
+        "@pypi//fastapi",
+        "@pypi//httpx",
+        "@pypi//rembg",
+        "@pypi//opencv_python_headless",
+        "@pypi//requests",
+        "@pypi//urllib3",
+        "@pypi//pillow",
+        "@pypi//pillow_heif",
+        "@pypi//pytest",
     ],
     visibility = ["//visibility:public"],
 )

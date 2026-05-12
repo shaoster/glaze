@@ -1,5 +1,4 @@
-load("@rules_python//python:defs.bzl", "py_test")
-load("@pip//:requirements.bzl", "requirement")
+load("@aspect_rules_py//py:defs.bzl", "py_test")
 
 py_test(
     name = "common_test",
@@ -12,12 +11,12 @@ py_test(
         "//:pytest_ini",
     ],
     deps = [
-        requirement("pytest"),
-        requirement("pytest-env"),
-        requirement("jsonschema"),
-        requirement("jsonschema-specifications"),
-        requirement("pyyaml"),
-        requirement("referencing"),
+        "@pypi//pytest",
+        "@pypi//pytest_env",
+        "@pypi//jsonschema",
+        "@pypi//jsonschema_specifications",
+        "@pypi//pyyaml",
+        "@pypi//referencing",
     ],
     env = {"DJANGO_SETTINGS_MODULE": "backend.test_settings"},
 )

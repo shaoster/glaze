@@ -221,7 +221,6 @@ gz_setup() {
     done
 
     echo "=== Glaze: setting up development environment ==="
-    echo "--- Setup mode: $setup_mode"
     # RTK
     if ! command -v rtk &>/dev/null; then
         echo "--- Installing RTK (for test optimizations and type generation)..."
@@ -229,40 +228,13 @@ gz_setup() {
         rtk init -g --auto-patch
     fi
 
-    # Python venv
-    if [[ "$setup_mode" == "isolated" ]]; then
-        if _gz_remove_symlink_if_present "$GLAZE_ROOT/.venv"; then
-            echo "--- Replacing shared .venv symlink with an isolated worktree virtual environment"
-        fi
-        if [[ ! -f "$GLAZE_ROOT/.venv/bin/activate" ]]; then
-            echo "--- Creating virtual environment..."
-            rtk python3 -m venv "$GLAZE_ROOT/.venv"
-        fi
-        source "$GLAZE_ROOT/.venv/bin/activate"
-        echo "--- Installing Python dependencies into the isolated worktree virtual environment..."
-    else
-        if [[ ! -f "$GLAZE_ROOT/.venv/bin/activate" ]]; then
-            if _gz_link_shared_dir_if_missing ".venv"; then
-                echo "--- Reusing shared virtual environment from $GLAZE_SHARED_ROOT/.venv"
-            elif [[ -f "$GLAZE_SHARED_ROOT/.venv/bin/activate" && "$GLAZE_SHARED_ROOT" != "$GLAZE_ROOT" ]]; then
-                echo "--- Reusing shared virtual environment from $GLAZE_SHARED_ROOT/.venv"
-            else
-                echo "--- Creating virtual environment..."
-                rtk python3 -m venv "$GLAZE_ROOT/.venv"
-            fi
-        fi
-        source "$(_gz_venv_root)/.venv/bin/activate"
-        if [[ "$(_gz_venv_root)" == "$GLAZE_SHARED_ROOT" && "$GLAZE_SHARED_ROOT" != "$GLAZE_ROOT" ]]; then
-            echo "--- Shared Python dependencies already available in $GLAZE_SHARED_ROOT/.venv"
-        else
-            echo "--- Installing Python dependencies..."
-        fi
-    fi
-    rtk pip install -r "$GLAZE_ROOT/requirements-dev.txt" -q
+    # Python
+    echo "--- Syncing Python environment with uv..."
+    rtk uv sync
 
     # Database
     echo "--- Running migrations..."
-    rtk python3 "$GLAZE_ROOT/manage.py" migrate --run-syncdb
+    rtk uv run python "$GLAZE_ROOT/manage.py" migrate --run-syncdb
 
     # Node + web deps
     _gz_ensure_node
@@ -294,9 +266,8 @@ gz_setup() {
 
 gz_manage() {        # gz_manage <subcommand> [args…]
     (
-        source "$(_gz_venv_root)/.venv/bin/activate"
         cd "$GLAZE_ROOT"
-        python manage.py "$@"
+        uv run python manage.py "$@"
     )
 }
 
@@ -446,8 +417,16 @@ gz_test() {
     fi
 
     if [ "$coverage" = true ]; then
-        echo "Running: bazel coverage --config=ci --combined_report=lcov $target"
-        (cd "$GLAZE_ROOT" && bazel coverage --config=ci --combined_report=lcov $target "$@")
+        # Exclude lint targets from coverage (they don't produce coverage data and slow down the pass)
+        local coverage_target
+        echo "Determining coverage targets (excluding 'lint' tagged targets)..."
+        coverage_target=$(bazel query "($target) except attr(tags, lint, //...)" 2>/dev/null | tr '\n' ' ')
+        if [[ -z "$coverage_target" ]]; then
+            echo "No coverage targets found."
+            return 0
+        fi
+        echo "Running: bazel coverage --config=ci --combined_report=lcov $coverage_target"
+        (cd "$GLAZE_ROOT" && bazel coverage --config=ci --combined_report=lcov $coverage_target "$@")
     else
         echo "Running: bazel test $target"
         (cd "$GLAZE_ROOT" && bazel test --test_output=errors $target "$@")

@@ -264,11 +264,9 @@ If you prefer to install dependencies and run servers yourself, follow these exp
 
 ```bash
 # Backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements-dev.txt
-python manage.py migrate
-uvicorn backend.asgi:application --port 8080 --reload
+uv sync
+uv run python manage.py migrate
+uv run uvicorn backend.asgi:application --port 8080 --reload
 
 # Web (separate terminal)
 cd web
@@ -351,7 +349,7 @@ To maintain stability on hardware with <1GB RAM, Glaze supports offloading the h
 
 #### Step 1: Deploy the Microservice (Run from your LOCAL machine)
 1.  **Set up Auth Token**: Create a Modal secret named `piece-image-crop-secret` with an `AUTH_TOKEN` key.
-2.  **Install Modal**: `pip install modal`
+2.  **Install Modal**: `uv tool install modal`
 3.  **Authenticate**: `modal setup`
 4.  **Deploy**: `modal deploy tools/piece_image_crop_service.py`
 5.  **Capture the URL**: The output will provide a permanent URL, e.g., `https://your-workspace-name--crop.modal.run`.

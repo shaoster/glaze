@@ -5,6 +5,7 @@ module(
 
 bazel_dep(name = "rules_python", version = "1.1.0")
 bazel_dep(name = "aspect_rules_js", version = "3.0.3")
+bazel_dep(name = "aspect_rules_py", version = "1.11.5")
 bazel_dep(name = "aspect_rules_ts", version = "3.8.8")
 bazel_dep(name = "rules_nodejs", version = "6.7.4")
 bazel_dep(name = "aspect_rules_lint", version = "2.5.0")
@@ -23,18 +24,25 @@ python.toolchain(
 
 # ── Pip: all deps (requirements.txt — single flat lock file) ─────────────────
 
-pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
-pip.parse(
-    hub_name = "pip",
-    python_version = "3.12",
-    requirements_lock = "//:requirements.lock",
+interpreters = use_extension("@aspect_rules_py//py/unstable:extension.bzl", "python_interpreters")
+interpreters.toolchain(python_version = "3.12", is_default = True)
+use_repo(interpreters, "python_interpreters")
+register_toolchains("@python_interpreters//:all")
+
+uv_bin = use_extension("@aspect_rules_py//uv/unstable:extension.bzl", "uv_bin")
+uv_bin.toolchain()
+use_repo(uv_bin, "uv")
+register_toolchains("@uv//:all")
+
+uv = use_extension("@aspect_rules_py//uv/unstable:extension.bzl", "uv")
+uv.declare_hub(hub_name = "pypi")
+uv.project(
+    hub_name = "pypi",
+    lock = "//:uv.lock",
+    pyproject = "//:pyproject.toml",
+    default_build_dependencies = [],
 )
-pip.parse(
-    hub_name = "tools_pip",
-    python_version = "3.12",
-    requirements_lock = "//tools:requirements.lock",
-)
-use_repo(pip, "pip", "tools_pip")
+use_repo(uv, "pypi")
 
 # ── Node toolchain ────────────────────────────────────────────────────────────
 
@@ -51,6 +59,7 @@ npm.npm_translate_lock(
     name = "npm",
     data = ["//web:package.json"],
     pnpm_lock = "//web:pnpm-lock.yaml",
+    lifecycle_hooks_exclude = ["*"],
     update_pnpm_lock = True,
     verify_node_modules_ignored = "//:.bazelignore",
 )

@@ -4,7 +4,7 @@
 
 ```bash
 # Create project and app
-pip install django djangorestframework django-cors-headers drf-spectacular dj-database-url whitenoise
+uv add django djangorestframework django-cors-headers drf-spectacular dj-database-url whitenoise
 django-admin startproject backend .
 python manage.py startapp api
 
@@ -146,7 +146,7 @@ print(finders.find('admin/js/my_script.js'))  # None → file not on the path
 ## Testing
 
 ```bash
-pip install -r requirements-dev.txt
+uv sync
 pytest api/
 ```
 

@@ -44,8 +44,8 @@ jobs:
         run: |
           tree="$(git rev-parse HEAD^{tree})"
           ci="$(sha256sum .github/workflows/ci.yml | cut -d' ' -f1)"
-          bazel="$(sha256sum MODULE.bazel | cut -d' ' -f1)"
-          py="$(sha256sum requirements.txt requirements-dev.txt | sha256sum | cut -d' ' -f1)"
+          bazel="$(sha256sum MODULE.bazel .bazelversion | sha256sum | cut -d' ' -f1)"
+          py="$(sha256sum pyproject.toml uv.lock | sha256sum | cut -d' ' -f1)"
           node="$(sha256sum web/pnpm-lock.yaml | cut -d' ' -f1)"
           value="${tree}-${ci}-${bazel}-${py}-${node}"
           deps_value="${bazel}-${py}-${node}"
@@ -141,6 +141,12 @@ jobs:
         run: |
           source env.sh
           gz_test --coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: bazel-out/_coverage/_coverage_report.dat
+          flags: code
+          fail_ci_if_error: false
 
   publish:
     name: Publish OCI image
