@@ -73,13 +73,13 @@ alias(
 # Bazel-managed Python 3.12 toolchain. Tagged no-sandbox because pip needs
 # network access to download wheels.
 genrule(
-    name = "pip_layer_tar",
+    name = "python_layer_tar",
     srcs = [
         "//:pyproject.toml",
         "//:uv.lock",
         "@uv//:uv",
     ],
-    outs = ["pip_layer.tar"],
+    outs = ["python_layer.tar"],
     cmd = """
         set -e
         export HOME=$$(mktemp -d)
@@ -133,7 +133,7 @@ oci_image(
     name = "image",
     base = "@python312_slim",
     tars = [
-        ":pip_layer_tar",
+        ":python_layer_tar",
         ":app_src_tar",
         ":web_dist_tar",
     ],
