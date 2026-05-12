@@ -8,7 +8,7 @@ export const BOTTOM_TAB_BAR_HEIGHT = 56;
 export default function LandingPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const currentTab = location.pathname === "/analyze" ? "/analyze" : "/";
+  const currentTab = location.pathname.startsWith("/analyze") ? "/analyze" : "/";
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
