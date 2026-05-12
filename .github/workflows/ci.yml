@@ -141,6 +141,12 @@ jobs:
         run: |
           source env.sh
           gz_test --coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: bazel-out/_coverage/_coverage_report.dat
+          flags: code
+          fail_ci_if_error: false
 
   publish:
     name: Publish OCI image
