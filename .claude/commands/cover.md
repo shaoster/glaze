@@ -1,1 +1,1 @@
-../../.agents/skills/cover/SKILL.md
+@../../.agents/skills/cover/SKILL.md

@@ -1,1 +1,1 @@
-../../.agents/skills/do-issue-worktree/SKILL.md
+@../../.agents/skills/do-issue-worktree/SKILL.md

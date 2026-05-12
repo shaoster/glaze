@@ -1,1 +1,1 @@
-../../.agents/skills/test-performance-audit/SKILL.md
+@../../.agents/skills/test-performance-audit/SKILL.md

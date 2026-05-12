@@ -1,1 +1,1 @@
-../../.agents/skills/spec-issue/SKILL.md
+@../../.agents/skills/spec-issue/SKILL.md
