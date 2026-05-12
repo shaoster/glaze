@@ -27,8 +27,12 @@ function makePieceDetail(): PieceDetail {
     created: new Date("2024-01-15T10:00:00Z"),
     last_modified: new Date("2024-01-15T10:00:00Z"),
     thumbnail: null,
+    shared: false,
+    is_editable: false,
+    can_edit: true,
     current_location: null,
     current_state: {
+      id: "state-id-1",
       state: "designed",
       notes: "",
       created: new Date("2024-01-15T10:00:00Z"),
@@ -37,8 +41,11 @@ function makePieceDetail(): PieceDetail {
       custom_fields: {},
       previous_state: null,
       next_state: null,
+      has_been_edited: false,
     },
     tags: [],
+    showcase_story: "",
+    showcase_fields: [],
     history: [],
   };
 }

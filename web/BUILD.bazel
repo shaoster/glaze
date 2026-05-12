@@ -406,6 +406,7 @@ js_library(
         ":image_lightbox_src",
         ":node_modules",
         ":util_lib",
+        ":workflow_state_src",
     ],
 )
 

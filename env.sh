@@ -420,7 +420,7 @@ gz_test() {
         # Exclude lint targets from coverage (they don't produce coverage data and slow down the pass)
         local coverage_target
         echo "Determining coverage targets (excluding 'lint' tagged targets)..."
-        coverage_target=$(bazel query "($target) except attr(tags, lint, //...)" 2>/dev/null | tr '\n' ' ')
+        coverage_target=$(bazel query "tests(set($target)) except attr(tags, lint, //...)" 2>/dev/null | tr '\n' ' ')
         if [[ -z "$coverage_target" ]]; then
             echo "No coverage targets found."
             return 0

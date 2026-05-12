@@ -73,6 +73,25 @@ def get_state_summary(state_id: str) -> dict:
     return dict(_STATE_MAP.get(state_id, {}).get("summary", {}))
 
 
+def can_reach(src_state_id: str, dst_state_id: str) -> bool:
+    """Return True if dst_state_id is reachable from src_state_id in the workflow graph.
+
+    Uses DFS over SUCCESSORS.  Used during retroactive state insertion to
+    determine where in a piece's history a new state logically belongs.
+    """
+    visited: set[str] = set()
+    stack = [src_state_id]
+    while stack:
+        node = stack.pop()
+        if node == dst_state_id:
+            return True
+        if node in visited:
+            continue
+        visited.add(node)
+        stack.extend(SUCCESSORS.get(node, []))
+    return False
+
+
 def get_state_ref_fields(state_id: str) -> dict[str, tuple[str, str]]:
     """Return {field_name: (source_state_id, source_field_name)} for all state ref fields.
 

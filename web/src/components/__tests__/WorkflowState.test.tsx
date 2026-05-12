@@ -170,6 +170,7 @@ vi.mock("../../util/api", () => ({
   fetchGlobalEntries: vi.fn().mockResolvedValue([]),
   fetchGlobalEntriesWithFilters: vi.fn().mockResolvedValue([]),
   updateCurrentState: vi.fn(),
+  updatePastState: vi.fn(),
   updatePiece: vi.fn(),
   createGlobalEntry: vi.fn(),
   toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),
@@ -196,6 +197,7 @@ vi.mock("../CloudinaryImage", () => ({
 
 function makeState(overrides: Partial<PieceState> = {}): PieceState {
   return {
+    id: "state-id-1",
     state: "designed",
     notes: "",
     created: new Date("2024-01-15T10:00:00Z"),
@@ -204,6 +206,7 @@ function makeState(overrides: Partial<PieceState> = {}): PieceState {
     previous_state: null,
     next_state: null,
     custom_fields: {},
+    has_been_edited: false,
     ...overrides,
   };
 }
@@ -216,9 +219,14 @@ function makePieceDetail(overrides: Partial<PieceDetail> = {}): PieceDetail {
     created: new Date("2024-01-15T10:00:00Z"),
     last_modified: new Date("2024-01-15T10:00:00Z"),
     thumbnail: null,
+    shared: false,
+    is_editable: false,
+    can_edit: true,
     current_state: state,
     current_location: "",
     tags: [],
+    showcase_story: "",
+    showcase_fields: [],
     history: [state],
     ...overrides,
   };
@@ -1234,6 +1242,37 @@ describe("WorkflowState", () => {
       expect(
         screen.queryByRole("button", { name: "Create Glaze Combination" }),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("saveStateFn prop", () => {
+    it("uses saveStateFn instead of updateCurrentState when provided", async () => {
+      const pieceState = makeState({ id: "past-state-id", notes: "" });
+      const updatedPiece = makePieceDetail({
+        history: [makeState({ id: "past-state-id", notes: "edited" })],
+      });
+      const saveStateFn = vi.fn().mockResolvedValue(updatedPiece);
+
+      render(
+        <WorkflowState
+          initialPieceState={pieceState}
+          pieceId="test-piece-id"
+          onSaved={vi.fn()}
+          autosaveDelayMs={0}
+          saveStateFn={saveStateFn}
+        />,
+      );
+
+      fireEvent.change(screen.getByLabelText("Notes"), {
+        target: { value: "edited" },
+      });
+
+      await waitFor(() => {
+        expect(saveStateFn).toHaveBeenCalledWith(
+          expect.objectContaining({ notes: "edited" }),
+        );
+        expect(api.updateCurrentState).not.toHaveBeenCalled();
+      });
     });
   });
 });

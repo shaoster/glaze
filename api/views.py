@@ -122,8 +122,10 @@ def _piece_queryset(request: Request):
 def _piece_read_queryset(request: Request):
     qs = Piece.objects.prefetch_related("states", "tag_links__tag")
     if request.user.is_authenticated:
-        return qs.filter(Q(user=request.user) | Q(shared=True))
-    return qs.filter(shared=True)
+        # Editable pieces are inaccessible to non-owners even when shared=True,
+        # without altering the shared flag itself.
+        return qs.filter(Q(user=request.user) | Q(shared=True, is_editable=False))
+    return qs.filter(shared=True, is_editable=False)
 
 
 def _serialize_piece_detail(piece: Piece, request: Request):
@@ -315,6 +317,32 @@ def piece_current_state(request: Request, piece_id: str) -> Response:
     serializer = PieceStateUpdateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     serializer.update(current, serializer.validated_data)
+    piece.refresh_from_db()
+    return Response(_serialize_piece_detail(piece, request))
+
+
+@extend_schema(
+    methods=["PATCH"],
+    request=PieceStateUpdateSerializer,
+    responses={200: PieceDetailSerializer},
+)
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response:
+    """Patch a past (sealed) state while the piece is in editable mode.
+
+    Returns 403 if the piece is not currently in editable mode.
+    """
+    piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
+    if not piece.is_editable:
+        return Response(
+            {"detail": "Piece is not in editable mode."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    ps = get_object_or_404(piece.states, pk=state_id)
+    serializer = PieceStateUpdateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    serializer.update(ps, serializer.validated_data)
     piece.refresh_from_db()
     return Response(_serialize_piece_detail(piece, request))
 
@@ -1007,7 +1035,10 @@ def glaze_combination_images(request: Request) -> Response:
     # Current states such as "completed" may not carry their own junction row, so
     # use the most recent state that does.
     refs = (
-        GlazeCombinationRef.objects.filter(piece_state__piece__user=request.user)
+        GlazeCombinationRef.objects.filter(
+            piece_state__piece__user=request.user,
+            piece_state__piece__is_editable=False,
+        )
         .values("piece_state__piece_id", "glaze_combination_id")
         .order_by("piece_state__piece_id", "-piece_state__created")
     )
@@ -1027,6 +1058,7 @@ def glaze_combination_images(request: Request) -> Response:
         PieceState.objects.filter(
             piece_id__in=piece_to_combo.keys(),
             piece__user=request.user,  # type: ignore[misc]
+            piece__is_editable=False,
             state__in=qualifying,
             image_links__isnull=False,
         )

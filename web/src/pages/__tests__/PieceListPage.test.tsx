@@ -113,7 +113,10 @@ const EXISTING_PIECE: PieceSummary = {
   current_location: null,
   tags: [],
   shared: false,
+  is_editable: false,
   can_edit: true,
+  showcase_story: "",
+  showcase_fields: [],
 };
 
 describe("PieceListPage", () => {
