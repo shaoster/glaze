@@ -1,8 +1,28 @@
+# Codecov configuration
+# Consolidated from .codecov.yml and codecov.yml
+
 coverage:
   status:
-    patch:
-      default:
-        carryforward: true
     project:
       default:
-        carryforward: true
+        target: auto
+        threshold: 2%
+    patch:
+      default:
+        target: auto
+        threshold: 2%
+  precision: 2
+  round: down
+  range: "70...100"
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: false
+
+flags:
+  code:
+    paths:
+      - api/
+      - web/src/
+    carryforward: true
