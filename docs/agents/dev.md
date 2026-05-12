@@ -274,7 +274,8 @@ Key local skills:
 | Skill                         | Use                                                                                          |
 | ----------------------------- | -------------------------------------------------------------------------------------------- |
 | `do-issue-worktree`           | Start a single issue or PR-sized change with `/do #<issue>` and an immediate worktree setup. |
-| `git-worktree-agent-workflow` | Coordinate parallel worktrees or recover mixed work that needs to be split into focused PRs. |
+
+For orchestrating multiple worktrees, see [`docs/agents/worktrees.md`](worktrees.md).
 
 ### Adding a new skill
 

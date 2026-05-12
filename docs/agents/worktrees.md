@@ -305,5 +305,3 @@ Orchestrator (main repo)
               +-- Delete local branches
               +-- rmdir .agent-worktrees/<agent> (if empty)
 ```
-
-- [multi-agent-workflows](../../../agent-patterns-plugin/skills/multi-agent-workflows/SKILL.md) - General agent orchestration
