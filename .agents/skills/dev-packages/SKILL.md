@@ -15,26 +15,24 @@ allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 
 ## Adding a New Python Package
 
-Bazel resolves Python packages from `requirements.lock`. Three steps required:
+Bazel resolves Python packages from `uv.lock`. Three steps required:
 
-**1. Add to `requirements.txt`** (runtime) or `requirements-dev.txt` (dev/lint/test only),
-then regenerate the lock from the repo root:
-
-```bash
-pip-compile --generate-hashes --output-file=requirements.lock requirements-dev.txt
-```
-
-Always run `pip-compile` from the repo root using `requirements-dev.txt` so that dev deps
-(pytest-django, mypy stubs, etc.) are preserved in the lock file. In a worktree, run from
-the worktree root after copying or symlinking `requirements-dev.txt` there.
-
-**2. Install locally:**
+**1. Add to `pyproject.toml`** (runtime or dev), then regenerate the lock:
 
 ```bash
-pip install -r requirements.txt
+uv add httpx           # runtime
+uv add --dev pytest    # dev/lint/test only
 ```
 
-**3. Add `requirement("package-name")` to the right `BUILD.bazel` target.**
+Always run `uv` commands from the repo root. In a worktree, run from the worktree root.
+
+**2. Sync local environment:**
+
+```bash
+uv sync
+```
+
+**3. Add `"@pypi//package_name"` to the right `BUILD.bazel` target.**
 
 Bazel sandboxes don't inherit the venv — every package a target imports must be declared
 in its `deps`. The key target is `api_lib` in `api/BUILD.bazel`:
@@ -54,7 +52,7 @@ rtk bazel build //api:api_lib
 rtk bazel test //api:api_test //api:api_mypy
 ```
 
-Commit `requirements.txt`, `requirements.lock`, `MODULE.bazel.lock` (updated automatically
+Commit `pyproject.toml`, `uv.lock`, `MODULE.bazel.lock` (updated automatically
 by Bazel), and the `BUILD.bazel` change together.
 
 ## Adding a New npm Package

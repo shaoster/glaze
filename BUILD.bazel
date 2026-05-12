@@ -74,23 +74,33 @@ alias(
 # network access to download wheels.
 genrule(
     name = "pip_layer_tar",
-    srcs = ["//:requirements.lock"],
+    srcs = [
+        "//:pyproject.toml",
+        "//:uv.lock",
+        "@uv//:uv",
+    ],
     outs = ["pip_layer.tar"],
     cmd = """
         set -e
+        export HOME=$$(mktemp -d)
+        UV=$(location @uv//:uv)
+
+        # Export uv.lock to requirements.txt
+        $$UV export --no-dev --format requirements.txt --output-file requirements.txt
+
         dest=$$(mktemp -d)
         $(PYTHON3) -m pip install \
             --quiet \
-            --require-hashes \
             --no-deps \
             --prefix="$$dest" \
-            -r $(location //:requirements.lock)
+            -r requirements.txt
+
         # Flatten site-packages to /app/site-packages in the tarball.
         sp=$$(find "$$dest" -type d -name site-packages | head -1)
         mkdir -p "$$dest/app"
         mv "$$sp" "$$dest/app/site-packages"
         tar -C "$$dest" -cf $@ app/site-packages
-        rm -rf "$$dest"
+        rm -rf "$$dest" "$$HOME"
     """,
     toolchains = ["@rules_python//python:current_py_toolchain"],
     tags = ["no-sandbox"],

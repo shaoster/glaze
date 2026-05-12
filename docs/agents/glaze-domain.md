@@ -570,7 +570,7 @@ These extend the generic GitHub interactions guide with Glaze-specific protected
 
 - Modifying [`workflow.yml`](../../workflow.yml) (state definitions, transitions, successors)
 - Modifying [`.github/workflows/`](../../.github/workflows/) (CI/CD configuration)
-- Adding or removing Python dependencies (`requirements*.txt`)
+- Adding or removing Python dependencies (`pyproject.toml`)
 - Adding or removing npm dependencies (`package.json`)
 - Writing or altering database migrations
 - Modifying deployment configuration, [`backend/settings.py`](../../backend/settings.py) or build settings [`build.sh`](../../build.sh)
