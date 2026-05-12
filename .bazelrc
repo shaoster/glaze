@@ -1,6 +1,9 @@
 # ── Common ────────────────────────────────────────────────────────────────────
 common --enable_bzlmod
 common --experimental_merged_skyframe_analysis_execution
+common --experimental_repository_cache_hardlinks
+common --action_cache_store_output_metadata
+common --nolegacy_external_runfiles
 build --workspace_status_command=tools/workspace_status.sh
 common --spawn_strategy=local
 build --incompatible_enable_cc_toolchain_resolution
