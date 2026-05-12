@@ -40,7 +40,7 @@ in its `deps`. The key target is `api_lib` in `api/BUILD.bazel`:
 ```python
 deps = [
     "//backend:backend_lib",
-    requirement("httpx"),   # ← add runtime packages here
+    "@pypi//httpx",   # ← add runtime packages here
 ],
 ```
 

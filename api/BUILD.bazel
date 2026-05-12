@@ -97,3 +97,36 @@ filegroup(
     ],
     visibility = ["//visibility:public"],
 )
+
+# ── mypy type-check ───────────────────────────────────────────────────────────
+# Runs mypy over all of api/ with the full django + DRF plugins enabled.
+# Runs as a single target (coarser than per-library) because mypy_django_plugin
+# requires full Django app initialization, which isn't available in per-target
+# Bazel sandboxes. TODO: revisit with rules_mypy once resolved — see
+# https://github.com/shaoster/glaze/issues/157
+
+py_test(
+    name = "api_mypy",
+    size = "medium",
+    srcs = ["//tools:mypy_main.py"],
+    args = ["api/"],
+    data = [
+        "//:mypy.ini",
+        "//:workflow_files",
+    ],
+    env = {"DJANGO_SETTINGS_MODULE": "backend.settings"},
+    main = "//tools:mypy_main.py",
+    tags = [
+        "lint",
+        "no-coverage",
+    ],
+    deps = [
+        ":api_lib",
+        "@pypi//mypy",
+        "@pypi//mypy_extensions",
+        "@pypi//django_stubs",
+        "@pypi//django_stubs_ext",
+        "@pypi//djangorestframework_stubs",
+        "@pypi//types_requests",
+    ],
+)
