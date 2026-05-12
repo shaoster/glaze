@@ -144,7 +144,7 @@ concept in multiple places, extract a reusable component in `web/src/components/
 - `CloudinaryImage.tsx` — renders `CaptionedImage` via `@cloudinary/url-gen` + `@cloudinary/react`; falls back to plain `<img>`. Sizing: `thumbnail`/`preview` (64×64 fill), `lightbox` (90vw×80vh fit)
 - `ImageLightbox.tsx` — full-screen modal image viewer with caption and keyboard/touch navigation
 - `StateChip.tsx` — shared workflow-state token. `variant: 'current' | 'past' | 'future'` plus `isTerminal` and optional interaction hooks
-- `WorkflowSummary.tsx` — renders read-only `summary` section for terminal states; displays promoted fields, computed numeric results, static text with optional `when` visibility
+- `ProcessSummary.tsx` — renders read-only `summary` section for terminal states; displays promoted fields, computed numeric results, static text with optional `when` visibility
 - `PieceShareControls.tsx` — owner-only sharing controls on terminal pieces; toggle for public access + copyable share link
 - `PublicPieceShell.tsx` — thin unauthenticated route wrapper rendering `PieceDetailPage` for publicly shared pieces
 
