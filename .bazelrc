@@ -5,6 +5,10 @@ build --workspace_status_command=tools/workspace_status.sh
 common --spawn_strategy=local
 build --incompatible_enable_cc_toolchain_resolution
 
+# aspect_rules_py / uv setup
+common --@pypi//venv=glaze
+common --@aspect_rules_py//py:python_version=3.12
+
 # Coverage exclude tags
 # We don't care about gcov. We don't have any C++ code.
 coverage --test_env=IGNORE_COVERAGE_COLLECTION_FAILURES=1

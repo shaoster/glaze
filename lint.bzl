@@ -20,6 +20,6 @@ load("@aspect_rules_lint//lint:ruff.bzl", "lint_ruff_aspect")
 # v2.x ships ruff as a pre-built binary at @aspect_rules_lint//lint:ruff_bin.
 
 ruff_aspect = lint_ruff_aspect(
-    binary = "@@aspect_rules_lint~//lint:ruff_bin",
+    binary = "@aspect_rules_lint//lint:ruff_bin",
     configs = ["@@//:ruff.toml"],
 )

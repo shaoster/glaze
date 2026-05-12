@@ -1,6 +1,5 @@
-load("@rules_python//python:defs.bzl", "py_binary", "py_test")
-load("@pip//:requirements.bzl", "requirement")
-load("@tools_pip//:requirements.bzl", requirement_tools = "requirement")
+load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_test")
+load("@pypi//:requirements.bzl", requirement_tools = "requirement")
 
 # ── Pytest runner ─────────────────────────────────────────────────────────────
 # Shared entry point for all py_test targets. Each test BUILD file lists this
@@ -19,12 +18,12 @@ py_binary(
     deps = [
         "//api:api_lib",
         "//backend:backend_lib",
-        requirement("django"),
-        requirement("djangorestframework"),
-        requirement("drf-spectacular"),
-        requirement("pyyaml"),
-        requirement("google-auth"),
-        requirement("requests"),
+        "@pypi//django",
+        "@pypi//djangorestframework",
+        "@pypi//drf_spectacular",
+        "@pypi//pyyaml",
+        "@pypi//google_auth",
+        "@pypi//requests",
     ],
     visibility = ["//visibility:public"],
 )
@@ -35,9 +34,9 @@ py_binary(
     deps = [
         "//api:api_lib",
         "//backend:backend_lib",
-        requirement("django"),
-        requirement("requests"),
-        requirement("pillow"),
+        "@pypi//django",
+        "@pypi//requests",
+        "@pypi//pillow",
     ],
     visibility = ["//visibility:public"],
 )
