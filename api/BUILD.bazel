@@ -85,6 +85,12 @@ filegroup(
 )
 
 filegroup(
+    name = "api_static",
+    srcs = glob(["static/**"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
     name = "api_runtime_files",
     srcs = [
         ":api_lib",
@@ -92,8 +98,8 @@ filegroup(
         ":api_workflow_lib",
         ":api_commands",
         ":migrations",
+        ":api_static",
         "__init__.py",
-        "static/admin/js/cloudinary_image_widget.js",
     ],
     visibility = ["//visibility:public"],
 )
@@ -114,6 +120,7 @@ _TEST_DATA = [
     "//:fixtures",
     "//:pytest_ini",
     ":migrations",
+    ":api_static",
 ]
 
 _TEST_ENV = {
