@@ -48,7 +48,7 @@ vi.mock("./components/PieceDetail", () => ({
 }));
 
 vi.mock("./components/GlazeCombinationGallery", () => ({
-  default: () => <div>Glaze Gallery Content</div>,
+  default: () => <div>Glaze Combinations</div>,
 }));
 
 vi.mock("./pages/GlazeImportToolPage", () => ({
@@ -260,7 +260,7 @@ describe("App auth flow", () => {
     await userEvent.click(screen.getByRole("tab", { name: "Analyze" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Glaze Gallery Content")).toBeInTheDocument();
+      expect(screen.getByText("Glaze Combinations")).toBeInTheDocument();
       expect(window.location.pathname).toBe("/analyze");
     });
 
@@ -364,7 +364,7 @@ describe("App auth flow", () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText("Glaze Gallery Content")).toBeInTheDocument();
+      expect(screen.getByText("Glaze Combinations")).toBeInTheDocument();
     });
 
     expect(screen.getByRole("tab", { name: "Analyze" })).toHaveAttribute(

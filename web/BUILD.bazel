@@ -293,6 +293,23 @@ js_library(
     ],
 )
 
+
+js_library(
+    name = "analysis_src",
+    srcs = [
+        "src/components/AnalysisCard.tsx",
+        "src/components/AnalysisIndex.tsx",
+        "src/components/GlazeCombinationSummary.tsx",
+    ],
+    deps = [
+        ":cloudinary_image_src",
+        ":generated_types",
+        ":node_modules",
+        ":primitive_src",
+        ":util_lib",
+    ],
+)
+
 js_library(
     name = "glaze_gallery_src",
     srcs = ["src/components/GlazeCombinationGallery.tsx"],
@@ -459,6 +476,17 @@ js_library(
         ":tag_manager_src",
         ":util_lib",
         ":workflow_state_src",
+    ],
+)
+
+
+js_library(
+    name = "analyze_page_src",
+    srcs = ["src/pages/AnalyzePage.tsx"],
+    deps = [
+        ":analysis_src",
+        ":glaze_gallery_src",
+        ":node_modules",
     ],
 )
 
@@ -821,6 +849,31 @@ vitest_test(
     ],
 )
 
+
+vitest_test(
+    name = "web_analysis_test",
+    srcs = [
+        "src/components/__tests__/AnalysisCard.test.tsx",
+        "src/components/__tests__/AnalysisIndex.test.tsx",
+        "src/components/__tests__/GlazeCombinationSummary.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":analysis_src",
+    ],
+)
+
+vitest_test(
+    name = "web_analyze_page_test",
+    srcs = [
+        "src/pages/__tests__/AnalyzePage.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":analyze_page_src",
+    ],
+)
+
 vitest_test(
     name = "web_app_test",
     srcs = ["src/App.test.tsx"],
@@ -837,6 +890,8 @@ vitest_test(
 test_suite(
     name = "web_test",
     tests = [
+        ":web_analysis_test",
+        ":web_analyze_page_test",
         ":web_api_test",
         ":web_app_test",
         ":web_cloudinary_cleanup_test",
