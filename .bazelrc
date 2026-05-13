@@ -1,6 +1,7 @@
 # ── Common ────────────────────────────────────────────────────────────────────
 startup --host_jvm_args=-Xmx1g
 startup --max_idle_secs=600
+common --experimental_disk_cache_gc_max_size=200G
 common --enable_bzlmod
 common --experimental_merged_skyframe_analysis_execution
 common --experimental_repository_cache_hardlinks
