@@ -129,6 +129,7 @@ function sortSuccessorsForDisplay(successors: string[]): string[] {
 type StateTransitionProps = {
   currentStateName: string;
   disabled?: boolean;
+  disabledHint?: string;
   transitioning?: boolean;
   transitionError?: string | null;
   onTransition: (nextState: string) => void;
@@ -137,6 +138,7 @@ type StateTransitionProps = {
 export default function StateTransition({
   currentStateName,
   disabled = false,
+  disabledHint,
   transitioning = false,
   transitionError,
   onTransition,
@@ -252,7 +254,7 @@ export default function StateTransition({
           variant="caption"
           sx={{ color: "text.secondary", mb: 1, display: "block" }}
         >
-          Save your changes before transitioning to a new state.
+          {disabledHint ?? "Save your changes before transitioning to a new state."}
         </Typography>
       )}
 

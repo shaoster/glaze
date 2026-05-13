@@ -501,7 +501,9 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
     def validate_state(self, value: str) -> str:
         piece: Piece = self.context["piece"]
         if piece.is_editable:
-            return value
+            raise serializers.ValidationError(
+                "Cannot add states while piece is in editable mode. Seal the piece first."
+            )
         current = piece.current_state
         if current is not None:
             valid_next = SUCCESSORS.get(current.state, [])

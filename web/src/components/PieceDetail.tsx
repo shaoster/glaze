@@ -503,7 +503,12 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
               <Box sx={{ mt: 2, mb: 1.5 }}>
                 <StateTransition
                   currentStateName={currentState.state}
-                  disabled={isDirty}
+                  disabled={isDirty || piece.is_editable}
+                  disabledHint={
+                    piece.is_editable
+                      ? "Seal edit mode before transitioning to a new state."
+                      : undefined
+                  }
                   transitioning={transitioning}
                   transitionError={transitionError}
                   onTransition={handleTransition}

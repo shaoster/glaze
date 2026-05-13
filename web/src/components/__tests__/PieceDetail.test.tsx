@@ -864,5 +864,14 @@ describe("PieceDetail", () => {
         screen.getByText(/'Glazing' is not a valid successor of 'Designing'/),
       ).toBeInTheDocument();
     });
+
+    it("disables transition buttons when piece is in editable mode", async () => {
+      await renderPieceDetail(makePiece({ is_editable: true }));
+      const transitionBtn = screen.getByRole("button", { name: "Throwing" });
+      expect(transitionBtn).toBeDisabled();
+      expect(
+        screen.getByText(/seal edit mode before transitioning/i),
+      ).toBeInTheDocument();
+    });
   });
 });
