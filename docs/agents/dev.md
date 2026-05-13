@@ -11,9 +11,7 @@ python manage.py migrate
 uvicorn backend.asgi:application --port 8080 --reload  # or any free port; gz_start picks one automatically
 
 # Web (separate terminal)
-cd web
-npm install
-npm run dev
+gz_web
 
 # Remote ML Offload (Optional, for 1GB RAM servers)
 # 1. Create a secret 'piece-image-crop-secret' with AUTH_TOKEN=xxx
@@ -125,7 +123,7 @@ gz_cd issue-456     # same for a different branch
 
 When multiple agents (Claude, Codex, etc.) are working on separate PRs in parallel:
 
-1. **Each agent owns one worktree.** The standard path is `.agent-worktrees/<agent>/<branch>`. The agent sources `env.sh` from there, and all its server state stays isolated in that directory.
+1. **Each agent owns one worktree.** The standard path is `.agent-worktrees/<agent>/<branch>`. The agent sources `env-agent.sh` from there (via `BASH_ENV`) to maintain its `GLAZE_AGENT` status; agents must NOT source `env.sh` directly as it unsets the agent flag. All server state stays isolated in the worktree directory.
 
 2. **Agents must announce their worktree path** at the start of every session, clearly and as a copy-friendly absolute path. This is the contract that makes `gz_worktrees` and `gz_cd` useful — a path buried in scrollback is not sufficient. The announcement should appear before any code changes so it is visible when you open the conversation.
 
@@ -213,12 +211,12 @@ Commit `requirements.txt`, `requirements.lock`, `MODULE.bazel.lock` (updated aut
 
 Bazel resolves npm packages from `web/pnpm-lock.yaml`. After any `npm install` that adds or removes packages, regenerate the lockfile with `pnpm import` so Bazel picks up the change:
 
-```bash
 # Install the package normally (from the repo root or web/ — npm resolves via web/package.json)
-(cd web && npm install react-swipeable)
+(cd web && rtk bazel run @nodejs_linux_amd64//:npm -- install react-swipeable)
 
 # Regenerate the pnpm lockfile from the updated package-lock.json
 # pnpm must be run from web/ where package.json and pnpm-lock.yaml live
+(cd web && rtk bazel run @nodejs_linux_amd64//:npx -- pnpm import)
 (cd web && pnpm import)
 
 # Commit both the updated package files
@@ -385,7 +383,7 @@ rtk bazel build --config=lint //...
 
 ```bash
 # Reformat Python files and apply ruff auto-fixes
-source env.sh && gz_format
+gz_format
 # equivalent to:
 uv run ruff format .
 uv run ruff check --fix .
@@ -423,7 +421,6 @@ rtk bazel test //api:api_mypy
 
 # Web component tests
 rtk bazel test //web:web_test
-cd web && npm run test:watch           # watch mode (no Bazel equivalent)
 
 # Web type-check + lint (both covered by the lint target)
 # Do not run tsc directly — tsc may not resolve depending on environment setup.
@@ -455,9 +452,8 @@ GitHub Actions runs three parallel jobs on every push and pull request — see [
 
 | Job        | What it runs                                                                                                                                                    |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `test`     | `bazel test --config=ci //...` — all test suites                                                                                                                |
-| `lint`     | `bazel build --config=ci --config=lint //...` — ruff, eslint, tsc, mypy                                                                                         |
-| `coverage` | `bazel coverage --config=ci --combined_report=lcov //...` — feeds Codecov |
+| `lint`     | `source env.sh && gz_lint` — ruff, eslint, tsc, mypy via Bazel                                                                                         |
+| `coverage` | `source env.sh && gz_test --coverage` — all test suites + Codecov report |
 
 Coverage reports are uploaded to [Codecov](https://codecov.io). Codecov posts a summary comment on each PR.
 

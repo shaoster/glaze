@@ -32,7 +32,7 @@ passing targets, so re-running `//...` after a fix costs no more than running a 
 ## Auto-Fix Before Committing
 
 ```bash
-source env.sh && gz_format
+gz_format
 # equivalent to:
 ruff format .
 ruff check --fix .
@@ -77,7 +77,7 @@ rtk bazel build --config=lint //web/...
 ## Web Build Helper
 
 ```bash
-source env.sh
+source env-agent.sh
 gz_build
 ```
 
@@ -89,7 +89,7 @@ Three parallel jobs on every push and PR (see `.github/workflows/ci.yml`):
 
 | Job | What it runs |
 |---|---|
-| `test` | `bazel test --config=ci //...` — all test suites |
+| `test` | `rtk bazel test --config=ci //...` — all test suites |
 | `lint` | `bazel build --config=ci --config=lint //...` — ruff, eslint, tsc, mypy |
 | `coverage` | `bazel coverage --config=ci --combined_report=lcov //...` — feeds Codecov |
 

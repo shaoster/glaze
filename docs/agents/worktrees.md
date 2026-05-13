@@ -253,7 +253,7 @@ Each subagent handles:
 2. **No directory changes**: Work should happen via path arguments, not `cd`
 3. **Single commit per worktree**: Keep changes atomic and reviewable
 4. **Issue reference in commit**: Always include `Fixes #N` for auto-closing
-5. **Dependency installation**: Each worktree may need `bun install` / `npm install`
+5. **Dependency installation**: Each worktree may need `bun install` / `rtk bazel run @nodejs_linux_amd64//:npm -- install`
 
 ## Agentic Optimizations
 
@@ -268,7 +268,7 @@ Each subagent handles:
 | Apply patch (apply) | `git -C .agent-worktrees/<agent>/issue-N-slug apply /tmp/patches/file.patch` |
 | Extract file changes | `git show <commit> -- path/to/file > /tmp/patch.patch` |
 | Check worktree status | `git -C .agent-worktrees/<agent>/issue-N-slug status --porcelain` |
-| Run tests in worktree | `source env.sh && gz_test` from the worktree root |
+| Run tests in worktree | `gz_test` from the worktree root |
 | Push worktree branch | `git push -u origin issue/N-slug` |
 
 ## Example Coordination Flow

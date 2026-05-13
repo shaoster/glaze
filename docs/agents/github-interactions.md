@@ -64,8 +64,8 @@ Before opening or pushing to a PR, verify every item:
 - During every commit, explicitly append the `Co-authored-by: <model-name> <noreply@google.com>` tag to the commit message. The agent is responsible for identifying its current model (e.g., `gemini-3.1-flash-lite-preview`) and ensuring this tag is present before finalizing the commit.
 - Every commit should have a short descriptive title with detailed bullets in the body explaining what was done and why.
 - If a PR includes refactoring alongside functional changes, describe both clearly in the commit and PR body.
-- All test suites pass: `bazel test //...`
-- All linters pass: `bazel build --config=lint //...`
+- All test suites pass: `gz_test`
+- All linters pass: `gz_lint`
 - The build succeeds (gz_build).
 - PR body contains "Closes #<N>" linking to the originating issue.
 - PR title is concise (under 70 characters).
@@ -81,10 +81,10 @@ Project-specific definition-of-done checks (e.g. serializer/type alignment, work
 
 ### Environment Setup
 
-When running in a github action, or in any remote sandboxed environment, first `source env.sh && gz_setup` to set up the test environment.
+When running in a github action, or in any remote sandboxed environment, first `source env-agent.sh && gz_setup` to set up the test environment.
 
-To run all tests, use `bazel test //...` (or `gz_bazel_test`).
-To run all linters, use `bazel build --config=lint //...` (or `gz_bazel_lint`).
+To run all tests, use `gz_test`.
+To run all linters, use `gz_lint`.
 To ensure build correctness, use `gz_build`.
 
 ### Avoid PATs — use `GITHUB_TOKEN` and `workflow_run`

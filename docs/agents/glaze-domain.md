@@ -431,9 +431,9 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 **Type generation pipeline:**
 
 - [`web/src/util/generated-types.ts`](../../web/src/util/generated-types.ts) is auto-generated — do not edit by hand. It is gitignored.
-- Generation is driven by [`web/scripts/generate-types.mjs`](../../web/scripts/generate-types.mjs), which calls the `openapi-typescript` programmatic API with a `transform` that converts `format: date-time` fields to `Date`. Run `npm run generate-types` with Django on port 8080.
+- Generation is driven by [`web/scripts/generate-types.mjs`](../../web/scripts/generate-types.mjs), which calls the `openapi-typescript` programmatic API with a `transform` that converts `format: date-time` fields to `Date`. Run `gz_gentypes` with Django on port 8080.
 - [`web/src/util/types.ts`](../../web/src/util/types.ts) derives domain types from `generated-types.ts` via intersection (no `Omit<>`). It also holds the `STATES` array and `SUCCESSORS` map from `workflow.yml`.
-- **When adding a new API field:** update the Django serializer → run `npm run generate-types` → update `web/src/util/types.ts` if semantic narrowing is needed → update mappers in `web/src/util/api.ts`.
+- **When adding a new API field:** update the Django serializer → run `gz_gentypes` → update `web/src/util/types.ts` if semantic narrowing is needed → update mappers in `web/src/util/api.ts`.
 - [`web/src/util/api.ts`](../../web/src/util/api.ts) uses the `Wire<T>` generic to type raw Axios responses (dates as strings). Mappers convert `Wire<T>` → domain `T`. This is the only file that should contain deserialization logic.
 - The OpenAPI schema is at `http://localhost:8080/api/schema/` and Swagger UI at `http://localhost:8080/api/schema/swagger/`.
 
@@ -577,9 +577,9 @@ These extend the generic GitHub interactions guide with Glaze-specific protected
 
 **Additional definition-of-done checks:**
 
-- All tests pass: `bazel test //...`
-- All linters pass (ruff, eslint, tsc, mypy): `bazel build --config=lint //...`
-- Auto-fix Python formatting and fixable lint issues before committing: `ruff format . && ruff check --fix .`
+- All tests pass: `gz_test`
+- All linters pass (ruff, eslint, tsc, mypy): `gz_lint`
+- Auto-fix Python formatting and fixable lint issues before committing: `gz_format`
 - Serializer output matches the TypeScript types in [`web/src/util/types.ts`](../../web/src/util/types.ts)
 - State names and transitions are derived from [`workflow.yml`](../../workflow.yml), not hardcoded
 - If `AGENTS.md` was modified, check whether [`README.md`](../../README.md) needs a corresponding update

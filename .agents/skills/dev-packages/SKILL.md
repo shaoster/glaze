@@ -20,8 +20,8 @@ Bazel resolves Python packages from `uv.lock`. Three steps required:
 **1. Add to `pyproject.toml`** (runtime or dev), then regenerate the lock:
 
 ```bash
-uv add httpx           # runtime
-uv add --dev pytest    # dev/lint/test only
+rtk bazel run @uv//:uv -- add httpx           # runtime
+rtk bazel run @uv//:uv -- add --dev pytest    # dev/lint/test only
 ```
 
 Always run `uv` commands from the repo root. In a worktree, run from the worktree root.
@@ -29,7 +29,7 @@ Always run `uv` commands from the repo root. In a worktree, run from the worktre
 **2. Sync local environment:**
 
 ```bash
-uv sync
+rtk bazel run @uv//:uv -- sync
 ```
 
 **3. Add `"@pypi//package_name"` to the right `BUILD.bazel` target.**
@@ -61,11 +61,11 @@ Bazel resolves npm packages from `web/pnpm-lock.yaml`. After any `npm install`:
 
 ```bash
 # Install the package
-(cd web && npm install react-swipeable)
+(cd web && rtk bazel run @nodejs_linux_amd64//:npm -- install react-swipeable)
 
 # Regenerate the pnpm lockfile from the updated package-lock.json
 # pnpm must run from web/ where package.json and pnpm-lock.yaml live
-(cd web && pnpm import)
+(cd web && rtk bazel run @nodejs_linux_amd64//:npx -- pnpm import)
 ```
 
 `pnpm` is available at `~/.nvm/versions/node/*/bin/pnpm` when nvm is active. If

@@ -1,23 +1,5 @@
 # TypeScript + React + Vite Guide
 
-## Scaffolding a new project
-
-```bash
-# Create Vite + React + TypeScript project
-npm create vite@latest web -- --template react-ts
-cd web
-npm install
-
-# Add MUI (with Emotion peer deps)
-npm install @mui/material @emotion/react @emotion/styled
-
-# Add Axios and React Router
-npm install axios react-router-dom
-
-# Start dev server
-npm run dev
-```
-
 Enable stricter TypeScript flags in `tsconfig.json` (`compilerOptions`):
 ```json
 "noUnusedLocals": true,
@@ -37,7 +19,7 @@ This is a Single Page Application (SPA). Routing is handled client-side via Reac
 
 - Strict mode is on. Beyond `strict: true`, also enforce `noUnusedLocals`, `noUnusedParameters`, and `noFallthroughCasesInSwitch` — remove unused variables and parameters rather than suppressing errors.
 - Avoid `any`. Use `unknown` when a type is genuinely unknown and narrow it before use.
-- Run `npx tsc --noEmit` as a standalone type-check step separate from the test suite.
+- Run `rtk bazel test //web:tsc_typecheck` as a standalone type-check step separate from the test suite.
 - Use `import.meta.env.VITE_*` to access environment variables in frontend code; plain `process.env` does not work in Vite.
 
 ## Component patterns
@@ -150,12 +132,6 @@ function useAsync<T>(asyncFunction: () => Promise<T>, immediate = true) {
 - Always use MUI theme tokens for color — never hardcode hex/rgb values. For text use `text.primary` (main content) and `text.secondary` (labels, metadata).
 
 ## Testing
-
-```bash
-cd web
-npm test          # single run (used in CI)
-npm run test:watch  # watch mode for development
-```
 
 The test environment is jsdom with React Testing Library.
 
