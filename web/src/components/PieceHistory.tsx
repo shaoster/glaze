@@ -30,9 +30,9 @@ import {
   insertableStatesBetween,
 } from "../util/workflow";
 import { addPieceState, deletePieceState, updatePastState } from "../util/api";
-import WorkflowState from "./WorkflowState";
 import { useAutosave } from "./useAutosave";
 
+// toDatetimeLocal converts a Date object to a string format suitable for datetime-local input
 const toDatetimeLocal = (date: Date) => {
   const pad = (n: number) => n.toString().padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -114,12 +114,16 @@ function EditablePieceStateListItem({
   pieceId: string;
   onSaved: (updated: PieceDetailType) => void;
 }) {
-  const [localDate, setLocalDate] = useState(() => toDatetimeLocal(ps.created));
+  const [localDate, setLocalDate] = useState(() =>
+    ps.created ? toDatetimeLocal(ps.created) : "",
+  );
+  const [prevCreated, setPrevCreated] = useState(ps.created);
 
   // Sync from props if updated externally (e.g. from another save)
-  useEffect(() => {
-    setLocalDate(toDatetimeLocal(ps.created));
-  }, [ps.created]);
+  if (ps.created !== prevCreated) {
+    setPrevCreated(ps.created);
+    setLocalDate(ps.created ? toDatetimeLocal(ps.created) : "");
+  }
 
   const save = useCallback(async () => {
     const date = new Date(localDate);
@@ -133,7 +137,7 @@ function EditablePieceStateListItem({
   }, [localDate, onSaved, pieceId, ps.id]);
 
   const { status } = useAutosave({
-    dirty: localDate !== toDatetimeLocal(ps.created),
+    dirty: localDate !== (ps.created ? toDatetimeLocal(ps.created) : ""),
     saveKey: localDate,
     save,
   });
@@ -407,7 +411,7 @@ export default function PieceHistory({
                       </Box>
                     ) : (
                       <ListItemText
-                        secondary={`${ps.created.toLocaleString()}${ps.notes ? " — " + ps.notes : ""}`}
+                        secondary={`${ps.created?.toLocaleString() ?? ""}${ps.notes ? " — " + ps.notes : ""}`}
                         secondaryTypographyProps={{
                           variant: "caption",
                           sx: { color: "text.secondary" },

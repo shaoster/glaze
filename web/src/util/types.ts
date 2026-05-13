@@ -35,18 +35,24 @@ export type Thumbnail = Omit<components["schemas"]["Thumbnail"], "crop"> & {
 // Minimal state shape returned in list responses.
 // Intersection narrows state: string → state: State.
 // PieceState is a structural subtype, so it can substitute for StateSummary.
-export type StateSummary = components["schemas"]["StateSummary"] & {
+export type StateSummary = Omit<components["schemas"]["StateSummary"], "created"> & {
   state: State;
+  created: Date;
 };
 
 // Full state record returned in detail responses.
 // Intersection narrows state: string → state: State.
-export type PieceState = Omit<components["schemas"]["PieceState"], "images"> & {
+// Added created: Date to resolve possible undefined errors after merge.
+export type PieceState = Omit<
+  components["schemas"]["PieceState"],
+  "images" | "created"
+> & {
   id: string;
   state: State;
   images: CaptionedImage[];
   custom_fields: Record<string, unknown>;
   has_been_edited: boolean;
+  created: Date;
 };
 
 // Piece list entry. Intersection narrows current_state to use our typed StateSummary.
