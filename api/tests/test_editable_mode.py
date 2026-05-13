@@ -122,12 +122,10 @@ class TestRetroactiveStateInsertion:
         orders = list(piece.states.order_by("order").values_list("order", flat=True))
         assert orders == [1, 2]
 
-    def test_retroactive_insert_between_states(self, client, piece):
-        """Inserting waxed between bisque_fired and glazed places it correctly."""
+    def test_retroactive_insert_between_states_blocked_by_api(self, client, piece):
+        """POST /states/ is blocked while piece is in editable mode."""
         client.patch(f"/api/pieces/{piece.id}/", {"is_editable": True}, format="json")
         piece.refresh_from_db()
-        # Build history: designed → wheel_thrown → trimmed → submitted_to_bisque_fire
-        # → bisque_fired → glazed (skip waxed intentionally)
         for state in [
             "wheel_thrown",
             "trimmed",
@@ -137,44 +135,16 @@ class TestRetroactiveStateInsertion:
             PieceState.objects.create(
                 piece=piece, state=state, order=piece.states.count() + 1
             )
-        # Add glazed as a direct successor of bisque_fired (skipping waxed).
         PieceState.objects.create(
             piece=piece, state="glazed", order=piece.states.count() + 1
         )
 
-        # Now retroactively insert waxed (bisque_fired → waxed → glazed).
         response = client.post(
             f"/api/pieces/{piece.id}/states/",
             {"state": "waxed", "notes": "forgotten step"},
             format="json",
         )
-        assert response.status_code == 201
-
-        history = response.json()["history"]
-        states_in_order = [ps["state"] for ps in history]
-        bisque_idx = states_in_order.index("bisque_fired")
-        waxed_idx = states_in_order.index("waxed")
-        glazed_idx = states_in_order.index("glazed")
-
-        assert bisque_idx < waxed_idx < glazed_idx, (
-            f"Expected bisque_fired < waxed < glazed, got indices "
-            f"{bisque_idx}, {waxed_idx}, {glazed_idx}"
-        )
-
-    def test_retroactive_insert_sets_has_been_edited(self, client, piece):
-        """States created while is_editable=True have has_been_edited=True."""
-        client.patch(f"/api/pieces/{piece.id}/", {"is_editable": True}, format="json")
-        next_state = SUCCESSORS[ENTRY_STATE][0]
-
-        response = client.post(
-            f"/api/pieces/{piece.id}/states/",
-            {"state": next_state},
-            format="json",
-        )
-        assert response.status_code == 201
-        history = response.json()["history"]
-        new_state = next(ps for ps in history if ps["state"] == next_state)
-        assert new_state["has_been_edited"] is True
+        assert response.status_code == 400
 
     def test_normal_transition_does_not_set_has_been_edited(self, client, piece):
         next_state = SUCCESSORS[ENTRY_STATE][0]
@@ -183,33 +153,26 @@ class TestRetroactiveStateInsertion:
         new_state = next(ps for ps in history if ps["state"] == next_state)
         assert new_state["has_been_edited"] is False
 
-    def test_retroactive_insert_with_no_predecessor_or_successor_appends(
-        self, client, piece
-    ):
-        """A state with no reachable predecessors or successors in history appends at end."""
-        client.patch(f"/api/pieces/{piece.id}/", {"is_editable": True}, format="json")
-        piece.refresh_from_db()
-        # designed (order=1), recycled has no common reachability path via normal
-        # transitions; but we can still insert it retroactively.
-        response = client.post(
-            f"/api/pieces/{piece.id}/states/",
-            {"state": "recycled"},
-            format="json",
-        )
-        assert response.status_code == 201
-        history = response.json()["history"]
-        last_state = history[-1]["state"]
-        assert last_state == "recycled"
-
-    def test_successor_validation_bypassed_when_editable(self, client, piece):
-        """Non-sequential state insertion is allowed when piece.is_editable."""
+    def test_state_transition_blocked_when_editable(self, client, piece):
+        """POST /states/ is rejected when piece.is_editable, regardless of state validity."""
         client.patch(f"/api/pieces/{piece.id}/", {"is_editable": True}, format="json")
         response = client.post(
             f"/api/pieces/{piece.id}/states/",
             {"state": "bisque_fired"},
             format="json",
         )
-        assert response.status_code == 201
+        assert response.status_code == 400
+
+    def test_state_transition_blocked_when_editable_error_message(self, client, piece):
+        """Blocked transition returns an informative error message."""
+        client.patch(f"/api/pieces/{piece.id}/", {"is_editable": True}, format="json")
+        response = client.post(
+            f"/api/pieces/{piece.id}/states/",
+            {"state": SUCCESSORS[ENTRY_STATE][0]},
+            format="json",
+        )
+        assert response.status_code == 400
+        assert "editable mode" in str(response.json()).lower()
 
     def test_successor_validation_enforced_when_not_editable(self, client, piece):
         """Non-sequential state insertion is rejected when piece is not editable."""
@@ -221,21 +184,14 @@ class TestRetroactiveStateInsertion:
         assert response.status_code == 400
 
     def test_current_state_reflects_highest_order(self, client, piece):
-        """current_state returns the state with the highest order after retroactive insertion."""
+        """current_state returns the state with the highest order in the ORM-built history."""
         client.patch(f"/api/pieces/{piece.id}/", {"is_editable": True}, format="json")
         piece.refresh_from_db()
-        # Insert glazed first (order=2), then retroactively insert waxed before it.
         PieceState.objects.create(piece=piece, state="bisque_fired", order=2)
         PieceState.objects.create(piece=piece, state="glazed", order=3)
 
-        # Insert waxed between bisque_fired and glazed.
-        response = client.post(
-            f"/api/pieces/{piece.id}/states/",
-            {"state": "waxed"},
-            format="json",
-        )
-        assert response.status_code == 201
-        # glazed should now be at the highest order and remain current_state.
+        response = client.get(f"/api/pieces/{piece.id}/")
+        assert response.status_code == 200
         assert response.json()["current_state"]["state"] == "glazed"
 
 
