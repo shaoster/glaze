@@ -121,11 +121,12 @@ Glaze uses a high-level orchestration workflow inspired by the [Get Shit Done (G
 1.  **`/dream`**: High-level vision and milestone orchestration. Use this to describe a broad feature or user story. The agent will use Plan Mode to break the vision into logical sub-tasks, create a GitHub Milestone, and spawn sub-agents to author specific specs.
 2.  **`/spec`**: Detail-oriented issue authoring. Each sub-task from the dream is turned into a precise GitHub issue with problem motivation, proposed solution, and acceptance criteria.
 3.  **`/do`**: Execution. When you want an agent to implement an issue or start a PR-sized change, use the explicit issue flow: `/do #292`.
+4.  **`/deps`**: Bazel dependency audit. Use this when you want an agent to inspect the rules_oci image target plus test and lint graphs for unexpected dependencies before planning cleanup work.
 
 #### Our Architectural Principles for Agent Work:
 
 - **Normative Content in GitHub**: Unlike some agent-first workflows that store state in local markdown files, Glaze keeps all normative requirements and status in **GitHub Issues, Milestones, and PRs**. This minimizes hallucinations from non-frontier models by using GitHub as the source of truth and ensures that the project remains accessible to human non-developer contributors via the standard GitHub UI.
-- **Flexible Verification**: Verification can happen **synchronously** (as part of the `/do` cycle where the agent runs tests before pushing) or **asynchronously** in bulk using the `/audit` (performance/flakiness) and `/coverage` skills.
+- **Flexible Verification**: Verification can happen **synchronously** (as part of the `/do` cycle where the agent runs tests before pushing) or **asynchronously** in bulk using the `/audit` (performance/flakiness), `/cover` (coverage), and `/deps` (Bazel dependency graph audit) skills.
 
 When you run `/do #292`, the agent will create a branch like `issue/292-vibe-coding-flow` and a repo-local worktree like `.agent-worktrees/codex/issue-292-vibe-coding-flow` before it analyzes or edits anything.
  The agent should immediately print a copy-friendly line:

@@ -49,7 +49,7 @@ command fails. State any deviation explicitly.
 
 ## Agent Resources
 
-Four user-invocable skills: `/do` (implement an issue), `/spec` (draft and file a new issue), `/audit` (test performance audit), and `/cover` (analyze test coverage).
+Six user-invocable skills: `/do` (implement an issue), `/spec` (draft and file a new issue), `/dream` (create a milestone and sub-issues), `/audit` (test performance audit), `/cover` (analyze test coverage), and `/deps` (audit Bazel dependency graphs).
 
 All other resources are loaded on demand via the `Read` tool. Load what the task touches —
 typically 2–4 files. The `/do` flow scouts dependencies and announces which to load.
@@ -83,6 +83,7 @@ bazel query "rdeps(//..., set(\$(git diff --name-only main | sed 's/.*/\"&\"/' |
 | Modifying ci.yml, cd.yml, or static.yml | [`.agents/skills/github-actions/SKILL.md`](.agents/skills/github-actions/SKILL.md) |
 | Dev environment setup, shell bootstrap, worktree navigation, server info | [`.agents/skills/dev-environment/SKILL.md`](.agents/skills/dev-environment/SKILL.md) |
 | Running tests, Bazel commands, linters, CI failures | [`.agents/skills/dev-testing/SKILL.md`](.agents/skills/dev-testing/SKILL.md) |
+| Auditing Bazel dependencies for OCI image, test, and lint targets | [`.agents/skills/deps/SKILL.md`](.agents/skills/deps/SKILL.md) |
 | Adding Python or npm packages, lock files, BUILD.bazel | [`.agents/skills/dev-packages/SKILL.md`](.agents/skills/dev-packages/SKILL.md) |
 | Bazel build optimization, remote caching, .bazelrc | [`.agents/skills/bazel-build-optimization/SKILL.md`](.agents/skills/bazel-build-optimization/SKILL.md) |
 
@@ -97,4 +98,4 @@ bazel query "rdeps(//..., set(\$(git diff --name-only main | sed 's/.*/\"&\"/' |
 | [`docs/agents/dev.md`](docs/agents/dev.md) | Glaze-specific dev setup, test commands, CI configuration |
 | [`docs/agents/worktrees.md`](docs/agents/worktrees.md) | Git worktree policy, single vs multi-issue workflows, and environment recovery |
 | [`.agents/skills/*/SKILL.md`](.agents/skills) | Agent-loadable resources — granular reference docs loaded on demand via `Read` |
-| [`.claude/do.md`](.claude/do.md), [`.claude/spec.md`](.claude/spec.md), [`.claude/audit.md`](.claude/audit.md), [`.claude/cover.md`](.claude/cover.md) | User-invocable skills only — everything else has no `.claude/` symlink |
+| [`.claude/commands/*.md`](.claude/commands) | User-invocable skills only — everything else has no `.claude/commands/` shim |

@@ -265,21 +265,22 @@ Reusable agent skills live in [`.agents/skills/`](../../.agents/skills/). Each s
 | Agent       | How skills are loaded                                                                                                |
 | ----------- | -------------------------------------------------------------------------------------------------------------------- |
 | Codex       | Reads `.agents/skills/` natively — no setup needed                                                                   |
-| Claude Code | Reads `.claude/<name>.md`; each skill has a git-tracked symlink there pointing into `.agents/skills/<name>/SKILL.md` |
+| Claude Code | Reads `.claude/commands/<name>.md`; each command shim points into `.agents/skills/<name>/SKILL.md` |
 
 Key local skills:
 
 | Skill                         | Use                                                                                          |
 | ----------------------------- | -------------------------------------------------------------------------------------------- |
 | `do-issue-worktree`           | Start a single issue or PR-sized change with `/do #<issue>` and an immediate worktree setup. |
+| `deps`                        | Audit Bazel dependency graphs for the OCI image plus test and lint targets.                  |
 
 For orchestrating multiple worktrees, see [`docs/agents/worktrees.md`](worktrees.md).
 
 ### Adding a new skill
 
 1. Create `.agents/skills/<skill-name>/SKILL.md` with the skill content.
-2. Add a Claude symlink: `ln -s ../.agents/skills/<skill-name>/SKILL.md .claude/<skill-name>.md`
-3. Commit both the folder and the symlink.
+2. Add a Claude command shim: `.claude/commands/<command>.md` containing `@../../.agents/skills/<skill-name>/SKILL.md`.
+3. Commit both the skill folder and the command shim.
 
 ---
 
