@@ -170,6 +170,7 @@ js_library(
         exclude = [
             "src/**/*.test.ts",
             "src/**/*.test.tsx",
+            "src/**/__tests__/**",
             "src/util/**/*",
         ],
     ) + [
