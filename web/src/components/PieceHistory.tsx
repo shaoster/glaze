@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import HistoryIcon from "@mui/icons-material/History";
@@ -145,6 +145,16 @@ export default function PieceHistory({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const isEditable = piece?.is_editable ?? false;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const prevIsEditableRef = useRef(isEditable);
+
+  useEffect(() => {
+    if (isEditable && !prevIsEditableRef.current) {
+      setHistoryOpen(true);
+      containerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+    prevIsEditableRef.current = isEditable;
+  }, [isEditable]);
 
   if (pastHistory.length === 0 && !isEditable) return null;
 
@@ -153,7 +163,7 @@ export default function PieceHistory({
     : -1;
 
   return (
-    <Box>
+    <Box ref={containerRef}>
       <Box
         component="button"
         type="button"

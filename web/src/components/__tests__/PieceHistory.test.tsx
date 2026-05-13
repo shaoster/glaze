@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import PieceHistory from "../PieceHistory";
 import type { PieceDetail as PieceDetailType, PieceState } from "../../util/types";
@@ -478,5 +478,72 @@ describe("PieceHistory", () => {
       // Should not throw when clicking without onRewind
       fireEvent.click(screen.getAllByText("Designed")[0].closest("li")!);
     });
+  });
+});
+
+describe("auto-expand on edit mode", () => {
+  let scrollIntoViewMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    scrollIntoViewMock = vi.fn();
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock;
+  });
+
+  afterEach(() => {
+    // @ts-expect-error restore
+    delete window.HTMLElement.prototype.scrollIntoView;
+  });
+
+  it("auto-expands the timeline when is_editable becomes true", async () => {
+    const state = makeState({ state: "designed" });
+    const piece = makePiece({ is_editable: false });
+    const { rerender } = render(
+      <PieceHistory pastHistory={[state]} piece={piece} onPieceUpdated={vi.fn()} />,
+    );
+    expect(screen.getByRole("button", { name: /show history/i })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+
+    await act(async () => {
+      rerender(
+        <PieceHistory
+          pastHistory={[state]}
+          piece={makePiece({ is_editable: true })}
+          onPieceUpdated={vi.fn()}
+        />,
+      );
+    });
+
+    expect(screen.getByRole("button", { name: /hide history/i })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
+  });
+
+  it("does not expand the timeline when is_editable stays false", async () => {
+    const state1 = makeState({ id: "s1", state: "designed" });
+    const state2 = makeState({ id: "s2", state: "wheel_thrown" });
+    const piece = makePiece({ is_editable: false });
+    const { rerender } = render(
+      <PieceHistory pastHistory={[state1]} piece={piece} onPieceUpdated={vi.fn()} />,
+    );
+
+    await act(async () => {
+      rerender(
+        <PieceHistory
+          pastHistory={[state1, state2]}
+          piece={makePiece({ is_editable: false })}
+          onPieceUpdated={vi.fn()}
+        />,
+      );
+    });
+
+    expect(screen.getByRole("button", { name: /show history/i })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(scrollIntoViewMock).not.toHaveBeenCalled();
   });
 });
