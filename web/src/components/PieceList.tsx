@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import type { PieceSummary, TagEntry } from "../util/types";
-import { formatState, isTerminalState, SUCCESSORS } from "../util/types";
+import { formatState, isTerminalState, SUCCESSORS } from "../util/workflow";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import { Masonry } from "masonic";

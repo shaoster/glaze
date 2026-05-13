@@ -1,34 +1,4 @@
 import type { components } from "./generated-types";
-import workflow from "../../../workflow.yml";
-import { formatState as _formatState } from "./workflow";
-export {
-  formatState,
-  formatPastState,
-  getStateDescription,
-  getStateMetadata,
-  isTerminalState,
-} from "./workflow";
-
-type WorkflowState = {
-  id: string;
-  visible: boolean;
-  friendly_name: string;
-  past_friendly_name: string;
-  description: string;
-  successors?: string[];
-  terminal?: boolean;
-};
-
-// Runtime constants derived from workflow.json.
-// STATES preserves lifecycle order; SUCCESSORS encodes the transition graph.
-// Neither is expressed in the OpenAPI schema, so they stay anchored to workflow.json.
-export const STATES = (workflow.states as WorkflowState[]).map(({ id }) => id);
-export const SUCCESSORS: Record<string, string[]> = Object.fromEntries(
-  (workflow.states as WorkflowState[]).map(({ id, successors }) => [
-    id,
-    successors ?? [],
-  ]),
-);
 
 // State type from the generated schema — stays in sync with backend validation.
 export type State = components["schemas"]["StateEnum"];
@@ -99,23 +69,6 @@ export type PieceDetail = PieceSummary & {
   current_state: PieceState;
   history: PieceState[];
 };
-
-// Returns null if the history+current sequence has all valid transitions, or an
-// error string for the first invalid step (e.g. "'Glazing' is not a valid successor of 'Designing'").
-export function validateHistorySequence(
-  history: PieceState[],
-  currentState: PieceState,
-): string | null {
-  const allStates = [...history, currentState];
-  for (let i = 0; i < allStates.length - 1; i++) {
-    const from = allStates[i].state;
-    const to = allStates[i + 1].state;
-    if (!(SUCCESSORS[from] ?? []).includes(to)) {
-      return `'${_formatState(to)}' is not a valid successor of '${_formatState(from)}'`;
-    }
-  }
-  return null;
-}
 
 // GlazeCombination entry and related types — derived from generated OpenAPI types.
 export type GlazeTypeRef = components["schemas"]["GlazeTypeRef"];

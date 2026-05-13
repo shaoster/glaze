@@ -326,12 +326,17 @@ def piece_current_state(request: Request, piece_id: str) -> Response:
     request=PieceStateUpdateSerializer,
     responses={200: PieceDetailSerializer},
 )
-@api_view(["PATCH"])
+@extend_schema(
+    methods=["DELETE"],
+    responses={200: PieceDetailSerializer},
+)
+@api_view(["PATCH", "DELETE"])
 @permission_classes([IsAuthenticated])
 def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response:
-    """Patch a past (sealed) state while the piece is in editable mode.
+    """Patch or delete a past (sealed) state while the piece is in editable mode.
 
     Returns 403 if the piece is not currently in editable mode.
+    DELETE also returns 403 if the targeted state is 'designed'.
     """
     piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
     if not piece.is_editable:
@@ -340,6 +345,15 @@ def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response
             status=status.HTTP_403_FORBIDDEN,
         )
     ps = get_object_or_404(piece.states, pk=state_id)
+    if request.method == "DELETE":
+        if ps.state == "designed":
+            return Response(
+                {"detail": "Cannot delete the 'designed' state."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        ps.delete()
+        piece.refresh_from_db()
+        return Response(_serialize_piece_detail(piece, request))
     serializer = PieceStateUpdateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     serializer.update(ps, serializer.validated_data)

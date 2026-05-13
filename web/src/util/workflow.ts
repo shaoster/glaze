@@ -9,6 +9,9 @@
  * duplicated elsewhere in the app; derive them from the exports here.
  */
 import workflow from "../../../workflow.yml";
+import type { components } from "./generated-types";
+
+type State = components["schemas"]["StateEnum"];
 
 type FieldType =
   | "string"
@@ -115,6 +118,13 @@ const STATE_MAP = new Map<string, WorkflowStateDefinition>(
   workflowDef.states.map((state) => [state.id, state]),
 );
 const GLOBALS_MAP = workflowDef.globals ?? {};
+
+// Runtime constants derived from workflow.yml.
+// STATES preserves lifecycle order; SUCCESSORS encodes the transition graph.
+export const STATES = workflowDef.states.map(({ id }) => id);
+export const SUCCESSORS: Record<string, string[]> = Object.fromEntries(
+  workflowDef.states.map(({ id, successors }) => [id, successors ?? []]),
+);
 
 function toTitleWords(value: string): string {
   return value
@@ -642,6 +652,38 @@ function buildSummaryItem(
     };
   }
   return null;
+}
+
+/**
+ * Returns null if the history+current sequence has all valid transitions, or an
+ * error string for the first invalid step.
+ */
+export function validateHistorySequence(
+  history: { state: State }[],
+  currentState: { state: State },
+): string | null {
+  const allStates = [...history, currentState];
+  for (let i = 0; i < allStates.length - 1; i++) {
+    const from = allStates[i].state;
+    const to = allStates[i + 1].state;
+    if (!(SUCCESSORS[from] ?? []).includes(to)) {
+      return `'${formatState(to)}' is not a valid successor of '${formatState(from)}'`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Returns the states that could be inserted immediately after `predecessor`
+ * that are not already present in `presentStates`.
+ */
+export function insertableStatesBetween(
+  predecessor: State,
+  presentStates: ReadonlySet<State>,
+): State[] {
+  return (SUCCESSORS[predecessor] ?? []).filter(
+    (s) => !presentStates.has(s as State),
+  ) as State[];
 }
 
 function resolveStateFieldRef(

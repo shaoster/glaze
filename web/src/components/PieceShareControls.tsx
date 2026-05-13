@@ -11,7 +11,7 @@ import { jpg } from "@cloudinary/url-gen/qualifiers/format";
 import { auto as autoQuality } from "@cloudinary/url-gen/qualifiers/quality";
 import { autoGravity } from "@cloudinary/url-gen/qualifiers/gravity";
 import type { PieceDetail, Thumbnail } from "../util/types";
-import { formatState } from "../util/types";
+import { formatState } from "../util/workflow";
 import { updatePiece } from "../util/api";
 
 const SHARE_IMAGE_SIZE = 600;

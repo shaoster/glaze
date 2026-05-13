@@ -35,7 +35,7 @@ import type {
   GlazeCombinationEntry,
   GlazeCombinationImageEntry,
 } from "../util/types";
-import { formatState } from "../util/types";
+import { formatState } from "../util/workflow";
 import { useAsync } from "../util/useAsync";
 
 const EMPTY_STATE_MESSAGE =

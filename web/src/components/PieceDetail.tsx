@@ -24,7 +24,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import LockIcon from "@mui/icons-material/Lock";
 import { useBlocker } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
-import { formatState, isTerminalState, validateHistorySequence } from "../util/types";
+import { formatState, isTerminalState, validateHistorySequence } from "../util/workflow";
 import {
   getCustomFieldDefinitions,
 } from "../util/workflow";
