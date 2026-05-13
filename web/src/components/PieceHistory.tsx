@@ -170,6 +170,9 @@ export default function PieceHistory({
     ? pastHistory.findIndex((ps) => ps.id === rewindedStateId)
     : -1;
 
+  const canModifyHistory = isEditable && !!piece && !!onPieceUpdated;
+  const showTrailingInsert = canModifyHistory && pastHistory.length > 0;
+
   return (
     <Box ref={containerRef}>
       <Box
@@ -211,21 +214,14 @@ export default function PieceHistory({
 
             // Predecessor for insert-before affordance
             const predecessor: State | null =
-              i === 0
-                ? (piece?.history[0]?.state ?? null)
-                : pastHistory[i - 1]?.state ?? null;
+              i === 0 ? null : pastHistory[i - 1]?.state ?? null;
 
             // Only show insert affordance in edit mode, with a valid predecessor,
             // and NOT before the last item (no affordance after pastHistory.at(-1))
             // — actually show before each item (between predecessor and item[i])
-            const showInsert =
-              isEditable &&
-              piece &&
-              onPieceUpdated &&
-              predecessor !== null &&
-              i < pastHistory.length; // always true, but explicit
+            const showInsert = canModifyHistory && predecessor !== null;
 
-            if (isEditable && piece && onPieceUpdated) {
+            if (canModifyHistory && piece && onPieceUpdated) {
               return (
                 <Box key={ps.id ?? i}>
                   {showInsert && predecessor && (
@@ -377,6 +373,14 @@ export default function PieceHistory({
               </ListItem>
             );
           })}
+          {showTrailingInsert && piece && onPieceUpdated && (
+            <InsertButton
+              predecessor={pastHistory[pastHistory.length - 1].state}
+              presentStates={presentStates}
+              piece={piece}
+              onPieceUpdated={onPieceUpdated}
+            />
+          )}
         </List>
       </Collapse>
     </Box>
