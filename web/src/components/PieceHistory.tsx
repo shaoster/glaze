@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import HistoryIcon from "@mui/icons-material/History";
@@ -15,6 +15,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -30,6 +31,12 @@ import {
 } from "../util/workflow";
 import { addPieceState, deletePieceState, updatePastState } from "../util/api";
 import WorkflowState from "./WorkflowState";
+import { useAutosave } from "./useAutosave";
+
+const toDatetimeLocal = (date: Date) => {
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
 
 type PieceHistoryProps = {
   pastHistory: PieceState[];
@@ -93,6 +100,65 @@ function InsertButton({
             ))}
           </Menu>
         </>
+      )}
+    </Box>
+  );
+}
+
+function EditablePieceStateListItem({
+  ps,
+  pieceId,
+  onSaved,
+}: {
+  ps: PieceState;
+  pieceId: string;
+  onSaved: (updated: PieceDetailType) => void;
+}) {
+  const [localDate, setLocalDate] = useState(() => toDatetimeLocal(ps.created));
+
+  // Sync from props if updated externally (e.g. from another save)
+  useEffect(() => {
+    setLocalDate(toDatetimeLocal(ps.created));
+  }, [ps.created]);
+
+  const save = useCallback(async () => {
+    const date = new Date(localDate);
+    // If invalid date (e.g. user partially typing), don't save
+    if (isNaN(date.getTime())) return;
+
+    const result = await updatePastState(pieceId, ps.id, {
+      created: date.toISOString(),
+    });
+    onSaved(result);
+  }, [localDate, onSaved, pieceId, ps.id]);
+
+  const { status } = useAutosave({
+    dirty: localDate !== toDatetimeLocal(ps.created),
+    saveKey: localDate,
+    save,
+  });
+
+  return (
+    <Box sx={{ width: "100%", mt: 1 }}>
+      <TextField
+        label="Created Date"
+        type="datetime-local"
+        value={localDate}
+        onChange={(e) => setLocalDate(e.target.value)}
+        fullWidth
+        size="small"
+        slotProps={{
+          inputLabel: { shrink: true },
+          htmlInput: { sx: { fontSize: "0.875rem" } },
+        }}
+        sx={{
+          "& .MuiInputBase-root": { backgroundColor: "background.paper" },
+        }}
+      />
+      {status === "saving" && (
+        <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 0.5 }}>
+          <CircularProgress size={12} />
+        </Box>
       )}
     </Box>
   );
@@ -327,14 +393,10 @@ export default function PieceHistory({
                         sx={{ width: "100%" }}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <WorkflowState
-                          key={ps.id}
-                          initialPieceState={ps}
+                        <EditablePieceStateListItem
+                          ps={ps}
                           pieceId={piece.id}
                           onSaved={onPieceUpdated}
-                          saveStateFn={(payload) =>
-                            updatePastState(piece.id, ps.id, payload)
-                          }
                         />
                       </Box>
                     </ListItem>

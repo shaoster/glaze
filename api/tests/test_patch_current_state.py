@@ -43,6 +43,19 @@ class TestPatchCurrentState:
         assert response.status_code == 200
         assert response.json()["current_state"]["notes"] == "Updated notes  "
 
+    def test_update_created(self, client, piece):
+        new_date = "2023-05-13T12:00:00Z"
+        response = client.patch(
+            f"/api/pieces/{piece.id}/state/",
+            {"created": new_date},
+            format="json",
+        )
+        assert response.status_code == 200
+        # The response serializes it back. DRF might normalize it.
+        # Check against the DB to be sure.
+        piece.refresh_from_db()
+        assert piece.current_state.created.isoformat() == "2023-05-13T12:00:00+00:00"
+
     def test_update_images(self, client, piece):
         crop = {"x": 0.1, "y": 0.2, "width": 0.7, "height": 0.6}
         images = [

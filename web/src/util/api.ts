@@ -295,6 +295,7 @@ export async function addPieceState(
 
 export type UpdateStatePayload = {
   notes?: string;
+  created?: string;
   images?: Array<{
     url: string;
     caption: string;
