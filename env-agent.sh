@@ -26,7 +26,7 @@ if [[ -n "$_GLAZE_AGENT_ENV_LOADED" && "${GLAZE_ROOT:-}" == "$_detected_root" ]]
     return
 fi
 export _GLAZE_AGENT_ENV_LOADED=1
-export GLAZE_AGENT=1
+export GLAZE_AGENT="${GLAZE_AGENT-1}"
 
 GLAZE_ROOT="$_detected_root"
 unset _detected_root
