@@ -70,6 +70,7 @@ export type PieceDetail = PieceSummary & {
   history: PieceState[];
 };
 
+
 // GlazeCombination entry and related types — derived from generated OpenAPI types.
 export type GlazeTypeRef = components["schemas"]["GlazeTypeRef"];
 export type FiringTemperatureRef =

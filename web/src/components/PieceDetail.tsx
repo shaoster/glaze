@@ -124,7 +124,7 @@ function EditableToggle({ piece, onPieceUpdated }: PieceDetailProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const seqError = piece.is_editable
-    ? validateHistorySequence(piece.history, piece.current_state)
+    ? validateHistorySequence(piece.history)
     : null;
 
   async function toggle() {

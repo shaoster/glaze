@@ -655,17 +655,16 @@ function buildSummaryItem(
 }
 
 /**
- * Returns null if the history+current sequence has all valid transitions, or an
- * error string for the first invalid step.
+ * Returns null if the history sequence has all valid consecutive transitions, or an
+ * error string for the first invalid step. history must include the current state
+ * as its last element (matching the API shape — history is obj.states.all()).
  */
 export function validateHistorySequence(
   history: { state: State }[],
-  currentState: { state: State },
 ): string | null {
-  const allStates = [...history, currentState];
-  for (let i = 0; i < allStates.length - 1; i++) {
-    const from = allStates[i].state;
-    const to = allStates[i + 1].state;
+  for (let i = 0; i < history.length - 1; i++) {
+    const from = history[i].state;
+    const to = history[i + 1].state;
     if (!(SUCCESSORS[from] ?? []).includes(to)) {
       return `'${formatState(to)}' is not a valid successor of '${formatState(from)}'`;
     }
