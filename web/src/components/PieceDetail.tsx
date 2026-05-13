@@ -23,7 +23,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import LockIcon from "@mui/icons-material/Lock";
 import { useBlocker } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
-import { formatState, isTerminalState } from "../util/types";
+import { formatState, isTerminalState, validateHistorySequence } from "../util/types";
 import {
   getCustomFieldDefinitions,
 } from "../util/workflow";
@@ -122,6 +122,9 @@ function SectionCard({ eyebrow, title, subtitle, children }: SectionCardProps) {
 function EditableToggle({ piece, onPieceUpdated }: PieceDetailProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const seqError = piece.is_editable
+    ? validateHistorySequence(piece.history, piece.current_state)
+    : null;
 
   async function toggle() {
     setSaving(true);
@@ -146,7 +149,7 @@ function EditableToggle({ piece, onPieceUpdated }: PieceDetailProps) {
           size="small"
           startIcon={<LockIcon fontSize="small" />}
           onClick={toggle}
-          disabled={saving}
+          disabled={saving || !!seqError}
         >
           Seal changes
         </Button>
@@ -161,6 +164,11 @@ function EditableToggle({ piece, onPieceUpdated }: PieceDetailProps) {
         >
           Edit piece history
         </Button>
+      )}
+      {seqError && (
+        <Typography variant="caption" color="error" sx={{ ml: 1 }}>
+          {seqError}
+        </Typography>
       )}
       {error && (
         <Typography variant="caption" color="error" sx={{ ml: 1 }}>

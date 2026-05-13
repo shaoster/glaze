@@ -842,9 +842,13 @@ describe("PieceDetail", () => {
     });
 
     it("calls updatePiece with is_editable=false when 'Seal changes' is clicked", async () => {
+      const designed = makeState({ state: "designed" });
+      const thrown = makeState({ state: "wheel_thrown" });
       const updated = makePiece({ is_editable: false });
       vi.mocked(api.updatePiece).mockResolvedValueOnce(updated);
-      await renderPieceDetail(makePiece({ is_editable: true }));
+      await renderPieceDetail(
+        makePiece({ is_editable: true, history: [designed], current_state: thrown }),
+      );
       fireEvent.click(screen.getByRole("button", { name: /seal changes/i }));
       await waitFor(() => {
         expect(api.updatePiece).toHaveBeenCalledWith(
@@ -852,6 +856,28 @@ describe("PieceDetail", () => {
           expect.objectContaining({ is_editable: false }),
         );
       });
+    });
+
+    it("disables 'Seal changes' button when history sequence is invalid", async () => {
+      const designed = makeState({ state: "designed" });
+      const glazed = makeState({ state: "glazed" });
+      await renderPieceDetail(
+        makePiece({ is_editable: true, history: [designed], current_state: glazed }),
+      );
+      expect(
+        screen.getByRole("button", { name: /seal changes/i }),
+      ).toBeDisabled();
+    });
+
+    it("shows error message when history sequence is invalid", async () => {
+      const designed = makeState({ state: "designed" });
+      const glazed = makeState({ state: "glazed" });
+      await renderPieceDetail(
+        makePiece({ is_editable: true, history: [designed], current_state: glazed }),
+      );
+      expect(
+        screen.getByText(/'Glazing' is not a valid successor of 'Designing'/),
+      ).toBeInTheDocument();
     });
   });
 });
