@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import userEvent from "@testing-library/user-event";
 import {
   act,
   render,
@@ -11,7 +10,6 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceDetail from "../PieceDetail";
-import WorkflowState from "../WorkflowState";
 import type {
   PieceDetail as PieceDetailType,
   PieceState,
@@ -149,6 +147,29 @@ vi.mock("../../util/api", () => ({
   uploadImageToCloudinary: vi.fn(),
 }));
 
+// Stub WorkflowState to avoid autosave timers and async GlobalEntryField calls
+// that inflate render time. Tests that need real WorkflowState internals live
+// in WorkflowState.test.tsx.
+vi.mock("../WorkflowState", () => ({
+  default: ({
+    onDirtyChange,
+    readOnly,
+  }: {
+    onDirtyChange?: (dirty: boolean) => void;
+    readOnly?: boolean;
+  }) => {
+    if (readOnly) return null;
+    return (
+      <div>
+        <label>
+          Notes
+          <input aria-label="Notes" onChange={() => onDirtyChange?.(true)} />
+        </label>
+      </div>
+    );
+  },
+}));
+
 function makeState(overrides: Partial<PieceState> = {}): PieceState {
   return {
     id: "state-id-1",
@@ -229,38 +250,6 @@ describe("PieceDetail", () => {
     expect(screen.getByText("Test Bowl")).toBeInTheDocument();
   });
 
-  it("does not overwrite newer note drafts when stale piece state props arrive", async () => {
-    const onSaved = vi.fn();
-    const initialState = makeState({ notes: "Trim foot" });
-    const { rerender } = render(
-      <ThemeProvider theme={TEST_THEME}>
-        <WorkflowState
-          initialPieceState={initialState}
-          pieceId="piece-id-1"
-          onSaved={onSaved}
-          autosaveDelayMs={60_000}
-        />
-      </ThemeProvider>,
-    );
-
-    fireEvent.change(screen.getByLabelText("Notes"), {
-      target: { value: "Trim foot  " },
-    });
-
-    rerender(
-      <ThemeProvider theme={TEST_THEME}>
-        <WorkflowState
-          initialPieceState={makeState({ notes: "Trim foot " })}
-          pieceId="piece-id-1"
-          onSaved={onSaved}
-          autosaveDelayMs={60_000}
-        />
-      </ThemeProvider>,
-    );
-
-    expect(screen.getByLabelText("Notes")).toHaveValue("Trim foot  ");
-  });
-
   it("renders current state label", async () => {
     await renderPieceDetail();
     expect(screen.getAllByText("Designing").length).toBeGreaterThan(0);
@@ -304,9 +293,7 @@ describe("PieceDetail", () => {
         history: [designed, thrown],
       }),
     );
-    await userEvent.click(
-      screen.getAllByRole("button", { name: /2 photos/i })[0],
-    );
+    fireEvent.click(screen.getAllByRole("button", { name: /2 photos/i })[0]);
     expect(screen.getByLabelText("Piece photos")).toBeInTheDocument();
     expect(
       screen.getAllByRole("button", { name: /open piece photo/i }),
@@ -329,13 +316,11 @@ describe("PieceDetail", () => {
     vi.mocked(api.updatePiece).mockResolvedValue(updated);
     const onPieceUpdated = vi.fn();
     await renderPieceDetail(undefined, onPieceUpdated);
-    await userEvent.click(
-      screen.getByRole("button", { name: "Browse Current location" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Browse Current location" }));
     await waitFor(() =>
       expect(screen.getByText("Studio 7")).toBeInTheDocument(),
     );
-    await userEvent.click(screen.getByText("Studio 7"));
+    fireEvent.click(screen.getByText("Studio 7"));
     await waitFor(() =>
       expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
         current_location: "Studio 7",
@@ -351,13 +336,11 @@ describe("PieceDetail", () => {
     vi.mocked(api.updatePiece).mockRejectedValue(new Error("Network error"));
 
     await renderPieceDetail();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Browse Current location" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Browse Current location" }));
     await waitFor(() =>
       expect(screen.getByText("Studio 7")).toBeInTheDocument(),
     );
-    await userEvent.click(screen.getByText("Studio 7"));
+    fireEvent.click(screen.getByText("Studio 7"));
 
     await waitFor(() =>
       expect(
@@ -430,7 +413,7 @@ describe("PieceDetail", () => {
       onPieceUpdated,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Share" }));
+    fireEvent.click(screen.getByRole("button", { name: "Share" }));
 
     await waitFor(() =>
       expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
@@ -455,7 +438,7 @@ describe("PieceDetail", () => {
       }),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
 
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(
@@ -478,7 +461,7 @@ describe("PieceDetail", () => {
       }),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Share" }));
+    fireEvent.click(screen.getByRole("button", { name: "Share" }));
 
     await waitFor(() =>
       expect(share).toHaveBeenCalledWith({
@@ -757,7 +740,7 @@ describe("PieceDetail", () => {
       });
 
       expect(screen.getByText("Unsaved Changes")).toBeInTheDocument();
-      await userEvent.click(screen.getByRole("button", { name: "Stay" }));
+      fireEvent.click(screen.getByRole("button", { name: "Stay" }));
 
       expect(screen.queryByText("Elsewhere")).not.toBeInTheDocument();
       expect(screen.getByLabelText("Notes")).toBeInTheDocument();
@@ -773,9 +756,7 @@ describe("PieceDetail", () => {
         await router.navigate("/other");
       });
 
-      await userEvent.click(
-        screen.getByRole("button", { name: "Leave without saving" }),
-      );
+      fireEvent.click(screen.getByRole("button", { name: "Leave without saving" }));
 
       await waitFor(() =>
         expect(screen.getByText("Elsewhere")).toBeInTheDocument(),
@@ -804,10 +785,13 @@ describe("PieceDetail", () => {
       fireEvent.click(screen.getByRole("button", { name: "Add or edit tags" }));
 
       expect(screen.getByLabelText("Tags")).toBeInTheDocument();
-      await userEvent.click(screen.getByRole("button", { name: "Open" }));
-      expect(
-        screen.getByRole("option", { name: "+ New tag" }),
-      ).toBeInTheDocument();
+      // Open the MUI Autocomplete dropdown via the popup indicator
+      fireEvent.click(screen.getByRole("button", { name: "Open" }));
+      await waitFor(() =>
+        expect(
+          screen.getByRole("option", { name: "+ New tag" }),
+        ).toBeInTheDocument(),
+      );
       expect(
         screen.getByRole("button", { name: "Save tags" }),
       ).toBeInTheDocument();

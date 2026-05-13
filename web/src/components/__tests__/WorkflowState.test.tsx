@@ -1275,4 +1275,32 @@ describe("WorkflowState", () => {
       });
     });
   });
+
+  it("does not overwrite newer note drafts when stale piece state props arrive", async () => {
+    const onSaved = vi.fn();
+    const initialState = makeState({ notes: "Trim foot" });
+    const { rerender } = render(
+      <WorkflowState
+        initialPieceState={initialState}
+        pieceId="piece-id-1"
+        onSaved={onSaved}
+        autosaveDelayMs={60_000}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Notes"), {
+      target: { value: "Trim foot  " },
+    });
+
+    rerender(
+      <WorkflowState
+        initialPieceState={makeState({ notes: "Trim foot " })}
+        pieceId="piece-id-1"
+        onSaved={onSaved}
+        autosaveDelayMs={60_000}
+      />,
+    );
+
+    expect(screen.getByLabelText("Notes")).toHaveValue("Trim foot  ");
+  });
 });
