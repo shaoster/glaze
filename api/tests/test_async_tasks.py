@@ -317,7 +317,9 @@ class TestRemoteDetectSubjectCrop:
         piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
 
         # Configure remote URL
-        monkeypatch.setattr(settings, "REMOTE_REMBG_URL", "https://remote.ai/", raising=False)
+        monkeypatch.setattr(
+            settings, "REMOTE_REMBG_URL", "https://remote.ai/", raising=False
+        )
 
         # Mock image download
         mock_response_get = type(
@@ -336,7 +338,9 @@ class TestRemoteDetectSubjectCrop:
         posted_calls = []
 
         def mock_post(url, data=None, json=None, headers=None, timeout=None):
-            posted_calls.append({"url": url, "data": data, "json": json, "headers": headers})
+            posted_calls.append(
+                {"url": url, "data": data, "json": json, "headers": headers}
+            )
             return mock_response_post
 
         monkeypatch.setattr("requests.post", mock_post)
@@ -355,7 +359,10 @@ class TestRemoteDetectSubjectCrop:
         assert len(posted_calls) == 1
         assert posted_calls[0]["url"] == "https://remote.ai/"
         # It should now send the base image.url directly
-        assert posted_calls[0]["json"]["url"] == "https://res.cloudinary.com/demo/image/upload/v1/pieces/mug.jpg"
+        assert (
+            posted_calls[0]["json"]["url"]
+            == "https://res.cloudinary.com/demo/image/upload/v1/pieces/mug.jpg"
+        )
         assert posted_calls[0]["data"] is None
 
         task.refresh_from_db()

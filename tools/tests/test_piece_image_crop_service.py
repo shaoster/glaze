@@ -6,18 +6,17 @@ without downloading any model weights.
 """
 
 import io
-import sys
 import os
 import unittest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 from PIL import Image
 
-
 # ---------------------------------------------------------------------------
 # Helpers: synthetic alpha masks
 # ---------------------------------------------------------------------------
+
 
 def _make_rgba(width: int, height: int, alpha: np.ndarray) -> Image.Image:
     """Create an RGBA PIL image with the given alpha channel (numpy uint8 array)."""
@@ -47,12 +46,14 @@ def _noisy_mask(width: int, height: int, subject_box, noise_box) -> np.ndarray:
 # Tests
 # ---------------------------------------------------------------------------
 
+
 class TestDownloadWithRetry(unittest.TestCase):
     """Tests for the download_with_retry helper."""
 
     def _get_fn(self):
         # Import late so that other heavy deps (rembg) are already patched
         from tools.piece_image_crop_service import create_app  # noqa
+
         # We need to call create_app() with rembg mocked to retrieve the closure.
         # Instead, test the logic independently by reconstructing a minimal version.
         import requests
@@ -95,8 +96,11 @@ class TestContourFiltering(unittest.TestCase):
     def _compute_bbox(self, alpha_np, width, height, padding=0.10):
         """Run the same contour logic as the service. Returns (left, upper, right, lower)."""
         import cv2
+
         _, binary_mask = cv2.threshold(alpha_np, 127, 255, cv2.THRESH_BINARY)
-        contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(
+            binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
         if not contours:
             return None
         largest = max(contours, key=cv2.contourArea)
@@ -127,13 +131,15 @@ class TestContourFiltering(unittest.TestCase):
     def test_noise_blob_ignored(self):
         W, H = 200, 200
         # Large subject at [50,50]→[150,150]; tiny noise at [0,0]→[5,5]
-        alpha = _noisy_mask(W, H, subject_box=(50, 50, 150, 150), noise_box=(0, 0, 5, 5))
+        alpha = _noisy_mask(
+            W, H, subject_box=(50, 50, 150, 150), noise_box=(0, 0, 5, 5)
+        )
         left, upper, right, lower = self._compute_bbox(alpha, W, H, padding=0.0)
 
         # Without padding, bbox should exactly match the subject (plus 1px because boundingRect is inclusive)
         self.assertEqual(left, 50)
         self.assertEqual(upper, 50)
-        self.assertLessEqual(right, 151)   # within 1px
+        self.assertLessEqual(right, 151)  # within 1px
         self.assertLessEqual(lower, 151)
 
     def test_padding_clamped_to_image_bounds(self):
@@ -179,14 +185,18 @@ class TestAuthVerification(unittest.TestCase):
 
     def setUp(self):
         # Patch rembg before importing create_app so model weights are never loaded
-        self._rembg_patcher = patch.dict("sys.modules", {
-            "rembg": MagicMock(),
-            "pillow_heif": MagicMock(),
-        })
+        self._rembg_patcher = patch.dict(
+            "sys.modules",
+            {
+                "rembg": MagicMock(),
+                "pillow_heif": MagicMock(),
+            },
+        )
         self._rembg_patcher.start()
 
         # rembg.new_session must return something; rembg.remove must return an RGBA image
         import rembg
+
         alpha = _single_blob_mask(100, 100, (20, 20, 80, 80))
         fake_output = _make_rgba(100, 100, alpha)
         rembg.new_session = MagicMock(return_value=MagicMock())
@@ -201,22 +211,30 @@ class TestAuthVerification(unittest.TestCase):
             os.environ["AUTH_TOKEN"] = token
 
         # Import inside test so the mock is already in sys.modules
-        from tools.piece_image_crop_service import create_app
         from fastapi.testclient import TestClient
+
+        from tools.piece_image_crop_service import create_app
+
         app = create_app()
         return TestClient(app)
 
     def test_no_token_configured_allows_any_request(self):
         client = self._make_client(token=None)
         img_bytes = io.BytesIO()
-        _make_rgba(100, 100, _single_blob_mask(100, 100, (10, 10, 90, 90))).save(img_bytes, format="PNG")
-        resp = client.post("/", content=img_bytes.getvalue(), headers={"Content-Type": "image/png"})
+        _make_rgba(100, 100, _single_blob_mask(100, 100, (10, 10, 90, 90))).save(
+            img_bytes, format="PNG"
+        )
+        resp = client.post(
+            "/", content=img_bytes.getvalue(), headers={"Content-Type": "image/png"}
+        )
         self.assertEqual(resp.status_code, 200)
 
     def test_valid_token_is_accepted(self):
         client = self._make_client(token="secret")
         img_bytes = io.BytesIO()
-        _make_rgba(100, 100, _single_blob_mask(100, 100, (10, 10, 90, 90))).save(img_bytes, format="PNG")
+        _make_rgba(100, 100, _single_blob_mask(100, 100, (10, 10, 90, 90))).save(
+            img_bytes, format="PNG"
+        )
         resp = client.post(
             "/",
             content=img_bytes.getvalue(),
@@ -227,7 +245,9 @@ class TestAuthVerification(unittest.TestCase):
     def test_invalid_token_returns_403(self):
         client = self._make_client(token="secret")
         img_bytes = io.BytesIO()
-        _make_rgba(100, 100, _single_blob_mask(100, 100, (10, 10, 90, 90))).save(img_bytes, format="PNG")
+        _make_rgba(100, 100, _single_blob_mask(100, 100, (10, 10, 90, 90))).save(
+            img_bytes, format="PNG"
+        )
         resp = client.post(
             "/",
             content=img_bytes.getvalue(),

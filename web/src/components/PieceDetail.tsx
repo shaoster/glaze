@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
+import axios from "axios";
 import {
   Alert,
   alpha,
@@ -14,6 +15,7 @@ import {
   Divider,
   IconButton,
   TextField,
+  Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
@@ -135,36 +137,72 @@ function EditableToggle({ piece, onPieceUpdated }: PieceDetailProps) {
         is_editable: !piece.is_editable,
       });
       onPieceUpdated(updated);
-    } catch {
-      setError("Failed to update. Please try again.");
+    } catch (e: unknown) {
+      if (axios.isAxiosError(e) && e.response?.data) {
+        const data = e.response.data;
+        const msg =
+          typeof data === "string"
+            ? data
+            : data.non_field_errors?.[0] ||
+              (typeof data === "object" ? Object.values(data).flat()[0] : null);
+        setError(String(msg || "Failed to update. Please try again."));
+      } else {
+        setError("Failed to update. Please try again.");
+      }
     } finally {
       setSaving(false);
     }
   }
 
+  const disabledReason = piece.shared
+    ? "This piece is publicly shared. Unshare it to edit history."
+    : null;
+
   return (
     <Box>
-      {piece.is_editable ? (
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={<LockIcon fontSize="small" />}
-          onClick={toggle}
-          disabled={saving || !!seqError}
+      <Tooltip
+        title={disabledReason || ""}
+        disableHoverListener={!disabledReason}
+        arrow
+      >
+        <span>
+          {piece.is_editable ? (
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<LockIcon fontSize="small" />}
+              onClick={toggle}
+              disabled={saving || !!seqError}
+            >
+              Seal changes
+            </Button>
+          ) : (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<HistoryIcon fontSize="small" />}
+              onClick={toggle}
+              disabled={saving || !!disabledReason}
+              sx={{ borderStyle: "dashed", color: "text.secondary" }}
+            >
+              Edit piece history
+            </Button>
+          )}
+        </span>
+      </Tooltip>
+      {disabledReason && (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{
+            ml: { sm: 1.5 },
+            mt: { xs: 0.5, sm: 0 },
+            display: { xs: "block", sm: "inline-block" },
+            verticalAlign: "middle",
+          }}
         >
-          Seal changes
-        </Button>
-      ) : (
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<HistoryIcon fontSize="small" />}
-          onClick={toggle}
-          disabled={saving}
-          sx={{ borderStyle: "dashed", color: "text.secondary" }}
-        >
-          Edit piece history
-        </Button>
+          {disabledReason}
+        </Typography>
       )}
       {seqError && (
         <Typography variant="caption" color="error" sx={{ ml: 1 }}>
