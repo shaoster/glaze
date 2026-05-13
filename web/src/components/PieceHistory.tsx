@@ -1,22 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import HistoryIcon from "@mui/icons-material/History";
+import AddIcon from "@mui/icons-material/Add";
 import {
   alpha,
   Box,
-  Button,
   Chip,
+  CircularProgress,
   Collapse,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
+  IconButton,
   List,
   ListItem,
   ListItemText,
+  Menu,
   MenuItem,
-  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -25,8 +23,12 @@ import type {
   PieceState,
   State,
 } from "../util/types";
-import { formatPastState, formatState, STATES } from "../util/types";
-import { addPieceState, updatePastState } from "../util/api";
+import {
+  formatPastState,
+  formatState,
+  insertableStatesBetween,
+} from "../util/workflow";
+import { addPieceState, deletePieceState, updatePastState } from "../util/api";
 import WorkflowState from "./WorkflowState";
 
 type PieceHistoryProps = {
@@ -37,101 +39,62 @@ type PieceHistoryProps = {
   onRewind?: (id: string | null) => void;
 };
 
-function AddMissingStateDialog({
-  open,
-  onClose,
+function InsertButton({
+  predecessor,
+  presentStates,
   piece,
   onPieceUpdated,
 }: {
-  open: boolean;
-  onClose: () => void;
+  predecessor: State;
+  presentStates: ReadonlySet<State>;
   piece: PieceDetailType;
   onPieceUpdated: (updated: PieceDetailType) => void;
 }) {
-  const presentStates = new Set<State>(piece.history.map((ps) => ps.state));
-  const availableStates = (STATES as State[]).filter(
-    (s) => !presentStates.has(s),
-  );
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [loading, setLoading] = useState(false);
 
-  const [selectedState, setSelectedState] = useState<State | "">("");
-  const [notes, setNotes] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const insertable = insertableStatesBetween(predecessor, presentStates);
+  if (insertable.length === 0) return null;
 
-  function handleClose() {
-    setSelectedState("");
-    setNotes("");
-    setError(null);
-    onClose();
-  }
-
-  async function handleSubmit() {
-    if (!selectedState) return;
-    setSaving(true);
-    setError(null);
+  async function handleSelect(state: State) {
+    setAnchorEl(null);
+    setLoading(true);
     try {
-      const updated = await addPieceState(piece.id, {
-        state: selectedState as PieceState["state"],
-        notes: notes.trim() || undefined,
-      });
+      const updated = await addPieceState(piece.id, { state });
       onPieceUpdated(updated);
-      handleClose();
-    } catch {
-      setError("Failed to add state. Please try again.");
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
-      <DialogTitle>Add missing state</DialogTitle>
-      <DialogContent>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 0.5 }}>
-          <TextField
-            select
-            label="State"
-            value={selectedState}
-            onChange={(e) => setSelectedState(e.target.value as State)}
-            fullWidth
+    <Box sx={{ display: "flex", justifyContent: "center", my: 0.25 }}>
+      {loading ? (
+        <CircularProgress size={16} />
+      ) : (
+        <>
+          <IconButton
             size="small"
+            aria-label="Insert state"
+            onClick={(e) => setAnchorEl(e.currentTarget)}
+            sx={{ opacity: 0.5, "&:hover": { opacity: 1 } }}
           >
-            {availableStates.map((s) => (
-              <MenuItem key={s} value={s}>
+            <AddIcon fontSize="small" />
+          </IconButton>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={() => setAnchorEl(null)}
+          >
+            {insertable.map((s) => (
+              <MenuItem key={s} onClick={() => handleSelect(s as State)}>
                 {formatState(s)}
               </MenuItem>
             ))}
-          </TextField>
-          <TextField
-            label="Notes"
-            multiline
-            rows={3}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            fullWidth
-            size="small"
-            slotProps={{ htmlInput: { maxLength: 2000 } }}
-          />
-          {error && (
-            <Typography variant="caption" color="error">
-              {error}
-            </Typography>
-          )}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose} disabled={saving}>
-          Cancel
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={!selectedState || saving}
-        >
-          Add state
-        </Button>
-      </DialogActions>
-    </Dialog>
+          </Menu>
+        </>
+      )}
+    </Box>
   );
 }
 
@@ -143,10 +106,10 @@ export default function PieceHistory({
   onRewind,
 }: PieceHistoryProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const isEditable = piece?.is_editable ?? false;
   const containerRef = useRef<HTMLDivElement>(null);
   const prevIsEditableRef = useRef(isEditable);
+  const [deletingStateId, setDeletingStateId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isEditable && !prevIsEditableRef.current) {
@@ -157,6 +120,10 @@ export default function PieceHistory({
   }, [isEditable]);
 
   if (pastHistory.length === 0 && !isEditable) return null;
+
+  const presentStates = new Set<State>(
+    piece?.history.map((ps) => ps.state) ?? [],
+  );
 
   const rewindIndex = rewindedStateId
     ? pastHistory.findIndex((ps) => ps.id === rewindedStateId)
@@ -196,94 +163,148 @@ export default function PieceHistory({
         </Typography>
       </Box>
       <Collapse in={historyOpen}>
-        <List dense sx={{ display: "grid", gap: 1.25 }}>
+        <List dense sx={{ display: "grid", gap: 0 }}>
           {pastHistory.map((ps, i) => {
             const isRewinded = ps.id === rewindedStateId;
             const isAfterRewind = rewindIndex !== -1 && i > rewindIndex;
+
+            // Predecessor for insert-before affordance
+            const predecessor: State | null =
+              i === 0
+                ? (piece?.history[0]?.state ?? null)
+                : pastHistory[i - 1]?.state ?? null;
+
+            // Only show insert affordance in edit mode, with a valid predecessor,
+            // and NOT before the last item (no affordance after pastHistory.at(-1))
+            // — actually show before each item (between predecessor and item[i])
+            const showInsert =
+              isEditable &&
+              piece &&
+              onPieceUpdated &&
+              predecessor !== null &&
+              i < pastHistory.length; // always true, but explicit
+
             if (isEditable && piece && onPieceUpdated) {
               return (
-                <Tooltip
-                  key={ps.id ?? i}
-                  title={
-                    isRewinded
-                      ? "Click to stop viewing this state"
-                      : "Click to view and edit this state"
-                  }
-                  placement="top-start"
-                  disableHoverListener={!onRewind}
-                >
-                  <ListItem
-                    disableGutters
-                    onClick={
-                      onRewind
-                        ? () => onRewind(isRewinded ? null : ps.id)
-                        : undefined
+                <Box key={ps.id ?? i}>
+                  {showInsert && predecessor && (
+                    <InsertButton
+                      predecessor={predecessor}
+                      presentStates={presentStates}
+                      piece={piece}
+                      onPieceUpdated={onPieceUpdated}
+                    />
+                  )}
+                  <Tooltip
+                    title={
+                      isRewinded
+                        ? "Click to stop viewing this state"
+                        : "Click to view and edit this state"
                     }
-                    sx={(theme) => ({
-                      px: 1.5,
-                      py: 1.5,
-                      borderRadius: 3,
-                      border: "1px solid",
-                      borderColor: isRewinded ? "primary.main" : "divider",
-                      backgroundColor: alpha(
-                        theme.palette.background.default,
-                        0.34,
-                      ),
-                      flexDirection: "column",
-                      alignItems: "flex-start",
-                      cursor: onRewind ? "pointer" : "default",
-                      opacity: isAfterRewind ? 0.35 : 1,
-                      pointerEvents: isAfterRewind ? "none" : "auto",
-                      transition: "opacity 0.2s, border-color 0.2s",
-                    })}
+                    placement="top-start"
+                    disableHoverListener={!onRewind}
                   >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        mb: 0.75,
-                        width: "100%",
-                      }}
+                    <ListItem
+                      disableGutters
+                      onClick={
+                        onRewind
+                          ? () => onRewind(isRewinded ? null : ps.id)
+                          : undefined
+                      }
+                      sx={(theme) => ({
+                        px: 1.5,
+                        py: 1.5,
+                        borderRadius: 3,
+                        border: "1px solid",
+                        borderColor: isRewinded ? "primary.main" : "divider",
+                        backgroundColor: alpha(
+                          theme.palette.background.default,
+                          0.34,
+                        ),
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        cursor: onRewind ? "pointer" : "default",
+                        opacity: isAfterRewind ? 0.35 : 1,
+                        pointerEvents: isAfterRewind ? "none" : "auto",
+                        transition: "opacity 0.2s, border-color 0.2s",
+                      })}
                     >
-                      <Typography
-                        variant="caption"
+                      <Box
                         sx={{
-                          color: isRewinded ? "primary.main" : "text.secondary",
-                          letterSpacing: "0.1em",
-                          textTransform: "uppercase",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          mb: 0.75,
+                          width: "100%",
                         }}
                       >
-                        {formatPastState(ps.state)}
-                      </Typography>
-                      {isRewinded && (
-                        <Chip
-                          icon={<HistoryIcon />}
-                          label="Viewing"
-                          size="small"
-                          color="primary"
-                          variant="outlined"
-                          sx={{ height: 18, fontSize: "0.65rem" }}
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: isRewinded ? "primary.main" : "text.secondary",
+                            letterSpacing: "0.1em",
+                            textTransform: "uppercase",
+                            flexGrow: 1,
+                          }}
+                        >
+                          {formatPastState(ps.state)}
+                        </Typography>
+                        {isRewinded && (
+                          <Chip
+                            icon={<HistoryIcon />}
+                            label="Viewing"
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                            sx={{ height: 18, fontSize: "0.65rem" }}
+                          />
+                        )}
+                        {ps.state !== "designed" && (
+                          <Box onClick={(e) => e.stopPropagation()}>
+                            {deletingStateId === ps.id ? (
+                              <CircularProgress size={16} />
+                            ) : (
+                              <IconButton
+                                size="small"
+                                aria-label={`Delete ${formatPastState(ps.state)} state`}
+                                onClick={async () => {
+                                  setDeletingStateId(ps.id);
+                                  try {
+                                    const updated = await deletePieceState(
+                                      piece.id,
+                                      ps.id,
+                                    );
+                                    onPieceUpdated(updated);
+                                  } finally {
+                                    setDeletingStateId(null);
+                                  }
+                                }}
+                                sx={{ opacity: 0.5, "&:hover": { opacity: 1 } }}
+                              >
+                                <CloseIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                          </Box>
+                        )}
+                      </Box>
+                      <Box
+                        sx={{ width: "100%" }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <WorkflowState
+                          key={ps.id}
+                          initialPieceState={ps}
+                          pieceId={piece.id}
+                          onSaved={onPieceUpdated}
+                          hideImageUpload
+                          saveStateFn={(payload) =>
+                            updatePastState(piece.id, ps.id, payload)
+                          }
                         />
-                      )}
-                    </Box>
-                    <Box
-                      sx={{ width: "100%" }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <WorkflowState
-                        key={ps.id}
-                        initialPieceState={ps}
-                        pieceId={piece.id}
-                        onSaved={onPieceUpdated}
-                        hideImageUpload
-                        saveStateFn={(payload) =>
-                          updatePastState(piece.id, ps.id, payload)
-                        }
-                      />
-                    </Box>
-                  </ListItem>
-                </Tooltip>
+                      </Box>
+                    </ListItem>
+                  </Tooltip>
+                </Box>
               );
             }
             return (
@@ -316,25 +337,6 @@ export default function PieceHistory({
             );
           })}
         </List>
-        {isEditable && piece && onPieceUpdated && (
-          <Box sx={{ mt: 1 }}>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={() => setAddDialogOpen(true)}
-              sx={{ borderStyle: "dashed" }}
-            >
-              Add missing state
-            </Button>
-            <AddMissingStateDialog
-              open={addDialogOpen}
-              onClose={() => setAddDialogOpen(false)}
-              piece={piece}
-              onPieceUpdated={onPieceUpdated}
-            />
-          </Box>
-        )}
       </Collapse>
     </Box>
   );

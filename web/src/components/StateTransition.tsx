@@ -16,7 +16,7 @@ import {
   getStateDescription,
   isTerminalState,
   SUCCESSORS,
-} from "../util/types";
+} from "../util/workflow";
 
 // Fixed height for each successor chip row — must match the sx on the wrapper Box below.
 const SUCCESSOR_ROW_HEIGHT = 36;

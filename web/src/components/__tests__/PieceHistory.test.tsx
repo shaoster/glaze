@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import PieceHistory from "../PieceHistory";
 import type { PieceDetail as PieceDetailType, PieceState } from "../../util/types";
 import * as api from "../../util/api";
@@ -14,7 +14,7 @@ vi.mock("../../../workflow.yml", () => ({
         visible: true,
         friendly_name: "Designing",
         description: "Design phase.",
-        successors: [],
+        successors: ["wheel_thrown"],
         past_friendly_name: "Designed",
       },
       {
@@ -35,6 +35,7 @@ vi.mock("../../util/api", () => ({
   updateCurrentState: vi.fn(),
   updatePastState: vi.fn(),
   addPieceState: vi.fn(),
+  deletePieceState: vi.fn(),
   updatePiece: vi.fn(),
 }));
 
@@ -202,12 +203,17 @@ describe("PieceHistory", () => {
     expect(screen.queryByText("First")).not.toBeInTheDocument();
   });
 
-  it("renders 'Add missing state' button when is_editable and history is open", async () => {
-    const piece = makePiece({ is_editable: true });
+  it("renders 'Insert state' button when is_editable and insertable states exist", async () => {
+    // designed → wheel_thrown is possible; history only has designed
+    const designedState = makeState({ id: "designed-id", state: "designed" });
+    const piece = makePiece({
+      is_editable: true,
+      history: [designedState],
+    });
     await act(async () => {
       render(
         <PieceHistory
-          pastHistory={[makeState({ state: "designed" })]}
+          pastHistory={[designedState]}
           piece={piece}
           onPieceUpdated={vi.fn()}
         />,
@@ -215,16 +221,20 @@ describe("PieceHistory", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /show history/i }));
     expect(
-      screen.getByRole("button", { name: /add missing state/i }),
+      screen.getByRole("button", { name: /insert state/i }),
     ).toBeInTheDocument();
   });
 
-  it("does not render 'Add missing state' button when not editable", async () => {
-    const piece = makePiece({ is_editable: false });
+  it("does not render 'Insert state' button when not editable", async () => {
+    const designedState = makeState({ id: "designed-id", state: "designed" });
+    const piece = makePiece({
+      is_editable: false,
+      history: [designedState],
+    });
     await act(async () => {
       render(
         <PieceHistory
-          pastHistory={[makeState({ state: "designed" })]}
+          pastHistory={[designedState]}
           piece={piece}
           onPieceUpdated={vi.fn()}
         />,
@@ -232,114 +242,130 @@ describe("PieceHistory", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /show history/i }));
     expect(
-      screen.queryByRole("button", { name: /add missing state/i }),
+      screen.queryByRole("button", { name: /insert state/i }),
     ).not.toBeInTheDocument();
   });
 
-  it("opens 'Add missing state' dialog on button click", async () => {
-    const piece = makePiece({ is_editable: true });
-    await act(async () => {
-      render(
-        <PieceHistory
-          pastHistory={[makeState({ state: "designed" })]}
-          piece={piece}
-          onPieceUpdated={vi.fn()}
-        />,
-      );
-    });
-    fireEvent.click(screen.getByRole("button", { name: /show history/i }));
-    fireEvent.click(screen.getByRole("button", { name: /add missing state/i }));
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
-    });
-  });
-
-  it("adds a missing state and resets the dialog", async () => {
+  it("clicking 'Insert state' opens a menu and selecting calls addPieceState", async () => {
     const updated = makePiece();
     vi.mocked(api.addPieceState).mockResolvedValue(updated);
     const onPieceUpdated = vi.fn();
-    const piece = makePiece({ is_editable: true });
+    const designedState = makeState({ id: "designed-id", state: "designed" });
+    const piece = makePiece({
+      is_editable: true,
+      history: [designedState],
+    });
     await act(async () => {
       render(
         <PieceHistory
-          pastHistory={[makeState({ state: "designed" })]}
+          pastHistory={[designedState]}
           piece={piece}
           onPieceUpdated={onPieceUpdated}
         />,
       );
     });
-
     fireEvent.click(screen.getByRole("button", { name: /show history/i }));
-    fireEvent.click(screen.getByRole("button", { name: /add missing state/i }));
-    const dialog = screen.getByRole("dialog");
-    fireEvent.mouseDown(screen.getByLabelText("State"));
-    fireEvent.click(screen.getByRole("option", { name: "Throwing" }));
-    fireEvent.change(within(dialog).getByLabelText("Notes"), {
-      target: { value: " forgot this step " },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /^add state$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /insert state/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /throwing/i }));
 
     await waitFor(() => {
       expect(api.addPieceState).toHaveBeenCalledWith("piece-id-1", {
         state: "wheel_thrown",
-        notes: "forgot this step",
       });
     });
     expect(onPieceUpdated).toHaveBeenCalledWith(updated);
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    });
   });
 
-  it("keeps the add dialog open and shows an error when adding fails", async () => {
-    vi.mocked(api.addPieceState).mockRejectedValue(new Error("boom"));
-    const piece = makePiece({ is_editable: true });
+  it("renders delete button on non-designed historical states in edit mode", async () => {
+    const wheelState = makeState({ id: "wt-id", state: "wheel_thrown" });
+    const designedState = makeState({ id: "d-id", state: "designed" });
+    const piece = makePiece({
+      is_editable: true,
+      history: [designedState, wheelState],
+    });
     await act(async () => {
       render(
         <PieceHistory
-          pastHistory={[makeState({ state: "designed" })]}
+          pastHistory={[designedState, wheelState]}
           piece={piece}
           onPieceUpdated={vi.fn()}
         />,
       );
     });
-
     fireEvent.click(screen.getByRole("button", { name: /show history/i }));
-    fireEvent.click(screen.getByRole("button", { name: /add missing state/i }));
-    fireEvent.mouseDown(screen.getByLabelText("State"));
-    fireEvent.click(screen.getByRole("option", { name: "Throwing" }));
-    fireEvent.click(screen.getByRole("button", { name: /^add state$/i }));
-
     expect(
-      await screen.findByText("Failed to add state. Please try again."),
+      screen.getByRole("button", { name: /delete.*state/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
-  it("clears add dialog fields when canceling", async () => {
-    const piece = makePiece({ is_editable: true });
+  it("does not render delete button on designed state", async () => {
+    const designedState = makeState({ id: "d-id", state: "designed" });
+    const piece = makePiece({
+      is_editable: true,
+      history: [designedState],
+    });
     await act(async () => {
       render(
         <PieceHistory
-          pastHistory={[makeState({ state: "designed" })]}
+          pastHistory={[designedState]}
           piece={piece}
           onPieceUpdated={vi.fn()}
         />,
       );
     });
-
     fireEvent.click(screen.getByRole("button", { name: /show history/i }));
-    fireEvent.click(screen.getByRole("button", { name: /add missing state/i }));
-    fireEvent.change(within(screen.getByRole("dialog")).getByLabelText("Notes"), {
-      target: { value: "discard me" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    });
+    expect(
+      screen.queryByRole("button", { name: /delete designed state/i }),
+    ).not.toBeInTheDocument();
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: /add missing state/i }));
-    expect(within(screen.getByRole("dialog")).getByLabelText("Notes")).toHaveValue("");
+  it("does not render delete button in read mode", async () => {
+    const wheelState = makeState({ id: "wt-id", state: "wheel_thrown" });
+    const designedState = makeState({ id: "d-id", state: "designed" });
+    const piece = makePiece({
+      is_editable: false,
+      history: [designedState, wheelState],
+    });
+    await act(async () => {
+      render(
+        <PieceHistory
+          pastHistory={[designedState, wheelState]}
+          piece={piece}
+          onPieceUpdated={vi.fn()}
+        />,
+      );
+    });
+    fireEvent.click(screen.getByRole("button", { name: /show history/i }));
+    expect(
+      screen.queryByRole("button", { name: /delete/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("clicking delete calls deletePieceState and triggers onPieceUpdated", async () => {
+    const updated = makePiece();
+    vi.mocked(api.deletePieceState).mockResolvedValue(updated);
+    const onPieceUpdated = vi.fn();
+    const wheelState = makeState({ id: "wt-id", state: "wheel_thrown" });
+    const designedState = makeState({ id: "d-id", state: "designed" });
+    const piece = makePiece({
+      is_editable: true,
+      history: [designedState, wheelState],
+    });
+    await act(async () => {
+      render(
+        <PieceHistory
+          pastHistory={[designedState, wheelState]}
+          piece={piece}
+          onPieceUpdated={onPieceUpdated}
+        />,
+      );
+    });
+    fireEvent.click(screen.getByRole("button", { name: /show history/i }));
+    fireEvent.click(screen.getByRole("button", { name: /delete.*state/i }));
+    await waitFor(() => {
+      expect(api.deletePieceState).toHaveBeenCalledWith("piece-id-1", "wt-id");
+    });
+    expect(onPieceUpdated).toHaveBeenCalledWith(updated);
   });
 
   it("renders editable Notes fields for past states when is_editable", async () => {

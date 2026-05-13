@@ -328,6 +328,16 @@ export async function updatePastState(
   return mapPieceDetail(data);
 }
 
+export async function deletePieceState(
+  pieceId: string,
+  stateId: string,
+): Promise<PieceDetail> {
+  const { data } = await client.delete<Wire<PieceDetail>>(
+    `pieces/${pieceId}/states/${stateId}/`,
+  );
+  return mapPieceDetail(data);
+}
+
 export type UpdatePiecePayload = {
   name?: string;
   current_location?: string;

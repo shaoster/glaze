@@ -341,6 +341,7 @@ import {
   isFavoritableGlobal,
   isTerminalState,
   isTaggableGlobal,
+  insertableStatesBetween,
 } from "./workflow";
 
 describe("formatWorkflowFieldLabel", () => {
@@ -837,5 +838,28 @@ describe("isTaggableGlobal", () => {
 
   it("returns false for an unknown global", () => {
     expect(isTaggableGlobal("nonexistent")).toBe(false);
+  });
+});
+
+describe("insertableStatesBetween", () => {
+  it("returns all successors of designed when only designed is present", () => {
+    const result = insertableStatesBetween("designed", new Set(["designed"]));
+    expect(result).toEqual(expect.arrayContaining(["wheel_thrown", "handbuilt"]));
+    expect(result).toHaveLength(2);
+  });
+
+  it("filters out already-present states", () => {
+    const result = insertableStatesBetween("designed", new Set(["designed", "wheel_thrown"]));
+    expect(result).toEqual(["handbuilt"]);
+  });
+
+  it("returns empty when all successors are already present", () => {
+    const result = insertableStatesBetween("designed", new Set(["designed", "wheel_thrown", "handbuilt"]));
+    expect(result).toEqual([]);
+  });
+
+  it("returns empty for a terminal state with no successors", () => {
+    const result = insertableStatesBetween("completed", new Set(["designed", "completed"]));
+    expect(result).toEqual([]);
   });
 });
