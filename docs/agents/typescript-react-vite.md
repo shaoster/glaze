@@ -4,18 +4,18 @@
 
 ```bash
 # Create Vite + React + TypeScript project
-npm create vite@latest web -- --template react-ts
+bazel run @nodejs_linux_amd64//:npm -- create vite@latest web -- --template react-ts
 cd web
-npm install
+bazel run @nodejs_linux_amd64//:npm -- install
 
 # Add MUI (with Emotion peer deps)
-npm install @mui/material @emotion/react @emotion/styled
+bazel run @nodejs_linux_amd64//:npm -- install @mui/material @emotion/react @emotion/styled
 
 # Add Axios and React Router
-npm install axios react-router-dom
+bazel run @nodejs_linux_amd64//:npm -- install axios react-router-dom
 
 # Start dev server
-npm run dev
+bazel run @nodejs_linux_amd64//:npm -- run dev
 ```
 
 Enable stricter TypeScript flags in `tsconfig.json` (`compilerOptions`):
@@ -37,7 +37,7 @@ This is a Single Page Application (SPA). Routing is handled client-side via Reac
 
 - Strict mode is on. Beyond `strict: true`, also enforce `noUnusedLocals`, `noUnusedParameters`, and `noFallthroughCasesInSwitch` — remove unused variables and parameters rather than suppressing errors.
 - Avoid `any`. Use `unknown` when a type is genuinely unknown and narrow it before use.
-- Run `npx tsc --noEmit` as a standalone type-check step separate from the test suite.
+- Run `bazel test //web:tsc_typecheck` as a standalone type-check step separate from the test suite.
 - Use `import.meta.env.VITE_*` to access environment variables in frontend code; plain `process.env` does not work in Vite.
 
 ## Component patterns
@@ -152,9 +152,8 @@ function useAsync<T>(asyncFunction: () => Promise<T>, immediate = true) {
 ## Testing
 
 ```bash
-cd web
-npm test          # single run (used in CI)
-npm run test:watch  # watch mode for development
+bazel test //web:web_test      # single run (used in CI)
+cd web && bazel run @nodejs_linux_amd64//:npm -- run test:watch  # watch mode for development
 ```
 
 The test environment is jsdom with React Testing Library.

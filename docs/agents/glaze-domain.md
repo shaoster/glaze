@@ -431,9 +431,9 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 **Type generation pipeline:**
 
 - [`web/src/util/generated-types.ts`](../../web/src/util/generated-types.ts) is auto-generated — do not edit by hand. It is gitignored.
-- Generation is driven by [`web/scripts/generate-types.mjs`](../../web/scripts/generate-types.mjs), which calls the `openapi-typescript` programmatic API with a `transform` that converts `format: date-time` fields to `Date`. Run `npm run generate-types` with Django on port 8080.
+- Generation is driven by [`web/scripts/generate-types.mjs`](../../web/scripts/generate-types.mjs), which calls the `openapi-typescript` programmatic API with a `transform` that converts `format: date-time` fields to `Date`. Run `bazel run @nodejs_linux_amd64//:npm -- run generate-types` with Django on port 8080.
 - [`web/src/util/types.ts`](../../web/src/util/types.ts) derives domain types from `generated-types.ts` via intersection (no `Omit<>`). It also holds the `STATES` array and `SUCCESSORS` map from `workflow.yml`.
-- **When adding a new API field:** update the Django serializer → run `npm run generate-types` → update `web/src/util/types.ts` if semantic narrowing is needed → update mappers in `web/src/util/api.ts`.
+- **When adding a new API field:** update the Django serializer → run `bazel run @nodejs_linux_amd64//:npm -- run generate-types` → update `web/src/util/types.ts` if semantic narrowing is needed → update mappers in `web/src/util/api.ts`.
 - [`web/src/util/api.ts`](../../web/src/util/api.ts) uses the `Wire<T>` generic to type raw Axios responses (dates as strings). Mappers convert `Wire<T>` → domain `T`. This is the only file that should contain deserialization logic.
 - The OpenAPI schema is at `http://localhost:8080/api/schema/` and Swagger UI at `http://localhost:8080/api/schema/swagger/`.
 

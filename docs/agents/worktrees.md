@@ -253,7 +253,7 @@ Each subagent handles:
 2. **No directory changes**: Work should happen via path arguments, not `cd`
 3. **Single commit per worktree**: Keep changes atomic and reviewable
 4. **Issue reference in commit**: Always include `Fixes #N` for auto-closing
-5. **Dependency installation**: Each worktree may need `bun install` / `npm install`
+5. **Dependency installation**: Each worktree may need `bun install` / `bazel run @nodejs_linux_amd64//:npm -- install`
 
 ## Agentic Optimizations
 

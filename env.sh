@@ -230,11 +230,11 @@ gz_setup() {
 
     # Python
     echo "--- Syncing Python environment with uv..."
-    rtk uv sync
+    bazel run @uv//:uv -- sync
 
     # Database
     echo "--- Running migrations..."
-    rtk uv run python "$GLAZE_ROOT/manage.py" migrate --run-syncdb
+    bazel run @uv//:uv -- run python "$GLAZE_ROOT/manage.py" migrate --run-syncdb
 
     # Node + web deps
     _gz_ensure_node
@@ -253,7 +253,7 @@ gz_setup() {
             echo "--- Installing web dependencies..."
         fi
     fi
-    (cd "$GLAZE_ROOT/web" && rtk npm install --silent)
+    (cd "$GLAZE_ROOT/web" && bazel run @nodejs_linux_amd64//:npm -- install --silent)
 
     echo "=== Setup complete ==="
     echo "    Run 'gz_gentypes' to regenerate TypeScript types via Bazel (no backend)."
@@ -267,7 +267,7 @@ gz_setup() {
 gz_manage() {        # gz_manage <subcommand> [args…]
     (
         cd "$GLAZE_ROOT"
-        uv run python manage.py "$@"
+        bazel run @uv//:uv -- run python manage.py "$@"
     )
 }
 
@@ -300,23 +300,15 @@ gz_prod_dbshell()    { gz_prod dbshell "$@"; }
 # ---------------------------------------------------------------------------
 
 gz_test_common() {
-    (
-        source "$(_gz_venv_root)/.venv/bin/activate"
-        cd "$GLAZE_ROOT"
-        pytest tests/ "$@"
-    )
+    bazel test //tests:common_test "$@"
 }
 
 gz_test_backend() {
-    (
-        source "$(_gz_venv_root)/.venv/bin/activate"
-        cd "$GLAZE_ROOT"
-        pytest api/ "$@"
-    )
+    bazel test //api:api_test "$@"
 }
 
 gz_test_web() {
-    (cd "$GLAZE_ROOT/web" && npm test "$@")
+    bazel test //web:web_test "$@"
 }
 
 gz_test() {
@@ -509,7 +501,7 @@ gz_web() {
     port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || _gz_find_free_port 5173)
     echo "$port" > "$_GLAZE_PIDS/web.port"
     BACKEND_PORT="$backend_port" _gz_start web "$_GLAZE_LOGS/web.log" \
-        bash -c "cd '$GLAZE_ROOT/web' && BACKEND_PORT=$backend_port npm run dev -- --port $port --strictPort"
+        bash -c "cd '$GLAZE_ROOT/web' && BACKEND_PORT=$backend_port bazel run @nodejs_linux_amd64//:npm -- run dev -- --port $port --strictPort"
 
     # Wait for Vite to print the chosen port (up to 10 s)
     local i=0

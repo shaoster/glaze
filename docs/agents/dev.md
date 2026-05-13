@@ -12,8 +12,8 @@ uvicorn backend.asgi:application --port 8080 --reload  # or any free port; gz_st
 
 # Web (separate terminal)
 cd web
-npm install
-npm run dev
+bazel run @nodejs_linux_amd64//:npm -- install
+bazel run @nodejs_linux_amd64//:npm -- run dev
 
 # Remote ML Offload (Optional, for 1GB RAM servers)
 # 1. Create a secret 'piece-image-crop-secret' with AUTH_TOKEN=xxx
@@ -213,12 +213,12 @@ Commit `requirements.txt`, `requirements.lock`, `MODULE.bazel.lock` (updated aut
 
 Bazel resolves npm packages from `web/pnpm-lock.yaml`. After any `npm install` that adds or removes packages, regenerate the lockfile with `pnpm import` so Bazel picks up the change:
 
-```bash
 # Install the package normally (from the repo root or web/ — npm resolves via web/package.json)
-(cd web && npm install react-swipeable)
+(cd web && bazel run @nodejs_linux_amd64//:npm -- install react-swipeable)
 
 # Regenerate the pnpm lockfile from the updated package-lock.json
 # pnpm must be run from web/ where package.json and pnpm-lock.yaml live
+(cd web && bazel run @nodejs_linux_amd64//:npx -- pnpm import)
 (cd web && pnpm import)
 
 # Commit both the updated package files
@@ -423,7 +423,7 @@ rtk bazel test //api:api_mypy
 
 # Web component tests
 rtk bazel test //web:web_test
-cd web && npm run test:watch           # watch mode (no Bazel equivalent)
+cd web && bazel run @nodejs_linux_amd64//:npm -- run test:watch  # watch mode (no Bazel equivalent)
 
 # Web type-check + lint (both covered by the lint target)
 # Do not run tsc directly — tsc may not resolve depending on environment setup.
