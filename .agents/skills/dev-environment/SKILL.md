@@ -18,12 +18,12 @@ allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 
 ```bash
 # Backend
-bazel run @uv//:uv -- sync
-bazel run @uv//:uv -- run python manage.py migrate
+rtk bazel run @uv//:uv -- sync
+rtk bazel run @uv//:uv -- run python manage.py migrate
 
 # Web (separate terminal)
 cd web
-bazel run @nodejs_linux_amd64//:npm -- install
+rtk bazel run @nodejs_linux_amd64//:npm -- install
 ```
 
 In a new environment, always run `source env.sh && gz_setup` before doing anything else.
@@ -108,11 +108,11 @@ Always run `git` commands from the repo root. Wrap subdirectory commands in a su
 
 ```bash
 # ✅ correct — shell stays at repo root
-(cd web && bazel run @nodejs_linux_amd64//:npx -- pnpm install)
+(cd web && rtk bazel run @nodejs_linux_amd64//:npx -- pnpm install)
 git add web/pnpm-lock.yaml
 
 # ❌ incorrect — shell is now inside web/
-cd web && bazel run @nodejs_linux_amd64//:npx -- pnpm install
+cd web && rtk bazel run @nodejs_linux_amd64//:npx -- pnpm install
 git add web/pnpm-lock.yaml   # fails: no web/web/pnpm-lock.yaml
 ```
 

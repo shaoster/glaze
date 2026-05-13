@@ -4,7 +4,7 @@
 
 ```bash
 # Create project and app
-bazel run @uv//:uv -- add django djangorestframework django-cors-headers drf-spectacular dj-database-url whitenoise
+rtk bazel run @uv//:uv -- add django djangorestframework django-cors-headers drf-spectacular dj-database-url whitenoise
 django-admin startproject backend .
 python manage.py startapp api
 
@@ -146,8 +146,8 @@ print(finders.find('admin/js/my_script.js'))  # None → file not on the path
 ## Testing
 
 ```bash
-bazel run @uv//:uv -- sync
-bazel test //api:api_test
+rtk bazel run @uv//:uv -- sync
+rtk bazel test //api:api_test
 ```
 
 `pytest.ini` should point pytest at the correct Django settings automatically — no extra configuration needed.

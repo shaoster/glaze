@@ -89,7 +89,7 @@ Three parallel jobs on every push and PR (see `.github/workflows/ci.yml`):
 
 | Job | What it runs |
 |---|---|
-| `test` | `bazel test --config=ci //...` — all test suites |
+| `test` | `rtk bazel test --config=ci //...` — all test suites |
 | `lint` | `bazel build --config=ci --config=lint //...` — ruff, eslint, tsc, mypy |
 | `coverage` | `bazel coverage --config=ci --combined_report=lcov //...` — feeds Codecov |
 

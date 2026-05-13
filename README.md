@@ -14,7 +14,7 @@ This guide assumes you already know the tools listed below and are familiar with
 
 - **[Django](https://www.djangoproject.com/)** is the Python web framework that owns the backend (`backend/`, `api/`). [Separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) keeps unrelated responsibilities apart so each layer stays simpler to reason about—for example, [`api/models.py`](api/models.py) defines the data schema, [`api/serializers.py`](api/serializers.py) translates between ORM objects and JSON payloads, and [`api/views.py`](api/views.py) wires those serializers into `/api/...` endpoints that enforce workflow rules from [`workflow.yml`](workflow.yml). That split keeps the REST API (powered by Django REST Framework, DRF) resilient even when one layer needs to change, while returning consistent data/validation to all clients.
 - **[React](https://react.dev/)** (web/src/) renders the SPA (Single Page Application) and consumes shared types/API helpers from [`web/src/util/types.ts`](web/src/util/types.ts) and [`web/src/util/api.ts`](web/src/util/api.ts). React follows a component-based paradigm where functions or classes receive props (inputs) and return HTML that the browser can render.
-- **[Vite](https://vitejs.dev/)** (web tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our web workbench, serves as the underlying runner for `bazel test //web:web_test`, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
+- **[Vite](https://vitejs.dev/)** (web tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our web workbench, serves as the underlying runner for `rtk bazel test //web:web_test`, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
 - **[Material UI](https://mui.com/)** supplies the component library used everywhere in the UI for forms, dialogs, buttons, and layout.
 - **[Axios](https://axios-http.com/)** is the HTTP client library we use in the web to talk to REST APIs; it keeps things simple by handling the details of sending and receiving JSON so the UI code does not have to repeat that work. Benefits of Axios over raw `fetch` include centralized configuration of base URLs and headers, automatic JSON parsing/serialization, and built-in hooks for handling errors, cancellations, and retries. In this project that means [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx) can rely on helpers like `updateCurrentState`/`updatePiece` instead of duplicating URLs or JSON logic, and we have a single place for surfaces errors before they hit the UI.
 - A **[client library](<https://en.wikipedia.org/wiki/Library_(computing)>)** is a reusable set of functions that wraps low-level protocols (like HTTP) so developers can interact with remote services using clean function calls, in their programming language of choice, instead of handling bytes, headers, or parsing manually.
@@ -233,10 +233,10 @@ RSS; large `StreamingHttpResponse` bodies should use async iterators.
 
 | Command           | Description                                                                                  |
 | ----------------- | -------------------------------------------------------------------------------------------- |
-| `gz_test`         | Run all tests via Bazel (`bazel test --test_output=errors //...`) — CI-aligned, incremental. |
-| `gz_test_common`  | Run workflow schema/integrity tests only (`bazel test //tests:common_test`).                 |
-| `gz_test_backend` | Run Django API tests only (`bazel test //api:api_test`).                                     |
-| `gz_test_web`     | Run web tests only (`bazel test //web:web_test`).                                            |
+| `gz_test`         | Run all tests via Bazel (`rtk bazel test --test_output=errors //...`) — CI-aligned, incremental. |
+| `gz_test_common`  | Run workflow schema/integrity tests only (`rtk bazel test //tests:common_test`).                 |
+| `gz_test_backend` | Run Django API tests only (`rtk bazel test //api:api_test`).                                     |
+| `gz_test_web`     | Run web tests only (`rtk bazel test //web:web_test`).                                            |
 
 ### Linting and type-checking
 
@@ -264,14 +264,14 @@ If you prefer to install dependencies and run servers yourself, follow these exp
 
 ```bash
 # Backend
-bazel run @uv//:uv -- sync
-bazel run @uv//:uv -- run python manage.py migrate
+rtk bazel run @uv//:uv -- sync
+rtk bazel run @uv//:uv -- run python manage.py migrate
 uvicorn backend.asgi:application --port 8080 --reload
 
 # Web (separate terminal)
 cd web
-bazel run @nodejs_linux_amd64//:npm -- install
-bazel run @nodejs_linux_amd64//:npm -- run dev
+rtk bazel run @nodejs_linux_amd64//:npm -- install
+rtk bazel run @nodejs_linux_amd64//:npm -- run dev
 ```
 # Remote ML Offload (Optional, for 1GB RAM servers)
 pip install modal
@@ -280,7 +280,7 @@ modal deploy tools/piece_image_crop_service.py
 
 # Type generation (backend must be running on port 8080)
 cd web
-bazel run @nodejs_linux_amd64//:npm -- run generate-types
+rtk bazel run @nodejs_linux_amd64//:npm -- run generate-types
 ```
 
 ## Testing and validation
@@ -289,13 +289,13 @@ Tests and linters run via [Bazel](https://bazel.build/) — the same commands wo
 
 ```bash
 # Run all tests (workflow, backend, web, mypy)
-bazel test //...
+rtk bazel test //...
 
 # Run all linters (ruff, eslint, tsc, mypy)
 bazel build --config=lint //...
 
 # Or via env.sh helpers (source env.sh first):
-gz_test          # bazel test --test_output=errors //...
+gz_test          # rtk bazel test --test_output=errors //...
 gz_lint          # bazel build --config=lint //...
 ```
 
@@ -309,11 +309,11 @@ source env.sh && gz_format
 **For fast iteration** — run individual Bazel targets (incremental, CI-aligned):
 
 ```bash
-bazel test //tests:...        # workflow schema validation
-bazel test //api:api_test     # backend API tests
-bazel test //api:api_mypy     # mypy type-check (full Django plugin)
-bazel test //web:web_test     # web component tests
-cd web && bazel run @nodejs_linux_amd64//:npm -- run test:watch  # watch mode (no Bazel equivalent)
+rtk bazel test //tests:...        # workflow schema validation
+rtk bazel test //api:api_test     # backend API tests
+rtk bazel test //api:api_mypy     # mypy type-check (full Django plugin)
+rtk bazel test //web:web_test     # web component tests
+cd web && rtk bazel run @nodejs_linux_amd64//:npm -- run test:watch  # watch mode (no Bazel equivalent)
 ```
 
 ## Cloudinary image uploads (web)
@@ -349,7 +349,7 @@ To maintain stability on hardware with <1GB RAM, Glaze supports offloading the h
 
 #### Step 1: Deploy the Microservice (Run from your LOCAL machine)
 1.  **Set up Auth Token**: Create a Modal secret named `piece-image-crop-secret` with an `AUTH_TOKEN` key.
-2.  **Install Modal**: `bazel run @uv//:uv -- tool install modal`
+2.  **Install Modal**: `rtk bazel run @uv//:uv -- tool install modal`
 3.  **Authenticate**: `modal setup`
 4.  **Deploy**: `modal deploy tools/piece_image_crop_service.py`
 5.  **Capture the URL**: The output will provide a permanent URL, e.g., `https://your-workspace-name--crop.modal.run`.
@@ -629,7 +629,7 @@ Claude will read the comment, make the change, and push it to the branch.
 
 ### Tips
 
-- Claude always runs `bazel test //api:api_test` (backend) and `bazel test //web:web_test` (web) before opening or updating a PR. If tests fail, it will not push.
+- Claude always runs `rtk bazel test //api:api_test` (backend) and `rtk bazel test //web:web_test` (web) before opening or updating a PR. If tests fail, it will not push.
 - Claude derives all state names and transitions from [`workflow.yml`](workflow.yml) — you can reference state names freely in issues and it will use the correct values.
 - For large or ambiguous requests, start with an issue rather than a direct PR comment so Claude can ask questions before writing code.
 

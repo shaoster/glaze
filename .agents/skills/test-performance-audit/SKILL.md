@@ -187,7 +187,7 @@ Write the issue body to a temp file and use `--body-file`. The body should conta
 5. **Priority table** — ranked fixes with estimated savings
 
 Priority schema:
-- 🔴 P0 — tests that fail under `bazel test //...`
+- 🔴 P0 — tests that fail under `rtk bazel test //...`
 - 🟠 P1 — single-line settings changes with high savings (`test_settings.py`)
 - 🟡 P2 — test code changes (swap `userEvent` → `fireEvent`, disable bootstrap in env)
 - 🟢 P3 — structural refactors (split large test files for Vitest parallelism)

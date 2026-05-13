@@ -230,11 +230,11 @@ gz_setup() {
 
     # Python
     echo "--- Syncing Python environment with uv..."
-    bazel run @uv//:uv -- sync
+    rtk bazel run @uv//:uv -- sync
 
     # Database
     echo "--- Running migrations..."
-    bazel run @uv//:uv -- run python "$GLAZE_ROOT/manage.py" migrate --run-syncdb
+    rtk bazel run @uv//:uv -- run python "$GLAZE_ROOT/manage.py" migrate --run-syncdb
 
     # Node + web deps
     _gz_ensure_node
@@ -253,7 +253,7 @@ gz_setup() {
             echo "--- Installing web dependencies..."
         fi
     fi
-    (cd "$GLAZE_ROOT/web" && bazel run @nodejs_linux_amd64//:npm -- install --silent)
+    (cd "$GLAZE_ROOT/web" && rtk bazel run @nodejs_linux_amd64//:npm -- install --silent)
 
     echo "=== Setup complete ==="
     echo "    Run 'gz_gentypes' to regenerate TypeScript types via Bazel (no backend)."
@@ -267,7 +267,7 @@ gz_setup() {
 gz_manage() {        # gz_manage <subcommand> [args…]
     (
         cd "$GLAZE_ROOT"
-        bazel run @uv//:uv -- run python manage.py "$@"
+        rtk bazel run @uv//:uv -- run python manage.py "$@"
     )
 }
 
@@ -300,15 +300,15 @@ gz_prod_dbshell()    { gz_prod dbshell "$@"; }
 # ---------------------------------------------------------------------------
 
 gz_test_common() {
-    bazel test //tests:common_test "$@"
+    rtk bazel test //tests:common_test "$@"
 }
 
 gz_test_backend() {
-    bazel test //api:api_test "$@"
+    rtk bazel test //api:api_test "$@"
 }
 
 gz_test_web() {
-    bazel test //web:web_test "$@"
+    rtk bazel test //web:web_test "$@"
 }
 
 gz_test() {
@@ -417,18 +417,18 @@ gz_test() {
             echo "No coverage targets found."
             return 0
         fi
-        echo "Running: bazel coverage --config=ci --combined_report=lcov $coverage_target"
-        (cd "$GLAZE_ROOT" && bazel coverage --config=ci --combined_report=lcov $coverage_target "$@")
+        echo "Running: rtk bazel coverage --config=ci --combined_report=lcov $coverage_target"
+        (cd "$GLAZE_ROOT" && rtk bazel coverage --config=ci --combined_report=lcov $coverage_target "$@")
     else
-        echo "Running: bazel test $target"
-        (cd "$GLAZE_ROOT" && bazel test --test_output=errors $target "$@")
+        echo "Running: rtk bazel test $target"
+        (cd "$GLAZE_ROOT" && rtk bazel test --test_output=errors $target "$@")
     fi
 }
 
 # CI-aligned: run ruff, eslint, tsc, and mypy via Bazel (same as CI).
 gz_lint() {
-    echo "Running: bazel build --config=lint //..."
-    (cd "$GLAZE_ROOT" && bazel build --config=ci --config=lint //... "$@")
+    echo "Running: rtk bazel build --config=lint //..."
+    (cd "$GLAZE_ROOT" && rtk bazel build --config=ci --config=lint //... "$@")
 }
 
 # Auto-fix: reformat Python files and apply ruff auto-fixes in one step.
@@ -501,7 +501,7 @@ gz_web() {
     port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || _gz_find_free_port 5173)
     echo "$port" > "$_GLAZE_PIDS/web.port"
     BACKEND_PORT="$backend_port" _gz_start web "$_GLAZE_LOGS/web.log" \
-        bash -c "cd '$GLAZE_ROOT/web' && BACKEND_PORT=$backend_port bazel run @nodejs_linux_amd64//:npm -- run dev -- --port $port --strictPort"
+        bash -c "cd '$GLAZE_ROOT/web' && BACKEND_PORT=$backend_port rtk bazel run @nodejs_linux_amd64//:npm -- run dev -- --port $port --strictPort"
 
     # Wait for Vite to print the chosen port (up to 10 s)
     local i=0
