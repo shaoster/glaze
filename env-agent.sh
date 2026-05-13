@@ -34,6 +34,10 @@ GLAZE_SHARED_ROOT="$(_gz_detect_shared_root "$GLAZE_ROOT")"
 GLAZE_SHARED_ROOT="${GLAZE_SHARED_ROOT:-$GLAZE_ROOT}"
 export GLAZE_ROOT GLAZE_SHARED_ROOT
 
+_GLAZE_PIDS="$GLAZE_ROOT/.dev-pids"
+_GLAZE_LOGS="$GLAZE_ROOT/.dev-logs"
+mkdir -p "$_GLAZE_PIDS" "$_GLAZE_LOGS"
+
 _gz_preferred_root_for() {
     local rel="$1"
     if [[ -e "$GLAZE_ROOT/$rel" ]]; then
@@ -78,15 +82,96 @@ ulimit -s unlimited 2>/dev/null || true
 # Propagate to child processes so agents spawned from an interactive shell
 # (Codex, etc.) also get this bootstrap without per-tool config.
 export BASH_ENV="$_GLAZE_SCRIPT_DIR/env-agent.sh"
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
 _gz_venv_root() {
     _gz_preferred_root_for ".venv/bin/activate"
 }
+
+_gz_find_free_port() {  # _gz_find_free_port [start_port]  — returns first unbound port >= start
+    python3 - "${1:-8080}" <<'EOF'
+import socket, sys
+port = int(sys.argv[1])
+while True:
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
+        s.bind(("", port))
+        s.close()
+        print(port)
+        break
+    except OSError:
+        port += 1
+EOF
+}
+
+_gz_is_running() {   # _gz_is_running <name>
+    local pidfile="$_GLAZE_PIDS/$1.pid"
+    [[ -f "$pidfile" ]] || return 1
+    local pid
+    pid=$(cat "$pidfile")
+    [[ -n "$pid" ]] || return 1
+    # Check if PID exists and is not a zombie
+    ps -p "$pid" -o state= 2>/dev/null | grep -qv "Z"
+}
+
+_gz_start() {        # _gz_start <name> <logfile> <cmd...>
+    local name="$1" logfile="$2"; shift 2
+    if _gz_is_running "$name"; then
+        echo "$name: already running (PID $(cat "$_GLAZE_PIDS/$name.pid"))"
+        return 0
+    fi
+    # Use direct backgrounding. monitor mode ensures a new process group.
+    # We use a subshell to avoid affecting the main shell state.
+    (
+        set -m
+        "$@" >> "$logfile" 2>&1 &
+        echo $! > "$_GLAZE_PIDS/$name.pid"
+    )
+    # Wait a moment to ensure the PID file is written
+    sleep 0.1
+    local pid=$(cat "$_GLAZE_PIDS/$name.pid" 2>/dev/null)
+    echo "$name: started (PID ${pid:-unknown}) — logs: $logfile"
+}
+
+_gz_stop() {         # _gz_stop <name>
+    local pidfile="$_GLAZE_PIDS/$1.pid"
+    if [[ -f "$pidfile" ]]; then
+        local pid i
+        pid=$(cat "$pidfile")
+        echo "Stopping $1 (PID $pid)..."
+        # Kill the entire process group so child processes don't get orphaned when
+        # the bash wrapper shell exits (e.g. on Ctrl+C from gz_start)
+        kill -- -"$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
+        for i in {1..10}; do
+            kill -0 -- -"$pid" 2>/dev/null || break
+            sleep 0.1
+        done
+        if kill -0 -- -"$pid" 2>/dev/null; then
+            kill -KILL -- -"$pid" 2>/dev/null || true
+        fi
+        echo "$1: stopped"
+    else
+        echo "$1: not running"
+    fi
+    rm -f "$pidfile" "${pidfile%.pid}.port"
+}
+
+_gz_rotate_log() {  # _gz_rotate_log <name>
+    local logfile="$_GLAZE_LOGS/$1.log"
+    [[ -f "$logfile" ]] && mv "$logfile" "${logfile%.log}.$(date +%Y%m%dT%H%M%S).log"
+}
+
 _gz_remove_symlink_if_present() {  # _gz_remove_symlink_if_present <path>
     local path="$1"
     [[ -L "$path" ]] || return 1
     rm "$path"
     return 0
 }
+
 _gz_link_shared_dir_if_missing() {  # _gz_link_shared_dir_if_missing <relative_path>
     local rel="$1"
     local shared_path="$GLAZE_SHARED_ROOT/$rel"
@@ -96,6 +181,7 @@ _gz_link_shared_dir_if_missing() {  # _gz_link_shared_dir_if_missing <relative_p
     mkdir -p "$(dirname "$local_path")"
     ln -s "$shared_path" "$local_path"
 }
+
 _gz_ensure_node() {
     if command -v node &>/dev/null; then
         return 0
@@ -111,9 +197,14 @@ _gz_ensure_node() {
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
     export NVM_DIR="$HOME/.nvm"
     source "$NVM_DIR/nvm.sh"
-    rtk nvm install 20
-    rtk nvm use 20
+    ${GLAZE_AGENT:+rtk }nvm install 20
+    ${GLAZE_AGENT:+rtk }nvm use 20
 }
+
+# ---------------------------------------------------------------------------
+# Setup
+# ---------------------------------------------------------------------------
+
 gz_install_mcp_tools() {
     echo "=== Installing MCP tool dependencies ==="
     local tools=(jq curl git gh)
@@ -205,6 +296,7 @@ gz_setup() {
 # ---------------------------------------------------------------------------
 # Django manage.py
 # ---------------------------------------------------------------------------
+
 gz_manage() {        # gz_manage <subcommand> [args…]
     (
         cd "$GLAZE_ROOT"
@@ -219,6 +311,27 @@ gz_dbshell()         { gz_manage dbshell "$@"; }
 gz_showmigrations()  { gz_manage showmigrations "$@"; }
 gz_dump_public_library() { gz_manage dump_public_library "$@"; }
 gz_load_public_library() { gz_manage load_public_library "$@"; }
+
+gz_prod() {          # gz_prod <manage.py subcommand> [args…]
+    local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
+    ssh "$host" "cd ~/glaze && docker compose exec web python manage.py $*"
+}
+
+gz_prod_shell() {    # gz_prod_shell [-c "cmd"]  — piping avoids SSH quoting issues
+    local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
+    if [[ "$1" == "-c" ]]; then
+        echo "${2:?gz_prod_shell -c requires a command string}" \
+            | ssh "$host" "cd ~/glaze && docker compose exec -T web python manage.py shell"
+    else
+        ssh "$host" "cd ~/glaze && docker compose exec web python manage.py shell $*"
+    fi
+}
+gz_prod_dbshell()    { gz_prod dbshell "$@"; }
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
 gz_test_common() {
     ${GLAZE_AGENT:+rtk }bazel test //tests:common_test "$@"
 }
@@ -375,6 +488,317 @@ gz_build() {
     fi
 }
 
+gz_push() {
+    # Build and push the OCI image to ghcr.io/shaoster/glaze.
+    # Usage: gz_push [--latest]
+    # Always tags with the current commit SHA; pass --latest to also tag :latest.
+    local sha
+    sha=$(git -C "$GLAZE_ROOT" rev-parse HEAD) || return 1
+    local tag_args=(--tag "$sha")
+    [[ "${1:-}" == "--latest" ]] && tag_args+=(--tag latest)
+    ${GLAZE_AGENT:+rtk }bazel run --stamp //:push -- "${tag_args[@]}"
+}
+
+gz_deploy() {
+    # Push the current image and deploy it to the production droplet.
+    # Usage: gz_deploy [--no-push]
+    # Reads GLAZE_PROD_HOST from .env.local (e.g. GLAZE_PROD_HOST=user@host).
+    local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
+    local sha
+    sha=$(git -C "$GLAZE_ROOT" rev-parse HEAD) || return 1
+    if [[ "${1:-}" != "--no-push" ]]; then
+        gz_push --latest || return $?
+    fi
+    "$GLAZE_ROOT/deploy.sh" "$host" "$sha"
+}
+
+# ---------------------------------------------------------------------------
+# Servers
+# ---------------------------------------------------------------------------
+
+gz_backend() {
+    local venv_root env_root port web_port app_origin
+    venv_root="$(_gz_venv_root)"
+    env_root="$(_gz_preferred_root_for ".env.local")"
+    port=$(_gz_find_free_port 8080)
+    web_port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || echo 5173)
+    app_origin="http://localhost:$web_port"
+    echo "$port" > "$_GLAZE_PIDS/backend.port"
+    _gz_start backend "$_GLAZE_LOGS/backend.log" \
+        bash -c "source '$venv_root/.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$env_root/.env.local' ] && source '$env_root/.env.local'; set +a && export APP_ORIGIN='$app_origin' && python manage.py load_public_library --skip-if-missing && uvicorn backend.asgi:application --host 127.0.0.1 --port $port --reload"
+}
+
+gz_web() {
+    local backend_port port
+    backend_port=$(cat "$_GLAZE_PIDS/backend.port" 2>/dev/null || echo 8080)
+    port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || _gz_find_free_port 5173)
+    echo "$port" > "$_GLAZE_PIDS/web.port"
+    BACKEND_PORT="$backend_port" _gz_start web "$_GLAZE_LOGS/web.log" \
+        bash -c "cd '$GLAZE_ROOT/web' && BACKEND_PORT=$backend_port ${GLAZE_AGENT:+rtk }bazel run @nodejs_linux_amd64//:npm -- run dev -- --port $port --strictPort"
+
+    # Wait for Vite to print the chosen port (up to 10 s)
+    local i=0
+    until grep -q 'Local:' "$_GLAZE_LOGS/web.log" 2>/dev/null; do
+        sleep 0.2
+        (( i++ ))
+        (( i >= 50 )) && break
+    done
+    port=$(grep 'Local:' "$_GLAZE_LOGS/web.log" | tail -1 | grep -oE ':[0-9]+/' | tr -d ':/')
+    [[ -n "$port" ]] && echo "$port" > "$_GLAZE_PIDS/web.port"
+    [[ -n "$port" ]] && echo "web: http://localhost:$port"
+    export APP_ORIGIN="http://localhost:${port:-5173}"
+}
+
+gz_open() {
+    (
+        # Give servers a moment to settle
+        sleep 1
+        local port
+        port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || grep 'Local:' "$_GLAZE_LOGS/web.log" 2>/dev/null | tail -1 | grep -oE ':[0-9]+/' | tr -d ':/')
+        local url="http://localhost:${port:-5173}"
+        echo "Opening $url"
+        if command -v wslview &>/dev/null; then
+            wslview "$url"
+        else
+            xdg-open "$url" 2>/dev/null || true
+        fi
+    ) &
+}
+
+gz_start() {
+    _gz_rotate_log backend
+    _gz_find_free_port 5173 > "$_GLAZE_PIDS/web.port"
+    gz_backend
+    _gz_rotate_log web
+    gz_web
+    gz_open
+    echo "Servers running — use 'gz_stop' to stop, 'gz_logs' to tail output."
+    # Best-effort cleanup when this terminal tab closes normally (Ctrl-D / exit / tab X).
+    # Does not fire on SIGKILL. Intentionally registered only after gz_start so that
+    # terminals that never started servers are unaffected.
+    trap 'gz_stop' EXIT
+}
+
+gz_stop() {
+    _gz_stop backend
+    _gz_stop web
+}
+
+gz_status() {
+    for name in backend web; do
+        if _gz_is_running "$name"; then
+            local pid port
+            pid=$(cat "$_GLAZE_PIDS/$name.pid")
+            port=$(cat "$_GLAZE_PIDS/$name.port" 2>/dev/null)
+            if [[ -n "$port" ]]; then
+                echo "$name: running on :$port (PID $pid)"
+            else
+                echo "$name: running (PID $pid)"
+            fi
+        elif [[ -f "$_GLAZE_PIDS/$name.pid" ]]; then
+            local pid=$(cat "$_GLAZE_PIDS/$name.pid" 2>/dev/null)
+            echo "$name: died (stale PID file: ${pid:-empty})"
+        else
+            echo "$name: not running"
+        fi
+    done
+}
+
+gz_clean() {         # purge all PID and port files in current worktree
+    echo "Cleaning server state in $GLAZE_ROOT..."
+    rm -f "$_GLAZE_PIDS"/*.pid "$_GLAZE_PIDS"/*.port
+}
+
+_gz_worktrees_purge() {
+    echo "=== Purging agent worktrees ==="
+    local wt_path="" wt_branch=""
+    while IFS= read -r line; do
+        if [[ "$line" == worktree\ * ]]; then
+            wt_path="${line#worktree }"
+        elif [[ "$line" == branch\ * ]]; then
+            wt_branch="${line#branch refs/heads/}"
+        elif [[ -z "$line" && -n "$wt_path" ]]; then
+            # Only target agent-managed worktrees
+            if [[ "$wt_path" =~ \.agent-worktrees/|\.claude/worktrees/ ]]; then
+                local skip=0
+                echo "Checking $wt_branch ($wt_path)..."
+
+                # 1. Check for open PRs
+                if command -v gh &>/dev/null; then
+                    if gh pr list --head "$wt_branch" --json number --jq '.[].number' | grep -q .; then
+                        echo "  [SKIP] Branch '$wt_branch' has an open PR."
+                        skip=1
+                    fi
+                fi
+
+                # 2. Check for unpushed changes
+                if [[ $skip -eq 0 ]]; then
+                    local upstream
+                    upstream=$(git -C "$GLAZE_SHARED_ROOT" rev-parse --abbrev-ref "$wt_branch@{u}" 2>/dev/null || echo "")
+                    if [[ -n "$upstream" ]]; then
+                        if [[ -n $(git -C "$GLAZE_SHARED_ROOT" rev-list "$upstream..$wt_branch") ]]; then
+                            echo "  [SKIP] Branch '$wt_branch' has unpushed commits."
+                            skip=1
+                        fi
+                    else
+                         # No upstream, check if it's merged into main
+                         if ! git -C "$GLAZE_SHARED_ROOT" merge-base --is-ancestor "$wt_branch" main 2>/dev/null; then
+                             echo "  [SKIP] Branch '$wt_branch' has no upstream and is not merged into main."
+                             skip=1
+                         fi
+                    fi
+                fi
+
+                if [[ $skip -eq 0 ]]; then
+                    echo "  Removing..."
+                    # Stop servers if running
+                    (cd "$wt_path" && source env.sh && gz_stop >/dev/null 2>&1)
+                    git -C "$GLAZE_SHARED_ROOT" worktree remove --force "$wt_path"
+                fi
+            fi
+            wt_path="" wt_branch=""
+        fi
+    done < <(git -C "$GLAZE_SHARED_ROOT" worktree list --porcelain; echo)
+
+    # Cleanup empty parent dirs
+    [[ -d "$GLAZE_SHARED_ROOT/.agent-worktrees" ]] && find "$GLAZE_SHARED_ROOT/.agent-worktrees" -type d -empty -delete 2>/dev/null
+    [[ -d "$GLAZE_SHARED_ROOT/.claude/worktrees" ]] && find "$GLAZE_SHARED_ROOT/.claude/worktrees" -type d -empty -delete 2>/dev/null
+    echo "=== Purge complete ==="
+}
+
+gz_worktrees() {   # list or purge worktrees
+    if [[ "${1:-}" == "--purge" ]]; then
+        _gz_worktrees_purge
+        return 0
+    fi
+
+    local pr_branches=""
+    if command -v gh &>/dev/null; then
+        # Cache open PR branches to avoid N network calls
+        pr_branches=$(gh pr list --limit 100 --json headRefName --jq '.[].headRefName' 2>/dev/null)
+    fi
+
+    local wt_path="" wt_branch=""
+    while IFS= read -r line; do
+        if [[ "$line" == worktree\ * ]]; then
+            wt_path="${line#worktree }"
+        elif [[ "$line" == branch\ * ]]; then
+            wt_branch="${line#branch refs/heads/}"
+        elif [[ "$line" == HEAD\ * ]]; then
+            wt_branch="(detached)"
+        elif [[ -z "$line" && -n "$wt_path" ]]; then
+            local indicators=()
+
+            # 1. Running check
+            if [[ -f "$wt_path/.dev-pids/backend.pid" || -f "$wt_path/.dev-pids/web.pid" ]]; then
+                indicators+=("●")
+            fi
+
+            if [[ "$wt_branch" != "(detached)" ]]; then
+                # 2. PR check
+                if echo "$pr_branches" | grep -qFx "$wt_branch"; then
+                    indicators+=("PR")
+                fi
+
+                # 3. Unpushed check
+                local upstream
+                upstream=$(git -C "$GLAZE_SHARED_ROOT" rev-parse --abbrev-ref "$wt_branch@{u}" 2>/dev/null || echo "")
+                if [[ -n "$upstream" ]]; then
+                    if [[ -n $(git -C "$GLAZE_SHARED_ROOT" rev-list "$upstream..$wt_branch") ]]; then
+                        indicators+=("↑")
+                    fi
+                elif ! git -C "$GLAZE_SHARED_ROOT" merge-base --is-ancestor "$wt_branch" main 2>/dev/null; then
+                    # No upstream, check if it's merged into main
+                    indicators+=("↑")
+                fi
+            fi
+
+            local ind_str=""
+            if [[ ${#indicators[@]} -gt 0 ]]; then
+                # Join with spaces
+                ind_str=" $(IFS=" "; echo "${indicators[*]}")"
+            fi
+
+            printf "  %-50s  %s%s\n" "${wt_branch:-?}" "$wt_path" "$ind_str"
+            wt_path="" wt_branch=""
+        fi
+    done < <(git -C "$GLAZE_SHARED_ROOT" worktree list --porcelain; echo)
+}
+
+gz_cd() {   # gz_cd [pattern] — cd to a matching worktree (defaults to root) and re-source env.sh
+    local pattern="${1:-/}"
+
+    # Shortcut for repo root
+    if [[ "$pattern" == "/" || "$pattern" == "root" ]]; then
+        local target="$GLAZE_SHARED_ROOT"
+        echo "→ $target"
+        cd "$target" && source "$target/env.sh"
+        return
+    fi
+
+    if _gz_is_running backend || _gz_is_running web; then
+        echo "Servers are running in this terminal — run 'gz_stop' before switching worktrees,"
+        echo "or open a new terminal tab for the target worktree."
+        return 1
+    fi
+    local matches
+    matches=$(git -C "$GLAZE_SHARED_ROOT" worktree list --porcelain \
+        | grep '^worktree ' | cut -d' ' -f2- | grep -i "$pattern" || true)
+    local count
+    if [[ -z "$matches" ]]; then
+        count=0
+    else
+        count=$(echo "$matches" | grep -c '^')
+    fi
+    if [[ $count -eq 0 ]]; then
+        echo "No worktree matching '$pattern'"
+        gz_worktrees
+        return 1
+    elif [[ $count -gt 1 ]]; then
+        echo "Ambiguous — multiple matches for '$pattern':"
+        echo "$matches" | sed 's/^/  /'
+        return 1
+    fi
+    local target="$matches"
+    echo "→ $target"
+    cd "$target" && source "$target/env.sh"
+}
+
+gz_logs() {    # gz_logs [backend|web|all]  — defaults to running servers
+    local target="${1:-running}"
+    local logs=()
+    case "$target" in
+        backend|web)
+            if _gz_is_running "$target"; then
+                logs+=("$_GLAZE_LOGS/$target.log")
+            else
+                echo "$target: not running"
+                return 1
+            fi
+            ;;
+        all)
+            logs=("$_GLAZE_LOGS/backend.log" "$_GLAZE_LOGS/web.log")
+            ;;
+        running)
+            _gz_is_running backend && logs+=("$_GLAZE_LOGS/backend.log")
+            _gz_is_running web && logs+=("$_GLAZE_LOGS/web.log")
+            ;;
+        *)
+            echo "Usage: gz_logs [backend|web|all]"
+            return 2
+            ;;
+    esac
+    if [[ ${#logs[@]} -eq 0 ]]; then
+        echo "No servers running in $GLAZE_ROOT"
+        return 1
+    fi
+    tail -f "${logs[@]}"
+}
+
+# ---------------------------------------------------------------------------
+# Type generation
+# ---------------------------------------------------------------------------
+
 gz_gentypes() {
     # Regenerate generated-types.ts via Bazel, then symlink it into the source
     # tree so the IDE and Vite dev server pick it up without a full build.
@@ -417,6 +841,37 @@ _GZ_SHORTCUTS=(
     "gz_cd [pattern]   — cd to a matching worktree (defaults to root) and re-source env.sh"
     "gz_logs [backend|web|all] — stream logs for running servers (or a selected service)"
 )
+
+gz_help() {
+    echo "Glaze helper shortcuts:"
+    for entry in "${_GZ_SHORTCUTS[@]}"; do
+        echo "  $entry"
+    done
+}
+
+# ---------------------------------------------------------------------------
+# Completions
+# ---------------------------------------------------------------------------
+
+# Tab-complete gz_cd with branch slugs and path basenames from all worktrees.
+# Generates candidates from both the short branch name (e.g. issue-123-fix-foo)
+# and the directory basename (same thing for our naming convention, but useful
+# when the branch name differs from the directory name).
+_gz_cd_complete() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local candidates
+    candidates=$(git -C "$GLAZE_SHARED_ROOT" worktree list --porcelain 2>/dev/null \
+        | awk '
+            /^worktree / { path = substr($0, 10); n = split(path, a, "/"); basename = a[n] }
+            /^branch /   { branch = substr($0, 8); gsub("refs/heads/", "", branch) }
+            /^$/         { if (path) { print basename; if (branch != "" && branch != basename) print branch }; path=""; branch="" }
+        ')
+    candidates="root / $candidates"
+    # shellcheck disable=SC2207
+    COMPREPLY=( $(compgen -W "$candidates" -- "$cur") )
+}
+complete -F _gz_cd_complete gz_cd
+
 _gz_get_all_sources() {
     local profile="$PWD/bazel_query_profile.json"
     echo "DEBUG: Starting ALL_SOURCES query at $(date +%s)"
