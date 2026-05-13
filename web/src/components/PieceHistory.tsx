@@ -1,10 +1,12 @@
 import { useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import HistoryIcon from "@mui/icons-material/History";
 import {
   alpha,
   Box,
   Button,
+  Chip,
   Collapse,
   Dialog,
   DialogActions,
@@ -15,6 +17,7 @@ import {
   ListItemText,
   MenuItem,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import type {
@@ -30,6 +33,8 @@ type PieceHistoryProps = {
   pastHistory: PieceState[];
   piece?: PieceDetailType;
   onPieceUpdated?: (updated: PieceDetailType) => void;
+  rewindedStateId?: string | null;
+  onRewind?: (id: string | null) => void;
 };
 
 function AddMissingStateDialog({
@@ -134,12 +139,18 @@ export default function PieceHistory({
   pastHistory,
   piece,
   onPieceUpdated,
+  rewindedStateId,
+  onRewind,
 }: PieceHistoryProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const isEditable = piece?.is_editable ?? false;
 
   if (pastHistory.length === 0 && !isEditable) return null;
+
+  const rewindIndex = rewindedStateId
+    ? pastHistory.findIndex((ps) => ps.id === rewindedStateId)
+    : -1;
 
   return (
     <Box>
@@ -176,50 +187,96 @@ export default function PieceHistory({
       </Box>
       <Collapse in={historyOpen}>
         <List dense sx={{ display: "grid", gap: 1.25 }}>
-          {pastHistory.map((ps, i) =>
-            isEditable && piece && onPieceUpdated ? (
-              <ListItem
-                key={ps.id ?? i}
-                disableGutters
-                sx={(theme) => ({
-                  px: 1.5,
-                  py: 1.5,
-                  borderRadius: 3,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  backgroundColor: alpha(
-                    theme.palette.background.default,
-                    0.34,
-                  ),
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                })}
-              >
-                <Typography
-                  variant="caption"
-                  sx={{
-                    mb: 0.75,
-                    color: "text.secondary",
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                  }}
+          {pastHistory.map((ps, i) => {
+            const isRewinded = ps.id === rewindedStateId;
+            const isAfterRewind = rewindIndex !== -1 && i > rewindIndex;
+            if (isEditable && piece && onPieceUpdated) {
+              return (
+                <Tooltip
+                  key={ps.id ?? i}
+                  title={
+                    isRewinded
+                      ? "Click to stop viewing this state"
+                      : "Click to view and edit this state"
+                  }
+                  placement="top-start"
+                  disableHoverListener={!onRewind}
                 >
-                  {formatPastState(ps.state)}
-                </Typography>
-                <Box sx={{ width: "100%" }}>
-                  <WorkflowState
-                    key={ps.id}
-                    initialPieceState={ps}
-                    pieceId={piece.id}
-                    onSaved={onPieceUpdated}
-                    hideImageUpload
-                    saveStateFn={(payload) =>
-                      updatePastState(piece.id, ps.id, payload)
+                  <ListItem
+                    disableGutters
+                    onClick={
+                      onRewind
+                        ? () => onRewind(isRewinded ? null : ps.id)
+                        : undefined
                     }
-                  />
-                </Box>
-              </ListItem>
-            ) : (
+                    sx={(theme) => ({
+                      px: 1.5,
+                      py: 1.5,
+                      borderRadius: 3,
+                      border: "1px solid",
+                      borderColor: isRewinded ? "primary.main" : "divider",
+                      backgroundColor: alpha(
+                        theme.palette.background.default,
+                        0.34,
+                      ),
+                      flexDirection: "column",
+                      alignItems: "flex-start",
+                      cursor: onRewind ? "pointer" : "default",
+                      opacity: isAfterRewind ? 0.35 : 1,
+                      pointerEvents: isAfterRewind ? "none" : "auto",
+                      transition: "opacity 0.2s, border-color 0.2s",
+                    })}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        mb: 0.75,
+                        width: "100%",
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: isRewinded ? "primary.main" : "text.secondary",
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {formatPastState(ps.state)}
+                      </Typography>
+                      {isRewinded && (
+                        <Chip
+                          icon={<HistoryIcon />}
+                          label="Viewing"
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          sx={{ height: 18, fontSize: "0.65rem" }}
+                        />
+                      )}
+                    </Box>
+                    <Box
+                      sx={{ width: "100%" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <WorkflowState
+                        key={ps.id}
+                        initialPieceState={ps}
+                        pieceId={piece.id}
+                        onSaved={onPieceUpdated}
+                        hideImageUpload
+                        saveStateFn={(payload) =>
+                          updatePastState(piece.id, ps.id, payload)
+                        }
+                      />
+                    </Box>
+                  </ListItem>
+                </Tooltip>
+              );
+            }
+            return (
               <ListItem
                 key={ps.id ?? i}
                 disableGutters
@@ -246,8 +303,8 @@ export default function PieceHistory({
                   }}
                 />
               </ListItem>
-            ),
-          )}
+            );
+          })}
         </List>
         {isEditable && piece && onPieceUpdated && (
           <Box sx={{ mt: 1 }}>
