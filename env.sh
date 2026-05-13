@@ -227,6 +227,7 @@ gz_setup() {
     if ! command -v rtk &>/dev/null; then
         echo "--- Installing RTK (for test optimizations and type generation)..."
         curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+        mkdir -p ~/.claude
         rtk init -g --auto-patch
     fi
 
