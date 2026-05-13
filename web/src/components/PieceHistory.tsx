@@ -266,7 +266,6 @@ export default function PieceHistory({
                         alignItems: "flex-start",
                         cursor: onRewind ? "pointer" : "default",
                         opacity: isAfterRewind ? 0.35 : 1,
-                        pointerEvents: isAfterRewind ? "none" : "auto",
                         transition: "opacity 0.2s, border-color 0.2s",
                       })}
                     >
