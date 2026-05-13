@@ -64,6 +64,7 @@ Before opening or pushing to a PR, verify every item:
 - [ ] Every commit has a short descriptive title with detailed bullets in the body explaining what and why
 - [ ] Refactoring alongside functional changes described separately in commit and PR body
 - [ ] All tests pass: `rtk bazel test //...`
+- [ ] All database migrations are included in the build: `bazel query 'labels(srcs, //api:migrations)'`
 - [ ] All linters pass: `rtk bazel build --config=lint //...`
 - [ ] Build succeeds: `gz_build`
 - [ ] Autoformat all touched files: `gz_format`

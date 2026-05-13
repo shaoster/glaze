@@ -56,31 +56,12 @@ py_library(
 
 filegroup(
     name = "api_commands",
-    srcs = [
-        "management/__init__.py",
-        "management/commands/__init__.py",
-        "management/commands/backpopulate_crops.py",
-        "management/commands/clear_crops.py",
-        "management/commands/clear_stuck_tasks.py",
-        "management/commands/dump_public_library.py",
-        "management/commands/import_test_tile_images.py",
-        "management/commands/load_public_library.py",
-        "management/commands/restore_images_from_backup.py",
-    ],
+    srcs = glob(["management/**/*.py"]),
 )
 
 filegroup(
     name = "migrations",
-    srcs = [
-        "migrations/0001_initial.py",
-        "migrations/0002_piece_shared.py",
-        "migrations/0003_rename_custom_fields.py",
-        "migrations/0004_normalize_images.py",
-        "migrations/0005_image_crops.py",
-        "migrations/0006_asynctask.py",
-        "migrations/0007_piece_showcase_fields_piece_showcase_story.py",
-        "migrations/__init__.py",
-    ],
+    srcs = glob(["migrations/*.py"]),
     visibility = ["//visibility:public"],
 )
 
@@ -312,6 +293,19 @@ py_test(
     ],
 )
 
+py_test(
+    name = "api_migration_test",
+    size = "small",
+    srcs = _CONFTEST + [
+        "tests/test_migrations_completeness.py",
+    ],
+    args = ["api/tests/test_migrations_completeness.py"],
+    data = _TEST_DATA,
+    env = _TEST_ENV,
+    main = "//tools:pytest_main.py",
+    deps = _TEST_DEPS,
+)
+
 # ── API test suite ────────────────────────────────────────────────────────────
 # Aggregate target: `bazel test //api:api_test` runs all API tests.
 # Individual targets above run only when their inputs change.
@@ -325,5 +319,6 @@ test_suite(
         ":api_model_test",
         ":api_piece_test",
         ":api_workflow_test",
+        ":api_migration_test",
     ],
 )
