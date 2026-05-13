@@ -146,7 +146,6 @@ print(finders.find('admin/js/my_script.js'))  # None → file not on the path
 ## Testing
 
 ```bash
-rtk bazel run @uv//:uv -- sync
 rtk bazel test //api:api_test
 ```
 

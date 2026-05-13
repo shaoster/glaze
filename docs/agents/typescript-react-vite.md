@@ -1,23 +1,5 @@
 # TypeScript + React + Vite Guide
 
-## Scaffolding a new project
-
-```bash
-# Create Vite + React + TypeScript project
-rtk bazel run @nodejs_linux_amd64//:npm -- create vite@latest web -- --template react-ts
-cd web
-rtk bazel run @nodejs_linux_amd64//:npm -- install
-
-# Add MUI (with Emotion peer deps)
-rtk bazel run @nodejs_linux_amd64//:npm -- install @mui/material @emotion/react @emotion/styled
-
-# Add Axios and React Router
-rtk bazel run @nodejs_linux_amd64//:npm -- install axios react-router-dom
-
-# Start dev server
-rtk bazel run @nodejs_linux_amd64//:npm -- run dev
-```
-
 Enable stricter TypeScript flags in `tsconfig.json` (`compilerOptions`):
 ```json
 "noUnusedLocals": true,
@@ -150,11 +132,6 @@ function useAsync<T>(asyncFunction: () => Promise<T>, immediate = true) {
 - Always use MUI theme tokens for color — never hardcode hex/rgb values. For text use `text.primary` (main content) and `text.secondary` (labels, metadata).
 
 ## Testing
-
-```bash
-rtk bazel test //web:web_test      # single run (used in CI)
-cd web && rtk bazel run @nodejs_linux_amd64//:npm -- run test:watch  # watch mode for development
-```
 
 The test environment is jsdom with React Testing Library.
 

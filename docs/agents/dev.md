@@ -11,9 +11,7 @@ python manage.py migrate
 uvicorn backend.asgi:application --port 8080 --reload  # or any free port; gz_start picks one automatically
 
 # Web (separate terminal)
-cd web
-rtk bazel run @nodejs_linux_amd64//:npm -- install
-rtk bazel run @nodejs_linux_amd64//:npm -- run dev
+gz_web
 
 # Remote ML Offload (Optional, for 1GB RAM servers)
 # 1. Create a secret 'piece-image-crop-secret' with AUTH_TOKEN=xxx
@@ -423,7 +421,6 @@ rtk bazel test //api:api_mypy
 
 # Web component tests
 rtk bazel test //web:web_test
-cd web && rtk bazel run @nodejs_linux_amd64//:npm -- run test:watch  # watch mode (no Bazel equivalent)
 
 # Web type-check + lint (both covered by the lint target)
 # Do not run tsc directly — tsc may not resolve depending on environment setup.
@@ -455,9 +452,8 @@ GitHub Actions runs three parallel jobs on every push and pull request — see [
 
 | Job        | What it runs                                                                                                                                                    |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `test`     | `rtk bazel test --config=ci //...` — all test suites                                                                                                                |
-| `lint`     | `bazel build --config=ci --config=lint //...` — ruff, eslint, tsc, mypy                                                                                         |
-| `coverage` | `bazel coverage --config=ci --combined_report=lcov //...` — feeds Codecov |
+| `lint`     | `source env.sh && gz_lint` — ruff, eslint, tsc, mypy via Bazel                                                                                         |
+| `coverage` | `source env.sh && gz_test --coverage` — all test suites + Codecov report |
 
 Coverage reports are uploaded to [Codecov](https://codecov.io). Codecov posts a summary comment on each PR.
 
