@@ -12,8 +12,8 @@ common --spawn_strategy=local
 build --incompatible_enable_cc_toolchain_resolution
 
 # Resource limits
-build --local_ram_resources=HOST_RAM*0.5
-build --local_cpu_resources=HOST_CPUS*0.5
+build --local_resources=memory=HOST_RAM*0.5
+build --local_resources=cpu=HOST_CPUS*0.5
 
 # aspect_rules_py / uv setup
 common --@pypi//venv=glaze
