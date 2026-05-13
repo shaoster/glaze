@@ -79,9 +79,22 @@ Keep the title under 70 characters and action-oriented:
 - Feature: `feat: <what it enables>`
 - Chore: `chore: <what changes>`
 
-### 4. Confirm and file
+### 4. Discuss & Refine
 
-Show the proposed title and body to the user. Incorporate any feedback, then file:
+After presenting the draft, do not immediately ask to file. Instead, ask:
+> Does this spec capture your intent, or are there parts we should discuss and
+> refine?
+
+Enter a conversational phase. Answer questions, clarify technical trade-offs,
+and gather feedback **without re-drafting the entire body** until the user is
+satisfied. This keeps the UI focused and saves tokens.
+
+Once the user approves the refined direction, present the **Final Draft**.
+
+### 5. Confirm and file
+
+Show the final proposed title and body. Incorporate any last-second tweaks, then
+file:
 
 ```bash
 cat > /tmp/issue-body.md << 'EOF'
