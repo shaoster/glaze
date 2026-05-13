@@ -4,7 +4,7 @@ import type { DependencyList, Dispatch, SetStateAction } from "react";
 interface AsyncState<T> {
   data: T | null;
   loading: boolean;
-  error: Error | null;
+  error: any | null;
 }
 
 export interface UseAsyncResult<T> extends AsyncState<T> {
@@ -61,7 +61,7 @@ export function useAsync<T>(
           setState({
             data: null,
             loading: false,
-            error: err instanceof Error ? err : new Error(String(err)),
+            error: err,
           });
       });
     return () => {
@@ -81,4 +81,36 @@ export function useAsync<T>(
   }, []);
 
   return { ...state, setData };
+}
+
+/**
+ * Manages loading / error / data state for a manually-triggered async function.
+ * Returns an `execute` function and the current state.
+ */
+export function useAsyncFn<T, Args extends any[]>(
+  asyncFn: (...args: Args) => Promise<T>,
+  deps: DependencyList = [],
+): AsyncState<T> & { execute: (...args: Args) => Promise<T> } {
+  const [state, setState] = useState<AsyncState<T>>({
+    data: null,
+    loading: false,
+    error: null,
+  });
+
+  const execute = useCallback(
+    async (...args: Args) => {
+      setState({ data: null, loading: true, error: null });
+      try {
+        const data = await asyncFn(...args);
+        setState({ data, loading: false, error: null });
+        return data;
+      } catch (err: unknown) {
+        setState({ data: null, loading: false, error: err });
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    deps,
+  );
+
+  return { ...state, execute };
 }

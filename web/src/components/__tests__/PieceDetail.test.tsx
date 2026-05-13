@@ -145,6 +145,14 @@ vi.mock("../../util/api", () => ({
   toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),
   hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
   uploadImageToCloudinary: vi.fn(),
+  extractErrorMessage: vi.fn((err) => {
+    if (err && typeof err === "object" && "response" in err) {
+      const data = (err as any).response?.data;
+      if (data?.non_field_errors?.[0]) return data.non_field_errors[0];
+      if (typeof data === "string") return data;
+    }
+    return (err as Error)?.message || "An unexpected error occurred.";
+  }),
 }));
 
 // Stub WorkflowState to avoid autosave timers and async GlobalEntryField calls
@@ -344,7 +352,7 @@ describe("PieceDetail", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("Failed to save location. Please try again."),
+        screen.getByText("Network error"),
       ).toBeInTheDocument(),
     );
   });
@@ -719,7 +727,7 @@ describe("PieceDetail", () => {
 
       await waitFor(() =>
         expect(
-          screen.getByText("Failed to save name. Please try again."),
+          screen.getByText("Network error"),
         ).toBeInTheDocument(),
       );
       expect(
@@ -897,6 +905,34 @@ describe("PieceDetail", () => {
       expect(
         screen.getByText(/seal edit mode before transitioning/i),
       ).toBeInTheDocument();
+    });
+
+    it("disables 'Edit piece history' button when piece is shared", async () => {
+      await renderPieceDetail(makePiece({ is_editable: false, shared: true }));
+      const editBtn = screen.getByRole("button", { name: /edit piece history/i });
+      expect(editBtn).toBeDisabled();
+      expect(
+        screen.getByText(/this piece is publicly shared. unshare it to edit history./i),
+      ).toBeInTheDocument();
+    });
+
+    it("displays descriptive error message from extractErrorMessage on toggle failure", async () => {
+      const errorResponse = {
+        response: {
+          data: {
+            non_field_errors: ["Piece is shared and cannot be made editable."],
+          },
+        },
+      };
+      vi.mocked(api.updatePiece).mockRejectedValueOnce(errorResponse);
+      await renderPieceDetail(makePiece({ is_editable: false }));
+      fireEvent.click(screen.getByRole("button", { name: /edit piece history/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("Piece is shared and cannot be made editable."),
+        ).toBeInTheDocument();
+      });
     });
   });
 });
