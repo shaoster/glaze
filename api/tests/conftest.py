@@ -31,7 +31,7 @@ def client(user):
 @pytest.fixture
 def piece(user, db):
     p = Piece.objects.create(user=user, name="Test Bowl")
-    PieceState.objects.create(piece=p, state=ENTRY_STATE)
+    PieceState.objects.create(piece=p, state=ENTRY_STATE, order=1)
     return p
 
 

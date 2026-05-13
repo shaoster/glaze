@@ -9,6 +9,7 @@ import {
   Alert,
   alpha,
   Box,
+  Button,
   Divider,
   IconButton,
   TextField,
@@ -18,6 +19,8 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
+import HistoryIcon from "@mui/icons-material/History";
+import LockIcon from "@mui/icons-material/Lock";
 import { useBlocker } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
 import { formatState, isTerminalState } from "../util/types";
@@ -112,6 +115,58 @@ function SectionCard({ eyebrow, title, subtitle, children }: SectionCardProps) {
         )}
       </Box>
       <Box sx={{ px: { xs: 1.5, sm: 2 }, pb: 1.5 }}>{children}</Box>
+    </Box>
+  );
+}
+
+function EditableToggle({ piece, onPieceUpdated }: PieceDetailProps) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function toggle() {
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await updatePiece(piece.id, {
+        is_editable: !piece.is_editable,
+      });
+      onPieceUpdated(updated);
+    } catch {
+      setError("Failed to update. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Box>
+      {piece.is_editable ? (
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<LockIcon fontSize="small" />}
+          onClick={toggle}
+          disabled={saving}
+        >
+          Seal changes
+        </Button>
+      ) : (
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<HistoryIcon fontSize="small" />}
+          onClick={toggle}
+          disabled={saving}
+          sx={{ borderStyle: "dashed", color: "text.secondary" }}
+        >
+          Edit piece history
+        </Button>
+      )}
+      {error && (
+        <Typography variant="caption" color="error" sx={{ ml: 1 }}>
+          {error}
+        </Typography>
+      )}
     </Box>
   );
 }
@@ -441,6 +496,11 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
                 <ShareControls piece={piece} onPieceUpdated={onPieceUpdated} />
               </Box>
             )}
+            {canEdit && (
+              <Box sx={{ mb: 1.5 }}>
+                <EditableToggle piece={piece} onPieceUpdated={onPieceUpdated} />
+              </Box>
+            )}
             <Box sx={{ mb: 1.5 }}>
               <SectionCard>
                 <GlobalEntryField
@@ -601,7 +661,11 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
           title="Timeline"
           subtitle={`${pastHistory.length} completed state${pastHistory.length === 1 ? "" : "s"}`}
         >
-          <PieceHistory pastHistory={pastHistory} />
+          <PieceHistory
+            pastHistory={pastHistory}
+            piece={piece}
+            onPieceUpdated={onPieceUpdated}
+          />
         </SectionCard>
       </Box>
 

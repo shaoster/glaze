@@ -244,6 +244,7 @@ class PieceStateSerializer(serializers.ModelSerializer):
     class Meta:
         model = PieceState
         fields = [
+            "id",
             "state",
             "notes",
             "created",
@@ -252,6 +253,7 @@ class PieceStateSerializer(serializers.ModelSerializer):
             "custom_fields",
             "previous_state",
             "next_state",
+            "has_been_edited",
         ]
         extra_kwargs = {
             "notes": {"required": True},
@@ -286,18 +288,28 @@ class PieceStateSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_previous_state(self, obj: PieceState) -> str | None:
-        prev = (
-            obj.piece.states.filter(created__lt=obj.created)
-            .order_by("-created")
-            .first()
-        )
+        if obj.order is not None:
+            prev = (
+                obj.piece.states.filter(order__lt=obj.order).order_by("-order").first()
+            )
+        else:
+            prev = (
+                obj.piece.states.filter(created__lt=obj.created)
+                .order_by("-created")
+                .first()
+            )
         return prev.state if prev else None
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_next_state(self, obj: PieceState) -> str | None:
-        nxt = (
-            obj.piece.states.filter(created__gt=obj.created).order_by("created").first()
-        )
+        if obj.order is not None:
+            nxt = obj.piece.states.filter(order__gt=obj.order).order_by("order").first()
+        else:
+            nxt = (
+                obj.piece.states.filter(created__gt=obj.created)
+                .order_by("created")
+                .first()
+            )
         return nxt.state if nxt else None
 
     def to_representation(self, instance: PieceState) -> dict:
@@ -350,6 +362,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
             "last_modified",
             "thumbnail",
             "shared",
+            "is_editable",
             "showcase_story",
             "showcase_fields",
             "can_edit",
@@ -443,7 +456,7 @@ class PieceCreateSerializer(serializers.ModelSerializer):
             current_location=location_obj,
         )
         PieceState.objects.create(
-            user=user, piece=piece, state=ENTRY_STATE, notes=notes
+            user=user, piece=piece, state=ENTRY_STATE, notes=notes, order=1
         )
 
         # Queue auto-detection for thumbnail if Cloudinary and no crop provided.
@@ -487,6 +500,8 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
 
     def validate_state(self, value: str) -> str:
         piece: Piece = self.context["piece"]
+        if piece.is_editable:
+            return value
         current = piece.current_state
         if current is not None:
             valid_next = SUCCESSORS.get(current.state, [])
@@ -498,6 +513,10 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data: dict) -> PieceState:
+        from django.db.models import F, Max
+
+        from .workflow import can_reach
+
         images = validated_data.pop("images", [])
 
         new_state_id: str = validated_data["state"]
@@ -508,6 +527,36 @@ class PieceStateCreateSerializer(serializers.ModelSerializer):
         )
 
         validated_data["custom_fields"] = inline_fields
+
+        if piece.is_editable:
+            existing = list(piece.states.values("state", "order"))
+            pred_orders = [
+                ps["order"]
+                for ps in existing
+                if ps["state"] != new_state_id and can_reach(ps["state"], new_state_id)
+            ]
+            succ_orders = [
+                ps["order"]
+                for ps in existing
+                if ps["state"] != new_state_id and can_reach(new_state_id, ps["state"])
+            ]
+            pred_orders_valid = [o for o in pred_orders if o is not None]
+            succ_orders_valid = [o for o in succ_orders if o is not None]
+            if pred_orders_valid:
+                insert_after = max(pred_orders_valid)
+            elif succ_orders_valid:
+                insert_after = min(succ_orders_valid) - 1
+            else:
+                insert_after = piece.states.aggregate(Max("order"))["order__max"] or 0
+            new_order = insert_after + 1
+            piece.states.filter(order__gte=new_order).update(order=F("order") + 1)
+            validated_data["order"] = new_order
+            validated_data["has_been_edited"] = True
+        else:
+            validated_data["order"] = (
+                piece.states.aggregate(Max("order"))["order__max"] or 0
+            ) + 1
+
         try:
             piece_state = PieceState.objects.create(
                 user=piece.user,
@@ -663,6 +712,7 @@ class PieceUpdateSerializer(serializers.Serializer):
     )
     thumbnail = ThumbnailSerializer(required=False, allow_null=True)
     shared = serializers.BooleanField(required=False)
+    is_editable = serializers.BooleanField(required=False)
     tags = serializers.ListField(child=serializers.CharField(), required=False)
     showcase_story = serializers.CharField(required=False, allow_blank=True)
     showcase_fields = serializers.JSONField(required=False)
@@ -675,6 +725,19 @@ class PieceUpdateSerializer(serializers.Serializer):
         if current is None or current.state not in TERMINAL_STATES:
             raise serializers.ValidationError("Only terminal pieces can be shared.")
         return value
+
+    def validate(self, data: dict) -> dict:
+        piece: Piece | None = self.context.get("piece")
+        would_be_editable = data.get(
+            "is_editable", piece.is_editable if piece else False
+        )
+        would_be_shared = data.get("shared", piece.shared if piece else False)
+        if would_be_editable and would_be_shared:
+            raise serializers.ValidationError(
+                "A piece cannot be shared while in editable mode. "
+                "Seal the piece before sharing, or unshare before editing."
+            )
+        return data
 
     def validate_showcase_fields(self, value):
         if not isinstance(value, list):
@@ -721,6 +784,8 @@ class PieceUpdateSerializer(serializers.Serializer):
                 get_task_interface().submit(task)
         if "shared" in validated_data:
             instance.shared = validated_data["shared"]
+        if "is_editable" in validated_data:
+            instance.is_editable = validated_data["is_editable"]
         if "showcase_story" in validated_data:
             instance.showcase_story = validated_data["showcase_story"]
         if "showcase_fields" in validated_data:

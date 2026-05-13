@@ -36,6 +36,7 @@ class TestPiecesList:
             "last_modified",
             "thumbnail",
             "shared",
+            "is_editable",
             "can_edit",
             "current_state",
             "tags",

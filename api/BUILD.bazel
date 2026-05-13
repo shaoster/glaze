@@ -200,6 +200,7 @@ py_test(
         "tests/test_pieces_create.py",
         "tests/test_pieces_list.py",
         "tests/test_sealed_state.py",
+        "tests/test_editable_mode.py",
     ],
     args = [
         "api/tests/test_pieces_create.py",
@@ -211,6 +212,7 @@ py_test(
         "api/tests/test_analysis.py",
         "api/tests/test_piece_showcase_validation.py",
         "api/tests/test_piece_state_admin_relational.py",
+        "api/tests/test_editable_mode.py",
     ],
     data = _TEST_DATA,
     env = _TEST_ENV,

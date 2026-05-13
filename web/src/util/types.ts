@@ -71,9 +71,11 @@ export type StateSummary = components["schemas"]["StateSummary"] & {
 // Full state record returned in detail responses.
 // Intersection narrows state: string → state: State.
 export type PieceState = Omit<components["schemas"]["PieceState"], "images"> & {
+  id: string;
   state: State;
   images: CaptionedImage[];
   custom_fields: Record<string, unknown>;
+  has_been_edited: boolean;
 };
 
 // Piece list entry. Intersection narrows current_state to use our typed StateSummary.
@@ -84,6 +86,7 @@ export type PieceSummary = Omit<
   current_state: StateSummary;
   thumbnail: Thumbnail | null;
   shared: boolean;
+  is_editable: boolean;
   can_edit: boolean;
   tags: TagEntry[];
   showcase_fields: string[];

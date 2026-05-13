@@ -174,6 +174,43 @@ describe("piece endpoints", () => {
     expect(result.current_state.next_state).toBe("trimmed");
   });
 
+  it("fetchPiece normalizes valid image crops and drops invalid crops", async () => {
+    const { fetchPiece } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: {
+        ...wirePieceDetail,
+        current_state: {
+          ...wirePieceState,
+          images: [
+            {
+              ...wireImage,
+              crop: { x: -0.25, y: 0.5, width: 1.25, height: 0.75 },
+            },
+            {
+              ...wireImage,
+              crop: { x: 0, y: 0, width: 0, height: 1 },
+            },
+            {
+              ...wireImage,
+              crop: { x: 0, y: "bad", width: 1, height: 1 },
+            },
+          ],
+        },
+      },
+    });
+
+    const result = await fetchPiece("piece-1");
+
+    expect(result.current_state.images[0].crop).toEqual({
+      x: 0,
+      y: 0.5,
+      width: 1,
+      height: 0.75,
+    });
+    expect(result.current_state.images[1].crop).toBeNull();
+    expect(result.current_state.images[2].crop).toBeNull();
+  });
+
   it("createPiece posts the payload and maps the response", async () => {
     const { createPiece } = await loadApiModule();
     mockClient.post.mockResolvedValue({ data: wirePieceDetail });
@@ -213,6 +250,23 @@ describe("piece endpoints", () => {
     expect(mockClient.patch).toHaveBeenCalledWith("pieces/piece-1/state/", {
       notes: "updated notes",
     });
+    expect(result.id).toBe("piece-1");
+  });
+
+  it("updatePastState patches the specific state endpoint", async () => {
+    const { updatePastState } = await loadApiModule();
+    mockClient.patch.mockResolvedValue({ data: wirePieceDetail });
+
+    const result = await updatePastState("piece-1", "state-1", {
+      notes: "retroactive notes",
+    });
+
+    expect(mockClient.patch).toHaveBeenCalledWith(
+      "pieces/piece-1/states/state-1/",
+      {
+        notes: "retroactive notes",
+      },
+    );
     expect(result.id).toBe("piece-1");
   });
 

@@ -139,6 +139,7 @@ vi.mock("../../util/api", () => ({
   fetchGlobalEntries: vi.fn().mockResolvedValue([]),
   fetchGlobalEntriesWithFilters: vi.fn().mockResolvedValue([]),
   updateCurrentState: vi.fn(),
+  updatePastState: vi.fn(),
   addPieceState: vi.fn(),
   updatePiece: vi.fn(),
   createTagEntry: vi.fn(),
@@ -150,6 +151,7 @@ vi.mock("../../util/api", () => ({
 
 function makeState(overrides: Partial<PieceState> = {}): PieceState {
   return {
+    id: "state-id-1",
     state: "designed",
     notes: "",
     created: new Date("2024-01-15T10:00:00Z"),
@@ -158,6 +160,7 @@ function makeState(overrides: Partial<PieceState> = {}): PieceState {
     custom_fields: {},
     previous_state: null,
     next_state: null,
+    has_been_edited: false,
     ...overrides,
   };
 }
@@ -175,10 +178,13 @@ function makePiece(overrides: Partial<PieceDetailType> = {}): PieceDetailType {
       cloud_name: null,
     },
     shared: false,
+    is_editable: false,
     can_edit: true,
     current_state: state,
     current_location: "",
     tags: [],
+    showcase_story: "",
+    showcase_fields: [],
     history: [state],
     ...overrides,
   };
@@ -804,6 +810,48 @@ describe("PieceDetail", () => {
       expect(
         screen.getByRole("button", { name: "Save tags" }),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("editable mode toggle", () => {
+    it("renders 'Edit piece history' button when is_editable=false", async () => {
+      await renderPieceDetail(makePiece({ is_editable: false }));
+      expect(
+        screen.getByRole("button", { name: /edit piece history/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("renders 'Seal changes' button when is_editable=true", async () => {
+      await renderPieceDetail(makePiece({ is_editable: true }));
+      expect(
+        screen.getByRole("button", { name: /seal changes/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("calls updatePiece with is_editable=true when 'Edit piece history' is clicked", async () => {
+      const updated = makePiece({ is_editable: true });
+      vi.mocked(api.updatePiece).mockResolvedValueOnce(updated);
+      await renderPieceDetail(makePiece({ is_editable: false }));
+      fireEvent.click(screen.getByRole("button", { name: /edit piece history/i }));
+      await waitFor(() => {
+        expect(api.updatePiece).toHaveBeenCalledWith(
+          "piece-id-1",
+          expect.objectContaining({ is_editable: true }),
+        );
+      });
+    });
+
+    it("calls updatePiece with is_editable=false when 'Seal changes' is clicked", async () => {
+      const updated = makePiece({ is_editable: false });
+      vi.mocked(api.updatePiece).mockResolvedValueOnce(updated);
+      await renderPieceDetail(makePiece({ is_editable: true }));
+      fireEvent.click(screen.getByRole("button", { name: /seal changes/i }));
+      await waitFor(() => {
+        expect(api.updatePiece).toHaveBeenCalledWith(
+          "piece-id-1",
+          expect.objectContaining({ is_editable: false }),
+        );
+      });
     });
   });
 });

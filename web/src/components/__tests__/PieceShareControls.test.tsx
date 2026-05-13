@@ -17,8 +17,10 @@ function makePiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
     last_modified: new Date("2024-01-15T10:00:00Z"),
     thumbnail: null,
     shared: false,
+    is_editable: false,
     can_edit: true,
     current_state: {
+      id: "state-id-1",
       state: "completed",
       notes: "",
       created: new Date("2024-01-15T10:00:00Z"),
@@ -27,9 +29,12 @@ function makePiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
       custom_fields: {},
       previous_state: null,
       next_state: null,
+      has_been_edited: false,
     },
     current_location: "",
     tags: [],
+    showcase_story: "",
+    showcase_fields: [],
     history: [],
     ...overrides,
   };
