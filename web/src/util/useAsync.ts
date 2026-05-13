@@ -90,7 +90,7 @@ export function useAsync<T>(
 export function useAsyncFn<T, Args extends any[]>(
   asyncFn: (...args: Args) => Promise<T>,
   deps: DependencyList = [],
-): AsyncState<T> & { execute: (...args: Args) => Promise<T> } {
+): AsyncState<T> & { execute: (...args: Args) => Promise<T | undefined> } {
   const [state, setState] = useState<AsyncState<T>>({
     data: null,
     loading: false,
