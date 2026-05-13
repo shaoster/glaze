@@ -107,6 +107,7 @@ def main() -> None:
         # --- DB mode: pull recent images ---
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
         import django
+
         django.setup()
         from api.models import Image as ApiImage  # noqa: PLC0415
 

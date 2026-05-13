@@ -227,6 +227,24 @@ class TestPieceDetail:
         assert response.status_code == 200
         assert response.json()["shared"] is True
 
+    def test_owner_cannot_enable_edit_mode_on_shared_piece(self, client, piece):
+        PieceState.objects.create(user=piece.user, piece=piece, state="completed")
+        piece.shared = True
+        piece.save()
+
+        response = client.patch(
+            f"/api/pieces/{piece.id}/",
+            {"is_editable": True},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {
+            "non_field_errors": [
+                "A piece cannot be shared while in editable mode. Seal the piece before sharing, or unshare before editing."
+            ]
+        }
+
     def test_owner_cannot_share_non_terminal_piece(self, client, piece):
         response = client.patch(
             f"/api/pieces/{piece.id}/",
