@@ -10,6 +10,7 @@ import {
   alpha,
   Box,
   Button,
+  Chip,
   Divider,
   IconButton,
   TextField,
@@ -27,7 +28,7 @@ import { formatState, isTerminalState, validateHistorySequence } from "../util/t
 import {
   getCustomFieldDefinitions,
 } from "../util/workflow";
-import { addPieceState, updateCurrentState, updatePiece } from "../util/api";
+import { addPieceState, updateCurrentState, updatePastState, updatePiece } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
 import NavigationBlocker from "./NavigationBlocker";
 import WorkflowState from "./WorkflowState";
@@ -209,6 +210,16 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   const hasWorkflowContent =
     canEdit || getCustomFieldDefinitions(currentState.state).length > 0;
   const pastHistory = piece.history.slice(0, -1);
+
+  const [rewindedStateId, setRewindedStateId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!piece.is_editable) setRewindedStateId(null);
+  }, [piece.is_editable]);
+
+  const rewindedState = rewindedStateId
+    ? pastHistory.find((ps) => ps.id === rewindedStateId) ?? null
+    : null;
 
   const [showcaseStoryValue, setShowcaseStoryValue] = useState(
     piece.showcase_story ?? "",
@@ -598,7 +609,33 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
           </Box>
         </Box>
 
-        {hasWorkflowContent && (
+        {rewindedState && piece.is_editable ? (
+          <SectionCard>
+            <Box sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
+              <Chip
+                icon={<HistoryIcon fontSize="small" />}
+                label={`Rewound to: ${formatState(rewindedState.state)}`}
+                color="primary"
+                variant="outlined"
+                size="small"
+                onDelete={() => setRewindedStateId(null)}
+              />
+              <Typography variant="caption" color="text.secondary">
+                Editing historical state — later states greyed out in timeline
+              </Typography>
+            </Box>
+            <WorkflowState
+              key={rewindedState.id}
+              initialPieceState={rewindedState}
+              pieceId={piece.id}
+              onSaved={onPieceUpdated}
+              hideImageUpload
+              saveStateFn={(payload) =>
+                updatePastState(piece.id, rewindedState.id, payload)
+              }
+            />
+          </SectionCard>
+        ) : hasWorkflowContent ? (
           <SectionCard>
             <WorkflowState
               key={currentState.state + currentState.created.toISOString()}
@@ -609,7 +646,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
               readOnly={!canEdit}
             />
           </SectionCard>
-        )}
+        ) : null}
 
         <Divider sx={{ my: 2, opacity: 0.4 }} />
 
@@ -673,6 +710,8 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             pastHistory={pastHistory}
             piece={piece}
             onPieceUpdated={onPieceUpdated}
+            rewindedStateId={rewindedStateId}
+            onRewind={piece.is_editable ? setRewindedStateId : undefined}
           />
         </SectionCard>
       </Box>

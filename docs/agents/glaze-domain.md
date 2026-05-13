@@ -587,6 +587,24 @@ These extend the generic GitHub interactions guide with Glaze-specific protected
 
 ---
 
+## Rewind (Edit-Mode History Navigation)
+
+When a piece has `is_editable=true`, users can "rewind" to a past state by clicking it in the Timeline section. This is a **frontend-only** display concept — the backend `current_state` is never altered.
+
+**How it works:**
+- `PieceDetailContent` holds `rewindedStateId: string | null` in local state.
+- When a past state is clicked in `PieceHistory`, `rewindedStateId` is set to that state's ID (clicking again toggles it off).
+- The main `WorkflowState` panel at the top of `PieceDetail` renders the rewound state (via `updatePastState`) instead of `currentState`. A "Rewound to: [State]" chip with a dismiss button is shown above the panel.
+- All history items chronologically after the rewound state are greyed out (`opacity: 0.35`, non-interactive) in the timeline.
+- When the piece is sealed (`is_editable` → false), `rewindedStateId` resets to `null` automatically via a `useEffect`, reverting the view to the real topologically latest state.
+- The rewind affordance is only available while `is_editable=true`; `onRewind` is not passed to `PieceHistory` when the piece is sealed.
+
+**Files:**
+- `web/src/components/PieceDetail.tsx` — `rewindedStateId` state, useEffect reset, conditional WorkflowState, rewind banner
+- `web/src/components/PieceHistory.tsx` — clickable list items, greying-out logic, `rewindedStateId`/`onRewind` props
+
+---
+
 ## Key Constraints
 
 - `workflow.yml` is the single source of truth for states and transitions. Both backend validation and web UI must derive from it — never duplicate the state list.
