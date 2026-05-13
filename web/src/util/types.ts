@@ -1,5 +1,6 @@
 import type { components } from "./generated-types";
 import workflow from "../../../workflow.yml";
+import { formatState as _formatState } from "./workflow";
 export {
   formatState,
   formatPastState,
@@ -98,6 +99,23 @@ export type PieceDetail = PieceSummary & {
   current_state: PieceState;
   history: PieceState[];
 };
+
+// Returns null if the history+current sequence has all valid transitions, or an
+// error string for the first invalid step (e.g. "'Glazing' is not a valid successor of 'Designing'").
+export function validateHistorySequence(
+  history: PieceState[],
+  currentState: PieceState,
+): string | null {
+  const allStates = [...history, currentState];
+  for (let i = 0; i < allStates.length - 1; i++) {
+    const from = allStates[i].state;
+    const to = allStates[i + 1].state;
+    if (!(SUCCESSORS[from] ?? []).includes(to)) {
+      return `'${_formatState(to)}' is not a valid successor of '${_formatState(from)}'`;
+    }
+  }
+  return null;
+}
 
 // GlazeCombination entry and related types — derived from generated OpenAPI types.
 export type GlazeTypeRef = components["schemas"]["GlazeTypeRef"];
