@@ -105,8 +105,6 @@ jobs:
           echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
       - name: Run Lint
         shell: bash
-        env:
-          GLAZE_AGENT: ""
         run: |
           source env.sh
           gz_lint
@@ -140,8 +138,6 @@ jobs:
           echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
       - name: Run Coverage & Test
         shell: bash
-        env:
-          GLAZE_AGENT: ""
         run: |
           source env.sh
           gz_test --coverage
