@@ -48,6 +48,7 @@ type WorkflowStateProps = {
   onDirtyChange?: (dirty: boolean) => void;
   autosaveDelayMs?: number;
   readOnly?: boolean;
+  hideNotes?: boolean;
   hideImageUpload?: boolean;
   saveStateFn?: (payload: UpdateStatePayload) => Promise<PieceDetail>;
 };
@@ -162,6 +163,7 @@ export default function WorkflowState({
   onDirtyChange,
   autosaveDelayMs,
   readOnly = false,
+  hideNotes = false,
   hideImageUpload = false,
   saveStateFn,
 }: WorkflowStateProps) {
@@ -427,8 +429,8 @@ export default function WorkflowState({
         textAlign: "left",
       }}
     >
-      {/* Notes — hidden in read-only (public) views */}
-      {!readOnly && (
+      {/* Notes — hidden in public views, disabled in owner read-only views */}
+      {!hideNotes && (
         <TextField
           label="Notes"
           multiline
@@ -436,6 +438,7 @@ export default function WorkflowState({
           onChange={(e) => dispatch({ type: "set_notes", notes: e.target.value })}
           slotProps={{ htmlInput: { maxLength: 2000 } }}
           fullWidth
+          disabled={readOnly}
           sx={{
             mb: 1.5,
             "& .MuiInputBase-root": { fontSize: "0.875rem" },

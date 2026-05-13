@@ -284,153 +284,140 @@ export default function PieceHistory({
 
             // Only show insert affordance in edit mode, with a valid predecessor,
             // and NOT before the last item (no affordance after pastHistory.at(-1))
-            // — actually show before each item (between predecessor and item[i])
             const showInsert = canModifyHistory && predecessor !== null;
 
-            if (canModifyHistory && piece && onPieceUpdated) {
-              return (
-                <Box key={ps.id ?? i}>
-                  {showInsert && predecessor && (
-                    <InsertButton
-                      predecessor={predecessor}
-                      presentStates={presentStates}
-                      piece={piece}
-                      onPieceUpdated={onPieceUpdated}
-                    />
-                  )}
-                  <Tooltip
-                    title={
-                      isRewinded
-                        ? "Click to stop viewing this state"
-                        : "Click to view and edit this state"
+            return (
+              <Box key={ps.id ?? i}>
+                {showInsert && predecessor && (
+                  <InsertButton
+                    predecessor={predecessor}
+                    presentStates={presentStates}
+                    piece={piece!}
+                    onPieceUpdated={onPieceUpdated!}
+                  />
+                )}
+                <Tooltip
+                  title={
+                    isRewinded
+                      ? "Click to stop viewing this state"
+                      : canModifyHistory
+                        ? "Click to view and edit this state"
+                        : "Click to view this state"
+                  }
+                  placement="top-start"
+                  disableHoverListener={!onRewind}
+                >
+                  <ListItem
+                    disableGutters
+                    onClick={
+                      onRewind
+                        ? () => onRewind(isRewinded ? null : ps.id)
+                        : undefined
                     }
-                    placement="top-start"
-                    disableHoverListener={!onRewind}
+                    sx={(theme) => ({
+                      px: 1.5,
+                      py: 1.5,
+                      mb: 1,
+                      borderRadius: 3,
+                      border: "1px solid",
+                      borderColor: isRewinded ? "primary.main" : "divider",
+                      backgroundColor: alpha(
+                        theme.palette.background.default,
+                        0.34,
+                      ),
+                      flexDirection: "column",
+                      alignItems: "flex-start",
+                      cursor: onRewind ? "pointer" : "default",
+                      opacity: isAfterRewind ? 0.35 : 1,
+                      transition: "opacity 0.2s, border-color 0.2s",
+                      "&:hover": {
+                        borderColor: onRewind ? "primary.main" : "divider",
+                      },
+                    })}
                   >
-                    <ListItem
-                      disableGutters
-                      onClick={
-                        onRewind
-                          ? () => onRewind(isRewinded ? null : ps.id)
-                          : undefined
-                      }
-                      sx={(theme) => ({
-                        px: 1.5,
-                        py: 1.5,
-                        borderRadius: 3,
-                        border: "1px solid",
-                        borderColor: isRewinded ? "primary.main" : "divider",
-                        backgroundColor: alpha(
-                          theme.palette.background.default,
-                          0.34,
-                        ),
-                        flexDirection: "column",
-                        alignItems: "flex-start",
-                        cursor: onRewind ? "pointer" : "default",
-                        opacity: isAfterRewind ? 0.35 : 1,
-                        transition: "opacity 0.2s, border-color 0.2s",
-                      })}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        mb: canModifyHistory ? 0.75 : 0,
+                        width: "100%",
+                      }}
                     >
-                      <Box
+                      <Typography
+                        variant="caption"
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                          mb: 0.75,
-                          width: "100%",
+                          color: isRewinded ? "primary.main" : "text.secondary",
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                          flexGrow: 1,
                         }}
                       >
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: isRewinded ? "primary.main" : "text.secondary",
-                            letterSpacing: "0.1em",
-                            textTransform: "uppercase",
-                            flexGrow: 1,
-                          }}
-                        >
-                          {formatPastState(ps.state)}
-                        </Typography>
-                        {isRewinded && (
-                          <Chip
-                            icon={<HistoryIcon />}
-                            label="Viewing"
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                            sx={{ height: 18, fontSize: "0.65rem" }}
-                          />
-                        )}
-                        {ps.state !== "designed" && (
-                          <Box onClick={(e) => e.stopPropagation()}>
-                            {deletingStateId === ps.id ? (
-                              <CircularProgress size={16} />
-                            ) : (
-                              <IconButton
-                                size="small"
-                                aria-label={`Delete ${formatPastState(ps.state)} state`}
-                                onClick={async () => {
-                                  dispatch({ type: "start_deleting", id: ps.id });
-                                  try {
-                                    const updated = await deletePieceState(
-                                      piece.id,
-                                      ps.id,
-                                    );
-                                    onPieceUpdated(updated);
-                                  } finally {
-                                    dispatch({ type: "done_deleting" });
-                                  }
-                                }}
-                                sx={{ opacity: 0.5, "&:hover": { opacity: 1 } }}
-                              >
-                                <CloseIcon fontSize="small" />
-                              </IconButton>
-                            )}
-                          </Box>
-                        )}
-                      </Box>
+                        {formatPastState(ps.state)}
+                      </Typography>
+                      {isRewinded && (
+                        <Chip
+                          icon={<HistoryIcon sx={{ fontSize: "0.8rem !important" }} />}
+                          label="Viewing"
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          sx={{ height: 18, fontSize: "0.65rem" }}
+                        />
+                      )}
+                      {canModifyHistory && ps.state !== "designed" && (
+                        <Box onClick={(e) => e.stopPropagation()}>
+                          {deletingStateId === ps.id ? (
+                            <CircularProgress size={16} />
+                          ) : (
+                            <IconButton
+                              size="small"
+                              aria-label={`Delete ${formatPastState(ps.state)} state`}
+                              onClick={async () => {
+                                dispatch({ type: "start_deleting", id: ps.id });
+                                try {
+                                  const updated = await deletePieceState(
+                                    piece!.id,
+                                    ps.id,
+                                  );
+                                  onPieceUpdated!(updated);
+                                } finally {
+                                  dispatch({ type: "done_deleting" });
+                                }
+                              }}
+                              sx={{ opacity: 0.5, "&:hover": { opacity: 1 } }}
+                            >
+                              <CloseIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                        </Box>
+                      )}
+                    </Box>
+
+                    {canModifyHistory ? (
                       <Box
                         sx={{ width: "100%" }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <EditablePieceStateListItem
                           ps={ps}
-                          pieceId={piece.id}
-                          onSaved={onPieceUpdated}
+                          pieceId={piece!.id}
+                          onSaved={onPieceUpdated!}
                         />
                       </Box>
-                    </ListItem>
-                  </Tooltip>
-                </Box>
-              );
-            }
-            return (
-              <ListItem
-                key={ps.id ?? i}
-                disableGutters
-                sx={(theme) => ({
-                  px: 1.5,
-                  py: 1.5,
-                  borderRadius: 3,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  backgroundColor: alpha(
-                    theme.palette.background.default,
-                    0.34,
-                  ),
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                })}
-              >
-                <ListItemText
-                  primary={formatPastState(ps.state)}
-                  secondary={`${ps.created.toLocaleString()}${ps.notes ? " — " + ps.notes : ""}`}
-                  slotProps={{
-                    primary: { sx: { color: "text.primary" } },
-                    secondary: { sx: { color: "text.secondary" } },
-                  }}
-                />
-              </ListItem>
+                    ) : (
+                      <ListItemText
+                        secondary={`${ps.created.toLocaleString()}${ps.notes ? " — " + ps.notes : ""}`}
+                        secondaryTypographyProps={{
+                          variant: "caption",
+                          sx: { color: "text.secondary" },
+                        }}
+                        sx={{ m: 0 }}
+                      />
+                    )}
+                  </ListItem>
+                </Tooltip>
+              </Box>
             );
           })}
           {showTrailingInsert && piece && onPieceUpdated && (

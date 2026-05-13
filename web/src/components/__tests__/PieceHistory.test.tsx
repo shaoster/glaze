@@ -508,6 +508,25 @@ describe("PieceHistory", () => {
       // Should not throw when clicking without onRewind
       fireEvent.click(screen.getAllByText("Designed")[0].closest("li")!);
     });
+
+    it("calls onRewind with the state id when a past state is clicked in read-only mode", async () => {
+      const piece = makePiece({ is_editable: false });
+      const onRewind = vi.fn();
+      await act(async () => {
+        render(
+          <PieceHistory
+            pastHistory={[pastState1, pastState2]}
+            piece={piece}
+            onPieceUpdated={vi.fn()}
+            rewindedStateId={null}
+            onRewind={onRewind}
+          />,
+        );
+      });
+      fireEvent.click(screen.getByRole("button", { name: /show history/i }));
+      fireEvent.click(screen.getAllByText("Designed")[0].closest("li")!);
+      expect(onRewind).toHaveBeenCalledWith("state-1");
+    });
   });
 });
 

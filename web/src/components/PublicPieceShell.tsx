@@ -51,7 +51,7 @@ export default function PublicPieceShell() {
             <CircularProgress />
           </Box>
         )}
-        {error && <Typography color="error">Failed to load piece.</Typography>}
+        {!!error && <Typography color="error">Failed to load piece.</Typography>}
         {piece && <ShowcaseView piece={piece} />}
       </ErrorBoundary>
     </Container>
