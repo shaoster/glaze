@@ -386,4 +386,97 @@ describe("PieceHistory", () => {
     });
     expect(onPieceUpdated).toHaveBeenCalledWith(updated);
   });
+
+  describe("rewind", () => {
+    const pastState1 = makeState({ id: "state-1", state: "designed" });
+    const pastState2 = makeState({ id: "state-2", state: "wheel_thrown" });
+
+    it("calls onRewind with the state id when a past state is clicked in edit mode", async () => {
+      const piece = makePiece({ is_editable: true });
+      const onRewind = vi.fn();
+      await act(async () => {
+        render(
+          <PieceHistory
+            pastHistory={[pastState1, pastState2]}
+            piece={piece}
+            onPieceUpdated={vi.fn()}
+            rewindedStateId={null}
+            onRewind={onRewind}
+          />,
+        );
+      });
+      fireEvent.click(screen.getByRole("button", { name: /show history/i }));
+      fireEvent.click(screen.getAllByText("Designed")[0].closest("li")!);
+      expect(onRewind).toHaveBeenCalledWith("state-1");
+    });
+
+    it("calls onRewind with null when the rewound state is clicked again", async () => {
+      const piece = makePiece({ is_editable: true });
+      const onRewind = vi.fn();
+      await act(async () => {
+        render(
+          <PieceHistory
+            pastHistory={[pastState1, pastState2]}
+            piece={piece}
+            onPieceUpdated={vi.fn()}
+            rewindedStateId="state-1"
+            onRewind={onRewind}
+          />,
+        );
+      });
+      fireEvent.click(screen.getByRole("button", { name: /show history/i }));
+      fireEvent.click(screen.getAllByText("Designed")[0].closest("li")!);
+      expect(onRewind).toHaveBeenCalledWith(null);
+    });
+
+    it("shows a 'Viewing' chip on the rewound state", async () => {
+      const piece = makePiece({ is_editable: true });
+      await act(async () => {
+        render(
+          <PieceHistory
+            pastHistory={[pastState1, pastState2]}
+            piece={piece}
+            onPieceUpdated={vi.fn()}
+            rewindedStateId="state-1"
+            onRewind={vi.fn()}
+          />,
+        );
+      });
+      fireEvent.click(screen.getByRole("button", { name: /show history/i }));
+      expect(screen.getByText("Viewing")).toBeInTheDocument();
+    });
+
+    it("does not show a 'Viewing' chip when no state is rewound", async () => {
+      const piece = makePiece({ is_editable: true });
+      await act(async () => {
+        render(
+          <PieceHistory
+            pastHistory={[pastState1, pastState2]}
+            piece={piece}
+            onPieceUpdated={vi.fn()}
+            rewindedStateId={null}
+            onRewind={vi.fn()}
+          />,
+        );
+      });
+      fireEvent.click(screen.getByRole("button", { name: /show history/i }));
+      expect(screen.queryByText("Viewing")).not.toBeInTheDocument();
+    });
+
+    it("clicking a past state does nothing when onRewind is not provided", async () => {
+      const piece = makePiece({ is_editable: true });
+      await act(async () => {
+        render(
+          <PieceHistory
+            pastHistory={[pastState1]}
+            piece={piece}
+            onPieceUpdated={vi.fn()}
+          />,
+        );
+      });
+      fireEvent.click(screen.getByRole("button", { name: /show history/i }));
+      // Should not throw when clicking without onRewind
+      fireEvent.click(screen.getAllByText("Designed")[0].closest("li")!);
+    });
+  });
 });

@@ -546,8 +546,9 @@ describe("PieceDetail", () => {
   it("confirmation dialog shows from/to states", async () => {
     await renderPieceDetail();
     fireEvent.click(screen.getByRole("button", { name: "Throwing" }));
-    expect(screen.getAllByText(/Designing/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Throwing/).length).toBeGreaterThan(0);
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText(/Designing/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Throwing/)).toBeInTheDocument();
   });
 
   it("cancelling confirmation closes dialog", async () => {
