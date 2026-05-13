@@ -5,7 +5,6 @@ import {
   useRef,
   useState,
 } from "react";
-import axios from "axios";
 import {
   Alert,
   alpha,
@@ -30,7 +29,14 @@ import { formatState, isTerminalState, validateHistorySequence } from "../util/w
 import {
   getCustomFieldDefinitions,
 } from "../util/workflow";
-import { addPieceState, updateCurrentState, updatePastState, updatePiece } from "../util/api";
+import {
+  addPieceState,
+  extractErrorMessage,
+  updateCurrentState,
+  updatePastState,
+  updatePiece,
+} from "../util/api";
+import { useAsyncFn } from "../util/useAsync";
 import CloudinaryImage from "./CloudinaryImage";
 import NavigationBlocker from "./NavigationBlocker";
 import WorkflowState from "./WorkflowState";
@@ -123,36 +129,21 @@ function SectionCard({ eyebrow, title, subtitle, children }: SectionCardProps) {
 }
 
 function EditableToggle({ piece, onPieceUpdated }: PieceDetailProps) {
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    execute: toggle,
+    loading: saving,
+    error: rawError,
+  } = useAsyncFn(async () => {
+    const updated = await updatePiece(piece.id, {
+      is_editable: !piece.is_editable,
+    });
+    onPieceUpdated(updated);
+  }, [piece.id, piece.is_editable, onPieceUpdated]);
+
+  const error = rawError ? extractErrorMessage(rawError) : null;
   const seqError = piece.is_editable
     ? validateHistorySequence(piece.history)
     : null;
-
-  async function toggle() {
-    setSaving(true);
-    setError(null);
-    try {
-      const updated = await updatePiece(piece.id, {
-        is_editable: !piece.is_editable,
-      });
-      onPieceUpdated(updated);
-    } catch (e: unknown) {
-      if (axios.isAxiosError(e) && e.response?.data) {
-        const data = e.response.data;
-        const msg =
-          typeof data === "string"
-            ? data
-            : data.non_field_errors?.[0] ||
-              (typeof data === "object" ? Object.values(data).flat()[0] : null);
-        setError(String(msg || "Failed to update. Please try again."));
-      } else {
-        setError("Failed to update. Please try again.");
-      }
-    } finally {
-      setSaving(false);
-    }
-  }
 
   const disabledReason = piece.shared
     ? "This piece is publicly shared. Unshare it to edit history."
@@ -232,14 +223,8 @@ export default function PieceDetail({
 function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   const theme = useTheme();
   const [isDirty, setIsDirty] = useState(false);
-  const [transitioning, setTransitioning] = useState(false);
-  const [transitionError, setTransitionError] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(piece.name);
-  const [nameSaving, setNameSaving] = useState(false);
-  const [nameError, setNameError] = useState<string | null>(null);
-  const [locationSaving, setLocationSaving] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
   const currentState = piece.current_state;
@@ -326,67 +311,65 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [piece]);
 
-  async function handleTransition(nextState: string) {
-    setTransitioning(true);
-    setTransitionError(null);
-    try {
+  const {
+    execute: handleTransition,
+    loading: transitioning,
+    error: rawTransitionError,
+  } = useAsyncFn(
+    async (nextState: string) => {
       const updated = await addPieceState(piece.id, {
         state: nextState as PieceDetailType["current_state"]["state"],
       });
       onPieceUpdated(updated);
       setIsDirty(false);
-    } catch {
-      setTransitionError("Failed to transition state. Please try again.");
-    } finally {
-      setTransitioning(false);
-    }
-  }
+    },
+    [piece.id, onPieceUpdated],
+  );
+  const transitionError = rawTransitionError
+    ? extractErrorMessage(rawTransitionError, "Failed to transition state. Please try again.")
+    : null;
 
   function startEditingName() {
     setNameValue(piece.name);
-    setNameError(null);
     setEditingName(true);
     setTimeout(() => nameInputRef.current?.focus(), 0);
   }
 
   function cancelEditingName() {
     setEditingName(false);
-    setNameError(null);
     setNameValue(piece.name);
   }
 
-  async function saveName() {
+  const {
+    execute: saveName,
+    loading: nameSaving,
+    error: rawNameError,
+  } = useAsyncFn(async () => {
     const trimmed = nameValue.trim();
     if (!trimmed) {
-      setNameError("Name cannot be empty.");
-      return;
+      throw new Error("Name cannot be empty.");
     }
     if (trimmed === piece.name) {
       setEditingName(false);
       return;
     }
-    setNameSaving(true);
-    setNameError(null);
-    try {
-      const saveNameRequest = () => updatePiece(piece.id, { name: trimmed });
-      const updated = pieceDetailSaveStatus
-        ? await pieceDetailSaveStatus.runManualSave(saveNameRequest)
-        : await saveNameRequest();
-      onPieceUpdated(updated);
-      setEditingName(false);
-    } catch {
-      setNameError("Failed to save name. Please try again.");
-    } finally {
-      setNameSaving(false);
-    }
-  }
+    const saveNameRequest = () => updatePiece(piece.id, { name: trimmed });
+    const updated = pieceDetailSaveStatus
+      ? await pieceDetailSaveStatus.runManualSave(saveNameRequest)
+      : await saveNameRequest();
+    onPieceUpdated(updated);
+    setEditingName(false);
+  }, [piece.id, piece.name, nameValue, onPieceUpdated, pieceDetailSaveStatus]);
+  const nameError = rawNameError
+    ? extractErrorMessage(rawNameError, "Failed to save name. Please try again.")
+    : null;
 
-  async function handleLocationSelect(
-    entry: { id: string; name: string } | null,
-  ) {
-    setLocationSaving(true);
-    setLocationError(null);
-    try {
+  const {
+    execute: handleLocationSelect,
+    loading: locationSaving,
+    error: rawLocationError,
+  } = useAsyncFn(
+    async (entry: { id: string; name: string } | null) => {
       const saveLocationRequest = () =>
         updatePiece(piece.id, {
           current_location: entry?.name ?? "",
@@ -395,12 +378,12 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
         ? await pieceDetailSaveStatus.runManualSave(saveLocationRequest)
         : await saveLocationRequest();
       onPieceUpdated(updated);
-    } catch {
-      setLocationError("Failed to save location. Please try again.");
-    } finally {
-      setLocationSaving(false);
-    }
-  }
+    },
+    [piece.id, onPieceUpdated, pieceDetailSaveStatus],
+  );
+  const locationError = rawLocationError
+    ? extractErrorMessage(rawLocationError, "Failed to save location. Please try again.")
+    : null;
 
   const galleryProps = {
     images: galleryImages,

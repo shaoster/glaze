@@ -615,3 +615,29 @@ export async function deleteCloudinaryCleanupAssets(
   );
   return data.deleted;
 }
+
+/**
+ * Extracts a human-readable error message from a backend response or Error object.
+ * Handles Axios errors, DRF non_field_errors, and generic field errors.
+ */
+export function extractErrorMessage(
+  error: unknown,
+  defaultMessage = "An unexpected error occurred.",
+): string {
+  if (axios.isAxiosError(error) && error.response?.data) {
+    const data = error.response.data;
+    if (typeof data === "string") return data;
+    if (typeof data === "object" && data !== null) {
+      const d = data as Record<string, unknown>;
+      // DRF non_field_errors
+      if (Array.isArray(d.non_field_errors) && d.non_field_errors.length > 0) {
+        return String(d.non_field_errors[0]);
+      }
+      // Check for other field errors (return the first one found)
+      const firstError = Object.values(d).flat()[0];
+      if (firstError) return String(firstError);
+    }
+  }
+  if (error instanceof Error) return error.message;
+  return defaultMessage;
+}

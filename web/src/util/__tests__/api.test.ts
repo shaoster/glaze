@@ -280,6 +280,18 @@ describe("piece endpoints", () => {
       name: "New Name",
     });
   });
+
+  it("deletePieceState sends a delete request and returns the piece detail", async () => {
+    const { deletePieceState } = await loadApiModule();
+    mockClient.delete.mockResolvedValue({ data: wirePieceDetail });
+
+    const result = await deletePieceState("piece-1", "state-1");
+
+    expect(mockClient.delete).toHaveBeenCalledWith(
+      "pieces/piece-1/states/state-1/",
+    );
+    expect(result.id).toBe("piece-1");
+  });
 });
 
 describe("auth endpoints", () => {
@@ -728,6 +740,62 @@ describe("upload endpoints", () => {
       {
         data: { public_ids: ["piece/orphan"] },
       },
+    );
+  });
+});
+
+describe("extractErrorMessage", () => {
+  it("returns the raw string if response data is a string", async () => {
+    const { extractErrorMessage } = await loadApiModule();
+    const error = {
+      isAxiosError: true,
+      response: { data: "Bad Request" },
+    };
+    mockIsAxiosError.mockReturnValue(true);
+
+    expect(extractErrorMessage(error)).toBe("Bad Request");
+  });
+
+  it("returns the first non_field_errors if present", async () => {
+    const { extractErrorMessage } = await loadApiModule();
+    const error = {
+      isAxiosError: true,
+      response: {
+        data: { non_field_errors: ["Invalid state transition"] },
+      },
+    };
+    mockIsAxiosError.mockReturnValue(true);
+
+    expect(extractErrorMessage(error)).toBe("Invalid state transition");
+  });
+
+  it("returns the first field error if non_field_errors is absent", async () => {
+    const { extractErrorMessage } = await loadApiModule();
+    const error = {
+      isAxiosError: true,
+      response: {
+        data: { name: ["This field is required."] },
+      },
+    };
+    mockIsAxiosError.mockReturnValue(true);
+
+    expect(extractErrorMessage(error)).toBe("This field is required.");
+  });
+
+  it("returns the Error message for generic Error objects", async () => {
+    const { extractErrorMessage } = await loadApiModule();
+    const error = new Error("Network failure");
+    mockIsAxiosError.mockReturnValue(false);
+
+    expect(extractErrorMessage(error)).toBe("Network failure");
+  });
+
+  it("returns the default message for unknown error types", async () => {
+    const { extractErrorMessage } = await loadApiModule();
+    mockIsAxiosError.mockReturnValue(false);
+
+    expect(extractErrorMessage({}, "Something went wrong")).toBe(
+      "Something went wrong",
     );
   });
 });
