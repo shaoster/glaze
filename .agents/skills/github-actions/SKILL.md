@@ -73,7 +73,7 @@ if: |
 ## Environment Setup in CI
 
 ```bash
-source env.sh && gz_setup
+gz_setup
 ```
 
 To run all tests: `rtk bazel test //...`

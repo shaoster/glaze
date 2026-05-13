@@ -268,7 +268,7 @@ Each subagent handles:
 | Apply patch (apply) | `git -C .agent-worktrees/<agent>/issue-N-slug apply /tmp/patches/file.patch` |
 | Extract file changes | `git show <commit> -- path/to/file > /tmp/patch.patch` |
 | Check worktree status | `git -C .agent-worktrees/<agent>/issue-N-slug status --porcelain` |
-| Run tests in worktree | `source env.sh && gz_test` from the worktree root |
+| Run tests in worktree | `gz_test` from the worktree root |
 | Push worktree branch | `git push -u origin issue/N-slug` |
 
 ## Example Coordination Flow

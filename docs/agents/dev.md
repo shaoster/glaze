@@ -125,7 +125,7 @@ gz_cd issue-456     # same for a different branch
 
 When multiple agents (Claude, Codex, etc.) are working on separate PRs in parallel:
 
-1. **Each agent owns one worktree.** The standard path is `.agent-worktrees/<agent>/<branch>`. The agent sources `env.sh` from there, and all its server state stays isolated in that directory.
+1. **Each agent owns one worktree.** The standard path is `.agent-worktrees/<agent>/<branch>`. The agent sources `env-agent.sh` from there (via `BASH_ENV`) to maintain its `GLAZE_AGENT` status; agents must NOT source `env.sh` directly as it unsets the agent flag. All server state stays isolated in the worktree directory.
 
 2. **Agents must announce their worktree path** at the start of every session, clearly and as a copy-friendly absolute path. This is the contract that makes `gz_worktrees` and `gz_cd` useful — a path buried in scrollback is not sufficient. The announcement should appear before any code changes so it is visible when you open the conversation.
 
@@ -385,7 +385,7 @@ rtk bazel build --config=lint //...
 
 ```bash
 # Reformat Python files and apply ruff auto-fixes
-source env.sh && gz_format
+gz_format
 # equivalent to:
 uv run ruff format .
 uv run ruff check --fix .

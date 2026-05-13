@@ -32,7 +32,7 @@ passing targets, so re-running `//...` after a fix costs no more than running a 
 ## Auto-Fix Before Committing
 
 ```bash
-source env.sh && gz_format
+gz_format
 # equivalent to:
 ruff format .
 ruff check --fix .
@@ -77,7 +77,7 @@ rtk bazel build --config=lint //web/...
 ## Web Build Helper
 
 ```bash
-source env.sh
+source env-agent.sh
 gz_build
 ```
 
