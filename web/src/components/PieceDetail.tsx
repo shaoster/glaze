@@ -251,9 +251,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
 
   const [rewindedStateId, setRewindedStateId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!piece.is_editable) setRewindedStateId(null);
-  }, [piece.is_editable]);
+  // Keep rewindedStateId when toggling is_editable to allow viewing history in read-only mode.
 
   const rewindedState = rewindedStateId
     ? pastHistory.find((ps) => ps.id === rewindedStateId) ?? null
@@ -652,7 +650,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
           </Box>
         </Box>
 
-        {rewindedState && piece.is_editable ? (
+        {rewindedState ? (
           <SectionCard>
             <Box sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
               <Chip
@@ -664,7 +662,9 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
                 onDelete={() => setRewindedStateId(null)}
               />
               <Typography variant="caption" color="text.secondary">
-                Editing historical state — later states greyed out in timeline
+                {piece.is_editable
+                  ? "Editing historical state — later states greyed out in timeline"
+                  : "Viewing historical state — read-only"}
               </Typography>
             </Box>
             <WorkflowState
@@ -672,6 +672,8 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
               initialPieceState={rewindedState}
               pieceId={piece.id}
               onSaved={onPieceUpdated}
+              readOnly={!piece.is_editable}
+              hideNotes={!canEdit}
               saveStateFn={(payload) =>
                 updatePastState(piece.id, rewindedState.id, payload)
               }
@@ -686,6 +688,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
               onSaved={onPieceUpdated}
               onDirtyChange={setIsDirty}
               readOnly={!canEdit}
+              hideNotes={!canEdit}
             />
           </SectionCard>
         ) : null}
@@ -753,7 +756,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             piece={piece}
             onPieceUpdated={onPieceUpdated}
             rewindedStateId={rewindedStateId}
-            onRewind={piece.is_editable ? setRewindedStateId : undefined}
+            onRewind={setRewindedStateId}
           />
         </SectionCard>
       </Box>
