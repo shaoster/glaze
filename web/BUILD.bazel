@@ -73,6 +73,17 @@ ts_project(
     tags = ["lint"],
 )
 
+ESLINT_INPUTS = glob(
+    [
+        "*.config.ts",
+        "src/**/*.ts",
+        "src/**/*.tsx",
+    ],
+    exclude = [
+        "src/util/generated-types.ts",  # genrule output, not a source-tree input
+    ],
+)
+
 eslint_pkg.eslint(
     name = "eslint_run",
     srcs = [
@@ -81,8 +92,7 @@ eslint_pkg.eslint(
         ":web_test_configs",
         ":web_test_files",
     ],
-    args = [
-        ".",
+    args = ESLINT_INPUTS + [
         "--max-warnings=0",
     ],
     chdir = package_name(),
