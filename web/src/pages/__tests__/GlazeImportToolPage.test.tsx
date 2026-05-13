@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -27,9 +27,7 @@ class MockImage {
   naturalHeight = 480;
 
   set src(_value: string) {
-    queueMicrotask(() => {
-      this.onload?.();
-    });
+    this.onload?.();
   }
 }
 
@@ -50,6 +48,11 @@ describe("GlazeImportToolPage", () => {
         scale: vi.fn(),
         drawImage: vi.fn(),
         restore: vi.fn(),
+        getImageData: vi.fn(() => ({
+          data: new Uint8ClampedArray(128 * 128 * 4),
+          width: 128,
+          height: 128,
+        })),
       })),
     });
     Object.defineProperty(HTMLCanvasElement.prototype, "toBlob", {
@@ -279,19 +282,19 @@ describe("GlazeImportToolPage", () => {
     fireEvent.change(input!, { target: { files: [file] } });
 
     await screen.findByText("combo.png");
-    await userEvent.click(screen.getByText("combo.png"));
-    await userEvent.click(
+    fireEvent.click(screen.getByText("combo.png"));
+    fireEvent.click(
       await screen.findByRole("button", { name: "Continue To OCR" }),
     );
-    await userEvent.click((await screen.findAllByText("combo.png"))[0]);
-    await userEvent.click(
+    fireEvent.click((await screen.findAllByText("combo.png"))[0]);
+    fireEvent.click(
       (await screen.findAllByRole("button", { name: "Run OCR" }))[0],
     );
 
     await waitFor(() =>
       expect(screen.getByText("Parsed as: Iron Red!Clear")).toBeInTheDocument(),
     );
-    await userEvent.click(
+    fireEvent.click(
       await screen.findByRole("button", { name: "Continue To Review" }),
     );
     await waitFor(() =>
@@ -300,7 +303,7 @@ describe("GlazeImportToolPage", () => {
         "true",
       ),
     );
-    await userEvent.click(await screen.findByText("Iron Red!Clear"));
+    fireEvent.click(await screen.findByText("Iron Red!Clear"));
     expect(screen.getByDisplayValue("glaze_combination")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Iron Red")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Clear")).toBeInTheDocument();
@@ -372,36 +375,60 @@ describe("GlazeImportToolPage", () => {
     fireEvent.change(input!, { target: { files: [file] } });
 
     await screen.findByText("ash-blue.png");
-    await userEvent.click(screen.getByText("ash-blue.png"));
-    await userEvent.click(
+    fireEvent.click(screen.getByText("ash-blue.png"));
+
+    fireEvent.click(
       await screen.findByRole("button", { name: "Continue To OCR" }),
     );
-    await userEvent.click((await screen.findAllByText("ash-blue.png"))[0]);
-    await userEvent.click(
-      (await screen.findAllByRole("button", { name: "Run OCR" }))[0],
-    );
+
+    // Wait for the OCR stage to be active and stable
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "3. OCR" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    });
+
+    // Be more specific about what we click in the OCR stage
+    const recordList = screen.getByRole("list");
+    const recordItem = await within(recordList).findByText("ash-blue.png");
+    fireEvent.click(recordItem);
+
+    const runOcrButtons = await screen.findAllByRole("button", { name: "Run OCR" });
+    fireEvent.click(runOcrButtons[0]);
+
     await waitFor(() =>
       expect(screen.getByText("Parsed as: Ash Blue")).toBeInTheDocument(),
     );
-    await userEvent.click(
+
+    fireEvent.click(
       await screen.findByRole("button", { name: "Continue To Review" }),
     );
-    await waitFor(() =>
+
+    await waitFor(() => {
       expect(screen.getByRole("tab", { name: "4. Review" })).toHaveAttribute(
         "aria-selected",
         "true",
-      ),
-    );
-    await userEvent.click((await screen.findAllByText("Ash Blue"))[0]);
-    await userEvent.click(
+      );
+    });
+
+    // Select the record in Review stage
+    const reviewRecordList = screen.getByRole("list");
+    const reviewRecordItem = await within(reviewRecordList).findByText("Ash Blue");
+    fireEvent.click(reviewRecordItem);
+
+    fireEvent.click(
       await screen.findByRole("button", { name: "Mark reviewed for import" }),
     );
-    await userEvent.click(
+
+    fireEvent.click(
       await screen.findByRole("button", { name: "Continue To Import" }),
     );
-    await userEvent.click(
+
+    fireEvent.click(
       await screen.findByRole("button", { name: "Run Bulk Import" }),
     );
+
 
     await waitFor(() =>
       expect(screen.getByText("1 duplicates skipped")).toBeInTheDocument(),
