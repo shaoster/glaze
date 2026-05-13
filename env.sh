@@ -10,8 +10,7 @@ _GLAZE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Bootstrap: venv activation, .env.local loading, BASH_ENV export.
 # env-agent.sh is also the entry point for non-interactive agent subshells.
 source "$_GLAZE_SCRIPT_DIR/env-agent.sh"
-# If we're in an interactive shell OR CI, we're likely a developer/bot, not an agent.
-[[ $- == *i* || -n "${GITHUB_ACTIONS:-}" ]] && unset GLAZE_AGENT
+unset GLAZE_AGENT
 GLAZE_ROOT="${GLAZE_ROOT:-$_GLAZE_SCRIPT_DIR}"
 GLAZE_SHARED_ROOT="${GLAZE_SHARED_ROOT:-$GLAZE_ROOT}"
 
