@@ -239,7 +239,7 @@ class PieceState(models.Model):
     piece = models.ForeignKey(Piece, on_delete=models.CASCADE, related_name="states")
     state = models.CharField(max_length=64)
     notes = models.TextField(blank=True, default="")
-    created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(default=timezone.now)
     last_modified = models.DateTimeField(auto_now=True)
     # Sequential position in piece history. Set on creation; shifted up when a
     # retroactive state is inserted before this one.

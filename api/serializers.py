@@ -662,6 +662,7 @@ class PieceStateUpdateSerializer(serializers.Serializer):
     )
     images = CaptionedImageSerializer(many=True, required=False)
     custom_fields = serializers.JSONField(required=False)
+    created = serializers.DateTimeField(required=False)
 
     def validate_custom_fields(self, value):
         if not isinstance(value, dict):
@@ -671,6 +672,8 @@ class PieceStateUpdateSerializer(serializers.Serializer):
     def update(self, instance: PieceState, validated_data: dict) -> PieceState:
         if "notes" in validated_data:
             instance.notes = validated_data["notes"]
+        if "created" in validated_data:
+            instance.created = validated_data["created"]
         if "images" in validated_data:
             replace_piece_state_images(
                 instance, validated_data["images"], user=instance.piece.user

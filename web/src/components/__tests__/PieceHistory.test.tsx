@@ -368,7 +368,7 @@ describe("PieceHistory", () => {
     expect(onPieceUpdated).toHaveBeenCalledWith(updated);
   });
 
-  it("renders editable Notes fields for past states when is_editable", async () => {
+  it("renders editable Created Date fields for past states when is_editable", async () => {
     const piece = makePiece({ is_editable: true });
     await act(async () => {
       render(
@@ -381,7 +381,7 @@ describe("PieceHistory", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /show history/i }));
     await waitFor(() => {
-      expect(screen.getByLabelText("Notes")).toBeInTheDocument();
+      expect(screen.getByLabelText("Created Date")).toBeInTheDocument();
     });
   });
 
@@ -401,15 +401,19 @@ describe("PieceHistory", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /show history/i }));
-    fireEvent.click(screen.getByRole("button", { name: /save past state/i }));
 
+    const input = screen.getByLabelText("Created Date");
+    fireEvent.change(input, { target: { value: "2024-01-16T12:00" } });
+
+    // Wait for autosave (default 700ms, plus network mock)
     await waitFor(() => {
       expect(api.updatePastState).toHaveBeenCalledWith(
         "piece-id-1",
         "past-state-id",
-        { notes: "edited note" },
+        expect.objectContaining({ created: expect.any(String) }),
       );
-    });
+    }, { timeout: 2000 });
+
     expect(onPieceUpdated).toHaveBeenCalledWith(updated);
   });
 

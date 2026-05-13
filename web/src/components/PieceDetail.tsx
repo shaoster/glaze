@@ -271,6 +271,8 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   const galleryImages: PiecePhotoGalleryImage[] = piece.history.flatMap(
     (state) => {
       const isCurrentState =
+        state.created &&
+        currentState.created &&
         state.created.getTime() === currentState.created.getTime() &&
         state.state === currentState.state;
       return state.images.map((image, imageIndex) => ({
@@ -665,7 +667,10 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
         ) : hasWorkflowContent ? (
           <SectionCard>
             <WorkflowState
-              key={currentState.state + currentState.created.toISOString()}
+              key={
+                currentState.state +
+                (currentState.created?.toISOString() ?? "")
+              }
               initialPieceState={currentState}
               pieceId={piece.id}
               onSaved={onPieceUpdated}

@@ -111,7 +111,10 @@ function normalizeCrop(value: unknown): ImageCrop | null {
 
 
 function mapStateSummary(raw: Wire<StateSummary>): StateSummary {
-  return { state: raw.state as State };
+  return {
+    state: raw.state as State,
+    created: new Date(raw.created ?? ""),
+  };
 }
 
 function mapTagEntry(raw: Wire<TagEntry>): TagEntry {
@@ -295,6 +298,7 @@ export async function addPieceState(
 
 export type UpdateStatePayload = {
   notes?: string;
+  created?: string;
   images?: Array<{
     url: string;
     caption: string;
