@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import HistoryIcon from "@mui/icons-material/History";
@@ -98,6 +98,38 @@ function InsertButton({
   );
 }
 
+type HistoryUIState = {
+  historyOpen: boolean;
+  deletingStateId: string | null;
+  prevIsEditable: boolean;
+};
+
+type HistoryAction =
+  | { type: "toggle_history" }
+  | { type: "start_deleting"; id: string }
+  | { type: "done_deleting" }
+  | { type: "is_editable_changed"; isEditable: boolean };
+
+function historyReducer(
+  state: HistoryUIState,
+  action: HistoryAction,
+): HistoryUIState {
+  switch (action.type) {
+    case "toggle_history":
+      return { ...state, historyOpen: !state.historyOpen };
+    case "start_deleting":
+      return { ...state, deletingStateId: action.id };
+    case "done_deleting":
+      return { ...state, deletingStateId: null };
+    case "is_editable_changed":
+      return {
+        ...state,
+        prevIsEditable: action.isEditable,
+        historyOpen: action.isEditable ? true : state.historyOpen,
+      };
+  }
+}
+
 export default function PieceHistory({
   pastHistory,
   piece,
@@ -105,18 +137,27 @@ export default function PieceHistory({
   rewindedStateId,
   onRewind,
 }: PieceHistoryProps) {
-  const [historyOpen, setHistoryOpen] = useState(false);
   const isEditable = piece?.is_editable ?? false;
   const containerRef = useRef<HTMLDivElement>(null);
-  const prevIsEditableRef = useRef(isEditable);
-  const [deletingStateId, setDeletingStateId] = useState<string | null>(null);
+  const [{ historyOpen, deletingStateId, prevIsEditable }, dispatch] =
+    useReducer(historyReducer, {
+      historyOpen: false,
+      deletingStateId: null,
+      prevIsEditable: isEditable,
+    });
 
+  // Sync when isEditable changes. Dispatching during render is the React-recommended
+  // "adjust state based on props" pattern — no effect needed, no lint violation.
+  if (prevIsEditable !== isEditable) {
+    dispatch({ type: "is_editable_changed", isEditable });
+  }
+
+  // Scroll into view after the panel expands. useEffect (post-paint) is correct
+  // for a smooth scroll animation — no need to block paint with useLayoutEffect.
   useEffect(() => {
-    if (isEditable && !prevIsEditableRef.current) {
-      setHistoryOpen(true);
+    if (isEditable) {
       containerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-    prevIsEditableRef.current = isEditable;
   }, [isEditable]);
 
   if (pastHistory.length === 0 && !isEditable) return null;
@@ -134,7 +175,7 @@ export default function PieceHistory({
       <Box
         component="button"
         type="button"
-        onClick={() => setHistoryOpen((o) => !o)}
+        onClick={() => dispatch({ type: "toggle_history" })}
         aria-expanded={historyOpen}
         sx={(theme) => ({
           display: "flex",
@@ -268,7 +309,7 @@ export default function PieceHistory({
                                 size="small"
                                 aria-label={`Delete ${formatPastState(ps.state)} state`}
                                 onClick={async () => {
-                                  setDeletingStateId(ps.id);
+                                  dispatch({ type: "start_deleting", id: ps.id });
                                   try {
                                     const updated = await deletePieceState(
                                       piece.id,
@@ -276,7 +317,7 @@ export default function PieceHistory({
                                     );
                                     onPieceUpdated(updated);
                                   } finally {
-                                    setDeletingStateId(null);
+                                    dispatch({ type: "done_deleting" });
                                   }
                                 }}
                                 sx={{ opacity: 0.5, "&:hover": { opacity: 1 } }}
