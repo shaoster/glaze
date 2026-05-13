@@ -337,7 +337,6 @@ export default function PieceHistory({
                           initialPieceState={ps}
                           pieceId={piece.id}
                           onSaved={onPieceUpdated}
-                          hideImageUpload
                           saveStateFn={(payload) =>
                             updatePastState(piece.id, ps.id, payload)
                           }
