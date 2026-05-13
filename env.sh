@@ -10,6 +10,8 @@ _GLAZE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Bootstrap: venv activation, .env.local loading, BASH_ENV export.
 # env-agent.sh is also the entry point for non-interactive agent subshells.
 source "$_GLAZE_SCRIPT_DIR/env-agent.sh"
+# If we're in an interactive shell, we're likely a developer, not an agent.
+[[ $- == *i* ]] && unset GLAZE_AGENT
 GLAZE_ROOT="${GLAZE_ROOT:-$_GLAZE_SCRIPT_DIR}"
 GLAZE_SHARED_ROOT="${GLAZE_SHARED_ROOT:-$GLAZE_ROOT}"
 
@@ -230,11 +232,11 @@ gz_setup() {
 
     # Python
     echo "--- Syncing Python environment with uv..."
-    rtk bazel run @uv//:uv -- sync
+    ${GLAZE_AGENT:+rtk }bazel run @uv//:uv -- sync
 
     # Database
     echo "--- Running migrations..."
-    rtk bazel run @uv//:uv -- run python "$GLAZE_ROOT/manage.py" migrate --run-syncdb
+    ${GLAZE_AGENT:+rtk }bazel run @uv//:uv -- run python "$GLAZE_ROOT/manage.py" migrate --run-syncdb
 
     # Node + web deps
     _gz_ensure_node
@@ -253,7 +255,7 @@ gz_setup() {
             echo "--- Installing web dependencies..."
         fi
     fi
-    (cd "$GLAZE_ROOT/web" && rtk bazel run @nodejs_linux_amd64//:npm -- install --silent)
+    (cd "$GLAZE_ROOT/web" && ${GLAZE_AGENT:+rtk }bazel run @nodejs_linux_amd64//:npm -- install --silent)
 
     echo "=== Setup complete ==="
     echo "    Run 'gz_gentypes' to regenerate TypeScript types via Bazel (no backend)."
@@ -267,7 +269,7 @@ gz_setup() {
 gz_manage() {        # gz_manage <subcommand> [args…]
     (
         cd "$GLAZE_ROOT"
-        rtk bazel run @uv//:uv -- run python manage.py "$@"
+        ${GLAZE_AGENT:+rtk }bazel run @uv//:uv -- run python manage.py "$@"
     )
 }
 
@@ -300,15 +302,15 @@ gz_prod_dbshell()    { gz_prod dbshell "$@"; }
 # ---------------------------------------------------------------------------
 
 gz_test_common() {
-    rtk bazel test //tests:common_test "$@"
+    ${GLAZE_AGENT:+rtk }bazel test //tests:common_test "$@"
 }
 
 gz_test_backend() {
-    rtk bazel test //api:api_test "$@"
+    ${GLAZE_AGENT:+rtk }bazel test //api:api_test "$@"
 }
 
 gz_test_web() {
-    rtk bazel test //web:web_test "$@"
+    ${GLAZE_AGENT:+rtk }bazel test //web:web_test "$@"
 }
 
 gz_test() {
@@ -412,23 +414,23 @@ gz_test() {
         # Exclude lint targets from coverage (they don't produce coverage data and slow down the pass)
         local coverage_target
         echo "Determining coverage targets (excluding 'lint' tagged targets)..."
-        coverage_target=$(bazel query "($target) except attr(tags, lint, //...)" 2>/dev/null | tr '\n' ' ')
+        coverage_target=$(${GLAZE_AGENT:+rtk }bazel query "($target) except attr(tags, lint, //...)" 2>/dev/null | tr '\n' ' ')
         if [[ -z "$coverage_target" ]]; then
             echo "No coverage targets found."
             return 0
         fi
-        echo "Running: rtk bazel coverage --config=ci --combined_report=lcov $coverage_target"
-        (cd "$GLAZE_ROOT" && rtk bazel coverage --config=ci --combined_report=lcov $coverage_target "$@")
+        echo "Running: ${GLAZE_AGENT:+rtk }bazel coverage --config=ci --combined_report=lcov $coverage_target"
+        (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel coverage --config=ci --combined_report=lcov $coverage_target "$@")
     else
-        echo "Running: rtk bazel test $target"
-        (cd "$GLAZE_ROOT" && rtk bazel test --test_output=errors $target "$@")
+        echo "Running: ${GLAZE_AGENT:+rtk }bazel test $target"
+        (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel test --test_output=errors $target "$@")
     fi
 }
 
 # CI-aligned: run ruff, eslint, tsc, and mypy via Bazel (same as CI).
 gz_lint() {
-    echo "Running: rtk bazel build --config=lint //..."
-    (cd "$GLAZE_ROOT" && rtk bazel build --config=ci --config=lint //... "$@")
+    echo "Running: ${GLAZE_AGENT:+rtk }bazel build --config=lint //..."
+    (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel build --config=ci --config=lint //... "$@")
 }
 
 # Auto-fix: reformat Python files and apply ruff auto-fixes in one step.
@@ -444,7 +446,7 @@ gz_format() {
 gz_build() {
     # Full production build via Bazel (CI-aligned).
     # Symlinks web/dist → bazel-bin/web/dist for easy inspection.
-    rtk bazel build //... || return $?
+    ${GLAZE_AGENT:+rtk }bazel build //... || return $?
     local dist_src="$GLAZE_ROOT/bazel-bin/web/dist"
     local dist_link="$GLAZE_ROOT/web/dist"
     if [[ ! -L "$dist_link" && -e "$dist_link" ]]; then
@@ -463,7 +465,7 @@ gz_push() {
     sha=$(git -C "$GLAZE_ROOT" rev-parse HEAD) || return 1
     local tag_args=(--tag "$sha")
     [[ "${1:-}" == "--latest" ]] && tag_args+=(--tag latest)
-    rtk bazel run --stamp //:push -- "${tag_args[@]}"
+    ${GLAZE_AGENT:+rtk }bazel run --stamp //:push -- "${tag_args[@]}"
 }
 
 gz_deploy() {
@@ -501,7 +503,7 @@ gz_web() {
     port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || _gz_find_free_port 5173)
     echo "$port" > "$_GLAZE_PIDS/web.port"
     BACKEND_PORT="$backend_port" _gz_start web "$_GLAZE_LOGS/web.log" \
-        bash -c "cd '$GLAZE_ROOT/web' && BACKEND_PORT=$backend_port rtk bazel run @nodejs_linux_amd64//:npm -- run dev -- --port $port --strictPort"
+        bash -c "cd '$GLAZE_ROOT/web' && BACKEND_PORT=$backend_port ${GLAZE_AGENT:+rtk }bazel run @nodejs_linux_amd64//:npm -- run dev -- --port $port --strictPort"
 
     # Wait for Vite to print the chosen port (up to 10 s)
     local i=0
@@ -769,7 +771,7 @@ gz_logs() {    # gz_logs [backend|web|all]  — defaults to running servers
 gz_gentypes() {
     # Regenerate generated-types.ts via Bazel, then symlink it into the source
     # tree so the IDE and Vite dev server pick it up without a full build.
-    rtk bazel build //web:generated_types || return $?
+    ${GLAZE_AGENT:+rtk }bazel build //web:generated_types || return $?
     local src="$GLAZE_ROOT/bazel-bin/web/src/util/generated-types.ts"
     local dest="$GLAZE_ROOT/web/src/util/generated-types.ts"
     ln -sfn "$src" "$dest"
@@ -846,7 +848,7 @@ _gz_get_all_sources() {
     local profile="$PWD/bazel_query_profile.json"
     echo "DEBUG: Starting ALL_SOURCES query at $(date +%s)"
     local sources
-    sources=$(bazel query --profile="$profile" --output=label 'kind("source file", //...:* )' 2> >(tee -a /dev/stderr) | sed 's|^//||; s|:|/|')
+    sources=$(${GLAZE_AGENT:+rtk }bazel query --profile="$profile" --output=label 'kind("source file", //...:* )' 2> >(tee -a /dev/stderr) | sed 's|^//||; s|:|/|')
     echo "DEBUG: Finished ALL_SOURCES query at $(date +%s). Sources found: $(echo "$sources" | wc -l)"
     echo "$sources"
 }
@@ -857,8 +859,8 @@ _gz_get_affected_targets() {
     
     # 1. Get all potential targets matching the filter
     local all_candidates
-    all_candidates=$(bazel query "$filter_query" 2>/dev/null)
+    all_candidates=$(${GLAZE_AGENT:+rtk }bazel query "$filter_query" 2>/dev/null)
     
     # 2. Find targets that depend on the changed files, intersected with our candidates
-    bazel query "set($all_candidates) intersect rdeps(//..., set($bazel_files))" 2>/dev/null
+    ${GLAZE_AGENT:+rtk }bazel query "set($all_candidates) intersect rdeps(//..., set($bazel_files))" 2>/dev/null
 }
