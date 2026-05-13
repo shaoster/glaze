@@ -107,6 +107,7 @@ jobs:
         shell: bash
         run: |
           source env.sh
+          gz_setup
           gz_lint
 
   coverage:
@@ -140,6 +141,7 @@ jobs:
         shell: bash
         run: |
           source env.sh
+          gz_setup
           gz_test --coverage
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
