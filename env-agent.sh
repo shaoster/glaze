@@ -634,7 +634,7 @@ _gz_worktrees_purge() {
                 # 2. Check for unpushed changes
                 if [[ $skip -eq 0 ]]; then
                     local upstream
-                    upstream=$(git -C "$GLAZE_SHARED_ROOT" rev-parse --abbrev-ref "$wt_branch@{u}" 2>/dev/null || echo "")
+                    upstream=$(git -C "$GLAZE_SHARED_ROOT" rev-parse --abbrev-ref "$wt_branch@{u}" 2>/dev/null) || upstream=""
                     if [[ -n "$upstream" ]]; then
                         if [[ -n $(git -C "$GLAZE_SHARED_ROOT" rev-list "$upstream..$wt_branch") ]]; then
                             echo "  [SKIP] Branch '$wt_branch' has unpushed commits."
@@ -702,7 +702,7 @@ gz_worktrees() {   # list or purge worktrees
 
                 # 3. Unpushed check
                 local upstream
-                upstream=$(git -C "$GLAZE_SHARED_ROOT" rev-parse --abbrev-ref "$wt_branch@{u}" 2>/dev/null || echo "")
+                upstream=$(git -C "$GLAZE_SHARED_ROOT" rev-parse --abbrev-ref "$wt_branch@{u}" 2>/dev/null) || upstream=""
                 if [[ -n "$upstream" ]]; then
                     if [[ -n $(git -C "$GLAZE_SHARED_ROOT" rev-list "$upstream..$wt_branch") ]]; then
                         indicators+=("↑")

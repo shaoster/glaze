@@ -10,6 +10,7 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceDetail from "../PieceDetail";
+import { PieceDetailSaveStatusProvider } from "../PieceDetailSaveStatusContext";
 import type {
   PieceDetail as PieceDetailType,
   PieceState,
@@ -162,16 +163,29 @@ vi.mock("../WorkflowState", () => ({
   default: ({
     onDirtyChange,
     readOnly,
+    saveStateFn,
   }: {
     onDirtyChange?: (dirty: boolean) => void;
     readOnly?: boolean;
+    saveStateFn?: (payload: any) => Promise<any>;
   }) => {
     if (readOnly) return null;
     return (
       <div>
         <label>
           Notes
-          <input aria-label="Notes" onChange={() => onDirtyChange?.(true)} />
+          <input
+            aria-label="Notes"
+            onChange={(e) => {
+              onDirtyChange?.(true);
+              if (saveStateFn) {
+                // Simulate autosave delay
+                setTimeout(() => {
+                  saveStateFn({ notes: e.target.value });
+                }, 700);
+              }
+            }}
+          />
         </label>
       </div>
     );
@@ -239,7 +253,9 @@ async function renderPieceDetail(
   await act(async () => {
     render(
       <ThemeProvider theme={TEST_THEME}>
-        <RouterProvider router={router} />
+        <PieceDetailSaveStatusProvider>
+          <RouterProvider router={router} />
+        </PieceDetailSaveStatusProvider>
       </ThemeProvider>,
     );
   });
@@ -248,6 +264,7 @@ async function renderPieceDetail(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useRealTimers();
   vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
   vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([]);
 });
@@ -933,6 +950,98 @@ describe("PieceDetail", () => {
           screen.getByText("Piece is shared and cannot be made editable."),
         ).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("showcase story", () => {
+    it("updates showcase story and triggers autosave", async () => {
+      const piece = makePiece({
+        current_state: makeState({ state: "completed" }),
+        showcase_story: "Old story",
+      });
+      const updatedPiece = { ...piece, showcase_story: "New story" };
+      vi.mocked(api.updatePiece).mockResolvedValue(updatedPiece);
+      const onPieceUpdated = vi.fn();
+
+      await renderPieceDetail(piece, onPieceUpdated);
+
+      const textarea = screen.getByPlaceholderText(/tell the story/i);
+      fireEvent.change(textarea, { target: { value: "New story" } });
+
+      await waitFor(() =>
+        expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
+          showcase_story: "New story",
+        }),
+        { timeout: 3000 }
+      );
+      expect(onPieceUpdated).toHaveBeenCalledWith(updatedPiece);
+    });
+  });
+
+  describe("historical state editing (rewind mode)", () => {
+    it("allows entering rewind mode and clearing it", async () => {
+      const designed = makeState({ id: "s1", state: "designed" });
+      const thrown = makeState({ id: "s2", state: "wheel_thrown" });
+      const piece = makePiece({
+        is_editable: true,
+        history: [designed, thrown],
+        current_state: thrown,
+      });
+
+      await renderPieceDetail(piece);
+
+      fireEvent.click(screen.getByRole("button", { name: /show history/i }));
+
+      const historicalItem = screen.getByText("Designed").closest("li")!;
+      fireEvent.click(historicalItem);
+
+      expect(screen.getByText(/rewound to: designing/i)).toBeInTheDocument();
+
+      // Clear rewind mode via the Chip's delete button
+      const chip = screen.getByRole("button", { name: /rewound to: designing/i });
+      const clearButton = within(chip).getByTestId("CancelIcon");
+      fireEvent.click(clearButton);
+      
+      expect(
+        screen.queryByText(/rewound to: designing/i),
+      ).not.toBeInTheDocument();
+    });
+
+    it("saves changes to historical state", async () => {
+      const designed = makeState({ id: "s1", state: "designed", notes: "old" });
+      const thrown = makeState({ id: "s2", state: "wheel_thrown" });
+      const piece = makePiece({
+        is_editable: true,
+        history: [designed, thrown],
+        current_state: thrown,
+      });
+      const updatedPiece = {
+        ...piece,
+        history: [{ ...designed, notes: "new" }, thrown],
+      };
+      vi.mocked(api.updatePastState).mockResolvedValue(updatedPiece);
+      const onPieceUpdated = vi.fn();
+
+      await renderPieceDetail(piece, onPieceUpdated);
+
+      fireEvent.click(screen.getByRole("button", { name: /show history/i }));
+      const historicalItem = screen.getByText("Designed").closest("li")!;
+      fireEvent.click(historicalItem);
+
+      // Find the Notes input within the active historical editor
+      // It's in the section card that has "Rewound to: ..."
+      const historicalEditor = screen.getByText(/Editing historical state/i).parentElement!.parentElement!;
+      const notesInput = within(historicalEditor).getByLabelText("Notes");
+      fireEvent.change(notesInput, { target: { value: "new" } });
+
+      await waitFor(() =>
+        expect(api.updatePastState).toHaveBeenCalledWith(
+          "piece-id-1",
+          "s1",
+          expect.anything(),
+        ),
+        { timeout: 3000 }
+      );
     });
   });
 });

@@ -159,7 +159,7 @@ export default function TagManager({
 
   return (
     <Box sx={{ flexBasis: "100%" }}>
-      {tagsLoadError && (
+      {!!tagsLoadError && (
         <Typography variant="body2" color="error">
           Failed to load tags.
         </Typography>

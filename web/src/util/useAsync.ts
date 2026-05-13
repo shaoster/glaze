@@ -4,7 +4,7 @@ import type { DependencyList, Dispatch, SetStateAction } from "react";
 interface AsyncState<T> {
   data: T | null;
   loading: boolean;
-  error: any | null;
+  error: unknown | null;
 }
 
 export interface UseAsyncResult<T> extends AsyncState<T> {
@@ -87,7 +87,7 @@ export function useAsync<T>(
  * Manages loading / error / data state for a manually-triggered async function.
  * Returns an `execute` function and the current state.
  */
-export function useAsyncFn<T, Args extends any[]>(
+export function useAsyncFn<T, Args extends unknown[]>(
   asyncFn: (...args: Args) => Promise<T>,
   deps: DependencyList = [],
 ): AsyncState<T> & { execute: (...args: Args) => Promise<T | undefined> } {
