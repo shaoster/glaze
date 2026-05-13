@@ -634,7 +634,6 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
               initialPieceState={rewindedState}
               pieceId={piece.id}
               onSaved={onPieceUpdated}
-              hideImageUpload
               saveStateFn={(payload) =>
                 updatePastState(piece.id, rewindedState.id, payload)
               }
