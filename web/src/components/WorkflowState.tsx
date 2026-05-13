@@ -24,6 +24,7 @@ import {
   fetchCloudinaryWidgetConfig,
   signCloudinaryWidgetParams,
   updateCurrentState,
+  type UpdateStatePayload,
 } from "../util/api";
 import {
   getCustomFieldDefinitions,
@@ -47,6 +48,8 @@ type WorkflowStateProps = {
   onDirtyChange?: (dirty: boolean) => void;
   autosaveDelayMs?: number;
   readOnly?: boolean;
+  hideImageUpload?: boolean;
+  saveStateFn?: (payload: UpdateStatePayload) => Promise<PieceDetail>;
 };
 
 
@@ -159,6 +162,8 @@ export default function WorkflowState({
   onDirtyChange,
   autosaveDelayMs,
   readOnly = false,
+  hideImageUpload = false,
+  saveStateFn,
 }: WorkflowStateProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [widgetLoading, setWidgetLoading] = useState(false);
@@ -219,15 +224,21 @@ export default function WorkflowState({
       images,
       custom_fields: normalizedCustomFields,
     };
-    const result = await updateCurrentState(pieceId, payload);
-    dispatch({ type: "replace_base_state", pieceState: result.current_state });
+    const saveFn = saveStateFn ?? ((p) => updateCurrentState(pieceId, p));
+    const result = await saveFn(payload);
+    const savedState = saveStateFn
+      ? result.history.find((ps) => ps.id === initialPieceState.id) ?? result.current_state
+      : result.current_state;
+    dispatch({ type: "replace_base_state", pieceState: savedState });
     onSaved(result);
   }, [
     pieceId,
     images,
+    initialPieceState.id,
     normalizedCustomFields,
     notes,
     onSaved,
+    saveStateFn,
   ]);
 
   const autosaveKey = useMemo(
@@ -257,15 +268,20 @@ export default function WorkflowState({
         .catch(() => undefined)
         .then(async () => {
           const nextImages = [...latestImagesRef.current, newImage];
-          const result = await updateCurrentState(pieceId, {
+          const payload = {
             notes,
             images: nextImages,
             custom_fields: normalizedCustomFields,
-          });
-          latestImagesRef.current = result.current_state.images;
+          };
+          const saveFn = saveStateFn ?? ((p) => updateCurrentState(pieceId, p));
+          const result = await saveFn(payload);
+          const savedState = saveStateFn
+            ? result.history.find((ps) => ps.id === initialPieceState.id) ?? result.current_state
+            : result.current_state;
+          latestImagesRef.current = savedState.images;
           dispatch({
             type: "replace_base_state",
-            pieceState: result.current_state,
+            pieceState: savedState,
           });
           onSaved(result);
         });
@@ -280,7 +296,7 @@ export default function WorkflowState({
           }
         });
     },
-    [normalizedCustomFields, notes, onSaved, pieceId],
+    [initialPieceState.id, normalizedCustomFields, notes, onSaved, pieceId, saveStateFn],
   );
 
   useEffect(() => {
@@ -589,7 +605,7 @@ export default function WorkflowState({
         uploadError={uploadError}
         imageError={imageError}
         mobile={isMobileLayout}
-        hidden={readOnly}
+        hidden={readOnly || hideImageUpload}
         onUploadClick={handleUploadWidgetClick}
       />
     </Box>

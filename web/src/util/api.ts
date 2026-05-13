@@ -125,6 +125,7 @@ function mapTagEntry(raw: Wire<TagEntry>): TagEntry {
 
 function mapPieceState(raw: Wire<PieceState>): PieceState {
   return {
+    id: raw.id,
     state: raw.state as State,
     notes: raw.notes,
     created: new Date(raw.created ?? ""),
@@ -133,6 +134,7 @@ function mapPieceState(raw: Wire<PieceState>): PieceState {
     previous_state: raw.previous_state as State | null,
     next_state: raw.next_state as State | null,
     custom_fields: raw.custom_fields ?? {},
+    has_been_edited: raw.has_been_edited ?? false,
   };
 }
 
@@ -144,6 +146,7 @@ function mapPieceSummary(raw: Wire<PieceSummary>): PieceSummary {
     last_modified: new Date(raw.last_modified ?? ""),
     thumbnail: raw.thumbnail as Thumbnail | null,
     shared: raw.shared ?? false,
+    is_editable: raw.is_editable ?? false,
     can_edit: raw.can_edit ?? true,
     current_state: mapStateSummary(raw.current_state),
     current_location: raw.current_location ?? "",
@@ -313,11 +316,24 @@ export async function updateCurrentState(
   return mapPieceDetail(data);
 }
 
+export async function updatePastState(
+  pieceId: string,
+  stateId: string,
+  payload: UpdateStatePayload,
+): Promise<PieceDetail> {
+  const { data } = await client.patch<Wire<PieceDetail>>(
+    `pieces/${pieceId}/states/${stateId}/`,
+    payload,
+  );
+  return mapPieceDetail(data);
+}
+
 export type UpdatePiecePayload = {
   name?: string;
   current_location?: string;
   thumbnail?: Thumbnail | null;
   shared?: boolean;
+  is_editable?: boolean;
   tags?: string[];
   showcase_story?: string;
   showcase_fields?: string[];

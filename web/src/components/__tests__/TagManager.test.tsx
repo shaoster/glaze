@@ -36,6 +36,7 @@ vi.mock("../../util/api", () => ({
 
 function makePiece(overrides = {}): PieceDetail {
   const state = {
+    id: "state-id-1",
     state: "designed" as const,
     notes: "",
     created: new Date("2024-01-15T10:00:00Z"),
@@ -44,6 +45,7 @@ function makePiece(overrides = {}): PieceDetail {
     previous_state: null,
     next_state: null,
     custom_fields: {},
+    has_been_edited: false,
   };
   return {
     id: "piece-id-1",
@@ -51,9 +53,14 @@ function makePiece(overrides = {}): PieceDetail {
     created: new Date("2024-01-15T10:00:00Z"),
     last_modified: new Date("2024-01-15T10:00:00Z"),
     thumbnail: null,
+    shared: false,
+    is_editable: false,
+    can_edit: true,
     current_state: state,
     current_location: "",
     tags: [],
+    showcase_story: "",
+    showcase_fields: [],
     history: [state],
     ...overrides,
   };

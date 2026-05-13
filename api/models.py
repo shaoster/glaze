@@ -204,13 +204,21 @@ class Piece(models.Model):
     # validated against this version. Hardcoded to the current WORKFLOW_VERSION
     # for now; future work will allow migrating pieces to newer versions.
     workflow_version = models.CharField(max_length=32, default=WORKFLOW_VERSION)
+    # When True, all state invariants are suspended: sealed checks, successor
+    # validation, and sharing are bypassed so past states can be retroactively
+    # added or edited. Shared pieces are inaccessible to non-owners while editable.
+    is_editable = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-fields_last_modified"]
 
     @property
     def current_state(self) -> "PieceState | None":
-        return self.states.order_by("-created").first()
+        from django.db.models import F
+
+        return self.states.order_by(
+            F("order").desc(nulls_last=True), "-created"
+        ).first()
 
     @property
     def last_modified(self):
@@ -233,6 +241,12 @@ class PieceState(models.Model):
     notes = models.TextField(blank=True, default="")
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
+    # Sequential position in piece history. Set on creation; shifted up when a
+    # retroactive state is inserted before this one.
+    order = models.PositiveIntegerField(null=True, blank=True)
+    # Set to True when this state is created or edited while piece.is_editable=True.
+    # Silent flag reserved for future analysis; not displayed in the UI.
+    has_been_edited = models.BooleanField(default=False)
     # Inline (non-global-ref) state-specific fields for this state.
     # Global ref fields are stored in per-type junction tables (PieceState*Ref models).
     custom_fields = models.JSONField(default=dict)
@@ -243,7 +257,7 @@ class PieceState(models.Model):
         return self.piece.workflow_version
 
     class Meta:
-        ordering = ["created"]
+        ordering = ["order", "created"]
 
     def __init__(self, *args, **kwargs):
         self._pending_images = kwargs.pop("images", None)
@@ -279,13 +293,22 @@ class PieceState(models.Model):
         if self.user_id is None and self.piece_id:
             self.user = self.piece.user
 
+        if self._state.adding and self.order is None and self.piece_id:
+            from django.db.models import Max
+
+            max_order = self.piece.states.aggregate(Max("order"))["order__max"] or 0
+            self.order = max_order + 1
+
         # Validate inline custom_fields against the DSL schema for this state.
         # Global ref fields are excluded from this schema (they live in junction tables).
         from .workflow import validate_custom_fields
 
         validate_custom_fields(self.state, self.custom_fields)
 
-        if not self._state.adding and not allow_sealed_edit:
+        is_editable = getattr(self.piece, "is_editable", False)
+        if is_editable and not self._state.adding:
+            self.has_been_edited = True
+        if not self._state.adding and not allow_sealed_edit and not is_editable:
             current = self.piece.current_state
             if current is None or current.pk != self.pk:
                 raise ValueError(
