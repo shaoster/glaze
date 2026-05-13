@@ -846,8 +846,13 @@ describe("PieceDetail", () => {
     it("disables 'Seal changes' button when history sequence is invalid", async () => {
       const designed = makeState({ state: "designed" });
       const glazed = makeState({ state: "glazed" });
+      // history includes current_state as last element (matches API shape)
       await renderPieceDetail(
-        makePiece({ is_editable: true, history: [designed], current_state: glazed }),
+        makePiece({
+          is_editable: true,
+          history: [designed, glazed],
+          current_state: glazed,
+        }),
       );
       expect(
         screen.getByRole("button", { name: /seal changes/i }),
@@ -858,11 +863,31 @@ describe("PieceDetail", () => {
       const designed = makeState({ state: "designed" });
       const glazed = makeState({ state: "glazed" });
       await renderPieceDetail(
-        makePiece({ is_editable: true, history: [designed], current_state: glazed }),
+        makePiece({
+          is_editable: true,
+          history: [designed, glazed],
+          current_state: glazed,
+        }),
       );
       expect(
         screen.getByText(/'Glazing' is not a valid successor of 'Designing'/),
       ).toBeInTheDocument();
+    });
+
+    it("enables 'Seal changes' button when history sequence is valid (regression: bisque_fired re-seal)", async () => {
+      const queued = makeState({ state: "submitted_to_bisque_fire" });
+      const bisqueFired = makeState({ state: "bisque_fired" });
+      // history ends with current_state — must not produce a self-comparison error
+      await renderPieceDetail(
+        makePiece({
+          is_editable: true,
+          history: [queued, bisqueFired],
+          current_state: bisqueFired,
+        }),
+      );
+      expect(
+        screen.getByRole("button", { name: /seal changes/i }),
+      ).not.toBeDisabled();
     });
 
     it("disables transition buttons when piece is in editable mode", async () => {
