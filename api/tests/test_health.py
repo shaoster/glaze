@@ -28,7 +28,9 @@ class TestHealthReady:
         assert response.status_code == 200
 
     def test_returns_503_when_database_check_fails(self):
-        with patch("api.views._check_database", side_effect=RuntimeError("boom")):
+        with patch(
+            "api.health_views._check_database", side_effect=RuntimeError("boom")
+        ):
             response = self._get()
         assert response.status_code == 503
         body = response.json()
@@ -41,15 +43,13 @@ class TestHealthReady:
         assert "boom" not in response.content.decode()
 
     def test_returns_503_when_migrations_pending(self):
-        with patch("api.views._check_migrations", return_value=False):
+        with patch("api.health_views._check_migrations", return_value=False):
             response = self._get()
         assert response.status_code == 503
         assert response.json()["checks"]["migrations"] is False
 
     def test_returns_503_when_async_tasks_unhealthy(self):
-        with patch(
-            "api.tasks.InMemoryTaskInterface.health_check", return_value=False
-        ):
+        with patch("api.tasks.InMemoryTaskInterface.health_check", return_value=False):
             response = self._get()
         assert response.status_code == 503
         assert response.json()["checks"]["async_tasks"] is False
