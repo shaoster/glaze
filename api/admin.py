@@ -817,6 +817,12 @@ class PieceStateAdminForm(forms.ModelForm):
         from .workflow import get_global_config, get_global_ref_fields_for_state
 
         super().__init__(*args, **kwargs)
+
+        # Hide the raw JSON field: it is either unused, or we have typed fields for it
+        if "custom_fields" in self.fields:
+            self.fields["custom_fields"].widget = forms.HiddenInput()
+            self.fields["custom_fields"].required = False
+
         self.custom_field_names = [
             name
             for name in self.fields
@@ -824,11 +830,6 @@ class PieceStateAdminForm(forms.ModelForm):
         ]
 
         if self.custom_field_names:
-            # Hide the raw JSON field if we have typed fields for it
-            if "custom_fields" in self.fields:
-                self.fields["custom_fields"].widget = forms.HiddenInput()
-                self.fields["custom_fields"].required = False
-
             instance = self.instance
             if isinstance(instance, PieceState):
                 # Populating initial values from custom_fields blob (inline fields)
