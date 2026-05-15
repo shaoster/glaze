@@ -1,5 +1,5 @@
 # ── Common ────────────────────────────────────────────────────────────────────
-startup --host_jvm_args=-Xmx1g
+startup --host_jvm_args=-Xmx2g
 startup --max_idle_secs=600
 common --experimental_disk_cache_gc_max_size=200G
 common --enable_bzlmod
@@ -13,7 +13,7 @@ build --incompatible_enable_cc_toolchain_resolution
 
 # Resource limits
 build --local_resources=memory=HOST_RAM*0.5
-build --local_resources=cpu=HOST_CPUS*0.5
+build --local_resources=cpu=HOST_CPUS*1.0
 
 # aspect_rules_py / uv setup
 common --@pypi//venv=glaze
@@ -46,6 +46,11 @@ common:ci --remote_cache=grpcs://remote.buildbuddy.io
 common:ci --remote_cache_compression
 common:ci --remote_timeout=10m
 common:ci --nolegacy_important_outputs
+
+# Memory optimization for CI (minimize retention of analysis graph)
+build:ci --notrack_incremental_state
+build:ci --nokeep_state_after_build
+build:ci --discard_analysis_cache
 
 # Optimize for GitHub Actions (network-limited, CPU-limited)
 # 1. Use a local disk cache (backed by actions/cache) to bypass network latency for hits.
