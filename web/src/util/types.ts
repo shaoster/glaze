@@ -118,3 +118,24 @@ export interface AsyncTask {
   created: string;
   last_modified: string;
 }
+
+export interface JSONSchemaProperty {
+  type: string;
+  enum?: string[];
+  anyOf?: JSONSchemaProperty[];
+  "x-label"?: string;
+  "x-description"?: string;
+  "x-display-as"?: string;
+  "x-required"?: boolean;
+  "x-global-ref"?: string;
+  "x-can-create"?: boolean;
+  "x-read-only"?: boolean;
+  [key: string]: unknown;
+}
+
+export interface UISchema {
+  type: "object";
+  properties: Record<string, JSONSchemaProperty>;
+  required?: string[];
+  additionalProperties?: boolean;
+}

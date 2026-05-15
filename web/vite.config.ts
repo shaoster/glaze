@@ -32,7 +32,12 @@ export default defineConfig({
     // sandbox CWD so Bazel's declared output tree artifact is populated.
     outDir: path.resolve(process.cwd(), "dist"),
     rollupOptions: {
+      input: {
+        main: path.resolve(root, "index.html"),
+        "admin-widget": path.resolve(root, "src/admin.tsx"),
+      },
       output: {
+        entryFileNames: "[name].js",
         manualChunks(id) {
           if (
             id.includes("node_modules/react") ||

@@ -170,6 +170,7 @@ vi.mock("../../../workflow.yml", () => ({
 vi.mock("../../util/api", () => ({
   fetchGlobalEntries: vi.fn().mockResolvedValue([]),
   fetchGlobalEntriesWithFilters: vi.fn().mockResolvedValue([]),
+  fetchWorkflowStateSchema: vi.fn().mockResolvedValue(null),
   updateCurrentState: vi.fn(),
   updatePastState: vi.fn(),
   updatePiece: vi.fn(),

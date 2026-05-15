@@ -34,6 +34,7 @@ py_library(
         "task_views.py",
         "urls.py",
         "views.py",
+        "workflow_views.py",
     ],
     deps = [
         ":api_workflow_lib",
@@ -50,6 +51,7 @@ py_library(
         "manual_tile_imports.py",
         "model_factories.py",
         "tasks.py",
+        "widgets.py",
     ],
     data = [
         ":api_commands",

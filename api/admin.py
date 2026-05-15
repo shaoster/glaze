@@ -33,7 +33,12 @@ from .utils import (
     normalize_image_payload,
     sync_glaze_type_singleton_combination,
 )
-from .workflow import get_image_fields_for_global_model, get_public_global_models
+from .widgets import WorkflowStateWidget
+from .workflow import (
+    build_ui_schema,
+    get_image_fields_for_global_model,
+    get_public_global_models,
+)
 
 
 class GlazeAdminSite(admin.AdminSite):
@@ -741,62 +746,6 @@ class PieceStateImageInline(SortableInlineAdminMixin, admin.TabularInline):
         js = ("admin/js/sortable_inline_notice.js",)
 
 
-def _get_custom_form_fields(state_id: str) -> dict[str, forms.Field]:
-    from django.apps import apps
-
-    from .workflow import (
-        build_custom_fields_schema,
-        get_global_config,
-        get_global_ref_fields_for_state,
-    )
-
-    schema = build_custom_fields_schema(state_id)
-    properties = schema.get("properties", {})
-    required_list = schema.get("required", [])
-
-    declared_fields: dict[str, forms.Field] = {}
-    for field_name, field_def in properties.items():
-        field_type = field_def.get("type")
-        is_required = field_name in required_list
-        label = field_name.replace("_", " ").capitalize()
-        form_field_name = f"custom_{field_name}"
-        is_percent = field_def.get("display_as") == "percent"
-
-        kwargs: dict[str, Any] = {"required": is_required, "label": label}
-        if is_percent:
-            kwargs["disabled"] = True
-            kwargs["help_text"] = "Displayed as percentage (x100%) in the main UI."
-
-        if field_type == "boolean":
-            declared_fields[form_field_name] = forms.BooleanField(
-                required=False, label=label
-            )
-        elif field_type == "integer":
-            declared_fields[form_field_name] = forms.IntegerField(**kwargs)
-        elif field_type == "number":
-            declared_fields[form_field_name] = forms.FloatField(**kwargs)
-        else:
-            declared_fields[form_field_name] = forms.CharField(**kwargs)
-
-    # Add global ref fields
-    global_ref_fields = get_global_ref_fields_for_state(state_id)
-    for field_name, global_name in global_ref_fields.items():
-        form_field_name = f"custom_{field_name}"
-        if form_field_name in declared_fields:
-            continue
-
-        config = get_global_config(global_name)
-        model_cls = apps.get_model("api", config["model"])
-        label = field_name.replace("_", " ").capitalize()
-        declared_fields[form_field_name] = forms.ModelChoiceField(
-            queryset=model_cls.objects.all(),
-            required=False,  # DSL doesn't easily expose 'required' for refs yet
-            label=label,
-        )
-
-    return declared_fields
-
-
 class PieceStateAdminForm(forms.ModelForm):
     allow_sealed_edit = forms.BooleanField(
         required=False,
@@ -806,6 +755,11 @@ class PieceStateAdminForm(forms.ModelForm):
             "Use only for exceptional admin corrections — this bypasses the sealed-state invariant."
         ),
     )
+    unified_custom_fields = forms.JSONField(
+        required=False,
+        label="Custom Fields",
+        widget=WorkflowStateWidget(),
+    )
 
     class Meta:
         model = PieceState
@@ -814,54 +768,52 @@ class PieceStateAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         from django.apps import apps
 
-        from .workflow import get_global_config, get_global_ref_fields_for_state
+        from .workflow import (
+            build_ui_schema,
+            get_global_config,
+            get_global_ref_fields_for_state,
+        )
 
         super().__init__(*args, **kwargs)
 
-        # Hide the raw JSON field: it is either unused, or we have typed fields for it
+        # Hide the raw JSON field since we have the unified widget for it
         if "custom_fields" in self.fields:
             self.fields["custom_fields"].widget = forms.HiddenInput()
             self.fields["custom_fields"].required = False
 
-        self.custom_field_names = [
-            name
-            for name in self.fields
-            if name.startswith("custom_") and name != "custom_fields"
-        ]
+        instance = self.instance
+        if isinstance(instance, PieceState) and instance.state:
+            ui_schema = build_ui_schema(instance.state)
+            self.fields["unified_custom_fields"].widget = WorkflowStateWidget(
+                piece_id=instance.piece_id, state_id=instance.state, ui_schema=ui_schema
+            )
 
-        if self.custom_field_names:
-            instance = self.instance
-            if isinstance(instance, PieceState):
-                # Populating initial values from custom_fields blob (inline fields)
-                if isinstance(instance.custom_fields, dict):
-                    for form_field_name in self.custom_field_names:
-                        field_name = form_field_name[7:]  # strip 'custom_'
-                        if field_name in instance.custom_fields:
-                            self.initial[form_field_name] = instance.custom_fields[
-                                field_name
-                            ]
+            # Initial value for the widget: current custom_fields + global_refs
+            global_ref_fields = get_global_ref_fields_for_state(instance.state)
+            global_ref_values = {}
+            for field_name, global_name in global_ref_fields.items():
+                ref_model_cls = apps.get_model(
+                    "api", f"PieceState{get_global_config(global_name)['model']}Ref"
+                )
+                try:
+                    ref_obj = ref_model_cls.objects.get(
+                        piece_state=instance, field_name=field_name
+                    )
+                    global_ref_values[field_name] = {
+                        "id": str(getattr(ref_obj, f"{global_name}_id")),
+                        "name": str(getattr(ref_obj, global_name)),
+                    }
+                except ref_model_cls.DoesNotExist:
+                    pass
 
-                # Populating initial values for relational fields (junction tables)
-                if instance.state:
-                    global_ref_fields = get_global_ref_fields_for_state(instance.state)
-                    for field_name, global_name in global_ref_fields.items():
-                        form_field_name = f"custom_{field_name}"
-                        if form_field_name not in self.fields:
-                            continue
-
-                        config = get_global_config(global_name)
-                        ref_model_cls = apps.get_model(
-                            "api", f"PieceState{config['model']}Ref"
-                        )
-                        try:
-                            ref_obj = ref_model_cls.objects.get(
-                                piece_state=instance, field_name=field_name
-                            )
-                            self.initial[form_field_name] = getattr(
-                                ref_obj, f"{global_name}_id"
-                            )
-                        except ref_model_cls.DoesNotExist:
-                            pass
+            initial_piece_state_data = {
+                "id": str(instance.id),
+                "state": instance.state,
+                "notes": instance.notes,
+                "custom_fields": instance.custom_fields or {},
+                "global_ref_values": global_ref_values,  # special key for the widget
+            }
+            self.initial["unified_custom_fields"] = initial_piece_state_data
 
     def clean(self):
         from .workflow import get_global_ref_fields_for_state
@@ -882,34 +834,19 @@ class PieceStateAdminForm(forms.ModelForm):
                     "Check 'Allow sealed edit' to override."
                 )
 
-        if hasattr(self, "custom_field_names") and self.custom_field_names:
-            instance = self.instance
-            custom_data: dict[str, Any] = {}
-            if isinstance(instance, PieceState):
-                instance_custom_fields = instance.custom_fields
-                if isinstance(instance_custom_fields, dict):
-                    custom_data = dict(instance_custom_fields)
+        unified_data = cleaned_data.get("unified_custom_fields")
+        if unified_data:
+            # unified_data is the JSON payload from the React widget:
+            # { notes, images, custom_fields: { ... } }
+            # Wait, our widget's saveStateFn sends { notes, images, custom_fields }
+            # We need to extract custom_fields and possibly notes.
+            if "custom_fields" in unified_data:
+                cleaned_data["custom_fields"] = unified_data["custom_fields"]
+            if "notes" in unified_data:
+                cleaned_data["notes"] = unified_data["notes"]
 
-            # Relational fields are stored in junction tables, NOT in the JSON blob.
-            global_ref_fields = (
-                get_global_ref_fields_for_state(instance.state)
-                if isinstance(instance, PieceState) and instance.state
-                else {}
-            )
-
-            for form_field_name in self.custom_field_names:
-                field_name = form_field_name[7:]  # strip 'custom_' prefix
-                if field_name in global_ref_fields:
-                    continue
-
-                if form_field_name in cleaned_data:  # type: ignore[operator]
-                    val = cleaned_data[form_field_name]  # type: ignore[index]
-                    if val not in (None, ""):
-                        custom_data[field_name] = val
-                    elif field_name in custom_data:
-                        del custom_data[field_name]
-            cleaned_data["custom_fields"] = custom_data  # type: ignore[index]
         return cleaned_data
+
 
 
 @admin.register(PieceState)
@@ -924,24 +861,9 @@ class PieceStateAdmin(ExportMixin, SortableAdminBase, admin.ModelAdmin):
     def get_fields(self, request: HttpRequest, obj: PieceState | None = None) -> Any:
         fields = list(super().get_fields(request, obj))
         if obj and obj.state:
-            custom_fields = _get_custom_form_fields(obj.state)
-            for custom_name in custom_fields:
-                if custom_name not in fields:
-                    fields.append(custom_name)
+            if "unified_custom_fields" not in fields:
+                fields.append("unified_custom_fields")
         return fields
-
-    def get_form(self, request, obj=None, change=False, **kwargs):
-        if obj and obj.state:
-            custom_fields = _get_custom_form_fields(obj.state)
-            if custom_fields:
-                # Create a dynamic subclass of the form with these fields declared
-                # so that modelform_factory (called by super().get_form) accepts them.
-                dynamic_form = type(
-                    f"Dynamic{self.form.__name__}", (self.form,), custom_fields
-                )
-                kwargs["form"] = dynamic_form
-
-        return super().get_form(request, obj, change, **kwargs)
 
     def save_model(
         self,
@@ -956,19 +878,17 @@ class PieceStateAdmin(ExportMixin, SortableAdminBase, admin.ModelAdmin):
         allow_sealed = form.cleaned_data.get("allow_sealed_edit", False)
         obj.save(allow_sealed_edit=bool(allow_sealed))
 
-        # Save relational fields (junction tables)
+        # Save relational fields (junction tables) from the unified React payload
         global_ref_fields = get_global_ref_fields_for_state(obj.state)
         global_ref_pks = {}
         clear_fields = set()
 
-        for field_name in global_ref_fields:
-            form_field_name = f"custom_{field_name}"
-            if form_field_name in form.cleaned_data:
-                val = form.cleaned_data[form_field_name]
-                if val:
-                    # val is a model instance from ModelChoiceField
-                    global_ref_pks[field_name] = str(val.pk)
-                else:
+        unified_data = form.cleaned_data.get("unified_custom_fields")
+        if unified_data and "global_ref_pks" in unified_data:
+            global_ref_pks = unified_data["global_ref_pks"]
+            # Any field in the schema that is NOT in the payload should be cleared
+            for field_name in global_ref_fields:
+                if field_name not in global_ref_pks:
                     clear_fields.add(field_name)
 
         if global_ref_pks or clear_fields:

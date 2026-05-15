@@ -42,6 +42,7 @@ from .piece_views import (
     pieces,
 )
 from .task_views import submit_task, task_detail
+from .workflow_views import workflow_state_schema
 
 __all__ = [
     "_FAVORITES_REGISTRY",
@@ -73,4 +74,5 @@ __all__ = [
     "pieces",
     "submit_task",
     "task_detail",
+    "workflow_state_schema",
 ]

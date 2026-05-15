@@ -19,20 +19,23 @@ import {
   Typography,
   useMediaQuery,
 } from "@mui/material";
-import type { PieceDetail, PieceState } from "../util/types";
+import type { PieceDetail, PieceState, UISchema } from "../util/types";
 import {
+  fetchWorkflowStateSchema,
   updateCurrentState,
   type UpdateStatePayload,
 } from "../util/api";
 import { openCloudinaryUploadWidget } from "../util/cloudinaryUpload";
 import {
   getCustomFieldDefinitions,
+  getDefinitionsFromSchema,
 } from "../util/workflow";
 import { entryNameOrEmpty } from "../util/optionalValues";
 import GlobalEntryField from "./GlobalEntryField";
 import AutosaveStatus from "./AutosaveStatus";
 import { useAutosave } from "./useAutosave";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
+import { useAsync } from "../util/useAsync";
 import {
   type ImageEntry,
   buildDraftState,
@@ -50,6 +53,8 @@ type WorkflowStateProps = {
   hideNotes?: boolean;
   hideImageUpload?: boolean;
   saveStateFn?: (payload: UpdateStatePayload) => Promise<PieceDetail>;
+  /** Optional pre-fetched schema to avoid an extra API call. */
+  uiSchema?: UISchema;
 };
 
 
@@ -165,6 +170,7 @@ export default function WorkflowState({
   hideNotes = false,
   hideImageUpload = false,
   saveStateFn,
+  uiSchema: initialUiSchema,
 }: WorkflowStateProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [widgetLoading, setWidgetLoading] = useState(false);
@@ -174,11 +180,24 @@ export default function WorkflowState({
     buildDraftState,
   );
   const { baseState, notes, images, customFieldInputs, globalRefPks } = draft;
-  const baseDraft = useMemo(() => buildDraftState(baseState), [baseState]);
-  const customFieldDefs = useMemo(
-    () => getCustomFieldDefinitions(baseState.state),
+
+  const { data: uiSchema } = useAsync(
+    () => fetchWorkflowStateSchema(baseState.state),
     [baseState.state],
+    { enabled: !initialUiSchema },
   );
+
+  const activeSchema = initialUiSchema ?? uiSchema;
+
+  const baseDraft = useMemo(() => buildDraftState(baseState), [baseState]);
+  const customFieldDefs = useMemo(() => {
+    if (activeSchema) {
+      return getDefinitionsFromSchema(activeSchema);
+    }
+    // Fallback to build-time AST if schema is not yet loaded.
+    return getCustomFieldDefinitions(baseState.state);
+  }, [baseState.state, activeSchema]);
+
   const normalizedCustomFields = useMemo(
     () =>
       normalizeCustomFieldPayload(

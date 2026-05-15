@@ -61,6 +61,11 @@ urlpatterns = [
         views.cloudinary_widget_sign,
         name="cloudinary-widget-sign",
     ),
+    path(
+        "workflow/schema/<str:state_id>/",
+        views.workflow_state_schema,
+        name="workflow-state-schema",
+    ),
 ]
 
 # Generate one route per global declared in workflow.yml.  The view factory

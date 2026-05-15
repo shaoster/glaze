@@ -10,6 +10,7 @@
  */
 import workflow from "../../../workflow.yml";
 import type { components } from "./generated-types";
+import type { UISchema } from "./types";
 
 type State = components["schemas"]["StateEnum"];
 
@@ -399,6 +400,29 @@ export function getCustomFieldDefinitions(
   return Object.entries(fields).map(([name, def]) =>
     buildResolvedField(name, def),
   );
+}
+
+/**
+ * Returns resolved custom field definitions derived from a UI JSON Schema.
+ * Used by the schema-driven WorkflowState component to avoid manual AST parsing.
+ */
+export function getDefinitionsFromSchema(
+  schema: UISchema,
+): ResolvedCustomField[] {
+  return Object.entries(schema.properties).map(([name, prop]) => ({
+    name,
+    label: prop["x-label"] ?? formatWorkflowFieldLabel(name),
+    type: prop.type as FieldType,
+    description: prop["x-description"],
+    required: !!prop["x-required"],
+    enum: prop.enum,
+    isGlobalRef: !!prop["x-global-ref"],
+    isStateRef: false,
+    isCalculated: !!prop["x-read-only"],
+    canCreate: prop["x-can-create"],
+    globalName: prop["x-global-ref"],
+    displayAs: prop["x-display-as"] as "percent" | undefined,
+  }));
 }
 
 /**

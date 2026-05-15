@@ -28,6 +28,7 @@ import type {
   TagEntry,
   Thumbnail,
   ImageCrop,
+  UISchema,
 } from "./types";
 
 export type AuthUser = {
@@ -261,6 +262,15 @@ export async function logoutUser(): Promise<void> {
 export async function fetchPiece(id: string): Promise<PieceDetail> {
   const { data } = await client.get<Wire<PieceDetail>>(`pieces/${id}/`);
   return mapPieceDetail(data);
+}
+
+export async function fetchWorkflowStateSchema(
+  stateId: string,
+): Promise<UISchema> {
+  const { data } = await client.get<UISchema>(
+    `workflow/schema/${stateId}/`,
+  );
+  return data;
 }
 
 export type CreatePiecePayload = {
