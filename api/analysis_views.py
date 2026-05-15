@@ -56,6 +56,7 @@ from .utils import bootstrap_dev_user
 from .workflow import (
     get_glaze_image_qualifying_states,
     get_global_model_and_field,
+    get_states_with_native_global_ref,
     is_private_global,
     is_public_global,
 )
@@ -85,11 +86,15 @@ def glaze_combination_images(request: Request) -> Response:
 
     # Collect the latest (piece_id → combo_id) mapping for this user's pieces.
     # Current states such as "completed" may not carry their own junction row, so
-    # use the most recent state that does.
+    # use the most recent state that does. Filter by native_states to ensure
+    # we don't pick up stale junction rows inadvertently written to states
+    # that inherit their combination via a $ref (e.g. glaze_fired).
+    native_states = get_states_with_native_global_ref("glaze_combination")
     refs = (
         GlazeCombinationRef.objects.filter(
             piece_state__piece__user=request.user,
             piece_state__piece__is_editable=False,
+            piece_state__state__in=native_states,
         )
         .values("piece_state__piece_id", "glaze_combination_id")
         .order_by("piece_state__piece_id", "-piece_state__created")
