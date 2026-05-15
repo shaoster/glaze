@@ -391,6 +391,22 @@ def get_global_ref_fields_for_state(state_id: str) -> dict[str, str]:
     return result
 
 
+def get_states_with_native_global_ref(global_name: str) -> frozenset[str]:
+    """Return all state IDs that directly define a reference to the given global,
+    ignoring states that inherit it via a state-ref.
+    """
+    result = set()
+    for state_id, state in _STATE_MAP.items():
+        for field_def in state.get("fields", {}).values():
+            if "type" in field_def or "compute" in field_def:
+                continue
+            ref = field_def.get("$ref")
+            if ref and ref.startswith(f"@{global_name}."):
+                result.add(state_id)
+                break
+    return frozenset(result)
+
+
 def get_state_global_ref_map() -> dict[str, list[str]]:
     """Return {global_name: [field_name, ...]} for every unique global ref across all states.
 

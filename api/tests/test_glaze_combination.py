@@ -449,7 +449,7 @@ class TestGlazeCombinationImages:
         current_state = PieceState.objects.create(
             piece=piece,
             user=user,
-            state="glaze_fired",
+            state="glazed",
             images=[{"url": "https://example.com/current.jpg", "caption": "current"}],
         )
         ref_model = apps.get_model("api", "PieceStateGlazeCombinationRef")
@@ -470,7 +470,7 @@ class TestGlazeCombinationImages:
         body = response.json()
         assert len(body) == 1
         assert body[0]["glaze_combination"]["id"] == str(current_combo.pk)
-        assert body[0]["pieces"][0]["state"] == "glaze_fired"
+        assert body[0]["pieces"][0]["state"] == "glazed"
         assert [img["url"] for img in body[0]["pieces"][0]["images"]] == [
             "https://example.com/current.jpg",
             "https://example.com/old.jpg",
