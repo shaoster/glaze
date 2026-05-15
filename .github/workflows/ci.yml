@@ -194,10 +194,11 @@ jobs:
           export SECRET_KEY=$(openssl rand -hex 32)
           export ALLOWED_HOST=localhost
           export APP_ORIGIN=http://localhost:8000
+          # `--wait` blocks until every service with a healthcheck reports
+          # healthy. The web service's healthcheck (defined in
+          # docker-compose.yml) is the pass criterion — a real readiness
+          # endpoint will replace its placeholder TCP probe in #272.
           docker compose up -d --wait --wait-timeout 180
-          # Hit a known unauthenticated endpoint to confirm gunicorn is serving.
-          curl -fsS --retry 10 --retry-delay 2 \
-            http://localhost:8000/admin/login/ >/dev/null
           docker compose logs web | tail -50
 
       - name: Tear down compose

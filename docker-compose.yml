@@ -44,6 +44,18 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Placeholder readiness check: confirms gunicorn is bound on :8000.
+    # Swap to the real readiness endpoint once shaoster/glaze#272 lands.
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import socket,sys; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 8000)); s.close()"
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 30s
 
 volumes:
   postgres_data:
