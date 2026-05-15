@@ -147,7 +147,9 @@ js_library(
 js_library(
     name = "util_lib",
     srcs = [
+        "src/cloudinary-widget.d.ts",
         "src/util/api.ts",
+        "src/util/cloudinaryUpload.ts",
         "src/util/format.ts",
         "src/util/normalizeWorkflowFields.ts",
         "src/util/optionalValues.ts",

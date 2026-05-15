@@ -22,12 +22,12 @@ import FactCheckIcon from "@mui/icons-material/FactCheck";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import MergeIcon from "@mui/icons-material/MergeType";
 import {
-  fetchCloudinaryWidgetConfig,
+  extractErrorMessage,
   importManualSquareCropRecords,
-  signCloudinaryWidgetParams,
   type CloudinaryWidgetConfig,
   type ManualSquareCropImportResponse,
 } from "../util/api";
+import { openCloudinaryUploadWidget } from "../util/cloudinaryUpload";
 import GlazeImportCropStage from "./glazeImportTool/GlazeImportCropStage";
 import GlazeImportImportStage from "./glazeImportTool/GlazeImportImportStage";
 import GlazeImportOcrStage from "./glazeImportTool/GlazeImportOcrStage";
@@ -289,53 +289,30 @@ export default function GlazeImportToolPage() {
   async function startCloudinaryUpload() {
     setWidgetError(null);
     setWidgetUploading(true);
-    let config: CloudinaryWidgetConfig;
-    try {
-      config = await fetchCloudinaryWidgetConfig();
-    } catch {
-      setWidgetUploading(false);
-      setWidgetError("Failed to load Cloudinary upload configuration.");
-      return;
-    }
-
-    if (!window.cloudinary?.createUploadWidget) {
-      setWidgetUploading(false);
-      setWidgetError(
-        "Cloudinary upload widget is not available in this browser.",
-      );
-      return;
-    }
-
-    const widget = window.cloudinary.createUploadWidget(
-      {
-        cloudName: config.cloud_name,
-        apiKey: config.api_key,
-        uploadSignature: (callback, paramsToSign) => {
-          signCloudinaryWidgetParams(paramsToSign as Record<string, unknown>)
-            .then(callback)
-            .catch(() => setWidgetError("Failed to sign Cloudinary upload."));
-        },
-        ...(config.folder ? { folder: config.folder } : {}),
+    const widget = await openCloudinaryUploadWidget({
+      messages: {
+        configError: "Failed to load Cloudinary upload configuration.",
+        unavailableError:
+          "Cloudinary upload widget is not available in this browser.",
+        signatureError: "Failed to sign Cloudinary upload.",
+        uploadError: "Cloudinary upload failed.",
+      },
+      widgetOptions: {
         sources: ["local"],
         multiple: true,
         resourceType: "image",
       },
-      async (error, result) => {
-        if (error) {
+      callbacks: {
+        onError: (message) => {
           setWidgetUploading(false);
-          setWidgetError("Cloudinary upload failed.");
-          return;
-        }
-        if (result?.event === "display-changed") {
-          const displayState =
-            typeof result.info === "string"
-              ? result.info
-              : (result.info as Record<string, unknown>)?.state;
-          if (displayState === "shown") {
+          setWidgetError(message);
+        },
+        onDisplayChange: (state) => {
+          if (state === "shown") {
             setWidgetUploading(false);
           }
-        }
-        if (result?.event === "success") {
+        },
+        onSuccess: async (result, config) => {
           const publicId = String(result.info.public_id || "");
           const originalFilename = String(
             result.info.original_filename || publicId || "upload",
@@ -415,11 +392,12 @@ export default function GlazeImportToolPage() {
               ),
             );
           }
-        }
+        },
       },
-    );
-
-    widget.open();
+    });
+    if (!widget) {
+      setWidgetUploading(false);
+    }
   }
 
   function confirmDeleteRecord(id: string) {
@@ -492,7 +470,7 @@ export default function GlazeImportToolPage() {
       setImportResult(result);
       setActiveTab(TAB_IMPORT);
     } catch (error) {
-      setImportError(error instanceof Error ? error.message : "Import failed.");
+      setImportError(extractErrorMessage(error, "Import failed."));
       setImportBuildProgress((current) =>
         current.map((entry) =>
           entry.status !== "ready"

@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import WorkflowState from "../WorkflowState";
+import type { CloudinaryUploadWidgetOptions } from "../../cloudinary-widget";
 import type { ResolvedCustomField } from "../../util/workflow";
 import {
   buildCustomFieldInputMap,
@@ -933,6 +934,33 @@ describe("WorkflowState", () => {
     await waitFor(() =>
       expect(
         screen.getByText("Upload failed. Please try again."),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("widget signature failure shows error message", async () => {
+    let uploadSignature:
+      | CloudinaryUploadWidgetOptions["uploadSignature"]
+      | undefined;
+    window.cloudinary = {
+      createUploadWidget: vi.fn((options) => {
+        uploadSignature = options.uploadSignature;
+        return { open: vi.fn(), close: noop, destroy: noop };
+      }),
+      openUploadWidget: vi.fn(),
+    };
+    vi.mocked(api.signCloudinaryWidgetParams).mockRejectedValue(
+      new Error("sign failed"),
+    );
+    render(<WorkflowState {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
+
+    await waitFor(() => expect(uploadSignature).toBeDefined());
+    uploadSignature?.(vi.fn(), { timestamp: "123" });
+    await waitFor(() =>
+      expect(
+        screen.getByText("Failed to sign upload. Please try again."),
       ).toBeInTheDocument(),
     );
   });

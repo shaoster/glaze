@@ -3,12 +3,25 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import GlazeImportToolPage from "../GlazeImportToolPage";
+import type { CloudinaryUploadWidgetOptions } from "../../cloudinary-widget";
 import {
   fetchCloudinaryWidgetConfig,
   importManualSquareCropRecords,
+  signCloudinaryWidgetParams,
 } from "../../util/api";
 
 vi.mock("../../util/api", () => ({
+  extractErrorMessage: vi.fn((error: unknown, defaultMessage: string) => {
+    const data = (error as { response?: { data?: unknown } }).response?.data;
+    if (typeof data === "object" && data !== null) {
+      const nonFieldErrors = (data as { non_field_errors?: unknown })
+        .non_field_errors;
+      if (Array.isArray(nonFieldErrors) && nonFieldErrors[0]) {
+        return String(nonFieldErrors[0]);
+      }
+    }
+    return error instanceof Error ? error.message : defaultMessage;
+  }),
   fetchCloudinaryWidgetConfig: vi.fn(),
   importManualSquareCropRecords: vi.fn(),
   signCloudinaryWidgetParams: vi.fn(),
@@ -333,6 +346,93 @@ describe("GlazeImportToolPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Cloudinary upload failed.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an error when Cloudinary upload signing fails", async () => {
+    let uploadSignature:
+      | CloudinaryUploadWidgetOptions["uploadSignature"]
+      | undefined;
+    window.cloudinary = {
+      createUploadWidget: vi.fn((options) => {
+        uploadSignature = options.uploadSignature;
+        return { open: vi.fn(), close: () => {}, destroy: () => {} };
+      }),
+      openUploadWidget: vi.fn(),
+    };
+    vi.mocked(fetchCloudinaryWidgetConfig).mockResolvedValue({
+      cloud_name: "demo-cloud",
+      api_key: "demo-key",
+    });
+    vi.mocked(signCloudinaryWidgetParams).mockRejectedValue(
+      new Error("sign failed"),
+    );
+
+    render(<GlazeImportToolPage />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Upload Via Cloudinary" }),
+    );
+
+    await waitFor(() => expect(uploadSignature).toBeDefined());
+    uploadSignature?.(vi.fn(), { timestamp: "123" });
+    await waitFor(() => {
+      expect(
+        screen.getByText("Failed to sign Cloudinary upload."),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("shows formatted API validation errors when import fails", async () => {
+    vi.mocked(createWorker).mockResolvedValue({
+      writeText: vi.fn().mockResolvedValue(undefined),
+      setParameters: vi.fn().mockResolvedValue(undefined),
+      recognize: vi.fn().mockResolvedValue({
+        data: { text: "Ash Blue", confidence: 91 },
+      }),
+      terminate: vi.fn().mockResolvedValue(undefined),
+    } as never);
+    vi.mocked(importManualSquareCropRecords).mockRejectedValue({
+      isAxiosError: true,
+      response: {
+        data: { non_field_errors: ["Import records are invalid."] },
+      },
+    });
+
+    const { container } = render(<GlazeImportToolPage />);
+    const input = container.querySelector('input[type="file"]');
+    const file = new File(["image-bytes"], "ash-blue.png", {
+      type: "image/png",
+    });
+
+    fireEvent.change(input!, { target: { files: [file] } });
+    await screen.findByText("ash-blue.png");
+    fireEvent.click(screen.getByText("ash-blue.png"));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Continue To OCR" }),
+    );
+    fireEvent.click((await screen.findAllByText("ash-blue.png"))[0]);
+    fireEvent.click(
+      (await screen.findAllByRole("button", { name: "Run OCR" }))[0],
+    );
+    await screen.findByText("Parsed as: Ash Blue");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Continue To Review" }),
+    );
+    const reviewRecordList = screen.getByRole("list");
+    fireEvent.click(await within(reviewRecordList).findByText("Ash Blue"));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Mark reviewed for import" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Continue To Import" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Run Bulk Import" }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Import records are invalid.")).toBeInTheDocument();
     });
   });
 
