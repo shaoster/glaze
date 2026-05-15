@@ -44,7 +44,11 @@ build:ci --bes_results_url=https://app.buildbuddy.io/invocation/
 build:ci --bes_backend=grpcs://remote.buildbuddy.io
 common:ci --remote_cache=grpcs://remote.buildbuddy.io
 common:ci --remote_cache_compression
-common:ci --remote_timeout=10m
+# Fail fast on stuck remote-cache fetches (the previous 10m let a hung
+# download wedge the bazel server until the runner process gave up).
+common:ci --remote_timeout=60s
+common:ci --remote_retries=5
+common:ci --remote_local_fallback
 common:ci --nolegacy_important_outputs
 
 # Optimize for GitHub Actions (network-limited, CPU-limited)
