@@ -3,6 +3,7 @@ import json
 import os
 import re
 from collections import defaultdict
+from typing import Callable
 
 from django.apps import apps
 from django.conf import settings
@@ -1288,3 +1289,57 @@ def task_detail(request: Request, task_id: str) -> Response:
     # Scope to current user to prevent leaking task state between accounts.
     task = get_object_or_404(AsyncTask, id=task_id, user=request.user)
     return Response(AsyncTaskSerializer(task).data)
+
+
+# ── Readiness ────────────────────────────────────────────────────────────────
+# Single anonymous endpoint used by docker-compose / nginx / future deploy
+# automation to gate traffic. Each entry in `_READINESS_CHECKS` returns True
+# iff that subsystem is currently usable; any exception is mapped to False so
+# the response never leaks internal error detail. Add a new check by appending
+# to `_READINESS_CHECKS` — the wire format is just `{name: bool}`.
+
+def _check_database() -> bool:
+    from django.db import connections
+
+    with connections["default"].cursor() as cursor:
+        cursor.execute("SELECT 1")
+        cursor.fetchone()
+    return True
+
+
+def _check_migrations() -> bool:
+    from django.db import connections
+    from django.db.migrations.executor import MigrationExecutor
+
+    executor = MigrationExecutor(connections["default"])
+    targets = executor.loader.graph.leaf_nodes()
+    return not executor.migration_plan(targets)
+
+
+def _check_async_tasks() -> bool:
+    from .tasks import get_task_interface
+
+    return get_task_interface().health_check()
+
+
+# Names resolved at request time (not import time) so tests can monkeypatch
+# `api.views._check_<name>` and the view will see the patched callable.
+_READINESS_CHECKS: tuple[str, ...] = ("database", "migrations", "async_tasks")
+
+
+@extend_schema(exclude=True)
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def health_ready(request: Request) -> Response:
+    checks: dict[str, bool] = {}
+    for name in _READINESS_CHECKS:
+        check: Callable[[], bool] = globals()[f"_check_{name}"]
+        try:
+            checks[name] = bool(check())
+        except Exception:
+            checks[name] = False
+    ok = all(checks.values())
+    return Response(
+        {"status": "ready" if ok else "not_ready", "checks": checks},
+        status=status.HTTP_200_OK if ok else status.HTTP_503_SERVICE_UNAVAILABLE,
+    )

@@ -30,6 +30,7 @@ urlpatterns = [
     path("auth/me/", views.auth_me, name="auth-me"),
     path("auth/register/", views.auth_register, name="auth-register"),
     path("auth/google/", views.auth_google, name="auth-google"),
+    path("health/ready/", views.health_ready, name="health-ready"),
     path("tasks/", views.submit_task, name="tasks-submit"),
     path("tasks/<uuid:task_id>/", views.task_detail, name="tasks-detail"),
     path("pieces/", views.pieces, name="pieces"),

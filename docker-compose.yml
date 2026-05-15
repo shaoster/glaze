@@ -44,14 +44,16 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Placeholder readiness check: confirms gunicorn is bound on :8000.
-    # Swap to the real readiness endpoint once shaoster/glaze#272 lands.
+    # Probes the API readiness endpoint. A 200 response means database,
+    # migrations, and the async task backend are all usable. start_period
+    # covers entrypoint commands (migrate, collectstatic, load_public_library,
+    # clear_stuck_tasks) before the first probe.
     healthcheck:
       test:
         - CMD
         - python
         - -c
-        - "import socket,sys; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 8000)); s.close()"
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready/', timeout=2).read()"
       interval: 5s
       timeout: 5s
       retries: 24
