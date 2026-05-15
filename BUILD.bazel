@@ -1,6 +1,24 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
+load("@aspect_rules_py//py:defs.bzl", "py_binary")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+
+# Dev entry point for backend management commands and the local ASGI server.
+# `bazel run //:manage -- runserver` etc. work directly; the sibling
+# `//:manage.venv` target materializes a venv (.manage.venv at the repo root)
+# with the full backend + api dep graph — used by gz_setup and the VSCode
+# Python interpreter.
+py_binary(
+    name = "manage",
+    srcs = ["manage.py"],
+    main = "manage.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//api:api_lib",
+        "//backend:backend_lib",
+        "@pypi//uvicorn",
+    ],
+)
 
 exports_files([
     "ruff.toml",
@@ -159,4 +177,14 @@ oci_push(
     repository = "ghcr.io/shaoster/glaze",
     # Tag is set at push time via --tag flag or OCI_TAG env var.
     # Example: bazel run //:push -- --tag $(git rev-parse --short HEAD)
+)
+
+# Load the freshly-built image into the local docker daemon so CI (and devs)
+# can `docker compose up` against it without a registry round-trip.
+# `bazel run //:load` tags it as ghcr.io/shaoster/glaze:latest, matching the
+# image reference in docker-compose.yml.
+oci_load(
+    name = "load",
+    image = ":image",
+    repo_tags = ["ghcr.io/shaoster/glaze:latest"],
 )

@@ -148,10 +148,10 @@ jobs:
           flags: code
           fail_ci_if_error: false
 
-  publish:
-    name: Publish OCI image
-    needs: [preflight, coverage, lint]
-    if: ${{ always() && !cancelled() && (github.event_name == 'push' && ((needs.coverage.result == 'success' && needs.lint.result == 'success') || needs.preflight.outputs.skip_main == 'true')) }}
+  image:
+    name: Build & smoke-test OCI image
+    needs: preflight
+    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -170,8 +170,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/bazel-disk-cache
-          key: bazel-disk-publish-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
+          key: bazel-disk-image-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
           restore-keys: |
+            bazel-disk-image-${{ needs.preflight.outputs.deps_key }}-
             bazel-disk-publish-${{ needs.preflight.outputs.deps_key }}-
             bazel-disk-
 
@@ -183,14 +184,37 @@ jobs:
       - name: Write Vite env file
         run: printf 'VITE_GOOGLE_CLIENT_ID=%s\n' '${{ secrets.VITE_GOOGLE_CLIENT_ID }}' > web/.env.local
 
+      - name: Build OCI image and load into docker
+        run: bazel run --config=ci --stamp //:load
+
+      - name: Smoke test via docker compose
+        run: |
+          set -euo pipefail
+          export POSTGRES_PASSWORD=ci
+          export SECRET_KEY=$(openssl rand -hex 32)
+          export ALLOWED_HOST=localhost
+          export APP_ORIGIN=http://localhost:8000
+          # `--wait` blocks until every service with a healthcheck reports
+          # healthy. The web service's healthcheck (defined in
+          # docker-compose.yml) is the pass criterion — a real readiness
+          # endpoint will replace its placeholder TCP probe in #272.
+          docker compose up -d --wait --wait-timeout 180
+          docker compose logs web | tail -50
+
+      - name: Tear down compose
+        if: always()
+        run: docker compose down -v --remove-orphans || true
+
       - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push OCI image
+      - name: Push OCI image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           bazel run --config=ci --stamp //:push -- \
             --tag latest \
@@ -198,8 +222,8 @@ jobs:
 
   record-fingerprint:
     name: Record successful fingerprint
-    needs: [preflight, lint, coverage]
-    if: ${{ github.event_name == 'pull_request' && needs.lint.result == 'success' && needs.coverage.result == 'success' }}
+    needs: [preflight, lint, coverage, image]
+    if: ${{ github.event_name == 'pull_request' && needs.lint.result == 'success' && needs.coverage.result == 'success' && needs.image.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Write fingerprint marker

@@ -51,9 +51,9 @@ _gz_preferred_root_for() {
     printf '%s\n' "$GLAZE_ROOT"
 }
 
-# Activate venv if present
-_GLAZE_VENV_ROOT="$(_gz_preferred_root_for ".venv/bin/activate")"
-[[ -f "$_GLAZE_VENV_ROOT/.venv/bin/activate" ]] && source "$_GLAZE_VENV_ROOT/.venv/bin/activate"
+# Activate Bazel-managed venv if present (built by `bazel run //:manage.venv`)
+_GLAZE_VENV_ROOT="$(_gz_preferred_root_for ".manage.venv/bin/activate")"
+[[ -f "$_GLAZE_VENV_ROOT/.manage.venv/bin/activate" ]] && source "$_GLAZE_VENV_ROOT/.manage.venv/bin/activate"
 
 # Load local env vars
 _gz_load_env_file() {
@@ -88,7 +88,7 @@ export BASH_ENV="$_GLAZE_SCRIPT_DIR/env-agent.sh"
 # ---------------------------------------------------------------------------
 
 _gz_venv_root() {
-    _gz_preferred_root_for ".venv/bin/activate"
+    _gz_preferred_root_for ".manage.venv/bin/activate"
 }
 
 _gz_find_free_port() {  # _gz_find_free_port [start_port]  — returns first unbound port >= start
@@ -261,32 +261,20 @@ gz_setup() {
         rtk init -g --auto-patch
     fi
 
-    # Python
-    echo "--- Syncing Python environment with uv..."
-    ${GLAZE_AGENT:+rtk }bazel run @uv//:uv -- sync
+    # Python — materializes .manage.venv/ at the workspace root via aspect_rules_py.
+    echo "--- Building Python venv with Bazel (//:manage.venv)..."
+    (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel run //:manage.venv)
 
     # Database
     echo "--- Running migrations..."
-    ${GLAZE_AGENT:+rtk }bazel run @uv//:uv -- run python "$GLAZE_ROOT/manage.py" migrate --run-syncdb
+    (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel run //:manage -- migrate --run-syncdb)
 
-    # Node + web deps
+    # Node + web deps — pnpm install via aspect_rules_js's @npm//:sync. This
+    # runs pnpm under the Bazel-managed node toolchain and materializes a
+    # normal pnpm tree at web/node_modules/ that both Bazel and the IDE read.
     _gz_ensure_node
-    if [[ "$setup_mode" == "isolated" ]]; then
-        if _gz_remove_symlink_if_present "$GLAZE_ROOT/web/node_modules"; then
-            echo "--- Replacing shared web/node_modules symlink with isolated worktree dependencies"
-        fi
-        echo "--- Installing web dependencies into the isolated worktree..."
-    else
-        if _gz_link_shared_dir_if_missing "web/node_modules"; then
-            echo "--- Reusing shared web/node_modules from $GLAZE_SHARED_ROOT/web/node_modules"
-        fi
-        if [[ -d "$GLAZE_ROOT/web/node_modules" ]]; then
-            echo "--- Web dependencies already available"
-        else
-            echo "--- Installing web dependencies..."
-        fi
-    fi
-    (cd "$GLAZE_ROOT/web" && ${GLAZE_AGENT:+rtk }bazel run @nodejs_linux_amd64//:npm -- install --silent)
+    echo "--- Syncing web dependencies via Bazel (@npm//:sync)..."
+    (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel run @npm//:sync)
 
     echo "=== Setup complete ==="
     echo "    Run 'gz_gentypes' to regenerate TypeScript types via Bazel (no backend)."
@@ -300,7 +288,7 @@ gz_setup() {
 gz_manage() {        # gz_manage <subcommand> [args…]
     (
         cd "$GLAZE_ROOT"
-        ${GLAZE_AGENT:+rtk }bazel run @uv//:uv -- run python manage.py "$@"
+        ${GLAZE_AGENT:+rtk }bazel run //:manage -- "$@"
     )
 }
 
@@ -467,7 +455,7 @@ gz_lint() {
 # Auto-fix: reformat Python files and apply ruff auto-fixes in one step.
 gz_format() {
     (
-        source "$(_gz_venv_root)/.venv/bin/activate"
+        source "$(_gz_venv_root)/.manage.venv/bin/activate"
         cd "$GLAZE_ROOT"
         ruff format .
         ruff check --fix .
@@ -525,7 +513,7 @@ gz_backend() {
     app_origin="http://localhost:$web_port"
     echo "$port" > "$_GLAZE_PIDS/backend.port"
     _gz_start backend "$_GLAZE_LOGS/backend.log" \
-        bash -c "source '$venv_root/.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$env_root/.env.local' ] && source '$env_root/.env.local'; set +a && export APP_ORIGIN='$app_origin' && python manage.py load_public_library --skip-if-missing && uvicorn backend.asgi:application --host 127.0.0.1 --port $port --reload"
+        bash -c "source '$venv_root/.manage.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$env_root/.env.local' ] && source '$env_root/.env.local'; set +a && export APP_ORIGIN='$app_origin' && python manage.py load_public_library --skip-if-missing && uvicorn backend.asgi:application --host 127.0.0.1 --port $port --reload"
 }
 
 gz_web() {
@@ -534,7 +522,7 @@ gz_web() {
     port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || _gz_find_free_port 5173)
     echo "$port" > "$_GLAZE_PIDS/web.port"
     BACKEND_PORT="$backend_port" _gz_start web "$_GLAZE_LOGS/web.log" \
-        bash -c "cd '$GLAZE_ROOT/web' && BACKEND_PORT=$backend_port ${GLAZE_AGENT:+rtk }bazel run @nodejs_linux_amd64//:npm -- run dev -- --port $port --strictPort"
+        bash -c "cd '$GLAZE_ROOT' && BACKEND_PORT=$backend_port ${GLAZE_AGENT:+rtk }bazel run //web:dev_server -- --port $port --strictPort"
 
     # Wait for Vite to print the chosen port (up to 10 s)
     local i=0
@@ -562,7 +550,7 @@ gz_open() {
         else
             xdg-open "$url" 2>/dev/null || true
         fi
-    ) &
+    )
 }
 
 gz_start() {
@@ -799,6 +787,14 @@ gz_logs() {    # gz_logs [backend|web|all]  — defaults to running servers
 # Type generation
 # ---------------------------------------------------------------------------
 
+gz_reload() {
+    # Re-source this file, bypassing the double-source guard so edits take
+    # effect in the current shell.
+    unset _GLAZE_AGENT_ENV_LOADED
+    # shellcheck disable=SC1091
+    source "$_GLAZE_SCRIPT_DIR/env-agent.sh"
+}
+
 gz_gentypes() {
     # Regenerate generated-types.ts via Bazel, then symlink it into the source
     # tree so the IDE and Vite dev server pick it up without a full build.
@@ -811,6 +807,7 @@ gz_gentypes() {
 
 _GZ_SHORTCUTS=(
     "gz_help           — show this list of shortcuts"
+    "gz_reload         — re-source env.sh in the current shell (picks up env-agent.sh edits)"
     "gz_install_mcp_tools — install MCP tool dependencies (jq, curl, git, gh)"
     "gz_setup [--isolated] — setup (shared reuse by default; --isolated for per-worktree deps)"
     "gz_manage <cmd>   — run any manage.py subcommand"

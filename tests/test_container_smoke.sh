@@ -1,5 +1,15 @@
 #!/bin/bash
 # Smoke test to verify that the API package exists as a package.
+#
+# Representative of the prod container: python:3.12-slim runs `python manage.py`
+# with PYTHONPATH=/app, no venv. We mirror that here with a vanilla `python3` +
+# PYTHONPATH=.
+#
+# Gotcha: if a shell with an activated aspect_rules_py venv (e.g. .manage.venv)
+# invokes `bazel test`, the venv's `bin/python3` — a runfiles shim that only
+# resolves inside its own runfiles tree — can leak onto PATH and surface as
+# `Unable to identify an interpreter for venv Runfiles { ... }` here. Run from
+# a non-activated shell, or strip the venv from PATH before invoking bazel.
 
 export PYTHONPATH=$PYTHONPATH:.
 
