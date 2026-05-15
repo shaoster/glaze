@@ -9,7 +9,7 @@ inputs:
     description: preflight-derived dependency hash; invalidates caches when MODULE.bazel/lock files change.
     required: true
   buildbuddy-api-key:
-    description: BuildBuddy remote API key (pass `${{ secrets.BAZEL_REMOTE_API_KEY }}`).
+    description: BuildBuddy remote API key. The caller must read this from secrets and pass it explicitly — composite actions cannot access secrets directly.
     required: true
 
 runs:
