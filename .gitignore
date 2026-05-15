@@ -160,6 +160,7 @@ celerybeat.pid
 # Docker local overrides
 docker-compose.override.yml
 .venv
+.manage.venv
 env/
 venv/
 ENV/

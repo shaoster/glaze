@@ -1,5 +1,6 @@
 web/node_modules
 .venv
+.manage.venv
 mobile
 .dev-logs
 .dev-pids

@@ -45,6 +45,15 @@ vite_pkg.vite(
     out_dirs = ["dist"],
 )
 
+# Interactive vite dev server. `bazel run //web:dev_server -- --port 5173`
+# replaces `bazel run @nodejs_linux_amd64//:npm -- run dev`; gz_web uses it.
+vite_pkg.vite_binary(
+    name = "dev_server",
+    chdir = package_name(),
+    data = [":web_lib"] + glob([".env.*"], allow_empty = True),
+    visibility = ["//visibility:public"],
+)
+
 ts_project(
     name = "tsc_typecheck",
     srcs = glob(
