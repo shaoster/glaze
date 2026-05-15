@@ -1,0 +1,38 @@
+name: Setup Bazel CI
+description: Restore bazel repository + disk caches and inject the BuildBuddy API key into .bazelrc for the current job.
+
+inputs:
+  cache-key-prefix:
+    description: Job-specific prefix for the disk cache key (e.g. lint, coverage, image). Lets each job have its own primary cache while still falling back to the shared bazel-disk- pool.
+    required: true
+  deps-key:
+    description: preflight-derived dependency hash; invalidates caches when MODULE.bazel/lock files change.
+    required: true
+  buildbuddy-api-key:
+    description: BuildBuddy remote API key (pass `${{ secrets.BAZEL_REMOTE_API_KEY }}`).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Cache Bazel Repository
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/bazel/_bazel_runner/cache/repos/v1
+        key: bazel-repo-${{ inputs.deps-key }}
+        restore-keys: bazel-repo-
+
+    - name: Cache Bazel Disk
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/bazel-disk-cache
+        key: bazel-disk-${{ inputs.cache-key-prefix }}-${{ inputs.deps-key }}-${{ github.run_id }}
+        restore-keys: |
+          bazel-disk-${{ inputs.cache-key-prefix }}-${{ inputs.deps-key }}-
+          bazel-disk-
+
+    - name: Inject BuildBuddy API key into .bazelrc
+      shell: bash
+      run: |
+        echo "" >> .bazelrc
+        echo "common:ci --remote_header=x-buildbuddy-api-key=${{ inputs.buildbuddy-api-key }}" >> .bazelrc

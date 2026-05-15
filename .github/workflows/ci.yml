@@ -85,29 +85,18 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Cache Bazel Repository
-        uses: actions/cache@v4
+      - uses: ./.github/actions/setup-bazel-ci
         with:
-          path: ~/.cache/bazel/_bazel_runner/cache/repos/v1
-          key: bazel-repo-${{ needs.preflight.outputs.deps_key }}
-          restore-keys: bazel-repo-
-      - name: Cache Bazel Disk
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/bazel-disk-cache
-          key: bazel-disk-lint-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
-          restore-keys: |
-            bazel-disk-lint-${{ needs.preflight.outputs.deps_key }}-
-            bazel-disk-
-      - name: Inject secret into ~/.bazelrc
-        run: |
-          echo "" >> .bazelrc
-          echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
+          cache-key-prefix: lint
+          deps-key: ${{ needs.preflight.outputs.deps_key }}
+          buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
       - name: Run Lint
         shell: bash
         run: |
           source env.sh
           gz_lint
+      - if: failure()
+        uses: ./.github/actions/collect-failure-diagnostics
 
   coverage:
     name: Coverage & Test
@@ -118,24 +107,11 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Cache Bazel Repository
-        uses: actions/cache@v4
+      - uses: ./.github/actions/setup-bazel-ci
         with:
-          path: ~/.cache/bazel/_bazel_runner/cache/repos/v1
-          key: bazel-repo-${{ needs.preflight.outputs.deps_key }}
-          restore-keys: bazel-repo-
-      - name: Cache Bazel Disk
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/bazel-disk-cache
-          key: bazel-disk-coverage-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
-          restore-keys: |
-            bazel-disk-coverage-${{ needs.preflight.outputs.deps_key }}-
-            bazel-disk-
-      - name: Inject secret into ~/.bazelrc
-        run: |
-          echo "" >> .bazelrc
-          echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
+          cache-key-prefix: coverage
+          deps-key: ${{ needs.preflight.outputs.deps_key }}
+          buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
       - name: Run Coverage & Test
         shell: bash
         run: |
@@ -147,6 +123,8 @@ jobs:
           files: bazel-out/_coverage/_coverage_report.dat
           flags: code
           fail_ci_if_error: false
+      - if: failure()
+        uses: ./.github/actions/collect-failure-diagnostics
 
   image:
     name: Build & smoke-test OCI image
@@ -160,26 +138,11 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      - name: Cache Bazel Repository
-        uses: actions/cache@v4
+      - uses: ./.github/actions/setup-bazel-ci
         with:
-          path: ~/.cache/bazel/_bazel_runner/cache/repos/v1
-          key: bazel-repo-${{ needs.preflight.outputs.deps_key }}
-          restore-keys: bazel-repo-
-      - name: Cache Bazel Disk
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/bazel-disk-cache
-          key: bazel-disk-image-${{ needs.preflight.outputs.deps_key }}-${{ github.run_id }}
-          restore-keys: |
-            bazel-disk-image-${{ needs.preflight.outputs.deps_key }}-
-            bazel-disk-publish-${{ needs.preflight.outputs.deps_key }}-
-            bazel-disk-
-
-      - name: Inject BuildBuddy API key into .bazelrc
-        run: |
-          echo "" >> .bazelrc
-          echo "common:ci --remote_header=x-buildbuddy-api-key=${{ secrets.BAZEL_REMOTE_API_KEY }}" >> .bazelrc
+          cache-key-prefix: image
+          deps-key: ${{ needs.preflight.outputs.deps_key }}
+          buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
 
       - name: Write Vite env file
         run: printf 'VITE_GOOGLE_CLIENT_ID=%s\n' '${{ secrets.VITE_GOOGLE_CLIENT_ID }}' > web/.env.local
@@ -196,39 +159,12 @@ jobs:
           export APP_ORIGIN=http://localhost:8000
           # `--wait` blocks until every service with a healthcheck reports
           # healthy. The web service's healthcheck (defined in
-          # docker-compose.yml) is the pass criterion — a real readiness
-          # endpoint will replace its placeholder TCP probe in #272.
+          # docker-compose.yml) is the pass criterion.
           docker compose up -d --wait --wait-timeout 180
           docker compose logs web | tail -50
 
-      - name: Collect failure diagnostics
-        if: failure()
-        run: |
-          set +e
-          mkdir -p /tmp/image-job-diagnostics
-          d=/tmp/image-job-diagnostics
-          # System state at failure time — usually answers OOM vs disk-full vs hang.
-          { uname -a; uptime; free -m; df -h; } > "$d/system.txt" 2>&1
-          # Bazel server crash log (the file path the "Server terminated abruptly"
-          # message points at) and the active invocation profile.
-          find ~/.cache/bazel -maxdepth 6 -name jvm.out -exec cp -v {} "$d/" \;
-          find ~/.cache/bazel -maxdepth 6 -name 'command.profile.gz' -exec cp -v {} "$d/" \;
-          # Docker / compose state.
-          docker ps -a > "$d/docker-ps.txt" 2>&1
-          docker compose ps > "$d/compose-ps.txt" 2>&1
-          docker compose logs --no-color > "$d/compose-logs.txt" 2>&1
-          # Kernel ring buffer often shows OOM-kill lines verbatim.
-          dmesg --ctime 2>/dev/null | tail -200 > "$d/dmesg.txt" || true
-          ls -la "$d"
-
-      - name: Upload failure diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: image-job-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
-          path: /tmp/image-job-diagnostics/
-          if-no-files-found: ignore
-          retention-days: 14
+      - if: failure()
+        uses: ./.github/actions/collect-failure-diagnostics
 
       - name: Tear down compose
         if: always()

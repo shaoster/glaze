@@ -1,0 +1,34 @@
+name: Collect failure diagnostics
+description: On job failure, capture system, bazel JVM, and (if present) docker compose state, then upload as a 14-day artifact for offline triage.
+
+runs:
+  using: composite
+  steps:
+    - name: Collect
+      shell: bash
+      run: |
+        set +e
+        d=/tmp/${{ github.job }}-diagnostics
+        mkdir -p "$d"
+        # System state at failure time — usually answers OOM vs disk-full vs hang.
+        { uname -a; uptime; free -m; df -h; } > "$d/system.txt" 2>&1
+        # Kernel ring buffer often shows OOM-kill lines verbatim.
+        dmesg --ctime 2>/dev/null | tail -200 > "$d/dmesg.txt"
+        # Bazel server crash log (the file path the "Server terminated abruptly"
+        # message points at) and the active invocation profile.
+        find ~/.cache/bazel -maxdepth 6 -name jvm.out -exec cp -v {} "$d/" \;
+        find ~/.cache/bazel -maxdepth 6 -name 'command.profile.gz' -exec cp -v {} "$d/" \;
+        # Docker / compose state — only meaningful in jobs that touch docker,
+        # but harmless to attempt elsewhere (commands return non-zero, ignored).
+        docker ps -a > "$d/docker-ps.txt" 2>&1
+        docker compose ps > "$d/compose-ps.txt" 2>&1
+        docker compose logs --no-color > "$d/compose-logs.txt" 2>&1
+        ls -la "$d"
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ github.job }}-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+        path: /tmp/${{ github.job }}-diagnostics/
+        if-no-files-found: ignore
+        retention-days: 14
