@@ -202,7 +202,7 @@ class TestAuthGoogle:
         settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
         client = APIClient()
         with patch(
-            "api.views.google_id_token.verify_oauth2_token",
+            "api.auth_views.google_id_token.verify_oauth2_token",
             side_effect=ValueError("bad"),
         ):
             resp = client.post(self.URL, {"credential": "bad-token"}, format="json")
@@ -213,7 +213,7 @@ class TestAuthGoogle:
         settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
         client = APIClient()
         with patch(
-            "api.views.google_id_token.verify_oauth2_token",
+            "api.auth_views.google_id_token.verify_oauth2_token",
             return_value=_FAKE_IDINFO.copy(),
         ):
             resp = client.post(self.URL, {"credential": "valid-token"}, format="json")
@@ -233,7 +233,7 @@ class TestAuthGoogle:
         UserProfile.objects.create(user=user, openid_subject="google-sub-123")
         client = APIClient()
         with patch(
-            "api.views.google_id_token.verify_oauth2_token",
+            "api.auth_views.google_id_token.verify_oauth2_token",
             return_value=_FAKE_IDINFO.copy(),
         ):
             resp = client.post(self.URL, {"credential": "valid-token"}, format="json")
@@ -251,7 +251,7 @@ class TestAuthGoogle:
         UserProfile.objects.create(user=user)
         client = APIClient()
         with patch(
-            "api.views.google_id_token.verify_oauth2_token",
+            "api.auth_views.google_id_token.verify_oauth2_token",
             return_value=_FAKE_IDINFO.copy(),
         ):
             resp = client.post(self.URL, {"credential": "valid-token"}, format="json")
@@ -272,7 +272,8 @@ class TestAuthGoogle:
         new_idinfo = {**_FAKE_IDINFO, "picture": "https://example.com/new.jpg"}
         client = APIClient()
         with patch(
-            "api.views.google_id_token.verify_oauth2_token", return_value=new_idinfo
+            "api.auth_views.google_id_token.verify_oauth2_token",
+            return_value=new_idinfo,
         ):
             resp = client.post(self.URL, {"credential": "valid-token"}, format="json")
         assert resp.status_code == 200
@@ -291,7 +292,7 @@ class TestAuthGoogle:
         )
         client = APIClient()
         with patch(
-            "api.views.google_id_token.verify_oauth2_token",
+            "api.auth_views.google_id_token.verify_oauth2_token",
             return_value=_FAKE_IDINFO.copy(),
         ):
             resp = client.post(self.URL, {"credential": "valid-token"}, format="json")
@@ -312,7 +313,7 @@ class TestAuthGoogle:
         idinfo = {key: value for key, value in _FAKE_IDINFO.items() if key != "picture"}
         client = APIClient()
         with patch(
-            "api.views.google_id_token.verify_oauth2_token", return_value=idinfo
+            "api.auth_views.google_id_token.verify_oauth2_token", return_value=idinfo
         ):
             resp = client.post(self.URL, {"credential": "valid-token"}, format="json")
         assert resp.status_code == 200

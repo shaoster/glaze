@@ -4,9 +4,9 @@ from django.contrib.auth.models import User
 from rest_framework.request import Request
 from rest_framework.test import APIClient, APIRequestFactory
 
+from api.global_entry_views import _apply_global_filters, _global_entries_impl
 from api.models import ClayBody, FiringTemperature, GlazeCombination, GlazeType, Tag
 from api.serializer_registry import _GLOBAL_ENTRY_SERIALIZERS
-from api.views import _apply_global_filters, _global_entries_impl
 
 
 def _get_serializer(model_name: str):
@@ -245,15 +245,19 @@ class TestGlobalEntries:
         )
         monkeypatch.delitem(_GLOBAL_ENTRY_SERIALIZERS, GlazeCombination, raising=False)
         monkeypatch.setattr(
-            "api.views.get_global_model_and_field",
+            "api.global_entry_views.get_global_model_and_field",
             lambda global_name: (
                 GlazeCombination,
                 {"firing_temperature": {"$ref": "@firing_temperature.name"}},
                 "firing_temperature",
             ),
         )
-        monkeypatch.setattr("api.views.is_public_global", lambda global_name: False)
-        monkeypatch.setattr("api.views.is_private_global", lambda global_name: True)
+        monkeypatch.setattr(
+            "api.global_entry_views.is_public_global", lambda global_name: False
+        )
+        monkeypatch.setattr(
+            "api.global_entry_views.is_private_global", lambda global_name: True
+        )
         django_request = APIRequestFactory().get("/api/globals/fake/")
         request = Request(django_request)
         request._user = user
