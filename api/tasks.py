@@ -8,7 +8,12 @@ from .models import AsyncTask
 
 logger = logging.getLogger(__name__)
 
-# Single shared executor for background tasks in development.
+# Per-process executor for background tasks. AsyncTask state is DB-backed
+# (so any API instance can poll status), but execution is bound to whichever
+# instance accepted the submission — submitting via this executor on instance
+# A means instance A is the only worker that will run it. A multi-instance
+# topology must replace this with a shared-broker backend before #275 (nginx
+# upstreams) lands; see #436.
 _executor = ThreadPoolExecutor(max_workers=1)
 
 TaskCallable = Callable[[AsyncTask], Any]
@@ -54,6 +59,10 @@ class InMemoryTaskInterface:
         # The shared executor is healthy iff it hasn't been shut down. After
         # shutdown, any subsequent .submit() raises RuntimeError, which would
         # surface to callers as a 500 — readiness should fail closed first.
+        # Note: this check is per-process; a "ready" answer from instance A
+        # says nothing about instance B's executor. Replacing this backend
+        # with a shared broker (#436) is what makes the readiness signal
+        # cluster-wide rather than instance-local.
         return not _executor._shutdown
 
     def submit(self, task: AsyncTask) -> None:
