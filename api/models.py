@@ -249,7 +249,7 @@ class PieceState(models.Model):
     has_been_edited = models.BooleanField(default=False)
     # Inline (non-global-ref) state-specific fields for this state.
     # Global ref fields are stored in per-type junction tables (PieceState*Ref models).
-    custom_fields = models.JSONField(default=dict)
+    custom_fields = models.JSONField(default=dict, blank=True)
 
     @property
     def workflow_version(self) -> str:
