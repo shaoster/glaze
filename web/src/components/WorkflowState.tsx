@@ -21,11 +21,10 @@ import {
 } from "@mui/material";
 import type { PieceDetail, PieceState } from "../util/types";
 import {
-  fetchCloudinaryWidgetConfig,
-  signCloudinaryWidgetParams,
   updateCurrentState,
   type UpdateStatePayload,
 } from "../util/api";
+import { openCloudinaryUploadWidget } from "../util/cloudinaryUpload";
 import {
   getCustomFieldDefinitions,
 } from "../util/workflow";
@@ -320,13 +319,6 @@ export default function WorkflowState({
     }
     setUploadError(null);
     setWidgetLoading(true);
-    let config;
-    try {
-      config = await fetchCloudinaryWidgetConfig();
-    } catch {
-      setUploadError("Failed to load upload configuration. Please try again.");
-      return;
-    }
     // Keeps the iframe hidden until it is ready (removed on display-changed: shown).
     const hideStyle = document.createElement("style");
     hideStyle.textContent = 'iframe[title="Upload Widget"] { opacity: 0; }';
@@ -339,19 +331,19 @@ export default function WorkflowState({
       'iframe[title="Upload Widget"] { top: env(safe-area-inset-top) !important; height: calc(100dvh - env(safe-area-inset-top)) !important; }';
     document.head.appendChild(safeAreaStyle);
 
-    const uploadWidget = window.cloudinary?.createUploadWidget(
-      {
-        cloudName: config.cloud_name,
-        apiKey: config.api_key,
-        uploadSignature: (callback, paramsToSign) => {
-          signCloudinaryWidgetParams(paramsToSign as Record<string, unknown>)
-            .then(callback)
-            .catch(() =>
-              setUploadError("Failed to sign upload. Please try again."),
-            );
-        },
-        ...(config.folder ? { folder: config.folder } : {}),
-        ...(config.upload_preset ? { uploadPreset: config.upload_preset } : {}),
+    const cleanupWidgetStyles = () => {
+      hideStyle.remove();
+      safeAreaStyle.remove();
+    };
+    const uploadWidget = await openCloudinaryUploadWidget({
+      messages: {
+        configError: "Failed to load upload configuration. Please try again.",
+        unavailableError:
+          "Upload widget is not available in this browser. Please try again.",
+        signatureError: "Failed to sign upload. Please try again.",
+        uploadError: "Upload failed. Please try again.",
+      },
+      widgetOptions: {
         sources: ["local", "camera"],
         multiple: true,
         resourceType: "image",
@@ -374,12 +366,13 @@ export default function WorkflowState({
           frame: { background: "#00000000" },
         } as { palette: Record<string, string> },
       },
-      (error, result) => {
-        if (result?.event === "display-changed") {
-          const state =
-            typeof result.info === "string"
-              ? result.info
-              : (result.info as Record<string, unknown>)?.state;
+      callbacks: {
+        onError: (message) => {
+          setWidgetLoading(false);
+          cleanupWidgetStyles();
+          setUploadError(message);
+        },
+        onDisplayChange: (state) => {
           if (state === "shown") {
             setWidgetLoading(false);
             hideStyle.remove();
@@ -393,15 +386,8 @@ export default function WorkflowState({
           } else if (state === "hidden" || state === "destroyed") {
             safeAreaStyle.remove();
           }
-        }
-        if (error) {
-          setWidgetLoading(false);
-          hideStyle.remove();
-          safeAreaStyle.remove();
-          setUploadError("Upload failed. Please try again.");
-          return;
-        }
-        if (result?.event === "success") {
+        },
+        onSuccess: (result, config) => {
           const newImage = {
             url: result.info.secure_url,
             caption: "",
@@ -410,10 +396,13 @@ export default function WorkflowState({
             crop: null,
           };
           saveUploadedImage(newImage);
-        }
+        },
       },
-    );
-    uploadWidget?.open();
+    });
+    if (!uploadWidget) {
+      setWidgetLoading(false);
+      cleanupWidgetStyles();
+    }
   }
 
   function handleFieldChange(name: string, value: string) {

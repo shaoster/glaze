@@ -1,7 +1,7 @@
 // Type declarations for the Cloudinary Upload Widget loaded from CDN.
 // https://cloudinary.com/documentation/upload_widget
 
-interface CloudinaryUploadWidgetResult {
+export interface CloudinaryUploadWidgetResult {
   event: string;
   info: {
     secure_url: string;
@@ -11,13 +11,13 @@ interface CloudinaryUploadWidgetResult {
   };
 }
 
-interface CloudinaryUploadWidget {
+export interface CloudinaryUploadWidget {
   open: () => void;
   close: () => void;
   destroy: () => void;
 }
 
-interface CloudinaryUploadWidgetOptions {
+export interface CloudinaryUploadWidgetOptions {
   cloudName: string;
   apiKey: string;
   uploadSignature: (
