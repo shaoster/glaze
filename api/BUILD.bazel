@@ -215,6 +215,19 @@ py_test(
 )
 
 py_test(
+    name = "api_health_test",
+    size = "small",
+    srcs = _CONFTEST + [
+        "tests/test_health.py",
+    ],
+    args = ["api/tests/test_health.py"],
+    data = _TEST_DATA,
+    env = _TEST_ENV,
+    main = "//tools:pytest_main.py",
+    deps = _TEST_DEPS,
+)
+
+py_test(
     name = "api_glaze_test",
     size = "medium",
     srcs = _CONFTEST + [
@@ -316,9 +329,10 @@ test_suite(
         ":api_admin_test",
         ":api_auth_test",
         ":api_glaze_test",
+        ":api_health_test",
+        ":api_migration_test",
         ":api_model_test",
         ":api_piece_test",
         ":api_workflow_test",
-        ":api_migration_test",
     ],
 )

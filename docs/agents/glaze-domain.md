@@ -280,6 +280,8 @@ These supplement the generic Django/DRF conventions.
 
 All API endpoints are registered in `backend/urls.py`.
 
+**Readiness endpoint:** `GET /api/health/ready/` is the single anonymous probe consumed by infrastructure (the `web` healthcheck in `docker-compose.yml`, future nginx upstream gating, rolling-deploy automation). It returns `200 {"status": "ready", "checks": {...}}` when every check passes or `503 {"status": "not_ready", "checks": {...}}` when any fails; `checks` values are booleans only — no exception detail leaks. The check registry lives in `api/views.py` as `_READINESS_CHECKS` (currently `database`, `migrations`, `async_tasks`); add a new probe by defining `_check_<name>() -> bool` and appending `<name>` to the tuple. There is no liveness endpoint — defer until k8s or another orchestrator that distinguishes liveness from readiness is in play.
+
 **ASGI server:** Production runs gunicorn with `uvicorn.workers.UvicornWorker` pointed at `backend.asgi:application` (see [`docker-entrypoint.sh`](../../docker-entrypoint.sh)). Django runs all sync views transparently in a thread pool — no per-view changes are required. Write a view as `async def` only when it performs long-running or streaming I/O that would otherwise block the worker heartbeat (e.g. the Cloudinary archive endpoint). Wrap any sync ORM or SDK calls inside an async view with `asyncio.to_thread(...)`. Use `httpx.AsyncClient` for outbound HTTP inside async views instead of `urllib.request.urlopen`.
 
 **Module boundaries — what goes in `api/workflow.py` vs. `api/utils.py`:**

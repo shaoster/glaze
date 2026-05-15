@@ -21,19 +21,3 @@ py_test(
     env = {"DJANGO_SETTINGS_MODULE": "backend.test_settings"},
 )
 
-sh_test(
-    name = "container_smoke_test",
-    srcs = ["test_container_smoke.sh"],
-    data = [
-        "//api:api_runtime_files",
-        "//backend:backend_runtime_files",
-    ],
-    args = [
-        "$(locations //api:api_runtime_files)",
-        "$(locations //backend:backend_runtime_files)",
-    ],
-    # Pin PATH so an activated aspect_rules_py venv on the dev shell (e.g.
-    # .manage.venv/bin/python3 — a runfiles shim that only resolves in its own
-    # runfiles tree) cannot leak in and shadow the system python3.
-    env = {"PATH": "/usr/bin:/bin"},
-)

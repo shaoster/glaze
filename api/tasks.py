@@ -37,9 +37,24 @@ class TaskInterface(Protocol):
 
     def submit(self, task: AsyncTask) -> None: ...
 
+    def health_check(self) -> bool:
+        """Return True if the task backend can currently accept submissions.
+
+        Used by the readiness endpoint. Concrete implementations should make
+        this cheap (no broker round-trip beyond what a real readiness probe
+        warrants) and must not raise — return False on any unexpected state.
+        """
+        ...
+
 
 class InMemoryTaskInterface:
     """Runs tasks in a background thread pool."""
+
+    def health_check(self) -> bool:
+        # The shared executor is healthy iff it hasn't been shut down. After
+        # shutdown, any subsequent .submit() raises RuntimeError, which would
+        # surface to callers as a 500 — readiness should fail closed first.
+        return not _executor._shutdown
 
     def submit(self, task: AsyncTask) -> None:
         # Use on_commit to ensure the task record is visible to the background thread.
