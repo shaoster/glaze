@@ -11,10 +11,6 @@ on:
         description: "Commit SHA to deploy (defaults to the selected branch HEAD)"
         required: false
         default: ""
-  push:
-    branches: [main]
-    paths:
-      - "docker-compose.yml"
 
 env:
   DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || inputs.sha || github.sha }}
@@ -23,7 +19,7 @@ jobs:
   deploy:
     name: Deploy to droplet
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     environment: glaze-droplet
     concurrency:
       group: deploy-production
