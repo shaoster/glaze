@@ -38,12 +38,20 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
   }
 
   const root = createRoot(container);
+  
+  // Ensure we have a valid state object for the component
+  const pieceState = {
+    ...options.initialPieceState,
+    custom_fields: options.initialPieceState.custom_fields || {},
+    notes: options.initialPieceState.notes || "",
+  };
+
   root.render(
     <React.StrictMode>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <WorkflowState
-          initialPieceState={options.initialPieceState}
+          initialPieceState={pieceState}
           pieceId={options.pieceId}
           onSaved={options.onSaved || (() => {})}
           onDirtyChange={options.onDirtyChange}
@@ -57,3 +65,5 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
 
   return () => root.unmount();
 };
+
+window.mountWorkflowStateWidget = mountWorkflowStateWidget;
