@@ -51,8 +51,12 @@ command fails. State any deviation explicitly.
 
 Six user-invocable skills: `/do` (implement an issue), `/spec` (draft and file a new issue), `/dream` (create a milestone and sub-issues), `/audit` (test performance audit), `/cover` (analyze test coverage), and `/deps` (audit Bazel dependency graphs).
 
-All other resources are loaded on demand via the `Read` tool. Load what the task touches —
-typically 2–4 files. The `/do` flow scouts dependencies and announces which to load.
+All other resources are loaded on demand via the `activate_skill` tool. Load what the task touches —
+typically 2–4 skills. The `/do` flow scouts dependencies and announces which to load.
+
+**Mandatory Skills for Development:**
+- Load `dev-environment` when bootstrapping the shell, navigating worktrees, or checking environment config.
+- Load `dev-testing` when running any build, test, or lint command.
 
 Use bazel query to scout dependencies and determine which skills are relevant:
 
@@ -70,7 +74,7 @@ bazel query 'rdeps(//..., //web:util_lib, 1)'
 bazel query "rdeps(//..., set(\$(git diff --name-only main | sed 's/.*/\"&\"/' | tr '\n' ' ')), 1)"
 ```
 
-| Task | Read |
+| Task | Skill |
 |---|---|
 | Workflow state machine, globals DSL, `workflow.yml` changes | [`.agents/skills/glaze-workflow/SKILL.md`](.agents/skills/glaze-workflow/SKILL.md) |
 | Backend: Glaze models, API endpoints, image FK, admin, Cloudinary | [`.agents/skills/glaze-backend/SKILL.md`](.agents/skills/glaze-backend/SKILL.md) |
@@ -81,8 +85,8 @@ bazel query "rdeps(//..., set(\$(git diff --name-only main | sed 's/.*/\"&\"/' |
 | Frontend testing: async assertions, mock boundaries, Autocomplete wrappers | [`.agents/skills/react-testing/SKILL.md`](.agents/skills/react-testing/SKILL.md) |
 | Opening PRs, issue bodies, DoD checklist, branch naming, scope limits | [`.agents/skills/github-pr/SKILL.md`](.agents/skills/github-pr/SKILL.md) |
 | Modifying ci.yml, cd.yml, or static.yml | [`.agents/skills/github-actions/SKILL.md`](.agents/skills/github-actions/SKILL.md) |
-| Dev environment setup, shell bootstrap, worktree navigation, server info | [`.agents/skills/dev-environment/SKILL.md`](.agents/skills/dev-environment/SKILL.md) |
-| Running tests, Bazel commands, linters, CI failures | [`.agents/skills/dev-testing/SKILL.md`](.agents/skills/dev-testing/SKILL.md) |
+| **Bootstrapping**: Dev environment setup, shell bootstrap, worktree navigation | [`.agents/skills/dev-environment/SKILL.md`](.agents/skills/dev-environment/SKILL.md) |
+| **Execution**: Running any build, test, or lint command; CI failures | [`.agents/skills/dev-testing/SKILL.md`](.agents/skills/dev-testing/SKILL.md) |
 | Auditing Bazel dependencies for OCI image, test, and lint targets | [`.agents/skills/deps/SKILL.md`](.agents/skills/deps/SKILL.md) |
 | Adding Python or npm packages, lock files, BUILD.bazel | [`.agents/skills/dev-packages/SKILL.md`](.agents/skills/dev-packages/SKILL.md) |
 | Bazel build optimization, remote caching, .bazelrc | [`.agents/skills/bazel-build-optimization/SKILL.md`](.agents/skills/bazel-build-optimization/SKILL.md) |
