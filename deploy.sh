@@ -39,6 +39,9 @@ else
     curl -fsSL \
         "https://raw.githubusercontent.com/shaoster/glaze/\${SHA}/docker-compose.yml" \
         -o docker-compose.yml
+    curl -fsSL \
+        "https://raw.githubusercontent.com/shaoster/glaze/\${SHA}/otel-collector-config.yml" \
+        -o otel-collector-config.yml
 fi
 
 echo "--- restarting services ---"
