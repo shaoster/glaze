@@ -1,30 +1,45 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import ScopedCssBaseline from "@mui/material/ScopedCssBaseline";
 import WorkflowState from "./components/WorkflowState";
 import type { PieceDetail, PieceState, UISchema } from "./util/types";
 import type { UpdateStatePayload } from "./util/api";
 
 const getDjangoTheme = (): "light" | "dark" => {
-  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  // Modern Django 5.0+
+  if (document.documentElement.dataset.theme === "dark") return "dark";
+  // Fallback for custom or older setups
+  if (document.body.classList.contains("dark-mode")) return "dark";
+  // System preference fallback
+  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
+  return "light";
 };
 
 const createAdminTheme = (mode: "light" | "dark") => {
+  const isDark = mode === "dark";
+  // Explicitly match Django dark/light mode background and foreground colors.
+  // Django Dark: #121212 bg, #eee fg.
+  // Django Light: #fff bg, #333 fg.
+  const bgColor = isDark ? "#121212" : "#fff";
+  const fgColor = isDark ? "#eee" : "#333";
+  const primaryColor = isDark ? "#79aec8" : "#447e9b";
+  const paperColor = isDark ? "#1e1e1e" : "#fff";
+
   return createTheme({
     palette: {
       mode,
-      primary: { main: "#1976d2" },
+      primary: { main: primaryColor },
+      background: {
+        default: bgColor,
+        paper: paperColor,
+      },
+      text: {
+        primary: fgColor,
+        secondary: isDark ? "#aaa" : "#666",
+      },
     },
     components: {
-      MuiBox: {
-        styleOverrides: {
-          root: {
-            // Apply Django colors to the container via CSS variables
-            "--body-bg": "inherit",
-            "--body-fg": "inherit",
-          },
-        },
-      },
       MuiTextField: {
         defaultProps: {
           variant: "outlined",
@@ -34,9 +49,8 @@ const createAdminTheme = (mode: "light" | "dark") => {
       MuiInputLabel: {
         styleOverrides: {
           root: {
-            // Use inherit to pick up the background color of the parent div
-            // which is set to var(--body-bg) in widgets.py
-            backgroundColor: "var(--body-bg, #fff)",
+            // Fix the 'notch' occlusion by matching the background color exactly.
+            backgroundColor: bgColor,
             padding: "0 4px",
             marginLeft: "-4px",
           },
@@ -67,11 +81,11 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
   const container = document.getElementById(options.containerId);
   if (!container) {
     console.error(`Container #${options.containerId} not found`);
-    return () => {};
+    return () => {{
+      // cleanup
+    }};
   }
 
-  // Create a dedicated container for MUI portals (Autocomplete, Dialogs, etc.)
-  // to avoid MutationObserver issues with the Admin's legacy DOM structure.
   const portalContainerId = `portal-root-${options.containerId}`;
   let portalContainer = document.getElementById(portalContainerId);
   if (!portalContainer) {
@@ -91,7 +105,6 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
     }
   }
 
-  // Ensure we have a valid state object for the component.
   const rawState = (initialPieceState || {}) as Record<string, unknown>;
   const pieceState = { ...rawState } as unknown as PieceState;
   
@@ -99,8 +112,6 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
   if (!pieceState.custom_fields) pieceState.custom_fields = {};
   if (pieceState.notes === undefined || pieceState.notes === null) pieceState.notes = "";
 
-  // Merge global_ref_values (provided by Django Admin) into custom_fields
-  // so buildDraftState can correctly resolve the initial global reference PKs.
   const globalRefValues = rawState.global_ref_values as Record<string, unknown> | undefined;
   if (globalRefValues) {
     pieceState.custom_fields = {
@@ -109,15 +120,14 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
     };
   }
 
-  const theme = createAdminTheme(getDjangoTheme());
+  const themeMode = getDjangoTheme();
+  const theme = createAdminTheme(themeMode);
 
   const wrappedSaveStateFn = async (payload: UpdateStatePayload): Promise<PieceDetail> => {
     if (options.saveStateFn) {
       await options.saveStateFn(payload);
     }
     
-    // WorkflowState expects the returned result to contain the updated state
-    // in history so it can refresh the local draft and stop the "Saving..." spinner.
     const updatedPieceState: PieceState = {
       ...pieceState,
       notes: payload.notes ?? "",
@@ -138,15 +148,21 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
   root.render(
     <React.StrictMode>
       <ThemeProvider theme={theme}>
-        <WorkflowState
-          initialPieceState={pieceState}
-          pieceId={options.pieceId}
-          onSaved={options.onSaved || (() => {})}
-          onDirtyChange={options.onDirtyChange}
-          uiSchema={options.uiSchema}
-          saveStateFn={wrappedSaveStateFn}
-          hideImageUpload // Admin has its own image inlines for now
-        />
+        {/* ScopedCssBaseline ensures the correct background/text colors are applied to children */}
+        <ScopedCssBaseline>
+          <WorkflowState
+            initialPieceState={pieceState}
+            pieceId={options.pieceId}
+            onSaved={options.onSaved || (() => {{
+              // no-op
+            }})}
+            onDirtyChange={options.onDirtyChange}
+            uiSchema={options.uiSchema}
+            saveStateFn={wrappedSaveStateFn}
+            hideImageUpload
+            disableAutosave // Disable autosave in Admin (uses main Save button)
+          />
+        </ScopedCssBaseline>
       </ThemeProvider>
     </React.StrictMode>
   );

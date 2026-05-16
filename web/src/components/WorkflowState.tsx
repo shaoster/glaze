@@ -55,6 +55,7 @@ type WorkflowStateProps = {
   saveStateFn?: (payload: UpdateStatePayload) => Promise<PieceDetail>;
   /** Optional pre-fetched schema to avoid an extra API call. */
   uiSchema?: UISchema;
+  disableAutosave?: boolean;
 };
 
 
@@ -177,6 +178,7 @@ export default function WorkflowState({
   hideImageUpload = false,
   saveStateFn,
   uiSchema: initialUiSchema,
+  disableAutosave = false,
 }: WorkflowStateProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [widgetLoading, setWidgetLoading] = useState(false);
@@ -279,7 +281,7 @@ export default function WorkflowState({
 
 
   const autosave = useAutosave({
-    dirty: !readOnly && isDirty,
+    dirty: !readOnly && isDirty && !disableAutosave,
     saveKey: autosaveKey,
     save: saveWorkflowState,
     delayMs: autosaveDelayMs,
