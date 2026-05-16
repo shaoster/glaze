@@ -15,6 +15,7 @@ import {
   RouterProvider,
   createBrowserRouter,
   createRoutesFromElements,
+  useLocation,
 } from "react-router-dom";
 import {
   Alert,
@@ -184,10 +185,6 @@ const DARK_THEME = createTheme({
     },
   },
 });
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as
-  | string
-  | undefined;
-
 type AuthViewMode = "login" | "register";
 
 function AuthLanding({
@@ -195,8 +192,11 @@ function AuthLanding({
 }: {
   onAuthenticated: (user: AuthUser) => void;
 }) {
+  const location = useLocation();
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+  const prefillEmail = (location.state as { prefillEmail?: string } | null)?.prefillEmail ?? "";
   const [mode, setMode] = useState<AuthViewMode>("login");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -432,9 +432,10 @@ function AuthLanding({
                         // Decode the email from the Google JWT so we can
                         // pre-fill the waitlist form without an extra round-trip.
                         try {
-                          const payload = JSON.parse(
-                            atob(credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
-                          );
+                          const segment = credential.split(".")[1]
+                            .replace(/-/g, "+").replace(/_/g, "/");
+                          const padded = segment + "=".repeat((4 - segment.length % 4) % 4);
+                          const payload = JSON.parse(atob(padded));
                           setNotInvitedEmail(payload.email ?? null);
                         } catch {
                           // JWT decode failed — show button without pre-fill.
@@ -789,6 +790,16 @@ function AuthenticatedApp({
                 )
               }
             />
+            <Route
+              path="/invite"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <InvitePage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>,
         ),
@@ -803,6 +814,8 @@ function AuthenticatedApp({
 export { Link };
 
 export default function App() {
+  // Read at render time so vi.stubEnv works in tests.
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
   const {
     data: currentUser,
     loading,

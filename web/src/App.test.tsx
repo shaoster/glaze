@@ -2,9 +2,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+// Capture the onSuccess callback so tests can trigger Google sign-in.
+let _googleOnSuccess: ((r: { credential: string }) => void) | undefined;
+
 vi.mock("@react-oauth/google", () => ({
   GoogleOAuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  GoogleLogin: () => <button>Google Login</button>,
+  GoogleLogin: ({ onSuccess }: { onSuccess: (r: { credential: string }) => void }) => {
+    _googleOnSuccess = onSuccess;
+    return <button>Google Login</button>;
+  },
 }));
 vi.mock("./util/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./util/api")>();
@@ -12,9 +18,12 @@ vi.mock("./util/api", async (importOriginal) => {
     ...actual,
     fetchCurrentUser: vi.fn().mockResolvedValue(null),
     loginWithGoogle: vi.fn(),
+    loginWithGoogleChecked: vi.fn(),
     loginWithEmail: vi.fn(),
     logoutUser: vi.fn().mockResolvedValue(undefined),
     registerWithEmail: vi.fn(),
+    requestWaitlist: vi.fn().mockResolvedValue(undefined),
+    acceptInvite: vi.fn(),
     fetchPieces: vi.fn().mockResolvedValue({ count: 0, results: [] }),
     fetchPiece: vi.fn(),
     ensureCsrfCookie: vi.fn().mockResolvedValue(undefined),
@@ -56,7 +65,15 @@ vi.mock("./pages/GlazeImportToolPage", () => ({
 }));
 
 // Now import App and the mocked api
-import { fetchCurrentUser, loginWithEmail, logoutUser } from "./util/api";
+import {
+  fetchCurrentUser,
+  loginWithEmail,
+  loginWithGoogleChecked,
+  logoutUser,
+  requestWaitlist,
+  acceptInvite,
+  NotInvitedError,
+} from "./util/api";
 import App from "./App";
 
 const MOCK_USER = {
@@ -363,6 +380,7 @@ describe("App auth flow", () => {
 
     render(<App />);
 
+
     await waitFor(() => {
       expect(screen.getByText("Glaze Combinations")).toBeInTheDocument();
     });
@@ -375,5 +393,140 @@ describe("App auth flow", () => {
       "aria-selected",
       "false",
     );
+  });
+});
+
+// ── invite / waitlist / not_invited flows ─────────────────────────────────────
+
+describe("not_invited and waitlist flow", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.history.pushState({}, "", "/");
+    vi.mocked(fetchCurrentUser).mockResolvedValue(null);
+    vi.mocked(requestWaitlist).mockResolvedValue(undefined);
+  });
+
+  it("shows inline error when Request Access clicked with no email", async () => {
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/track every pottery piece/i)).toBeInTheDocument(),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Request Access" }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/enter your email below/i)).toBeInTheDocument(),
+    );
+    expect(requestWaitlist).not.toHaveBeenCalled();
+  });
+
+  it("submits waitlist immediately when Request Access clicked with email pre-filled", async () => {
+    const { container } = render(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/track every pottery piece/i)).toBeInTheDocument(),
+    );
+
+    const emailInput = container.querySelector('input[type="email"]') as HTMLInputElement;
+    fireEvent.change(emailInput, { target: { value: "hopeful@example.com" } });
+
+    await userEvent.click(screen.getByRole("button", { name: "Request Access" }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/we'll let you know/i)).toBeInTheDocument(),
+    );
+    expect(requestWaitlist).toHaveBeenCalledWith("hopeful@example.com");
+  });
+
+  // P1 regression: unpadded base64url JWT payload must still yield the email.
+  it("shows Request Access with correct email after Google not_invited with unpadded JWT", async () => {
+    // {"email":"x@example.com"} is 25 bytes → base64 needs == padding → test the
+    // padding fix by stripping it before handing the credential to the handler.
+    const rawPayload = '{"email":"x@example.com"}';
+    const b64url = btoa(rawPayload).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    const credential = `header.${b64url}.sig`;
+
+    vi.mocked(loginWithGoogleChecked).mockRejectedValue(
+      new NotInvitedError("This email is not invited."),
+    );
+
+    // GoogleLogin only renders when VITE_GOOGLE_CLIENT_ID is set.
+    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", "test-client-id");
+
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Google Login" })).toBeInTheDocument(),
+    );
+
+    // _googleOnSuccess is captured when GoogleLogin renders.
+    expect(_googleOnSuccess).toBeDefined();
+    await _googleOnSuccess!({ credential });
+
+    await waitFor(() =>
+      expect(screen.getByText(/this email is not invited/i)).toBeInTheDocument(),
+    );
+    // The shared section shows "Request access" (lowercase a); the header row
+    // shows "Request Access" (capital A). Click the shared-section button which
+    // already has the email from the decoded JWT.
+    const requestButton = screen.getByRole("button", { name: "Request access" });
+    await userEvent.click(requestButton);
+
+    await waitFor(() =>
+      expect(screen.getByText(/we'll let you know/i)).toBeInTheDocument(),
+    );
+    expect(requestWaitlist).toHaveBeenCalledWith("x@example.com");
+
+    vi.unstubAllEnvs();
+  });
+});
+
+describe("invite page routing", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(requestWaitlist).mockResolvedValue(undefined);
+  });
+
+  // P2 regression: /invite must render InvitePage even when authenticated.
+  it("renders InvitePage at /invite when the user is already signed in", async () => {
+    vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_USER);
+    vi.mocked(acceptInvite).mockResolvedValue({ email: "user@example.com" });
+    window.history.pushState({}, "", "/invite?token=valid-token");
+
+    render(<App />);
+
+    await waitFor(() =>
+      expect(screen.getByText(/you've been invited/i)).toBeInTheDocument(),
+    );
+  });
+
+  it("renders InvitePage at /invite when not signed in", async () => {
+    vi.mocked(fetchCurrentUser).mockResolvedValue(null);
+    vi.mocked(acceptInvite).mockResolvedValue({ email: "new@example.com" });
+    window.history.pushState({}, "", "/invite?token=valid-token");
+
+    render(<App />);
+
+    await waitFor(() =>
+      expect(screen.getByText(/you've been invited/i)).toBeInTheDocument(),
+    );
+  });
+
+  // P3 regression: "Continue to sign in" must prefill the email on the auth form.
+  it("prefills email on auth form after accepting an invite", async () => {
+    vi.mocked(fetchCurrentUser).mockResolvedValue(null);
+    vi.mocked(acceptInvite).mockResolvedValue({ email: "invited@example.com" });
+    window.history.pushState({}, "", "/invite?token=valid-token");
+
+    const { container } = render(<App />);
+
+    await waitFor(() =>
+      expect(screen.getByText(/you've been invited/i)).toBeInTheDocument(),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /continue to sign in/i }));
+
+    await waitFor(() => {
+      const emailInput = container.querySelector('input[type="email"]') as HTMLInputElement;
+      expect(emailInput?.value).toBe("invited@example.com");
+    });
   });
 });
