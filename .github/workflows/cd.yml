@@ -71,7 +71,7 @@ jobs:
           gh release create "release-${{ env.DEPLOY_SHA }}" \
             --title "Build ${{ env.DEPLOY_SHA }}" \
             --notes "Docker image: \`ghcr.io/shaoster/glaze:${{ env.DEPLOY_SHA }}\`" \
-            --latest
+            --latest || true
 
   deploy-modal:
     name: Deploy ML Microservice to Modal
