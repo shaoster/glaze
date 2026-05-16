@@ -771,7 +771,6 @@ class PieceStateAdminForm(forms.ModelForm):
         from django.apps import apps
 
         from .workflow import (
-            build_ui_schema,
             get_global_config,
             get_global_ref_fields_for_state,
         )
@@ -868,7 +867,6 @@ class PieceStateAdminForm(forms.ModelForm):
         return cleaned_data
 
 
-
 @admin.register(PieceState)
 class PieceStateAdmin(ExportMixin, SortableAdminBase, admin.ModelAdmin):
     resource_classes = [PieceStateResource]
@@ -948,6 +946,8 @@ class ImageAdmin(admin.ModelAdmin):
 def send_invite_action(
     modeladmin: "AllowedEmailAdmin", request: HttpRequest, queryset: Any
 ) -> None:
+    # Intentionally sends to already-approved rows too — admins use this to
+    # re-send a lost link without having to change the row's status first.
     count = 0
     for row in queryset:
         if row.status == AllowedEmail.Status.WAITLISTED:

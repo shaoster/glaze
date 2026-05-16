@@ -17,6 +17,8 @@ def make_invite_token(email: str) -> str:
 def verify_invite_token(token: str) -> str:
     """Return the email encoded in *token*, or raise signing.BadSignature / signing.SignatureExpired."""
     data = signing.loads(token, salt=_INVITE_SALT, max_age=_INVITE_MAX_AGE)
+    if data.get("kind") != "invite":
+        raise signing.BadSignature("wrong token kind")
     return data["email"]
 
 

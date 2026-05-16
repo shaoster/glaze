@@ -68,6 +68,16 @@ def test_tampered_token_raises(db):
         verify_invite_token("tampered.token.value")
 
 
+def test_wrong_kind_token_raises(db):
+    # A validly-signed token with a different kind must be rejected so tokens
+    # from other signing contexts (e.g., password-reset) can't be used as invites.
+    wrong_kind = signing.dumps(
+        {"email": "test@example.com", "kind": "password-reset"}, salt="invite"
+    )
+    with pytest.raises(signing.BadSignature):
+        verify_invite_token(wrong_kind)
+
+
 # ── admin-invite endpoint ─────────────────────────────────────────────────────
 
 
@@ -118,6 +128,25 @@ def test_admin_invite_email_contains_token(db, admin_client):
     # Extract token from URL and verify it decodes correctly.
     token = body.split("token=")[1].split()[0]
     assert verify_invite_token(token) == "tokentest@example.com"
+
+
+def test_admin_invite_resends_to_already_approved(db, admin_client):
+    # Re-sending to an already-approved row is intentional: admins use this to
+    # resend a lost link without needing to change the row's status.
+    AllowedEmail.objects.create(
+        email="resend@example.com", status=AllowedEmail.Status.APPROVED
+    )
+    resp = admin_client.post(
+        "/api/auth/admin-invite/", {"email": "resend@example.com"}, format="json"
+    )
+    assert resp.status_code == 204
+    assert len(mail.outbox) == 1
+    assert "resend@example.com" in mail.outbox[0].to
+    # Status must not have changed.
+    assert (
+        AllowedEmail.objects.get(email="resend@example.com").status
+        == AllowedEmail.Status.APPROVED
+    )
 
 
 # ── accept-invite endpoint ────────────────────────────────────────────────────
@@ -258,12 +287,33 @@ def test_gate_grandfathers_existing_user(db, anon_client):
 
 
 @PROD
+def test_gate_hides_account_existence_from_uninvited_callers(db, anon_client):
+    # Account enumeration protection: re-registering a known email without an
+    # AllowedEmail row must return 403, not 400 ("already exists"). The gate
+    # fires before the duplicate check so callers can't probe for existing accounts.
+    User.objects.create_user(
+        username="taken@example.com", email="taken@example.com", password="x"
+    )
+    resp = anon_client.post(
+        "/api/auth/register/",
+        {"email": "taken@example.com", "password": "testpass123"},
+        format="json",
+    )
+    assert resp.status_code == 403
+    assert resp.data["code"] == "not_invited"
+
+
+@PROD
 def test_gate_blocks_email_without_allowedemail_row(db, anon_client):
     # A User row alone does NOT grandfather — AllowedEmail is the authority.
     # Use a fresh username so the serializer passes and only the gate can block.
     resp = anon_client.post(
         "/api/auth/register/",
-        {"email": "norow@example.com", "password": "testpass123", "username": "norow@example.com"},
+        {
+            "email": "norow@example.com",
+            "password": "testpass123",
+            "username": "norow@example.com",
+        },
         format="json",
     )
     assert resp.status_code == 403

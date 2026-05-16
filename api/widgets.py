@@ -1,4 +1,5 @@
 import os
+
 from django import forms
 from django.conf import settings
 from django.templatetags.static import static
@@ -34,7 +35,7 @@ class WorkflowStateWidget(forms.Widget):
         # Use Django's json_script to safely embed JSON data (prevents XSS)
         state_script_id = f"workflow-state-data-{name}"
         schema_script_id = f"workflow-schema-data-{name}"
-        
+
         html_data = json_script(initial_state, state_script_id)
         html_data += json_script(ui_schema, schema_script_id)
 

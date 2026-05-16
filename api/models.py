@@ -64,7 +64,7 @@ class AllowedEmail(models.Model):
         WAITLISTED = "waitlisted", "Waitlisted"
         APPROVED = "approved", "Approved"
 
-    email = models.EmailField(unique=True, db_index=True)
+    email = models.EmailField(unique=True)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,

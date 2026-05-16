@@ -82,6 +82,9 @@ class TestAuthEndpoints:
         assert response.status_code == 204
 
     def test_register_rejects_duplicate_email(self):
+        AllowedEmail.objects.create(
+            email="existing@example.com", status=AllowedEmail.Status.APPROVED
+        )
         User.objects.create_user(
             username="existing@example.com",
             email="existing@example.com",
@@ -98,6 +101,24 @@ class TestAuthEndpoints:
         )
         assert response.status_code == 400
         assert response.json() == {"email": ["A user with this email already exists."]}
+
+    def test_register_existing_email_without_allowlist_returns_403_not_400(self):
+        # Account enumeration protection: an uninvited caller registering a known
+        # email must get 403 (not_invited), not 400 (duplicate). The allowlist
+        # gate fires before the duplicate check so callers can't probe for accounts.
+        User.objects.create_user(
+            username="taken@example.com",
+            email="taken@example.com",
+            password="password123",
+        )
+        client = APIClient()
+        response = client.post(
+            "/api/auth/register/",
+            {"email": "taken@example.com", "password": "password123"},
+            format="json",
+        )
+        assert response.status_code == 403
+        assert response.json()["code"] == "not_invited"
 
     def test_google_auth_returns_503_when_not_configured(self, settings):
         settings.GOOGLE_OAUTH_CLIENT_ID = ""
