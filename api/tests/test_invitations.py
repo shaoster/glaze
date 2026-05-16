@@ -270,18 +270,40 @@ def test_gate_blocks_email_without_allowedemail_row(db, anon_client):
     assert resp.data["code"] == "not_invited"
 
 
-def test_gate_bypassed_in_dev(db, anon_client):
-    # IS_PRODUCTION defaults to False in test settings
+def test_gate_allows_first_user_in_dev(db, anon_client):
+    # IS_PRODUCTION=False: first login (no users yet) bypasses the gate.
     resp = anon_client.post(
         "/api/auth/register/",
         {
-            "email": "anyone@example.com",
+            "email": "first@example.com",
             "password": "testpass123",
-            "username": "anyone@example.com",
+            "username": "first@example.com",
         },
         format="json",
     )
     assert resp.status_code in (200, 201)
+    # The email must now be in AllowedEmail so the account can return.
+    assert AllowedEmail.objects.filter(
+        email="first@example.com", status=AllowedEmail.Status.APPROVED
+    ).exists()
+
+
+def test_gate_blocks_second_user_in_dev(db, anon_client):
+    # IS_PRODUCTION=False: once any user exists, the gate enforces normally.
+    User.objects.create_user(
+        username="first@example.com", email="first@example.com", password="x"
+    )
+    resp = anon_client.post(
+        "/api/auth/register/",
+        {
+            "email": "second@example.com",
+            "password": "testpass123",
+            "username": "second@example.com",
+        },
+        format="json",
+    )
+    assert resp.status_code == 403
+    assert resp.data["code"] == "not_invited"
 
 
 @PROD

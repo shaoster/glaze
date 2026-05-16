@@ -220,18 +220,29 @@ def auth_register(request: Request) -> Response:
 
 
 def _check_not_invited(email: str) -> Response | None:
-    """Return a 403 Response if *email* is not approved in production, else None.
+    """Return a 403 Response if *email* is not approved, else None.
 
-    Grandfathering of existing users is handled once at migration time (migration
-    0012 seeds AllowedEmail from the User table). Do not check User existence here —
-    that would make the gate a no-op for every account that already exists.
+    In dev (IS_PRODUCTION=False) the very first login (no User rows yet) is
+    allowed unconditionally and the email is auto-approved so the same account
+    can return. Every subsequent login — including a second Google account in
+    dev — must have an AllowedEmail row like in production.
+
+    Grandfathering of existing production users is handled once at migration
+    time (0012 seeds AllowedEmail from User), not at runtime.
     """
-    if not settings.IS_PRODUCTION:
-        return None
     if AllowedEmail.objects.filter(
         email__iexact=email, status=AllowedEmail.Status.APPROVED
     ).exists():
         return None
+
+    if not settings.IS_PRODUCTION and not get_user_model().objects.exists():
+        # Fresh dev environment: bootstrap the first account and pre-approve it.
+        AllowedEmail.objects.get_or_create(
+            email=email.lower(),
+            defaults={"status": AllowedEmail.Status.APPROVED},
+        )
+        return None
+
     return Response(
         {
             "detail": "This email is not invited to PotterDoc yet. Ask an admin to add it.",
