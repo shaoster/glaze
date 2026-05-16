@@ -85,8 +85,12 @@ class WorkflowStateWidget(forms.Widget):
                         onDirtyChange: (dirty) => {{
                             // console.log('Form dirty:', dirty);
                         }},
+                        onChange: (payload) => {{
+                            // Update hidden input on every change
+                            document.getElementById('id_{name}').value = JSON.stringify(payload);
+                        }},
                         saveStateFn: (payload) => {{
-                            // Update hidden input so main Admin "Save" sees the changes
+                            // Also update on explicit save (though autosave is disabled)
                             document.getElementById('id_{name}').value = JSON.stringify(payload);
                             return Promise.resolve({{}}); 
                         }}

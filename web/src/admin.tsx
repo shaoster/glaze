@@ -10,6 +10,7 @@ const getDjangoTheme = (): "light" | "dark" => {
   const theme = document.documentElement.dataset.theme;
   if (theme === "dark") return "dark";
   if (theme === "light") return "light";
+  
   if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
   return "light";
 };
@@ -37,29 +38,23 @@ const createAdminTheme = (mode: "light" | "dark") => {
     components: {
       MuiTextField: {
         defaultProps: {
-          variant: "standard", // Standard variant has no box border
+          variant: "standard",
           size: "small",
           fullWidth: true,
         },
-      },
-      MuiInput: {
         styleOverrides: {
           root: {
-            marginTop: "16px",
-            "&::before": {
-              // Optional: remove the standard underline if a truly borderless look is desired
-              // borderBottom: '1px solid var(--border-color, #ccc)', 
-            },
+            margin: 0,
           },
         },
       },
       MuiInputLabel: {
         styleOverrides: {
           root: {
-            backgroundColor: "transparent", // Requested transparent background
+            backgroundColor: "transparent",
             padding: 0,
             marginLeft: 0,
-            transform: "translate(0, -4px) scale(0.75)", // Slightly higher
+            transform: "translate(0, -4px) scale(0.75)",
             "&.Mui-focused": {
               transform: "translate(0, -4px) scale(0.75)",
             },
@@ -81,6 +76,7 @@ interface MountOptions {
   onSaved?: (updated: PieceDetail) => void;
   onDirtyChange?: (dirty: boolean) => void;
   saveStateFn?: (payload: UpdateStatePayload) => Promise<PieceDetail>;
+  onChange?: (payload: UpdateStatePayload) => void;
 }
 
 declare global {
@@ -91,6 +87,8 @@ declare global {
 
 export const mountWorkflowStateWidget = (options: MountOptions) => {
   const themeMode = getDjangoTheme();
+  console.log(`Mounting WorkflowState widget (theme: ${themeMode})...`, options);
+  
   const container = document.getElementById(options.containerId);
   if (!container) {
     console.error(`Container #${options.containerId} not found`);
@@ -170,6 +168,7 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
             onDirtyChange={options.onDirtyChange}
             uiSchema={options.uiSchema}
             saveStateFn={wrappedSaveStateFn}
+            onChange={options.onChange}
             hideImageUpload
             disableAutosave
             hideNotes

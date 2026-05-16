@@ -56,6 +56,8 @@ type WorkflowStateProps = {
   /** Optional pre-fetched schema to avoid an extra API call. */
   uiSchema?: UISchema;
   disableAutosave?: boolean;
+  /** Called whenever the payload changes. */
+  onChange?: (payload: UpdateStatePayload) => void;
 };
 
 
@@ -179,6 +181,7 @@ export default function WorkflowState({
   saveStateFn,
   uiSchema: initialUiSchema,
   disableAutosave = false,
+  onChange,
 }: WorkflowStateProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [widgetLoading, setWidgetLoading] = useState(false);
@@ -238,6 +241,15 @@ export default function WorkflowState({
 
   const isDirty = notes !== baseState.notes || customFieldsDirty;
 
+  const currentPayload = useMemo(
+    () => ({
+      notes,
+      images,
+      custom_fields: normalizedCustomFields,
+    }),
+    [notes, images, normalizedCustomFields],
+  );
+
   useEffect(() => {
     latestImagesRef.current = images;
   }, [images]);
@@ -246,14 +258,15 @@ export default function WorkflowState({
     onDirtyChange?.(readOnly ? false : isDirty);
   }, [isDirty, onDirtyChange, readOnly]);
 
+  useEffect(() => {
+    if (!readOnly) {
+      onChange?.(currentPayload);
+    }
+  }, [currentPayload, onChange, readOnly]);
+
   const saveWorkflowState = useCallback(async () => {
-    const payload = {
-      notes,
-      images,
-      custom_fields: normalizedCustomFields,
-    };
     const saveFn = saveStateFn ?? ((p) => updateCurrentState(pieceId, p));
-    const result = await saveFn(payload);
+    const result = await saveFn(currentPayload);
     const savedState = saveStateFn
       ? result.history.find((ps) => ps.id === initialPieceState.id) ?? result.current_state
       : result.current_state;
@@ -261,12 +274,10 @@ export default function WorkflowState({
     onSaved(result);
   }, [
     pieceId,
-    images,
     initialPieceState.id,
-    normalizedCustomFields,
-    notes,
     onSaved,
     saveStateFn,
+    currentPayload,
   ]);
 
   const autosaveKey = useMemo(
