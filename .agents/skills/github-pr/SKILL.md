@@ -78,6 +78,7 @@ Before opening or pushing to a PR, verify every item:
 - [ ] All local commits pushed to the remote branch
 - [ ] Remote PR state verified (e.g., via `gh pr view` or by checking the URL)
 - [ ] If conventions or constraints changed during PR work, append them to the relevant file under `docs/agents/`
+- [ ] **Security**: For any item flagged **[SECURITY]** in the plan — confirm the intended permission model is enforced in code (correct `permission_classes`, gate applied in all entry points, no unintended `AllowAny` exposure, token expiry and validation covered by tests)
 
 ## Scope Limits — Ask Before Acting
 

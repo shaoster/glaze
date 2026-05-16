@@ -54,6 +54,16 @@ confirmation before skipping the worktree.
    - Read the issue title and body from GitHub.
    - **Dependency scout** — use Bazel to confirm which layers the issue touches (see Scouting Queries below).
    - Formulate a detailed plan including implementation steps and testing strategy.
+   - **Security surface scan** — before presenting the plan, scan each planned change for security-sensitive items and call them out explicitly in the plan. Flag any item that:
+     - Adds or modifies authentication or authorization logic (new endpoints, permission classes, session handling)
+     - Introduces new tokens, secrets, signed payloads, or cryptographic primitives
+     - Changes who can access which data (new models with user-scoped vs. global access, row-level visibility)
+     - Exposes new data in API responses or serializer fields
+     - Adds or modifies email delivery, OAuth flows, or third-party auth integrations
+     - Modifies Django settings that affect security headers, CORS, CSRF, or allowed hosts
+     - Adds new `AllowAny` or `IsAdminUser` permission class usage
+
+     Label each flagged item with **[SECURITY]** in the plan so the user can verify the intended access model before approving implementation.
    - Present the plan to the user for approval.
 
 2. **Issue Commenting:**
