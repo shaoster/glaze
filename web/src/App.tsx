@@ -189,7 +189,6 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as
   | undefined;
 
 type AuthViewMode = "login" | "register";
-const SIGN_UP_ENABLED = false;
 
 function AuthLanding({
   onAuthenticated,
@@ -217,9 +216,6 @@ function AuthLanding({
         const user = await loginWithEmail(email.trim(), password);
         onAuthenticated(user);
       } else {
-        if (!SIGN_UP_ENABLED) {
-          throw new Error("Sign up is disabled.");
-        }
         const user = await registerWithEmail({
           email: email.trim(),
           password,
@@ -311,20 +307,18 @@ function AuthLanding({
               Log In
             </Button>
             <Button
-              variant={mode === "register" ? "contained" : "outlined"}
-              onClick={() => setMode("register")}
-              disabled={submitting || !SIGN_UP_ENABLED}
+              variant="outlined"
+              onClick={() => {
+                setNotInvitedEmail(email.trim() || null);
+                setWaitlistDone(false);
+                setMode("login");
+              }}
+              disabled={submitting || waitlistDone}
               fullWidth
             >
-              Sign Up
+              Request Access
             </Button>
           </Stack>
-          {!SIGN_UP_ENABLED && (
-            <Typography variant="body2" color="text.secondary">
-              Sign up is temporarily disabled. Ask an admin to create your
-              account.
-            </Typography>
-          )}
 
           <Box component="form" onSubmit={handleSubmit}>
             <Stack spacing={2}>
