@@ -41,6 +41,11 @@ services:
       LOGTAIL_SOURCE_TOKEN: ${LOGTAIL_SOURCE_TOKEN:-}
       REMOTE_REMBG_URL: ${REMOTE_REMBG_URL:-}
       MODAL_AUTH_TOKEN: ${MODAL_AUTH_TOKEN:-}
+      OTEL_ENABLED: ${OTEL_ENABLED:-}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-glaze}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otelcol:4317}
+      OTEL_SAMPLE_RATE: ${OTEL_SAMPLE_RATE:-1.0}
+      GRAFANA_CLOUD_OTLP_TOKEN: ${GRAFANA_CLOUD_OTLP_TOKEN:-}
       EMAIL_HOST: ${EMAIL_HOST:-smtp.resend.com}
       EMAIL_PORT: ${EMAIL_PORT:-465}
       EMAIL_HOST_USER: ${EMAIL_HOST_USER:-resend}
@@ -51,6 +56,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      otelcol:
+        condition: service_started
     # Probes the API readiness endpoint. A 200 response means database,
     # migrations, and the async task backend are all usable. start_period
     # covers entrypoint commands (migrate, collectstatic, load_public_library,
@@ -65,6 +72,15 @@ services:
       timeout: 5s
       retries: 24
       start_period: 30s
+
+  otelcol:
+    image: otel/opentelemetry-collector-contrib:0.126.0
+    restart: unless-stopped
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel/config.yml:ro
+    command: ["--config=/etc/otel/config.yml"]
+    environment:
+      GRAFANA_CLOUD_OTLP_TOKEN: ${GRAFANA_CLOUD_OTLP_TOKEN:-}
 
   mailpit:
     image: axllent/mailpit:latest
