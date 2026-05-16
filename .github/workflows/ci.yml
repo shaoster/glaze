@@ -166,6 +166,13 @@ jobs:
       - name: Build OCI image and load into docker
         run: bazel run --config=ci --stamp //:load
 
+      - name: Pre-pull sidecar images
+        run: |
+          # Pull third-party images (postgres, otelcol, etc.) before starting
+          # the timed --wait block so image download doesn't eat into the
+          # healthcheck timeout budget.
+          docker compose pull --ignore-buildable
+
       - name: Smoke test via docker compose
         run: |
           set -euo pipefail
@@ -176,7 +183,9 @@ jobs:
           # `--wait` blocks until every service with a healthcheck reports
           # healthy. The web service's healthcheck (defined in
           # docker-compose.yml) is the pass criterion.
-          docker compose up -d --wait --wait-timeout 180
+          # Timeout is 300s: migrate + load_public_library (249 records) +
+          # collectstatic + gunicorn startup can exceed 120s on a cold runner.
+          docker compose up -d --wait --wait-timeout 300
           docker compose logs web | tail -50
 
       - if: failure()
