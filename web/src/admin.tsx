@@ -7,8 +7,9 @@ import type { PieceDetail, PieceState, UISchema } from "./util/types";
 import type { UpdateStatePayload } from "./util/api";
 
 const getDjangoTheme = (): "light" | "dark" => {
-  if (document.documentElement.dataset.theme === "dark") return "dark";
-  if (document.body.classList.contains("dark-mode")) return "dark";
+  const theme = document.documentElement.dataset.theme;
+  if (theme === "dark") return "dark";
+  if (theme === "light") return "light";
   if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
   return "light";
 };
@@ -36,16 +37,35 @@ const createAdminTheme = (mode: "light" | "dark") => {
     components: {
       MuiTextField: {
         defaultProps: {
-          variant: "outlined",
+          variant: "standard", // Standard variant has no box border
           size: "small",
+          fullWidth: true,
+        },
+      },
+      MuiInput: {
+        styleOverrides: {
+          root: {
+            marginTop: "16px",
+            "&::before": {
+              // Optional: remove the standard underline if a truly borderless look is desired
+              // borderBottom: '1px solid var(--border-color, #ccc)', 
+            },
+          },
         },
       },
       MuiInputLabel: {
         styleOverrides: {
           root: {
-            backgroundColor: bgColor,
-            padding: "0 4px",
-            marginLeft: "-4px",
+            backgroundColor: "transparent", // Requested transparent background
+            padding: 0,
+            marginLeft: 0,
+            transform: "translate(0, -4px) scale(0.75)", // Slightly higher
+            "&.Mui-focused": {
+              transform: "translate(0, -4px) scale(0.75)",
+            },
+          },
+          shrink: {
+            transform: "translate(0, -4px) scale(0.75)",
           },
         },
       },
@@ -70,7 +90,7 @@ declare global {
 }
 
 export const mountWorkflowStateWidget = (options: MountOptions) => {
-  console.log("Mounting WorkflowState widget...", options);
+  const themeMode = getDjangoTheme();
   const container = document.getElementById(options.containerId);
   if (!container) {
     console.error(`Container #${options.containerId} not found`);
@@ -113,7 +133,6 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
     };
   }
 
-  const themeMode = getDjangoTheme();
   const theme = createAdminTheme(themeMode);
 
   const wrappedSaveStateFn = async (payload: UpdateStatePayload): Promise<PieceDetail> => {
@@ -153,7 +172,7 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
             saveStateFn={wrappedSaveStateFn}
             hideImageUpload
             disableAutosave
-            hideNotes // Always exclude notes in Admin (redundant with parent form)
+            hideNotes
           />
         </ScopedCssBaseline>
       </ThemeProvider>

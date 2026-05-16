@@ -463,15 +463,16 @@ export default function WorkflowState({
         />
       )}
       {customFieldDefs.length > 0 && (
-        <Box>
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            }}
-          >
-            {customFieldDefs.map((field) => {
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            pt: 3, // Increased padding above the custom fields interior
+            alignItems: "start",
+          }}
+        >
+          {customFieldDefs.map((field) => {
               const value = customFieldInputs[field.name] ?? "";
               const helperText = field.description;
               const label = field.label;
@@ -605,7 +606,6 @@ export default function WorkflowState({
                 />
               );
             })}
-          </Box>
         </Box>
       )}
 
