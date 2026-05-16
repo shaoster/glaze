@@ -274,6 +274,7 @@ gz_setup() {
     if ! command -v rtk &>/dev/null; then
         echo "--- Installing RTK (for test optimizations and type generation)..."
         curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+        export PATH="$HOME/.local/bin:$PATH"
         mkdir -p ~/.claude
         rtk init -g --auto-patch
     fi
@@ -289,9 +290,12 @@ gz_setup() {
     # Node + web deps — pnpm install via aspect_rules_js's @npm//:sync. This
     # runs pnpm under the Bazel-managed node toolchain and materializes a
     # normal pnpm tree at web/node_modules/ that both Bazel and the IDE read.
-    _gz_ensure_node
     echo "--- Syncing web dependencies via Bazel (@npm//:sync)..."
     (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel run @npm//:sync)
+
+    # Activate the venv in the current shell — it may not have been active at
+    # source time if the repo was freshly cloned and the venv didn't exist yet.
+    [[ -f "$GLAZE_ROOT/.manage.venv/bin/activate" ]] && source "$GLAZE_ROOT/.manage.venv/bin/activate"
 
     echo "=== Setup complete ==="
     echo "    Run 'gz_gentypes' to regenerate TypeScript types via Bazel (no backend)."
