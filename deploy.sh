@@ -18,10 +18,6 @@ set -euo pipefail
 HOST=${1:?Usage: ./deploy.sh user@host [commit-sha]}
 KNOWN_SHA=${2:-}
 
-echo "--- syncing Nginx snippets ---"
-ssh "$HOST" "mkdir -p /etc/nginx/snippets"
-scp -r nginx/snippets/*.conf "$HOST":/etc/nginx/snippets/
-
 echo "--- deploying application ---"
 ssh "$HOST" bash <<REMOTE
 set -euo pipefail
@@ -45,9 +41,8 @@ else
         -o docker-compose.yml
 fi
 
-echo "--- restarting services and reloading nginx ---"
+echo "--- restarting services ---"
 docker compose up -d
-nginx -t && systemctl reload nginx
 
 echo "--- pruning ---"
 docker container prune -f
@@ -56,3 +51,10 @@ docker image prune -f
 echo "--- deploy complete ---"
 docker compose ps
 REMOTE
+
+# Nginx snippets are synced after a successful app deploy so a mid-deploy
+# failure does not leave new config files on the host without a reload.
+echo "--- syncing Nginx snippets ---"
+ssh "$HOST" "mkdir -p /etc/nginx/snippets"
+scp -r nginx/snippets/*.conf "$HOST":/etc/nginx/snippets/
+ssh "$HOST" "nginx -t && systemctl reload nginx"
