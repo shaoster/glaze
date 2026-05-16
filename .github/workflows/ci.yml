@@ -4,27 +4,38 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-x-paths-ignore: &paths-ignore
-  - "**/*.md"
-  - ".gitignore"
-  - ".gitattributes"
-  - ".gitmodules"
-  - ".mailmap"
-  - ".editorconfig"
-  - ".vscode/**"
-  - ".idea/**"
-  - "LICENSE"
-  - "LICENSE.*"
-  - "deploy.sh"
-  - "setup-*.sh"
-  - "nginx/**"
-
 on:
   push:
     branches: [main]
-    paths-ignore: *paths-ignore
+    paths-ignore:
+      - "**/*.md"
+      - ".gitignore"
+      - ".gitattributes"
+      - ".gitmodules"
+      - ".mailmap"
+      - ".editorconfig"
+      - ".vscode/**"
+      - ".idea/**"
+      - "LICENSE"
+      - "LICENSE.*"
+      - "deploy.sh"
+      - "setup-*.sh"
+      - "nginx/**"
   pull_request:
-    paths-ignore: *paths-ignore
+    paths-ignore:
+      - "**/*.md"
+      - ".gitignore"
+      - ".gitattributes"
+      - ".gitmodules"
+      - ".mailmap"
+      - ".editorconfig"
+      - ".vscode/**"
+      - ".idea/**"
+      - "LICENSE"
+      - "LICENSE.*"
+      - "deploy.sh"
+      - "setup-*.sh"
+      - "nginx/**"
 
 jobs:
   preflight:
