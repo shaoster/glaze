@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { Box, Button, Chip, Typography } from "@mui/material";
+import {
+  Button,
+  Chip,
+  InputAdornment,
+  TextField,
+} from "@mui/material";
 import type { SxProps, Theme } from "@mui/material";
 import GlobalEntryDialog from "./GlobalEntryDialog";
 
@@ -17,8 +22,6 @@ export interface GlobalEntryFieldProps {
   sx?: SxProps<Theme>;
 }
 
-// Keep global refs visually consistent across forms: a selected value becomes
-// a removable chip, and every edit path funnels through the shared dialog.
 export default function GlobalEntryField({
   globalName,
   label,
@@ -27,7 +30,6 @@ export default function GlobalEntryField({
   helperText,
   required = false,
   canCreate = false,
-  hideLabel = false,
   disabled = false,
   hideActionWhenDisabled = false,
   sx,
@@ -36,53 +38,57 @@ export default function GlobalEntryField({
   const showAction = !disabled || !hideActionWhenDisabled;
 
   return (
-    <Box sx={sx}>
-      <Box
-        sx={{
-          display: "flex",
-          gap: 1,
-          alignItems: "center",
-          flexWrap: "wrap",
+    <>
+      <TextField
+        label={label}
+        value={value ? "" : "None selected"}
+        helperText={helperText}
+        required={required}
+        disabled={disabled}
+        fullWidth
+        slotProps={{
+          input: {
+            readOnly: true,
+            startAdornment: value ? (
+              <InputAdornment position="start">
+                <Chip
+                  label={value}
+                  size="small"
+                  onDelete={disabled ? undefined : () => onSelect(null)}
+                />
+              </InputAdornment>
+            ) : null,
+            endAdornment: showAction ? (
+              <InputAdornment position="end">
+                <Button
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpen(true);
+                  }}
+                  disabled={disabled}
+                  aria-label={value ? `Change ${label}` : `Browse ${label}`}
+                >
+                  {value ? "Change" : "Browse"}
+                </Button>
+              </InputAdornment>
+            ) : null,
+          },
         }}
-      >
-        {!hideLabel && (
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ flexShrink: 0 }}
-          >
-            {label}
-            {required && " *"}
-          </Typography>
-        )}
-        {value && (
-          <Chip
-            label={value}
-            onDelete={disabled ? undefined : () => onSelect(null)}
-          />
-        )}
-        {showAction && (
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => setOpen(true)}
-            disabled={disabled}
-            aria-label={value ? `Change ${label}` : `Browse ${label}`}
-            sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
-          >
-            {value ? "Change…" : "Browse…"}
-          </Button>
-        )}
-      </Box>
-      {helperText && (
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ display: "block", mt: 0.25, pl: 1, fontStyle: "italic", fontSize: "0.7rem" }}
-        >
-          {helperText}
-        </Typography>
-      )}
+        sx={[
+          {
+            "& .MuiInputBase-root": {
+              cursor: "pointer",
+              // If there's a value, the actual input text is hidden
+              "& input": {
+                display: value ? "none" : "block",
+              },
+            },
+          },
+          ...(Array.isArray(sx) ? sx : [sx]),
+        ]}
+        onClick={disabled ? undefined : () => setOpen(true)}
+      />
       <GlobalEntryDialog
         globalName={globalName}
         open={open}
@@ -90,6 +96,6 @@ export default function GlobalEntryField({
         onSelect={onSelect}
         canCreate={canCreate}
       />
-    </Box>
+    </>
   );
 }

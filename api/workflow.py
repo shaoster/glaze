@@ -514,7 +514,59 @@ def _resolve_field_def_cached(field_def_hashable: Any) -> dict:
 
 def _resolve_field_def(field_def: dict) -> dict:
     """Resolve a DSL field_def to its JSON Schema property dict."""
-    return _resolve_field_def_cached(_make_hashable(field_def))
+    return dict(_resolve_field_def_cached(_make_hashable(field_def)))
+
+
+@lru_cache(maxsize=None)
+def build_ui_schema(state_id: str) -> dict:
+    """Return a JSON Schema that describes all fields (including global refs) for UI generation.
+
+    Adds `x-` extensions for UI-specific metadata like labels, global refs, and required status.
+    """
+    state = _STATE_MAP.get(state_id)
+    dsl_fields: dict = state.get("fields", {}) if state else {}
+
+    properties: dict = {}
+    required: list[str] = []
+
+    for field_name, field_def in dsl_fields.items():
+        # Copy to avoid mutating the cached resolve_field_def result.
+        field_schema = dict(_resolve_field_def(field_def))
+
+        # Add UI hints
+        field_schema["x-label"] = field_def.get(
+            "label", field_name.replace("_", " ").capitalize()
+        )
+        if "description" in field_def:
+            field_schema["x-description"] = field_def["description"]
+        if "display_as" in field_def:
+            field_schema["x-display-as"] = field_def["display_as"]
+        if field_def.get("required", False):
+            field_schema["x-required"] = True
+            required.append(field_name)
+
+        # Global ref detection
+        resolved_global = _resolve_to_global_ref(field_def)
+        if resolved_global:
+            field_schema["x-global-ref"] = resolved_global[0]
+            if field_def.get("can_create"):
+                field_schema["x-can-create"] = True
+
+        if "$ref" in field_def and not field_def["$ref"].startswith("@"):
+            field_schema["x-state-ref"] = True
+
+        if "compute" in field_def:
+            field_schema["x-read-only"] = True
+
+        properties[field_name] = field_schema
+
+    schema: dict = {
+        "type": "object",
+        "properties": properties,
+        "required": required,
+        "additionalProperties": False,
+    }
+    return schema
 
 
 @lru_cache(maxsize=None)

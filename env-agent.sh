@@ -118,6 +118,23 @@ _gz_is_running() {   # _gz_is_running <name>
     ps -p "$pid" -o state= 2>/dev/null | grep -qv "Z"
 }
 
+_gz_wait_for_health() {
+    local port="$1"
+    local url="http://127.0.0.1:$port/api/health/ready/"
+    local i=0
+    echo -n "Waiting for backend to be ready..."
+    until curl -s "$url" | grep -q '"status": "ready"' 2>/dev/null; do
+        echo -n "."
+        sleep 0.5
+        (( i++ ))
+        if (( i >= 40 )); then
+            echo " timed out!"
+            return 1
+        fi
+    done
+    echo " ready."
+}
+
 _gz_start() {        # _gz_start <name> <logfile> <cmd...>
     local name="$1" logfile="$2"; shift 2
     if _gz_is_running "$name"; then
@@ -559,6 +576,7 @@ gz_start() {
     gz_backend
     _gz_rotate_log web
     gz_web
+    _gz_wait_for_health "$(cat "$_GLAZE_PIDS/backend.port")"
     gz_open
     echo "Servers running — use 'gz_stop' to stop, 'gz_logs' to tail output."
     # Best-effort cleanup when this terminal tab closes normally (Ctrl-D / exit / tab X).

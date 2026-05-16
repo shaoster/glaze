@@ -170,6 +170,7 @@ vi.mock("../../../workflow.yml", () => ({
 vi.mock("../../util/api", () => ({
   fetchGlobalEntries: vi.fn().mockResolvedValue([]),
   fetchGlobalEntriesWithFilters: vi.fn().mockResolvedValue([]),
+  fetchWorkflowStateSchema: vi.fn().mockResolvedValue(null),
   updateCurrentState: vi.fn(),
   updatePastState: vi.fn(),
   updatePiece: vi.fn(),
@@ -1166,10 +1167,10 @@ describe("WorkflowState", () => {
       expect(
         screen.getByRole("button", { name: "Browse Glaze Combination" }),
       ).toBeInTheDocument();
-      // No text input with the field label — free typing is not supported
-      expect(
-        screen.queryByLabelText("Glaze Combination"),
-      ).not.toBeInTheDocument();
+      // Field label exists but points to a read-only input
+      const input = screen.getByLabelText("Glaze Combination");
+      expect(input).toBeInTheDocument();
+      expect(input).toHaveAttribute("readonly");
     });
 
     it("shows the selected value as a chip when a glaze combination is set", async () => {

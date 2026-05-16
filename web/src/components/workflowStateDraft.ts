@@ -136,7 +136,7 @@ export function normalizeCustomFieldPayload(
 }
 
 function stateImages(pieceState: PieceState): ImageEntry[] {
-  return pieceState.images.map((img) => ({
+  return (pieceState.images || []).map((img) => ({
     url: img.url,
     caption: img.caption,
     cloudinary_public_id: img.cloudinary_public_id ?? null,
@@ -147,10 +147,10 @@ function stateImages(pieceState: PieceState): ImageEntry[] {
 
 export function buildDraftState(pieceState: PieceState): DraftState {
   const customFieldDefs = getCustomFieldDefinitions(pieceState.state);
-  const customFields = pieceState.custom_fields;
+  const customFields = pieceState.custom_fields || {};
   return {
     baseState: pieceState,
-    notes: pieceState.notes,
+    notes: pieceState.notes || "",
     images: stateImages(pieceState),
     customFieldInputs: buildCustomFieldInputMap(
       customFieldDefs,

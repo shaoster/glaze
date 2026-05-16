@@ -565,6 +565,16 @@ js_library(
     ],
 )
 
+js_library(
+    name = "admin_src",
+    srcs = ["src/admin.tsx"],
+    deps = [
+        ":node_modules",
+        ":util_lib",
+        ":workflow_state_src",
+    ],
+)
+
 # ── Granular web test targets ─────────────────────────────────────────────────
 # Each target runs a focused subset of tests and depends only on the components
 # it exercises.  A change to an isolated component re-runs only the relevant
@@ -898,6 +908,15 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_admin_test",
+    srcs = ["src/admin.test.tsx"],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":admin_src",
+    ],
+)
+
+vitest_test(
     name = "web_app_test",
     srcs = ["src/App.test.tsx"],
     tags = ["ibazel_notify_changes"],
@@ -913,6 +932,7 @@ vitest_test(
 test_suite(
     name = "web_test",
     tests = [
+        ":web_admin_test",
         ":web_analysis_test",
         ":web_analyze_page_test",
         ":web_api_test",

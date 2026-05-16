@@ -19,20 +19,23 @@ import {
   Typography,
   useMediaQuery,
 } from "@mui/material";
-import type { PieceDetail, PieceState } from "../util/types";
+import type { PieceDetail, PieceState, UISchema } from "../util/types";
 import {
+  fetchWorkflowStateSchema,
   updateCurrentState,
   type UpdateStatePayload,
 } from "../util/api";
 import { openCloudinaryUploadWidget } from "../util/cloudinaryUpload";
 import {
   getCustomFieldDefinitions,
+  getDefinitionsFromSchema,
 } from "../util/workflow";
 import { entryNameOrEmpty } from "../util/optionalValues";
 import GlobalEntryField from "./GlobalEntryField";
 import AutosaveStatus from "./AutosaveStatus";
 import { useAutosave } from "./useAutosave";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
+import { useAsync } from "../util/useAsync";
 import {
   type ImageEntry,
   buildDraftState,
@@ -50,6 +53,11 @@ type WorkflowStateProps = {
   hideNotes?: boolean;
   hideImageUpload?: boolean;
   saveStateFn?: (payload: UpdateStatePayload) => Promise<PieceDetail>;
+  /** Optional pre-fetched schema to avoid an extra API call. */
+  uiSchema?: UISchema;
+  disableAutosave?: boolean;
+  /** Called whenever the payload changes. */
+  onChange?: (payload: UpdateStatePayload) => void;
 };
 
 
@@ -120,7 +128,13 @@ function ImageUploader({
           </Fab>
         </Portal>
       ) : (
-        <Portal container={() => document.getElementById("piece-upload-trigger")}>
+        <Portal
+          container={
+            (typeof document !== "undefined" &&
+              document.getElementById("piece-upload-trigger")) ||
+            null
+          }
+        >
           <Button
             variant="outlined"
             size="small"
@@ -165,6 +179,9 @@ export default function WorkflowState({
   hideNotes = false,
   hideImageUpload = false,
   saveStateFn,
+  uiSchema: initialUiSchema,
+  disableAutosave = false,
+  onChange,
 }: WorkflowStateProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [widgetLoading, setWidgetLoading] = useState(false);
@@ -174,11 +191,24 @@ export default function WorkflowState({
     buildDraftState,
   );
   const { baseState, notes, images, customFieldInputs, globalRefPks } = draft;
-  const baseDraft = useMemo(() => buildDraftState(baseState), [baseState]);
-  const customFieldDefs = useMemo(
-    () => getCustomFieldDefinitions(baseState.state),
+
+  const { data: uiSchema } = useAsync(
+    () => fetchWorkflowStateSchema(baseState.state),
     [baseState.state],
+    { enabled: !initialUiSchema },
   );
+
+  const activeSchema = initialUiSchema ?? uiSchema;
+
+  const baseDraft = useMemo(() => buildDraftState(baseState), [baseState]);
+  const customFieldDefs = useMemo(() => {
+    if (activeSchema) {
+      return getDefinitionsFromSchema(activeSchema);
+    }
+    // Fallback to build-time AST if schema is not yet loaded.
+    return getCustomFieldDefinitions(baseState.state);
+  }, [baseState.state, activeSchema]);
+
   const normalizedCustomFields = useMemo(
     () =>
       normalizeCustomFieldPayload(
@@ -211,6 +241,15 @@ export default function WorkflowState({
 
   const isDirty = notes !== baseState.notes || customFieldsDirty;
 
+  const currentPayload = useMemo(
+    () => ({
+      notes,
+      images,
+      custom_fields: normalizedCustomFields,
+    }),
+    [notes, images, normalizedCustomFields],
+  );
+
   useEffect(() => {
     latestImagesRef.current = images;
   }, [images]);
@@ -219,14 +258,15 @@ export default function WorkflowState({
     onDirtyChange?.(readOnly ? false : isDirty);
   }, [isDirty, onDirtyChange, readOnly]);
 
+  useEffect(() => {
+    if (!readOnly) {
+      onChange?.(currentPayload);
+    }
+  }, [currentPayload, onChange, readOnly]);
+
   const saveWorkflowState = useCallback(async () => {
-    const payload = {
-      notes,
-      images,
-      custom_fields: normalizedCustomFields,
-    };
     const saveFn = saveStateFn ?? ((p) => updateCurrentState(pieceId, p));
-    const result = await saveFn(payload);
+    const result = await saveFn(currentPayload);
     const savedState = saveStateFn
       ? result.history.find((ps) => ps.id === initialPieceState.id) ?? result.current_state
       : result.current_state;
@@ -234,12 +274,10 @@ export default function WorkflowState({
     onSaved(result);
   }, [
     pieceId,
-    images,
     initialPieceState.id,
-    normalizedCustomFields,
-    notes,
     onSaved,
     saveStateFn,
+    currentPayload,
   ]);
 
   const autosaveKey = useMemo(
@@ -254,7 +292,7 @@ export default function WorkflowState({
 
 
   const autosave = useAutosave({
-    dirty: !readOnly && isDirty,
+    dirty: !readOnly && isDirty && !disableAutosave,
     saveKey: autosaveKey,
     save: saveWorkflowState,
     delayMs: autosaveDelayMs,
@@ -436,15 +474,16 @@ export default function WorkflowState({
         />
       )}
       {customFieldDefs.length > 0 && (
-        <Box>
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            }}
-          >
-            {customFieldDefs.map((field) => {
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            pt: 3, // Increased padding above the custom fields interior
+            alignItems: "start",
+          }}
+        >
+          {customFieldDefs.map((field) => {
               const value = customFieldInputs[field.name] ?? "";
               const helperText = field.description;
               const label = field.label;
@@ -578,7 +617,6 @@ export default function WorkflowState({
                 />
               );
             })}
-          </Box>
         </Box>
       )}
 
