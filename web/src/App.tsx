@@ -337,7 +337,7 @@ function AuthLanding({
           </Stack>
           {waitlistEmailError && (
             <Typography variant="body2" color="error">
-              Enter your email above, then click Request Access.
+              Enter your email below, then click Request Access.
             </Typography>
           )}
 
