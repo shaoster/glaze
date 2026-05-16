@@ -19,7 +19,25 @@ on:
       - "LICENSE"
       - "LICENSE.*"
       - "docker-compose.yml"
+      - "deploy.sh"
+      - "setup-*.sh"
+      - "nginx/**"
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - ".gitignore"
+      - ".gitattributes"
+      - ".gitmodules"
+      - ".mailmap"
+      - ".editorconfig"
+      - ".vscode/**"
+      - ".idea/**"
+      - "LICENSE"
+      - "LICENSE.*"
+      - "docker-compose.yml"
+      - "deploy.sh"
+      - "setup-*.sh"
+      - "nginx/**"
 
 jobs:
   preflight:
