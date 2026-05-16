@@ -13,55 +13,32 @@ const createAdminTheme = (mode: "light" | "dark") => {
   return createTheme({
     palette: {
       mode,
-      primary: { main: "var(--primary, #1976d2)" },
-      background: {
-        default: "var(--body-bg, #fff)",
-        paper: "var(--body-bg, #fff)",
-      },
-      text: {
-        primary: "var(--body-fg, #333)",
-        secondary: "var(--body-fg, #333)",
-      },
-      divider: "var(--border-color, #ccc)",
+      primary: { main: "#1976d2" },
     },
     components: {
+      MuiBox: {
+        styleOverrides: {
+          root: {
+            // Apply Django colors to the container via CSS variables
+            "--body-bg": "inherit",
+            "--body-fg": "inherit",
+          },
+        },
+      },
       MuiTextField: {
         defaultProps: {
           variant: "outlined",
           size: "small",
         },
-        styleOverrides: {
-          root: {
-            // Ensure inputs don't have their own backgrounds that occlude labels
-            "& .MuiInputBase-root": {
-              backgroundColor: "transparent",
-            },
-          },
-        },
       },
       MuiInputLabel: {
         styleOverrides: {
           root: {
-            // Match the Django background to fix the notch occlusion
+            // Use inherit to pick up the background color of the parent div
+            // which is set to var(--body-bg) in widgets.py
             backgroundColor: "var(--body-bg, #fff)",
             padding: "0 4px",
             marginLeft: "-4px",
-            color: "var(--body-fg, #333)",
-            "&.Mui-focused": {
-              color: "var(--primary, #1976d2)",
-            },
-          },
-        },
-      },
-      MuiOutlinedInput: {
-        styleOverrides: {
-          root: {
-            "& .MuiOutlinedInput-notchedOutline": {
-              borderColor: "var(--border-color, #ccc)",
-            },
-            "&:hover .MuiOutlinedInput-notchedOutline": {
-              borderColor: "var(--body-fg, #333)",
-            },
           },
         },
       },
