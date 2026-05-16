@@ -125,6 +125,32 @@ js_binary(
     entry_point = "scripts/generate-types.mjs",
 )
 
+js_binary(
+    name = "coverage_audit",
+    data = [
+        ":node_modules/better-sqlite3",
+        ":node_modules/lcov-parse",
+    ],
+    entry_point = "scripts/coverage-audit.mjs",
+    visibility = ["//visibility:public"],
+)
+
+js_library(
+    name = "coverage_audit_src",
+    srcs = ["scripts/coverage-audit.mjs"],
+    deps = [
+        ":node_modules",
+    ],
+)
+
+js_library(
+    name = "generate_types_src",
+    srcs = ["scripts/generate-types.mjs"],
+    deps = [
+        ":node_modules",
+    ],
+)
+
 js_run_binary(
     name = "generated_types_gen",
     srcs = ["//web:openapi_schema"],
@@ -897,6 +923,28 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_coverage_audit_test",
+    srcs = [
+        "src/util/__tests__/coverageAudit.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":coverage_audit_src",
+    ],
+)
+
+vitest_test(
+    name = "web_generate_types_test",
+    srcs = [
+        "src/util/__tests__/generateTypes.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":generate_types_src",
+    ],
+)
+
+vitest_test(
     name = "web_analyze_page_test",
     srcs = [
         "src/pages/__tests__/AnalyzePage.test.tsx",
@@ -934,6 +982,7 @@ test_suite(
     tests = [
         ":web_admin_test",
         ":web_analysis_test",
+        ":web_coverage_audit_test",
         ":web_analyze_page_test",
         ":web_api_test",
         ":web_app_test",
@@ -957,6 +1006,7 @@ test_suite(
         ":web_state_transition_test",
         ":web_tag_manager_test",
         ":web_tag_test",
+        ":web_generate_types_test",
         ":web_workflow_state_test",
         ":web_workflow_summary_test",
         ":workflow_test",
