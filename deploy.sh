@@ -47,11 +47,11 @@ echo "--- pruning stopped containers and unused images ---"
 docker container prune -f
 docker image prune -f
 
+echo "--- deploy complete ---"
+docker compose ps
+REMOTE
+
 echo "--- syncing Nginx snippets ---"
 ssh "$HOST" "mkdir -p /etc/nginx/snippets"
 scp -r nginx/snippets/*.conf "$HOST":/etc/nginx/snippets/
 ssh "$HOST" "nginx -t && systemctl reload nginx"
-
-echo "--- deploy complete ---"
-docker compose ps
-REMOTE
