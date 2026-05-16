@@ -90,13 +90,28 @@ The web UI is organized around a small set of React components in [`web/src/comp
 - [`PieceShareControls.tsx`](web/src/components/PieceShareControls.tsx): Owner-only sharing controls shown on terminal pieces — toggles the public sharing flag and provides a copyable share link.
 - [`PublicPieceShell.tsx`](web/src/components/PublicPieceShell.tsx): Thin unauthenticated route wrapper that renders `PieceDetailPage` for publicly shared terminal pieces, without the main app shell.
 
+## Prerequisites
+
+Before cloning, ensure the following are installed on your system:
+
+| Tool | Required | Install |
+|---|---|---|
+| OS | Ubuntu 22.04+ or Debian 12+ (WSL2 on Windows works; macOS untested) | — |
+| [Bazelisk](https://github.com/bazelbuild/bazelisk) | Yes — aliased as `bazel`; downloads Bazel 8.5.1 automatically via `.bazelversion` | [Bazelisk releases](https://github.com/bazelbuild/bazelisk/releases) or `brew install bazelisk` |
+| `curl` | Yes — used by `gz_setup` to bootstrap RTK | `apt install curl` |
+| `git` | Yes | `apt install git` |
+
+Python (3.12) and Node (22) are managed hermetically by Bazel — no manual installs needed once Bazelisk is present.
+
+**VS Code users:** install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/macOS) or Docker Engine (Linux) and the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers), then open the repo and choose **Reopen in Container** — the devcontainer pre-installs all prerequisites automatically.
+
 ## Quick start
 
 This section is for folks who just want to fire up the whole stack quickly and start poking around the app.
 
 ```bash
 source env.sh
-gz_setup    # first-time only: creates venv, installs deps, runs migrations, installs Node
+gz_setup    # first-time only: creates venv, installs deps, runs migrations
 gz_start    # starts backend (port 8080) and web (Vite port), press Ctrl+C to stop
 ```
 

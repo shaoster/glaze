@@ -1,0 +1,22 @@
+{
+  "name": "Glaze",
+  "build": { "dockerfile": "Dockerfile" },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode-remote.remote-containers",
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ],
+      "settings": {
+        "terminal.integrated.profiles.linux": {
+          "glaze": {
+            "path": "bash",
+            "args": ["--rcfile", "${containerWorkspaceFolder}/env.sh"]
+          }
+        },
+        "terminal.integrated.defaultProfile.linux": "glaze"
+      }
+    }
+  }
+}

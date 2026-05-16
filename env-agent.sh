@@ -289,7 +289,6 @@ gz_setup() {
     # Node + web deps — pnpm install via aspect_rules_js's @npm//:sync. This
     # runs pnpm under the Bazel-managed node toolchain and materializes a
     # normal pnpm tree at web/node_modules/ that both Bazel and the IDE read.
-    _gz_ensure_node
     echo "--- Syncing web dependencies via Bazel (@npm//:sync)..."
     (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel run @npm//:sync)
 
