@@ -1,6 +1,9 @@
 import pytest
 from django.contrib.auth.models import User
+from django.test import override_settings
 from rest_framework.test import APIClient
+
+PROD = override_settings(IS_PRODUCTION=True)
 
 from api.models import ENTRY_STATE, Piece, PieceState
 

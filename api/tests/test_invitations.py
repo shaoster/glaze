@@ -3,11 +3,11 @@ import time
 import pytest
 from django.contrib.auth.models import User
 from django.core import mail, signing
-from django.test import override_settings
 from rest_framework.test import APIClient
 
 from api.invitations import _INVITE_SALT, make_invite_token, verify_invite_token
 from api.models import AllowedEmail
+from api.tests.conftest import PROD
 
 
 @pytest.fixture
@@ -209,9 +209,6 @@ def test_waitlist_does_not_demote_approved(db, anon_client):
 
 
 # ── Allowlist gate ────────────────────────────────────────────────────────────
-
-PROD = override_settings(IS_PRODUCTION=True)
-
 
 @PROD
 def test_gate_blocks_unknown_email_in_prod(db, anon_client):
