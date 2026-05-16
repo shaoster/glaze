@@ -238,13 +238,19 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "console": {
-            "format": "%(levelname)s %(asctime)s %(name)s %(message)s",
+            "format": "%(levelname)s %(asctime)s %(name)s [trace=%(trace_id)s] %(message)s",
+        },
+    },
+    "filters": {
+        "otel_trace": {
+            "()": "api.logging.OtelTraceFilter",
         },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "console",
+            "filters": ["otel_trace"],
         },
     },
     "root": {
