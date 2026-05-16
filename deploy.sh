@@ -9,10 +9,14 @@
 #
 # Prerequisites on the droplet:
 #   - Docker + Docker Compose plugin installed
-#   - ~/glaze/docker-compose.yml present (bootstrapped once; kept in sync by this script)
 #   - ~/glaze/.env present (copy from .env.production.example)
 #   - Authenticated with ghcr.io (one-time):
 #       docker login ghcr.io -u shaoster -p <PAT with read:packages>
+#
+# On first run this script clones the repo to ~/glaze (public repo, no key needed).
+# Subsequent deploys fetch the commit matching the deployed image so config files
+# (docker-compose.yml, otel-collector-config.yml, nginx/snippets/, etc.) are
+# always in sync without having to update this script when new files are added.
 set -euo pipefail
 
 HOST=${1:?Usage: ./deploy.sh user@host [commit-sha]}
@@ -21,24 +25,28 @@ KNOWN_SHA=${2:-}
 echo "--- deploying application ---"
 ssh "$HOST" bash <<REMOTE
 set -euo pipefail
+
+echo "--- bootstrapping repo (no-op if already cloned) ---"
+if [[ ! -d ~/glaze/.git ]]; then
+    git clone https://github.com/shaoster/glaze.git ~/glaze
+fi
 cd ~/glaze
 
 echo "--- pulling latest images ---"
 docker compose pull
 
-echo "--- syncing docker-compose.yml ---"
+echo "--- syncing repo to image commit ---"
 SHA="${KNOWN_SHA}"
 if [[ -z "\$SHA" ]]; then
     SHA=\$(docker inspect ghcr.io/shaoster/glaze:latest \
         --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)
 fi
 if [[ -z "\$SHA" ]]; then
-    echo "WARNING: commit SHA unknown, docker-compose.yml not updated"
+    echo "WARNING: commit SHA unknown, repo not updated"
 else
     echo "Image built from commit \$SHA"
-    curl -fsSL \
-        "https://raw.githubusercontent.com/shaoster/glaze/\${SHA}/docker-compose.yml" \
-        -o docker-compose.yml
+    git fetch --quiet origin
+    git checkout --quiet "\$SHA"
 fi
 
 echo "--- restarting services ---"
