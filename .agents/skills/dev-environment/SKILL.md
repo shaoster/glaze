@@ -134,6 +134,13 @@ git add web/pnpm-lock.yaml   # fails: no web/web/pnpm-lock.yaml
 |---|---|
 | `VITE_GOOGLE_CLIENT_ID` | Google Sign-In button not rendered; must match `GOOGLE_OAUTH_CLIENT_ID` |
 
+## Off-Limits Paths
+
+**Never** use `find`, `ls`, `Read`, `grep`, or any other tool to scan or read files
+under `/home/phil/.cache/bazel`. It is large, slow to traverse, and not a source of
+truth for anything in the repo. To inspect a Python package, read it from
+`.manage.venv/lib/python3.12/site-packages/` instead.
+
 ## Symlinking `.env.local` into a Worktree
 
 When working in an agent worktree, symlink the untracked root `.env.local` into the
