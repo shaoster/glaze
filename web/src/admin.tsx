@@ -38,13 +38,33 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
   }
 
   const root = createRoot(container);
+
+  let initialPieceState = options.initialPieceState;
+  if (typeof initialPieceState === "string") {
+    try {
+      initialPieceState = JSON.parse(initialPieceState);
+    } catch (e) {
+      console.error("Failed to parse initialPieceState string:", e);
+    }
+  }
+
+  // Ensure we have a valid state object for the component.
+  const rawState = (initialPieceState || {}) as Record<string, unknown>;
+  const pieceState = { ...rawState } as unknown as PieceState;
   
-  // Ensure we have a valid state object for the component
-  const pieceState = {
-    ...options.initialPieceState,
-    custom_fields: options.initialPieceState.custom_fields || {},
-    notes: options.initialPieceState.notes || "",
-  };
+  if (!pieceState.images) pieceState.images = [];
+  if (!pieceState.custom_fields) pieceState.custom_fields = {};
+  if (pieceState.notes === undefined || pieceState.notes === null) pieceState.notes = "";
+
+  // Merge global_ref_values (provided by Django Admin) into custom_fields
+  // so buildDraftState can correctly resolve the initial global reference PKs.
+  const globalRefValues = rawState.global_ref_values as Record<string, unknown> | undefined;
+  if (globalRefValues) {
+    pieceState.custom_fields = {
+      ...pieceState.custom_fields,
+      ...globalRefValues,
+    };
+  }
 
   root.render(
     <React.StrictMode>
