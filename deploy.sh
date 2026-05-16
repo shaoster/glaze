@@ -50,7 +50,9 @@ else
 fi
 
 echo "--- restarting services ---"
-docker compose up -d
+# --force-recreate ensures containers always pick up .env changes even when
+# the image and compose spec are unchanged (e.g. secret rotation).
+docker compose up -d --force-recreate
 
 echo "--- pruning ---"
 docker container prune -f
