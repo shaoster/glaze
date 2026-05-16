@@ -26,6 +26,7 @@ Generate the raw coverage data with `rtk bazel coverage --combined_report=lcov -
 - **Redundant coverage**: find lines or files hit by many tests, identify tests with nearly identical source sets, and call out coverage that is duplicated enough to simplify.
 - **Unexpected coverage**: look for tests that hit files outside their feature area, or that exercise unrelated modules and components.
 - **Mocking opportunities**: treat unusually broad coverage from a non-integration test as a candidate for more mocking and narrower assertions, especially when it fans out across many feature modules.
+- **Integration candidates**: if the broad fan-out is intentional and the test is genuinely exercising multiple layers, consider marking the Bazel target as integration coverage instead of forcing it into a unit-test shape.
 
 ## Workflow
 
@@ -54,4 +55,5 @@ Generate the raw coverage data with `rtk bazel coverage --combined_report=lcov -
 - Coverage review should assume tests are unit tests first.
 - A Bazel target is only treated as integration coverage when it is explicitly tagged `integration`.
 - When a non-integration test covers many unrelated components or feature modules, call it out as a mocking candidate.
+- When the breadth is intentional, call out the target as an integration-test candidate and tell the user to add `tags = ["integration"]` to the relevant `BUILD.bazel` rule (`vitest_test(...)` under `web/BUILD.bazel`, `py_test(...)` under `api/BUILD.bazel`, or the equivalent test rule in the owning package).
 - If the data does not support a concrete recommendation, stop and say the coverage data is insufficient instead of filing a vague issue.
