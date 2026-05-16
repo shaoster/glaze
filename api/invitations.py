@@ -34,4 +34,4 @@ def send_invitation_email(email: str, token: str) -> None:
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[email],
     )
-    logger.info("Invitation email sent to %s", email)
+    logger.info("Invitation email sent to %s — invite URL: %s", email, invite_url)
