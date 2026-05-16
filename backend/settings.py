@@ -132,7 +132,7 @@ ASGI_APPLICATION = "backend.asgi.application"
 # plain HTTP. Trust only the proxy's X-Forwarded-Proto value so Django still
 # treats external HTTPS requests as secure.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_HOST = False
 
 
 # Database

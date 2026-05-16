@@ -53,3 +53,13 @@ class TestHealthReady:
             response = self._get()
         assert response.status_code == 503
         assert response.json()["checks"]["async_tasks"] is False
+
+    def test_ignores_untrusted_forwarded_host_header(self):
+        # Regression test for production DisallowedHost error.
+        # With USE_X_FORWARDED_HOST = False, Django should ignore this header
+        # and rely on the Host header (which defaults to 'testserver' in DRF tests).
+        client = APIClient()
+        response = client.get(
+            "/api/health/ready/", HTTP_X_FORWARDED_HOST="159.223.154.68"
+        )
+        assert response.status_code == 200
