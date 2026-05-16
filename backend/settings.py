@@ -96,7 +96,9 @@ SPECTACULAR_SETTINGS = {
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     # WhiteNoise must come directly after SecurityMiddleware and before all others.
-    "whitenoise.middleware.WhiteNoiseMiddleware",
+    # AsyncCompatWhiteNoiseMiddleware wraps the sync file iterator in an async
+    # generator so Django's ASGI handler never sees a bare map() object.
+    "backend.middleware.AsyncCompatWhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
