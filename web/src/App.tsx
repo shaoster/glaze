@@ -48,7 +48,6 @@ import {
   loginWithGoogleChecked,
   logoutUser,
   NotInvitedError,
-  registerWithEmail,
   requestWaitlist,
 } from "./util/api";
 import { useAsync } from "./util/useAsync";
@@ -185,8 +184,6 @@ const DARK_THEME = createTheme({
     },
   },
 });
-type AuthViewMode = "login" | "register";
-
 function AuthLanding({
   onAuthenticated,
 }: {
@@ -195,11 +192,8 @@ function AuthLanding({
   const location = useLocation();
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
   const prefillEmail = (location.state as { prefillEmail?: string } | null)?.prefillEmail ?? "";
-  const [mode, setMode] = useState<AuthViewMode>("login");
   const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notInvitedEmail, setNotInvitedEmail] = useState<string | null>(null);
@@ -213,29 +207,10 @@ function AuthLanding({
     setError(null);
     setNotInvitedEmail(null);
     try {
-      if (mode === "login") {
-        const user = await loginWithEmail(email.trim(), password);
-        onAuthenticated(user);
-      } else {
-        const user = await registerWithEmail({
-          email: email.trim(),
-          password,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-        });
-        onAuthenticated(user);
-      }
-    } catch (err) {
-      if (err instanceof NotInvitedError) {
-        setNotInvitedEmail(email.trim());
-        setError(err.detail);
-      } else {
-        setError(
-          mode === "login"
-            ? "Login failed. Please check your credentials."
-            : "Sign up failed.",
-        );
-      }
+      const user = await loginWithEmail(email.trim(), password);
+      onAuthenticated(user);
+    } catch {
+      setError("Login failed. Please check your credentials.");
     } finally {
       setSubmitting(false);
     }
@@ -319,14 +294,6 @@ function AuthLanding({
 
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
             <Button
-              variant={mode === "login" ? "contained" : "outlined"}
-              onClick={() => setMode("login")}
-              disabled={submitting}
-              fullWidth
-            >
-              Log In
-            </Button>
-            <Button
               variant="outlined"
               onClick={handleRequestAccess}
               disabled={submitting || waitlistSubmitting || waitlistDone}
@@ -360,28 +327,9 @@ function AuthLanding({
                 required
                 fullWidth
                 slotProps={{
-                  htmlInput: {
-                    autoComplete:
-                      mode === "login" ? "current-password" : "new-password",
-                  },
+                  htmlInput: { autoComplete: "current-password" },
                 }}
               />
-              {mode === "register" && (
-                <>
-                  <TextField
-                    label="First name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    fullWidth
-                  />
-                  <TextField
-                    label="Last name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    fullWidth
-                  />
-                </>
-              )}
               <Button
                 type="submit"
                 variant="contained"
@@ -392,13 +340,11 @@ function AuthLanding({
                   ) : undefined
                 }
               >
-                {mode === "login" ? "Log In" : "Create Account"}
+                Log In
               </Button>
               {submitting && (
                 <Typography variant="body2" color="text.secondary">
-                  {mode === "login"
-                    ? "Signing you in..."
-                    : "Creating your account..."}
+                  Signing you in...
                 </Typography>
               )}
             </Stack>
