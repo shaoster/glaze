@@ -16,4 +16,4 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
 from backend.otel import configure_otel
 
 configure_otel()
-application = get_asgi_application()
+application = get_asgi_application()  # noqa: E402
