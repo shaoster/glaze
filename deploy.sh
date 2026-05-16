@@ -18,13 +18,19 @@ set -euo pipefail
 HOST=${1:?Usage: ./deploy.sh user@host [commit-sha]}
 KNOWN_SHA=${2:-}
 
-echo "--- pulling latest image and syncing docker-compose.yml ---"
+echo "--- syncing Nginx snippets ---"
+ssh "$HOST" "mkdir -p /etc/nginx/snippets"
+scp -r nginx/snippets/*.conf "$HOST":/etc/nginx/snippets/
+
+echo "--- deploying application ---"
 ssh "$HOST" bash <<REMOTE
 set -euo pipefail
 cd ~/glaze
 
+echo "--- pulling latest images ---"
 docker compose pull
 
+echo "--- syncing docker-compose.yml ---"
 SHA="${KNOWN_SHA}"
 if [[ -z "\$SHA" ]]; then
     SHA=\$(docker inspect ghcr.io/shaoster/glaze:latest \
@@ -38,19 +44,12 @@ else
         "https://raw.githubusercontent.com/shaoster/glaze/\${SHA}/docker-compose.yml" \
         -o docker-compose.yml
 fi
-REMOTE
 
-echo "--- syncing Nginx snippets ---"
-ssh "$HOST" "mkdir -p /etc/nginx/snippets"
-scp -r nginx/snippets/*.conf "$HOST":/etc/nginx/snippets/
-ssh "$HOST" "nginx -t && systemctl reload nginx"
-
-echo "--- restarting services and pruning ---"
-ssh "$HOST" bash <<REMOTE
-set -euo pipefail
-cd ~/glaze
-
+echo "--- restarting services and reloading nginx ---"
 docker compose up -d
+nginx -t && systemctl reload nginx
+
+echo "--- pruning ---"
 docker container prune -f
 docker image prune -f
 
