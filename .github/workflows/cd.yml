@@ -38,6 +38,29 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H $(echo "${{ vars.DEPLOY_HOST }}" | cut -d@ -f2) >> ~/.ssh/known_hosts
 
+      - name: Render and ship .env
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          LOGTAIL_SOURCE_TOKEN: ${{ secrets.LOGTAIL_SOURCE_TOKEN }}
+          MODAL_AUTH_TOKEN: ${{ secrets.MODAL_AUTH_TOKEN }}
+          GRAFANA_CLOUD_OTLP_TOKEN: ${{ secrets.GRAFANA_CLOUD_OTLP_TOKEN }}
+          ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
+          APP_ORIGIN: ${{ vars.APP_ORIGIN }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+          CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_UPLOAD_FOLDER }}
+          CLOUDINARY_UPLOAD_PRESET: ${{ vars.CLOUDINARY_UPLOAD_PRESET }}
+          CLOUDINARY_PUBLIC_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_PUBLIC_UPLOAD_FOLDER }}
+          REMOTE_REMBG_URL: ${{ vars.REMOTE_REMBG_URL }}
+          OTEL_ENABLED: ${{ vars.OTEL_ENABLED }}
+        run: |
+          envsubst < .env.production.template > /tmp/.env
+          scp /tmp/.env "${{ vars.DEPLOY_HOST }}":~/glaze/.env
+
       - name: Deploy
         run: ./deploy.sh "${{ vars.DEPLOY_HOST }}" "${{ env.DEPLOY_SHA }}"
 
