@@ -6,7 +6,7 @@ from django.core import mail, signing
 from django.test import override_settings
 from rest_framework.test import APIClient
 
-from api.invitations import make_invite_token, verify_invite_token
+from api.invitations import _INVITE_SALT, make_invite_token, verify_invite_token
 from api.models import AllowedEmail
 
 
@@ -72,7 +72,7 @@ def test_wrong_kind_token_raises(db):
     # A validly-signed token with a different kind must be rejected so tokens
     # from other signing contexts (e.g., password-reset) can't be used as invites.
     wrong_kind = signing.dumps(
-        {"email": "test@example.com", "kind": "password-reset"}, salt="invite"
+        {"email": "test@example.com", "kind": "password-reset"}, salt=_INVITE_SALT
     )
     with pytest.raises(signing.BadSignature):
         verify_invite_token(wrong_kind)

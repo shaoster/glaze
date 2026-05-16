@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from django.contrib.auth.models import User
+from django.test import override_settings
 from rest_framework.test import APIClient
 
 from api.models import AllowedEmail, Piece, UserProfile
@@ -102,6 +103,7 @@ class TestAuthEndpoints:
         assert response.status_code == 400
         assert response.json() == {"email": ["A user with this email already exists."]}
 
+    @override_settings(IS_PRODUCTION=True)
     def test_register_existing_email_without_allowlist_returns_403_not_400(self):
         # Account enumeration protection: an uninvited caller registering a known
         # email must get 403 (not_invited), not 400 (duplicate). The allowlist
