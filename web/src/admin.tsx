@@ -7,20 +7,14 @@ import type { PieceDetail, PieceState, UISchema } from "./util/types";
 import type { UpdateStatePayload } from "./util/api";
 
 const getDjangoTheme = (): "light" | "dark" => {
-  // Modern Django 5.0+
   if (document.documentElement.dataset.theme === "dark") return "dark";
-  // Fallback for custom or older setups
   if (document.body.classList.contains("dark-mode")) return "dark";
-  // System preference fallback
   if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
   return "light";
 };
 
 const createAdminTheme = (mode: "light" | "dark") => {
   const isDark = mode === "dark";
-  // Explicitly match Django dark/light mode background and foreground colors.
-  // Django Dark: #121212 bg, #eee fg.
-  // Django Light: #fff bg, #333 fg.
   const bgColor = isDark ? "#121212" : "#fff";
   const fgColor = isDark ? "#eee" : "#333";
   const primaryColor = isDark ? "#79aec8" : "#447e9b";
@@ -49,7 +43,6 @@ const createAdminTheme = (mode: "light" | "dark") => {
       MuiInputLabel: {
         styleOverrides: {
           root: {
-            // Fix the 'notch' occlusion by matching the background color exactly.
             backgroundColor: bgColor,
             padding: "0 4px",
             marginLeft: "-4px",
@@ -148,7 +141,6 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
   root.render(
     <React.StrictMode>
       <ThemeProvider theme={theme}>
-        {/* ScopedCssBaseline ensures the correct background/text colors are applied to children */}
         <ScopedCssBaseline>
           <WorkflowState
             initialPieceState={pieceState}
@@ -160,7 +152,8 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
             uiSchema={options.uiSchema}
             saveStateFn={wrappedSaveStateFn}
             hideImageUpload
-            disableAutosave // Disable autosave in Admin (uses main Save button)
+            disableAutosave
+            hideNotes // Always exclude notes in Admin (redundant with parent form)
           />
         </ScopedCssBaseline>
       </ThemeProvider>
