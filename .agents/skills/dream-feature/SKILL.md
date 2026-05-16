@@ -83,7 +83,8 @@ for complex ones, `generalist` for simple chores) to author the specific spec.
 >
 > **Goal:** <Sub-task Goal>
 > **Dependencies:** <List of Sub-task Titles this depends on>
-> **Constraints:** Associate the issue with milestone number <Milestone Number>.
+> **Constraints:** Associate the issue with milestone title "<Milestone Title>"
+> (pass as `--milestone "<Milestone Title>"` — passing the numeric ID fails).
 >
 > **Instruction:** You are acting as a sub-agent for a `/dream` orchestration.
 > Use the provided Milestone Context to answer any internal questions or
@@ -91,7 +92,22 @@ for complex ones, `generalist` for simple chores) to author the specific spec.
 > Resolve the discussion autonomously using the vision established in the
 > milestone.
 >
+> **Permission handling:** If you need Bash or Write permission to file the
+> issue, include the **complete final issue body** verbatim in your permission
+> request so the orchestrator can act on it without losing context.
+>
 > **Output:** Return ONLY the URL of the created issue.
+
+**Orchestrator permission handling (critical):**
+
+When a sub-agent halts requesting Bash or Write permission, **always use
+`SendMessage` to the original agent ID** to grant permission and resume it —
+never spawn a fresh agent. A fresh agent has no memory of the issue body and
+will hallucinate unrelated content by latching onto visible repo issues.
+
+If `SendMessage` is unavailable, extract the complete issue body from the
+agent's permission-request message and create the issue directly via Bash
+rather than delegating to a new context-free agent.
 
 ### 6. Link and Finalize
 
