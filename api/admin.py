@@ -816,7 +816,7 @@ class PieceStateAdminForm(forms.ModelForm):
             self.initial["unified_custom_fields"] = initial_piece_state_data
 
     def clean(self):
-        from .workflow import get_global_ref_fields_for_state
+        from .serializers import _resolve_custom_field_payload
 
         cleaned_data = super().clean()
 
@@ -835,15 +835,31 @@ class PieceStateAdminForm(forms.ModelForm):
                 )
 
         unified_data = cleaned_data.get("unified_custom_fields")
-        if unified_data:
+        if unified_data and isinstance(instance, PieceState):
             # unified_data is the JSON payload from the React widget:
             # { notes, images, custom_fields: { ... } }
-            # Wait, our widget's saveStateFn sends { notes, images, custom_fields }
-            # We need to extract custom_fields and possibly notes.
-            if "custom_fields" in unified_data:
-                cleaned_data["custom_fields"] = unified_data["custom_fields"]
+            # custom_fields here contains BOTH inline fields and global ref PKs.
+            incoming = unified_data.get("custom_fields", {})
+            (
+                inline_fields,
+                _,
+                global_ref_pks,
+                clear_fields,
+            ) = _resolve_custom_field_payload(
+                instance.piece,
+                instance.state,
+                incoming,
+                clear_empty_refs=True,
+            )
+
+            # Update cleaned_data so the model save() only gets the inline fields
+            cleaned_data["custom_fields"] = inline_fields
             if "notes" in unified_data:
                 cleaned_data["notes"] = unified_data["notes"]
+
+            # Store relational changes for save_model()
+            self._global_ref_pks = global_ref_pks
+            self._clear_global_ref_fields = clear_fields
 
         return cleaned_data
 
@@ -878,21 +894,15 @@ class PieceStateAdmin(ExportMixin, SortableAdminBase, admin.ModelAdmin):
         allow_sealed = form.cleaned_data.get("allow_sealed_edit", False)
         obj.save(allow_sealed_edit=bool(allow_sealed))
 
-        # Save relational fields (junction tables) from the unified React payload
-        global_ref_fields = get_global_ref_fields_for_state(obj.state)
-        global_ref_pks = {}
-        clear_fields = set()
-
-        unified_data = form.cleaned_data.get("unified_custom_fields")
-        if unified_data and "global_ref_pks" in unified_data:
-            global_ref_pks = unified_data["global_ref_pks"]
-            # Any field in the schema that is NOT in the payload should be cleared
-            for field_name in global_ref_fields:
-                if field_name not in global_ref_pks:
-                    clear_fields.add(field_name)
-
-        if global_ref_pks or clear_fields:
-            _write_global_ref_rows(obj, global_ref_fields, global_ref_pks, clear_fields)
+        # Save relational fields (junction tables) from the split payload
+        if hasattr(form, "_global_ref_pks"):
+            global_ref_fields = get_global_ref_fields_for_state(obj.state)
+            _write_global_ref_rows(
+                obj,
+                global_ref_fields,
+                form._global_ref_pks,
+                form._clear_global_ref_fields,
+            )
 
 
 @admin.action(description="Re-run selected tasks")

@@ -46,8 +46,10 @@ def test_piece_state_admin_save_unified_relational_fields(user):
         "state": "wheel_thrown",
         "custom_fields": "{}",
         "unified_custom_fields": {
-            "custom_fields": {"clay_weight_lbs": 2.5},
-            "global_ref_pks": {"clay_body": str(cb.id)},
+            "custom_fields": {
+                "clay_weight_lbs": 2.5,
+                "clay_body": str(cb.id),
+            },
         },
         "allow_sealed_edit": True,
     }

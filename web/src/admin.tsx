@@ -1,7 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import CssBaseline from "@mui/material/CssBaseline";
 import WorkflowState from "./components/WorkflowState";
 import type { PieceDetail, PieceState, UISchema } from "./util/types";
 import type { UpdateStatePayload } from "./util/api";
@@ -11,15 +10,19 @@ const getDjangoTheme = (): "light" | "dark" => {
 };
 
 const createAdminTheme = (mode: "light" | "dark") => {
-  const bgColor = mode === "dark" ? "#121212" : "#fff";
   return createTheme({
     palette: {
       mode,
-      primary: { main: "#1976d2" },
+      primary: { main: "var(--primary, #1976d2)" },
       background: {
-        default: bgColor,
-        paper: mode === "dark" ? "#1e1e1e" : "#fff",
+        default: "var(--body-bg, #fff)",
+        paper: "var(--body-bg, #fff)",
       },
+      text: {
+        primary: "var(--body-fg, #333)",
+        secondary: "var(--body-fg, #333)",
+      },
+      divider: "var(--border-color, #ccc)",
     },
     components: {
       MuiTextField: {
@@ -27,15 +30,38 @@ const createAdminTheme = (mode: "light" | "dark") => {
           variant: "outlined",
           size: "small",
         },
+        styleOverrides: {
+          root: {
+            // Ensure inputs don't have their own backgrounds that occlude labels
+            "& .MuiInputBase-root": {
+              backgroundColor: "transparent",
+            },
+          },
+        },
       },
       MuiInputLabel: {
         styleOverrides: {
           root: {
-            // Ensure the label's background matches the theme background
-            // so the 'notch' in outlined fields works correctly.
-            backgroundColor: bgColor,
+            // Match the Django background to fix the notch occlusion
+            backgroundColor: "var(--body-bg, #fff)",
             padding: "0 4px",
             marginLeft: "-4px",
+            color: "var(--body-fg, #333)",
+            "&.Mui-focused": {
+              color: "var(--primary, #1976d2)",
+            },
+          },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderColor: "var(--border-color, #ccc)",
+            },
+            "&:hover .MuiOutlinedInput-notchedOutline": {
+              borderColor: "var(--body-fg, #333)",
+            },
           },
         },
       },
@@ -135,7 +161,6 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
   root.render(
     <React.StrictMode>
       <ThemeProvider theme={theme}>
-        <CssBaseline />
         <WorkflowState
           initialPieceState={pieceState}
           pieceId={options.pieceId}
@@ -149,7 +174,10 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
     </React.StrictMode>
   );
 
-  return () => root.unmount();
+  return () => {
+    root.unmount();
+    portalContainer?.remove();
+  };
 };
 
 window.mountWorkflowStateWidget = mountWorkflowStateWidget;
