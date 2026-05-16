@@ -202,14 +202,14 @@ def auth_register(request: Request) -> Response:
     serializer.is_valid(raise_exception=True)
     user_model = get_user_model()
     email = serializer.validated_data["email"]
-    not_invited = _check_not_invited(email)
-    if not_invited:
-        return not_invited
     if user_model.objects.filter(email__iexact=email).exists():
         return Response(
             {"email": ["A user with this email already exists."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    not_invited = _check_not_invited(email)
+    if not_invited:
+        return not_invited
     user = serializer.save()
     bootstrap_dev_user(user)
     login(request, user)

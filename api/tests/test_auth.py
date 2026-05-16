@@ -4,7 +4,7 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from api.models import Piece, UserProfile
+from api.models import AllowedEmail, Piece, UserProfile
 
 
 @pytest.mark.django_db
@@ -197,6 +197,12 @@ _FAKE_IDINFO = {
 @pytest.mark.django_db
 class TestAuthGoogle:
     URL = "/api/auth/google/"
+
+    def setup_method(self):
+        AllowedEmail.objects.get_or_create(
+            email="google@example.com",
+            defaults={"status": AllowedEmail.Status.APPROVED},
+        )
 
     def test_returns_400_on_invalid_credential(self, settings):
         settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"

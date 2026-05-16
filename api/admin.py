@@ -836,6 +836,8 @@ class PieceStateAdminForm(forms.ModelForm):
                     "Check 'Allow sealed edit' to override."
                 )
 
+        if not isinstance(cleaned_data, dict):
+            return cleaned_data
         unified_data = cleaned_data.get("unified_custom_fields")
         if unified_data and isinstance(instance, PieceState):
             # unified_data is the JSON payload from the React widget:

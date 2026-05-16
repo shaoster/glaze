@@ -16,16 +16,16 @@ export default function InvitePage() {
   const navigate = useNavigate();
   const token = searchParams.get("token") ?? "";
 
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "error">(
+    token ? "loading" : "error"
+  );
   const [invitedEmail, setInvitedEmail] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState(
+    token ? "" : "No invitation token found in the URL."
+  );
 
   useEffect(() => {
-    if (!token) {
-      setErrorMessage("No invitation token found in the URL.");
-      setState("error");
-      return;
-    }
+    if (!token) return;
     acceptInvite(token)
       .then(({ email }) => {
         setInvitedEmail(email);
