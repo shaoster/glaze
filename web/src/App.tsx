@@ -205,6 +205,7 @@ function AuthLanding({
   const [notInvitedEmail, setNotInvitedEmail] = useState<string | null>(null);
   const [waitlistDone, setWaitlistDone] = useState(false);
   const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [waitlistEmailError, setWaitlistEmailError] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -241,10 +242,29 @@ function AuthLanding({
   }
 
   async function handleWaitlist() {
-    if (!notInvitedEmail) return;
+    const target = notInvitedEmail;
+    if (!target) return;
     setWaitlistSubmitting(true);
     try {
-      await requestWaitlist(notInvitedEmail);
+      await requestWaitlist(target);
+      setWaitlistDone(true);
+    } finally {
+      setWaitlistSubmitting(false);
+    }
+  }
+
+  async function handleRequestAccess() {
+    const target = email.trim();
+    if (!target) {
+      setWaitlistEmailError(true);
+      return;
+    }
+    setWaitlistEmailError(false);
+    setNotInvitedEmail(target);
+    setWaitlistDone(false);
+    setWaitlistSubmitting(true);
+    try {
+      await requestWaitlist(target);
       setWaitlistDone(true);
     } finally {
       setWaitlistSubmitting(false);
@@ -308,17 +328,18 @@ function AuthLanding({
             </Button>
             <Button
               variant="outlined"
-              onClick={() => {
-                setNotInvitedEmail(email.trim() || null);
-                setWaitlistDone(false);
-                setMode("login");
-              }}
-              disabled={submitting || waitlistDone}
+              onClick={handleRequestAccess}
+              disabled={submitting || waitlistSubmitting || waitlistDone}
               fullWidth
             >
-              Request Access
+              {waitlistSubmitting ? "Submitting…" : "Request Access"}
             </Button>
           </Stack>
+          {waitlistEmailError && (
+            <Typography variant="body2" color="error">
+              Enter your email above, then click Request Access.
+            </Typography>
+          )}
 
           <Box component="form" onSubmit={handleSubmit}>
             <Stack spacing={2}>
@@ -326,7 +347,7 @@ function AuthLanding({
                 label="Email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setWaitlistEmailError(false); }}
                 required
                 fullWidth
                 slotProps={{ htmlInput: { autoComplete: "email" } }}
