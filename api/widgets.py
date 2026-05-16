@@ -63,7 +63,7 @@ class WorkflowStateWidget(forms.Widget):
         {vite_preamble}
         {css_html}
         <div id="{container_id}" class="workflow-state-widget-container"
-             style="min-height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 16px; background: #fff; margin-bottom: 20px;">
+             style="min-height: 200px; border: 1px solid var(--border-color, #ccc); border-radius: 4px; padding: 16px; background: var(--body-bg, #fff); color: var(--body-fg, #333); margin-bottom: 20px;">
             Loading custom fields...
         </div>
         <input type="hidden" name="{name}" id="id_{name}" value="">

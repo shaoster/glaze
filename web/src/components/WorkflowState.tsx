@@ -125,7 +125,13 @@ function ImageUploader({
           </Fab>
         </Portal>
       ) : (
-        <Portal container={() => document.getElementById("piece-upload-trigger")}>
+        <Portal
+          container={
+            (typeof document !== "undefined" &&
+              document.getElementById("piece-upload-trigger")) ||
+            null
+          }
+        >
           <Button
             variant="outlined"
             size="small"

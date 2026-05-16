@@ -6,12 +6,42 @@ import WorkflowState from "./components/WorkflowState";
 import type { PieceDetail, PieceState, UISchema } from "./util/types";
 import type { UpdateStatePayload } from "./util/api";
 
-const theme = createTheme({
-  palette: {
-    mode: "light",
-    primary: { main: "#1976d2" },
-  },
-});
+const getDjangoTheme = (): "light" | "dark" => {
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+};
+
+const createAdminTheme = (mode: "light" | "dark") => {
+  const bgColor = mode === "dark" ? "#121212" : "#fff";
+  return createTheme({
+    palette: {
+      mode,
+      primary: { main: "#1976d2" },
+      background: {
+        default: bgColor,
+        paper: mode === "dark" ? "#1e1e1e" : "#fff",
+      },
+    },
+    components: {
+      MuiTextField: {
+        defaultProps: {
+          variant: "outlined",
+          size: "small",
+        },
+      },
+      MuiInputLabel: {
+        styleOverrides: {
+          root: {
+            // Ensure the label's background matches the theme background
+            // so the 'notch' in outlined fields works correctly.
+            backgroundColor: bgColor,
+            padding: "0 4px",
+            marginLeft: "-4px",
+          },
+        },
+      },
+    },
+  });
+};
 
 interface MountOptions {
   containerId: string;
@@ -35,6 +65,16 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
   if (!container) {
     console.error(`Container #${options.containerId} not found`);
     return () => {};
+  }
+
+  // Create a dedicated container for MUI portals (Autocomplete, Dialogs, etc.)
+  // to avoid MutationObserver issues with the Admin's legacy DOM structure.
+  const portalContainerId = `portal-root-${options.containerId}`;
+  let portalContainer = document.getElementById(portalContainerId);
+  if (!portalContainer) {
+    portalContainer = document.createElement("div");
+    portalContainer.id = portalContainerId;
+    document.body.appendChild(portalContainer);
   }
 
   const root = createRoot(container);
@@ -66,6 +106,32 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
     };
   }
 
+  const theme = createAdminTheme(getDjangoTheme());
+
+  const wrappedSaveStateFn = async (payload: UpdateStatePayload): Promise<PieceDetail> => {
+    if (options.saveStateFn) {
+      await options.saveStateFn(payload);
+    }
+    
+    // WorkflowState expects the returned result to contain the updated state
+    // in history so it can refresh the local draft and stop the "Saving..." spinner.
+    const updatedPieceState: PieceState = {
+      ...pieceState,
+      notes: payload.notes ?? "",
+      images: payload.images ?? [],
+      custom_fields: payload.custom_fields ?? {},
+    };
+
+    return {
+      id: options.pieceId,
+      name: "Admin Edit",
+      current_state: updatedPieceState,
+      history: [updatedPieceState],
+      is_owner: true,
+      can_edit: true,
+    } as unknown as PieceDetail;
+  };
+
   root.render(
     <React.StrictMode>
       <ThemeProvider theme={theme}>
@@ -76,7 +142,7 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
           onSaved={options.onSaved || (() => {})}
           onDirtyChange={options.onDirtyChange}
           uiSchema={options.uiSchema}
-          saveStateFn={options.saveStateFn}
+          saveStateFn={wrappedSaveStateFn}
           hideImageUpload // Admin has its own image inlines for now
         />
       </ThemeProvider>
