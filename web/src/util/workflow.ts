@@ -417,7 +417,7 @@ export function getDefinitionsFromSchema(
     required: !!prop["x-required"],
     enum: prop.enum,
     isGlobalRef: !!prop["x-global-ref"],
-    isStateRef: false,
+    isStateRef: !!prop["x-state-ref"],
     isCalculated: !!prop["x-read-only"],
     canCreate: prop["x-can-create"],
     globalName: prop["x-global-ref"],

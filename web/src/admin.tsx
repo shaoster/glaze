@@ -92,9 +92,9 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
   const container = document.getElementById(options.containerId);
   if (!container) {
     console.error(`Container #${options.containerId} not found`);
-    return () => {{
+    return () => {
       // cleanup
-    }};
+    };
   }
 
   const portalContainerId = `portal-root-${options.containerId}`;
@@ -162,9 +162,9 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
           <WorkflowState
             initialPieceState={pieceState}
             pieceId={options.pieceId}
-            onSaved={options.onSaved || (() => {{
+            onSaved={options.onSaved || (() => {
               // no-op
-            }})}
+            })}
             onDirtyChange={options.onDirtyChange}
             uiSchema={options.uiSchema}
             saveStateFn={wrappedSaveStateFn}

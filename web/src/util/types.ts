@@ -128,6 +128,7 @@ export interface JSONSchemaProperty {
   "x-display-as"?: string;
   "x-required"?: boolean;
   "x-global-ref"?: string;
+  "x-state-ref"?: boolean;
   "x-can-create"?: boolean;
   "x-read-only"?: boolean;
   [key: string]: unknown;

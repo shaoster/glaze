@@ -385,6 +385,24 @@ describe("getDefinitionsFromSchema", () => {
     });
   });
 
+  it("detects state refs from UISchema", () => {
+    const schema: any = {
+      type: "object",
+      properties: {
+        inherited_field: {
+          type: "string",
+          "x-state-ref": true,
+        },
+      },
+    };
+
+    const defs = getDefinitionsFromSchema(schema);
+    expect(defs[0]).toMatchObject({
+      name: "inherited_field",
+      isStateRef: true,
+    });
+  });
+
   it("handles missing UI extensions with fallbacks", () => {
     const schema: any = {
       type: "object",

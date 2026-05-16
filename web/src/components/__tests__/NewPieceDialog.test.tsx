@@ -102,7 +102,7 @@ describe("NewPieceDialog", () => {
       await act(async () => {
         render(<NewPieceDialog {...defaultProps} />);
       });
-      expect(screen.getByText("Location")).toBeInTheDocument();
+      expect(screen.getByLabelText("Location")).toBeInTheDocument();
     });
 
     it("fetches location browse entries when the picker opens", async () => {

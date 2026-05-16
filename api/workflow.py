@@ -552,6 +552,9 @@ def build_ui_schema(state_id: str) -> dict:
             if field_def.get("can_create"):
                 field_schema["x-can-create"] = True
 
+        if "$ref" in field_def and not field_def["$ref"].startswith("@"):
+            field_schema["x-state-ref"] = True
+
         if "compute" in field_def:
             field_schema["x-read-only"] = True
 
