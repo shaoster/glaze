@@ -1,4 +1,3 @@
-import json
 import os
 from django import forms
 from django.conf import settings
@@ -86,6 +85,7 @@ class WorkflowStateWidget(forms.Widget):
                     
                     const initialState = JSON.parse(document.getElementById('{state_script_id}').textContent);
                     const uiSchema = JSON.parse(document.getElementById('{schema_script_id}').textContent);
+                    document.getElementById('id_{name}').value = JSON.stringify(initialState);
 
                     mountWorkflowStateWidget({{
                         containerId: '{container_id}',

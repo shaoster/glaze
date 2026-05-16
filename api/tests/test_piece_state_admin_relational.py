@@ -89,3 +89,23 @@ def test_piece_state_admin_load_unified_fields(user):
     initial_unified = form.initial["unified_custom_fields"]
     assert initial_unified["custom_fields"] == {"clay_weight_lbs": 1.5}
     assert initial_unified["global_ref_values"]["clay_body"]["id"] == str(cb.id)
+
+
+@pytest.mark.django_db
+def test_piece_state_admin_widget_seeds_hidden_payload(user):
+    piece = Piece.objects.create(user=user, name="Test Piece")
+    state = PieceState.objects.create(user=user, piece=piece, state="wheel_thrown")
+
+    admin = PieceStateAdmin(PieceState, AdminSite())
+    form_class = admin.get_form(None, obj=state, change=True)
+    form = form_class(instance=state)
+
+    rendered = form.fields["unified_custom_fields"].widget.render(
+        "unified_custom_fields",
+        form.initial["unified_custom_fields"],
+    )
+
+    assert (
+        "document.getElementById('id_unified_custom_fields').value = JSON.stringify(initialState);"
+        in rendered
+    )

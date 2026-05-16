@@ -10,8 +10,13 @@ const getDjangoTheme = (): "light" | "dark" => {
   const theme = document.documentElement.dataset.theme;
   if (theme === "dark") return "dark";
   if (theme === "light") return "light";
-  
-  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
+
+  if (
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  ) {
+    return "dark";
+  }
   return "light";
 };
 
@@ -87,8 +92,7 @@ declare global {
 
 export const mountWorkflowStateWidget = (options: MountOptions) => {
   const themeMode = getDjangoTheme();
-  console.log(`Mounting WorkflowState widget (theme: ${themeMode})...`, options);
-  
+
   const container = document.getElementById(options.containerId);
   if (!container) {
     console.error(`Container #${options.containerId} not found`);
@@ -118,10 +122,12 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
 
   const rawState = (initialPieceState || {}) as Record<string, unknown>;
   const pieceState = { ...rawState } as unknown as PieceState;
-  
+
   if (!pieceState.images) pieceState.images = [];
   if (!pieceState.custom_fields) pieceState.custom_fields = {};
-  if (pieceState.notes === undefined || pieceState.notes === null) pieceState.notes = "";
+  if (pieceState.notes === undefined || pieceState.notes === null) {
+    pieceState.notes = "";
+  }
 
   const globalRefValues = rawState.global_ref_values as Record<string, unknown> | undefined;
   if (globalRefValues) {
@@ -137,7 +143,7 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
     if (options.saveStateFn) {
       await options.saveStateFn(payload);
     }
-    
+
     const updatedPieceState: PieceState = {
       ...pieceState,
       notes: payload.notes ?? "",
@@ -162,9 +168,7 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
           <WorkflowState
             initialPieceState={pieceState}
             pieceId={options.pieceId}
-            onSaved={options.onSaved || (() => {
-              // no-op
-            })}
+            onSaved={options.onSaved ?? (() => undefined)}
             onDirtyChange={options.onDirtyChange}
             uiSchema={options.uiSchema}
             saveStateFn={wrappedSaveStateFn}

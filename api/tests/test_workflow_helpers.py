@@ -413,6 +413,15 @@ def test_build_custom_fields_schema_resolves_state_refs_recursively(monkeypatch)
     }
 
 
+def test_build_ui_schema_marks_state_refs(monkeypatch):
+    monkeypatch.setattr(workflow_module, "_STATE_MAP", _MOCK_STATE_MAP)
+    monkeypatch.setattr(workflow_module, "_GLOBALS_MAP", _MOCK_GLOBALS_MAP)
+
+    schema = workflow_module.build_ui_schema("trimmed")
+    assert schema["properties"]["pre_trim_weight_lbs"]["x-state-ref"] is True
+    assert "x-global-ref" not in schema["properties"]["pre_trim_weight_lbs"]
+
+
 # ---------------------------------------------------------------------------
 # get_filterable_fields
 # ---------------------------------------------------------------------------
