@@ -38,6 +38,8 @@ export default defineConfig({
       },
       output: {
         entryFileNames: "[name].js",
+        chunkFileNames: "chunks/[name].js",
+        assetFileNames: "assets/[name].[ext]",
         manualChunks(id) {
           if (
             id.includes("node_modules/react") ||

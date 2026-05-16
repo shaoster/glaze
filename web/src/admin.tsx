@@ -29,7 +29,8 @@ declare global {
   }
 }
 
-window.mountWorkflowStateWidget = (options: MountOptions) => {
+export const mountWorkflowStateWidget = (options: MountOptions) => {
+  console.log("Mounting WorkflowState widget...", options);
   const container = document.getElementById(options.containerId);
   if (!container) {
     console.error(`Container #${options.containerId} not found`);

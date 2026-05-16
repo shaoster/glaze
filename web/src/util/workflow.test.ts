@@ -342,7 +342,67 @@ import {
   isTerminalState,
   isTaggableGlobal,
   insertableStatesBetween,
+  getDefinitionsFromSchema,
 } from "./workflow";
+
+describe("getDefinitionsFromSchema", () => {
+  it("resolves definitions from a UISchema", () => {
+    const schema: any = {
+      type: "object",
+      properties: {
+        clay_weight_lbs: {
+          type: "number",
+          "x-label": "Custom Label",
+          "x-description": "Desc",
+          "x-required": true,
+        },
+        clay_body: {
+          type: "string",
+          "x-global-ref": "clay_body",
+          "x-can-create": true,
+        },
+      },
+    };
+
+    const defs = getDefinitionsFromSchema(schema);
+    expect(defs).toHaveLength(2);
+
+    expect(defs[0]).toMatchObject({
+      name: "clay_weight_lbs",
+      label: "Custom Label",
+      type: "number",
+      description: "Desc",
+      required: true,
+      isGlobalRef: false,
+    });
+
+    expect(defs[1]).toMatchObject({
+      name: "clay_body",
+      type: "string",
+      isGlobalRef: true,
+      globalName: "clay_body",
+      canCreate: true,
+    });
+  });
+
+  it("handles missing UI extensions with fallbacks", () => {
+    const schema: any = {
+      type: "object",
+      properties: {
+        simple_field: {
+          type: "string",
+        },
+      },
+    };
+
+    const defs = getDefinitionsFromSchema(schema);
+    expect(defs[0]).toMatchObject({
+      name: "simple_field",
+      label: "Simple Field",
+      required: false,
+    });
+  });
+});
 
 describe("formatWorkflowFieldLabel", () => {
   it("converts a single snake_case word to Title Case", () => {
