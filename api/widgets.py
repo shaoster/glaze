@@ -1,4 +1,5 @@
 import json
+import os
 from django import forms
 from django.conf import settings
 from django.templatetags.static import static
@@ -6,6 +7,8 @@ from django.utils.safestring import mark_safe
 
 
 class WorkflowStateWidget(forms.Widget):
+    template_name = None
+
     def __init__(self, attrs=None, piece_id=None, state_id=None, ui_schema=None):
         super().__init__(attrs)
         self.piece_id = piece_id
@@ -30,12 +33,19 @@ class WorkflowStateWidget(forms.Widget):
         ui_schema = context["widget"]["ui_schema_json"]
         piece_id = context["widget"]["piece_id"]
 
-        # Predictable asset paths from our Vite config
-        js_url = static("admin-widget.js")
-        css_url = static("assets/admin-widget.css")
+        # In development, we prefer the Vite dev server if running.
+        # gz_start sets APP_ORIGIN to the Vite URL.
+        app_origin = os.environ.get("APP_ORIGIN")
+        if settings.DEBUG and app_origin:
+            js_url = f"{app_origin}/src/admin.tsx"
+            css_html = ""  # Vite handles CSS in dev mode
+        else:
+            js_url = static("admin-widget.js")
+            css_url = static("assets/admin-widget.css")
+            css_html = f'<link rel="stylesheet" href="{css_url}">'
 
         html = f"""
-        <link rel="stylesheet" href="{css_url}">
+        {css_html}
         <div id="{container_id}" class="workflow-state-widget-container"
              style="min-height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 16px; background: #fff;">
             Loading custom fields...
