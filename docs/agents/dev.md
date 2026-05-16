@@ -227,6 +227,10 @@ git add web/package.json web/package-lock.json web/pnpm-lock.yaml
 
 After updating the lockfile, check whether the new package needs to be added to a `js_library` `srcs` or `deps` in the relevant `BUILD.bazel`. Use `rtk bazel query 'labels(srcs, <library-target>)'` to inspect what a target currently includes, and add the package to the appropriate `BUILD.bazel` entry if Bazel tests fail with a missing module error.
 
+### Adding JavaScript dev tools
+
+Prefer Python for standalone dev tooling when the dependency graph allows it. Use the JS tool path under `web/scripts/` when the tool is naturally coupled to the web dependency graph or when the needed package exists in npm but not pip. Wire the script through `web/BUILD.bazel` with `js_binary`, and add a `vitest_test` when you want the tool itself covered by tests. `web/scripts/generate-types.mjs` and `web/scripts/coverage-audit.mjs` are the current examples.
+
 ---
 
 ### Orientation inside a worktree
@@ -461,6 +465,8 @@ Coverage reports are uploaded to [Codecov](https://codecov.io). Codecov posts a 
 ### What to test
 
 Run `rtk bazel test //...` — it discovers and runs all affected tests automatically. Do not pick granular targets to save time during iterative debugging. Bazel caches passing targets, so re-running `//...` after a fix costs no more than running a single target when the others haven't changed.
+
+Default to unit tests first. Treat a Bazel target as integration coverage only when it is explicitly tagged `integration`. If a non-integration target exercises many unrelated feature modules, prefer narrower assertions and more mocking instead of treating the breadth as a feature.
 
 ## Token Efficiency
 

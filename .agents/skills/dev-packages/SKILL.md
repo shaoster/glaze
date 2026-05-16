@@ -59,6 +59,8 @@ by Bazel), and the `BUILD.bazel` change together.
 
 Bazel resolves npm packages from `web/pnpm-lock.yaml`. After any `npm install`:
 
+Prefer Python for standalone dev tooling when the dependency graph allows it. Use the JS tool path under `web/scripts/` when the tool belongs on the web dependency graph or when the needed package exists in npm but not pip. In those cases, wire the script through `web/BUILD.bazel` with `js_binary`, and add a `vitest_test` when you want the tool itself covered by tests.
+
 ```bash
 # Install the package
 (cd web && rtk bazel run @nodejs_linux_amd64//:npm -- install react-swipeable)

@@ -434,6 +434,7 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 
 - [`web/src/util/generated-types.ts`](../../web/src/util/generated-types.ts) is auto-generated — do not edit by hand. It is gitignored.
 - Generation is driven by [`web/scripts/generate-types.mjs`](../../web/scripts/generate-types.mjs), which calls the `openapi-typescript` programmatic API with a `transform` that converts `format: date-time` fields to `Date`. Run `gz_gentypes` with Django on port 8080.
+- The same `web/scripts/` + `js_binary` pattern also applies to other JS dev tools. Prefer Python for new repo tooling unless the dependency graph or npm-only package availability makes JS the better fit; when you do choose JS, wire it through `web/BUILD.bazel` and add a `vitest_test` so the tool keeps coverage.
 - [`web/src/util/types.ts`](../../web/src/util/types.ts) derives domain types from `generated-types.ts` via intersection (no `Omit<>`). It also holds the `STATES` array and `SUCCESSORS` map from `workflow.yml`.
 - **When adding a new API field:** update the Django serializer → run `gz_gentypes` → update `web/src/util/types.ts` if semantic narrowing is needed → update mappers in `web/src/util/api.ts`.
 - [`web/src/util/api.ts`](../../web/src/util/api.ts) uses the `Wire<T>` generic to type raw Axios responses (dates as strings). Mappers convert `Wire<T>` → domain `T`. This is the only file that should contain deserialization logic.
@@ -516,6 +517,8 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 - Every new or modified `workflow.ts` helper → add or update a test in `web/src/util/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture. Never import `workflow.yml` directly in a test — always mock it.
 - Every new or modified `api.ts` function → add or update a test in `web/src/util/__tests__/api.test.ts`, mocking axios via `vi.mock`.
 - Component tests that involve typing into a controlled MUI Autocomplete must use a stateful wrapper (see `Controlled` in `GlobalEntryDialog.test.tsx`).
+- Default to unit tests first. A Bazel target counts as integration coverage only when it is explicitly tagged `integration`.
+- If a non-integration test reaches a large number of unrelated components or feature modules, treat that breadth as a mocking candidate and narrow the test before accepting it as desirable coverage.
 
 ---
 

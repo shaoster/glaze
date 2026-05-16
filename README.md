@@ -259,6 +259,10 @@ RSS; large `StreamingHttpResponse` bodies should use async iterators.
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `gz_gentypes` | Regenerate [`web/src/util/generated-types.ts`](web/src/util/generated-types.ts) from the live OpenAPI schema. Starts the backend temporarily if it is not already running. |
 
+### JavaScript dev tools
+
+Prefer Python for standalone dev tooling when the dependency graph allows it. Use the JS tool path under [`web/scripts/`](web/scripts/) when the tool is naturally coupled to the web dependency graph or when the needed package exists in npm but not pip. Wire those scripts through [`web/BUILD.bazel`](web/BUILD.bazel) with `js_binary` and add a `vitest_test` when you want the tool itself covered by tests. [`web/scripts/generate-types.mjs`](web/scripts/generate-types.mjs) and [`web/scripts/coverage-audit.mjs`](web/scripts/coverage-audit.mjs) are the current examples.
+
 Run `gz_help` to print the full list of shortcuts at any time.
 
 ## Manual setup (without `env.sh`)
