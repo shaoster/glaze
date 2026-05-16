@@ -1,10 +1,13 @@
 {
   "name": "Glaze",
   "build": { "dockerfile": "Dockerfile" },
-  "forwardPorts": [8080, 5173],
+  "forwardPorts": [
+    8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087,
+    5173, 5174, 5175, 5176, 5177, 5178, 5179, 5180
+  ],
   "portsAttributes": {
-    "8080": { "label": "Django backend" },
-    "5173": { "label": "Vite dev server" }
+    "8080-8087": { "label": "Django backend" },
+    "5173-5180": { "label": "Vite dev server" }
   },
   "customizations": {
     "vscode": {
