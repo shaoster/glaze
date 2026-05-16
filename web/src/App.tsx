@@ -44,7 +44,7 @@ import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import {
   fetchCurrentUser,
   loginWithEmail,
-  loginWithGoogle,
+  loginWithGoogleChecked,
   logoutUser,
   NotInvitedError,
   registerWithEmail,
@@ -367,22 +367,6 @@ function AuthLanding({
                   />
                 </>
               )}
-              {error && <Alert severity="error">{error}</Alert>}
-              {notInvitedEmail && !waitlistDone && (
-                <Button
-                  variant="outlined"
-                  size="small"
-                  disabled={waitlistSubmitting}
-                  onClick={handleWaitlist}
-                >
-                  {waitlistSubmitting ? "Submitting…" : "Request access"}
-                </Button>
-              )}
-              {waitlistDone && (
-                <Alert severity="success">
-                  Thanks — we'll let you know when an admin approves your request.
-                </Alert>
-              )}
               <Button
                 type="submit"
                 variant="contained"
@@ -426,10 +410,20 @@ function AuthLanding({
                     setError(null);
                     setNotInvitedEmail(null);
                     try {
-                      const user = await loginWithGoogle(credential);
+                      const user = await loginWithGoogleChecked(credential);
                       onAuthenticated(user);
                     } catch (err) {
                       if (err instanceof NotInvitedError) {
+                        // Decode the email from the Google JWT so we can
+                        // pre-fill the waitlist form without an extra round-trip.
+                        try {
+                          const payload = JSON.parse(
+                            atob(credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
+                          );
+                          setNotInvitedEmail(payload.email ?? null);
+                        } catch {
+                          // JWT decode failed — show button without pre-fill.
+                        }
                         setError(err.detail);
                       } else {
                         setError("Google sign-in failed. Please try again.");
@@ -451,6 +445,23 @@ function AuthLanding({
                 )}
               </Box>
             </>
+          )}
+
+          {error && <Alert severity="error">{error}</Alert>}
+          {notInvitedEmail && !waitlistDone && (
+            <Button
+              variant="outlined"
+              size="small"
+              disabled={waitlistSubmitting}
+              onClick={handleWaitlist}
+            >
+              {waitlistSubmitting ? "Submitting…" : "Request access"}
+            </Button>
+          )}
+          {waitlistDone && (
+            <Alert severity="success">
+              Thanks — we'll let you know when an admin approves your request.
+            </Alert>
           )}
 
           <Box component="footer" sx={{ pt: 1 }}>
