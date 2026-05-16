@@ -5,6 +5,7 @@ py_library(
     srcs = [
         "__init__.py",
         "asgi.py",
+        "middleware.py",
         "settings.py",
         "test_settings.py",
         "urls.py",
@@ -40,6 +41,7 @@ filegroup(
     srcs = [
         "__init__.py",
         "asgi.py",
+        "middleware.py",
         "settings.py",
         "test_settings.py",
         "urls.py",

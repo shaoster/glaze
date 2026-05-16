@@ -1,9 +1,8 @@
 import pytest
-from django import forms
 from django.contrib.admin.sites import AdminSite
 
 from api.admin import PieceStateAdmin
-from api.models import GlazeCombination, Piece, PieceState
+from api.models import Piece, PieceState
 from api.widgets import WorkflowStateWidget
 
 
@@ -72,7 +71,10 @@ def test_piece_state_admin_load_unified_fields(user):
     piece = Piece.objects.create(user=user, name="Test Piece")
     # 'wheel_thrown' has 'clay_weight_lbs' inline field and 'clay_body' global ref
     state = PieceState.objects.create(
-        user=user, piece=piece, state="wheel_thrown", custom_fields={"clay_weight_lbs": 1.5}
+        user=user,
+        piece=piece,
+        state="wheel_thrown",
+        custom_fields={"clay_weight_lbs": 1.5},
     )
     from api.models import ClayBody
 

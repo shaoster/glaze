@@ -59,6 +59,36 @@ from .workflow import (
 )
 
 
+class AllowedEmail(models.Model):
+    class Status(models.TextChoices):
+        WAITLISTED = "waitlisted", "Waitlisted"
+        APPROVED = "approved", "Approved"
+
+    email = models.EmailField(unique=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.APPROVED,
+        db_index=True,
+    )
+    notes = models.TextField(blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = [
+            models.Case(
+                models.When(status="waitlisted", then=0),
+                default=1,
+                output_field=models.IntegerField(),
+            ),
+            "email",
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.email} ({self.status})"
+
+
 class Image(models.Model):
     """Shared image asset referenced by pieces, states, and global entries."""
 

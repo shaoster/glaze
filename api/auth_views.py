@@ -4,7 +4,7 @@ import json
 import os
 import re
 from collections import defaultdict
-from typing import Callable
+from typing import Any, Callable
 
 from django.apps import apps
 from django.conf import settings
@@ -25,7 +25,9 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from .invitations import make_invite_token, send_invitation_email, verify_invite_token
 from .models import (
+    AllowedEmail,
     AsyncTask,
     FavoriteGlazeCombination,
     GlazeCombination,
@@ -140,6 +142,10 @@ def auth_google(request: Request) -> Response:
 
     User = get_user_model()
 
+    not_invited = _check_not_invited(email)
+    if not_invited:
+        return not_invited
+
     # Look up by Google subject first (handles email changes gracefully).
     profile = (
         UserProfile.objects.filter(openid_subject=google_sub)
@@ -194,9 +200,11 @@ def auth_register(request: Request) -> Response:
     serializer = RegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user_model = get_user_model()
-    if user_model.objects.filter(
-        email__iexact=serializer.validated_data["email"]
-    ).exists():
+    email = serializer.validated_data["email"]
+    not_invited = _check_not_invited(email)
+    if not_invited:
+        return not_invited
+    if user_model.objects.filter(email__iexact=email).exists():
         return Response(
             {"email": ["A user with this email already exists."]},
             status=status.HTTP_400_BAD_REQUEST,
@@ -205,3 +213,98 @@ def auth_register(request: Request) -> Response:
     bootstrap_dev_user(user)
     login(request, user)
     return Response(AuthUserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+# ── Allowlist gate ────────────────────────────────────────────────────────────
+
+
+def _check_not_invited(email: str) -> Response | None:
+    """Return a 403 Response if *email* is not approved, else None.
+
+    In dev (IS_PRODUCTION=False) the very first login (no User rows yet) is
+    allowed unconditionally and the email is auto-approved so the same account
+    can return. Every subsequent login — including a second Google account in
+    dev — must have an AllowedEmail row like in production.
+
+    Grandfathering of existing production users is handled once at migration
+    time (0012 seeds AllowedEmail from User), not at runtime.
+    """
+    if AllowedEmail.objects.filter(
+        email__iexact=email, status=AllowedEmail.Status.APPROVED
+    ).exists():
+        return None
+
+    if not settings.IS_PRODUCTION and not get_user_model().objects.exists():
+        # Fresh dev environment: bootstrap the first account and pre-approve it.
+        AllowedEmail.objects.get_or_create(
+            email=email.lower(),
+            defaults={"status": AllowedEmail.Status.APPROVED},
+        )
+        return None
+
+    return Response(
+        {
+            "detail": "This email is not invited to PotterDoc yet. Ask an admin to add it.",
+            "code": "not_invited",
+        },
+        status=status.HTTP_403_FORBIDDEN,
+    )
+
+
+# ── Invitation endpoints ──────────────────────────────────────────────────────
+
+
+@extend_schema(request=None, responses={204: None})
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def admin_invite(request: Request) -> Response:
+    email = request.data.get("email", "").strip().lower()
+    if not email:
+        return Response(
+            {"detail": "email is required."}, status=status.HTTP_400_BAD_REQUEST
+        )
+    AllowedEmail.objects.update_or_create(
+        email=email,
+        defaults={"status": AllowedEmail.Status.APPROVED},
+    )
+    token = make_invite_token(email)
+    send_invitation_email(email, token)
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(request=None, responses={200: None})
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def accept_invite(request: Request) -> Response:
+    from django.core import signing
+
+    token = request.data.get("token", "")
+    try:
+        email = verify_invite_token(token)
+    except signing.SignatureExpired:
+        return Response(
+            {"detail": "Invitation link has expired.", "code": "token_expired"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    except signing.BadSignature:
+        return Response(
+            {"detail": "Invalid invitation link.", "code": "token_invalid"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return Response({"email": email})
+
+
+@extend_schema(request=None, responses={204: None})
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def waitlist_request(request: Request) -> Response:
+    email = request.data.get("email", "").strip().lower()
+    if not email:
+        return Response(
+            {"detail": "email is required."}, status=status.HTTP_400_BAD_REQUEST
+        )
+    # Never demote an approved row; never create a second row.
+    existing = AllowedEmail.objects.filter(email__iexact=email).first()
+    if existing is None:
+        AllowedEmail.objects.create(email=email, status=AllowedEmail.Status.WAITLISTED)
+    return Response(status=status.HTTP_204_NO_CONTENT)

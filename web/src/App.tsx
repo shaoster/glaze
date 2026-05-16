@@ -15,6 +15,7 @@ import {
   RouterProvider,
   createBrowserRouter,
   createRoutesFromElements,
+  useLocation,
 } from "react-router-dom";
 import {
   Alert,
@@ -44,9 +45,10 @@ import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import {
   fetchCurrentUser,
   loginWithEmail,
-  loginWithGoogle,
+  loginWithGoogleChecked,
   logoutUser,
-  registerWithEmail,
+  NotInvitedError,
+  requestWaitlist,
 } from "./util/api";
 import { useAsync } from "./util/useAsync";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -63,6 +65,7 @@ const CloudinaryCleanupPage = lazy(
 );
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
+const InvitePage = lazy(() => import("./pages/InvitePage"));
 
 // Extend window type for Google OAuth
 declare global {
@@ -181,54 +184,65 @@ const DARK_THEME = createTheme({
     },
   },
 });
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as
-  | string
-  | undefined;
-
-type AuthViewMode = "login" | "register";
-const SIGN_UP_ENABLED = false;
-
 function AuthLanding({
   onAuthenticated,
 }: {
   onAuthenticated: (user: AuthUser) => void;
 }) {
-  const [mode, setMode] = useState<AuthViewMode>("login");
-  const [email, setEmail] = useState("");
+  const location = useLocation();
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+  const prefillEmail = (location.state as { prefillEmail?: string } | null)?.prefillEmail ?? "";
+  const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notInvitedEmail, setNotInvitedEmail] = useState<string | null>(null);
+  const [waitlistDone, setWaitlistDone] = useState(false);
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [waitlistEmailError, setWaitlistEmailError] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
+    setNotInvitedEmail(null);
     try {
-      if (mode === "login") {
-        const user = await loginWithEmail(email.trim(), password);
-        onAuthenticated(user);
-      } else {
-        if (!SIGN_UP_ENABLED) {
-          throw new Error("Sign up is disabled.");
-        }
-        const user = await registerWithEmail({
-          email: email.trim(),
-          password,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-        });
-        onAuthenticated(user);
-      }
+      const user = await loginWithEmail(email.trim(), password);
+      onAuthenticated(user);
     } catch {
-      setError(
-        mode === "login"
-          ? "Login failed. Please check your credentials."
-          : "Sign up failed.",
-      );
+      setError("Login failed. Please check your credentials.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleWaitlist() {
+    const target = notInvitedEmail;
+    if (!target) return;
+    setWaitlistSubmitting(true);
+    try {
+      await requestWaitlist(target);
+      setWaitlistDone(true);
+    } finally {
+      setWaitlistSubmitting(false);
+    }
+  }
+
+  async function handleRequestAccess() {
+    const target = email.trim();
+    if (!target) {
+      setWaitlistEmailError(true);
+      return;
+    }
+    setWaitlistEmailError(false);
+    setNotInvitedEmail(target);
+    setWaitlistDone(false);
+    setWaitlistSubmitting(true);
+    try {
+      await requestWaitlist(target);
+      setWaitlistDone(true);
+    } finally {
+      setWaitlistSubmitting(false);
     }
   }
 
@@ -280,26 +294,17 @@ function AuthLanding({
 
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
             <Button
-              variant={mode === "login" ? "contained" : "outlined"}
-              onClick={() => setMode("login")}
-              disabled={submitting}
+              variant="outlined"
+              onClick={handleRequestAccess}
+              disabled={submitting || waitlistSubmitting || waitlistDone}
               fullWidth
             >
-              Log In
-            </Button>
-            <Button
-              variant={mode === "register" ? "contained" : "outlined"}
-              onClick={() => setMode("register")}
-              disabled={submitting || !SIGN_UP_ENABLED}
-              fullWidth
-            >
-              Sign Up
+              {waitlistSubmitting ? "Submitting…" : "Request Access"}
             </Button>
           </Stack>
-          {!SIGN_UP_ENABLED && (
-            <Typography variant="body2" color="text.secondary">
-              Sign up is temporarily disabled. Ask an admin to create your
-              account.
+          {waitlistEmailError && (
+            <Typography variant="body2" color="error">
+              Enter your email below, then click Request Access.
             </Typography>
           )}
 
@@ -309,7 +314,7 @@ function AuthLanding({
                 label="Email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setWaitlistEmailError(false); }}
                 required
                 fullWidth
                 slotProps={{ htmlInput: { autoComplete: "email" } }}
@@ -322,29 +327,9 @@ function AuthLanding({
                 required
                 fullWidth
                 slotProps={{
-                  htmlInput: {
-                    autoComplete:
-                      mode === "login" ? "current-password" : "new-password",
-                  },
+                  htmlInput: { autoComplete: "current-password" },
                 }}
               />
-              {mode === "register" && (
-                <>
-                  <TextField
-                    label="First name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    fullWidth
-                  />
-                  <TextField
-                    label="Last name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    fullWidth
-                  />
-                </>
-              )}
-              {error && <Alert severity="error">{error}</Alert>}
               <Button
                 type="submit"
                 variant="contained"
@@ -355,13 +340,11 @@ function AuthLanding({
                   ) : undefined
                 }
               >
-                {mode === "login" ? "Log In" : "Create Account"}
+                Log In
               </Button>
               {submitting && (
                 <Typography variant="body2" color="text.secondary">
-                  {mode === "login"
-                    ? "Signing you in..."
-                    : "Creating your account..."}
+                  Signing you in...
                 </Typography>
               )}
             </Stack>
@@ -386,11 +369,27 @@ function AuthLanding({
                     if (!credential) return;
                     setSubmitting(true);
                     setError(null);
+                    setNotInvitedEmail(null);
                     try {
-                      const user = await loginWithGoogle(credential);
+                      const user = await loginWithGoogleChecked(credential);
                       onAuthenticated(user);
-                    } catch {
-                      setError("Google sign-in failed. Please try again.");
+                    } catch (err) {
+                      if (err instanceof NotInvitedError) {
+                        // Decode the email from the Google JWT so we can
+                        // pre-fill the waitlist form without an extra round-trip.
+                        try {
+                          const segment = credential.split(".")[1]
+                            .replace(/-/g, "+").replace(/_/g, "/");
+                          const padded = segment + "=".repeat((4 - segment.length % 4) % 4);
+                          const payload = JSON.parse(atob(padded));
+                          setNotInvitedEmail(payload.email ?? null);
+                        } catch {
+                          // JWT decode failed — show button without pre-fill.
+                        }
+                        setError(err.detail);
+                      } else {
+                        setError("Google sign-in failed. Please try again.");
+                      }
                     } finally {
                       setSubmitting(false);
                     }
@@ -408,6 +407,23 @@ function AuthLanding({
                 )}
               </Box>
             </>
+          )}
+
+          {error && <Alert severity="error">{error}</Alert>}
+          {notInvitedEmail && !waitlistDone && (
+            <Button
+              variant="outlined"
+              size="small"
+              disabled={waitlistSubmitting}
+              onClick={handleWaitlist}
+            >
+              {waitlistSubmitting ? "Submitting…" : "Request access"}
+            </Button>
+          )}
+          {waitlistDone && (
+            <Alert severity="success">
+              Thanks — we'll let you know when an admin approves your request.
+            </Alert>
           )}
 
           <Box component="footer" sx={{ pt: 1 }}>
@@ -514,6 +530,16 @@ function UnauthenticatedApp({
             <Route
               path="/pieces/:id"
               element={<PublicPieceShell />}
+            />
+            <Route
+              path="/invite"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <InvitePage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
             />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>,
@@ -710,6 +736,16 @@ function AuthenticatedApp({
                 )
               }
             />
+            <Route
+              path="/invite"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <InvitePage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>,
         ),
@@ -724,6 +760,8 @@ function AuthenticatedApp({
 export { Link };
 
 export default function App() {
+  // Read at render time so vi.stubEnv works in tests.
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
   const {
     data: currentUser,
     loading,
