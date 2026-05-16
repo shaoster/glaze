@@ -237,12 +237,17 @@ def test_gate_blocks_waitlisted_email(db, anon_client):
 
 @PROD
 def test_gate_grandfathers_existing_user(db, anon_client):
-    user = User.objects.create_user(
+    # Grandfathering happens at migration time: the 0012 migration creates an
+    # AllowedEmail row for every existing User. Simulate that here — a User with
+    # a corresponding approved AllowedEmail row must pass the gate.
+    User.objects.create_user(
         username="existing@example.com",
         email="existing@example.com",
         password="pass",
     )
-    # existing user has no AllowedEmail row; gate should still let them through
+    AllowedEmail.objects.create(
+        email="existing@example.com", status=AllowedEmail.Status.APPROVED
+    )
     client = APIClient()
     resp = client.post(
         "/api/auth/login/",
@@ -250,6 +255,19 @@ def test_gate_grandfathers_existing_user(db, anon_client):
         format="json",
     )
     assert resp.status_code == 200
+
+
+@PROD
+def test_gate_blocks_email_without_allowedemail_row(db, anon_client):
+    # A User row alone does NOT grandfather — AllowedEmail is the authority.
+    # Use a fresh username so the serializer passes and only the gate can block.
+    resp = anon_client.post(
+        "/api/auth/register/",
+        {"email": "norow@example.com", "password": "testpass123", "username": "norow@example.com"},
+        format="json",
+    )
+    assert resp.status_code == 403
+    assert resp.data["code"] == "not_invited"
 
 
 def test_gate_bypassed_in_dev(db, anon_client):

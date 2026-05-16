@@ -143,7 +143,7 @@ def auth_google(request: Request) -> Response:
 
     User = get_user_model()
 
-    not_invited = _check_not_invited(email, User)
+    not_invited = _check_not_invited(email)
     if not_invited:
         return not_invited
 
@@ -202,7 +202,7 @@ def auth_register(request: Request) -> Response:
     serializer.is_valid(raise_exception=True)
     user_model = get_user_model()
     email = serializer.validated_data["email"]
-    not_invited = _check_not_invited(email, user_model)
+    not_invited = _check_not_invited(email)
     if not_invited:
         return not_invited
     if user_model.objects.filter(email__iexact=email).exists():
@@ -219,11 +219,14 @@ def auth_register(request: Request) -> Response:
 # ── Allowlist gate ────────────────────────────────────────────────────────────
 
 
-def _check_not_invited(email: str, user_model: Any) -> Response | None:
-    """Return a 403 Response if *email* is not allowed in production, else None."""
+def _check_not_invited(email: str) -> Response | None:
+    """Return a 403 Response if *email* is not approved in production, else None.
+
+    Grandfathering of existing users is handled once at migration time (migration
+    0012 seeds AllowedEmail from the User table). Do not check User existence here —
+    that would make the gate a no-op for every account that already exists.
+    """
     if not settings.IS_PRODUCTION:
-        return None
-    if user_model.objects.filter(email__iexact=email).exists():
         return None
     if AllowedEmail.objects.filter(
         email__iexact=email, status=AllowedEmail.Status.APPROVED
