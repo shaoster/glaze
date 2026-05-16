@@ -575,6 +575,15 @@ js_library(
     ],
 )
 
+js_library(
+    name = "invite_page_src",
+    srcs = ["src/pages/InvitePage.tsx"],
+    deps = [
+        ":node_modules",
+        ":util_lib",
+    ],
+)
+
 # ── Granular web test targets ─────────────────────────────────────────────────
 # Each target runs a focused subset of tests and depends only on the components
 # it exercises.  A change to an isolated component re-runs only the relevant
@@ -917,6 +926,17 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_invite_page_test",
+    srcs = [
+        "src/pages/__tests__/InvitePage.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":invite_page_src",
+    ],
+)
+
+vitest_test(
     name = "web_app_test",
     srcs = ["src/App.test.tsx"],
     tags = ["ibazel_notify_changes"],
@@ -952,6 +972,7 @@ test_suite(
         ":web_piece_list_page_test",
         ":web_piece_list_test",
         ":web_piece_share_controls_test",
+        ":web_invite_page_test",
         ":web_primitive_test",
         ":web_public_piece_shell_test",
         ":web_state_transition_test",

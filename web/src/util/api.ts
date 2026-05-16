@@ -259,6 +259,61 @@ export async function logoutUser(): Promise<void> {
   await client.post("auth/logout/", {});
 }
 
+export type ApiError = { detail?: string; code?: string };
+
+function extractApiError(error: unknown): ApiError {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as ApiError | undefined;
+    return { detail: data?.detail, code: data?.code };
+  }
+  return {};
+}
+
+export class NotInvitedError extends Error {
+  detail: string;
+  constructor(detail: string) {
+    super(detail);
+    this.detail = detail;
+    this.name = "NotInvitedError";
+  }
+}
+
+export async function loginWithGoogleChecked(credential: string): Promise<AuthUser> {
+  try {
+    return await loginWithGoogle(credential);
+  } catch (error) {
+    const { code, detail } = extractApiError(error);
+    if (code === "not_invited") throw new NotInvitedError(detail ?? "Not invited.");
+    throw error;
+  }
+}
+
+export async function registerWithEmailChecked(payload: {
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
+}): Promise<AuthUser> {
+  try {
+    return await registerWithEmail(payload);
+  } catch (error) {
+    const { code, detail } = extractApiError(error);
+    if (code === "not_invited") throw new NotInvitedError(detail ?? "Not invited.");
+    throw error;
+  }
+}
+
+export async function acceptInvite(token: string): Promise<{ email: string }> {
+  await ensureCsrfCookie();
+  const { data } = await client.post<{ email: string }>("auth/accept-invite/", { token });
+  return data;
+}
+
+export async function requestWaitlist(email: string): Promise<void> {
+  await ensureCsrfCookie();
+  await client.post("auth/waitlist/", { email });
+}
+
 export async function fetchPiece(id: string): Promise<PieceDetail> {
   const { data } = await client.get<Wire<PieceDetail>>(`pieces/${id}/`);
   return mapPieceDetail(data);

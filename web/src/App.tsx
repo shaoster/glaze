@@ -46,7 +46,9 @@ import {
   loginWithEmail,
   loginWithGoogle,
   logoutUser,
+  NotInvitedError,
   registerWithEmail,
+  requestWaitlist,
 } from "./util/api";
 import { useAsync } from "./util/useAsync";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -63,6 +65,7 @@ const CloudinaryCleanupPage = lazy(
 );
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
+const InvitePage = lazy(() => import("./pages/InvitePage"));
 
 // Extend window type for Google OAuth
 declare global {
@@ -200,11 +203,15 @@ function AuthLanding({
   const [lastName, setLastName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notInvitedEmail, setNotInvitedEmail] = useState<string | null>(null);
+  const [waitlistDone, setWaitlistDone] = useState(false);
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
+    setNotInvitedEmail(null);
     try {
       if (mode === "login") {
         const user = await loginWithEmail(email.trim(), password);
@@ -221,14 +228,30 @@ function AuthLanding({
         });
         onAuthenticated(user);
       }
-    } catch {
-      setError(
-        mode === "login"
-          ? "Login failed. Please check your credentials."
-          : "Sign up failed.",
-      );
+    } catch (err) {
+      if (err instanceof NotInvitedError) {
+        setNotInvitedEmail(email.trim());
+        setError(err.detail);
+      } else {
+        setError(
+          mode === "login"
+            ? "Login failed. Please check your credentials."
+            : "Sign up failed.",
+        );
+      }
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleWaitlist() {
+    if (!notInvitedEmail) return;
+    setWaitlistSubmitting(true);
+    try {
+      await requestWaitlist(notInvitedEmail);
+      setWaitlistDone(true);
+    } finally {
+      setWaitlistSubmitting(false);
     }
   }
 
@@ -345,6 +368,21 @@ function AuthLanding({
                 </>
               )}
               {error && <Alert severity="error">{error}</Alert>}
+              {notInvitedEmail && !waitlistDone && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  disabled={waitlistSubmitting}
+                  onClick={handleWaitlist}
+                >
+                  {waitlistSubmitting ? "Submitting…" : "Request access"}
+                </Button>
+              )}
+              {waitlistDone && (
+                <Alert severity="success">
+                  Thanks — we'll let you know when an admin approves your request.
+                </Alert>
+              )}
               <Button
                 type="submit"
                 variant="contained"
@@ -386,11 +424,16 @@ function AuthLanding({
                     if (!credential) return;
                     setSubmitting(true);
                     setError(null);
+                    setNotInvitedEmail(null);
                     try {
                       const user = await loginWithGoogle(credential);
                       onAuthenticated(user);
-                    } catch {
-                      setError("Google sign-in failed. Please try again.");
+                    } catch (err) {
+                      if (err instanceof NotInvitedError) {
+                        setError(err.detail);
+                      } else {
+                        setError("Google sign-in failed. Please try again.");
+                      }
                     } finally {
                       setSubmitting(false);
                     }
@@ -514,6 +557,16 @@ function UnauthenticatedApp({
             <Route
               path="/pieces/:id"
               element={<PublicPieceShell />}
+            />
+            <Route
+              path="/invite"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <InvitePage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
             />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>,

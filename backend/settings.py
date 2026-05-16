@@ -286,3 +286,26 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 # Remote ML Offloading (Modal)
 REMOTE_REMBG_URL = os.environ.get("REMOTE_REMBG_URL", "")
 MODAL_AUTH_TOKEN = os.environ.get("MODAL_AUTH_TOKEN", "")
+
+# Email — production uses Resend SMTP; dev defaults to console (prints to stdout).
+# To preview rendered emails locally: docker compose --profile mail up -d mailpit
+# then set EMAIL_HOST=localhost EMAIL_PORT=1025 EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+# Mailpit web UI: http://localhost:8025
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@potterdoc.com")
+INVITE_LINK_BASE_URL = os.environ.get("INVITE_LINK_BASE_URL", "http://localhost:5173")
+if IS_PRODUCTION:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.resend.com")
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "465"))
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "resend")
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "true").lower() == "true"
+else:
+    EMAIL_BACKEND = os.environ.get(
+        "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+    )
+    EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "1025"))
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_SSL = False

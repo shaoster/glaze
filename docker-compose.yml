@@ -41,6 +41,13 @@ services:
       LOGTAIL_SOURCE_TOKEN: ${LOGTAIL_SOURCE_TOKEN:-}
       REMOTE_REMBG_URL: ${REMOTE_REMBG_URL:-}
       MODAL_AUTH_TOKEN: ${MODAL_AUTH_TOKEN:-}
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.resend.com}
+      EMAIL_PORT: ${EMAIL_PORT:-465}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-resend}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-true}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@potterdoc.com}
+      INVITE_LINK_BASE_URL: ${INVITE_LINK_BASE_URL:-https://potterdoc.com}
     depends_on:
       db:
         condition: service_healthy
@@ -58,6 +65,14 @@ services:
       timeout: 5s
       retries: 24
       start_period: 30s
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    profiles: [mail]
+    ports:
+      - "8025:8025"
+      - "1025:1025"
 
 volumes:
   postgres_data:
