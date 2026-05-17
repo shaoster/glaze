@@ -8,9 +8,11 @@ from rest_framework.test import APIClient
 
 from api.models import (
     ClayBody,
+    GlazeCombination,
     Location,
     PieceState,
     PieceStateClayBodyRef,
+    PieceStateGlazeCombinationRef,
     PieceStateLocationRef,
     Tag,
 )
@@ -109,6 +111,71 @@ class TestPieceDetail:
             "images",
             "custom_fields",
         } <= cs.keys()
+
+    def test_detail_reuses_prefetched_piece_state_refs(self, client, piece, user):
+        clay_body = ClayBody.objects.create(user=user, name="Stoneware")
+        kiln_location = Location.objects.create(user=user, name="Main Kiln")
+        glaze_combination = GlazeCombination.objects.create(
+            user=user, name="Blue Celadon"
+        )
+
+        handbuilt = PieceState.objects.create(
+            user=user,
+            piece=piece,
+            state="handbuilt",
+        )
+        bisque = PieceState.objects.create(
+            user=user,
+            piece=piece,
+            state="submitted_to_bisque_fire",
+        )
+        glazed = PieceState.objects.create(
+            user=user,
+            piece=piece,
+            state="glazed",
+        )
+
+        PieceStateClayBodyRef.objects.create(
+            piece_state=handbuilt,
+            field_name="clay_body",
+            clay_body=clay_body,
+        )
+        PieceStateLocationRef.objects.create(
+            piece_state=bisque,
+            field_name="kiln_location",
+            location=kiln_location,
+        )
+        PieceStateGlazeCombinationRef.objects.create(
+            piece_state=glazed,
+            field_name="glaze_combination",
+            glaze_combination=glaze_combination,
+        )
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = client.get(f"/api/pieces/{piece.id}/")
+
+        assert response.status_code == 200
+        data = response.json()
+        history = {state["state"]: state for state in data["history"]}
+        assert history["handbuilt"]["custom_fields"]["clay_body"] == {
+            "id": str(clay_body.id),
+            "name": "Stoneware",
+        }
+        assert history["submitted_to_bisque_fire"]["custom_fields"][
+            "kiln_location"
+        ] == {
+            "id": str(kiln_location.id),
+            "name": "Main Kiln",
+        }
+        assert history["glazed"]["custom_fields"]["glaze_combination"] == {
+            "id": str(glaze_combination.id),
+            "name": "Blue Celadon",
+        }
+
+        sql = "\n".join(query["sql"] for query in ctx.captured_queries)
+        assert 'WHERE ("api_piecestateclaybodyref"."field_name"' not in sql
+        assert 'WHERE ("api_piecestatelocationref"."field_name"' not in sql
+        assert 'WHERE ("api_piecestateglazecombinationref"."field_name"' not in sql
 
     def test_current_location_exposed(self, client, piece, user):
         location = Location.objects.create(user=user, name="Studio Q")
