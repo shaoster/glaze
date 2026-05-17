@@ -46,6 +46,7 @@ if [[ -z "\$SHA" ]]; then
 else
     echo "Image built from commit \$SHA"
     git fetch --quiet origin
+    git restore --quiet .
     git checkout --quiet "\$SHA"
 fi
 
