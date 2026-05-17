@@ -89,8 +89,29 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "PotterDoc API",
-    "DESCRIPTION": "Pottery workflow tracking API",
+    "DESCRIPTION": (
+        "Pottery workflow tracking API.\n\n"
+        "**Authentication:** All endpoints (except auth and public piece reads) require "
+        "a session cookie. To authenticate in this UI, click **Authorize** and paste "
+        "the value of your `sessionid` cookie. You can obtain it by logging in through "
+        "the web app and copying the cookie from your browser's DevTools (Application → "
+        "Cookies → `sessionid`)."
+    ),
     "VERSION": "0.0.1",
+    "SECURITY": [{"cookieAuth": []}],
+    "COMPONENTS": {
+        "securitySchemes": {
+            "cookieAuth": {
+                "type": "apiKey",
+                "in": "cookie",
+                "name": "sessionid",
+                "description": (
+                    "Django session cookie. Log in via the web UI, then copy the "
+                    "`sessionid` value from DevTools → Application → Cookies."
+                ),
+            }
+        }
+    },
 }
 
 MIDDLEWARE = [

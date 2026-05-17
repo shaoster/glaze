@@ -21,67 +21,67 @@ _detected_root="${_detected_root:-$_GLAZE_SCRIPT_DIR}"
 
 # Guard against double-sourcing, but re-initialize if we're in a different
 # git root than what was previously detected (e.g. switched into a worktree).
-if [[ -n "$_GLAZE_AGENT_ENV_LOADED" && "${GLAZE_ROOT:-}" == "$_detected_root" ]]; then
+if [[ -z "$_GLAZE_AGENT_ENV_LOADED" || "${GLAZE_ROOT:-}" != "$_detected_root" ]]; then
+    export _GLAZE_AGENT_ENV_LOADED=1
+    export GLAZE_AGENT=1
+
+    GLAZE_ROOT="$_detected_root"
     unset _detected_root
-    return
-fi
-export _GLAZE_AGENT_ENV_LOADED=1
-export GLAZE_AGENT=1
+    GLAZE_SHARED_ROOT="$(_gz_detect_shared_root "$GLAZE_ROOT")"
+    GLAZE_SHARED_ROOT="${GLAZE_SHARED_ROOT:-$GLAZE_ROOT}"
+    export GLAZE_ROOT GLAZE_SHARED_ROOT
 
-GLAZE_ROOT="$_detected_root"
-unset _detected_root
-GLAZE_SHARED_ROOT="$(_gz_detect_shared_root "$GLAZE_ROOT")"
-GLAZE_SHARED_ROOT="${GLAZE_SHARED_ROOT:-$GLAZE_ROOT}"
-export GLAZE_ROOT GLAZE_SHARED_ROOT
+    _GLAZE_PIDS="$GLAZE_ROOT/.dev-pids"
+    _GLAZE_LOGS="$GLAZE_ROOT/.dev-logs"
+    mkdir -p "$_GLAZE_PIDS" "$_GLAZE_LOGS"
 
-_GLAZE_PIDS="$GLAZE_ROOT/.dev-pids"
-_GLAZE_LOGS="$GLAZE_ROOT/.dev-logs"
-mkdir -p "$_GLAZE_PIDS" "$_GLAZE_LOGS"
-
-_gz_preferred_root_for() {
-    local rel="$1"
-    if [[ -e "$GLAZE_ROOT/$rel" ]]; then
+    _gz_preferred_root_for() {
+        local rel="$1"
+        if [[ -e "$GLAZE_ROOT/$rel" ]]; then
+            printf '%s\n' "$GLAZE_ROOT"
+            return 0
+        fi
+        if [[ "$GLAZE_SHARED_ROOT" != "$GLAZE_ROOT" && -e "$GLAZE_SHARED_ROOT/$rel" ]]; then
+            printf '%s\n' "$GLAZE_SHARED_ROOT"
+            return 0
+        fi
         printf '%s\n' "$GLAZE_ROOT"
-        return 0
-    fi
-    if [[ "$GLAZE_SHARED_ROOT" != "$GLAZE_ROOT" && -e "$GLAZE_SHARED_ROOT/$rel" ]]; then
-        printf '%s\n' "$GLAZE_SHARED_ROOT"
-        return 0
-    fi
-    printf '%s\n' "$GLAZE_ROOT"
-}
+    }
 
-# Activate Bazel-managed venv if present (built by `bazel run //:manage.venv`)
-_GLAZE_VENV_ROOT="$(_gz_preferred_root_for ".manage.venv/bin/activate")"
-[[ -f "$_GLAZE_VENV_ROOT/.manage.venv/bin/activate" ]] && source "$_GLAZE_VENV_ROOT/.manage.venv/bin/activate"
+    # Activate Bazel-managed venv if present (built by `bazel run //:manage.venv`)
+    _GLAZE_VENV_ROOT="$(_gz_preferred_root_for ".manage.venv/bin/activate")"
+    [[ -f "$_GLAZE_VENV_ROOT/.manage.venv/bin/activate" ]] && source "$_GLAZE_VENV_ROOT/.manage.venv/bin/activate"
 
-# Load local env vars
-_gz_load_env_file() {
-    local path="$1"
-    [[ -f "$path" ]] || return 0
-    set -a
-    # shellcheck disable=SC1090
-    source "$path"
-    set +a
-}
+    # Load local env vars
+    _gz_load_env_file() {
+        local path="$1"
+        [[ -f "$path" ]] || return 0
+        set -a
+        # shellcheck disable=SC1090
+        source "$path"
+        set +a
+    }
 
-_gz_load_preferred_env_file() {
-    local rel="$1"
-    local preferred_root
-    preferred_root="$(_gz_preferred_root_for "$rel")"
-    _gz_load_env_file "$preferred_root/$rel"
-}
+    _gz_load_preferred_env_file() {
+        local rel="$1"
+        local preferred_root
+        preferred_root="$(_gz_preferred_root_for "$rel")"
+        _gz_load_env_file "$preferred_root/$rel"
+    }
 
-_gz_load_preferred_env_file ".env.local"
-_gz_load_preferred_env_file "web/.env.local"
-_gz_load_preferred_env_file "mobile/.env.local"
+    _gz_load_preferred_env_file ".env.local"
+    _gz_load_preferred_env_file "web/.env.local"
+    _gz_load_preferred_env_file "mobile/.env.local"
 
-# Prevent Rust/rtk stack overflows from crashing the WSL2 VM
-ulimit -s unlimited 2>/dev/null || true
+    # Prevent Rust/rtk stack overflows from crashing the WSL2 VM
+    ulimit -s unlimited 2>/dev/null || true
 
-# Propagate to child processes so agents spawned from an interactive shell
-# (Codex, etc.) also get this bootstrap without per-tool config.
-export BASH_ENV="$_GLAZE_SCRIPT_DIR/env-agent.sh"
+    # Propagate to child processes so agents spawned from an interactive shell
+    # (Codex, etc.) also get this bootstrap without per-tool config.
+    export BASH_ENV="$_GLAZE_SCRIPT_DIR/env-agent.sh"
+fi
+
+unset _detected_root
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -483,7 +483,7 @@ gz_format() {
     )
 }
 
-gz_build() {
+_gz_build() {
     # Full production build via Bazel (CI-aligned).
     # Symlinks web/dist → bazel-bin/web/dist for easy inspection.
     ${GLAZE_AGENT:+rtk }bazel build //... || return $?
@@ -525,7 +525,7 @@ gz_deploy() {
 # Servers
 # ---------------------------------------------------------------------------
 
-gz_backend() {
+_gz_backend() {
     local venv_root env_root port web_port app_origin
     venv_root="$(_gz_venv_root)"
     env_root="$(_gz_preferred_root_for ".env.local")"
@@ -537,7 +537,7 @@ gz_backend() {
         bash -c "source '$venv_root/.manage.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$env_root/.env.local' ] && source '$env_root/.env.local'; set +a && export APP_ORIGIN='$app_origin' && python manage.py load_public_library --skip-if-missing && uvicorn backend.asgi:application --host 127.0.0.1 --port $port --reload"
 }
 
-gz_web() {
+_gz_web() {
     local backend_port port
     backend_port=$(cat "$_GLAZE_PIDS/backend.port" 2>/dev/null || echo 8080)
     port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || _gz_find_free_port 5173)
@@ -556,6 +556,12 @@ gz_web() {
     [[ -n "$port" ]] && echo "$port" > "$_GLAZE_PIDS/web.port"
     [[ -n "$port" ]] && echo "web: http://localhost:$port"
     export APP_ORIGIN="http://localhost:${port:-5173}"
+}
+
+gz_story() {
+    local port=${1:-6006}
+    echo "Starting Storybook dev server on http://localhost:$port ..."
+    (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel run //web:storybook_dev -- dev --port "$port")
 }
 
 gz_open() {
@@ -577,9 +583,9 @@ gz_open() {
 gz_start() {
     _gz_rotate_log backend
     _gz_find_free_port 5173 > "$_GLAZE_PIDS/web.port"
-    gz_backend
+    _gz_backend
     _gz_rotate_log web
-    gz_web
+    _gz_web
     _gz_wait_for_health "$(cat "$_GLAZE_PIDS/backend.port")"
     gz_open
     echo "Servers running — use 'gz_stop' to stop, 'gz_logs' to tail output."
@@ -849,10 +855,10 @@ _GZ_SHORTCUTS=(
     "gz_test_web       — run the web tests only"
     "gz_lint           — run affected linters via Bazel (smart detection on branches; --all to lint everything)"
     "gz_format         — auto-fix: ruff format + ruff check --fix (Python)"
-    "gz_build          — full production build via Bazel (//...); symlinks web/dist"
     "gz_gentypes       — regenerate TypeScript types via Bazel; symlinks into src/"
     "gz_push [--latest]— build + push OCI image tagged with HEAD sha (and :latest)"
     "gz_deploy [--no-push] — push image + deploy to GLAZE_PROD_HOST droplet"
+    "gz_story [port]   — start Storybook dev server via Bazel (default port 6006)"
     "gz_start/stop     — start or stop backend + web (gz_start opens browser, registers EXIT cleanup)"
     "gz_open           — open the web UI in the browser (if servers already running)"
     "gz_status         — show what services are running (with ports)"

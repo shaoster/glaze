@@ -587,7 +587,7 @@ These extend the generic GitHub interactions guide with Glaze-specific protected
 - Auto-fix Python formatting and fixable lint issues before committing: `gz_format`
 - Serializer output matches the TypeScript types in [`web/src/util/types.ts`](../../web/src/util/types.ts)
 - State names and transitions are derived from [`workflow.yml`](../../workflow.yml), not hardcoded
-- If `AGENTS.md` was modified, check whether [`README.md`](../../README.md) needs a corresponding update
+- If `AGENTS.md` was modified, check whether the domain-specific READMEs (`api/README.md`, `web/README.md`, etc.) or the root `README.md` need a corresponding update
 - If conventions or constraints change during PR work, append those changes to the relevant file under `docs/agents/` in a follow-up commit
 
 ---

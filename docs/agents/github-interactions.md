@@ -70,7 +70,7 @@ Before opening or pushing to a PR, verify every item:
 - PR body contains "Closes #<N>" linking to the originating issue.
 - PR title is concise (under 70 characters).
 - No debug code, temporary workarounds, or stray `print`/`console.log` statements.
-- If agent documentation (`AGENTS.md` or equivalent) was modified, check whether the project `README.md` needs a corresponding update.
+- If agent documentation (`AGENTS.md` or equivalent) was modified, check whether the domain-specific READMEs (`api/README.md`, `web/README.md`, etc.) or the root `README.md` need a corresponding update.
 - If conventions or constraints implied by the work should be respected going forward, append them to the relevant agent documentation file in a follow-up commit.
 
 Project-specific definition-of-done checks (e.g. serializer/type alignment, workflow derivation rules) are documented in the project's domain guide.
