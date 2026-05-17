@@ -20,11 +20,12 @@ const sampleImages: CaptionedImage[] = [
   },
   {
     url: "https://images.unsplash.com/photo-1593150501174-d8200671607f?w=800",
-    caption: "",
+    caption: "Bisque fired pieces",
     cloudinary_public_id: undefined,
     cloud_name: undefined,
   },
 ];
+
 
 /**
  * ImageLightbox component for immersive full-screen image viewing.
