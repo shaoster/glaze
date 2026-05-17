@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 import ImageLightbox from "../components/ImageLightbox";
 import type { CaptionedImage } from "../util/types";
+import { useState } from "react";
+import Button from "@mui/material/Button";
 
 const sampleImages: CaptionedImage[] = [
   {
@@ -47,7 +49,25 @@ const meta = {
     },
   },
   tags: ["autodocs"],
-  args: { onClose: fn() },
+  render: (args) => {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <Button variant="contained" onClick={() => setOpen(true)}>
+          Open Image Lightbox
+        </Button>
+        {open && (
+          <ImageLightbox
+            {...args}
+            onClose={() => {
+              setOpen(false);
+              args.onClose?.();
+            }}
+          />
+        )}
+      </>
+    );
+  },
 } satisfies Meta<typeof ImageLightbox>;
 
 export default meta;
@@ -57,6 +77,7 @@ export const SingleImage: Story = {
   args: {
     images: [sampleImages[0]],
     initialIndex: 0,
+    onClose: fn(),
   },
 };
 
@@ -64,6 +85,7 @@ export const MultipleImages: Story = {
   args: {
     images: sampleImages,
     initialIndex: 0,
+    onClose: fn(),
   },
 };
 
@@ -71,6 +93,7 @@ export const StartAtSecond: Story = {
   args: {
     images: sampleImages,
     initialIndex: 1,
+    onClose: fn(),
   },
 };
 
@@ -78,6 +101,7 @@ export const WithThumbnailAction: Story = {
   args: {
     images: sampleImages,
     initialIndex: 0,
+    onClose: fn(),
     onSetAsThumbnail: fn(),
   },
 };

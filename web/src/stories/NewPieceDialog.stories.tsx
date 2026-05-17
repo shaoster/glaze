@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import NewPieceDialog from "../components/NewPieceDialog";
 import { http, HttpResponse } from "msw";
+import { useState } from "react";
+import Button from "@mui/material/Button";
 
 /**
  * NewPieceDialog is the entry point for adding new work to the Glaze library.
@@ -26,6 +28,27 @@ const meta = {
     },
   },
   tags: ["autodocs"],
+  argTypes: {
+    open: { table: { disable: true } },
+  },
+  render: (args) => {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <Button variant="contained" onClick={() => setOpen(true)}>
+          Open New Piece Dialog
+        </Button>
+        <NewPieceDialog
+          {...args}
+          open={open}
+          onClose={() => {
+            setOpen(false);
+            args.onClose?.();
+          }}
+        />
+      </>
+    );
+  },
 } satisfies Meta<typeof NewPieceDialog>;
 
 export default meta;
@@ -33,7 +56,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    open: true,
     onClose: () => {},
     onCreated: () => {},
   },

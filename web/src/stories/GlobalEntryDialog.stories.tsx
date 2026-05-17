@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import GlobalEntryDialog from "../components/GlobalEntryDialog";
 import { http, HttpResponse } from "msw";
+import { useState } from "react";
+import Button from "@mui/material/Button";
 
 /**
  * GlobalEntryDialog provides a searchable selection interface for global domain entities.
@@ -26,6 +28,27 @@ const meta = {
     },
   },
   tags: ["autodocs"],
+  argTypes: {
+    open: { table: { disable: true } },
+  },
+  render: (args) => {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <Button variant="contained" onClick={() => setOpen(true)}>
+          Open Global Entry Dialog
+        </Button>
+        <GlobalEntryDialog
+          {...args}
+          open={open}
+          onClose={() => {
+            setOpen(false);
+            args.onClose?.();
+          }}
+        />
+      </>
+    );
+  },
 } satisfies Meta<typeof GlobalEntryDialog>;
 
 export default meta;
@@ -33,7 +56,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    open: true,
     globalName: "location",
     onClose: () => {},
     onSelect: () => {},
