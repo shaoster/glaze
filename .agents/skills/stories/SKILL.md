@@ -45,6 +45,7 @@ For each target component:
 - **Data Variety**:
   - For components that take a list as their primary input (e.g., `ImageLightbox`, `PieceList`, `TagChipList`), ensure the story variants use **meaningfully distinct items**.
   - Avoid repeating the same image URL, name, or metadata across list items so navigation and visual variety can be properly verified.
+  - **Unique IDs**: For objects in a list that have an `id` field, ensure they have **actually different IDs** (e.g., `id: "1"`, `id: "2"`) to ensure stable React keys and logical distinction between items.
 - **useBlocker handling**:
   - For components that use `useBlocker` (e.g., `PieceDetail`), ensure the component is wrapped in a data router context (using `createMemoryRouter` + `RouterProvider` in decorators) to prevent Storybook from crashing.
 - **Theming**:
