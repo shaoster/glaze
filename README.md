@@ -234,6 +234,7 @@ Glaze uses agent workflows for planning, implementation, offline analysis, and d
 - `/cover`: run the coverage audit workflow.
 - `/deps`: inspect Bazel dependency graphs for unexpected or overly broad dependencies.
 - `/docs`: assess and update human-facing READMEs to keep them aligned with the codebase.
+- `/stories`: auto-generate and update Storybook stories for frontend components.
 
 Use `/dream` and `/spec` when the work is still being shaped. Use `/do` when the task is ready to implement. Use the asynchronous audit skills when you want analysis without blocking the main development loop.
 
@@ -243,7 +244,7 @@ Interactive component stories are published to GitHub Pages via Storybook:
 
 **[https://shaoster.github.io/glaze/storybook/](https://shaoster.github.io/glaze/storybook/)**
 
-Run locally with `cd web && pnpm storybook`. See [`web/README.md`](web/README.md) for details.
+Run locally with `gz_story`. See [`web/README.md`](web/README.md) for details.
 
 ## Deployment and CI/CD
 
