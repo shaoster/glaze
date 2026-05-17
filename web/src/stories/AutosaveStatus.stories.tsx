@@ -1,6 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import AutosaveStatus from "../components/AutosaveStatus";
 
+/**
+ * AutosaveStatus component indicating the current synchronization state of a piece's data.
+ *
+ * Rationale: Critical for user trust in the "no-save-button" architecture (Issue #172).
+ * Shows when changes are pending, saving, or successfully persisted.
+ *
+ * Edge cases:
+ * - Network Error: Red status with specific error message and retry hint.
+ * - Floating Variant: Used in the mobile-optimized detail header.
+ * - Precision: Shows "Saved at [Time]" to confirm the last successful sync.
+ */
 const meta = {
   title: "Components/AutosaveStatus",
   component: AutosaveStatus,

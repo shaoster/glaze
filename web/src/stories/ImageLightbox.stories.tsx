@@ -24,6 +24,18 @@ const sampleImages: CaptionedImage[] = [
   },
 ];
 
+/**
+ * ImageLightbox component for immersive full-screen image viewing.
+ *
+ * Rationale: Replaces standard browser image opening with a controlled,
+ * themed experience. Supports captions and administrative actions like "Set as Thumbnail".
+ *
+ * Edge cases:
+ * - Single vs. Multiple: Navigation arrows only appear when there's more than one image.
+ * - Missing Captions: Layout adjusts when captions are empty or null.
+ * - Large Images: Ensures images are contained within the viewport while maintaining aspect ratio.
+ * - Thumbnail Action: The "Set as Thumbnail" action is only present if the callback is provided.
+ */
 const meta = {
   title: "Components/ImageLightbox",
   component: ImageLightbox,

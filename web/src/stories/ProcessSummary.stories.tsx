@@ -43,6 +43,17 @@ const history: PieceState[] = [
   },
 ];
 
+/**
+ * ProcessSummary component providing a high-level timeline of a piece's history.
+ *
+ * Rationale: Designed to give users a quick overview of the pottery lifecycle,
+ * summarizing transitions between states (e.g., from 'bisque_fired' to 'glaze_fired').
+ *
+ * Edge cases:
+ * - Empty history: Displays a placeholder or empty state message.
+ * - Long history: Handles multiple states gracefully, though usually limited to workflow steps.
+ * - Custom fields: Summaries often prioritize specific fields (weight, temperature) based on the state.
+ */
 const meta = {
   title: "Components/ProcessSummary",
   component: ProcessSummary,

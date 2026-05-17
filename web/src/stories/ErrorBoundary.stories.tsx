@@ -1,6 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import ErrorBoundary from "../components/ErrorBoundary";
 
+/**
+ * ErrorBoundary component to catch JavaScript errors anywhere in their child component tree.
+ *
+ * Rationale: Standardizes error handling across the app to prevent full-page crashes.
+ * Displays a fallback UI and logs the error to our logging service (e.g., Sentry or internal API).
+ *
+ * Edge cases:
+ * - Render errors: Catches errors during the render phase of children.
+ * - Lifecycle errors: Catches errors in `componentDidMount` and `componentDidUpdate`.
+ * - Recoverability: Provides a "Retry" or "Home" action to help users get back on track.
+ */
 const meta = {
   title: "Components/ErrorBoundary",
   component: ErrorBoundary,

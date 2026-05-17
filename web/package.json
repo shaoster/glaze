@@ -61,6 +61,8 @@
     "happy-dom": "^20.9.0",
     "jsdom": "^29.0.2",
     "lcov-parse": "^1.0.0",
+    "msw": "^2.14.6",
+    "msw-storybook-addon": "^2.0.7",
     "openapi-typescript": "^7.13.0",
     "prettier": "3.8.3",
     "storybook": "^9.1.20",
@@ -76,6 +78,11 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "better-sqlite3"
+    ]
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
     ]
   }
 }

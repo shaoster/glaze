@@ -2,6 +2,10 @@ import type { Preview } from "@storybook/react-vite";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import React from "react";
+import { initialize, mswLoader } from "msw-storybook-addon";
+
+// Initialize MSW
+initialize();
 
 const DARK_THEME = createTheme({
   palette: {
@@ -28,6 +32,7 @@ const preview: Preview = {
       </ThemeProvider>
     ),
   ],
+  loaders: [mswLoader],
   parameters: {
     backgrounds: {
       default: "dark",

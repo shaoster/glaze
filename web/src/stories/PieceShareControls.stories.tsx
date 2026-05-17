@@ -31,6 +31,17 @@ const basePiece: PieceDetail = {
   created: new Date("2025-01-01"),
 };
 
+/**
+ * PieceShareControls component for managing the public sharing status of a piece.
+ *
+ * Rationale: Implements the "Share to Gallery" feature, allowing users to make
+ * their work public. Integrated into the PieceDetail view during the redesign (Issue #172).
+ *
+ * Edge cases:
+ * - Permissions: Only visible/enabled if the user has `can_edit` permission.
+ * - API Failure: Handles errors during the toggle transition (though mocking is handled via MSW or props).
+ * - UI Feedback: Provides immediate visual feedback when the sharing state changes.
+ */
 const meta = {
   title: "Components/PieceShareControls",
   component: ShareControls,
