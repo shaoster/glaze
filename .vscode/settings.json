@@ -9,6 +9,16 @@
     }
   },
   "terminal.integrated.defaultProfile.linux": "glaze",
+  "terminal.integrated.profiles.osx": {
+    "glaze": {
+      "path": "/bin/bash",
+      "args": [
+        "--rcfile",
+        "${workspaceFolder}/env.sh"
+      ]
+    }
+  },
+  "terminal.integrated.defaultProfile.osx": "glaze",
   "python.terminal.activateEnvironment": false,
   "python.defaultInterpreterPath": "${workspaceFolder}/.manage.venv/bin/python",
   "typescript.tsdk": "web/node_modules/typescript/lib",

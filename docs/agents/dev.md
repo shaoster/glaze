@@ -39,7 +39,7 @@ For CI/CD workflow details, deployment variables, and GitHub Actions behavior, s
 
 ### VS Code / Cursor integrated terminal
 
-[`.vscode/settings.json`](../../.vscode/settings.json) configures a `glaze` terminal profile that runs `bash --rcfile env.sh`. New terminals automatically get the full interactive environment (venv active, `gz_*` functions, `.env.local` loaded) without any manual `source` step.
+[`.vscode/settings.json`](../../.vscode/settings.json) configures `glaze` terminal profiles for Linux and macOS that run `bash --rcfile env.sh`. New terminals automatically get the full interactive environment (venv active, `gz_*` functions, `.env.local` loaded) without any manual `source` step.
 
 `python.terminal.activateEnvironment` is disabled so VS Code does not double-activate the venv on top of what `env.sh` already did.
 

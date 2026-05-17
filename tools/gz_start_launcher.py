@@ -166,6 +166,18 @@ def process_group_kwargs() -> dict[str, object]:
     return {"start_new_session": True}
 
 
+def process_group_is_running(pgid: int) -> bool:
+    if os.name == "nt":
+        return process_is_running(pgid)
+    try:
+        os.killpg(pgid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
 def rotate_log(log_path: Path) -> None:
     if not log_path.exists():
         return
@@ -335,14 +347,34 @@ def launch_child(
         raise
 
 
-def kill_process_group(pid: int) -> None:
+def terminate_process_group(pid: int, timeout_seconds: float = 3.0) -> None:
     if os.name == "nt":
         subprocess.run(["taskkill", "/T", "/F", "/PID", str(pid)], check=False)
+        return
+    if not process_group_is_running(pid):
         return
     try:
         os.killpg(pid, signal.SIGTERM)
     except ProcessLookupError:
         return
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if not process_group_is_running(pid):
+            return
+        time.sleep(0.1)
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except ProcessLookupError:
+        return
+    deadline = time.monotonic() + 1.0
+    while time.monotonic() < deadline:
+        if not process_group_is_running(pid):
+            return
+        time.sleep(0.05)
+
+
+def kill_process_group(pid: int) -> None:
+    terminate_process_group(pid)
 
 
 def ensure_running(pidfile: Path) -> tuple[int | None, bool]:
@@ -414,25 +446,31 @@ def start_backend(
     ]
     subprocess.run(load_public_library, cwd=str(roots.workspace), env=backend_env, check=True)
 
-    backend = launch_child(
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "backend.asgi:application",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(backend_port),
-            "--reload",
-        ],
-        cwd=roots.workspace,
-        env=backend_env,
-        log_path=log_path,
-    )
-    write_text(pidfile, str(backend.pid))
-    print(f"backend: started (PID {backend.pid}) — logs: {log_path}")
-    return backend.pid
+    backend: subprocess.Popen[str] | None = None
+    try:
+        backend = launch_child(
+            [
+                sys.executable,
+                "-m",
+                "uvicorn",
+                "backend.asgi:application",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(backend_port),
+                "--reload",
+            ],
+            cwd=roots.workspace,
+            env=backend_env,
+            log_path=log_path,
+        )
+        write_text(pidfile, str(backend.pid))
+        print(f"backend: started (PID {backend.pid}) — logs: {log_path}")
+        return backend.pid
+    except Exception:
+        if backend is not None:
+            terminate_process_group(backend.pid)
+        raise
 
 
 def start_web(
@@ -459,15 +497,21 @@ def start_web(
 
     print(f"web: starting on :{web_port} ...")
     web_binary = web_executable_path(roots)
-    web = launch_child(
-        [str(web_binary), "--port", str(web_port), "--strictPort"],
-        cwd=roots.workspace,
-        env=web_env,
-        log_path=log_path,
-    )
-    write_text(pidfile, str(web.pid))
-    print(f"web: started (PID {web.pid}) — logs: {log_path}")
-    return web.pid
+    web: subprocess.Popen[str] | None = None
+    try:
+        web = launch_child(
+            [str(web_binary), "--port", str(web_port), "--strictPort"],
+            cwd=roots.workspace,
+            env=web_env,
+            log_path=log_path,
+        )
+        write_text(pidfile, str(web.pid))
+        print(f"web: started (PID {web.pid}) — logs: {log_path}")
+        return web.pid
+    except Exception:
+        if web is not None:
+            terminate_process_group(web.pid)
+        raise
 
 
 def start_stack(no_browser: bool = False) -> int:
@@ -538,11 +582,11 @@ def start_stack(no_browser: bool = False) -> int:
         if backend_started:
             pid, running = ensure_running(backend_pidfile)
             if running and pid is not None:
-                kill_process_group(pid)
+                terminate_process_group(pid)
         if web_started:
             pid, running = ensure_running(web_pidfile)
             if running and pid is not None:
-                kill_process_group(pid)
+                terminate_process_group(pid)
         raise
 
 

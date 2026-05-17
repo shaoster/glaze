@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import signal
 from pathlib import Path
 
 from tools import gz_start_launcher as launcher
@@ -90,3 +91,51 @@ def test_backend_is_ready_uses_health_checks(monkeypatch) -> None:
     )
 
     assert launcher.backend_is_ready(8080) is True
+
+
+def test_terminate_process_group_stops_gracefully(monkeypatch) -> None:
+    if launcher.os.name == "nt":
+        return
+
+    signals: list[int] = []
+    times = iter([0.0, 0.1])
+    alive = {"value": True}
+
+    def fake_killpg(pgid: int, sig: int) -> None:
+        signals.append(sig)
+        if sig == signal.SIGTERM:
+            alive["value"] = False
+        if sig == 0 and not alive["value"]:
+            raise ProcessLookupError
+
+    monkeypatch.setattr(launcher.os, "killpg", fake_killpg)
+    monkeypatch.setattr(launcher.time, "monotonic", lambda: next(times))
+    monkeypatch.setattr(launcher.time, "sleep", lambda _: None)
+
+    launcher.terminate_process_group(1234, timeout_seconds=0.5)
+
+    assert signals == [0, signal.SIGTERM, 0]
+
+
+def test_terminate_process_group_escalates_after_timeout(monkeypatch) -> None:
+    if launcher.os.name == "nt":
+        return
+
+    signals: list[int] = []
+    times = iter([0.0, 1.1, 1.2, 1.3])
+    alive = {"value": True}
+
+    def fake_killpg(pgid: int, sig: int) -> None:
+        signals.append(sig)
+        if sig == signal.SIGKILL:
+            alive["value"] = False
+        if sig == 0 and not alive["value"]:
+            raise ProcessLookupError
+
+    monkeypatch.setattr(launcher.os, "killpg", fake_killpg)
+    monkeypatch.setattr(launcher.time, "monotonic", lambda: next(times))
+    monkeypatch.setattr(launcher.time, "sleep", lambda _: None)
+
+    launcher.terminate_process_group(1234, timeout_seconds=0.0)
+
+    assert signals == [0, signal.SIGTERM, signal.SIGKILL, 0]
