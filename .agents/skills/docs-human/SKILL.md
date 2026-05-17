@@ -23,7 +23,7 @@ Glaze uses domain-specific READMEs to keep documentation focused and maintainabl
 - **`tests/README.md`**: Common and cross-cutting tests, specifically structural tests for the workflow state machine (`workflow.schema.yml` validation).
 - **`tools/README.md`**: Standalone utilities, Modal crop offloading, and the Glaze import tool.
 - **`pages/README.md`**: Static published pages (e.g. index generation).
-- **`.github/README.md`**: CI/CD infrastructure, GitHub Actions workflows (`ci.yml`, `cd.yml`, `static.yml`), and deployment pipelines.
+- **`docs/ci-cd.md`**: CI/CD infrastructure, GitHub Actions workflows (`ci.yml`, `cd.yml`, `static.yml`), and deployment pipelines.
 
 ## Workflow
 

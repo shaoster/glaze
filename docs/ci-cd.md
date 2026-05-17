@@ -1,10 +1,10 @@
 # CI / CD Infrastructure
 
-This directory contains three GitHub Actions workflows and a shared composite action.
+This document describes the GitHub Actions workflows and deployment pipeline for Glaze.
 
 ## Workflows
 
-### `ci.yml` — Continuous Integration
+### `ci.yml` - Continuous Integration
 
 Runs on every pull request and every push to `main`. Skips doc-only changes (`.md`, `.vscode/`, `nginx/`, etc.).
 
@@ -12,15 +12,15 @@ Runs on every pull request and every push to `main`. Skips doc-only changes (`.m
 
 | Job | Trigger | What it does |
 |---|---|---|
-| **Preflight** | Always | Computes a CI fingerprint from the git tree SHA plus hashes of `ci.yml`, `MODULE.bazel`, `.bazelversion`, `pyproject.toml`, `uv.lock`, and `web/pnpm-lock.yaml`. On a `push` to `main`, looks up whether that fingerprint was already validated by a prior PR run — if so, sets `skip_main=true` to avoid re-running lint and coverage on an already-validated tree. |
-| **Lint** | PRs always; `main` only when `skip_main=false` | Runs `gz_lint` (`bazel build --config=lint //...`) — ruff, ESLint, tsc, and mypy. |
+| **Preflight** | Always | Computes a CI fingerprint from the git tree SHA plus hashes of `ci.yml`, `MODULE.bazel`, `.bazelversion`, `pyproject.toml`, `uv.lock`, and `web/pnpm-lock.yaml`. On a `push` to `main`, looks up whether that fingerprint was already validated by a prior PR run - if so, sets `skip_main=true` to avoid re-running lint and coverage on an already-validated tree. |
+| **Lint** | PRs always; `main` only when `skip_main=false` | Runs `gz_lint` (`bazel build --config=lint //...`) - ruff, ESLint, tsc, and mypy. |
 | **Coverage & Test** | PRs always; `main` only when `skip_main=false` | Runs `gz_test --coverage` (`bazel coverage //...`) then uploads the merged LCOV report to Codecov. |
 | **Build & smoke-test OCI image** | Always (including `main` regardless of `skip_main`) | Builds the OCI image with Bazel (`bazel run --config=ci --stamp //:load`), writes `VITE_GOOGLE_CLIENT_ID` from Actions secrets into `web/.env.local` before the build so it is baked into the JS bundle, pre-pulls sidecar images (Postgres, OpenTelemetry Collector), starts the full `docker compose` stack, and waits up to 300 s for the healthcheck to pass. On `push` to `main`, also pushes the image to `ghcr.io/shaoster/glaze` tagged with `:latest` and the commit SHA. |
 | **Record fingerprint** | PRs only, after all three above succeed | Uploads a tiny artifact named `ci-fingerprint-<hash>` (retained 30 days). The Preflight job on the next `main` push checks for this artifact to decide whether `skip_main=true`. |
 
 #### Skip-main optimization
 
-The fingerprint-based skip avoids re-running lint and coverage on `main` when the exact same tree was already validated by a PR. The OCI image job always runs on `main` regardless — it is the gate for pushing to the registry and triggering CD.
+The fingerprint-based skip avoids re-running lint and coverage on `main` when the exact same tree was already validated by a PR. The OCI image job always runs on `main` regardless - it is the gate for pushing to the registry and triggering CD.
 
 #### Required secrets / variables
 
@@ -31,7 +31,7 @@ The fingerprint-based skip avoids re-running lint and coverage on `main` when th
 
 ---
 
-### `cd.yml` — Continuous Deployment
+### `cd.yml` - Continuous Deployment
 
 Runs automatically after CI completes successfully on `main`, or manually via `workflow_dispatch` (optionally targeting a specific SHA).
 
@@ -44,7 +44,7 @@ Runs automatically after CI completes successfully on `main`, or manually via `w
 
 #### Required secrets / variables
 
-All are scoped to the `glaze-droplet` environment in **Settings → Environments**.
+All are scoped to the `glaze-droplet` environment in **Settings -> Environments**.
 
 | Name | Kind | Description |
 |---|---|---|
@@ -70,7 +70,7 @@ All are scoped to the `glaze-droplet` environment in **Settings → Environments
 
 ---
 
-### `static.yml` — GitHub Pages
+### `static.yml` - GitHub Pages
 
 Deploys the `pages/` directory to GitHub Pages. Runs on pushes to `main` that touch `pages/**` or `tools/generate_index.py`, and supports manual dispatch. Runs `python tools/generate_index.py pages` to generate the index before uploading.
 
@@ -88,13 +88,13 @@ Used by the lint, coverage, and image jobs to set up a consistent Bazel environm
 
 ```
 PR opened
-  └─ CI: preflight → lint + coverage + image build/smoke-test
+  └─ CI: preflight -> lint + coverage + image build/smoke-test
        └─ record-fingerprint artifact uploaded on success
 
 PR merged to main
-  └─ CI: preflight checks artifact → skip lint/coverage if already validated
-       └─ image job always runs → pushes ghcr.io/shaoster/glaze:latest + :<sha>
+  └─ CI: preflight checks artifact -> skip lint/coverage if already validated
+       └─ image job always runs -> pushes ghcr.io/shaoster/glaze:latest + :<sha>
             └─ CD triggered by workflow_run on success
-                 ├─ deploy job: SCP .env → deploy.sh → docker compose pull + restart → GitHub Release
+                 ├─ deploy job: SCP .env -> deploy.sh -> docker compose pull + restart -> GitHub Release
                  └─ deploy-modal job: modal deploy tools/piece_image_crop_service.py
 ```

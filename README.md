@@ -15,6 +15,7 @@ A pottery workflow tracking application. Log pieces and record state transitions
 - [Common Tests (`tests/`)](tests/README.md) - Structural tests for the workflow state machine.
 - [Tools (`tools/`)](tools/README.md) - Standalone utilities, Modal crop offloading, and Glaze import tool.
 - [Pages (`pages/`)](pages/README.md) - Static published pages.
+- [CI / CD Infrastructure (`docs/`)](docs/ci-cd.md) - GitHub Actions workflows, deployment pipelines, and environment variables.
 - [Agent Development Guide (`docs/agents/`)](docs/agents/dev.md) - Shell bootstrap, worktree navigation, and agent workflow context.
 
 ## For new developers
@@ -270,7 +271,7 @@ Run locally with `cd web && pnpm storybook`. See [`web/README.md`](web/README.md
 
 ## Deployment and CI/CD
 
-Deployment details, GitHub Actions workflows, and environment variables live in [`.github/README.md`](.github/README.md).
+Deployment details, GitHub Actions workflows, and environment variables live in [`docs/ci-cd.md`](docs/ci-cd.md).
 
 ## Project structure
 

@@ -39,6 +39,8 @@ Two scripts handle environment bootstrap:
 
 `env.sh` sources `env-agent.sh` — the venv activation and env-var loading logic live in exactly one place.
 
+For CI/CD workflow details, deployment variables, and GitHub Actions behavior, see [`docs/ci-cd.md`](../ci-cd.md) rather than looking for a `.github/README.md` file.
+
 ### VS Code / Cursor integrated terminal
 
 [`.vscode/settings.json`](../../.vscode/settings.json) configures a `glaze` terminal profile that runs `bash --rcfile env.sh`. New terminals automatically get the full interactive environment (venv active, `gz_*` functions, `.env.local` loaded) without any manual `source` step.
