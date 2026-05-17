@@ -42,6 +42,11 @@ uv.project(
     pyproject = "//:pyproject.toml",
     default_build_dependencies = [],
 )
+uv.override_package(
+    lock = "//:uv.lock",
+    name = "glaze-tools",
+    target = "//tools:glaze_tools",
+)
 use_repo(uv, "pypi")
 
 # ── Node toolchain ────────────────────────────────────────────────────────────

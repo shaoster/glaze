@@ -1,10 +1,18 @@
-load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_test")
+load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_library", "py_test")
 
 # ── Pytest runner ─────────────────────────────────────────────────────────────
 # Shared entry point for all py_test targets. Each test BUILD file lists this
 # as both a srcs entry and the main, then passes the test directory as an arg.
 
 exports_files(["pytest_main.py", "mypy_main.py"])
+
+# Placeholder target for the glaze-tools uv workspace member.
+# uv.override_package() in MODULE.bazel points here so Bazel skips
+# trying to install it from PyPI.
+py_library(
+    name = "glaze_tools",
+    srcs = [],
+)
 
 # ── OpenAPI schema generator ──────────────────────────────────────────────────
 # py_binary used as a genrule tool by //web:openapi_schema.

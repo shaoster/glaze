@@ -54,6 +54,7 @@ dependencies = [
     "mypy-extensions==1.1.0",
     "opentelemetry-exporter-otlp-proto-grpc>=1.41.1",
     "opentelemetry-instrumentation-asgi>=0.62b1",
+    "opentelemetry-instrumentation-django>=0.62b1",
     "opentelemetry-instrumentation-psycopg2>=0.62b1",
     "opentelemetry-sdk>=1.41.1",
     "packaging==26.2",
@@ -96,3 +97,6 @@ dependencies = [
     "uvicorn==0.46.0",
     "whitenoise==6.9.0",
 ]
+
+[tool.uv.workspace]
+members = ["tools"]
