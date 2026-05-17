@@ -481,7 +481,6 @@ dependencies = [
     { name = "lazy-loader" },
     { name = "librt" },
     { name = "llvmlite" },
-    { name = "logtail-python" },
     { name = "msgpack" },
     { name = "mypy" },
     { name = "mypy-extensions" },
@@ -586,7 +585,6 @@ requires-dist = [
     { name = "lazy-loader", specifier = "==0.5" },
     { name = "librt", specifier = "==0.8.1" },
     { name = "llvmlite", specifier = "==0.47.0" },
-    { name = "logtail-python", specifier = "==0.3.4" },
     { name = "msgpack", specifier = "==1.1.2" },
     { name = "mypy", specifier = "==1.20.0" },
     { name = "mypy-extensions", specifier = "==1.1.0" },
@@ -883,19 +881,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/e6/4b/e3f2cd17822cf772a4a51a0a8080b0032e6d37b2dbe8cfb724eac4e31c52/llvmlite-0.47.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:5853bf26160857c0c2573415ff4efe01c4c651e59e2c55c2a088740acfee51cd", size = 56275178, upload-time = "2026-03-31T18:28:48.342Z" },
     { url = "https://files.pythonhosted.org/packages/b6/55/a3b4a543185305a9bdf3d9759d53646ed96e55e7dfd43f53e7a421b8fbae/llvmlite-0.47.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:003bcf7fa579e14db59c1a1e113f93ab8a06b56a4be31c7f08264d1d4072d077", size = 55128632, upload-time = "2026-03-31T18:28:52.901Z" },
     { url = "https://files.pythonhosted.org/packages/2f/f5/d281ae0f79378a5a91f308ea9fdb9f9cc068fddd09629edc0725a5a8fde1/llvmlite-0.47.0-cp312-cp312-win_amd64.whl", hash = "sha256:f3079f25bdc24cd9d27c4b2b5e68f5f60c4fdb7e8ad5ee2b9b006007558f9df7", size = 38138692, upload-time = "2026-03-31T18:28:57.147Z" },
-]
-
-[[package]]
-name = "logtail-python"
-version = "0.3.4"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "msgpack" },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/9a/15e146007507d6baddaf34d915e16bbd2d424a8722e8ffa9a41d31d6c92f/logtail_python-0.3.4.tar.gz", hash = "sha256:284fffda6b54892ce9a2d0cade04cd61b7a1900c01d583abbdfe0dfee366e1c3", size = 29517, upload-time = "2025-09-01T14:39:52.986Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f8/4a/c98428c52a92b9347c15b6ad987a76205112edea5bbb5d3223873e12e9d9/logtail_python-0.3.4-py2.py3-none-any.whl", hash = "sha256:db5cf6b93f8de2352904519d9502021d3af3a81e6a27336b45a62358b35bbc16", size = 8897, upload-time = "2025-09-01T14:39:51.694Z" },
 ]
 
 [[package]]

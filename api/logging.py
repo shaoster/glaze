@@ -27,8 +27,7 @@ def task_context(task_id: str) -> Generator[None, None, None]:
 class TaskCorrelationFilter(logging.Filter):
     """Logging filter that injects the current task_id into LogRecords.
 
-    This allows log formatters (and external aggregators like Logtail)
-    to group logs by background task.
+    This allows log aggregators to group logs by background task.
     """
 
     def filter(self, record: logging.LogRecord) -> bool:

@@ -276,17 +276,6 @@ LOGGING = {
     },
 }
 
-LOGTAIL_SOURCE_TOKEN = os.environ.get("LOGTAIL_SOURCE_TOKEN")
-if LOGTAIL_SOURCE_TOKEN:
-    LOGGING["handlers"]["logtail"] = {
-        "class": "logtail.LogtailHandler",
-        "source_token": LOGTAIL_SOURCE_TOKEN,
-    }
-    LOGGING["root"]["handlers"].append("logtail")
-    LOGGING["loggers"]["django"]["handlers"].append("logtail")
-    LOGGING["loggers"]["django.request"]["handlers"].append("logtail")
-    LOGGING["loggers"]["api"]["handlers"].append("logtail")
-
 # Security settings
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
