@@ -41,6 +41,7 @@ For each target component:
 - **Modal/Portal Handling**:
   - For components using MUI `Dialog` or `Modal`, set `docs: { inlineStories: false, iframeHeight: 600 }` in `parameters`.
   - Use a `render` function to wrap the modal in a "Toggle Button" so the Docs page remains interactive and readable.
+  - **Hide Source Code**: For stories using this "Toggle Button" pattern, set `docs: { canvas: { sourceState: "none" }, source: { code: null } }` in `parameters` to prevent the "Show Code" block from displaying unhelpful button-only code.
 - **useBlocker handling**:
   - For components that use `useBlocker` (e.g., `PieceDetail`), ensure the component is wrapped in a data router context (using `createMemoryRouter` + `RouterProvider` in decorators) to prevent Storybook from crashing.
 - **Theming**:
@@ -52,6 +53,7 @@ For each target component:
 - Ensure the **Docs** tab renders the JSDoc rationale and all story variants correctly.
 - Verify that MSW successfully intercepts backend requests (check the network tab).
 - Run `rtk bazel build //web:storybook_build` to ensure the new stories don't break the static build.
+- Launch the server `gz_story` on a custom port and verify the new stories are accessible and functional in the browser and don't error out.
 
 ## Quality Bar
 
