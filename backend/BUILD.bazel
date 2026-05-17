@@ -48,6 +48,7 @@ filegroup(
         "__init__.py",
         "asgi.py",
         "middleware.py",
+        "otel.py",
         "settings.py",
         "test_settings.py",
         "urls.py",

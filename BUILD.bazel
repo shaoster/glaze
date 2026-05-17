@@ -82,10 +82,7 @@ alias(
 #   /app/                      Django project root (manage.py, backend/, api/, etc.)
 #   /app/web/dist/             Vite-built SPA (served by WhiteNoise at URL root)
 #   /app/site-packages/        pip-installed runtime deps (added to PYTHONPATH)
-#
-# collectstatic runs at container startup (docker-entrypoint.sh) because it
-# needs files from pip-installed packages (e.g. DRF browsable API assets) that
-# land in site-packages, not in the image layers we control at build time.
+#   /app/staticfiles/          collected static assets (built by staticfiles_tar genrule)
 
 # pip deps layer — install runtime deps into /app/site-packages using the
 # Bazel-managed Python 3.12 toolchain. Tagged no-sandbox because pip needs
@@ -147,6 +144,36 @@ pkg_tar(
     package_dir = "/app/web/dist",
 )
 
+# Static files layer — run collectstatic at build time so container startup
+# doesn't block on it. Needs site-packages (DRF assets) + app source.
+genrule(
+    name = "staticfiles_tar",
+    srcs = [
+        ":python_layer_tar",
+        ":app_src_tar",
+        ":web_dist_tar",
+    ],
+    outs = ["staticfiles.tar"],
+    cmd = """
+        set -e
+        tmp=$$(mktemp -d)
+        tar -xf $(location :python_layer_tar) -C "$$tmp"
+        tar -xf $(location :app_src_tar) -C "$$tmp"
+        tar -xf $(location :web_dist_tar) -C "$$tmp"
+        PYTHON3="$$PWD/$(PYTHON3)"
+        OUT_TAR="$$PWD/$@"
+        export PYTHONPATH="$$tmp/app:$$tmp/app/site-packages"
+        export DJANGO_SETTINGS_MODULE=backend.settings
+        export SECRET_KEY=buildtime-placeholder
+        cd "$$tmp/app"
+        "$$PYTHON3" manage.py collectstatic --no-input
+        tar -C "$$tmp" -cf "$$OUT_TAR" app/staticfiles
+        rm -rf "$$tmp"
+    """,
+    toolchains = ["@rules_python//python:current_py_toolchain"],
+    tags = ["no-sandbox"],
+)
+
 oci_image(
     name = "image",
     base = "@python312_slim",
@@ -154,6 +181,7 @@ oci_image(
         ":python_layer_tar",
         ":app_src_tar",
         ":web_dist_tar",
+        ":staticfiles_tar",
     ],
     env = {
         "PYTHONPATH": "/app:/app/site-packages",
