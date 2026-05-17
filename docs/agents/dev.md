@@ -276,6 +276,7 @@ Key local skills:
 | Skill                         | Use                                                                                          |
 | ----------------------------- | -------------------------------------------------------------------------------------------- |
 | `do-issue-worktree`           | Start a single issue or PR-sized change with `/do #<issue>` and an immediate worktree setup. |
+| `docs-human`                  | Maintain human-facing docs with `/docs` in Claude Code or the native Codex skill.           |
 | `deps`                        | Audit Bazel dependency graphs for the OCI image plus test and lint targets.                  |
 
 For orchestrating multiple worktrees, see [`docs/agents/worktrees.md`](worktrees.md).

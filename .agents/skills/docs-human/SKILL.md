@@ -7,7 +7,7 @@ name: docs-human
 description: |
   Assess and update human-facing documentation (READMEs) based on codebase state
   or recent changes. Explains the documentation strategy (what goes where) and
-  invokes /do to apply updates.
+  invokes /docs in Claude Code, or /do for issue-driven work, to apply updates.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 ---
 
