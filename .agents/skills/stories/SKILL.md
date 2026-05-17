@@ -38,6 +38,7 @@ For each target component:
 - **Mocking (MSW)**:
   - All API calls (via `axios`, `useAsync`, etc.) **must** be mocked in `parameters.msw.handlers`.
   - Use `http.get("/api/...", () => HttpResponse.json(...))` to provide deterministic data.
+  - **Deployment Support**: In `preview.tsx`, configure `initialize({ serviceWorker: { url: ... } })` to dynamically detect the path for `mockServiceWorker.js` if the Storybook is deployed to a subpath (e.g., GitHub Pages).
 - **Modal/Portal Handling**:
   - For components using MUI `Dialog` or `Modal`, set `docs: { inlineStories: false, iframeHeight: 600 }` in `parameters`.
   - Use a `render` function to wrap the modal in a "Toggle Button" so the Docs page remains interactive and readable.

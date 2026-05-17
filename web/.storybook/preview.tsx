@@ -7,7 +7,14 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { themes } from "@storybook/theming";
 
 // Initialize MSW
-initialize();
+initialize({
+  onUnhandledRequest: "bypass",
+  serviceWorker: {
+    url: window.location.pathname.startsWith("/glaze/storybook")
+      ? "/glaze/storybook/mockServiceWorker.js"
+      : "/mockServiceWorker.js",
+  },
+});
 
 const DARK_THEME = createTheme({
   palette: {
