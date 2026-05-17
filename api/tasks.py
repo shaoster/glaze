@@ -143,11 +143,8 @@ def ping_task(task: AsyncTask) -> Dict[str, str]:
 @TaskRegistry.register("detect_subject_crop")
 def detect_subject_crop(task: AsyncTask) -> dict | None:
     """Download an image, calculate its subject crop, and update the target model."""
-    import requests
-    from cloudinary import CloudinaryImage
-
     from .models import Image, Piece, PieceStateImage
-    from .utils import calculate_subject_crop, calculate_subject_crop_remote
+    from .utils import calculate_subject_crop_remote
 
     params = task.input_params or {}
     image_id = params.get("image_id")
@@ -168,26 +165,8 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
 
     from django.conf import settings
 
-    if getattr(settings, "REMOTE_REMBG_URL", None):
-        logger.info("Using remote service (offloading base URL).")
-        # Offload the original URL. The remote service handles pre-processing,
-        # resizing, and format conversion (e.g. HEIC -> JPG).
-        crop = calculate_subject_crop_remote(image_url=image.url)
-    else:
-        logger.info("Using local rembg. Optimizing download for constrained host.")
-        # Local fallback still uses Cloudinary optimizations to prevent OOM on the Droplet.
-        download_url = CloudinaryImage(image.cloudinary_public_id).build_url(
-            cloud_name=image.cloud_name,
-            secure=True,
-            format="jpg",
-            quality="auto",
-            width=1500,
-            crop="limit",
-        )
-        logger.info(f"Downloading optimized image from {download_url}")
-        response = requests.get(download_url, timeout=30)
-        response.raise_for_status()
-        crop = calculate_subject_crop(response.content)
+    logger.info("Offloading subject detection to remote service.")
+    crop = calculate_subject_crop_remote(image_url=image.url)
     if not crop:
         return {"status": "skipped", "reason": "No subject detected"}
 
