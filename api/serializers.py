@@ -288,10 +288,16 @@ class PieceStateSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_previous_state(self, obj: PieceState) -> str | None:
+        prefetched_states = obj.piece._prefetched_states()
+        if prefetched_states is not None:
+            for index, state in enumerate(prefetched_states):
+                if state.pk == obj.pk:
+                    prev = prefetched_states[index - 1] if index > 0 else None
+                    return prev.state if prev else None
+            return None
+
         if obj.order is not None:
-            prev = (
-                obj.piece.states.filter(order__lt=obj.order).order_by("-order").first()
-            )
+            prev = obj.piece.states.filter(order__lt=obj.order).order_by("-order").first()
         else:
             prev = (
                 obj.piece.states.filter(created__lt=obj.created)
@@ -302,6 +308,18 @@ class PieceStateSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_next_state(self, obj: PieceState) -> str | None:
+        prefetched_states = obj.piece._prefetched_states()
+        if prefetched_states is not None:
+            for index, state in enumerate(prefetched_states):
+                if state.pk == obj.pk:
+                    nxt = (
+                        prefetched_states[index + 1]
+                        if index < len(prefetched_states) - 1
+                        else None
+                    )
+                    return nxt.state if nxt else None
+            return None
+
         if obj.order is not None:
             nxt = obj.piece.states.filter(order__gt=obj.order).order_by("order").first()
         else:

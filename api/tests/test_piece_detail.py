@@ -1,10 +1,19 @@
 import uuid
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient
 
-from api.models import Location, PieceState, Tag
+from api.models import (
+    ClayBody,
+    Location,
+    PieceState,
+    PieceStateClayBodyRef,
+    PieceStateLocationRef,
+    Tag,
+)
 from api.serializers import _replace_piece_tags
 
 # ---------------------------------------------------------------------------
@@ -14,6 +23,67 @@ from api.serializers import _replace_piece_tags
 
 @pytest.mark.django_db
 class TestPieceDetail:
+    def test_get_uses_a_small_number_of_queries(self, client, piece, user):
+        piece.current_location = Location.objects.create(user=user, name="Studio")
+        piece.thumbnail = {
+            "url": "https://example.com/piece-thumb.jpg",
+            "cloudinary_public_id": None,
+            "cloud_name": None,
+        }
+        piece.save()
+        PieceState.objects.create(piece=piece, state="designed")
+        PieceState.objects.create(piece=piece, state="designed")
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = client.get(f"/api/pieces/{piece.id}/")
+
+        assert response.status_code == 200
+        assert len(ctx) <= 7
+
+    def test_get_prefetches_state_global_refs(self, client, piece, user):
+        clay_body = ClayBody.objects.create(user=user, name="Stoneware")
+        kiln_location = Location.objects.create(user=user, name="Kiln Shelf")
+
+        clay_state = PieceState.objects.create(
+            piece=piece,
+            user=piece.user,
+            state="handbuilt",
+            order=2,
+        )
+        PieceStateClayBodyRef.objects.create(
+            piece_state=clay_state,
+            field_name="clay_body",
+            clay_body=clay_body,
+        )
+
+        kiln_state = PieceState.objects.create(
+            piece=piece,
+            user=piece.user,
+            state="submitted_to_bisque_fire",
+            order=3,
+        )
+        PieceStateLocationRef.objects.create(
+            piece_state=kiln_state,
+            field_name="kiln_location",
+            location=kiln_location,
+        )
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = client.get(f"/api/pieces/{piece.id}/")
+
+        assert response.status_code == 200
+        sql = "\n".join(query["sql"] for query in ctx)
+        assert "api_piecestateclaybodyref" in sql
+        assert "api_piecestatelocationref" in sql
+        assert "WHERE (\"api_piecestateclaybodyref\".\"field_name\"" not in sql
+        assert "WHERE (\"api_piecestatelocationref\".\"field_name\"" not in sql
+        assert response.json()["current_state"]["custom_fields"]["kiln_location"][
+            "name"
+        ] == "Kiln Shelf"
+        assert response.json()["history"][1]["custom_fields"]["clay_body"]["name"] == (
+            "Stoneware"
+        )
+
     def test_get(self, client, piece):
         response = client.get(f"/api/pieces/{piece.id}/")
         assert response.status_code == 200

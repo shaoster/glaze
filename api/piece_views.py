@@ -9,7 +9,7 @@ from typing import Callable
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.db.models import DateTimeField, OuterRef, Q, Subquery
+from django.db.models import DateTimeField, OuterRef, Prefetch, Q, Subquery
 from django.db.models.functions import Coalesce, Greatest
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
@@ -55,7 +55,9 @@ from .serializers import (
 from .utils import bootstrap_dev_user
 from .workflow import (
     get_glaze_image_qualifying_states,
+    get_global_config,
     get_global_model_and_field,
+    get_state_global_ref_map,
     is_private_global,
     is_public_global,
 )
@@ -73,18 +75,46 @@ _DEFAULT_PAGE_SIZE = 24
 
 
 def _piece_queryset(request: Request):
-    return Piece.objects.prefetch_related("states", "tag_links__tag").filter(
-        user=request.user
-    )  # type: ignore[misc]
+    user_id = request.user.id
+    assert user_id is not None
+    return (
+        Piece.objects.select_related("current_location", "thumbnail")
+        .prefetch_related("states", "tag_links__tag")
+        .filter(user_id=user_id)
+    )
 
 
 def _piece_read_queryset(request: Request):
-    qs = Piece.objects.prefetch_related("states", "tag_links__tag")
+    qs = Piece.objects.select_related("current_location", "thumbnail").prefetch_related(
+        "states", "tag_links__tag"
+    )
     if request.user.is_authenticated:
         # Editable pieces are inaccessible to non-owners even when shared=True,
         # without altering the shared flag itself.
         return qs.filter(Q(user=request.user) | Q(shared=True, is_editable=False))
     return qs.filter(shared=True, is_editable=False)
+
+
+def _piece_detail_queryset(request: Request):
+    return _piece_read_queryset(request).prefetch_related(
+        "states__image_links__image", *_piece_state_ref_prefetches()
+    )
+
+
+def _piece_state_ref_prefetches() -> list[Prefetch]:
+    prefetches: list[Prefetch] = []
+    for global_name in get_state_global_ref_map():
+        config = get_global_config(global_name)
+        ref_model = apps.get_model("api", f"PieceState{config['model']}Ref")
+        related_name = ref_model._meta.get_field("piece_state").remote_field.related_name
+        assert related_name is not None
+        prefetches.append(
+            Prefetch(
+                f"states__{related_name}",
+                queryset=ref_model.objects.select_related(global_name),
+            )
+        )
+    return prefetches
 
 
 def _serialize_piece_detail(piece: Piece, request: Request):
@@ -206,7 +236,7 @@ def pieces(request: Request) -> Response:
 @permission_classes([AllowAny])
 def piece_detail(request: Request, piece_id: str) -> Response:
     if request.method == "GET":
-        piece = get_object_or_404(_piece_read_queryset(request), pk=piece_id)
+        piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
         return Response(_serialize_piece_detail(piece, request))
 
     if not request.user.is_authenticated:
@@ -236,8 +266,7 @@ def piece_states(request: Request, piece_id: str) -> Response:
     serializer = PieceStateCreateSerializer(data=request.data, context={"piece": piece})
     serializer.is_valid(raise_exception=True)
     serializer.save()
-    # Reload to pick up updated last_modified on current_state
-    piece.refresh_from_db()
+    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
     return Response(
         _serialize_piece_detail(piece, request), status=status.HTTP_201_CREATED
     )
@@ -250,7 +279,7 @@ def piece_states(request: Request, piece_id: str) -> Response:
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def piece_current_state_detail(request: Request, piece_id: str) -> Response:
-    piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
+    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
     current = piece.current_state
     if current is None:
         return Response(
@@ -276,7 +305,7 @@ def piece_current_state(request: Request, piece_id: str) -> Response:
     serializer = PieceStateUpdateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     serializer.update(current, serializer.validated_data)
-    piece.refresh_from_db()
+    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
     return Response(_serialize_piece_detail(piece, request))
 
 
@@ -311,10 +340,10 @@ def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response
                 status=status.HTTP_403_FORBIDDEN,
             )
         ps.delete()
-        piece.refresh_from_db()
+        piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
         return Response(_serialize_piece_detail(piece, request))
     serializer = PieceStateUpdateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     serializer.update(ps, serializer.validated_data)
-    piece.refresh_from_db()
+    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
     return Response(_serialize_piece_detail(piece, request))

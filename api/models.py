@@ -1,4 +1,6 @@
 import uuid
+from datetime import datetime
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 from django.apps import apps
@@ -57,6 +59,15 @@ from .workflow import (
 from .workflow import (
     get_state_ref_fields as get_state_ref_fields,
 )
+
+
+@lru_cache(maxsize=None)
+def _piece_state_global_ref_related_name(global_name: str) -> str:
+    config = get_global_config(global_name)
+    ref_model = apps.get_model("api", f"PieceState{config['model']}Ref")
+    related_name = ref_model._meta.get_field("piece_state").remote_field.related_name
+    assert related_name is not None
+    return related_name
 
 
 class AllowedEmail(models.Model):
@@ -242,8 +253,26 @@ class Piece(models.Model):
     class Meta:
         ordering = ["-fields_last_modified"]
 
+    def _prefetched_states(self) -> list["PieceState"] | None:
+        """Return prefetched states when the relation is already cached."""
+        states = getattr(self, "_prefetched_objects_cache", {}).get("states")
+        if states is None:
+            return None
+        return list(states)
+
+    @staticmethod
+    def _state_sort_key(state: "PieceState") -> tuple[bool, int, datetime]:
+        order = state.order if state.order is not None else -1
+        return (state.order is not None, order, state.created)
+
     @property
     def current_state(self) -> "PieceState | None":
+        prefetched_states = self._prefetched_states()
+        if prefetched_states is not None:
+            if not prefetched_states:
+                return None
+            return max(prefetched_states, key=self._state_sort_key)
+
         from django.db.models import F
 
         return self.states.order_by(
@@ -307,6 +336,20 @@ class PieceState(models.Model):
     @images.setter
     def images(self, value: list[dict]) -> None:
         self._pending_images = value
+
+    def _prefetched_global_ref(self, field_name: str) -> Any | None:
+        global_ref_map = get_global_ref_fields_for_state(self.state)
+        global_name = global_ref_map.get(field_name)
+        if global_name is None:
+            return None
+        related_name = _piece_state_global_ref_related_name(global_name)
+        refs = getattr(self, "_prefetched_objects_cache", {}).get(related_name)
+        if refs is None:
+            return None
+        for ref_row in refs:
+            if ref_row.field_name == field_name:
+                return getattr(ref_row, global_name)
+        return None
 
     def save(self, *args, allow_sealed_edit: bool = False, **kwargs):
         """
@@ -398,6 +441,9 @@ class PieceState(models.Model):
         # Not in custom_fields or calculated. Check junction tables for global refs.
         global_ref_map = get_global_ref_fields_for_state(self.state)
         if field_name in global_ref_map:
+            prefetched_global_ref = self._prefetched_global_ref(field_name)
+            if prefetched_global_ref is not None:
+                return prefetched_global_ref
             global_name = global_ref_map[field_name]
             config = get_global_config(global_name)
             ref_model = apps.get_model("api", f"PieceState{config['model']}Ref")

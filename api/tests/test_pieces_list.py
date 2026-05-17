@@ -1,6 +1,8 @@
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
-from api.models import ENTRY_STATE, Piece, PieceState, Tag
+from api.models import ENTRY_STATE, Location, Piece, PieceState, Tag
 
 # ---------------------------------------------------------------------------
 # GET /api/pieces/
@@ -9,6 +11,31 @@ from api.models import ENTRY_STATE, Piece, PieceState, Tag
 
 @pytest.mark.django_db
 class TestPiecesList:
+    def test_list_uses_a_small_number_of_queries(self, client, user):
+        location = Location.objects.create(user=user, name="Bench")
+        pieces = []
+        for i in range(3):
+            pieces.append(
+                Piece.objects.create(
+                    user=user,
+                    name=f"Piece {i}",
+                    thumbnail={
+                        "url": f"https://example.com/thumb-{i}.jpg",
+                        "cloudinary_public_id": None,
+                        "cloud_name": None,
+                    },
+                    current_location=location,
+                )
+            )
+        for piece in pieces:
+            PieceState.objects.create(piece=piece, state=ENTRY_STATE)
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = client.get("/api/pieces/")
+
+        assert response.status_code == 200
+        assert len(ctx) <= 5
+
     def test_empty(self, client):
         response = client.get("/api/pieces/")
         assert response.status_code == 200
