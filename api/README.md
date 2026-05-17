@@ -107,7 +107,7 @@ Some global types (currently **Clay Bodies** and **Glaze Types**) support a shar
 
 ### Getting to the admin
 
-1. Start the app with `gz_start`, or if you only need the backend, run `uvicorn backend.asgi:application --port 8080 --reload`.
+1. Start the app with `gz_start`.
 2. Go to `http://localhost:8080/admin/` and sign in with a Django superuser account.
    - To create a superuser: `gz_manage createsuperuser` (or `python manage.py createsuperuser`).
 

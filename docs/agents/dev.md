@@ -10,9 +10,6 @@ pip install -r requirements.txt
 python manage.py migrate
 uvicorn backend.asgi:application --port 8080 --reload  # or any free port; gz_start picks one automatically
 
-# Web (separate terminal)
-gz_web
-
 # Remote ML Offload (Optional, for 1GB RAM servers)
 # 1. Create a secret 'piece-image-crop-secret' with AUTH_TOKEN=xxx
 pip install modal
@@ -23,8 +20,7 @@ modal deploy tools/piece_image_crop_service.py
 Set `REMOTE_REMBG_URL` and `MODAL_AUTH_TOKEN` in your `.env` to enable offloading.
 
 See [`env.sh`](../../env.sh) for shell helpers (`gz_setup`, `gz_start`, etc.) that wrap these commands.
-In a new environment, always run `source env.sh` and `gz_setup` before trying to do anything else.
-`gz_setup` reuses the main checkout's `.venv` and `web/node_modules` by default when invoked from a repo-local worktree. Use `gz_setup --isolated` (or `GLAZE_SETUP_ISOLATED=1 gz_setup`) when a branch needs its own dependency environment, such as when changing Python requirements or Node packages.
+In a new environment, run `source env.sh` once so the helpers are available. After that, `gz_start` will start the dev stack directly. Use `gz_setup` only when you want to repair a broken local environment or explicitly create isolated worktree-local dependencies with `--isolated`.
 
 ---
 
@@ -34,7 +30,7 @@ Two scripts handle environment bootstrap:
 
 | Script                               | Purpose                                                                                                                                                                        |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`env.sh`](../../env.sh)             | Interactive shells: sources `~/.bashrc`, delegates to `env-agent.sh`, then defines all `gz_*` helpers. Used as `bash --rcfile` by the VS Code/Cursor terminal profile.         |
+| [`env.sh`](../../env.sh)             | Interactive Bash shells: sources `~/.bashrc`, delegates to `env-agent.sh`, then defines all `gz_*` helpers. Used as `bash --rcfile` by the VS Code/Cursor terminal profile. |
 | [`env-agent.sh`](../../env-agent.sh) | Lightweight, silent bootstrap for non-interactive shells: activates `.venv` if present, loads `.env.local` vars, exports `BASH_ENV` so child processes inherit the same setup. |
 
 `env.sh` sources `env-agent.sh` — the venv activation and env-var loading logic live in exactly one place.
@@ -43,7 +39,7 @@ For CI/CD workflow details, deployment variables, and GitHub Actions behavior, s
 
 ### VS Code / Cursor integrated terminal
 
-[`.vscode/settings.json`](../../.vscode/settings.json) configures a `glaze` terminal profile that runs `bash --rcfile env.sh`. New terminals automatically get the full interactive environment (venv active, `gz_*` functions, `.env.local` loaded) without any manual `source` step.
+[`.vscode/settings.json`](../../.vscode/settings.json) configures `glaze` terminal profiles for Linux and macOS that run `bash --rcfile env.sh`. New terminals automatically get the full interactive environment (venv active, `gz_*` functions, `.env.local` loaded) without any manual `source` step.
 
 `python.terminal.activateEnvironment` is disabled so VS Code does not double-activate the venv on top of what `env.sh` already did.
 
@@ -68,9 +64,7 @@ Keep repo-local agent configuration out of `.codex`, which may be reserved by th
 - Codex-specific local config: `.agent-config/codex/`
 - Shared agent assets and instructions: `.agents/`
 
-This keeps worktrees close to the repo-local bootstrap, makes cleanup easier, and avoids temp-directory permission/path surprises. `env-agent.sh` resolves the active git worktree root from the current working directory, then falls back to the main checkout's `.env.local` files and `.venv` when the worktree does not have its own copies yet. Since `gz_start` selects an environment based on the resolved `.env` location, agents should symlink the untracked `$GLAZE_ROOT/.env.local` into the newly created worktree to ensure the worktree's code is being validate instead of the root repo's.
-
-When you do want a truly separate dependency environment inside the worktree, run `gz_setup --isolated` to replace any shared `.venv` or `web/node_modules` symlinks with local worktree-specific installs.
+This keeps worktrees close to the repo-local bootstrap, makes cleanup easier, and avoids temp-directory permission/path surprises. `env-agent.sh` resolves the active git worktree root from the current working directory, then falls back to the main checkout's `.env.local` files and `.venv` when the worktree does not have its own copies yet.
 
 ### One terminal per worktree
 
@@ -92,9 +86,7 @@ ss -tlnp | grep -E 'node|python'    # all bound ports with owning process
 
 ### Cleanup on terminal close
 
-`gz_start` registers a shell `EXIT` trap that calls `gz_stop` automatically when the terminal tab closes. This is best-effort: it fires on normal exits (Ctrl-D, typing `exit`, clicking the X on the tab) but not on SIGKILL. In practice this covers the PR-review workflow — you open a tab, start servers, test, close the tab.
-
-The trap is intentionally registered only inside `gz_start`, so terminals that never called `gz_start` are unaffected. There is no VS Code-native terminal-close hook; the shell `EXIT` trap is the right mechanism here.
+`gz_start` starts the backend and web servers in the background. Use `gz_stop` to stop them when you are done.
 
 ### Navigating to an agent's worktree
 
@@ -119,7 +111,7 @@ gz_cd issue-456     # same for a different branch
 1. `gz_worktrees` — identify the target path (run from any terminal)
 2. Open a new terminal tab (Ctrl+Shift+\` in VS Code)
 3. `gz_cd <pattern>` in the new tab — takes you to the right worktree and sets up the environment
-4. `gz_start` — starts servers, opens browser, registers the EXIT cleanup
+4. `gz_start` — starts servers and opens the browser
 
 ### Multi-agent workflow
 
@@ -129,15 +121,15 @@ When multiple agents (Claude, Codex, etc.) are working on separate PRs in parall
 
 2. **Agents must announce their worktree path** at the start of every session, clearly and as a copy-friendly absolute path. This is the contract that makes `gz_worktrees` and `gz_cd` useful — a path buried in scrollback is not sufficient. The announcement should appear before any code changes so it is visible when you open the conversation.
 
-3. **Open a dedicated terminal tab per active worktree** before running `gz_start`. This matches the one-terminal-per-worktree rule and makes `gz_stop` and the EXIT trap reliable.
+3. **Open a dedicated terminal tab per active worktree** before running `gz_start`. This matches the one-terminal-per-worktree rule and keeps the server lifecycle scoped to the current worktree.
 
 4. **Ports auto-select.** No manual port coordination is needed. `gz_start` in worktree A and `gz_start` in worktree B will land on different ports automatically.
 
 5. **`gz_open` opens the browser to the right URL** for whichever worktree's terminal you run it from. After `gz_start` in a new worktree, the browser tab goes to that worktree's Vite port, proxying to that worktree's Django instance.
 
-6. **Cleanup is per-worktree.** `gz_stop` in worktree A does not affect worktree B's servers. Closing the terminal tab triggers best-effort cleanup via the EXIT trap. When you are done reviewing a PR, either `gz_stop` explicitly or just close the tab.
+6. **Cleanup is per-worktree.** `gz_stop` in worktree A does not affect worktree B's servers. When you are done reviewing a PR, run `gz_stop` explicitly in that worktree's tab.
 
-7. **Agent-initiated `gz_start` is unnecessary.** `gz_start` is a single shell command; the lifecycle problem (who stops the servers?) is already solved by the EXIT trap on terminal close. Just run `gz_start` manually in the worktree's tab.
+7. **Agent-initiated `gz_start` is unnecessary.** `gz_start` is a single shell command; just run it manually in the worktree's tab and use `gz_stop` when finished.
 
 ### Explicit `/do #<issue>` agent flow
 

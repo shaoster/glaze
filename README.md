@@ -62,7 +62,7 @@ This section is for folks who just want to fire up the whole stack quickly and s
 ```bash
 source env.sh
 gz_setup    # first-time only: creates venv, installs deps, runs migrations
-gz_start    # starts backend (port 8080) and web (Vite port), press Ctrl+C to stop
+gz_start    # starts backend + web via the Bazel-run launcher
 ```
 
 ## Development helpers (`env.sh`)
@@ -75,7 +75,7 @@ Source the file to load all shortcuts into your shell:
 source env.sh
 ```
 
-**VS Code / Cursor:** the repo ships a terminal profile in [`.vscode/settings.json`](.vscode/settings.json) that automatically sources `env.sh` in every new integrated terminal — no manual step needed. The venv is activated and `gz_*` helpers are available from the moment the terminal opens.
+**VS Code / Cursor:** the repo ships terminal profiles in [`.vscode/settings.json`](.vscode/settings.json) for Linux and macOS that automatically source `env.sh` in every new integrated terminal. The venv is activated and `gz_*` helpers are available from the moment the terminal opens.
 
 **AI coding agents (Claude Code, Codex, Cursor agent):** a companion script [`env-agent.sh`](env-agent.sh) provides a silent, lightweight bootstrap (venv activation + `.env.local` loading) for non-interactive shells. Claude Code picks it up via `.claude/settings.json`; Codex and other agents inherit it through `BASH_ENV` when launched from an `env.sh`-sourced terminal. Prefer repo-local worktrees under `.agent-worktrees/...` instead of `/tmp`; the bootstrap detects the active git worktree root automatically and falls back to the main checkout's `.env.local` and `.venv` when the worktree does not have its own yet. `gz_setup` reuses the shared `.venv` and `web/node_modules` by default, and `gz_setup --isolated` creates worktree-local dependency installs when a branch is changing Python or Node packages. Keep repo-local Codex-specific config in `.agent-config/codex/` rather than `.codex`, which may be reserved by the local Codex installation. See [`docs/agents/dev.md`](docs/agents/dev.md) for details.
 
@@ -156,7 +156,7 @@ cp web/.env.example web/.env.local
 
 | Command                  | Description                                                                                         |
 | ------------------------ | --------------------------------------------------------------------------------------------------- |
-| `gz_start`               | Start backend and web, join in the foreground. Ctrl+C stops both. Rotates old logs before starting. |
+| `gz_start`               | Start backend and web via the Bazel-run launcher. Rotates old logs before starting.              |
 | `gz_stop`                | Stop both servers.                                                                                  |
 | `gz_status`              | Show whether backend and web are running.                                                           |
 | `gz_logs [backend\|web]` | Tail logs. Omit argument to tail both.                                                              |

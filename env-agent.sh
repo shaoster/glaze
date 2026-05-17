@@ -91,21 +91,29 @@ _gz_venv_root() {
     _gz_preferred_root_for ".manage.venv/bin/activate"
 }
 
-_gz_find_free_port() {  # _gz_find_free_port [start_port]  — returns first unbound port >= start
-    python3 - "${1:-8080}" <<'EOF'
+_gz_port_is_free() {  # _gz_port_is_free <port>
+    local port="$1"
+    python3 - "$port" <<'EOF'
 import socket, sys
 port = int(sys.argv[1])
-while True:
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
-        s.bind(("", port))
-        s.close()
-        print(port)
-        break
-    except OSError:
-        port += 1
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.settimeout(0.2)
+    raise SystemExit(1 if s.connect_ex(("127.0.0.1", port)) == 0 else 0)
 EOF
+}
+
+_gz_find_free_port() {  # _gz_find_free_port [start_port]  — returns first unbound port >= start
+    local port="${1:-8080}"
+    [[ "$port" =~ ^[0-9]+$ ]] || return 1
+    (( port >= 0 && port <= 65535 )) || return 1
+    while [[ "$port" -le 65535 ]]; do
+        if _gz_port_is_free "$port"; then
+            printf '%s\n' "$port"
+            return 0
+        fi
+        (( port++ ))
+    done
+    return 1
 }
 
 _gz_is_running() {   # _gz_is_running <name>
@@ -123,7 +131,7 @@ _gz_wait_for_health() {
     local url="http://127.0.0.1:$port/api/health/ready/"
     local i=0
     echo -n "Waiting for backend to be ready..."
-    until curl -s "$url" | grep -q '"status": "ready"' 2>/dev/null; do
+    until curl -s "$url" | python3 -c 'import json, sys; print("ready" if json.load(sys.stdin).get("status") == "ready" else "not_ready")' 2>/dev/null | grep -q '^ready$'; do
         echo -n "."
         sleep 0.5
         (( i++ ))
@@ -525,39 +533,6 @@ gz_deploy() {
 # Servers
 # ---------------------------------------------------------------------------
 
-_gz_backend() {
-    local venv_root env_root port web_port app_origin
-    venv_root="$(_gz_venv_root)"
-    env_root="$(_gz_preferred_root_for ".env.local")"
-    port=$(_gz_find_free_port 8080)
-    web_port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || echo 5173)
-    app_origin="http://localhost:$web_port"
-    echo "$port" > "$_GLAZE_PIDS/backend.port"
-    _gz_start backend "$_GLAZE_LOGS/backend.log" \
-        bash -c "source '$venv_root/.manage.venv/bin/activate' && cd '$GLAZE_ROOT' && set -a && [ -f '$env_root/.env.local' ] && source '$env_root/.env.local'; set +a && export APP_ORIGIN='$app_origin' && python manage.py load_public_library --skip-if-missing && uvicorn backend.asgi:application --host 127.0.0.1 --port $port --reload"
-}
-
-_gz_web() {
-    local backend_port port
-    backend_port=$(cat "$_GLAZE_PIDS/backend.port" 2>/dev/null || echo 8080)
-    port=$(cat "$_GLAZE_PIDS/web.port" 2>/dev/null || _gz_find_free_port 5173)
-    echo "$port" > "$_GLAZE_PIDS/web.port"
-    BACKEND_PORT="$backend_port" _gz_start web "$_GLAZE_LOGS/web.log" \
-        bash -c "cd '$GLAZE_ROOT' && BACKEND_PORT=$backend_port ${GLAZE_AGENT:+rtk }bazel run //web:dev_server -- --port $port --strictPort"
-
-    # Wait for Vite to print the chosen port (up to 10 s)
-    local i=0
-    until grep -q 'Local:' "$_GLAZE_LOGS/web.log" 2>/dev/null; do
-        sleep 0.2
-        (( i++ ))
-        (( i >= 50 )) && break
-    done
-    port=$(grep 'Local:' "$_GLAZE_LOGS/web.log" | tail -1 | grep -oE ':[0-9]+/' | tr -d ':/')
-    [[ -n "$port" ]] && echo "$port" > "$_GLAZE_PIDS/web.port"
-    [[ -n "$port" ]] && echo "web: http://localhost:$port"
-    export APP_ORIGIN="http://localhost:${port:-5173}"
-}
-
 gz_story() {
     local port=${1:-6006}
     echo "Starting Storybook dev server on http://localhost:$port ..."
@@ -581,14 +556,11 @@ gz_open() {
 }
 
 gz_start() {
-    _gz_rotate_log backend
-    _gz_find_free_port 5173 > "$_GLAZE_PIDS/web.port"
-    _gz_backend
-    _gz_rotate_log web
-    _gz_web
-    _gz_wait_for_health "$(cat "$_GLAZE_PIDS/backend.port")"
-    gz_open
-    echo "Servers running — use 'gz_stop' to stop, 'gz_logs' to tail output."
+    (
+        cd "$GLAZE_ROOT"
+        ${GLAZE_AGENT:+rtk }bazel run //tools:gz_start_launcher
+    ) || return $?
+
     # Best-effort cleanup when this terminal tab closes normally (Ctrl-D / exit / tab X).
     # Does not fire on SIGKILL. Intentionally registered only after gz_start so that
     # terminals that never started servers are unaffected.
@@ -635,7 +607,7 @@ _gz_worktrees_purge() {
             wt_branch="${line#branch refs/heads/}"
         elif [[ -z "$line" && -n "$wt_path" ]]; then
             # Only target agent-managed worktrees
-            if [[ "$wt_path" =~ \.agent-worktrees/|\.claude/worktrees/ ]]; then
+            if [[ "$wt_path" =~ \.agent-worktrees/ || "$wt_path" =~ \.claude/worktrees/ ]]; then
                 local skip=0
                 echo "Checking $wt_branch ($wt_path)..."
 
@@ -895,7 +867,8 @@ _gz_cd_complete() {
     # shellcheck disable=SC2207
     COMPREPLY=( $(compgen -W "$candidates" -- "$cur") )
 }
-complete -F _gz_cd_complete gz_cd
+# complete -F is bash-only; skip in zsh to avoid spurious errors
+[[ -n "${BASH_VERSION:-}" ]] && complete -F _gz_cd_complete gz_cd
 
 _gz_get_all_sources() {
     local profile="$PWD/bazel_query_profile.json"
