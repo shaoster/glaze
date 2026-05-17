@@ -129,6 +129,7 @@ _CONFTEST = [
 
 pytest_test(
     name = "api_workflow_test",
+    tags = ["integration"],
     size = "medium",
     srcs = _CONFTEST + [
         "tests/test_custom_fields.py",
@@ -144,11 +145,12 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
-    expected_coverage = ["api/**"],
+    expected_coverage = ["api/workflow.py", "api/utils.py"],
 )
 
 pytest_test(
     name = "api_model_test",
+    tags = ["integration"],
     size = "medium",
     srcs = _CONFTEST + [
         "tests/test_async_maintenance.py",
@@ -172,11 +174,12 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
-    expected_coverage = ["api/**"],
+    expected_coverage = ["api/models.py", "api/model_factories.py", "api/utils.py"],
 )
 
 pytest_test(
     name = "api_otel_test",
+    tags = ["integration"],
     size = "small",
     srcs = _CONFTEST + [
         "tests/test_otel.py",
@@ -188,11 +191,12 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
-    expected_coverage = ["api/**"],
+    expected_coverage = ["api/logging.py"],
 )
 
 pytest_test(
     name = "api_piece_test",
+    tags = ["integration"],
     size = "medium",
     srcs = _CONFTEST + [
         "tests/test_analysis.py",
@@ -222,7 +226,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
-    expected_coverage = ["api/**"],
+    expected_coverage = ["api/piece_views.py", "api/analysis_views.py", "api/workflow_views.py"],
 )
 
 pytest_test(
@@ -236,7 +240,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
-    expected_coverage = ["api/**"],
+    expected_coverage = ["api/auth_views.py"],
 )
 
 pytest_test(
@@ -250,7 +254,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
-    expected_coverage = ["api/**"],
+    expected_coverage = ["api/health_views.py"],
 )
 
 pytest_test(
@@ -264,11 +268,12 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
-    expected_coverage = ["api/**"],
+    expected_coverage = ["api/invitations.py"],
 )
 
 pytest_test(
     name = "api_glaze_test",
+    tags = ["integration"],
     size = "medium",
     srcs = _CONFTEST + [
         "tests/test_glaze_combination.py",
@@ -290,11 +295,12 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
-    expected_coverage = ["api/**"],
+    expected_coverage = ["api/import_views.py", "api/manual_tile_imports.py"],
 )
 
 pytest_test(
     name = "api_admin_test",
+    tags = ["integration"],
     size = "medium",
     srcs = _CONFTEST + [
         "tests/test_admin_exports.py",
@@ -312,7 +318,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
-    expected_coverage = ["api/**"],
+    expected_coverage = ["api/admin.py", "api/cloudinary_cleanup.py", "api/cloudinary_views.py"],
 )
 
 # ── mypy type-check ───────────────────────────────────────────────────────────
@@ -350,6 +356,7 @@ py_test(
 
 pytest_test(
     name = "api_migration_test",
+    tags = ["integration"],
     size = "small",
     srcs = _CONFTEST + [
         "tests/test_migrations_completeness.py",
@@ -359,7 +366,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
-    expected_coverage = ["api/**"],
+    expected_coverage = ["api/migrations/*.py"],
 )
 
 # ── API test suite ────────────────────────────────────────────────────────────

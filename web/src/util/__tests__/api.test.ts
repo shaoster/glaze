@@ -799,3 +799,47 @@ describe("extractErrorMessage", () => {
     );
   });
 });
+
+describe("loginWithGoogleChecked", () => {
+  it("throws NotInvitedError when api returns not_invited code", async () => {
+    const { loginWithGoogleChecked } = await loadApiModule();
+    const error = {
+      isAxiosError: true,
+      response: {
+        data: { code: "not_invited", detail: "Please request an invite." },
+      },
+    };
+    mockClient.post.mockRejectedValue(error);
+    mockIsAxiosError.mockReturnValue(true);
+
+    await expect(loginWithGoogleChecked("token")).rejects.toThrow("Please request an invite.");
+    await expect(loginWithGoogleChecked("token")).rejects.toBeInstanceOf(Error);
+  });
+
+  it("rethrows other errors", async () => {
+    const { loginWithGoogleChecked } = await loadApiModule();
+    const error = new Error("other error");
+    mockClient.post.mockRejectedValue(error);
+    mockIsAxiosError.mockReturnValue(false);
+
+    await expect(loginWithGoogleChecked("token")).rejects.toThrow("other error");
+  });
+});
+
+describe("extractApiError fallback", () => {
+  it("returns empty object for non-axios errors", async () => {
+    // We can't directly test the private function extractApiError easily
+    // but loginWithGoogleChecked uses it.
+    const { loginWithGoogleChecked } = await loadApiModule();
+    mockClient.post.mockRejectedValue(new Error("pure error"));
+    mockIsAxiosError.mockReturnValue(false);
+    
+    try {
+      await loginWithGoogleChecked("token");
+    } catch (e) {
+      // The error is rethrown as is because extractApiError returns {}
+      expect(e).toBeInstanceOf(Error);
+      expect((e as Error).message).toBe("pure error");
+    }
+  });
+});

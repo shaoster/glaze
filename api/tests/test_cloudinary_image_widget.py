@@ -5,9 +5,11 @@ import pytest
 
 from api.admin import (
     CloudinaryImageWidget,
+    _admin_image_preview,
     _cloudinary_lightbox_url,
     _cloudinary_preview_url,
     _cloudinary_public_id,
+    _image_cloud_name,
     _image_url,
 )
 
@@ -130,6 +132,14 @@ class TestCloudinaryPreviewUrl:
         monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
         url = "https://example.com/img.jpg"
         assert _cloudinary_preview_url(url) == url
+
+    def test_falls_back_to_url_parse_if_dict_missing_public_id(self, monkeypatch):
+        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
+        # Dict has URL but no explicit public_id
+        img = {"url": HEIC_URL}
+        result = _cloudinary_preview_url(img)
+        assert HEIC_PUBLIC_ID.split("/")[-1] in result
+        assert result.endswith(".jpg")
 
 
 class TestCloudinaryLightboxUrl:
@@ -322,3 +332,46 @@ class TestCloudinaryImageWidgetJavascript:
         assert "cloudinary_public_id: info.public_id || null" in script
         assert "url: info.secure_url || info.url || ''" in script
         assert "inp.value = rawUrl" not in script
+
+
+class TestImageCloudName:
+    def test_returns_env_default_for_plain_string(self, monkeypatch):
+        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "env-cloud")
+        assert _image_cloud_name("https://example.com/img.jpg") == "env-cloud"
+
+    def test_extracts_from_json_string(self, monkeypatch):
+        monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
+        val = '{"url": "...", "cloud_name": "json-cloud"}'
+        assert _image_cloud_name(val) == "json-cloud"
+
+    def test_extracts_from_dict(self, monkeypatch):
+        monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
+        assert _image_cloud_name({"cloud_name": "dict-cloud"}) == "dict-cloud"
+
+    def test_env_fallback_for_dict_without_cloud_name(self, monkeypatch):
+        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "env-fallback")
+        assert _image_cloud_name({"url": "..."}) == "env-fallback"
+
+    def test_returns_empty_string_if_no_env_and_no_data(self, monkeypatch):
+        monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
+        assert _image_cloud_name(None) == ""
+
+
+class TestAdminImagePreview:
+    def test_returns_dash_for_none(self):
+        assert _admin_image_preview(None) == "—"
+
+    def test_returns_dash_if_no_preview_url(self, monkeypatch):
+        monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
+        # Without cloud name, _cloudinary_preview_url returns original URL if it's a string,
+        # but if we pass something that doesn't result in a preview...
+        # Wait, if it returns original URL, it's NOT empty.
+        assert _admin_image_preview("") == "—"
+
+    def test_renders_img_tag_for_valid_image(self, monkeypatch):
+        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
+        html = _admin_image_preview(HEIC_IMAGE_DICT)
+        assert '<img src="' in html
+        assert 'class="cloudinary-preview"' in html
+        assert 'data-full-url="' in html
+        assert "demo-cloud" in html
