@@ -9,7 +9,7 @@ from typing import Callable
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.db.models import DateTimeField, OuterRef, Q, Subquery
+from django.db.models import DateTimeField, OuterRef, Prefetch, Q, Subquery
 from django.db.models.functions import Coalesce, Greatest
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
@@ -55,7 +55,9 @@ from .serializers import (
 from .utils import bootstrap_dev_user
 from .workflow import (
     get_glaze_image_qualifying_states,
+    get_global_config,
     get_global_model_and_field,
+    get_state_global_ref_map,
     is_private_global,
     is_public_global,
 )
@@ -94,7 +96,25 @@ def _piece_read_queryset(request: Request):
 
 
 def _piece_detail_queryset(request: Request):
-    return _piece_read_queryset(request).prefetch_related("states__image_links__image")
+    return _piece_read_queryset(request).prefetch_related(
+        "states__image_links__image", *_piece_state_ref_prefetches()
+    )
+
+
+def _piece_state_ref_prefetches() -> list[Prefetch]:
+    prefetches: list[Prefetch] = []
+    for global_name in get_state_global_ref_map():
+        config = get_global_config(global_name)
+        ref_model = apps.get_model("api", f"PieceState{config['model']}Ref")
+        related_name = ref_model._meta.get_field("piece_state").remote_field.related_name
+        assert related_name is not None
+        prefetches.append(
+            Prefetch(
+                f"states__{related_name}",
+                queryset=ref_model.objects.select_related(global_name),
+            )
+        )
+    return prefetches
 
 
 def _serialize_piece_detail(piece: Piece, request: Request):
