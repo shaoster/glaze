@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# Deploy the latest image to a droplet running Docker Compose.
+# Deploy the image for a specific commit SHA to a droplet running Docker Compose.
 #
-# Usage: ./deploy.sh user@host [commit-sha]
+# Usage: ./deploy.sh user@host commit-sha
 #
-# commit-sha: the SHA to sync docker-compose.yml from. When omitted, the
-#             script reads org.opencontainers.image.revision from the image
-#             label (CI path). gz_deploy passes it explicitly (local path).
+# commit-sha: required commit SHA for the published release/image tag.
+#             gz_deploy passes it explicitly.
 #
 # Prerequisites on the droplet:
 #   - Docker + Docker Compose plugin installed
@@ -19,8 +18,8 @@
 # always in sync without having to update this script when new files are added.
 set -euo pipefail
 
-HOST=${1:?Usage: ./deploy.sh user@host [commit-sha]}
-KNOWN_SHA=${2:-}
+HOST=${1:?Usage: ./deploy.sh user@host commit-sha}
+KNOWN_SHA=${2:?Usage: ./deploy.sh user@host commit-sha}
 
 echo "--- deploying application ---"
 ssh "$HOST" bash <<REMOTE
@@ -32,48 +31,35 @@ if [[ ! -d ~/glaze/.git ]]; then
 fi
 cd ~/glaze
 
-echo "--- pulling latest images ---"
-docker compose pull
-
-echo "--- verifying image SHA ---"
-IMAGE_SHA=\$(docker inspect ghcr.io/shaoster/glaze:latest \
-    --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)
-
 echo "--- syncing repo to image commit ---"
 SHA="${KNOWN_SHA}"
-if [[ -z "\$SHA" ]]; then
-    SHA="\$IMAGE_SHA"
-fi
-if [[ -z "\$SHA" ]]; then
-    echo "WARNING: commit SHA unknown, repo not updated"
-else
-    if [[ -n "\$IMAGE_SHA" && "\$IMAGE_SHA" != "\$SHA" ]]; then
-        echo "ERROR: pulled image was built from \$IMAGE_SHA but expected \$SHA"
-        echo "The registry may not have the image for this commit yet."
-        exit 1
-    fi
-    echo "Image built from commit \$SHA"
-    git fetch --quiet origin
-    DIRTY=\$(git status --short)
-    if [[ -n "\$DIRTY" ]]; then
-        echo "WARNING: discarding local modifications before checkout:"
-        echo "\$DIRTY"
-    fi
-    git restore --quiet .
-    git checkout --quiet "\$SHA"
-fi
+echo "Image built from commit \$SHA"
+git fetch --quiet origin
+git restore --quiet .
+git checkout --quiet "\$SHA"
+
+echo "--- rendering release compose override ---"
+cat > docker-compose.release.yml <<EOF
+services:
+  web:
+    image: ghcr.io/shaoster/glaze:${SHA}
+EOF
+
+echo "--- pulling release image ---"
+docker compose -f docker-compose.yml -f docker-compose.release.yml pull
 
 echo "--- restarting services ---"
 # --force-recreate ensures containers always pick up .env changes even when
 # the image and compose spec are unchanged (e.g. secret rotation).
-docker compose up -d --force-recreate
+docker compose -f docker-compose.yml -f docker-compose.release.yml up -d --force-recreate
 
 echo "--- pruning ---"
 docker container prune -f
 docker image prune -f
 
 echo "--- deploy complete ---"
-docker compose ps
+docker compose -f docker-compose.yml -f docker-compose.release.yml ps
+rm -f docker-compose.release.yml
 REMOTE
 
 # Nginx snippets are synced after a successful app deploy so a mid-deploy
