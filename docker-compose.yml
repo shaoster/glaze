@@ -24,7 +24,7 @@ services:
     image: ghcr.io/shaoster/glaze:latest
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       PRODUCTION: "true"
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
