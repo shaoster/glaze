@@ -31,6 +31,47 @@ jobs:
         with:
           ref: ${{ env.DEPLOY_SHA }}
 
+      - name: Verify deploy inputs
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
+          APP_ORIGIN: ${{ vars.APP_ORIGIN }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+          CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          CLOUDINARY_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_UPLOAD_FOLDER }}
+          CLOUDINARY_UPLOAD_PRESET: ${{ vars.CLOUDINARY_UPLOAD_PRESET }}
+          CLOUDINARY_PUBLIC_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_PUBLIC_UPLOAD_FOLDER }}
+          EMAIL_HOST: ${{ vars.EMAIL_HOST }}
+          EMAIL_PORT: ${{ vars.EMAIL_PORT }}
+          EMAIL_HOST_USER: ${{ vars.EMAIL_HOST_USER }}
+          EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+          EMAIL_USE_SSL: ${{ vars.EMAIL_USE_SSL }}
+          DEFAULT_FROM_EMAIL: ${{ vars.DEFAULT_FROM_EMAIL }}
+          INVITE_LINK_BASE_URL: ${{ vars.INVITE_LINK_BASE_URL }}
+          LOGTAIL_SOURCE_TOKEN: ${{ vars.LOGTAIL_SOURCE_TOKEN }}
+          REMOTE_REMBG_URL: ${{ vars.REMOTE_REMBG_URL }}
+          OTEL_ENABLED: ${{ vars.OTEL_ENABLED }}
+          GRAFANA_CLOUD_OTLP_TOKEN: ${{ secrets.GRAFANA_CLOUD_OTLP_TOKEN }}
+          MODAL_AUTH_TOKEN: ${{ secrets.MODAL_AUTH_TOKEN }}
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          required="DEPLOY_HOST SECRET_KEY POSTGRES_PASSWORD ALLOWED_HOST APP_ORIGIN GOOGLE_OAUTH_CLIENT_ID VITE_GOOGLE_CLIENT_ID CLOUDINARY_CLOUD_NAME CLOUDINARY_API_KEY CLOUDINARY_API_SECRET CLOUDINARY_UPLOAD_FOLDER CLOUDINARY_UPLOAD_PRESET CLOUDINARY_PUBLIC_UPLOAD_FOLDER EMAIL_HOST EMAIL_PORT EMAIL_HOST_USER EMAIL_HOST_PASSWORD EMAIL_USE_SSL DEFAULT_FROM_EMAIL INVITE_LINK_BASE_URL LOGTAIL_SOURCE_TOKEN REMOTE_REMBG_URL OTEL_ENABLED GRAFANA_CLOUD_OTLP_TOKEN MODAL_AUTH_TOKEN MODAL_TOKEN_ID MODAL_TOKEN_SECRET"
+          missing=0
+          for name in $required; do
+            if [ -z "${!name:-}" ]; then
+              echo "$name is required for deploy." >&2
+              missing=1
+            fi
+          done
+
+          exit "$missing"
+
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
@@ -42,19 +83,27 @@ jobs:
         env:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
-          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
-          MODAL_AUTH_TOKEN: ${{ secrets.MODAL_AUTH_TOKEN }}
-          GRAFANA_CLOUD_OTLP_TOKEN: ${{ secrets.GRAFANA_CLOUD_OTLP_TOKEN }}
           ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
           APP_ORIGIN: ${{ vars.APP_ORIGIN }}
           GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
           VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
           CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
           CLOUDINARY_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_UPLOAD_FOLDER }}
           CLOUDINARY_UPLOAD_PRESET: ${{ vars.CLOUDINARY_UPLOAD_PRESET }}
           CLOUDINARY_PUBLIC_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_PUBLIC_UPLOAD_FOLDER }}
+          EMAIL_HOST: ${{ vars.EMAIL_HOST }}
+          EMAIL_PORT: ${{ vars.EMAIL_PORT }}
+          EMAIL_HOST_USER: ${{ vars.EMAIL_HOST_USER }}
+          EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+          EMAIL_USE_SSL: ${{ vars.EMAIL_USE_SSL }}
+          DEFAULT_FROM_EMAIL: ${{ vars.DEFAULT_FROM_EMAIL }}
+          INVITE_LINK_BASE_URL: ${{ vars.INVITE_LINK_BASE_URL }}
+          LOGTAIL_SOURCE_TOKEN: ${{ vars.LOGTAIL_SOURCE_TOKEN }}
           REMOTE_REMBG_URL: ${{ vars.REMOTE_REMBG_URL }}
+          MODAL_AUTH_TOKEN: ${{ secrets.MODAL_AUTH_TOKEN }}
+          GRAFANA_CLOUD_OTLP_TOKEN: ${{ secrets.GRAFANA_CLOUD_OTLP_TOKEN }}
           OTEL_ENABLED: ${{ vars.OTEL_ENABLED }}
         run: |
           envsubst < .env.production.template > /tmp/.env
