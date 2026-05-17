@@ -200,7 +200,7 @@ jobs:
     # Always push on main merges, even when skip_main skipped the build/test
     # job — the remote cache has the correct image layers from the PR run.
     if: >-
-      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      always() && !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       (needs.image.result == 'success' || needs.image.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
