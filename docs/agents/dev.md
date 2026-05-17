@@ -277,6 +277,7 @@ Key local skills:
 
 | Skill                         | Use                                                                                          |
 | ----------------------------- | -------------------------------------------------------------------------------------------- |
+| `docs-human`                  | Keep human-facing READMEs aligned after structural doc changes.                              |
 | `do-issue-worktree`           | Start a single issue or PR-sized change with `/do #<issue>` and an immediate worktree setup. |
 | `deps`                        | Audit Bazel dependency graphs for the OCI image plus test and lint targets.                  |
 

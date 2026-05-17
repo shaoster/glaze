@@ -25,6 +25,8 @@ Glaze uses domain-specific READMEs to keep documentation focused and maintainabl
 - **`pages/README.md`**: Static published pages (e.g. index generation).
 - **`docs/ci-cd.md`**: CI/CD infrastructure, GitHub Actions workflows (`ci.yml`, `cd.yml`, `static.yml`), and deployment pipelines.
 
+Use `docs-human` whenever the task is to reconcile duplicated docs after a structural change and keep the root README canonical.
+
 ## Workflow
 
 1. **Assess Divergence**: 
