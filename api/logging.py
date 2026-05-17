@@ -1,8 +1,9 @@
 import logging
 from contextlib import contextmanager
-from opentelemetry import trace as otel_trace
 from contextvars import ContextVar
 from typing import Generator
+
+from opentelemetry import trace as otel_trace
 
 # Context variable to hold the current task ID for log correlation.
 # Using contextvars ensures thread-safety when running tasks in a ThreadPoolExecutor.

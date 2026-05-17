@@ -9,6 +9,8 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
+from backend.otel import traced_class
+
 from .model_factories import (
     COMPOSITE_NAME_SEPARATOR as COMPOSITE_NAME_SEPARATOR,
 )
@@ -103,6 +105,7 @@ class AllowedEmail(models.Model):
         return f"{self.email} ({self.status})"
 
 
+@traced_class
 class Image(models.Model):
     """Shared image asset referenced by pieces, states, and global entries."""
 
@@ -219,6 +222,7 @@ _register_globals()
 # ---------------------------------------------------------------------------
 
 
+@traced_class
 class Piece(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
@@ -268,14 +272,6 @@ class Piece(models.Model):
         order = state.order if state.order is not None else -1
         return (state.order is not None, order, state.created)
 
-    @property
-    def current_state(self) -> "PieceState | None":
-        prefetched_states = self._prefetched_states()
-        if prefetched_states is not None:
-            if not prefetched_states:
-                return None
-            return max(prefetched_states, key=self._state_sort_key)
-
     def _prefetched_state(self, state_id: str) -> "PieceState | None | object":
         states = self._prefetched_states()
         if states is None:
@@ -317,6 +313,7 @@ class Piece(models.Model):
         return self.name
 
 
+@traced_class
 class PieceState(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(

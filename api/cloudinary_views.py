@@ -25,6 +25,8 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from backend.otel import traced
+
 from .models import (
     AsyncTask,
     FavoriteGlazeCombination,
@@ -77,6 +79,7 @@ from .workflow import (
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@traced
 def cloudinary_widget_config(request: Request) -> Response:
     """Return Cloudinary config needed to initialize the Upload Widget."""
     cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME")
@@ -116,6 +119,7 @@ def cloudinary_widget_config(request: Request) -> Response:
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@traced
 def cloudinary_widget_sign(request: Request) -> Response:
     """Sign the params_to_sign dict provided by the Cloudinary Upload Widget."""
     api_secret = os.environ.get("CLOUDINARY_API_SECRET")
@@ -212,6 +216,7 @@ def cloudinary_widget_sign(request: Request) -> Response:
 )
 @api_view(["GET", "DELETE"])
 @permission_classes([IsAdminUser])
+@traced
 def admin_cloudinary_cleanup(request: Request) -> Response:
     from .cloudinary_cleanup import (
         delete_cloudinary_assets,
@@ -302,6 +307,7 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
 )
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
+@traced
 def admin_cloudinary_cleanup_archive(
     request: Request,
 ) -> StreamingHttpResponse | Response:

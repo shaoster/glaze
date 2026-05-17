@@ -25,6 +25,8 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from backend.otel import traced
+
 from .models import (
     AsyncTask,
     FavoriteGlazeCombination,
@@ -74,6 +76,7 @@ _DEFAULT_ORDERING = "-last_modified"
 _DEFAULT_PAGE_SIZE = 24
 
 
+@traced
 def _piece_queryset(request: Request):
     user_id = request.user.id
     assert user_id is not None
@@ -95,36 +98,6 @@ def _piece_read_queryset(request: Request):
     return qs.filter(shared=True, is_editable=False)
 
 
-def _piece_detail_queryset(request: Request):
-    return _piece_read_queryset(request).prefetch_related(
-        "states__image_links__image", *_piece_state_ref_prefetches()
-    )
-
-
-def _piece_state_ref_prefetches() -> list[Prefetch]:
-    prefetches: list[Prefetch] = []
-    for global_name in get_state_global_ref_map():
-        config = get_global_config(global_name)
-        ref_model = apps.get_model("api", f"PieceState{config['model']}Ref")
-        related_name = ref_model._meta.get_field("piece_state").remote_field.related_name
-        assert related_name is not None
-        prefetches.append(
-            Prefetch(
-                f"states__{related_name}",
-                queryset=ref_model.objects.select_related(global_name),
-            )
-        )
-    return prefetches
-
-
-def _serialize_piece_detail(piece: Piece, request: Request):
-    return PieceDetailSerializer(piece, context={"request": request}).data
-
-
-def _serialize_piece_summary(qs, request: Request):
-    return PieceSummarySerializer(qs, many=True, context={"request": request}).data
-
-
 def _piece_state_ref_prefetches() -> list[Prefetch]:
     prefetches: list[Prefetch] = []
     for global_name in get_state_global_ref_map():
@@ -143,12 +116,24 @@ def _piece_state_ref_prefetches() -> list[Prefetch]:
     return prefetches
 
 
+@traced
 def _piece_detail_queryset(request: Request):
     return _piece_read_queryset(request).prefetch_related(
         "states__image_links__image", *_piece_state_ref_prefetches()
     )
 
 
+@traced
+def _serialize_piece_detail(piece: Piece, request: Request):
+    return PieceDetailSerializer(piece, context={"request": request}).data
+
+
+@traced
+def _serialize_piece_summary(qs, request: Request):
+    return PieceSummarySerializer(qs, many=True, context={"request": request}).data
+
+
+@traced
 def _apply_piece_ordering(qs, ordering_param: str):
     db_ordering = _PIECE_ORDERING_MAP.get(
         ordering_param, _PIECE_ORDERING_MAP[_DEFAULT_ORDERING]
@@ -212,6 +197,7 @@ def _apply_piece_ordering(qs, ordering_param: str):
 )
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
+@traced
 def pieces(request: Request) -> Response:
     if request.method == "GET":
         qs = _piece_queryset(request)
@@ -258,6 +244,7 @@ def pieces(request: Request) -> Response:
 )
 @api_view(["GET", "PATCH"])
 @permission_classes([AllowAny])
+@traced
 def piece_detail(request: Request, piece_id: str) -> Response:
     if request.method == "GET":
         piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
@@ -285,6 +272,7 @@ def piece_detail(request: Request, piece_id: str) -> Response:
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@traced
 def piece_states(request: Request, piece_id: str) -> Response:
     piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
     serializer = PieceStateCreateSerializer(data=request.data, context={"piece": piece})
@@ -302,6 +290,7 @@ def piece_states(request: Request, piece_id: str) -> Response:
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@traced
 def piece_current_state_detail(request: Request, piece_id: str) -> Response:
     piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
     current = piece.current_state
@@ -319,6 +308,7 @@ def piece_current_state_detail(request: Request, piece_id: str) -> Response:
 )
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
+@traced
 def piece_current_state(request: Request, piece_id: str) -> Response:
     piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
     current = piece.current_state
@@ -344,6 +334,7 @@ def piece_current_state(request: Request, piece_id: str) -> Response:
 )
 @api_view(["PATCH", "DELETE"])
 @permission_classes([IsAuthenticated])
+@traced
 def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response:
     """Patch or delete a past (sealed) state while the piece is in editable mode.
 

@@ -210,6 +210,7 @@ def test_waitlist_does_not_demote_approved(db, anon_client):
 
 # ── Allowlist gate ────────────────────────────────────────────────────────────
 
+
 @PROD
 def test_gate_blocks_unknown_email_in_prod(db, anon_client):
     resp = anon_client.post(

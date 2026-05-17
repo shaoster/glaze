@@ -25,6 +25,8 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from backend.otel import traced
+
 from .models import (
     AsyncTask,
     FavoriteGlazeCombination,
@@ -68,6 +70,7 @@ from .workflow import (
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@traced
 def glaze_combination_images(request: Request) -> Response:
     """Return images from pieces grouped by the glaze combination applied.
 

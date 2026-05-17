@@ -20,6 +20,8 @@ from django.db import models
 from django.db.models import Q
 from django.db.models.fields.related_descriptors import ForwardManyToOneDescriptor
 
+from backend.otel import traced_class
+
 from .workflow import (
     get_filterable_compose_fields,
     get_filterable_fields,
@@ -62,6 +64,7 @@ class ImageForeignKey(models.ForeignKey):
         return name, path, args, kwargs
 
 
+@traced_class
 class GlobalModel(models.Model):
     """Abstract base class for all global domain types in the Glaze workflow.
 
@@ -611,6 +614,7 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
 # ---------------------------------------------------------------------------
 
 
+@traced_class
 class FavoriteModel(models.Model):
     """Abstract base class for per-user favorites junction tables.
 
