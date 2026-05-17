@@ -15,7 +15,13 @@ import ErrorBoundary from "../components/ErrorBoundary";
 const meta = {
   title: "Components/ErrorBoundary",
   component: ErrorBoundary,
-  parameters: { layout: "centered" },
+  parameters: {
+    layout: "centered",
+    docs: {
+      inlineStories: false,
+      iframeHeight: 300,
+    },
+  },
   tags: ["autodocs"],
   args: { children: null },
 } satisfies Meta<typeof ErrorBoundary>;

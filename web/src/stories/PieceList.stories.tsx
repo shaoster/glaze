@@ -21,6 +21,10 @@ const meta = {
   component: PieceList,
   parameters: {
     layout: "fullscreen",
+    docs: {
+      inlineStories: false,
+      iframeHeight: 800,
+    },
   },
   tags: ["autodocs"],
 } satisfies Meta<typeof PieceList>;

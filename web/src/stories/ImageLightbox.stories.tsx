@@ -39,7 +39,13 @@ const sampleImages: CaptionedImage[] = [
 const meta = {
   title: "Components/ImageLightbox",
   component: ImageLightbox,
-  parameters: { layout: "fullscreen" },
+  parameters: {
+    layout: "fullscreen",
+    docs: {
+      inlineStories: false,
+      iframeHeight: 800,
+    },
+  },
   tags: ["autodocs"],
   args: { onClose: fn() },
 } satisfies Meta<typeof ImageLightbox>;

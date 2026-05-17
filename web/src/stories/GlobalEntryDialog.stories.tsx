@@ -20,6 +20,10 @@ const meta = {
   component: GlobalEntryDialog,
   parameters: {
     layout: "centered",
+    docs: {
+      inlineStories: false,
+      iframeHeight: 600,
+    },
   },
   tags: ["autodocs"],
 } satisfies Meta<typeof GlobalEntryDialog>;
