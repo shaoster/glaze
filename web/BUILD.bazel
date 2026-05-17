@@ -783,7 +783,7 @@ vitest_test(
     srcs = [
         "src/components/__tests__/WorkflowState.test.tsx",
     ],
-    tags = ["ibazel_notify_changes"],
+    tags = ["ibazel_notify_changes", "integration"],
     deps = [
         ":workflow_state_src",
     ],
@@ -898,7 +898,7 @@ vitest_test(
     srcs = [
         "src/components/__tests__/PieceDetail.test.tsx",
     ],
-    tags = ["ibazel_notify_changes"],
+    tags = ["ibazel_notify_changes", "integration"],
     deps = [
         ":piece_detail_src",
     ],
@@ -961,7 +961,7 @@ vitest_test(
         "src/pages/__tests__/GlazeImportUploadStage.test.tsx",
         "src/pages/__tests__/glazeImportToolOcr.test.ts",
     ],
-    tags = ["ibazel_notify_changes"],
+    tags = ["ibazel_notify_changes", "integration"],
     deps = [
         ":glaze_import_src",
     ],

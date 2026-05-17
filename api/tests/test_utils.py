@@ -238,3 +238,33 @@ class TestSyncGlazeTypeSingletonCombination:
         assert combo.runs is True
         assert combo.is_food_safe is True
         assert combo.layers.get().id == original_layer_id
+
+
+class TestUtilsCoverage:
+    def test_get_rss_error_path(self, monkeypatch):
+        from api.utils import get_rss
+        # Mock open to raise FileNotFoundError
+        def mock_open(*args, **kwargs):
+            raise FileNotFoundError()
+        monkeypatch.setattr("builtins.open", mock_open)
+        assert get_rss() == 0.0
+
+    def test_calculate_subject_crop_remote_no_url(self, settings):
+        from api.utils import calculate_subject_crop_remote
+        settings.REMOTE_REMBG_URL = None
+        assert calculate_subject_crop_remote(b"data") is None
+
+    def test_calculate_subject_crop_remote_request_failure(self, monkeypatch, settings):
+        from api.utils import calculate_subject_crop_remote
+        settings.REMOTE_REMBG_URL = "http://remote"
+        
+        class MockResponse:
+            def raise_for_status(self):
+                import requests
+                raise requests.exceptions.HTTPError("error")
+        
+        def mock_post(*args, **kwargs):
+            return MockResponse()
+            
+        monkeypatch.setattr("requests.post", mock_post)
+        assert calculate_subject_crop_remote(b"data") is None

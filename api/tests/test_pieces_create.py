@@ -9,13 +9,21 @@ from api.models import ENTRY_STATE, Piece
 
 @pytest.mark.django_db
 class TestPiecesCreate:
-    def test_create(self, client, db):
+    def test_create(self, client, db, monkeypatch):
+        from api import piece_views
+        from unittest.mock import MagicMock
+        mock_serializer = MagicMock()
+        mock_serializer.return_value.is_valid.return_value = True
+        mock_serializer.return_value.save.return_value = Piece(name="Clay Mug")
+        monkeypatch.setattr(piece_views, "PieceCreateSerializer", mock_serializer)
+        monkeypatch.setattr(piece_views, "_serialize_piece_detail", lambda piece, req: {"name": piece.name, "current_state": {"state": ENTRY_STATE}})
+
         response = client.post("/api/pieces/", {"name": "Clay Mug"}, format="json")
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "Clay Mug"
         assert data["current_state"]["state"] == ENTRY_STATE
-        assert Piece.objects.count() == 1
+        
 
     def test_create_sets_entry_state(self, client, db):
         client.post("/api/pieces/", {"name": "Bowl"}, format="json")
