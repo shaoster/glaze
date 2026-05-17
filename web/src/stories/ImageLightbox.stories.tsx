@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { fn } from "storybook/test";
+import { fn } from "@storybook/test";
 import ImageLightbox from "../components/ImageLightbox";
 import type { CaptionedImage } from "../util/types";
 

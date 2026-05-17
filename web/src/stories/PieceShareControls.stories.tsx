@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { fn } from "storybook/test";
+import { fn } from "@storybook/test";
 import ShareControls from "../components/PieceShareControls";
 import type { PieceDetail } from "../util/types";
 
