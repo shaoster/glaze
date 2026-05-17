@@ -59,13 +59,11 @@ def get_state_friendly_name(state_id: str) -> str:
     return str(_STATE_MAP.get(state_id, {}).get("friendly_name", state_id))
 
 
-@traced
 def get_state_config(state_id: str) -> dict:
     """Return the full workflow.yml config dict for a state, or {} if unknown."""
     return dict(_STATE_MAP.get(state_id, {}))
 
 
-@traced
 def get_state_summary(state_id: str) -> dict:
     """Return read-only summary metadata declared for a workflow state.
 

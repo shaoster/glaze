@@ -78,9 +78,9 @@ def traced_class(cls):
     return cls
 
 
-def configure_otel() -> None:
+def configure_otel() -> bool:
     if not os.environ.get("OTEL_ENABLED"):
-        return
+        return False
 
     # The OTel gRPC exporter bundles _pb2.py files generated for protobuf<7.
     # protobuf>=4 rejects old generated descriptors unless the pure-Python
@@ -133,3 +133,4 @@ def configure_otel() -> None:
 
     _DjangoMiddleware.__acall__ = __acall__
     markcoroutinefunction(_DjangoMiddleware)
+    return True

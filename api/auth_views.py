@@ -69,7 +69,6 @@ from .workflow import (
 @ensure_csrf_cookie
 @api_view(["GET"])
 @permission_classes([AllowAny])
-@traced
 def csrf(request: Request) -> Response:
     return Response(status=status.HTTP_204_NO_CONTENT)
 

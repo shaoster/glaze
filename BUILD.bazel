@@ -178,6 +178,7 @@ genrule(
     name = "version_txt",
     srcs = [],
     outs = ["version.txt"],
+    # Workspace status variables are not Make vars; must read stable-status.txt directly.
     cmd = "grep 'STABLE_GIT_COMMIT' bazel-out/stable-status.txt | awk '{print $$2}' > $@",
     stamp = 1,
 )
