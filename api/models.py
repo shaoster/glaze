@@ -272,14 +272,6 @@ class Piece(models.Model):
         order = state.order if state.order is not None else -1
         return (state.order is not None, order, state.created)
 
-    @property
-    def current_state(self) -> "PieceState | None":
-        prefetched_states = self._prefetched_states()
-        if prefetched_states is not None:
-            if not prefetched_states:
-                return None
-            return max(prefetched_states, key=self._state_sort_key)
-
     def _prefetched_state(self, state_id: str) -> "PieceState | None | object":
         states = self._prefetched_states()
         if states is None:

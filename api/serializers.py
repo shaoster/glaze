@@ -301,7 +301,9 @@ class PieceStateSerializer(serializers.ModelSerializer):
             return None
 
         if obj.order is not None:
-            prev = obj.piece.states.filter(order__lt=obj.order).order_by("-order").first()
+            prev = (
+                obj.piece.states.filter(order__lt=obj.order).order_by("-order").first()
+            )
         else:
             prev = (
                 obj.piece.states.filter(created__lt=obj.created)

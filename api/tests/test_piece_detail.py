@@ -77,11 +77,12 @@ class TestPieceDetail:
         sql = "\n".join(query["sql"] for query in ctx)
         assert "api_piecestateclaybodyref" in sql
         assert "api_piecestatelocationref" in sql
-        assert "WHERE (\"api_piecestateclaybodyref\".\"field_name\"" not in sql
-        assert "WHERE (\"api_piecestatelocationref\".\"field_name\"" not in sql
-        assert response.json()["current_state"]["custom_fields"]["kiln_location"][
-            "name"
-        ] == "Kiln Shelf"
+        assert 'WHERE ("api_piecestateclaybodyref"."field_name"' not in sql
+        assert 'WHERE ("api_piecestatelocationref"."field_name"' not in sql
+        assert (
+            response.json()["current_state"]["custom_fields"]["kiln_location"]["name"]
+            == "Kiln Shelf"
+        )
         assert response.json()["history"][1]["custom_fields"]["clay_body"]["name"] == (
             "Stoneware"
         )

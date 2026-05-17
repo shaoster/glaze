@@ -1,11 +1,11 @@
 import asyncio
 
 from opentelemetry import trace
+from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
-from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
 from opentelemetry.trace import SpanKind
 
 

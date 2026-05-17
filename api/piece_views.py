@@ -98,42 +98,6 @@ def _piece_read_queryset(request: Request):
     return qs.filter(shared=True, is_editable=False)
 
 
-<<<<<<< HEAD
-def _piece_detail_queryset(request: Request):
-    return _piece_read_queryset(request).prefetch_related(
-        "states__image_links__image", *_piece_state_ref_prefetches()
-    )
-
-
-def _piece_state_ref_prefetches() -> list[Prefetch]:
-    prefetches: list[Prefetch] = []
-    for global_name in get_state_global_ref_map():
-        config = get_global_config(global_name)
-        ref_model = apps.get_model("api", f"PieceState{config['model']}Ref")
-        related_name = ref_model._meta.get_field("piece_state").remote_field.related_name
-        assert related_name is not None
-        prefetches.append(
-            Prefetch(
-                f"states__{related_name}",
-                queryset=ref_model.objects.select_related(global_name),
-            )
-        )
-    return prefetches
-
-
-=======
-@traced
->>>>>>> a31f9720 (feat: stamp git SHA into OTel service.version and add traced decorator)
-def _serialize_piece_detail(piece: Piece, request: Request):
-    return PieceDetailSerializer(piece, context={"request": request}).data
-
-
-@traced
-def _serialize_piece_summary(qs, request: Request):
-    return PieceSummarySerializer(qs, many=True, context={"request": request}).data
-
-
-<<<<<<< HEAD
 def _piece_state_ref_prefetches() -> list[Prefetch]:
     prefetches: list[Prefetch] = []
     for global_name in get_state_global_ref_map():
@@ -152,15 +116,24 @@ def _piece_state_ref_prefetches() -> list[Prefetch]:
     return prefetches
 
 
+@traced
 def _piece_detail_queryset(request: Request):
     return _piece_read_queryset(request).prefetch_related(
         "states__image_links__image", *_piece_state_ref_prefetches()
     )
 
 
-=======
 @traced
->>>>>>> a31f9720 (feat: stamp git SHA into OTel service.version and add traced decorator)
+def _serialize_piece_detail(piece: Piece, request: Request):
+    return PieceDetailSerializer(piece, context={"request": request}).data
+
+
+@traced
+def _serialize_piece_summary(qs, request: Request):
+    return PieceSummarySerializer(qs, many=True, context={"request": request}).data
+
+
+@traced
 def _apply_piece_ordering(qs, ordering_param: str):
     db_ordering = _PIECE_ORDERING_MAP.get(
         ordering_param, _PIECE_ORDERING_MAP[_DEFAULT_ORDERING]
