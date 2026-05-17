@@ -224,42 +224,16 @@ source env.sh && gz_format
 
 ## Vibe coding / Contributing
 
-Glaze uses Claude agents to handle issues and PR feedback autonomously. You don't need to clone the repo or write code to contribute.
+Glaze uses agent workflows for planning, implementation, and offline analysis. If you want to work with the repo through an agent, use the workflow that matches the task:
 
-### Open an issue → get a PR
+- `/dream`: define a broad feature or product direction and let the agent break it into milestones and sub-issues.
+- `/spec`: turn a specific idea into a focused issue with scope, motivation, and acceptance criteria.
+- `/do #<issue>`: implement a scoped issue on a repo-local worktree and produce the code change.
+- `/audit`: run the performance and flakiness audit workflow.
+- `/cover`: run the coverage audit workflow.
+- `/deps`: inspect Bazel dependency graphs for unexpected or overly broad dependencies.
 
-1. **Open a GitHub issue** describing the feature or bug.
-   - Be specific: what should happen, what currently happens, any relevant state names from [`workflow.yml`](workflow.yml).
-2. **Apply the `claude` label** to the issue to invoke the agent.
-   - Claude will read the issue and either ask clarifying questions (as a comment) or implement the change on a new branch and open a pull request.
-3. **Answer any follow-up questions** Claude posts as issue comments.
-   - Claude re-reads the full thread each time, so just reply naturally — no special trigger phrase needed.
-4. **Review the pull request** Claude opens.
-   - Claude links the PR to the issue and includes "Closes #N" in the body so the issue closes automatically on merge.
-
-### Request changes on a PR → get a new commit
-
-When you submit a **pull request review** with **"Request changes"**:
-
-- Claude reads your review summary and all inline comments.
-- It implements the requested changes, runs the full test suite, and pushes a new commit to the PR branch.
-- It then posts a comment summarising what was changed and how each piece of feedback was addressed.
-
-### Mention `@claude` in a PR comment
-
-You can also invoke Claude directly in any PR comment:
-
-```
-@claude Can you refactor this to use a DRF serializer instead of a raw dict?
-```
-
-Claude will read the comment, make the change, and push it to the branch.
-
-### Tips
-
-- Claude always runs `gz_test` before opening or updating a PR. If tests fail, it will not push.
-- Claude derives all state names and transitions from [`workflow.yml`](workflow.yml) — you can reference state names freely in issues and it will use the correct values.
-- For large or ambiguous requests, start with an issue rather than a direct PR comment so Claude can ask questions before writing code.
+Use `/dream` and `/spec` when the work is still being shaped. Use `/do` when the task is ready to implement. Use the asynchronous audit skills when you want analysis without blocking the main development loop.
 
 ## Component Documentation
 
