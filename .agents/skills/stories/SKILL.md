@@ -42,7 +42,9 @@ For each target component:
   - For components using MUI `Dialog` or `Modal`, set `docs: { inlineStories: false, iframeHeight: 600 }` in `parameters`.
   - Use a `render` function to wrap the modal in a "Toggle Button" so the Docs page remains interactive and readable.
 - **useBlocker handling**:
-  - For components that use `useBlocker` (e.g., `PieceDetail`), ensure the story includes a variant that simulates the blocking behavior and make sure the component is wrapped in a data router context (e.g., `BrowserRouter`) to prevent Storybook from crashing.
+  - For components that use `useBlocker` (e.g., `PieceDetail`), ensure the component is wrapped in a data router context (using `createMemoryRouter` + `RouterProvider` in decorators) to prevent Storybook from crashing.
+- **Theming**:
+  - Use `@storybook/theming` to set `docs: { theme: themes.dark }` in `preview.tsx` to match the app's dark mode and ensure contrast for all components.
 
 ### 4. Verification
 

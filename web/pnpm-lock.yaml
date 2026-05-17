@@ -87,6 +87,9 @@ importers:
       '@storybook/test':
         specifier: ^8.6.18
         version: 8.6.18(storybook@8.6.18(prettier@3.8.3))
+      '@storybook/theming':
+        specifier: ^8.6.18
+        version: 8.6.18(storybook@8.6.18(prettier@3.8.3))
       '@testing-library/jest-dom':
         specifier: ^6.6.3
         version: 6.9.1

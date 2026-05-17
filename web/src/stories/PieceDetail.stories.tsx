@@ -177,3 +177,23 @@ export const TerminalState: Story = {
   },
   parameters: { ...Default.parameters },
 };
+
+/**
+ * Demonstrates the navigation blocking behavior. 
+ * If you try to navigate away while the form is dirty (e.g. by changing notes),
+ * the `useBlocker` hook will trigger a confirmation dialog.
+ */
+export const DirtyState: Story = {
+  args: {
+    ...Editable.args,
+    piece: {
+      ...mockPiece,
+      is_editable: true,
+      current_state: {
+        ...mockPiece.current_state,
+        notes: "I have changed these notes but not saved yet...",
+      },
+    },
+  },
+  parameters: { ...Default.parameters },
+};
