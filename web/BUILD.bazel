@@ -668,6 +668,10 @@ vitest_test(
     deps = [
         ":primitive_src",
     ],
+    expected_coverage = [
+        "web/src/components/ErrorBoundary.tsx",
+        "web/src/components/StateChip.tsx",
+    ],
 )
 
 vitest_test(
@@ -678,6 +682,9 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":cloudinary_image_src",
+    ],
+    expected_coverage = [
+        "web/src/components/CloudinaryImage*",
     ],
 )
 
@@ -692,6 +699,10 @@ vitest_test(
         ":cloudinary_image_src",
         ":image_lightbox_src",
     ],
+    expected_coverage = [
+        "web/src/components/CloudinaryImage*",
+        "web/src/components/ImageLightbox*",
+    ],
 )
 
 vitest_test(
@@ -702,6 +713,11 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":tag_src",
+    ],
+    expected_coverage = [
+        "web/src/components/Tag*",
+        "web/src/components/CreateTagDialog*",
+        "web/src/components/tagPalette*",
     ],
 )
 
@@ -715,6 +731,9 @@ vitest_test(
     deps = [
         ":global_picker_src",
     ],
+    expected_coverage = [
+        "web/src/components/GlobalEntry*",
+    ],
 )
 
 vitest_test(
@@ -725,6 +744,9 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":glaze_gallery_src",
+    ],
+    expected_coverage = [
+        "web/src/components/GlazeCombination*",
     ],
 )
 
@@ -737,6 +759,9 @@ vitest_test(
     deps = [
         ":new_piece_dialog_src",
     ],
+    expected_coverage = [
+        "web/src/components/NewPieceDialog*",
+    ],
 )
 
 vitest_test(
@@ -748,6 +773,9 @@ vitest_test(
     deps = [
         ":piece_list_src",
     ],
+    expected_coverage = [
+        "web/src/components/PieceList*",
+    ],
 )
 
 vitest_test(
@@ -758,6 +786,9 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":workflow_state_src",
+    ],
+    expected_coverage = [
+        "web/src/components/WorkflowState*",
     ],
 )
 
@@ -772,6 +803,10 @@ vitest_test(
     deps = [
         ":piece_photo_gallery_src",
     ],
+    expected_coverage = [
+        "web/src/components/PiecePhoto*",
+        "web/src/components/DeletePiecePhotoDialog*",
+    ],
 )
 
 vitest_test(
@@ -782,6 +817,9 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":tag_manager_src",
+    ],
+    expected_coverage = [
+        "web/src/components/TagManager*",
     ],
 )
 
@@ -794,6 +832,9 @@ vitest_test(
     deps = [
         ":state_transition_src",
     ],
+    expected_coverage = [
+        "web/src/components/StateTransition*",
+    ],
 )
 
 vitest_test(
@@ -804,6 +845,9 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":piece_history_src",
+    ],
+    expected_coverage = [
+        "web/src/components/PieceHistory*",
     ],
 )
 
@@ -816,6 +860,9 @@ vitest_test(
     deps = [
         ":piece_share_controls_src",
     ],
+    expected_coverage = [
+        "web/src/components/PieceShareControls*",
+    ],
 )
 
 vitest_test(
@@ -826,6 +873,9 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":piece_detail_src",
+    ],
+    expected_coverage = [
+        "web/src/components/ProcessSummary*",
     ],
 )
 
@@ -838,6 +888,9 @@ vitest_test(
     deps = [
         ":public_piece_shell_src",
     ],
+    expected_coverage = [
+        "web/src/components/PublicPieceShell*",
+    ],
 )
 
 vitest_test(
@@ -848,6 +901,9 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":piece_detail_src",
+    ],
+    expected_coverage = [
+        "web/src/components/PieceDetail*",
     ],
 )
 
@@ -860,6 +916,9 @@ vitest_test(
     deps = [
         ":piece_detail_page_src",
     ],
+    expected_coverage = [
+        "web/src/pages/PieceDetailPage*",
+    ],
 )
 
 vitest_test(
@@ -871,6 +930,9 @@ vitest_test(
     deps = [
         ":piece_list_page_src",
     ],
+    expected_coverage = [
+        "web/src/pages/PieceListPage*",
+    ],
 )
 
 vitest_test(
@@ -881,6 +943,9 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":cloudinary_cleanup_page_src",
+    ],
+    expected_coverage = [
+        "web/src/pages/CloudinaryCleanupPage*",
     ],
 )
 
@@ -900,6 +965,9 @@ vitest_test(
     deps = [
         ":glaze_import_src",
     ],
+    expected_coverage = [
+        "web/src/pages/GlazeImport*",
+    ],
 )
 
 vitest_test(
@@ -914,6 +982,9 @@ vitest_test(
         "public/test-images/test-tile-no-label.png",
         ":ocr_detection_src",
     ],
+    expected_coverage = [
+        "web/src/pages/ocrDetection*",
+    ],
 )
 
 vitest_test(
@@ -924,6 +995,9 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":util_lib",
+    ],
+    expected_coverage = [
+        "web/src/util/workflow*",
     ],
 )
 
@@ -936,6 +1010,9 @@ vitest_test(
     deps = [
         ":util_lib",
     ],
+    expected_coverage = [
+        "web/src/util/api.ts",
+    ],
 )
 
 vitest_test(
@@ -947,6 +1024,9 @@ vitest_test(
     deps = [
         ":util_lib",
     ],
+    expected_coverage = [
+        "web/src/util/normalizeWorkflowFields*",
+    ],
 )
 
 vitest_test(
@@ -957,6 +1037,9 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":util_lib",
+    ],
+    expected_coverage = [
+        "web/src/util/format*",
     ],
 )
 
@@ -972,6 +1055,11 @@ vitest_test(
     deps = [
         ":analysis_src",
     ],
+    expected_coverage = [
+        "web/src/components/AnalysisCard*",
+        "web/src/components/AnalysisIndex*",
+        "web/src/components/GlazeCombinationSummary*",
+    ],
 )
 
 vitest_test(
@@ -982,6 +1070,9 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":coverage_audit_src",
+    ],
+    expected_coverage = [
+        "web/scripts/coverage-audit.mjs",
     ],
 )
 
@@ -994,6 +1085,9 @@ vitest_test(
     deps = [
         ":generate_types_src",
     ],
+    expected_coverage = [
+        "web/src/util/generateTypes*",
+    ],
 )
 
 vitest_test(
@@ -1005,6 +1099,9 @@ vitest_test(
     deps = [
         ":analyze_page_src",
     ],
+    expected_coverage = [
+        "web/src/pages/AnalyzePage*",
+    ],
 )
 
 vitest_test(
@@ -1013,6 +1110,9 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":admin_src",
+    ],
+    expected_coverage = [
+        "web/src/admin*",
     ],
 )
 
@@ -1025,6 +1125,9 @@ vitest_test(
     deps = [
         ":invite_page_src",
     ],
+    expected_coverage = [
+        "web/src/pages/InvitePage*",
+    ],
 )
 
 vitest_test(
@@ -1033,6 +1136,9 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":web_lib",
+    ],
+    expected_coverage = [
+        "web/src/**",
     ],
 )
 

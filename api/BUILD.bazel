@@ -144,6 +144,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
 pytest_test(
@@ -171,6 +172,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
 pytest_test(
@@ -186,6 +188,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
 pytest_test(
@@ -219,6 +222,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
 pytest_test(
@@ -232,6 +236,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
 pytest_test(
@@ -245,6 +250,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
 pytest_test(
@@ -258,6 +264,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
 pytest_test(
@@ -283,6 +290,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
 pytest_test(
@@ -304,6 +312,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
 # ── mypy type-check ───────────────────────────────────────────────────────────
@@ -350,6 +359,7 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
 # ── API test suite ────────────────────────────────────────────────────────────

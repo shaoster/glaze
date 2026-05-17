@@ -15,7 +15,12 @@ const __dirname = dirname(__filename);
 const covFile = process.env.COVERAGE_OUTPUT_FILE;
 const expectedCoverageRaw = process.env.EXPECTED_COVERAGE;
 if (covFile && expectedCoverageRaw) {
-  const patterns = expectedCoverageRaw.split(":").filter(Boolean);
+  // Strip leading "web/" so patterns in BUILD.bazel are repo-root-relative
+  // but the scope file uses paths as they appear in LCOV (relative to web/).
+  const patterns = expectedCoverageRaw
+    .split(":")
+    .filter(Boolean)
+    .map((p) => (p.startsWith("web/") ? p.slice(4) : p));
   if (patterns.length > 0) {
     writeFileSync(covFile + ".scope", patterns.join("\n"));
   }
