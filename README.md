@@ -87,6 +87,7 @@ Glaze uses a high-level orchestration workflow inspired by the [Get Shit Done (G
 2.  **`/spec`**: Detail-oriented issue authoring. Each sub-task from the dream is turned into a precise GitHub issue with problem motivation, proposed solution, and acceptance criteria.
 3.  **`/do`**: Execution. When you want an agent to implement an issue or start a PR-sized change, use the explicit issue flow: `/do #292`.
 4.  **`/deps`**: Bazel dependency audit. Use this when you want an agent to inspect the rules_oci image target plus test and lint graphs for unexpected dependencies before planning cleanup work.
+5.  **`/pm`**: Session-level communication mode. Use this when the main audience is less technical contributors and you want the assistant to explain choices in terms of user value, trade-offs, and constraints instead of file-by-file edits.
 
 #### Our Architectural Principles for Agent Work:
 
