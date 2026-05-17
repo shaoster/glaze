@@ -139,3 +139,70 @@ def test_terminate_process_group_escalates_after_timeout(monkeypatch) -> None:
     launcher.terminate_process_group(1234, timeout_seconds=0.0)
 
     assert signals == [0, signal.SIGTERM, signal.SIGKILL, 0]
+
+
+def test_start_web_sets_bazel_bindir_only_on_linux(monkeypatch, tmp_path: Path) -> None:
+    roots = launcher.Roots(workspace=tmp_path, shared=tmp_path)
+    pidfile = tmp_path / "web.pid"
+    portfile = tmp_path / "web.port"
+    log_path = tmp_path / "web.log"
+
+    # Mock web executable
+    web_bin = tmp_path / "bazel-bin" / "web" / "dev_server_" / "dev_server"
+    web_bin.parent.mkdir(parents=True)
+    web_bin.touch()
+
+    class MockPopen:
+        pid = 9999
+
+    monkeypatch.setattr(launcher, "ensure_running", lambda _: (None, False))
+    monkeypatch.setattr(launcher, "rotate_log", lambda _: None)
+    monkeypatch.setattr(launcher, "web_executable_path", lambda _: web_bin)
+
+    # 1. Test Linux behavior: BAZEL_BINDIR must be set if missing
+    monkeypatch.setattr(launcher.sys, "platform", "linux")
+    captured_env_linux: dict[str, str] = {}
+
+    def fake_launch_child_linux(argv, cwd, env, log_path):
+        nonlocal captured_env_linux
+        captured_env_linux = env
+        return MockPopen()
+
+    monkeypatch.setattr(launcher, "launch_child", fake_launch_child_linux)
+    launcher.start_web(roots, {}, pidfile, portfile, log_path, 8080, 5173)
+
+    assert captured_env_linux.get("BAZEL_BINDIR") == ".", (
+        "On Linux, BAZEL_BINDIR must fallback to '.' if missing to prevent: "
+        "FATAL: aspect_rules_js[js_binary]: BAZEL_BINDIR must be set in environment"
+    )
+
+    # 1b. Test Linux behavior: BAZEL_BINDIR should be respected if already set
+    captured_env_linux_existing: dict[str, str] = {}
+
+    def fake_launch_child_linux_existing(argv, cwd, env, log_path):
+        nonlocal captured_env_linux_existing
+        captured_env_linux_existing = env
+        return MockPopen()
+
+    monkeypatch.setattr(launcher, "launch_child", fake_launch_child_linux_existing)
+    launcher.start_web(roots, {"BAZEL_BINDIR": "bazel-out/k8-fastbuild/bin"}, pidfile, portfile, log_path, 8080, 5173)
+
+    assert captured_env_linux_existing.get("BAZEL_BINDIR") == "bazel-out/k8-fastbuild/bin", (
+        "BAZEL_BINDIR should be respected if already provided by the environment."
+    )
+
+    # 2. Test Mac behavior: BAZEL_BINDIR should NOT be set (not required)
+    monkeypatch.setattr(launcher.sys, "platform", "darwin")
+    captured_env_mac: dict[str, str] = {}
+
+    def fake_launch_child_mac(argv, cwd, env, log_path):
+        nonlocal captured_env_mac
+        captured_env_mac = env
+        return MockPopen()
+
+    monkeypatch.setattr(launcher, "launch_child", fake_launch_child_mac)
+    launcher.start_web(roots, {}, pidfile, portfile, log_path, 8080, 5173)
+
+    assert "BAZEL_BINDIR" not in captured_env_mac, (
+        "BAZEL_BINDIR should not be set on macOS as it is not required by aspect_rules_js."
+    )

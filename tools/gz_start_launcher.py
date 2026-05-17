@@ -495,6 +495,11 @@ def start_web(
     web_env = env.copy()
     web_env["BACKEND_PORT"] = str(backend_port)
 
+    # Behavioral: aspect_rules_js[js_binary] FATAL error occurs on Linux if BAZEL_BINDIR is unset
+    # when running as a non-build action. We provide a fallback to '.' to suppress this.
+    if sys.platform.startswith("linux"):
+        web_env.setdefault("BAZEL_BINDIR", ".")
+
     print(f"web: starting on :{web_port} ...")
     web_binary = web_executable_path(roots)
     web: subprocess.Popen[str] | None = None
