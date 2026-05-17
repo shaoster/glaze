@@ -41,7 +41,7 @@ For each target component:
 - **Modal/Portal Handling**:
   - For components using MUI `Dialog` or `Modal`, set `docs: { inlineStories: false, iframeHeight: 600 }` in `parameters`.
   - Use a `render` function to wrap the modal in a "Toggle Button" so the Docs page remains interactive and readable.
-  - **Hide Source Code**: For stories using this "Toggle Button" pattern, set `docs: { canvas: { sourceState: "none" }, source: { code: null } }` in `parameters` to prevent the "Show Code" block from displaying unhelpful button-only code.
+  - **Manual Source Code**: For stories using this "Toggle Button" pattern, provide a clean JSX snippet in `parameters.docs.source.code` so the "Show Code" button remains useful.
 - **Data Variety**:
   - For components that take a list as their primary input (e.g., `ImageLightbox`, `PieceList`, `TagChipList`), ensure the story variants use **meaningfully distinct items**.
   - Avoid repeating the same image URL, name, or metadata across list items so navigation and visual variety can be properly verified.

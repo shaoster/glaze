@@ -24,8 +24,18 @@ const meta = {
     docs: {
       inlineStories: false,
       iframeHeight: 400,
-      canvas: { sourceState: "none" },
-      source: { code: null },
+      source: {
+        code: `
+<CreateTagDialog
+  open={true}
+  name=""
+  color="#8a5a3a"
+  onNameChange={(val) => console.log(val)}
+  onColorChange={(col) => console.log(col)}
+  onClose={() => {}}
+  onCreate={() => console.log('Create clicked')}
+/>`,
+      },
     },
   },
   tags: ["autodocs"],

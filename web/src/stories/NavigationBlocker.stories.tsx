@@ -23,12 +23,19 @@ const meta = {
     docs: {
       inlineStories: false,
       iframeHeight: 300,
-      canvas: { sourceState: "none" },
-      source: { code: null },
+      source: {
+        code: `
+<NavigationBlocker
+  open={true}
+  onStay={() => {}}
+  onLeave={() => console.log('Leaving page...')}
+/>`,
+      },
     },
   },
   tags: ["autodocs"],
   argTypes: {
+    open: { table: { disable: true } },
   },
   render: (args) => <NavigationBlockerWithState {...args} />,
 } satisfies Meta<typeof NavigationBlocker>;

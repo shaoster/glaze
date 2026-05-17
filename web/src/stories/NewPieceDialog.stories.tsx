@@ -25,8 +25,14 @@ const meta = {
     docs: {
       inlineStories: false,
       iframeHeight: 600,
-      canvas: { sourceState: "none" },
-      source: { code: null },
+      source: {
+        code: `
+<NewPieceDialog
+  open={true}
+  onClose={() => {}}
+  onCreated={(piece) => console.log('Created piece:', piece)}
+/>`,
+      },
     },
   },
   tags: ["autodocs"],

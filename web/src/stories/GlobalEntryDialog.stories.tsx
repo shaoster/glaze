@@ -25,8 +25,16 @@ const meta = {
     docs: {
       inlineStories: false,
       iframeHeight: 600,
-      canvas: { sourceState: "none" },
-      source: { code: null },
+      source: {
+        code: `
+<GlobalEntryDialog
+  open={true}
+  globalName="location"
+  onClose={() => {}}
+  onSelect={(entry) => console.log('Selected:', entry)}
+  canCreate={true}
+/>`,
+      },
     },
   },
   tags: ["autodocs"],

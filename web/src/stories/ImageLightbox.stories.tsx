@@ -46,8 +46,16 @@ const meta = {
     docs: {
       inlineStories: false,
       iframeHeight: 800,
-      canvas: { sourceState: "none" },
-      source: { code: null },
+      source: {
+        code: `
+<ImageLightbox
+  open={true}
+  images={sampleImages}
+  initialIndex={0}
+  onClose={() => {}}
+  onSetAsThumbnail={async (image) => console.log('Set as thumbnail:', image)}
+/>`,
+      },
     },
   },
   tags: ["autodocs"],

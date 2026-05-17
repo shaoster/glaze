@@ -23,8 +23,15 @@ const meta = {
     docs: {
       inlineStories: false,
       iframeHeight: 300,
-      canvas: { sourceState: "none" },
-      source: { code: null },
+      source: {
+        code: `
+<DeletePiecePhotoDialog
+  open={true}
+  deleting={false}
+  onCancel={() => {}}
+  onConfirm={() => console.log('Confirmed deletion')}
+/>`,
+      },
     },
   },
   tags: ["autodocs"],
