@@ -3,7 +3,6 @@ import DeletePiecePhotoDialog from "../components/DeletePiecePhotoDialog";
 import { fn } from "@storybook/test";
 import { useState } from "react";
 import Button from "@mui/material/Button";
-import React from "react";
 
 /**
  * DeletePiecePhotoDialog is a confirmation modal for image removal.
@@ -32,35 +31,38 @@ const meta = {
   argTypes: {
     open: { table: { disable: true } },
   },
-  render: (args) => {
-    const [open, setOpen] = useState(false);
-    return (
-      <>
-        <Button variant="contained" color="error" onClick={() => setOpen(true)}>
-          Open Delete Dialog
-        </Button>
-        <DeletePiecePhotoDialog
-          {...args}
-          open={open}
-          onCancel={() => {
-            setOpen(false);
-            args.onCancel?.();
-          }}
-          onConfirm={() => {
-            args.onConfirm?.();
-            setOpen(false);
-          }}
-        />
-      </>
-    );
-  },
+  render: (args) => <DeletePiecePhotoDialogWithState {...args} />,
 } satisfies Meta<typeof DeletePiecePhotoDialog>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+function DeletePiecePhotoDialogWithState(args: React.ComponentProps<typeof DeletePiecePhotoDialog>) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="contained" color="error" onClick={() => setOpen(true)}>
+        Open Delete Dialog
+      </Button>
+      <DeletePiecePhotoDialog
+        {...args}
+        open={open}
+        onCancel={() => {
+          setOpen(false);
+          args.onCancel?.();
+        }}
+        onConfirm={() => {
+          args.onConfirm?.();
+          setOpen(false);
+        }}
+      />
+    </>
+  );
+}
+
 export const Default: Story = {
   args: {
+    open: false,
     deleting: false,
     onCancel: fn(),
     onConfirm: fn(),

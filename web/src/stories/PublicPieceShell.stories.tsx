@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import PublicPieceShell from "../components/PublicPieceShell";
 import { http, HttpResponse } from "msw";
-import React from "react";
 
 /**
  * PublicPieceShell is the visitor-facing view for a single piece.

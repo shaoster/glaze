@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import PiecePhotoGallery from "../components/PiecePhotoGallery";
 import { fn } from "@storybook/test";
-import React from "react";
 
 /**
  * PiecePhotoGallery is the interactive image management area for a piece.
@@ -34,12 +33,16 @@ const mockImages = [
     caption: "Early stage",
     cloudinary_public_id: "test1",
     cloud_name: "glaze",
+    stateLabel: "Thrown",
+    editableCurrentStateIndex: null,
   },
   {
     url: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800",
     caption: "After trimming",
     cloudinary_public_id: "test2",
     cloud_name: "glaze",
+    stateLabel: "Trimmed",
+    editableCurrentStateIndex: null,
   },
 ];
 
@@ -61,6 +64,6 @@ export const Empty: Story = {
 export const ReadOnly: Story = {
   args: {
     ...Default.args,
-    canEdit: false,
+    updatePieceFn: undefined,
   },
 };

@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from "@storybook/react";
 import TagManager from "../components/TagManager";
 import { fn } from "@storybook/test";
 import { http, HttpResponse } from "msw";
-import React from "react";
 
 /**
  * TagManager is the orchestration component for managing a piece's tags.

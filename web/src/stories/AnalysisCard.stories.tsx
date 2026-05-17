@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import AnalysisCard from "../components/AnalysisCard";
 import TimelineIcon from "@mui/icons-material/Timeline";
-import React from "react";
 
 /**
  * AnalysisCard is a navigation and summary component used on the Analyze dashboard.
@@ -30,17 +29,15 @@ export const Default: Story = {
   args: {
     title: "Glaze Combinations",
     description: "Explore and analyze successful glaze recipes and their interactions.",
-    icon: <TimelineIcon />,
+    summary: <TimelineIcon />,
     to: "/analyze/glaze-combinations",
-    metrics: ["124 combinations", "15 active glazes"],
   },
 };
 
-export const WithoutMetrics: Story = {
+export const WithoutSummary: Story = {
   args: {
     title: "Simple Analysis",
-    description: "A card without any specific metrics shown at the bottom.",
-    icon: <TimelineIcon />,
+    description: "A card without any specific summary icon shown.",
     to: "/analyze/simple",
   },
 };

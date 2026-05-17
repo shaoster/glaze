@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import TagAutocomplete from "../components/TagAutocomplete";
 import { fn } from "@storybook/test";
-import React from "react";
 
 /**
  * TagAutocomplete is a specialized MUI Autocomplete for searching and creating tags.
@@ -36,25 +35,27 @@ const mockTags = [
 
 export const Default: Story = {
   args: {
-    availableTags: mockTags,
-    selectedTagIds: ["t1"],
-    onTagToggle: fn(),
-    onCreateTag: fn(),
+    label: "Tags",
+    options: mockTags,
+    value: [mockTags[0]],
+    onChange: fn(),
+    onCreateNew: fn(),
   },
 };
 
 export const MultiSelect: Story = {
   args: {
     ...Default.args,
-    selectedTagIds: ["t1", "t2"],
+    value: [mockTags[0], mockTags[1]],
   },
 };
 
 export const NoResults: Story = {
   args: {
-    availableTags: [],
-    selectedTagIds: [],
-    onTagToggle: fn(),
-    onCreateTag: fn(),
+    label: "Tags",
+    options: [],
+    value: [],
+    onChange: fn(),
+    onCreateNew: fn(),
   },
 };

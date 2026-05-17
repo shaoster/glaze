@@ -3,7 +3,6 @@ import NavigationBlocker from "../components/NavigationBlocker";
 import { fn } from "@storybook/test";
 import { useState } from "react";
 import Button from "@mui/material/Button";
-import React from "react";
 
 /**
  * NavigationBlocker is a confirmation dialog that prevents accidental loss of data.
@@ -30,37 +29,39 @@ const meta = {
   },
   tags: ["autodocs"],
   argTypes: {
-    open: { table: { disable: true } },
   },
-  render: (args) => {
-    const [open, setOpen] = useState(false);
-    return (
-      <>
-        <Button variant="contained" onClick={() => setOpen(true)}>
-          Simulate Unsaved Navigation
-        </Button>
-        <NavigationBlocker
-          {...args}
-          open={open}
-          onStay={() => {
-            setOpen(false);
-            args.onStay?.();
-          }}
-          onLeave={() => {
-            setOpen(false);
-            args.onLeave?.();
-          }}
-        />
-      </>
-    );
-  },
+  render: (args) => <NavigationBlockerWithState {...args} />,
 } satisfies Meta<typeof NavigationBlocker>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+function NavigationBlockerWithState(args: React.ComponentProps<typeof NavigationBlocker>) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="contained" onClick={() => setOpen(true)}>
+        Simulate Unsaved Navigation
+      </Button>
+      <NavigationBlocker
+        {...args}
+        open={open}
+        onStay={() => {
+          setOpen(false);
+          args.onStay?.();
+        }}
+        onLeave={() => {
+          setOpen(false);
+          args.onLeave?.();
+        }}
+      />
+    </>
+  );
+}
+
 export const Default: Story = {
   args: {
+    open: false,
     onStay: fn(),
     onLeave: fn(),
   },

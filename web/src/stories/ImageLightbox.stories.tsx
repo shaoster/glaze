@@ -26,7 +26,6 @@ const sampleImages: CaptionedImage[] = [
   },
 ];
 
-
 /**
  * ImageLightbox component for immersive full-screen image viewing.
  *
@@ -52,29 +51,33 @@ const meta = {
     },
   },
   tags: ["autodocs"],
-  render: (args) => {
-    const [open, setOpen] = useState(false);
-    return (
-      <>
-        <Button variant="contained" onClick={() => setOpen(true)}>
-          Open Image Lightbox
-        </Button>
-        {open && (
-          <ImageLightbox
-            {...args}
-            onClose={() => {
-              setOpen(false);
-              args.onClose?.();
-            }}
-          />
-        )}
-      </>
-    );
+  argTypes: {
   },
+  render: (args) => <ImageLightboxWithState {...args} />,
 } satisfies Meta<typeof ImageLightbox>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+function ImageLightboxWithState(args: React.ComponentProps<typeof ImageLightbox>) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="contained" onClick={() => setOpen(true)}>
+        Open Image Lightbox
+      </Button>
+      {open && (
+        <ImageLightbox
+          {...args}
+          onClose={() => {
+            setOpen(false);
+            args.onClose?.();
+          }}
+        />
+      )}
+    </>
+  );
+}
 
 export const SingleImage: Story = {
   args: {

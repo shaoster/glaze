@@ -39,6 +39,7 @@ const mockPieces: PieceSummary[] = [
     created: new Date("2026-05-10"),
     last_modified: new Date("2026-05-12"),
     thumbnail: null,
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     current_state: { state: "glaze_fired", created: new Date("2026-05-12") } as any,
     current_location: "Finished Goods Shelf",
     tags: [{ id: "t1", name: "midnight", color: "#121232", is_public: true }],
@@ -53,6 +54,7 @@ const mockPieces: PieceSummary[] = [
     created: new Date("2026-05-08"),
     last_modified: new Date("2026-05-09"),
     thumbnail: null,
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     current_state: { state: "bisque_fired", created: new Date("2026-05-09") } as any,
     current_location: "Bisque Shelf",
     tags: [{ id: "t2", name: "spring", color: "#8eb89a", is_public: true }],

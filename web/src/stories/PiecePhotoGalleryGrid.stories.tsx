@@ -29,27 +29,35 @@ const mockImages = [
   {
     url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=400",
     caption: "Early stage",
+    stateLabel: "Designed",
+    editableCurrentStateIndex: null,
   },
   {
     url: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=400",
     caption: "After trimming",
+    stateLabel: "Trimmed",
+    editableCurrentStateIndex: null,
   },
   {
     url: "https://images.unsplash.com/photo-1593150501174-d8200671607f?w=400",
     caption: "Bisque fired",
+    stateLabel: "Bisque Fired",
+    editableCurrentStateIndex: null,
   },
 ];
 
 export const Default: Story = {
   args: {
     images: mockImages,
-    onImageClick: fn(),
+    canDeleteImages: false,
+    onOpenImage: fn(),
+    onRequestDelete: fn(),
   },
 };
 
 export const SingleImage: Story = {
   args: {
+    ...Default.args,
     images: [mockImages[0]],
-    onImageClick: fn(),
   },
 };

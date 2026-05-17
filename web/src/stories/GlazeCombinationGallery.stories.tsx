@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import GlazeCombinationGallery from "../components/GlazeCombinationGallery";
 import { http, HttpResponse } from "msw";
-import React from "react";
 
 /**
  * GlazeCombinationGallery displays a filterable grid of glaze combinations and their resulting pieces.

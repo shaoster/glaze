@@ -33,31 +33,34 @@ const meta = {
   argTypes: {
     open: { table: { disable: true } },
   },
-  render: (args) => {
-    const [open, setOpen] = useState(false);
-    return (
-      <>
-        <Button variant="contained" onClick={() => setOpen(true)}>
-          Open Global Entry Dialog
-        </Button>
-        <GlobalEntryDialog
-          {...args}
-          open={open}
-          onClose={() => {
-            setOpen(false);
-            args.onClose?.();
-          }}
-        />
-      </>
-    );
-  },
+  render: (args) => <GlobalEntryDialogWithState {...args} />,
 } satisfies Meta<typeof GlobalEntryDialog>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+function GlobalEntryDialogWithState(args: React.ComponentProps<typeof GlobalEntryDialog>) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="contained" onClick={() => setOpen(true)}>
+        Open Global Entry Dialog
+      </Button>
+      <GlobalEntryDialog
+        {...args}
+        open={open}
+        onClose={() => {
+          setOpen(false);
+          args.onClose?.();
+        }}
+      />
+    </>
+  );
+}
+
 export const Default: Story = {
   args: {
+    open: false,
     globalName: "location",
     onClose: () => {},
     onSelect: () => {},

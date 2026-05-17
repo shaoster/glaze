@@ -49,6 +49,7 @@ const mockInitialState = {
 
 export const Default: Story = {
   args: {
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     initialPieceState: mockInitialState as any,
     pieceId: "p1",
     onSaved: () => {},

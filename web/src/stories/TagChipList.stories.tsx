@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import TagChipList from "../components/TagChipList";
-import React from "react";
 
 /**
  * TagChipList renders an array of tags with built-in overflow handling.

@@ -31,33 +31,35 @@ const meta = {
   },
   tags: ["autodocs"],
   argTypes: {
-    open: { table: { disable: true } },
   },
-  render: (args) => {
-    const [open, setOpen] = useState(false);
-    return (
-      <>
-        <Button variant="contained" onClick={() => setOpen(true)}>
-          Open New Piece Dialog
-        </Button>
-        <NewPieceDialog
-          {...args}
-          open={open}
-          onClose={() => {
-            setOpen(false);
-            args.onClose?.();
-          }}
-        />
-      </>
-    );
-  },
+  render: (args) => <NewPieceDialogWithState {...args} />,
 } satisfies Meta<typeof NewPieceDialog>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+function NewPieceDialogWithState(args: React.ComponentProps<typeof NewPieceDialog>) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="contained" onClick={() => setOpen(true)}>
+        Open New Piece Dialog
+      </Button>
+      <NewPieceDialog
+        {...args}
+        open={open}
+        onClose={() => {
+          setOpen(false);
+          args.onClose?.();
+        }}
+      />
+    </>
+  );
+}
+
 export const Default: Story = {
   args: {
+    open: false,
     onClose: () => {},
     onCreated: () => {},
   },
@@ -82,7 +84,8 @@ export const Submitting: Story = {
   parameters: {
     msw: {
       handlers: [
-        ...(Default.parameters as any).msw.handlers,
+        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+        ...((Default.parameters as any).msw.handlers || []),
         http.post("/api/pieces/", () => {
           return new Promise(() => {}); // Never resolves
         }),

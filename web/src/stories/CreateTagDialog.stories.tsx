@@ -3,7 +3,6 @@ import CreateTagDialog from "../components/CreateTagDialog";
 import { fn } from "@storybook/test";
 import { useState } from "react";
 import Button from "@mui/material/Button";
-import React from "react";
 
 /**
  * CreateTagDialog provides a simple interface for adding new categories/tags to the system.
@@ -34,42 +33,45 @@ const meta = {
     open: { table: { disable: true } },
     color: { control: "color" },
   },
-  render: (args) => {
-    const [open, setOpen] = useState(false);
-    const [name, setName] = useState(args.name || "");
-    const [color, setColor] = useState(args.color || "#8a5a3a");
-    
-    return (
-      <>
-        <Button variant="contained" onClick={() => setOpen(true)}>
-          Open Create Tag Dialog
-        </Button>
-        <CreateTagDialog
-          {...args}
-          open={open}
-          name={name}
-          color={color}
-          onNameChange={setName}
-          onColorChange={setColor}
-          onClose={() => {
-            setOpen(false);
-            args.onClose?.();
-          }}
-          onCreate={() => {
-            args.onCreate?.();
-            setOpen(false);
-          }}
-        />
-      </>
-    );
-  },
+  render: (args) => <CreateTagDialogWithState {...args} />,
 } satisfies Meta<typeof CreateTagDialog>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+function CreateTagDialogWithState(args: React.ComponentProps<typeof CreateTagDialog>) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(args.name || "");
+  const [color, setColor] = useState(args.color || "#8a5a3a");
+  
+  return (
+    <>
+      <Button variant="contained" onClick={() => setOpen(true)}>
+        Open Create Tag Dialog
+      </Button>
+      <CreateTagDialog
+        {...args}
+        open={open}
+        name={name}
+        color={color}
+        onNameChange={setName}
+        onColorChange={setColor}
+        onClose={() => {
+          setOpen(false);
+          args.onClose?.();
+        }}
+        onCreate={() => {
+          args.onCreate?.();
+          setOpen(false);
+        }}
+      />
+    </>
+  );
+}
+
 export const Default: Story = {
   args: {
+    open: false,
     name: "",
     color: "#8a5a3a",
     error: null,

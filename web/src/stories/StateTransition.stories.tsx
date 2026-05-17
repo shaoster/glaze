@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import StateTransition from "../components/StateTransition";
 import { fn } from "@storybook/test";
-import React from "react";
 
 /**
  * StateTransition visualizes and controls the progression of a piece through its workflow.
