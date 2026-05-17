@@ -7,7 +7,7 @@ name: docs
 description: |
   Assess and update human-facing documentation (READMEs) based on codebase state
   or recent changes. Explains the documentation strategy (what goes where) and
-  invokes /docs in Claude Code, or /do for issue-driven work, to apply updates.
+  applies updates directly.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 ---
 
@@ -34,8 +34,8 @@ Glaze uses domain-specific READMEs to keep documentation focused and maintainabl
    - Ensure that new frontend components have accompanying `.stories.tsx` coverage and are documented appropriately.
    - Ensure that new or changed API endpoints are documented with DRF `@extend_schema` decorators so they appear correctly in the Swagger UI.
 2. **List Updates**: Formulate a concise list of missing, outdated, or misplaced documentation based strictly on the divergence.
-3. **Invoke Execution**: For the identified updates, invoke the `/do` skill to create a branch, write the documentation changes, and open a PR. For example: "I have identified the following docs divergences... I will now use `/do` to update them."
+3. **Apply Updates**: Write the documentation changes directly — create a branch, edit the files, and open a PR. For example: "I have identified the following docs divergences..." then proceed to implement them.
 4. **Execution Strategy (Tracking Stamp)**: To mark a documentation update as complete, the agent MUST "touch" the stamp file in its PR.
    - Run `date -u +"%Y-%m-%dT%H:%M:%SZ" > .agents/skills/docs/LAST_ANALYSIS_STAMP`
    - Include this file modification in the same commit as the documentation updates. The file's content is arbitrary; changing it ensures that `git log` on the next run will find this new commit.
-5. **Iteration Strategy**: If you iterate on the PR (e.g., adding new commits to address review feedback), you MUST ensure the stamp file modification is in the *very last* commit of the PR branch. If a repository uses a rebase and merge strategy, an early stamp commit will cause the PR's subsequent commits to be incorrectly flagged as "new" changes in the next analysis. Use `git commit --amend` or interactive rebase (`git rebase -i`) to guarantee the stamp file is touched by the final commit.
+5. **Iteration Strategy**: If you iterate on the PR (e.g., adding new commits to address review feedback), you MUST ensure the stamp file modification is in the *very last* commit of the PR branch. If a repository uses a "rebase and merge" (non-squash) strategy, an early stamp commit will cause the PR's subsequent commits to be incorrectly flagged as "new" changes in the next analysis. Use `git commit --amend` or interactive rebase (`git rebase -i`) to guarantee the stamp file is touched by the final commit in the PR.

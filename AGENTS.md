@@ -49,7 +49,7 @@ command fails. State any deviation explicitly.
 
 ## Agent Resources
 
-Six user-invocable skills: `/do` (implement an issue), `/spec` (draft and file a new issue), `/dream` (create a milestone and sub-issues), `/audit` (test performance audit), `/cover` (analyze test coverage), and `/deps` (audit Bazel dependency graphs).
+Seven user-invocable skills: `/do` (implement an issue), `/spec` (draft and file a new issue), `/dream` (create a milestone and sub-issues), `/audit` (test performance audit), `/cover` (analyze test coverage), `/deps` (audit Bazel dependency graphs), and `/docs` (assess and update human-facing READMEs).
 
 All other resources are loaded on demand via the `activate_skill` tool. Load what the task touches —
 typically 2–4 skills. The `/do` flow scouts dependencies and announces which to load.
