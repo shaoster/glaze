@@ -197,7 +197,7 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
     def get_glaze_types(self, obj: GlazeCombination) -> list:
         return [
             {"id": str(layer.glaze_type_id), "name": layer.glaze_type.name}
-            for layer in obj.layers.select_related("glaze_type").all()
+            for layer in obj.layers.all()
         ]
 
 

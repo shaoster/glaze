@@ -155,7 +155,9 @@ class TestDetectSubjectCropTask:
 
     def test_no_subject_detected_is_skipped(self, user, monkeypatch):
         image = self._make_cloudinary_image(user)
-        monkeypatch.setattr("api.utils.calculate_subject_crop_remote", lambda image_url: None)
+        monkeypatch.setattr(
+            "api.utils.calculate_subject_crop_remote", lambda image_url: None
+        )
         task = self._make_task(user, {"image_id": str(image.id)})
         self._run_sync(task.id)
         task.refresh_from_db()
@@ -169,7 +171,9 @@ class TestDetectSubjectCropTask:
         image = self._make_cloudinary_image(user)
         piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
         crop = {"x": 0.1, "y": 0.2, "width": 0.5, "height": 0.5}
-        monkeypatch.setattr("api.utils.calculate_subject_crop_remote", lambda image_url: crop)
+        monkeypatch.setattr(
+            "api.utils.calculate_subject_crop_remote", lambda image_url: crop
+        )
         task = self._make_task(
             user, {"image_id": str(image.id), "piece_id": str(piece.id)}
         )
@@ -212,7 +216,9 @@ class TestDetectSubjectCropTask:
             piece_state=ps, image=image, order=0, crop=None
         )
         crop = {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8}
-        monkeypatch.setattr("api.utils.calculate_subject_crop_remote", lambda image_url: crop)
+        monkeypatch.setattr(
+            "api.utils.calculate_subject_crop_remote", lambda image_url: crop
+        )
         task = self._make_task(
             user,
             {"image_id": str(image.id), "piece_state_image_id": str(psi.id)},

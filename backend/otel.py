@@ -129,7 +129,9 @@ def configure_otel() -> bool:
     log_provider = LoggerProvider(resource=resource)
     log_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
     otel_logs.set_logger_provider(log_provider)
-    logging.getLogger().addHandler(LoggingHandler(level=logging.INFO, logger_provider=log_provider))
+    logging.getLogger().addHandler(
+        LoggingHandler(level=logging.INFO, logger_provider=log_provider)
+    )
 
     DjangoInstrumentor().instrument()
     Psycopg2Instrumentor().instrument()

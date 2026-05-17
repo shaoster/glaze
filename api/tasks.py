@@ -163,7 +163,6 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     if not image.cloud_name or not image.cloudinary_public_id:
         return {"status": "skipped", "reason": "Not a Cloudinary image"}
 
-    from django.conf import settings
 
     logger.info("Offloading subject detection to remote service.")
     crop = calculate_subject_crop_remote(image_url=image.url)
