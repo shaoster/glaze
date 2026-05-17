@@ -60,9 +60,12 @@ from .workflow import (
     get_state_ref_fields as get_state_ref_fields,
 )
 
+_MISSING = object()
 
-@lru_cache(maxsize=None)
-def _piece_state_global_ref_related_name(global_name: str) -> str:
+
+# Only a handful of global-ref types exist for piece states, so keep this bounded.
+@lru_cache(maxsize=8)
+def _piece_state_ref_related_name(global_name: str) -> str:
     config = get_global_config(global_name)
     ref_model = apps.get_model("api", f"PieceState{config['model']}Ref")
     related_name = ref_model._meta.get_field("piece_state").remote_field.related_name
@@ -273,6 +276,30 @@ class Piece(models.Model):
                 return None
             return max(prefetched_states, key=self._state_sort_key)
 
+    def _prefetched_state(self, state_id: str) -> "PieceState | None | object":
+        states = self._prefetched_states()
+        if states is None:
+            return _MISSING
+        matches = [state for state in states if state.state == state_id]
+        if not matches:
+            return None
+        return max(matches, key=lambda state: state.created)
+
+    @property
+    def current_state(self) -> "PieceState | None":
+        states = self._prefetched_states()
+        if states is not None:
+            if not states:
+                return None
+            return max(
+                states,
+                key=lambda state: (
+                    state.order is not None,
+                    state.order if state.order is not None else -1,
+                    state.created,
+                ),
+            )
+
         from django.db.models import F
 
         return self.states.order_by(
@@ -337,15 +364,15 @@ class PieceState(models.Model):
     def images(self, value: list[dict]) -> None:
         self._pending_images = value
 
-    def _prefetched_global_ref(self, field_name: str) -> Any | None:
+    def _prefetched_global_ref(self, field_name: str) -> Any | None | object:
         global_ref_map = get_global_ref_fields_for_state(self.state)
         global_name = global_ref_map.get(field_name)
         if global_name is None:
-            return None
-        related_name = _piece_state_global_ref_related_name(global_name)
+            return _MISSING
+        related_name = _piece_state_ref_related_name(global_name)
         refs = getattr(self, "_prefetched_objects_cache", {}).get(related_name)
         if refs is None:
-            return None
+            return _MISSING
         for ref_row in refs:
             if ref_row.field_name == field_name:
                 return getattr(ref_row, global_name)
@@ -411,12 +438,15 @@ class PieceState(models.Model):
             marker = val[1:-1]
             if "." in marker:
                 src_state_id, src_field_name = marker.split(".", 1)
-                ancestor = (
-                    self.piece.states.filter(state=src_state_id)
-                    .order_by("-created")
-                    .first()
-                )
-                if ancestor:
+                ancestor = self.piece._prefetched_state(src_state_id)
+                if ancestor is _MISSING:
+                    ancestor = (
+                        self.piece.states.filter(state=src_state_id)
+                        .order_by("-created")
+                        .first()
+                    )
+                if ancestor is not None:
+                    assert isinstance(ancestor, PieceState)
                     return ancestor.resolve_custom_field(src_field_name)
 
         if val is not None:
@@ -442,7 +472,7 @@ class PieceState(models.Model):
         global_ref_map = get_global_ref_fields_for_state(self.state)
         if field_name in global_ref_map:
             prefetched_global_ref = self._prefetched_global_ref(field_name)
-            if prefetched_global_ref is not None:
+            if prefetched_global_ref is not _MISSING:
                 return prefetched_global_ref
             global_name = global_ref_map[field_name]
             config = get_global_config(global_name)
