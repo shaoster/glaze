@@ -65,7 +65,7 @@ export default defineConfig({
       reportsDirectory: process.env.COVERAGE_OUTPUT_FILE
         ? process.env.COVERAGE_OUTPUT_FILE + "/.."
         : "./coverage",
-      include: ["src/**/*.{ts,tsx}"],
+      include: ["src/**/*.{ts,tsx}", "scripts/**/*.mjs"],
       exclude: ["src/test-setup.ts", "**/*.d.ts", "**/generated-types.ts"],
     },
   },
