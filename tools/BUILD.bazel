@@ -49,6 +49,38 @@ py_binary(
     visibility = ["//visibility:public"],
 )
 
+# ── Glaze dev-stack launcher ────────────────────────────────────────────────
+# Single hermetic entry point for `gz_start`. It starts backend + web,
+# writes pid/port metadata, and exits so Bazel can release its lock.
+py_binary(
+    name = "gz_start_launcher",
+    srcs = ["gz_start_launcher.py"],
+    data = [
+        "//:workflow_files",
+        "//web:dev_server",
+    ],
+    deps = [
+        "//api:api_lib",
+        "//backend:backend_lib",
+        "@pypi//uvicorn",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+pytest_test(
+    name = "test_gz_start_launcher",
+    srcs = [
+        "gz_start_launcher.py",
+        "tests/test_gz_start_launcher.py",
+        "//tools:pytest_main.py",
+    ],
+    main = "//tools:pytest_main.py",
+    args = ["tools/tests/test_gz_start_launcher.py"],
+    deps = [],
+    expected_coverage = ["tools/gz_start_launcher.py"],
+    visibility = ["//visibility:public"],
+)
+
 # ── Piece image crop service ───────────────────────────────────────────────────
 # Local dev entry point for the Modal remote cropping service.
 # Run with: bazel run //tools:piece_image_crop_service
