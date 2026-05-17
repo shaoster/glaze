@@ -64,7 +64,7 @@ npm.npm_translate_lock(
     name = "npm",
     data = ["//web:package.json"],
     pnpm_lock = "//web:pnpm-lock.yaml",
-    lifecycle_hooks_exclude = ["*"],
+    lifecycle_hooks = {"better-sqlite3": ["install"]},
     update_pnpm_lock = True,
     verify_node_modules_ignored = "//:.bazelignore",
 )

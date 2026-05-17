@@ -23,7 +23,7 @@ import lcovParse from "lcov-parse";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = resolve(SCRIPT_DIR, "..");
-const REPO_ROOT = resolve(WEB_DIR, "..");
+const REPO_ROOT = process.env.BUILD_WORKSPACE_DIRECTORY || resolve(WEB_DIR, "..");
 const DEFAULT_REPORT_ROOT = resolve(REPO_ROOT, "bazel-testlogs");
 const DEFAULT_INTEGRATION_REGEX = /(?:^|[/_.-])integration(?:$|[/_.-])/i;
 

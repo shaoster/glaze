@@ -70,6 +70,8 @@
     "glob": "^13"
   },
   "pnpm": {
-    "onlyBuiltDependencies": []
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }
