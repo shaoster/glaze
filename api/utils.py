@@ -7,6 +7,7 @@ workflow-state-machine logic derived from workflow.yml).
 
 import logging
 import os
+
 import requests
 from cloudinary import CloudinaryImage
 from django.apps import apps

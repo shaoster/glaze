@@ -293,3 +293,28 @@ class TestResponseShape:
         assert piece["state"] == "glazed"
         assert len(piece["images"]) == 1
         assert piece["images"][0]["url"] == SAMPLE_IMAGE["url"]
+
+
+@pytest.mark.django_db
+class TestQueryCount:
+    """Regression guard: query count must not scale with the number of combos."""
+
+    def test_fixed_query_count(self, client, user, django_assert_num_queries):
+        for i in range(3):
+            gt = _glaze_type(f"Glaze {i}", user=user)
+            combo = _combo(user, gt)
+            p = _piece(user, name=f"Piece {i}")
+            state = _add_state(p, "glazed", images=[SAMPLE_IMAGE])
+            _attach_combo(state, combo)
+        # 8 fixed queries regardless of combo count (update this comment when the
+        # number changes, e.g. due to new middleware or auth path changes):
+        #   1. set_config('TimeZone', ...)
+        #   2. SELECT django_session (session auth)
+        #   3. SELECT auth_user (session auth)
+        #   4. SELECT PieceStateGlazeCombinationRef (piece→combo mapping)
+        #   5. SELECT PieceState + image_links prefetch (qualifying states)
+        #   6. SELECT GlazeCombination + select_related test_tile_image
+        #   7. SELECT GlazeCombinationLayer (prefetch layers__glaze_type batch)
+        #   8. SELECT FavoriteGlazeCombination (favorite_ids)
+        with django_assert_num_queries(8):
+            client.get(URL)

@@ -179,9 +179,11 @@ def glaze_combination_images(request: Request) -> Response:
     sorted_combo_ids = sorted(combo_pieces.keys(), key=_combo_latest, reverse=True)
 
     # Bulk-fetch GlazeCombination objects for serialization.
-    combos_qs = GlazeCombination.objects.filter(
-        pk__in=sorted_combo_ids
-    ).prefetch_related("layers__glaze_type", "firing_temperature")
+    combos_qs = (
+        GlazeCombination.objects.filter(pk__in=sorted_combo_ids)
+        .select_related("test_tile_image")
+        .prefetch_related("layers__glaze_type", "firing_temperature")
+    )
     combo_by_id = {c.pk: c for c in combos_qs}
 
     favorite_ids = FavoriteGlazeCombination.get_favorite_ids_for(request.user)
