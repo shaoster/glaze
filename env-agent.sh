@@ -558,6 +558,12 @@ gz_web() {
     export APP_ORIGIN="http://localhost:${port:-5173}"
 }
 
+gz_story() {
+    local port=${1:-6006}
+    echo "Starting Storybook dev server on http://localhost:$port ..."
+    (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel run //web:storybook_dev -- dev --port "$port")
+}
+
 gz_open() {
     (
         # Give servers a moment to settle
@@ -853,6 +859,7 @@ _GZ_SHORTCUTS=(
     "gz_gentypes       — regenerate TypeScript types via Bazel; symlinks into src/"
     "gz_push [--latest]— build + push OCI image tagged with HEAD sha (and :latest)"
     "gz_deploy [--no-push] — push image + deploy to GLAZE_PROD_HOST droplet"
+    "gz_story [port]   — start Storybook dev server via Bazel (default port 6006)"
     "gz_start/stop     — start or stop backend + web (gz_start opens browser, registers EXIT cleanup)"
     "gz_open           — open the web UI in the browser (if servers already running)"
     "gz_status         — show what services are running (with ports)"

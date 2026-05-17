@@ -173,3 +173,38 @@ For tests that exercise react-router navigation, use playwright's browser tests.
 ## Debugging
 
 - When something in a third party library or framework behaves differently from what is expected based on context, prefer to look up the documentation before blindly scanning the code.
+
+## Storybook
+
+Storybook is the component documentation layer for `web/src/components/`. Stories live in `web/src/stories/` and are built hermetically via Bazel.
+
+### Running Storybook
+
+```bash
+gz_story               # Bazel-managed dev server on http://localhost:6006
+gz_story 7007          # alternate port
+
+# Or directly via Bazel:
+bazel build //web:storybook_build   # static build → bazel-bin/web/storybook-static/
+bazel run //web:storybook_dev       # dev server
+```
+
+The published Storybook is at **https://shaoster.github.io/glaze/storybook/**, deployed by `static.yml` on every push to `main`.
+
+### Writing stories
+
+- Story files are `src/stories/<ComponentName>.stories.tsx`.
+- Import from `storybook/test` (not `@storybook/test`, which was removed in v9).
+- The preview wraps all stories in the MUI dark theme via `.storybook/preview.tsx` — no ThemeProvider needed in individual stories.
+- Use `fn()` from `storybook/test` for callback props so actions are logged in the Storybook UI.
+- Keep fixtures minimal: provide just enough props to render the interesting variant. Avoid coupling stories to backend API shapes unless necessary.
+
+### Bazel target details
+
+| Target | Purpose |
+|---|---|
+| `//web:storybook_lib` | `js_library` aggregating `.storybook/**` + `src/stories/**` + `web_lib` |
+| `//web:storybook_build` | Static build via `storybook build`; output in `bazel-bin/web/storybook-static/` |
+| `//web:storybook_dev` | Dev server via `storybook dev` |
+
+**Sandbox note:** `.storybook/main.ts` sets `viteFinal: config => { config.publicDir = false; return config; }` to prevent Vite from trying to copy `public/` assets (which are read-only symlinks in the Bazel sandbox).

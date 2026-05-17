@@ -236,8 +236,9 @@ __marimo__/
 # Agent Tempdirs
 .claude/worktrees
 
-# Ignore the generated index
+# Ignore generated pages output (both the index and the storybook build artifact)
 pages/index.html
+pages/storybook
 
 # Bazel's aspect_rules tempdir
 .aspect
