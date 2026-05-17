@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from django.apps import apps
@@ -242,8 +243,26 @@ class Piece(models.Model):
     class Meta:
         ordering = ["-fields_last_modified"]
 
+    def _prefetched_states(self) -> list["PieceState"] | None:
+        """Return prefetched states when the relation is already cached."""
+        states = getattr(self, "_prefetched_objects_cache", {}).get("states")
+        if states is None:
+            return None
+        return list(states)
+
+    @staticmethod
+    def _state_sort_key(state: "PieceState") -> tuple[bool, int, datetime]:
+        order = state.order if state.order is not None else -1
+        return (state.order is not None, order, state.created)
+
     @property
     def current_state(self) -> "PieceState | None":
+        prefetched_states = self._prefetched_states()
+        if prefetched_states is not None:
+            if not prefetched_states:
+                return None
+            return max(prefetched_states, key=self._state_sort_key)
+
         from django.db.models import F
 
         return self.states.order_by(

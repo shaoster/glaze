@@ -1,6 +1,8 @@
 import uuid
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient
 
@@ -14,6 +16,23 @@ from api.serializers import _replace_piece_tags
 
 @pytest.mark.django_db
 class TestPieceDetail:
+    def test_get_uses_a_small_number_of_queries(self, client, piece, user):
+        piece.current_location = Location.objects.create(user=user, name="Studio")
+        piece.thumbnail = {
+            "url": "https://example.com/piece-thumb.jpg",
+            "cloudinary_public_id": None,
+            "cloud_name": None,
+        }
+        piece.save()
+        PieceState.objects.create(piece=piece, state="designed")
+        PieceState.objects.create(piece=piece, state="designed")
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = client.get(f"/api/pieces/{piece.id}/")
+
+        assert response.status_code == 200
+        assert len(ctx) <= 6
+
     def test_get(self, client, piece):
         response = client.get(f"/api/pieces/{piece.id}/")
         assert response.status_code == 200
