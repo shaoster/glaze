@@ -91,7 +91,7 @@ Glaze uses a high-level orchestration workflow inspired by the [Get Shit Done (G
 #### Our Architectural Principles for Agent Work:
 
 - **Normative Content in GitHub**: Unlike some agent-first workflows that store state in local markdown files, Glaze keeps all normative requirements and status in **GitHub Issues, Milestones, and PRs**. This minimizes hallucinations from non-frontier models by using GitHub as the source of truth and ensures that the project remains accessible to human non-developer contributors via the standard GitHub UI.
-- **Flexible Verification**: Verification can happen **synchronously** (as part of the `/do` cycle where the agent runs tests before pushing) or **asynchronously** in bulk using the `/audit` (performance/flakiness), `/cover` (coverage), and `/deps` (Bazel dependency graph audit) skills.
+- **Flexible Verification**: Verification can happen **synchronously** (as part of the `/do` cycle where the agent runs tests before pushing) or **asynchronously** in bulk using the `/audit` (test performance/flakiness), `/cover` (coverage), and `/deps` (Bazel dependency graph audit) skills.
 
 When you run `/do #292`, the agent will create a branch like `issue/292-vibe-coding-flow` and a repo-local worktree like `.agent-worktrees/codex/issue-292-vibe-coding-flow` before it analyzes or edits anything.
  The agent should immediately print a copy-friendly line:
@@ -224,14 +224,15 @@ source env.sh && gz_format
 
 ## Vibe coding / Contributing
 
-Glaze uses agent workflows for planning, implementation, and offline analysis. If you want to work with the repo through an agent, use the workflow that matches the task:
+Glaze uses agent workflows for planning, implementation, offline analysis, and docs convergence. If you want to work with the repo through an agent, use the workflow that matches the task:
 
 - `/dream`: define a broad feature or product direction and let the agent break it into milestones and sub-issues.
 - `/spec`: turn a specific idea into a focused issue with scope, motivation, and acceptance criteria.
 - `/do #<issue>`: implement a scoped issue on a repo-local worktree and produce the code change.
-- `/audit`: run the performance and flakiness audit workflow.
+- `/audit`: run the performance and flakiness audit workflow for tests.
 - `/cover`: run the coverage audit workflow.
 - `/deps`: inspect Bazel dependency graphs for unexpected or overly broad dependencies.
+- `docs-convergence`: reconcile duplicated docs after structural changes.
 
 Use `/dream` and `/spec` when the work is still being shaped. Use `/do` when the task is ready to implement. Use the asynchronous audit skills when you want analysis without blocking the main development loop.
 

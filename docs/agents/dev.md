@@ -279,6 +279,7 @@ Key local skills:
 | ----------------------------- | -------------------------------------------------------------------------------------------- |
 | `do-issue-worktree`           | Start a single issue or PR-sized change with `/do #<issue>` and an immediate worktree setup. |
 | `deps`                        | Audit Bazel dependency graphs for the OCI image plus test and lint targets.                  |
+| `docs-convergence`            | Reconcile duplicated docs after structural changes so the root README stays canonical.       |
 
 For orchestrating multiple worktrees, see [`docs/agents/worktrees.md`](worktrees.md).
 

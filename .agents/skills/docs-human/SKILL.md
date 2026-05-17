@@ -39,3 +39,5 @@ Glaze uses domain-specific READMEs to keep documentation focused and maintainabl
    - Run `date -u +"%Y-%m-%dT%H:%M:%SZ" > .agents/skills/docs-human/LAST_ANALYSIS_STAMP`
    - Include this file modification in the same commit as the documentation updates. The file's content is arbitrary; changing it ensures that `git log` on the next run will find this new commit.
 5. **Iteration Strategy**: If you iterate on the PR (e.g., adding new commits to address review feedback), you MUST ensure the stamp file modification is in the *very last* commit of the PR branch. If a repository uses a "rebase and merge" (non-squash) strategy, an early stamp commit will cause the PR's subsequent commits to be incorrectly flagged as "new" changes in the next analysis. Use `git commit --amend` or interactive rebase (`git rebase -i`) to guarantee the stamp file is touched by the final commit in the PR.
+
+When the task is to reconcile duplicated docs after a structural change, load the `docs-convergence` skill alongside `docs-human` so the root README, package READMEs, agent docs, and skill docs stay aligned.
