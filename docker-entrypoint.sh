@@ -2,7 +2,6 @@
 set -e
 
 python manage.py migrate --no-input
-python manage.py collectstatic --no-input
 python manage.py load_public_library --skip-if-missing
 # On startup, fail all tasks marked as RUNNING or PENDING because in an
 # InMemoryTaskInterface setup, no tasks can survive a process restart.

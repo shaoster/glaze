@@ -168,10 +168,11 @@ jobs:
 
       - name: Pre-pull sidecar images
         run: |
-          # Pull third-party images (postgres, otelcol, etc.) before starting
+          # Pull third-party sidecar images (postgres, otelcol) before starting
           # the timed --wait block so image download doesn't eat into the
-          # healthcheck timeout budget.
-          docker compose pull --ignore-buildable
+          # healthcheck timeout budget. Explicitly name services to avoid pulling
+          # the web service and overwriting the locally-built Bazel image.
+          docker compose pull db otelcol
 
       - name: Smoke test via docker compose
         run: |
