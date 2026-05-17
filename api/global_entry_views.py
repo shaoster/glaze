@@ -25,6 +25,8 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from backend.otel import traced
+
 from .models import (
     AsyncTask,
     FavoriteGlazeCombination,
@@ -125,6 +127,7 @@ _GLOBAL_CREATE_REQUEST_SCHEMA = {
 }
 
 
+@traced
 def _global_entries_impl(request: Request, global_name: str) -> Response:
     """Core implementation for GET/POST /api/globals/<global_name>/.
 
@@ -314,6 +317,7 @@ def make_global_entry_view(global_name: str):
     return view
 
 
+@traced
 def _global_entry_favorite_impl(
     request: Request, model_cls, fav_model_cls, pk: str
 ) -> Response:

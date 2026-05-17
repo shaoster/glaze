@@ -46,6 +46,8 @@ from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from backend.otel import traced_class
+
 from .models import (
     AsyncTask,
     FiringTemperature,
@@ -136,6 +138,7 @@ class FiringTemperatureRefSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "cone", "temperature_c", "atmosphere"]
 
 
+@traced_class
 @global_entry_serializer(GlazeCombination)
 class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
     """Richer list entry for GlazeCombination: includes properties, glaze types, and favorite flag.
@@ -235,6 +238,7 @@ class CaptionedImageSerializer(serializers.Serializer):
     crop = serializers.JSONField(required=False, allow_null=True, default=None)
 
 
+@traced_class
 class PieceStateSerializer(serializers.ModelSerializer):
     previous_state = serializers.SerializerMethodField()
     next_state = serializers.SerializerMethodField()
@@ -362,6 +366,7 @@ class ThumbnailSerializer(serializers.Serializer):
     crop = serializers.JSONField(required=False, allow_null=True, default=None)
 
 
+@traced_class
 @add_tags(Piece)
 @global_entry_serializer(Piece)
 class PieceSummarySerializer(serializers.ModelSerializer):
@@ -421,6 +426,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         return {**thumbnail, "crop": obj.thumbnail_crop}
 
 
+@traced_class
 class PieceDetailSerializer(PieceSummarySerializer):
     current_state = serializers.SerializerMethodField()
     history = serializers.SerializerMethodField()
@@ -441,6 +447,7 @@ class PieceDetailSerializer(PieceSummarySerializer):
         )
 
 
+@traced_class
 class PieceCreateSerializer(serializers.ModelSerializer):
     notes = serializers.CharField(
         required=False,
@@ -499,6 +506,7 @@ class PieceCreateSerializer(serializers.ModelSerializer):
         return piece
 
 
+@traced_class
 class PieceStateCreateSerializer(serializers.ModelSerializer):
     state = serializers.ChoiceField(choices=sorted(VALID_STATES))
     notes = serializers.CharField(
@@ -670,6 +678,7 @@ def _write_global_ref_rows(
         )
 
 
+@traced_class
 class PieceStateUpdateSerializer(serializers.Serializer):
     """Partial update of the current PieceState's editable fields."""
 
@@ -726,6 +735,7 @@ class PieceStateUpdateSerializer(serializers.Serializer):
         return instance
 
 
+@traced_class
 class PieceUpdateSerializer(serializers.Serializer):
     """Partial update of Piece fields."""
 

@@ -25,6 +25,8 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from backend.otel import traced
+
 from .invitations import make_invite_token, send_invitation_email, verify_invite_token
 from .models import (
     AllowedEmail,
@@ -67,6 +69,7 @@ from .workflow import (
 @ensure_csrf_cookie
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@traced
 def csrf(request: Request) -> Response:
     return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -74,6 +77,7 @@ def csrf(request: Request) -> Response:
 @extend_schema(request=LoginSerializer, responses={200: AuthUserSerializer})
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@traced
 def auth_login(request: Request) -> Response:
     serializer = LoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -95,6 +99,7 @@ def auth_login(request: Request) -> Response:
 @extend_schema(request=None, responses={204: None})
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@traced
 def auth_logout(request: Request) -> Response:
     logout(request)
     return Response(status=status.HTTP_204_NO_CONTENT)
@@ -103,6 +108,7 @@ def auth_logout(request: Request) -> Response:
 @extend_schema(request=None, responses={200: AuthUserSerializer, 401: None})
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@traced
 def auth_me(request: Request) -> Response:
     return Response(AuthUserSerializer(request.user).data)
 
@@ -110,6 +116,7 @@ def auth_me(request: Request) -> Response:
 @extend_schema(request=GoogleAuthSerializer, responses={200: AuthUserSerializer})
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@traced
 def auth_google(request: Request) -> Response:
     client_id = settings.GOOGLE_OAUTH_CLIENT_ID
     if not client_id:
@@ -196,6 +203,7 @@ def auth_google(request: Request) -> Response:
 @extend_schema(request=RegisterSerializer, responses={201: AuthUserSerializer})
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@traced
 def auth_register(request: Request) -> Response:
     serializer = RegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -257,6 +265,7 @@ def _check_not_invited(email: str) -> Response | None:
 @extend_schema(request=None, responses={204: None})
 @api_view(["POST"])
 @permission_classes([IsAdminUser])
+@traced
 def admin_invite(request: Request) -> Response:
     email = request.data.get("email", "").strip().lower()
     if not email:
@@ -275,6 +284,7 @@ def admin_invite(request: Request) -> Response:
 @extend_schema(request=None, responses={200: None})
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@traced
 def accept_invite(request: Request) -> Response:
     from django.core import signing
 
@@ -297,6 +307,7 @@ def accept_invite(request: Request) -> Response:
 @extend_schema(request=None, responses={204: None})
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@traced
 def waitlist_request(request: Request) -> Response:
     email = request.data.get("email", "").strip().lower()
     if not email:

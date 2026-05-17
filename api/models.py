@@ -9,6 +9,8 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
+from backend.otel import traced_class
+
 from .model_factories import (
     COMPOSITE_NAME_SEPARATOR as COMPOSITE_NAME_SEPARATOR,
 )
@@ -103,6 +105,7 @@ class AllowedEmail(models.Model):
         return f"{self.email} ({self.status})"
 
 
+@traced_class
 class Image(models.Model):
     """Shared image asset referenced by pieces, states, and global entries."""
 
@@ -219,6 +222,7 @@ _register_globals()
 # ---------------------------------------------------------------------------
 
 
+@traced_class
 class Piece(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
@@ -317,6 +321,7 @@ class Piece(models.Model):
         return self.name
 
 
+@traced_class
 class PieceState(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(

@@ -80,7 +80,7 @@ urlpatterns = [
 # so requests to them return 404 rather than 405.
 for _global_name in get_global_names():
     # Ignoring the reassignment type error since they're placeholders.
-    _model_cls, _, _ = get_global_model_and_field(_global_name)  # type: ignore[assignment]
+    _model_cls, _, _ = get_global_model_and_field(_global_name)
 
     urlpatterns.append(
         path(

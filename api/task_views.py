@@ -25,6 +25,8 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from backend.otel import traced
+
 from .models import (
     AsyncTask,
     FavoriteGlazeCombination,
@@ -68,6 +70,7 @@ from .workflow import (
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@traced
 def submit_task(request: Request) -> Response:
     from .tasks import get_task_interface
 
@@ -92,6 +95,7 @@ def submit_task(request: Request) -> Response:
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@traced
 def task_detail(request: Request, task_id: str) -> Response:
     # Scope to current user to prevent leaking task state between accounts.
     task = get_object_or_404(AsyncTask, id=task_id, user=request.user)

@@ -13,6 +13,8 @@ import yaml
 from django.apps import apps
 from django.db import models as django_models
 
+from backend.otel import traced
+
 if TYPE_CHECKING:
     from .model_factories import GlobalModel
 
@@ -57,11 +59,13 @@ def get_state_friendly_name(state_id: str) -> str:
     return str(_STATE_MAP.get(state_id, {}).get("friendly_name", state_id))
 
 
+@traced
 def get_state_config(state_id: str) -> dict:
     """Return the full workflow.yml config dict for a state, or {} if unknown."""
     return dict(_STATE_MAP.get(state_id, {}))
 
 
+@traced
 def get_state_summary(state_id: str) -> dict:
     """Return read-only summary metadata declared for a workflow state.
 
@@ -73,6 +77,7 @@ def get_state_summary(state_id: str) -> dict:
     return dict(_STATE_MAP.get(state_id, {}).get("summary", {}))
 
 
+@traced
 def can_reach(src_state_id: str, dst_state_id: str) -> bool:
     """Return True if dst_state_id is reachable from src_state_id in the workflow graph.
 
@@ -112,6 +117,7 @@ def get_state_ref_fields(state_id: str) -> dict[str, tuple[str, str]]:
     return result
 
 
+@traced
 def get_global_model_and_field(
     global_name: str,
 ) -> tuple[type["GlobalModel"], dict[str, dict], str]:
@@ -641,6 +647,7 @@ def _validate_custom_fields_cached(state_id: str, custom_fields_hashable: Any) -
         ) from exc
 
 
+@traced
 def validate_custom_fields(state_id: str, custom_fields: dict) -> None:
     """Validate custom_fields against the workflow DSL for state_id.
 
