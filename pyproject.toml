@@ -59,7 +59,7 @@ dependencies = [
     "onnxruntime==1.26.0",
     "opencv-python-headless==4.13.0.92",
     "opentelemetry-exporter-otlp-proto-grpc>=1.11.1",
-    "opentelemetry-instrumentation-django>=0.62b1",
+    "opentelemetry-instrumentation-asgi>=0.62b1",
     "opentelemetry-instrumentation-psycopg2>=0.62b1",
     "opentelemetry-sdk>=1.41.1",
     "packaging==26.2",
