@@ -60,20 +60,17 @@ jobs:
           envsubst < .env.production.template > /tmp/.env
           scp /tmp/.env "${{ vars.DEPLOY_HOST }}":~/glaze/.env
 
+      - name: Deploy
+        run: ./deploy.sh "${{ vars.DEPLOY_HOST }}" "${{ env.DEPLOY_SHA }}"
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh release view "release-${{ env.DEPLOY_SHA }}" >/dev/null 2>&1; then
-            echo "Release release-${{ env.DEPLOY_SHA }} already exists"
-          else
-            gh release create "release-${{ env.DEPLOY_SHA }}" \
-              --title "Build ${{ env.DEPLOY_SHA }}" \
-              --notes "Docker image: \`ghcr.io/shaoster/glaze:${{ env.DEPLOY_SHA }}\`"
-          fi
-
-      - name: Deploy
-        run: ./deploy.sh "${{ vars.DEPLOY_HOST }}" "${{ env.DEPLOY_SHA }}"
+          gh release view "release-${{ env.DEPLOY_SHA }}" >/dev/null 2>&1 || \
+          gh release create "release-${{ env.DEPLOY_SHA }}" \
+            --title "Build ${{ env.DEPLOY_SHA }}" \
+            --notes "Docker image: \`ghcr.io/shaoster/glaze:${{ env.DEPLOY_SHA }}\`"
 
   deploy-modal:
     name: Deploy ML Microservice to Modal

@@ -13,16 +13,16 @@
 #       docker login ghcr.io -u shaoster -p <PAT with read:packages>
 #
 # On first run this script clones the repo to ~/glaze (public repo, no key needed).
-# Subsequent deploys fetch the commit matching the deployed image so config files
-# (docker-compose.yml, otel-collector-config.yml, nginx/snippets/, etc.) are
-# always in sync without having to update this script when new files are added.
+# Subsequent deploys fetch the commit matching the deployed image, persist that
+# tag in ~/glaze/.env, and then restart Compose so later restarts keep using the
+# exact release image instead of drifting to a moving tag.
 set -euo pipefail
 
 HOST=${1:?Usage: ./deploy.sh user@host commit-sha}
 KNOWN_SHA=${2:?Usage: ./deploy.sh user@host commit-sha}
 
 echo "--- deploying application ---"
-ssh "$HOST" bash <<REMOTE
+ssh "$HOST" env KNOWN_SHA="$KNOWN_SHA" bash <<'REMOTE'
 set -euo pipefail
 
 echo "--- bootstrapping repo (no-op if already cloned) ---"
@@ -32,34 +32,36 @@ fi
 cd ~/glaze
 
 echo "--- syncing repo to image commit ---"
-SHA="${KNOWN_SHA}"
-echo "Image built from commit \$SHA"
+SHA="$KNOWN_SHA"
+echo "Image built from commit $SHA"
 git fetch --quiet origin
 git restore --quiet .
-git checkout --quiet "\$SHA"
+git checkout --quiet "$SHA"
 
-echo "--- rendering release compose override ---"
-cat > docker-compose.release.yml <<EOF
-services:
-  web:
-    image: ghcr.io/shaoster/glaze:${SHA}
-EOF
+echo "--- recording release tag in .env ---"
+env_tmp=$(mktemp .env.tmp.XXXXXX)
+trap 'rm -f "$env_tmp"' EXIT
+if [[ -f .env ]]; then
+    grep -v '^IMAGE_TAG=' .env > "$env_tmp" || true
+fi
+printf 'IMAGE_TAG=%s\n' "$SHA" >> "$env_tmp"
+mv "$env_tmp" .env
+trap - EXIT
 
 echo "--- pulling release image ---"
-docker compose -f docker-compose.yml -f docker-compose.release.yml pull
+docker compose pull
 
 echo "--- restarting services ---"
 # --force-recreate ensures containers always pick up .env changes even when
 # the image and compose spec are unchanged (e.g. secret rotation).
-docker compose -f docker-compose.yml -f docker-compose.release.yml up -d --force-recreate
+docker compose up -d --force-recreate
 
 echo "--- pruning ---"
 docker container prune -f
 docker image prune -f
 
 echo "--- deploy complete ---"
-docker compose -f docker-compose.yml -f docker-compose.release.yml ps
-rm -f docker-compose.release.yml
+docker compose ps
 REMOTE
 
 # Nginx snippets are synced after a successful app deploy so a mid-deploy

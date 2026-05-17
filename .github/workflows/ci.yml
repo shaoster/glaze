@@ -173,6 +173,8 @@ jobs:
         run: bazel run --config=ci --stamp //:load
 
       - name: Pre-pull sidecar images
+        env:
+          IMAGE_TAG: latest
         run: |
           # Pull third-party sidecar images (postgres, otelcol) before starting
           # the timed --wait block so image download doesn't eat into the
@@ -181,6 +183,8 @@ jobs:
           docker compose pull db otelcol
 
       - name: Smoke test via docker compose
+        env:
+          IMAGE_TAG: latest
         run: |
           set -euo pipefail
           export POSTGRES_PASSWORD=ci
@@ -200,6 +204,8 @@ jobs:
 
       - name: Tear down compose
         if: always()
+        env:
+          IMAGE_TAG: latest
         run: docker compose down -v --remove-orphans || true
 
       - name: Log in to GitHub Container Registry
