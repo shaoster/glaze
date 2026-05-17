@@ -35,17 +35,30 @@ cd ~/glaze
 echo "--- pulling latest images ---"
 docker compose pull
 
+echo "--- verifying image SHA ---"
+IMAGE_SHA=\$(docker inspect ghcr.io/shaoster/glaze:latest \
+    --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)
+
 echo "--- syncing repo to image commit ---"
 SHA="${KNOWN_SHA}"
 if [[ -z "\$SHA" ]]; then
-    SHA=\$(docker inspect ghcr.io/shaoster/glaze:latest \
-        --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)
+    SHA="\$IMAGE_SHA"
 fi
 if [[ -z "\$SHA" ]]; then
     echo "WARNING: commit SHA unknown, repo not updated"
 else
+    if [[ -n "\$IMAGE_SHA" && "\$IMAGE_SHA" != "\$SHA" ]]; then
+        echo "ERROR: pulled image was built from \$IMAGE_SHA but expected \$SHA"
+        echo "The registry may not have the image for this commit yet."
+        exit 1
+    fi
     echo "Image built from commit \$SHA"
     git fetch --quiet origin
+    DIRTY=\$(git status --short)
+    if [[ -n "\$DIRTY" ]]; then
+        echo "WARNING: discarding local modifications before checkout:"
+        echo "\$DIRTY"
+    fi
     git restore --quiet .
     git checkout --quiet "\$SHA"
 fi
