@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/react";
 import NewPieceDialog from "../components/NewPieceDialog";
 import { http, HttpResponse } from "msw";
 
@@ -53,7 +53,7 @@ export const Submitting: Story = {
   parameters: {
     msw: {
       handlers: [
-        ...Default.parameters.msw.handlers,
+        ...(Default.parameters as any).msw.handlers,
         http.post("/api/pieces/", () => {
           return new Promise(() => {}); // Never resolves
         }),

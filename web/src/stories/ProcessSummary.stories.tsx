@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/react";
 import ProcessSummary from "../components/ProcessSummary";
 import type { PieceState } from "../util/types";
 

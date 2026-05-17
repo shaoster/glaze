@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/react";
 import GlobalEntryDialog from "../components/GlobalEntryDialog";
 import { http, HttpResponse } from "msw";
 
@@ -30,7 +30,6 @@ export const Default: Story = {
   args: {
     open: true,
     globalName: "location",
-    label: "Location",
     onClose: () => {},
     onSelect: () => {},
   },
@@ -61,7 +60,6 @@ export const GlazeCombinations: Story = {
   args: {
     ...Default.args,
     globalName: "glaze_combination",
-    label: "Glaze Combination",
   },
   parameters: {
     msw: {

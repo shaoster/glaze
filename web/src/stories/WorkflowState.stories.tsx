@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/react";
 import WorkflowState from "../components/WorkflowState";
 import { http, HttpResponse } from "msw";
 

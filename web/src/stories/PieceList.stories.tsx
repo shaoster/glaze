@@ -1,6 +1,7 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/react";
 import PieceList from "../components/PieceList";
 import { http, HttpResponse } from "msw";
+import type { PieceSummary } from "../util/types";
 
 /**
  * PieceList is the primary dashboard for browsing and managing pieces.
@@ -26,16 +27,20 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const mockPieces = [
+const mockPieces: PieceSummary[] = [
   {
     id: "p1",
     name: "Midnight Bowl",
     created: new Date("2026-05-10"),
     last_modified: new Date("2026-05-12"),
     thumbnail: null,
-    current_state: { state: "glaze_fired", created: new Date("2026-05-12") },
+    current_state: { state: "glaze_fired", created: new Date("2026-05-12") } as any,
     current_location: "Finished Goods Shelf",
-    tags: [{ id: "t1", name: "midnight", color: "#121232" }],
+    tags: [{ id: "t1", name: "midnight", color: "#121232", is_public: true }],
+    shared: false,
+    is_editable: false,
+    can_edit: true,
+    showcase_fields: [],
   },
   {
     id: "p2",
@@ -43,13 +48,20 @@ const mockPieces = [
     created: new Date("2026-05-08"),
     last_modified: new Date("2026-05-09"),
     thumbnail: null,
-    current_state: { state: "bisque_fired", created: new Date("2026-05-09") },
+    current_state: { state: "bisque_fired", created: new Date("2026-05-09") } as any,
     current_location: "Bisque Shelf",
-    tags: [{ id: "t2", name: "spring", color: "#8eb89a" }],
+    tags: [{ id: "t2", name: "spring", color: "#8eb89a", is_public: true }],
+    shared: true,
+    is_editable: false,
+    can_edit: true,
+    showcase_fields: [],
   },
 ];
 
 export const Default: Story = {
+  args: {
+    pieces: mockPieces,
+  },
   parameters: {
     msw: {
       handlers: [
@@ -65,6 +77,9 @@ export const Default: Story = {
 };
 
 export const Empty: Story = {
+  args: {
+    pieces: [],
+  },
   parameters: {
     msw: {
       handlers: [
@@ -80,6 +95,10 @@ export const Empty: Story = {
 };
 
 export const Loading: Story = {
+  args: {
+    pieces: [],
+    loading: true,
+  },
   parameters: {
     msw: {
       handlers: [
@@ -92,6 +111,9 @@ export const Loading: Story = {
 };
 
 export const Error: Story = {
+  args: {
+    pieces: [],
+  },
   parameters: {
     msw: {
       handlers: [

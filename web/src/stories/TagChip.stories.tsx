@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/react";
 import TagChip from "../components/TagChip";
 
 /**

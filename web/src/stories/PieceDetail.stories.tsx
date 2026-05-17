@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/react";
 import PieceDetail from "../components/PieceDetail";
 import type { PieceDetail as PieceDetailType } from "../util/types";
 import { http, HttpResponse } from "msw";
