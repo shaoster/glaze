@@ -22,6 +22,7 @@ const meta = {
   parameters: {
     layout: "fullscreen",
   },
+  tags: ["autodocs"],
 } satisfies Meta<typeof PieceDetail>;
 
 export default meta;

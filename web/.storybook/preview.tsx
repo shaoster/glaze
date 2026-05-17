@@ -3,6 +3,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import React from "react";
 import { initialize, mswLoader } from "msw-storybook-addon";
+import { MemoryRouter } from "react-router-dom";
 
 // Initialize MSW
 initialize();
@@ -26,10 +27,12 @@ const DARK_THEME = createTheme({
 const preview: Preview = {
   decorators: [
     (Story) => (
-      <ThemeProvider theme={DARK_THEME}>
-        <CssBaseline />
-        <Story />
-      </ThemeProvider>
+      <MemoryRouter>
+        <ThemeProvider theme={DARK_THEME}>
+          <CssBaseline />
+          <Story />
+        </ThemeProvider>
+      </MemoryRouter>
     ),
   ],
   loaders: [mswLoader],

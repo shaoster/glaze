@@ -16,6 +16,7 @@ const meta = {
   title: "Components/ErrorBoundary",
   component: ErrorBoundary,
   parameters: { layout: "centered" },
+  tags: ["autodocs"],
   args: { children: null },
 } satisfies Meta<typeof ErrorBoundary>;
 
