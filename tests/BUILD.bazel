@@ -1,6 +1,6 @@
-load("@aspect_rules_py//py:defs.bzl", "py_test")
+load("//:python.bzl", "pytest_test")
 
-py_test(
+pytest_test(
     name = "common_test",
     size = "small",
     srcs = glob(["**/*.py"]) + ["//tools:pytest_main.py"],
@@ -11,7 +11,6 @@ py_test(
         "//:pytest_ini",
     ],
     deps = [
-        "@pypi//pytest",
         "@pypi//pytest_env",
         "@pypi//jsonschema",
         "@pypi//jsonschema_specifications",
@@ -19,5 +18,5 @@ py_test(
         "@pypi//referencing",
     ],
     env = {"DJANGO_SETTINGS_MODULE": "backend.test_settings"},
+    expected_coverage = ["api/**", "tests/**"],
 )
-

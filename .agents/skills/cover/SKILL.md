@@ -33,7 +33,8 @@ bazel run //web:coverage_audit -- summary
 The sparse schema makes common questions cheap to ask via the following commands:
 - `bazel run //web:coverage_audit -- gaps`: Largest uncovered contiguous ranges.
 - `bazel run //web:coverage_audit -- redundant`: Lines hit by many tests; candidates for simplification.
-- `bazel run //web:coverage_audit -- unexpected`: Tests with broad cross-module reach (non-integration candidates).
+- `bazel run //web:coverage_audit -- unexpected`: Tests reaching outside their feature area.
+- `bazel run //web:coverage_audit -- scope-violations`: Tests covering files outside their declared `expected_coverage` scope.
 
 Native dependencies like `better-sqlite3` are managed via Bazel lifecycle hooks in `MODULE.bazel`. Do NOT attempt to manually run `pnpm install` or debug missing `.node` bindings; if they are missing, ensure `MODULE.bazel` has the correct `lifecycle_hooks` configured and run `bazel run //web:coverage_audit` to trigger the build.
 
@@ -55,6 +56,8 @@ Native dependencies like `better-sqlite3` are managed via Bazel lifecycle hooks 
    - If the data is insufficient to support a concrete recommendation, do not create an issue yet.
    - Keep the analysis actionable: identify specific files, lines, functions, or test targets.
    - For non-integration tests, treat broad cross-module coverage as a mocking candidate rather than as desirable integration coverage.
+   - Run `scope-violations` to flag tests that cover files outside their declared `expected_coverage`. These are concrete mocking or scope candidates.
+   - Check Bazel target names against file naming conventions: a target named `<pkg>_<module>_test` should declare `expected_coverage` covering `<pkg>/<module>*`. Flag targets that deviate as needing a scope declaration.
 3. **Draft the Issue**
    - Use the `spec-issue` skill to format the findings into a GitHub issue.
    - Include:
@@ -63,7 +66,7 @@ Native dependencies like `better-sqlite3` are managed via Bazel lifecycle hooks 
      - **Scope**: specific modules, files, or test targets
      - **Coverage Gaps**: uncovered files, lines, or functions
      - **Redundant Coverage**: tests or lines that are duplicated enough to simplify
-     - **Unexpected Coverage**: tests that reach unrelated modules
+     - **Unexpected Coverage / Scope Violations**: tests that reach unrelated modules or exceed their declared scope
      - **Mocking Opportunities**: broad non-integration tests that should be narrowed
      - **Specific Action Items**: concrete edits, not generic "increase coverage" language
 
@@ -73,4 +76,5 @@ Native dependencies like `better-sqlite3` are managed via Bazel lifecycle hooks 
 - A Bazel target is only treated as integration coverage when it is explicitly tagged `integration`.
 - When a non-integration test covers many unrelated components or feature modules, call it out as a mocking candidate.
 - When the breadth is intentional, call out the target as an integration-test candidate and tell the user to add `tags = ["integration"]` to the relevant `BUILD.bazel` rule (`vitest_test(...)` under `web/BUILD.bazel`, `pytest_test(...)` under `api/BUILD.bazel`, or the equivalent test rule in the owning package).
+- `expected_coverage` is opt-in and absence is not a finding by itself. Only flag scope violations when the declaration exists and is violated.
 - If the data does not support a concrete recommendation, stop and say the coverage data is insufficient instead of filing a vague issue.

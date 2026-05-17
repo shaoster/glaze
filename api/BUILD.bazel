@@ -1,4 +1,5 @@
 load("@aspect_rules_py//py:defs.bzl", "py_library", "py_test")
+load("//:python.bzl", "pytest_test")
 
 py_library(
     name = "api_workflow_lib",
@@ -97,10 +98,8 @@ filegroup(
 
 _TEST_DEPS = [
     ":api_lib",
-    "@pypi//pytest",
     "@pypi//pytest_django",
     "@pypi//pytest_env",
-    "@pypi//pytest_cov",
     "@pypi//tzdata",
 ]
 
@@ -128,7 +127,7 @@ _CONFTEST = [
 # Each target covers a coherent slice of the API so that changing one file
 # only re-runs the tests that could be affected.
 
-py_test(
+pytest_test(
     name = "api_workflow_test",
     size = "medium",
     srcs = _CONFTEST + [
@@ -145,9 +144,10 @@ py_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
-py_test(
+pytest_test(
     name = "api_model_test",
     size = "medium",
     srcs = _CONFTEST + [
@@ -172,9 +172,10 @@ py_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
-py_test(
+pytest_test(
     name = "api_otel_test",
     size = "small",
     srcs = _CONFTEST + [
@@ -187,9 +188,10 @@ py_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
-py_test(
+pytest_test(
     name = "api_piece_test",
     size = "medium",
     srcs = _CONFTEST + [
@@ -220,9 +222,10 @@ py_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
-py_test(
+pytest_test(
     name = "api_auth_test",
     size = "medium",
     srcs = _CONFTEST + [
@@ -233,9 +236,10 @@ py_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
-py_test(
+pytest_test(
     name = "api_health_test",
     size = "small",
     srcs = _CONFTEST + [
@@ -246,9 +250,10 @@ py_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
-py_test(
+pytest_test(
     name = "api_invitation_test",
     size = "medium",
     srcs = _CONFTEST + [
@@ -259,9 +264,10 @@ py_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
-py_test(
+pytest_test(
     name = "api_glaze_test",
     size = "medium",
     srcs = _CONFTEST + [
@@ -284,9 +290,10 @@ py_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
-py_test(
+pytest_test(
     name = "api_admin_test",
     size = "medium",
     srcs = _CONFTEST + [
@@ -305,6 +312,7 @@ py_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
 # ── mypy type-check ───────────────────────────────────────────────────────────
@@ -340,7 +348,7 @@ py_test(
     ],
 )
 
-py_test(
+pytest_test(
     name = "api_migration_test",
     size = "small",
     srcs = _CONFTEST + [
@@ -351,6 +359,7 @@ py_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
+    expected_coverage = ["api/**"],
 )
 
 # ── API test suite ────────────────────────────────────────────────────────────

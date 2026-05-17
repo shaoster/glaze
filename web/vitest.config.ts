@@ -2,12 +2,29 @@ import { defineConfig } from "vitest/config";
 import yaml from "@rollup/plugin-yaml";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "url";
+import { writeFileSync } from "node:fs";
 
 // Path to the directory containing this file
 // This is necessary to run in bazel runfiles dirs where this file needs to
 // be passed by arg to a vitest invocation.
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Write .scope sidecar so coverage-audit can detect out-of-scope coverage.
+// Only written during coverage builds (COVERAGE_OUTPUT_FILE is set by Bazel).
+const covFile = process.env.COVERAGE_OUTPUT_FILE;
+const expectedCoverageRaw = process.env.EXPECTED_COVERAGE;
+if (covFile && expectedCoverageRaw) {
+  // Strip leading "web/" so patterns in BUILD.bazel are repo-root-relative
+  // but the scope file uses paths as they appear in LCOV (relative to web/).
+  const patterns = expectedCoverageRaw
+    .split(":")
+    .filter(Boolean)
+    .map((p) => (p.startsWith("web/") ? p.slice(4) : p));
+  if (patterns.length > 0) {
+    writeFileSync(covFile + ".scope", patterns.join("\n"));
+  }
+}
 
 export default defineConfig({
   plugins: [yaml()],
@@ -65,7 +82,7 @@ export default defineConfig({
       reportsDirectory: process.env.COVERAGE_OUTPUT_FILE
         ? process.env.COVERAGE_OUTPUT_FILE + "/.."
         : "./coverage",
-      include: ["src/**/*.{ts,tsx}"],
+      include: ["src/**/*.{ts,tsx}", "scripts/**/*.mjs"],
       exclude: ["src/test-setup.ts", "**/*.d.ts", "**/generated-types.ts"],
     },
   },
