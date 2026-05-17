@@ -9,8 +9,12 @@ Interactive component stories are published at:
 Run locally:
 
 ```bash
-pnpm storybook        # dev server at http://localhost:6006
-pnpm build-storybook  # static build → storybook-static/
+pnpm storybook          # dev server at http://localhost:6006
+pnpm build-storybook    # static build → storybook-static/
+
+# Hermetic build via Bazel (same as CI):
+bazel build //web:storybook_build   # output in bazel-bin/web/storybook-static/
+bazel run //web:storybook_dev       # Bazel-managed dev server
 ```
 
 Stories live in `src/stories/`. The preview wraps every story with the app's MUI dark theme so components render in their production context.

@@ -7,6 +7,11 @@ const config: StorybookConfig = {
     name: "@storybook/react-vite",
     options: {},
   },
+  viteFinal: (config) => {
+    // Disable publicDir copy so Bazel's read-only sandbox doesn't cause EACCES.
+    config.publicDir = false;
+    return config;
+  },
 };
 
 export default config;
