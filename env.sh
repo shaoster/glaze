@@ -5,7 +5,11 @@
 # When used as --rcfile, ~/.bashrc is not loaded automatically — do it first.
 [[ -f ~/.bashrc ]] && source ~/.bashrc
 
-_GLAZE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -n "${GLAZE_ROOT:-}" ]]; then
+    _GLAZE_SCRIPT_DIR="$GLAZE_ROOT"
+else
+    _GLAZE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
 
 # Bootstrap: everything (helpers, venv, env vars) defined in env-agent.sh.
 source "$_GLAZE_SCRIPT_DIR/env-agent.sh"

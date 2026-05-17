@@ -2,7 +2,11 @@
 # Sourced automatically via BASH_ENV — keep it silent and fast.
 # Do NOT source ~/.bashrc here; agents don't need interactive shell config.
 
-_GLAZE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -n "${GLAZE_ROOT:-}" ]]; then
+    _GLAZE_SCRIPT_DIR="$GLAZE_ROOT"
+else
+    _GLAZE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
 
 _gz_detect_git_root() {
     local cwd="${PWD:-$_GLAZE_SCRIPT_DIR}"

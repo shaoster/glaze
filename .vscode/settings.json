@@ -11,11 +11,10 @@
   "terminal.integrated.defaultProfile.linux": "glaze",
   "terminal.integrated.profiles.osx": {
     "glaze": {
-      "path": "/bin/bash",
-      "args": [
-        "--rcfile",
-        "${workspaceFolder}/env.sh"
-      ]
+      "path": "/bin/zsh",
+      "env": {
+        "ZDOTDIR": "${workspaceFolder}/.vscode"
+      }
     }
   },
   "terminal.integrated.defaultProfile.osx": "glaze",
