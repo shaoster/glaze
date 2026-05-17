@@ -43,6 +43,10 @@ const preview: Preview = {
   parameters: {
     docs: {
       theme: themes.dark,
+      source: {
+        type: "dynamic",
+        excludeDecorators: true,
+      },
     },
     backgrounds: {
       default: "dark",

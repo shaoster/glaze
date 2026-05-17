@@ -46,6 +46,8 @@ const meta = {
     docs: {
       inlineStories: false,
       iframeHeight: 800,
+      canvas: { sourceState: "none" },
+      source: { code: null },
     },
   },
   tags: ["autodocs"],
