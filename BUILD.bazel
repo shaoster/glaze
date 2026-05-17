@@ -81,41 +81,47 @@ alias(
 # Image layout (all under /app):
 #   /app/                      Django project root (manage.py, backend/, api/, etc.)
 #   /app/web/dist/             Vite-built SPA (served by WhiteNoise at URL root)
-#   /app/site-packages/        pip-installed runtime deps (added to PYTHONPATH)
+#   /app/site-packages/        uv-synced runtime deps (added to PYTHONPATH)
 #   /app/staticfiles/          collected static assets (built by staticfiles_tar genrule)
 
-# pip deps layer — install runtime deps into /app/site-packages using the
-# Bazel-managed Python 3.12 toolchain. Tagged no-sandbox because pip needs
+# Dependency layer — sync runtime deps into a temp venv, then flatten its
+# site-packages into /app/site-packages. Tagged no-sandbox because uv needs
 # network access to download wheels.
 genrule(
     name = "python_layer_tar",
     srcs = [
         "//:pyproject.toml",
         "//:uv.lock",
-        "@uv//:uv",
     ],
+    tools = ["@uv//:uv"],
     outs = ["python_layer.tar"],
     cmd = """
         set -e
         export HOME=$$(mktemp -d)
-        UV=$(location @uv//:uv)
+        UV="$$PWD/$(location @uv//:uv)"
+        PYTHON3_ABS="$$PWD/$(PYTHON3)"
+        OUT_TAR="$$PWD/$@"
 
-        # Export uv.lock to requirements.txt
-        $$UV export --no-dev --format requirements.txt --output-file requirements.txt
-
+        work=$$(mktemp -d)
         dest=$$(mktemp -d)
-        $(PYTHON3) -m pip install \
-            --quiet \
-            --no-deps \
-            --prefix="$$dest" \
-            -r requirements.txt
+        cp $(location //:pyproject.toml) "$$work/pyproject.toml"
+        cp $(location //:uv.lock) "$$work/uv.lock"
+
+        # Sync only the locked runtime dependencies into an isolated venv.
+        cd "$$work"
+        $$UV sync \
+            --frozen \
+            --no-dev \
+            --no-install-project \
+            --no-editable \
+            --python "$$PYTHON3_ABS"
 
         # Flatten site-packages to /app/site-packages in the tarball.
-        sp=$$(find "$$dest" -type d -name site-packages | head -1)
+        sp=$$(find "$$work/.venv" -type d -name site-packages | head -1)
         mkdir -p "$$dest/app"
         mv "$$sp" "$$dest/app/site-packages"
-        tar -C "$$dest" -cf $@ app/site-packages
-        rm -rf "$$dest" "$$HOME"
+        tar -C "$$dest" -cf "$$OUT_TAR" app/site-packages
+        rm -rf "$$dest" "$$work" "$$HOME"
     """,
     toolchains = ["@rules_python//python:current_py_toolchain"],
     tags = ["no-sandbox"],

@@ -516,7 +516,7 @@ gz_deploy() {
     local sha
     sha=$(git -C "$GLAZE_ROOT" rev-parse HEAD) || return 1
     if [[ "${1:-}" != "--no-push" ]]; then
-        gz_push --latest || return $?
+        gz_push || return $?
     fi
     "$GLAZE_ROOT/deploy.sh" "$host" "$sha"
 }
