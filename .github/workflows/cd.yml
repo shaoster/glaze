@@ -61,16 +61,27 @@ jobs:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
-          required="DEPLOY_HOST SECRET_KEY POSTGRES_PASSWORD ALLOWED_HOST APP_ORIGIN GOOGLE_OAUTH_CLIENT_ID VITE_GOOGLE_CLIENT_ID CLOUDINARY_CLOUD_NAME CLOUDINARY_API_KEY CLOUDINARY_API_SECRET CLOUDINARY_UPLOAD_FOLDER CLOUDINARY_UPLOAD_PRESET CLOUDINARY_PUBLIC_UPLOAD_FOLDER EMAIL_HOST EMAIL_PORT EMAIL_HOST_USER EMAIL_HOST_PASSWORD EMAIL_USE_SSL DEFAULT_FROM_EMAIL INVITE_LINK_BASE_URL LOGTAIL_SOURCE_TOKEN REMOTE_REMBG_URL OTEL_ENABLED GRAFANA_CLOUD_OTLP_TOKEN MODAL_AUTH_TOKEN MODAL_TOKEN_ID MODAL_TOKEN_SECRET"
-          missing=0
-          for name in $required; do
+          critical="DEPLOY_HOST SECRET_KEY POSTGRES_PASSWORD ALLOWED_HOST APP_ORIGIN CLOUDINARY_CLOUD_NAME CLOUDINARY_API_KEY CLOUDINARY_API_SECRET CLOUDINARY_UPLOAD_FOLDER CLOUDINARY_UPLOAD_PRESET CLOUDINARY_PUBLIC_UPLOAD_FOLDER"
+          features="EMAIL_HOST EMAIL_PORT EMAIL_HOST_USER EMAIL_HOST_PASSWORD EMAIL_USE_SSL DEFAULT_FROM_EMAIL INVITE_LINK_BASE_URL LOGTAIL_SOURCE_TOKEN REMOTE_REMBG_URL OTEL_ENABLED GRAFANA_CLOUD_OTLP_TOKEN MODAL_AUTH_TOKEN MODAL_TOKEN_ID MODAL_TOKEN_SECRET"
+          
+          missing_critical=0
+          for name in $critical; do
             if [ -z "${!name:-}" ]; then
-              echo "$name is required for deploy." >&2
-              missing=1
+              echo "CRITICAL: $name is required for deploy." >&2
+              missing_critical=1
             fi
           done
 
-          exit "$missing"
+          if [ "$missing_critical" -ne 0 ]; then
+            exit 1
+          fi
+
+          echo "All critical variables present. Checking optional feature variables..."
+          for name in $features; do
+            if [ -z "${!name:-}" ]; then
+              echo "WARNING: $name is missing. Some features may be disabled or use defaults."
+            fi
+          done
 
       - name: Set up SSH
         run: |
