@@ -2,6 +2,12 @@ import type { Preview } from "@storybook/react-vite";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import React from "react";
+import { initialize, mswLoader } from "msw-storybook-addon";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { themes } from "@storybook/theming";
+
+// Initialize MSW
+initialize();
 
 const DARK_THEME = createTheme({
   palette: {
@@ -21,14 +27,27 @@ const DARK_THEME = createTheme({
 
 const preview: Preview = {
   decorators: [
-    (Story) => (
-      <ThemeProvider theme={DARK_THEME}>
-        <CssBaseline />
-        <Story />
-      </ThemeProvider>
-    ),
+    (Story) => {
+      const router = createMemoryRouter([{ path: "/", element: <Story /> }], {
+        initialEntries: ["/"],
+      });
+      return (
+        <ThemeProvider theme={DARK_THEME}>
+          <CssBaseline />
+          <RouterProvider router={router} />
+        </ThemeProvider>
+      );
+    },
   ],
+  loaders: [mswLoader],
   parameters: {
+    docs: {
+      theme: themes.dark,
+      source: {
+        type: "dynamic",
+        excludeDecorators: true,
+      },
+    },
     backgrounds: {
       default: "dark",
       values: [{ name: "dark", value: "#211b19" }],

@@ -132,6 +132,7 @@ ESLINT_INPUTS = glob(
         "src/**/*.tsx",
     ],
     exclude = [
+        "src/**/*.d.ts",
         "src/util/generated-types.ts",  # genrule output, not a source-tree input
     ],
 )

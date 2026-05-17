@@ -1,6 +1,19 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/react";
 import StateChip from "../components/StateChip";
 
+/**
+ * StateChip component representing a workflow state.
+ *
+ * Rationale: Introduced in commit 4d7442f to support workflow-authored state labels.
+ * Redesigned in Issue #172 (PieceDetail redesign) with enhanced pulse animations
+ * and modern border-radius.
+ *
+ * Edge cases:
+ * - Terminal states: Special coloring for 'completed' (green) and 'recycled' (red-brown).
+ * - Interactive: Future states with dashed borders that animate on hover.
+ * - Pulse: Current state has a breathing dot animation to indicate active status.
+ * - Muted/Disabled: Used during timeline navigation and invalid transitions.
+ */
 const meta = {
   title: "Components/StateChip",
   component: StateChip,
