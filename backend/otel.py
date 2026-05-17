@@ -1,4 +1,5 @@
 import functools
+import logging
 import os
 
 
@@ -115,6 +116,21 @@ def configure_otel() -> bool:
     )
     provider.add_span_processor(BatchSpanProcessor(exporter))
     trace.set_tracer_provider(provider)
+
+    from opentelemetry import _logs as otel_logs
+    from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+
+    log_exporter = OTLPLogExporter(
+        endpoint=os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"),
+        insecure=True,
+    )
+    log_provider = LoggerProvider(resource=resource)
+    log_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+    otel_logs.set_logger_provider(log_provider)
+    logging.getLogger().addHandler(LoggingHandler(level=logging.INFO, logger_provider=log_provider))
+
     DjangoInstrumentor().instrument()
     Psycopg2Instrumentor().instrument()
 

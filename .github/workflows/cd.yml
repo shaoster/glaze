@@ -44,7 +44,6 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
-          LOGTAIL_SOURCE_TOKEN: ${{ secrets.LOGTAIL_SOURCE_TOKEN }}
           MODAL_AUTH_TOKEN: ${{ secrets.MODAL_AUTH_TOKEN }}
           GRAFANA_CLOUD_OTLP_TOKEN: ${{ secrets.GRAFANA_CLOUD_OTLP_TOKEN }}
           ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}

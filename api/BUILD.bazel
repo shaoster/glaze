@@ -40,7 +40,6 @@ py_library(
     deps = [
         ":api_workflow_lib",
         "//backend:backend_lib",
-        "@pypi//logtail_python",
     ],
 )
 
