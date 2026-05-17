@@ -15,7 +15,7 @@ A pottery workflow tracking application. Log pieces and record state transitions
 - [Common Tests (`tests/`)](tests/README.md) - Structural tests for the workflow state machine.
 - [Tools (`tools/`)](tools/README.md) - Standalone utilities, Modal crop offloading, and Glaze import tool.
 - [Pages (`pages/`)](pages/README.md) - Static published pages.
-- [Agent Workflows (`docs/agents/`)](docs/agents/AGENTS.md) - Context for AI assistants.
+- [Agent Development Guide (`docs/agents/`)](docs/agents/dev.md) - Shell bootstrap, worktree navigation, and agent workflow context.
 
 ## For new developers
 
@@ -23,7 +23,7 @@ This guide assumes you already know the tools listed below and are familiar with
 
 - **[Django](https://www.djangoproject.com/)** is the Python web framework that owns the backend (`backend/`, `api/`). [Separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) keeps unrelated responsibilities apart so each layer stays simpler to reason about—for example, [`api/models.py`](api/models.py) defines the data schema, [`api/serializers.py`](api/serializers.py) translates between ORM objects and JSON payloads, and [`api/views.py`](api/views.py) wires those serializers into `/api/...` endpoints that enforce workflow rules from [`workflow.yml`](workflow.yml). That split keeps the REST API (powered by Django REST Framework, DRF) resilient even when one layer needs to change, while returning consistent data/validation to all clients.
 - **[React](https://react.dev/)** (web/src/) renders the SPA (Single Page Application) and consumes shared types/API helpers from [`web/src/util/types.ts`](web/src/util/types.ts) and [`web/src/util/api.ts`](web/src/util/api.ts). React follows a component-based paradigm where functions or classes receive props (inputs) and return HTML that the browser can render.
-- **[Vite](https://vitejs.dev/)** (web tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our web workbench, serves as the underlying runner for `bazel test //web:web_test`, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
+- **[Vite](https://vitejs.dev/)** (web tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our web workbench, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
 - **[Material UI](https://mui.com/)** supplies the component library used everywhere in the UI for forms, dialogs, buttons, and layout.
 - **[Axios](https://axios-http.com/)** is the HTTP client library we use in the web to talk to REST APIs; it keeps things simple by handling the details of sending and receiving JSON so the UI code does not have to repeat that work. Benefits of Axios over raw `fetch` include centralized configuration of base URLs and headers, automatic JSON parsing/serialization, and built-in hooks for handling errors, cancellations, and retries. In this project that means [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx) can rely on helpers like `updateCurrentState`/`updatePiece` instead of duplicating URLs or JSON logic, and we have a single place for surfaces errors before they hit the UI.
 - A **[client library](https://en.wikipedia.org/wiki/Library_(computing))** is a reusable set of functions that wraps low-level protocols (like HTTP) so developers can interact with remote services using clean function calls, in their programming language of choice, instead of handling bytes, headers, or parsing manually.
@@ -157,8 +157,6 @@ cp web/.env.example web/.env.local
 | `gz_start`               | Start backend and web, join in the foreground. Ctrl+C stops both. Rotates old logs before starting. |
 | `gz_stop`                | Stop both servers.                                                                                  |
 | `gz_status`              | Show whether backend and web are running.                                                           |
-| `gz_backend`             | Start the Django backend on port 8080 (backgrounded).                                               |
-| `gz_web`                 | Start the Vite dev server (backgrounded). Prints the local URL once ready.                          |
 | `gz_logs [backend\|web]` | Tail logs. Omit argument to tail both.                                                              |
 
 Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`.
@@ -183,21 +181,12 @@ RSS; large `StreamingHttpResponse` bodies should use async iterators.
 | Command           | Description                                                                                  |
 | ----------------- | -------------------------------------------------------------------------------------------- |
 | `gz_test`         | Run all tests via Bazel (`bazel test --test_output=errors //...`) — CI-aligned, incremental. |
-| `gz_test_common`  | Run workflow schema/integrity tests only (`bazel test //tests:common_test`).                 |
-| `gz_test_backend` | Run Django API tests only (`bazel test //api:api_test`).                                     |
-| `gz_test_web`     | Run web tests only (`bazel test //web:web_test`).                                            |
 
 ### Linting and type-checking
 
 | Command   | Description                                                                 |
 | --------- | --------------------------------------------------------------------------- |
 | `gz_lint` | Run all linters via Bazel (`bazel build --config=lint //...`) — CI-aligned. |
-
-### Build
-
-| Command    | Description                                                                                                                             |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `gz_build` | Run the same frontend build command used in CI (`gz_gentypes` then `cd web && npm run build`, which expands to `tsc -b && vite build`). |
 
 ### JavaScript dev tools
 
@@ -221,21 +210,9 @@ bazel run @nodejs_linux_amd64//:npm -- install
 bazel run @nodejs_linux_amd64//:npm -- run dev
 ```
 
-## Testing and validation
+## Testing
 
-Tests and linters run via [Bazel](https://bazel.build/) — the same commands work locally and in CI.
-
-```bash
-# Run all tests (workflow, backend, web, mypy)
-bazel test //...
-
-# Run all linters (ruff, eslint, tsc, mypy)
-bazel build --config=lint //...
-
-# Or via env.sh helpers (source env.sh first):
-gz_test          # bazel test --test_output=errors //...
-gz_lint          # bazel build --config=lint //...
-```
+Use `gz_test` for the full suite. The package READMEs above describe each area in more detail.
 
 **Before committing** — auto-fix Python formatting and fixable lint issues:
 
@@ -243,21 +220,6 @@ gz_lint          # bazel build --config=lint //...
 source env.sh && gz_format
 # equivalent to: ruff format . && ruff check --fix .
 ```
-
-**For fast iteration** — run individual Bazel targets (incremental, CI-aligned):
-
-```bash
-bazel test //tests:...        # workflow schema validation
-bazel test //api:api_test     # backend API tests
-bazel test //api:api_mypy     # mypy type-check (full Django plugin)
-bazel test //web:web_test     # web component tests
-cd web && bazel run @nodejs_linux_amd64//:npm -- run test:watch  # watch mode (no Bazel equivalent)
-```
-
-For more specifics on what is tested in each package, refer to the individual module `README.md` files:
-- [Backend Tests](api/README.md#what-is-tested)
-- [Frontend Tests](web/README.md#what-is-tested)
-- [Common Tests](tests/README.md)
 
 ## Vibe coding / Contributing
 
@@ -294,7 +256,7 @@ Claude will read the comment, make the change, and push it to the branch.
 
 ### Tips
 
-- Claude always runs `bazel test //api:api_test` (backend) and `bazel test //web:web_test` (web) before opening or updating a PR. If tests fail, it will not push.
+- Claude always runs `gz_test` before opening or updating a PR. If tests fail, it will not push.
 - Claude derives all state names and transitions from [`workflow.yml`](workflow.yml) — you can reference state names freely in issues and it will use the correct values.
 - For large or ambiguous requests, start with an issue rather than a direct PR comment so Claude can ask questions before writing code.
 
@@ -306,127 +268,9 @@ Interactive component stories are published to GitHub Pages via Storybook:
 
 Run locally with `cd web && pnpm storybook`. See [`web/README.md`](web/README.md) for details.
 
-## Deployment
+## Deployment and CI/CD
 
-PotterDoc supports Docker Compose (self-hosted on any VPS/droplet).
-
-### Docker Compose (self-hosted)
-
-The repo uses [`docker-compose.yml`](docker-compose.yml) for self-hosting on a single VPS (e.g. DigitalOcean, Hetzner, Linode). The container image is built by Bazel (`rules_oci`) — no Dockerfile needed.
-
-**Architecture:**
-
-- `web` — Gunicorn + uvicorn workers (ASGI) serving Django + the Vite-built frontend via WhiteNoise on port 8000
-- `db` — Postgres 17 with a named volume for persistence
-
-**How it works:**
-
-- Every push to `main` that passes all tests triggers a `publish` job ([`ci.yml`](.github/workflows/ci.yml)) that builds the OCI image with Bazel (with `VITE_GOOGLE_CLIENT_ID` baked in from a GitHub Actions secret) and pushes it to `ghcr.io/shaoster/glaze:latest`. On success, [`cd.yml`](.github/workflows/cd.yml) automatically deploys the new image to the droplet and creates a GitHub release marking the deployed SHA.
-- The droplet never needs git, Node, or Python build tools — it just pulls the pre-built image.
-- Migrations and `collectstatic` run automatically inside the container on every start (via [`docker-entrypoint.sh`](docker-entrypoint.sh)).
-- Runtime secrets (`SECRET_KEY`, `DATABASE_URL`, `CLOUDINARY_*`, etc.) live only in `.env` on the droplet and are never part of the image.
-
-**One-time GitHub setup:**
-
-Add `VITE_GOOGLE_CLIENT_ID` to your repo's Actions secrets (**Settings → Secrets and variables → Actions**), set to the same value as your Google OAuth client ID. Leave it empty to build without Google Sign-In.
-
-For invitation email delivery, add `EMAIL_HOST_PASSWORD` as a repository or environment secret. The deploy workflow forwards the email connection settings into the droplet `.env`; if you want to override the defaults, add these as Actions variables:
-
-- `EMAIL_HOST` (defaults to `smtp.resend.com`)
-- `EMAIL_PORT` (defaults to `465`)
-- `EMAIL_HOST_USER` (defaults to `resend`)
-- `EMAIL_USE_SSL` (defaults to `true`)
-- `DEFAULT_FROM_EMAIL` (defaults to `noreply@potterdoc.com`)
-- `INVITE_LINK_BASE_URL` (defaults to `https://potterdoc.com`)
-
-**First-time setup on the droplet:**
-
-```bash
-# Install Docker (Ubuntu)
-curl -fsSL https://get.docker.com | sh
-
-# Copy docker-compose.yml and configure secrets (no need to clone the full repo)
-mkdir ~/glaze
-scp docker-compose.yml user@your-droplet:~/glaze/
-scp .env.production.example user@your-droplet:~/glaze/.env
-# edit ~/glaze/.env — fill in SECRET_KEY, POSTGRES_PASSWORD, ALLOWED_HOST, APP_ORIGIN, etc.
-
-# Authenticate with GitHub Container Registry (one-time)
-# Create a classic PAT at github.com/settings/tokens with read:packages scope
-docker login ghcr.io -u shaoster -p YOUR_PAT
-
-# Pull and start the stack
-cd ~/glaze
-docker compose up -d
-```
-
-**Subsequent deploys** (from your local machine):
-
-```bash
-# Add to .env.local:  GLAZE_PROD_HOST=user@your-droplet
-gz_deploy
-```
-
-`gz_deploy` builds and pushes the OCI image (tagged with HEAD SHA and `:latest`), then SSHes into the droplet via [`deploy.sh`](deploy.sh) to pull the new image and restart the service. Pass `--no-push` to skip the build and redeploy the image already in the registry. No source code needed on the droplet.
-
-**Environment variables** (set in `.env` on the droplet):
-
-| Variable                   | Required | Description                                                                                      |
-| -------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `SECRET_KEY`               | Yes      | Django secret key — generate with `python -c "import secrets; print(secrets.token_urlsafe(50))"` |
-| `POSTGRES_PASSWORD`        | Yes      | Password for the Postgres `glaze` user                                                           |
-| `ALLOWED_HOST`             | Yes      | Hostname of the droplet, e.g. `myapp.example.com`                                                |
-| `APP_ORIGIN`               | Yes      | Full origin URL, e.g. `https://myapp.example.com`                                                |
-| `GOOGLE_OAUTH_CLIENT_ID`   | No       | Backend runtime verification of Google JWTs                                                      |
-| `CLOUDINARY_CLOUD_NAME`    | No       | Enable Cloudinary image uploads                                                                  |
-| `CLOUDINARY_API_KEY`       | No       | Cloudinary API key                                                                               |
-| `CLOUDINARY_API_SECRET`    | No       | Cloudinary API secret                                                                            |
-| `CLOUDINARY_UPLOAD_FOLDER` | No       | Cloudinary folder for uploaded images                                                            |
-| `CLOUDINARY_UPLOAD_PRESET` | No       | Cloudinary upload preset (passed to the Upload Widget as `uploadPreset`)                         |
-| `EMAIL_HOST`               | No       | SMTP host for invitation emails, defaults to Resend                                              |
-| `EMAIL_PORT`               | No       | SMTP port, defaults to `465`                                                                     |
-| `EMAIL_HOST_USER`          | No       | SMTP username, defaults to `resend`                                                              |
-| `EMAIL_HOST_PASSWORD`      | Yes*     | Resend SMTP password or API key used to send invitation emails                                   |
-| `EMAIL_USE_SSL`            | No       | Whether to use SSL for SMTP, defaults to `true`                                                  |
-| `DEFAULT_FROM_EMAIL`       | No       | From address used on invitation emails                                                           |
-| `INVITE_LINK_BASE_URL`     | No       | Public base URL used to build invite links                                                       |
-
-Note: `VITE_GOOGLE_CLIENT_ID` is **not** set here — it is baked into the JS bundle at CI build time via the GitHub Actions secret.
-
-**Local overrides:** create `docker-compose.override.yml` (gitignored) to customize port bindings or mount volumes during local Docker testing without touching the main compose file.
-
-**Setting up Nginx + SSL (one-time, after first `docker compose up -d`):**
-
-```bash
-./setup-nginx.sh user@your-droplet myapp.example.com admin@example.com
-```
-
-[`setup-nginx.sh`](setup-nginx.sh) installs Nginx and Certbot on the droplet, copies [`nginx/glaze.conf`](nginx/glaze.conf) with your domain substituted in, opens ports 80/443 in the firewall, and runs `certbot --nginx` to provision a Let's Encrypt cert. Certbot rewrites the Nginx config in-place to add TLS and sets up automatic renewal via a systemd timer.
-
-**Prerequisites:**
-
-- A domain with a DNS A record pointing at the droplet's IP (must be propagated before running Certbot)
-- `ufw` active on the droplet (`ufw enable`)
-
-**After initial setup**, the Nginx config lives at `/etc/nginx/sites-available/glaze` on the droplet. Do not re-run `setup-nginx.sh` or overwrite that file — you will lose the TLS configuration Certbot added. To make intentional Nginx config changes, edit the file on the droplet directly and run `systemctl reload nginx`.
-
-**Alternative: Tailscale (no public domain required)**
-
-If you don't have a public domain, or want the app private to your devices, use Tailscale instead. The app gets a valid HTTPS cert for its `*.ts.net` MagicDNS hostname and is only reachable from devices on your Tailscale network.
-
-**Before running the script:**
-
-1. Enable **HTTPS Certificates** and **MagicDNS** in the [Tailscale admin console](https://login.tailscale.com/admin/dns)
-2. Generate an auth key at [Tailscale admin → Keys](https://login.tailscale.com/admin/settings/keys)
-3. Install Tailscale on your local machine/devices so they can reach the droplet
-
-```bash
-./setup-tailscale.sh user@your-droplet tskey-auth-xxxxx
-```
-
-[`setup-tailscale.sh`](setup-tailscale.sh) installs Tailscale and Nginx, authenticates the droplet, issues a TLS cert via `tailscale cert`, configures Nginx with the `*.ts.net` hostname, restricts ports 80/443 to the Tailscale subnet only (port 8000 is also closed), and installs a weekly cron job to renew the cert.
-
-After setup, the app is reachable at `https://<droplet-name>.tail<id>.ts.net` from any device on your Tailscale network. To find the exact URL, run `tailscale status` on the droplet or check the [Tailscale admin console](https://login.tailscale.com/admin/machines).
+Deployment details, GitHub Actions workflows, and environment variables live in [`.github/README.md`](.github/README.md).
 
 ## Project structure
 
