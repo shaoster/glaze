@@ -9,16 +9,29 @@ Use this skill to assess test coverage and create actionable tasks to improve it
 
 ## Automated Analysis
 
-Use the new coverage-analysis tool to turn LCOV output into a temporary `.gitignored` SQLite database, then query the database instead of scraping raw LCOV by hand. The sparse schema should make the common questions cheap to ask:
+The coverage-analysis tool ingests raw LCOV output from `bazel-testlogs` into a temporary SQLite database. This enables high-performance queries that track:
+- **Per-test `CoverageLine` rows**: identify which specific tests hit which lines.
+- **Aggregated coverage**: view project-wide health.
+- **Redundancy & Overlap**: find lines exercised by too many tests or tests with identical footprints.
 
-- Build and query the database with `bazel run //web:coverage_audit -- summary`
+**Step 1: Generate Raw Coverage Data**
+Run this from the repo root (works in worktrees). It generates individual `coverage.dat` files for every test in `bazel-testlogs`:
+```bash
+rtk bazel coverage --combined_report=lcov --cache_test_results=false //...
+```
 
-- source files
-- source lines
-- per-test `CoverageLine` rows
-- a combined coverage view for aggregate queries
+**Step 2: Ingest and Analyze**
+Run the audit tool. It automatically scans `bazel-testlogs`, builds the database, and performs cross-test analysis:
+```bash
+bazel run //web:coverage_audit -- summary
+```
 
-Generate the raw coverage data with `rtk bazel coverage --combined_report=lcov --cache_test_results=false //...`, then load the per-test reports into the coverage-analysis tool. Avoid `genhtml` and other interactive report-generation tools; they add noise without improving the analysis.
+The sparse schema makes common questions cheap to ask via the following commands:
+- `bazel run //web:coverage_audit -- gaps`: Largest uncovered contiguous ranges.
+- `bazel run //web:coverage_audit -- redundant`: Lines hit by many tests; candidates for simplification.
+- `bazel run //web:coverage_audit -- unexpected`: Tests reaching outside their feature area.
+
+Native dependencies like `better-sqlite3` are managed via Bazel lifecycle hooks in `MODULE.bazel`. Do NOT attempt to manually run `pnpm install` or debug missing `.node` bindings; if they are missing, ensure `MODULE.bazel` has the correct `lifecycle_hooks` configured and run `bazel run //web:coverage_audit` to trigger the build.
 
 ## Common Query Recipes
 
@@ -32,7 +45,7 @@ Generate the raw coverage data with `rtk bazel coverage --combined_report=lcov -
 
 1. **Generate Coverage Data**
    - Run `rtk bazel coverage --combined_report=lcov --cache_test_results=false //...`.
-   - Load the per-test LCOV into the coverage-analysis tool and use the database for all follow-up queries.
+   - Run `bazel run //web:coverage_audit -- summary` to build the SQLite database.
 2. **Analyze**
    - Do not ask the developer for information that can be inferred from the coverage data.
    - If the data is insufficient to support a concrete recommendation, do not create an issue yet.
