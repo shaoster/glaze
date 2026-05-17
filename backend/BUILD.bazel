@@ -35,7 +35,7 @@ py_library(
         "@pypi//aiofiles",
         "@pypi//opentelemetry_api",
         "@pypi//opentelemetry_sdk",
-        "@pypi//opentelemetry_instrumentation_django",
+        "@pypi//opentelemetry_instrumentation_asgi",
         "@pypi//opentelemetry_instrumentation_psycopg2",
         "@pypi//opentelemetry_exporter_otlp_proto_grpc",
     ],
