@@ -22,7 +22,12 @@ runs:
         # but harmless to attempt elsewhere (commands return non-zero, ignored).
         docker ps -a > "$d/docker-ps.txt" 2>&1
         docker compose ps > "$d/compose-ps.txt" 2>&1
-        docker compose logs --no-color > "$d/compose-logs.txt" 2>&1
+        # Use docker logs directly — docker compose logs requires env vars
+        # (IMAGE_TAG etc.) that are unavailable in the diagnostics step.
+        for cid in $(docker ps -aq 2>/dev/null); do
+          name=$(docker inspect --format '{{.Name}}' "$cid" | tr -d '/')
+          docker logs "$cid" > "$d/container-${name}.log" 2>&1
+        done
         ls -la "$d"
 
     - name: Upload

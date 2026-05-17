@@ -191,12 +191,20 @@ jobs:
           export SECRET_KEY=$(openssl rand -hex 32)
           export ALLOWED_HOST=localhost
           export APP_ORIGIN=http://localhost:8000
+          # Enable OTel so configure_otel() runs its full import path on startup.
+          # otelcol is already running as a sidecar; missing packages surface here
+          # rather than only in production. OTLP endpoint uses the compose service
+          # name — docker-compose.yml already defaults to http://otelcol:4317.
+          export OTEL_ENABLED=true
           # `--wait` blocks until every service with a healthcheck reports
           # healthy. The web service's healthcheck (defined in
           # docker-compose.yml) is the pass criterion.
           # Timeout is 300s: migrate + load_public_library (249 records) +
           # gunicorn startup can exceed 120s on a cold runner.
-          docker compose up -d --wait --wait-timeout 300
+          docker compose up -d --wait --wait-timeout 300 || {
+            docker compose logs web | tail -100
+            exit 1
+          }
           docker compose logs web | tail -50
 
       - if: failure()

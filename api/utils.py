@@ -7,8 +7,6 @@ workflow-state-machine logic derived from workflow.yml).
 
 import logging
 import os
-from typing import Any
-
 import requests
 from cloudinary import CloudinaryImage
 from django.apps import apps
@@ -34,8 +32,6 @@ def get_rss() -> float:
     return 0.0
 
 
-# Global cache for rembg sessions to avoid re-initializing ONNX for every task.
-_REMBG_SESSIONS: dict[str, Any] = {}
 DEV_THUMBNAIL_URLS = {
     "bowl": "/thumbnails/bowl.svg",
     "mug": "/thumbnails/mug.svg",
@@ -56,124 +52,6 @@ SHARED_GLAZE_FIELDS: tuple[str, ...] = (
     "is_different_on_white_and_brown_clay",
     "apply_thin",
 )
-
-
-def _get_rembg_session(model_name: str = "u2netp"):
-    """Get or create a thread-safe rembg session with limited ONNX threads."""
-    import onnxruntime as ort
-    from rembg import new_session
-
-    if model_name not in _REMBG_SESSIONS:
-        logger.info(f"Initializing new rembg session for model: {model_name}")
-        # Limit threads to avoid CPU contention in a multi-worker environment.
-        opts = ort.SessionOptions()
-        opts.inter_op_num_threads = 1
-        opts.intra_op_num_threads = 1
-
-        # Some versions of rembg (e.g. 2.0.30) have a bug where passing sess_opts
-        # as a keyword argument to new_session() causes it to be passed twice
-        # to the session class. We attempt to bypass new_session() and use the
-        # class directly to avoid this TypeError.
-        try:
-            from rembg import sessions as rembg_sessions_mod
-
-            # 1. Try finding it in the sessions dict (standard in modern versions)
-            # Some versions have rembg.sessions.sessions, others might have it at rembg.sessions.
-            sessions_dict = getattr(rembg_sessions_mod, "sessions", None)
-            session_class = None
-
-            if isinstance(sessions_dict, dict):
-                session_class = sessions_dict.get(model_name)
-
-            # 2. If not found, try finding it in sessions_class list or legacy sessions_names
-            if not session_class:
-                sessions_class = getattr(rembg_sessions_mod, "sessions_class", [])
-                if isinstance(sessions_class, list):
-                    for sc in sessions_class:
-                        if hasattr(sc, "name") and sc.name() == model_name:
-                            session_class = sc
-                            break
-
-            if not session_class:
-                sessions_names = getattr(rembg_sessions_mod, "sessions_names", None)
-                if isinstance(sessions_names, dict):
-                    session_class = sessions_names.get(model_name)
-
-            if session_class:
-                _REMBG_SESSIONS[model_name] = session_class(
-                    model_name, sess_opts=opts, providers=["CPUExecutionProvider"]
-                )
-            else:
-                _REMBG_SESSIONS[model_name] = new_session(
-                    model_name, providers=["CPUExecutionProvider"], sess_opts=opts
-                )
-        except (ImportError, TypeError, AttributeError, KeyError):
-            logger.warning(
-                "Direct rembg session instantiation failed; falling back to new_session."
-            )
-            _REMBG_SESSIONS[model_name] = new_session(
-                model_name, providers=["CPUExecutionProvider"], sess_opts=opts
-            )
-    return _REMBG_SESSIONS[model_name]
-
-
-def calculate_subject_crop(image_bytes: bytes) -> dict | None:
-    """Detect the main subject in an image and return a relative crop box."""
-    import io
-
-    from PIL import Image
-    from rembg import remove
-
-    # 1. Remove background
-    logger.info(f"Opening image for rembg ({len(image_bytes)} bytes)")
-    input_image = Image.open(io.BytesIO(image_bytes))
-    orig_width, orig_height = input_image.size
-
-    # Resize for processing to save memory. 640px is plenty for subject detection.
-    # We return relative coordinates, so the absolute size doesn't matter.
-    MAX_DIM = 640
-    process_image: Image.Image = input_image
-    if max(orig_width, orig_height) > MAX_DIM:
-        scale = MAX_DIM / max(orig_width, orig_height)
-        new_size = (int(orig_width * scale), int(orig_height * scale))
-        logger.info(
-            f"Resizing image from {orig_width}x{orig_height} to {new_size} for rembg"
-        )
-        process_image = input_image.resize(new_size, Image.Resampling.LANCZOS)
-
-    # Use a cached session with limited threads to prevent deadlocks and CPU contention.
-    # u2netp is the "portable" version, much smaller memory footprint.
-    session = _get_rembg_session("u2netp")
-    logger.info(f"Running rembg.remove(model=u2netp) on {process_image.size} image...")
-    output_image = remove(process_image, session=session)
-    logger.info("rembg.remove() completed.")
-
-    # 2. Find non-transparent bounds
-    alpha = output_image.getchannel("A")
-    bbox = alpha.getbbox()
-
-    # Capture size before closing for relative coordinate math
-    p_width, p_height = process_image.size
-
-    # Clean up intermediate images
-    if process_image != input_image:
-        process_image.close()
-    output_image.close()
-    input_image.close()
-
-    if not bbox:
-        logger.info("No non-transparent bounds found in image.")
-        return None
-
-    # 3. Convert to relative crop coordinates
-    left, upper, right, lower = bbox
-
-    return {
-        "x": left / p_width,
-        "y": upper / p_height,
-        "width": (right - left) / p_width,
-        "height": (lower - upper) / p_height,
-    }
 
 
 def calculate_subject_crop_remote(

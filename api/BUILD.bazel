@@ -9,8 +9,6 @@ py_library(
     deps = [
         "//backend:backend_lib",
         "@pypi//httpx",
-        "@pypi//rembg",
-        "@pypi//onnxruntime",
     ],
 )
 
@@ -159,14 +157,12 @@ py_test(
         "tests/test_globals.py",
         "tests/test_image_field_migration.py",
         "tests/test_model_factory.py",
-        "tests/test_rembg_init.py",
         "tests/test_utils.py",
     ],
     args = [
         "api/tests/test_async_maintenance.py",
         "api/tests/test_async_tasks.py",
         "api/tests/test_model_factory.py",
-        "api/tests/test_rembg_init.py",
         "api/tests/test_globals.py",
         "api/tests/test_utils.py",
         "api/tests/test_global_entries.py",
