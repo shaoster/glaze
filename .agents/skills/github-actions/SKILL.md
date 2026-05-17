@@ -7,7 +7,8 @@ name: github-actions
 description: |
   GitHub Actions conventions for ci.yml, cd.yml, and static.yml: GITHUB_TOKEN vs
   PATs, workflow_run for CI→CD triggers, paths-ignore for doc-only pushes,
-  concurrency groups for deploys, and bot-actor guards on event-triggered jobs.
+  concurrency groups for deploys, explicit secret/env mapping, and bot-actor
+  guards on event-triggered jobs.
   Invoke when modifying any of the three workflow files.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 ---
@@ -58,6 +59,36 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 ```
+
+## Map Secrets and Variables Explicitly
+
+Do not rely on implicit environment inheritance for deploy-time values. When a job
+renders a remote `.env` or otherwise ships runtime config, map each required value
+explicitly from `secrets.*` or `vars.*` in the step `env` block, then fail early if a
+required deploy input is missing.
+
+Validate the deploy surface in one step:
+
+- required secrets and variables that the deploy cannot work without
+- paired feature flags that must be complete when enabled
+- optional values that may remain blank only when the feature is disabled
+
+Example pattern:
+
+```yaml
+- name: Verify email secret
+  env:
+    EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+  run: |
+    if [ -z "${EMAIL_HOST_PASSWORD:-}" ]; then
+      echo "EMAIL_HOST_PASSWORD is required." >&2
+      exit 1
+    fi
+```
+
+Use repository or environment secrets for sensitive values and GitHub Actions
+variables for non-sensitive defaults. Prefer environment-scoped secrets for
+deployment targets like `glaze-droplet` when the value only applies there.
 
 ## Prevent Feedback Loops on Event-Triggered Jobs
 

@@ -129,6 +129,19 @@ concurrency:
   cancel-in-progress: false
 ```
 
+### Map secrets and variables explicitly
+
+When a workflow renders a deployed `.env` or otherwise ships runtime configuration,
+list each value in the step `env` block instead of relying on implicit inheritance.
+Use `secrets.*` for sensitive values, `vars.*` for non-sensitive defaults, and fail
+fast when a required deploy input is absent.
+
+This is especially important for environment-scoped deploy secrets. If a job needs a
+credential only for the droplet, keep it in the deployment environment and check for
+it before rendering or copying config so the job stops immediately instead of
+shipping a broken release. Treat optional features as paired settings: if a feature is
+enabled, validate every required value for that feature in the same step.
+
 ### Prevent agent feedback loops
 
 Agent workflows triggered by issue or PR events must guard against infinite loops where the agent's own comments re-trigger itself. Filter out bot actors at the top of every job:

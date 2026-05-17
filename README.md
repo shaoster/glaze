@@ -449,6 +449,15 @@ The repo uses [`docker-compose.yml`](docker-compose.yml) for self-hosting on a s
 
 Add `VITE_GOOGLE_CLIENT_ID` to your repo's Actions secrets (**Settings → Secrets and variables → Actions**), set to the same value as your Google OAuth client ID. Leave it empty to build without Google Sign-In.
 
+For invitation email delivery, add `EMAIL_HOST_PASSWORD` as a repository or environment secret. The deploy workflow forwards the email connection settings into the droplet `.env`; if you want to override the defaults, add these as Actions variables:
+
+- `EMAIL_HOST` (defaults to `smtp.resend.com`)
+- `EMAIL_PORT` (defaults to `465`)
+- `EMAIL_HOST_USER` (defaults to `resend`)
+- `EMAIL_USE_SSL` (defaults to `true`)
+- `DEFAULT_FROM_EMAIL` (defaults to `noreply@potterdoc.com`)
+- `INVITE_LINK_BASE_URL` (defaults to `https://potterdoc.com`)
+
 **First-time setup on the droplet:**
 
 ```bash
@@ -493,6 +502,13 @@ gz_deploy
 | `CLOUDINARY_API_SECRET`    | No       | Cloudinary API secret                                                                            |
 | `CLOUDINARY_UPLOAD_FOLDER` | No       | Cloudinary folder for uploaded images                                                            |
 | `CLOUDINARY_UPLOAD_PRESET` | No       | Cloudinary upload preset (passed to the Upload Widget as `uploadPreset`)                         |
+| `EMAIL_HOST`               | No       | SMTP host for invitation emails, defaults to Resend                                              |
+| `EMAIL_PORT`               | No       | SMTP port, defaults to `465`                                                                     |
+| `EMAIL_HOST_USER`          | No       | SMTP username, defaults to `resend`                                                              |
+| `EMAIL_HOST_PASSWORD`      | Yes*     | Resend SMTP password or API key used to send invitation emails                                   |
+| `EMAIL_USE_SSL`            | No       | Whether to use SSL for SMTP, defaults to `true`                                                  |
+| `DEFAULT_FROM_EMAIL`       | No       | From address used on invitation emails                                                           |
+| `INVITE_LINK_BASE_URL`     | No       | Public base URL used to build invite links                                                       |
 
 Note: `VITE_GOOGLE_CLIENT_ID` is **not** set here — it is baked into the JS bundle at CI build time via the GitHub Actions secret.
 
