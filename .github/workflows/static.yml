@@ -5,9 +5,6 @@ on:
   # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
-    paths:
-      - "pages/**"
-      - "tools/generate_index.py"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -34,19 +31,45 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Compute deps key
+        id: deps
+        shell: bash
+        run: |
+          bazel="$(sha256sum MODULE.bazel .bazelversion | sha256sum | cut -d' ' -f1)"
+          node="$(sha256sum web/pnpm-lock.yaml | cut -d' ' -f1)"
+          echo "deps_key=$(printf '%s' "${bazel}-${node}" | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - uses: ./.github/actions/setup-bazel-ci
+        with:
+          cache-key-prefix: pages
+          deps-key: ${{ steps.deps.outputs.deps_key }}
+          buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
+
+      - name: Build Storybook
+        run: bazel build --config=ci //web:storybook_build
+
+      - name: Copy Storybook to pages
+        run: |
+          mkdir -p pages/storybook
+          cp -r bazel-bin/web/storybook-static/. pages/storybook/
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+
       - name: Generate Index
         run: python tools/generate_index.py pages
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
           path: "pages"
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5

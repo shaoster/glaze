@@ -3,6 +3,7 @@ load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@npm//web:eslint/package_json.bzl", eslint_pkg = "bin")
 load("@npm//web:vite/package_json.bzl", vite_pkg = "bin")
+load("@npm//web:storybook/package_json.bzl", storybook_pkg = "bin")
 load(":vitest.bzl", "vitest_test")
 
 # Link all npm packages into this package's node_modules so that js_binary
@@ -43,6 +44,48 @@ vite_pkg.vite(
     args = ["build"],
     chdir = package_name(),
     out_dirs = ["dist"],
+)
+
+# ── Storybook static build ────────────────────────────────────────────────────
+# Sources for stories and Storybook config.
+js_library(
+    name = "storybook_lib",
+    srcs = glob([
+        ".storybook/**",
+        "src/stories/**",
+    ]) + [
+        "package.json",
+        "tsconfig.json",
+        "tsconfig.app.json",
+        "tsconfig.node.json",
+    ],
+    deps = [
+        ":web_lib",
+        ":node_modules",
+    ],
+)
+
+# `bazel build //web:storybook_build` produces storybook-static/
+storybook_pkg.storybook(
+    name = "storybook_build",
+    srcs = [":storybook_lib"],
+    args = [
+        "build",
+        "--output-dir",
+        "storybook-static",
+        "--quiet",
+    ],
+    chdir = package_name(),
+    out_dirs = ["storybook-static"],
+    visibility = ["//visibility:public"],
+)
+
+# Interactive Storybook dev server. `bazel run //web:storybook_dev`
+storybook_pkg.storybook_binary(
+    name = "storybook_dev",
+    chdir = package_name(),
+    data = [":storybook_lib"],
+    visibility = ["//visibility:public"],
 )
 
 # Interactive vite dev server. `bazel run //web:dev_server -- --port 5173`

@@ -1,0 +1,1 @@
+This issue tracks the work to split the root README.md into domain-specific READMEs and refactor the root README into a high-level overview. It also reconciles these documentation structural changes with the recently merged Storybook work (issue #503) and updates the agent skills to reflect the new documentation strategy.

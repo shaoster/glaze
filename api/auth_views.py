@@ -65,7 +65,11 @@ from .workflow import (
 )
 
 
-@extend_schema(request=None, responses={204: None})
+@extend_schema(
+    request=None,
+    responses={204: None},
+    description="Set the CSRF cookie. Call this before any POST/PATCH/DELETE request from a browser client.",
+)
 @ensure_csrf_cookie
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -73,7 +77,11 @@ def csrf(request: Request) -> Response:
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@extend_schema(request=LoginSerializer, responses={200: AuthUserSerializer})
+@extend_schema(
+    request=LoginSerializer,
+    responses={200: AuthUserSerializer},
+    description="Log in with email and password. Sets the session cookie on success.",
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @traced
@@ -95,7 +103,11 @@ def auth_login(request: Request) -> Response:
     return Response(AuthUserSerializer(user).data)
 
 
-@extend_schema(request=None, responses={204: None})
+@extend_schema(
+    request=None,
+    responses={204: None},
+    description="Log out the current session.",
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @traced
@@ -104,7 +116,11 @@ def auth_logout(request: Request) -> Response:
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@extend_schema(request=None, responses={200: AuthUserSerializer, 401: None})
+@extend_schema(
+    request=None,
+    responses={200: AuthUserSerializer, 401: None},
+    description="Return the currently authenticated user. Returns 401 if not logged in.",
+)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 @traced
@@ -112,7 +128,15 @@ def auth_me(request: Request) -> Response:
     return Response(AuthUserSerializer(request.user).data)
 
 
-@extend_schema(request=GoogleAuthSerializer, responses={200: AuthUserSerializer})
+@extend_schema(
+    request=GoogleAuthSerializer,
+    responses={200: AuthUserSerializer},
+    description=(
+        "Verify a Google Sign-In credential (JWT) and log in. "
+        "Creates a new account automatically if the email is on the allow-list. "
+        "Returns 503 if Google OAuth is not configured on this server."
+    ),
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @traced
@@ -199,7 +223,15 @@ def auth_google(request: Request) -> Response:
     return Response(AuthUserSerializer(user).data)
 
 
-@extend_schema(request=RegisterSerializer, responses={201: AuthUserSerializer})
+@extend_schema(
+    request=RegisterSerializer,
+    responses={201: AuthUserSerializer},
+    description=(
+        "Register a new account. The email must be on the allow-list. "
+        "Note: the web UI sign-up flow is currently disabled; this endpoint "
+        "remains available for direct API use."
+    ),
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @traced
@@ -261,7 +293,11 @@ def _check_not_invited(email: str) -> Response | None:
 # ── Invitation endpoints ──────────────────────────────────────────────────────
 
 
-@extend_schema(request=None, responses={204: None})
+@extend_schema(
+    request=None,
+    responses={204: None},
+    description="(Admin only) Add an email to the allow-list and send an invitation email.",
+)
 @api_view(["POST"])
 @permission_classes([IsAdminUser])
 @traced
@@ -280,7 +316,11 @@ def admin_invite(request: Request) -> Response:
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@extend_schema(request=None, responses={200: None})
+@extend_schema(
+    request=None,
+    responses={200: None},
+    description="Validate an invitation token and return the associated email. Does not log in.",
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @traced
@@ -303,7 +343,11 @@ def accept_invite(request: Request) -> Response:
     return Response({"email": email})
 
 
-@extend_schema(request=None, responses={204: None})
+@extend_schema(
+    request=None,
+    responses={204: None},
+    description="Add an email to the waitlist. No-ops silently if the email already exists.",
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @traced

@@ -73,7 +73,7 @@ Before opening or pushing to a PR, verify every item:
 - [ ] No debug code, temporary workarounds, or stray `print`/`console.log` statements
 - [ ] Serializer output matches TypeScript types in `web/src/util/types.ts`
 - [ ] State names and transitions derived from `workflow.yml`, not hardcoded
-- [ ] If `AGENTS.md` was modified, check whether `README.md` needs a corresponding update
+- [ ] If `AGENTS.md` was modified, check whether the domain-specific READMEs (`api/README.md`, `web/README.md`, etc.) or the root `README.md` need a corresponding update
 - [ ] PR description updated to reflect all functional changes (use `gh pr edit`)
 - [ ] All local commits pushed to the remote branch
 - [ ] Remote PR state verified (e.g., via `gh pr view` or by checking the URL)

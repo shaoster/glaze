@@ -159,6 +159,7 @@ def _apply_piece_ordering(qs, ordering_param: str):
 @extend_schema(
     methods=["GET"],
     operation_id="pieces_list",
+    description="List the authenticated user's pieces, paginated and sortable.",
     parameters=[
         OpenApiParameter(
             name="ordering",
@@ -194,6 +195,7 @@ def _apply_piece_ordering(qs, ordering_param: str):
     methods=["POST"],
     request=PieceCreateSerializer,
     responses={201: PieceDetailSerializer},
+    description="Create a new piece. The piece is initialized in the `designed` state.",
 )
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
@@ -236,11 +238,16 @@ def pieces(request: Request) -> Response:
     methods=["GET"],
     operation_id="pieces_retrieve",
     responses={200: PieceDetailSerializer},
+    description=(
+        "Retrieve a single piece. Publicly shared terminal pieces are readable "
+        "without authentication; all others require the owning user's session."
+    ),
 )
 @extend_schema(
     methods=["PATCH"],
     request=PieceUpdateSerializer,
     responses={200: PieceDetailSerializer},
+    description="Update piece metadata (name, notes, thumbnail, shared flag). Requires authentication.",
 )
 @api_view(["GET", "PATCH"])
 @permission_classes([AllowAny])
@@ -269,6 +276,10 @@ def piece_detail(request: Request, piece_id: str) -> Response:
 @extend_schema(
     request=PieceStateCreateSerializer,
     responses={201: PieceDetailSerializer},
+    description=(
+        "Advance the piece to a new state. The `state` field must be a valid "
+        "successor of the current state as defined in `workflow.yml`."
+    ),
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -287,6 +298,7 @@ def piece_states(request: Request, piece_id: str) -> Response:
 @extend_schema(
     methods=["GET"],
     responses={200: PieceStateSerializer},
+    description="Return the current (most recent) state of the piece.",
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -305,6 +317,7 @@ def piece_current_state_detail(request: Request, piece_id: str) -> Response:
     methods=["PATCH"],
     request=PieceStateUpdateSerializer,
     responses={200: PieceDetailSerializer},
+    description="Update fields on the current (unsealed) state: notes, location, custom fields, images.",
 )
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
@@ -327,10 +340,12 @@ def piece_current_state(request: Request, piece_id: str) -> Response:
     methods=["PATCH"],
     request=PieceStateUpdateSerializer,
     responses={200: PieceDetailSerializer},
+    description="Edit a sealed past state while the piece is in editable mode. Returns 403 if not editable.",
 )
 @extend_schema(
     methods=["DELETE"],
     responses={200: PieceDetailSerializer},
+    description="Delete a sealed past state while in editable mode. Cannot delete the `designed` state.",
 )
 @api_view(["PATCH", "DELETE"])
 @permission_classes([IsAuthenticated])
