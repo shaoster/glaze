@@ -25,13 +25,12 @@ import subprocess
 import sys
 import time
 import urllib.request
-from urllib.error import HTTPError
 import webbrowser
-from datetime import datetime
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable
-
+from urllib.error import HTTPError
 
 BACKEND_MIN_PORT = 8080
 WEB_MIN_PORT = 5173
@@ -58,7 +57,9 @@ def _git_output(args: list[str], cwd: Path) -> str | None:
 
 def detect_roots() -> Roots:
     cwd = Path(os.environ.get("BUILD_WORKSPACE_DIRECTORY") or os.getcwd()).resolve()
-    workspace = Path(_git_output(["rev-parse", "--show-toplevel"], cwd) or str(cwd)).resolve()
+    workspace = Path(
+        _git_output(["rev-parse", "--show-toplevel"], cwd) or str(cwd)
+    ).resolve()
     git_common_dir = _git_output(
         ["rev-parse", "--path-format=absolute", "--git-common-dir"],
         workspace,
@@ -203,7 +204,9 @@ def port_from_log(log_path: Path) -> int | None:
         return None
 
     pattern = re.compile(r"(?:127\.0\.0\.1|localhost):(\d+)")
-    for line in reversed(log_path.read_text(encoding="utf-8", errors="ignore").splitlines()):
+    for line in reversed(
+        log_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    ):
         match = pattern.search(line)
         if match:
             return int(match.group(1))
@@ -283,7 +286,9 @@ def wait_for_backend(port: int, timeout_seconds: float = 60.0) -> None:
         if time.monotonic() >= deadline:
             sys.stdout.write(" timed out!\n")
             if last_payload is not None:
-                sys.stdout.write(f"Last readiness payload: {json.dumps(last_payload, sort_keys=True)}\n")
+                sys.stdout.write(
+                    f"Last readiness payload: {json.dumps(last_payload, sort_keys=True)}\n"
+                )
             sys.stdout.flush()
             raise TimeoutError(f"backend did not become ready on port {port}")
 
@@ -302,7 +307,10 @@ def open_browser(url: str) -> None:
     elif os.name == "nt":
         candidates.append(["cmd", "/c", "start", "", url])
     else:
-        if os.environ.get("WSL_DISTRO_NAME") or "microsoft" in platform.release().lower():
+        if (
+            os.environ.get("WSL_DISTRO_NAME")
+            or "microsoft" in platform.release().lower()
+        ):
             if shutil_which("wslview"):
                 candidates.append(["wslview", url])
         candidates.append(["xdg-open", url])
@@ -312,7 +320,9 @@ def open_browser(url: str) -> None:
 
     for command in candidates:
         try:
-            subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.Popen(
+                command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
             return
         except FileNotFoundError:
             continue
@@ -396,7 +406,9 @@ def start_backend(
     pid, running = ensure_running(pidfile)
     if running and pid is not None:
         print(f"backend: already running (PID {pid})")
-        existing_port = read_int_file(portfile) or port_from_log(log_path) or backend_port
+        existing_port = (
+            read_int_file(portfile) or port_from_log(log_path) or backend_port
+        )
         write_text(portfile, str(existing_port))
         return pid
 
@@ -444,7 +456,9 @@ def start_backend(
         "load_public_library",
         "--skip-if-missing",
     ]
-    subprocess.run(load_public_library, cwd=str(roots.workspace), env=backend_env, check=True)
+    subprocess.run(
+        load_public_library, cwd=str(roots.workspace), env=backend_env, check=True
+    )
 
     backend: subprocess.Popen[str] | None = None
     try:
@@ -556,7 +570,11 @@ def start_stack(no_browser: bool = False) -> int:
             backend_started = True
         else:
             print(f"backend: already running (PID {pid})")
-            backend_port = read_int_file(backend_portfile) or port_from_log(backend_log) or backend_port
+            backend_port = (
+                read_int_file(backend_portfile)
+                or port_from_log(backend_log)
+                or backend_port
+            )
 
         pid, running = ensure_running(web_pidfile)
         if not (running and pid is not None):

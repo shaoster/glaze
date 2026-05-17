@@ -2,11 +2,15 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Dict, Optional, Protocol
 
-from django.db import transaction
+from celery import shared_task
+from django.db import close_old_connections, transaction
 
 from .models import AsyncTask
 
 logger = logging.getLogger(__name__)
+
+# Cache for the task interface instance.
+_task_interface: Optional["TaskInterface"] = None
 
 # Per-process executor for background tasks. AsyncTask state is DB-backed
 # (so any API instance can poll status), but execution is bound to whichever
@@ -52,6 +56,59 @@ class TaskInterface(Protocol):
         ...
 
 
+def _execute_task(task_id: Any) -> None:
+    """Shared execution logic for both in-memory and Celery workers."""
+    from .logging import task_context
+
+    with task_context(str(task_id)):
+        # Close any stale connections before starting
+        close_old_connections()
+
+        try:
+            # Re-fetch task to ensure we have the latest state in this thread.
+            try:
+                task = AsyncTask.objects.get(id=task_id)
+            except AsyncTask.DoesNotExist:
+                logger.error(f"Async task {task_id} not found for execution.")
+                return
+
+            from .utils import get_rss
+
+            logger.info(
+                f"Worker picking up task {task.task_type} ({task.id}). RSS: {get_rss():.2f}MB"
+            )
+            task.status = AsyncTask.Status.RUNNING
+            task.save(update_fields=["status", "last_modified"])
+
+            task_fn = TaskRegistry.get(task.task_type)
+            if not task_fn:
+                task.status = AsyncTask.Status.FAILURE
+                task.error = f"Unknown task type: {task.task_type}"
+                task.save(update_fields=["status", "error", "last_modified"])
+                return
+
+            try:
+                result = task_fn(task)
+                task.status = AsyncTask.Status.SUCCESS
+                task.result = result
+                task.save(update_fields=["status", "result", "last_modified"])
+                from .utils import get_rss
+
+                logger.info(
+                    f"Successfully completed task {task.task_type} ({task.id}). RSS: {get_rss():.2f}MB"
+                )
+            except Exception as e:
+                logger.exception(
+                    f"Fatal error executing task {task.task_type} ({task.id})"
+                )
+                task.status = AsyncTask.Status.FAILURE
+                task.error = str(e)
+                task.save(update_fields=["status", "error", "last_modified"])
+        finally:
+            # Clean up connections so the thread pool doesn't leak them
+            close_old_connections()
+
+
 class InMemoryTaskInterface:
     """Runs tasks in a background thread pool."""
 
@@ -68,66 +125,54 @@ class InMemoryTaskInterface:
     def submit(self, task: AsyncTask) -> None:
         # Use on_commit to ensure the task record is visible to the background thread.
         logger.info(f"Submitting task {task.task_type} ({task.id}) to thread pool.")
-        transaction.on_commit(lambda: _executor.submit(self._run_task, task.id))
+        transaction.on_commit(lambda: _executor.submit(_execute_task, task.id))
 
-    def _run_task(self, task_id: Any) -> None:
-        from django.db import close_old_connections
 
-        from .logging import task_context
+class CeleryTaskInterface:
+    """Submits tasks to a Celery broker."""
 
-        with task_context(str(task_id)):
-            # Close any stale connections before starting
-            close_old_connections()
+    def health_check(self) -> bool:
+        from django.conf import settings
+        from redis import Redis
 
-            try:
-                # Re-fetch task to ensure we have the latest state in this thread.
-                try:
-                    task = AsyncTask.objects.get(id=task_id)
-                except AsyncTask.DoesNotExist:
-                    logger.error(f"Async task {task_id} not found for execution.")
-                    return
+        # If we have a broker URL, try a ping.
+        if not settings.CELERY_BROKER_URL:
+            return False
 
-                from .utils import get_rss
+        try:
+            # Assumes Redis broker; Celery doesn't provide a cheap generic
+            # "broker_is_up" without a full connection/handshake.
+            # NOTE: Update this if the broker ever changes away from Redis.
+            r = Redis.from_url(settings.CELERY_BROKER_URL, socket_timeout=1)
+            return bool(r.ping())
+        except Exception:
+            return False
 
-                logger.info(
-                    f"Worker picking up task {task.task_type} ({task.id}). RSS: {get_rss():.2f}MB"
-                )
-                task.status = AsyncTask.Status.RUNNING
-                task.save(update_fields=["status", "last_modified"])
+    def submit(self, task: AsyncTask) -> None:
+        logger.info(f"Submitting task {task.task_type} ({task.id}) to Celery.")
+        transaction.on_commit(lambda: run_celery_task.delay(task.id))
 
-                task_fn = TaskRegistry.get(task.task_type)
-                if not task_fn:
-                    task.status = AsyncTask.Status.FAILURE
-                    task.error = f"Unknown task type: {task.task_type}"
-                    task.save(update_fields=["status", "error", "last_modified"])
-                    return
 
-                try:
-                    result = task_fn(task)
-                    task.status = AsyncTask.Status.SUCCESS
-                    task.result = result
-                    task.save(update_fields=["status", "result", "last_modified"])
-                    from .utils import get_rss
-
-                    logger.info(
-                        f"Successfully completed task {task.task_type} ({task.id}). RSS: {get_rss():.2f}MB"
-                    )
-                except Exception as e:
-                    logger.exception(
-                        f"Fatal error executing task {task.task_type} ({task.id})"
-                    )
-                    task.status = AsyncTask.Status.FAILURE
-                    task.error = str(e)
-                    task.save(update_fields=["status", "error", "last_modified"])
-            finally:
-                # Clean up connections so the thread pool doesn't leak them
-                close_old_connections()
+@shared_task
+def run_celery_task(task_id: Any) -> None:
+    """Celery worker entrypoint for all AsyncTasks."""
+    _execute_task(task_id)
 
 
 # Global interface instance.
-# In the future, this can be swapped for CeleryTaskInterface based on settings.
 def get_task_interface() -> TaskInterface:
-    return InMemoryTaskInterface()
+    global _task_interface
+    if _task_interface is not None:
+        return _task_interface
+
+    from django.conf import settings
+
+    backend = getattr(settings, "ASYNC_TASK_BACKEND", "inmemory")
+    if backend == "celery":
+        _task_interface = CeleryTaskInterface()
+    else:
+        _task_interface = InMemoryTaskInterface()
+    return _task_interface
 
 
 @TaskRegistry.register("ping")
@@ -162,7 +207,6 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     # Cloudinary-backed assets only (as per constraints)
     if not image.cloud_name or not image.cloudinary_public_id:
         return {"status": "skipped", "reason": "Not a Cloudinary image"}
-
 
     logger.info("Offloading subject detection to remote service.")
     crop = calculate_subject_crop_remote(image_url=image.url)

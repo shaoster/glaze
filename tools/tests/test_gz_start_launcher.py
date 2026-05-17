@@ -73,7 +73,9 @@ def test_choose_port_reuses_existing_free_port(monkeypatch, tmp_path: Path) -> N
     assert launcher.choose_port(port_file, 8080) == 8088
 
 
-def test_choose_port_falls_back_when_existing_port_is_busy(monkeypatch, tmp_path: Path) -> None:
+def test_choose_port_falls_back_when_existing_port_is_busy(
+    monkeypatch, tmp_path: Path
+) -> None:
     port_file = tmp_path / "backend.port"
     port_file.write_text("8088\n", encoding="utf-8")
 
@@ -87,7 +89,9 @@ def test_backend_is_ready_uses_health_checks(monkeypatch) -> None:
     monkeypatch.setattr(
         launcher,
         "backend_ready_payload",
-        lambda port: {"checks": {"database": True, "async_tasks": True, "migrations": False}},
+        lambda port: {
+            "checks": {"database": True, "async_tasks": True, "migrations": False}
+        },
     )
 
     assert launcher.backend_is_ready(8080) is True
@@ -185,11 +189,19 @@ def test_start_web_sets_bazel_bindir_only_on_linux(monkeypatch, tmp_path: Path) 
         return MockPopen()
 
     monkeypatch.setattr(launcher, "launch_child", fake_launch_child_linux_existing)
-    launcher.start_web(roots, {"BAZEL_BINDIR": "bazel-out/k8-fastbuild/bin"}, pidfile, portfile, log_path, 8080, 5173)
-
-    assert captured_env_linux_existing.get("BAZEL_BINDIR") == "bazel-out/k8-fastbuild/bin", (
-        "BAZEL_BINDIR should be respected if already provided by the environment."
+    launcher.start_web(
+        roots,
+        {"BAZEL_BINDIR": "bazel-out/k8-fastbuild/bin"},
+        pidfile,
+        portfile,
+        log_path,
+        8080,
+        5173,
     )
+
+    assert (
+        captured_env_linux_existing.get("BAZEL_BINDIR") == "bazel-out/k8-fastbuild/bin"
+    ), "BAZEL_BINDIR should be respected if already provided by the environment."
 
     # 2. Test Mac behavior: BAZEL_BINDIR should NOT be set (not required)
     monkeypatch.setattr(launcher.sys, "platform", "darwin")

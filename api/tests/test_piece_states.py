@@ -324,15 +324,16 @@ class TestPieceStates:
             "custom_fields.kiln_location": "Invalid location id: '00000000-0000-0000-0000-000000000000'"
         }
 
+
 class TestPieceStateSerializerNavigation:
     def test_navigation_with_prefetched_states_missing_obj(self, user):
         piece = Piece.objects.create(user=user, name="Prefetch Test")
         s1 = PieceState.objects.create(piece=piece, state="designed", order=1)
         s2 = PieceState.objects.create(piece=piece, state="trimmed", order=2)
-        
+
         # Simulate prefetching but exclude s2 from the list
         piece._prefetched_objects_cache = {"states": [s1]}
-        
+
         serializer = PieceStateSerializer()
         # Should return None if the state isn't in the prefetched list
         assert serializer.get_previous_state(s2) is None
@@ -340,11 +341,11 @@ class TestPieceStateSerializerNavigation:
 
     def test_navigation_without_order(self, user):
         piece = Piece.objects.create(user=user, name="No Order Test")
-        # Ensure distinct 'created' times by saving explicitly if needed, 
+        # Ensure distinct 'created' times by saving explicitly if needed,
         # but usually separate creates are enough.
         s1 = PieceState.objects.create(piece=piece, state="designed", order=None)
         s2 = PieceState.objects.create(piece=piece, state="trimmed", order=None)
-        
+
         serializer = PieceStateSerializer()
         assert serializer.get_previous_state(s2) == "designed"
         assert serializer.get_next_state(s1) == "trimmed"
