@@ -6,7 +6,7 @@ receivers:
 
 exporters:
   otlphttp:
-    endpoint: https://otlp-gateway-prod-us-east-0.grafana.net/otlp
+    endpoint: https://otlp-gateway-prod-us-east-3.grafana.net/otlp
     headers:
       authorization: "Basic ${env:GRAFANA_CLOUD_OTLP_TOKEN}"
 
