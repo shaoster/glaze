@@ -13,13 +13,13 @@ const sampleImages: CaptionedImage[] = [
     cloud_name: undefined,
   },
   {
-    url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
+    url: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800",
     caption: "Detail of the rim",
     cloudinary_public_id: undefined,
     cloud_name: undefined,
   },
   {
-    url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
+    url: "https://images.unsplash.com/photo-1593150501174-d8200671607f?w=800",
     caption: "",
     cloudinary_public_id: undefined,
     cloud_name: undefined,

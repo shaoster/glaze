@@ -42,6 +42,9 @@ For each target component:
   - For components using MUI `Dialog` or `Modal`, set `docs: { inlineStories: false, iframeHeight: 600 }` in `parameters`.
   - Use a `render` function to wrap the modal in a "Toggle Button" so the Docs page remains interactive and readable.
   - **Hide Source Code**: For stories using this "Toggle Button" pattern, set `docs: { canvas: { sourceState: "none" }, source: { code: null } }` in `parameters` to prevent the "Show Code" block from displaying unhelpful button-only code.
+- **Data Variety**:
+  - For components that take a list as their primary input (e.g., `ImageLightbox`, `PieceList`, `TagChipList`), ensure the story variants use **meaningfully distinct items**.
+  - Avoid repeating the same image URL, name, or metadata across list items so navigation and visual variety can be properly verified.
 - **useBlocker handling**:
   - For components that use `useBlocker` (e.g., `PieceDetail`), ensure the component is wrapped in a data router context (using `createMemoryRouter` + `RouterProvider` in decorators) to prevent Storybook from crashing.
 - **Theming**:
