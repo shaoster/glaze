@@ -40,3 +40,4 @@ test.xml
 
 # Generated files.
 src/util/generated-types.ts
+storybook-static

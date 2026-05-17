@@ -425,6 +425,14 @@ PotterDoc supports Google Sign-In using OAuth 2.0 with OpenID Connect. To enable
    - New Google users get accounts created automatically
    - Profile information (name, picture) syncs from Google on each login
 
+## Component Documentation
+
+Interactive component stories are published to GitHub Pages via Storybook:
+
+**[https://shaoster.github.io/glaze/storybook/](https://shaoster.github.io/glaze/storybook/)**
+
+Run locally with `cd web && pnpm storybook`. See [`web/README.md`](web/README.md) for details.
+
 ## Deployment
 
 PotterDoc supports Docker Compose (self-hosted on any VPS/droplet).

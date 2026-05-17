@@ -5,9 +5,6 @@ on:
   # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
-    paths:
-      - "pages/**"
-      - "tools/generate_index.py"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -40,6 +37,22 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install pnpm
+        run: npm install -g pnpm
+      - name: Install web dependencies
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+      - name: Build Storybook
+        working-directory: web
+        run: pnpm build-storybook
+      - name: Copy Storybook to pages
+        run: |
+          mkdir -p pages/storybook
+          cp -r web/storybook-static/. pages/storybook/
       - name: Generate Index
         run: python tools/generate_index.py pages
       - name: Upload artifact

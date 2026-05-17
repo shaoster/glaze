@@ -1,5 +1,20 @@
 # React + TypeScript + Vite
 
+## Storybook
+
+Interactive component stories are published at:
+
+**[https://shaoster.github.io/glaze/storybook/](https://shaoster.github.io/glaze/storybook/)**
+
+Run locally:
+
+```bash
+pnpm storybook        # dev server at http://localhost:6006
+pnpm build-storybook  # static build → storybook-static/
+```
+
+Stories live in `src/stories/`. The preview wraps every story with the app's MUI dark theme so components render in their production context.
+
 ## Local env config (git-safe)
 
 Use `.env.local` for local-only values. It is gitignored.
