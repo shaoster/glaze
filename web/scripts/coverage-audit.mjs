@@ -558,7 +558,14 @@ export async function buildDatabase(options) {
   }
 
   for (const reportPath of reportFiles) {
-    const parsed = await parseLcovFile(reportPath);
+    if (statSync(reportPath).size === 0) continue;
+    let parsed;
+    try {
+      parsed = await parseLcovFile(reportPath);
+    } catch {
+      // Non-LCOV files (e.g. baseline stubs) — skip silently.
+      continue;
+    }
     ingestReport(db, reportPath, options.integrationRegex, caches)(parsed);
   }
 
