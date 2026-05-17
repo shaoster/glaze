@@ -15,6 +15,7 @@ import {
   unlinkSync,
   readdirSync,
   statSync,
+  readFileSync,
 } from "node:fs";
 import { accessSync, constants as fsConstants } from "node:fs";
 import { tmpdir } from "node:os";
@@ -41,7 +42,7 @@ export function help(exitCode = 0) {
   const dbPath = defaultDbPath();
   console.log(`
 Usage:
-  coverage-audit.mjs [options] [summary|gaps|redundant|unexpected]
+  coverage-audit.mjs [options] [summary|gaps|redundant|unexpected|scope-violations]
 
 Options:
   --db <path>                 SQLite database path (default: ${displayPath(dbPath)})
@@ -53,10 +54,11 @@ Options:
   -h, --help                  Show help
 
 Commands:
-  summary     Build the DB and print a compact overview
-  gaps        Print uncovered files and the largest uncovered ranges
-  redundant   Print lines covered by many tests
-  unexpected  Print tests that fan out across unrelated feature buckets
+  summary          Build the DB and print a compact overview
+  gaps             Print uncovered files and the largest uncovered ranges
+  redundant        Print lines covered by many tests
+  unexpected       Print tests that fan out across unrelated feature buckets
+  scope-violations Print tests that cover files outside their declared expected_coverage scope
 `);
   process.exit(exitCode);
 }
@@ -146,6 +148,20 @@ export function displayPath(path) {
   return normalized;
 }
 
+export function globToRegex(pattern) {
+  // Escape all regex metacharacters except * and ?
+  const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+  // Replace ** before *, so we handle them independently
+  const withDoubleStar = escaped.replace(/\*\*/g, "\x00");
+  const withSingleStar = withDoubleStar.replace(/\*/g, "[^/]*");
+  const resolved = withSingleStar.replace(/\x00/g, ".*").replace(/\?/g, "[^/]");
+  return new RegExp("^" + resolved + "$");
+}
+
+export function matchesScope(filePath, patterns) {
+  return patterns.some((p) => globToRegex(p).test(filePath));
+}
+
 export function bucketForPath(path) {
   if (path.startsWith("web/src/components/")) return "web/src/components";
   if (path.startsWith("web/src/pages/")) return "web/src/pages";
@@ -231,7 +247,8 @@ export function createSchema(db) {
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL UNIQUE,
       report_path TEXT NOT NULL,
-      is_integration INTEGER NOT NULL DEFAULT 0
+      is_integration INTEGER NOT NULL DEFAULT 0,
+      scope TEXT
     );
 
     CREATE TABLE IF NOT EXISTS coverage_lines (
@@ -309,26 +326,35 @@ export function getOrCreateSourceLine(db, lineCache, sourceFileId, lineNumber) {
   return Number(result.lastInsertRowid);
 }
 
-export function upsertTest(db, testName, reportPath, isIntegration) {
+export function upsertTest(db, testName, reportPath, isIntegration, scope = null) {
   const existing = db.prepare("SELECT id FROM tests WHERE name = ?").get(testName);
   if (existing) {
-    db.prepare("UPDATE tests SET report_path = ?, is_integration = ? WHERE id = ?").run(
+    db.prepare("UPDATE tests SET report_path = ?, is_integration = ?, scope = ? WHERE id = ?").run(
       reportPath,
       isIntegration ? 1 : 0,
+      scope,
       existing.id,
     );
     return existing.id;
   }
   const result = db
-    .prepare("INSERT INTO tests(name, report_path, is_integration) VALUES (?, ?, ?)")
-    .run(testName, reportPath, isIntegration ? 1 : 0);
+    .prepare("INSERT INTO tests(name, report_path, is_integration, scope) VALUES (?, ?, ?, ?)")
+    .run(testName, reportPath, isIntegration ? 1 : 0, scope);
   return Number(result.lastInsertRowid);
+}
+
+export function readScopeFile(reportPath) {
+  const scopePath = reportPath + ".scope";
+  if (!existsSync(scopePath)) return null;
+  const raw = readFileSync(scopePath, "utf8").trim();
+  return raw.length > 0 ? raw : null;
 }
 
 export function ingestReport(db, reportPath, integrationRegex, caches) {
   const testName = displayReportName(reportPath);
   const isIntegration = isIntegrationTest(testName, integrationRegex);
-  const testId = upsertTest(db, testName, reportPath, isIntegration);
+  const scope = readScopeFile(reportPath);
+  const testId = upsertTest(db, testName, reportPath, isIntegration, scope);
   const tx = db.transaction((records) => {
     for (const record of records) {
       const rawPath = record.file ?? record.path ?? "";
@@ -536,6 +562,52 @@ export function reportUnexpectedCoverage(db, limit, minFiles, minBuckets, integr
   }
 }
 
+export function reportScopeViolations(db, limit) {
+  const testsWithScope = db
+    .prepare("SELECT id, name, scope FROM tests WHERE scope IS NOT NULL AND is_integration = 0")
+    .all();
+
+  if (testsWithScope.length === 0) {
+    console.log("Scope violations: no tests have declared expected_coverage.");
+    return;
+  }
+
+  const coveredFilesQuery = db.prepare(`
+    SELECT DISTINCT sf.path AS file_path
+    FROM coverage_lines cl
+    JOIN source_lines sl ON sl.id = cl.source_line_id
+    JOIN source_files sf ON sf.id = sl.source_file_id
+    WHERE cl.test_id = ? AND cl.hit_count > 0
+  `);
+
+  const violations = [];
+  for (const test of testsWithScope) {
+    const patterns = test.scope.split("\n").filter(Boolean);
+    const coveredFiles = coveredFilesQuery.all(test.id).map((r) => r.file_path);
+    const outOfScope = coveredFiles.filter((f) => !matchesScope(f, patterns));
+    if (outOfScope.length > 0) {
+      violations.push({ testName: test.name, patterns, outOfScope });
+    }
+  }
+
+  violations.sort((a, b) => b.outOfScope.length - a.outOfScope.length || a.testName.localeCompare(b.testName));
+
+  console.log("Scope violations (covered outside declared expected_coverage):");
+  if (violations.length === 0) {
+    console.log("- none");
+    return;
+  }
+  for (const v of violations.slice(0, limit)) {
+    console.log(`- ${v.testName}: declared [${v.patterns.join(", ")}]`);
+    for (const f of v.outOfScope.slice(0, 5)) {
+      console.log(`    ${f}`);
+    }
+    if (v.outOfScope.length > 5) {
+      console.log(`    ... and ${v.outOfScope.length - 5} more`);
+    }
+  }
+}
+
 export function ensureDbDirectory(dbPath) {
   mkdirSync(dirname(dbPath), { recursive: true });
 }
@@ -584,6 +656,7 @@ export async function main() {
 
   if (options.command === "summary") {
     reportGaps(db, options.limit);
+    reportScopeViolations(db, options.limit);
     reportUnexpectedCoverage(
       db,
       options.limit,
@@ -603,6 +676,8 @@ export async function main() {
       options.minBuckets,
       options.integrationRegex,
     );
+  } else if (options.command === "scope-violations") {
+    reportScopeViolations(db, options.limit);
   } else {
     throw new Error(`Unknown command: ${options.command}`);
   }

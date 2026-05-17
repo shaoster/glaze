@@ -26,15 +26,23 @@ import pytest
 if __name__ == "__main__":
     cov_file = os.environ.get("COVERAGE_OUTPUT_FILE")
     if cov_file:
-        # Extract --cov=<pkg> args injected by the pytest_test() macro.
+        # Extract --cov=<pkg> and --expected-coverage=<glob> args injected by pytest_test().
         cov_srcs = [a[6:] for a in sys.argv[1:] if a.startswith("--cov=")]
-        pytest_args = [a for a in sys.argv[1:] if not a.startswith("--cov")]
+        scope_patterns = [a[19:] for a in sys.argv[1:] if a.startswith("--expected-coverage=")]
+        pytest_args = [
+            a for a in sys.argv[1:]
+            if not a.startswith("--cov=") and not a.startswith("--expected-coverage=")
+        ]
 
         if not cov_srcs:
             raise RuntimeError(
                 "COVERAGE_OUTPUT_FILE is set but no --cov=<pkg> arg was found. "
                 "Ensure the pytest_test() macro is used and cov_src is set."
             )
+
+        if scope_patterns:
+            with open(cov_file + ".scope", "w") as f:
+                f.write("\n".join(scope_patterns))
 
         # data_file=None avoids writing a .coverage file into the Bazel sandbox.
         cov = coverage.Coverage(source_pkgs=cov_srcs, data_file=None)

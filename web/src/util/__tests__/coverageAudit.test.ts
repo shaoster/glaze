@@ -74,7 +74,7 @@ vi.mock("better-sqlite3", () => {
       throw new Error(`Unhandled get query: ${sql}`);
     }
 
-    #all(sql) {
+    #all(sql, args) {
       if (
         sql ===
         "SELECT sf.path AS file_path, sl.line_number FROM source_lines sl JOIN source_files sf ON sf.id = sl.source_file_id WHERE sl.total_hit_count = 0 ORDER BY sf.path, sl.line_number"
@@ -138,6 +138,32 @@ vi.mock("better-sqlite3", () => {
         return rows.sort((a, b) => a.name.localeCompare(b.name) || b.hit_count - a.hit_count);
       }
 
+      if (
+        sql ===
+        "SELECT id, name, scope FROM tests WHERE scope IS NOT NULL AND is_integration = 0"
+      ) {
+        return this.tests.filter((t) => t.scope != null && !t.is_integration);
+      }
+
+      if (
+        sql ===
+        "SELECT DISTINCT sf.path AS file_path FROM coverage_lines cl JOIN source_lines sl ON sl.id = cl.source_line_id JOIN source_files sf ON sf.id = sl.source_file_id WHERE cl.test_id = ? AND cl.hit_count > 0"
+      ) {
+        const testId = args[0];
+        const fileIds = new Set(
+          this.coverageLines
+            .filter((cl) => cl.test_id === testId && cl.hit_count > 0)
+            .map((cl) => {
+              const sl = this.sourceLines.find((s) => s.id === cl.source_line_id);
+              return sl?.source_file_id;
+            })
+            .filter(Boolean),
+        );
+        return [...fileIds].map((fid) => ({
+          file_path: this.sourceFiles.find((sf) => sf.id === fid)!.path,
+        }));
+      }
+
       throw new Error(`Unhandled all query: ${sql}`);
     }
 
@@ -160,19 +186,21 @@ vi.mock("better-sqlite3", () => {
         return { lastInsertRowid: row.id };
       }
 
-      if (sql === "UPDATE tests SET report_path = ?, is_integration = ? WHERE id = ?") {
-        const row = this.tests.find((entry) => entry.id === args[2]);
+      if (sql === "UPDATE tests SET report_path = ?, is_integration = ?, scope = ? WHERE id = ?") {
+        const row = this.tests.find((entry) => entry.id === args[3]);
         row.report_path = args[0];
         row.is_integration = args[1];
+        row.scope = args[2];
         return { changes: 1 };
       }
 
-      if (sql === "INSERT INTO tests(name, report_path, is_integration) VALUES (?, ?, ?)") {
+      if (sql === "INSERT INTO tests(name, report_path, is_integration, scope) VALUES (?, ?, ?, ?)") {
         const row = {
           id: this.nextIds.tests++,
           name: args[0],
           report_path: args[1],
           is_integration: args[2],
+          scope: args[3],
         };
         this.tests.push(row);
         return { lastInsertRowid: row.id };
@@ -233,7 +261,10 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import {
   buildDatabase,
+  globToRegex,
+  matchesScope,
   reportRedundancy,
+  reportScopeViolations,
   reportUnexpectedCoverage,
   summarizeCoverage,
 } from "../../../scripts/coverage-audit.mjs";
@@ -401,6 +432,144 @@ describe("coverage audit tool", () => {
         const output = logSpy.mock.calls.flat().join("\n");
         expect(output).toContain(join(root, "unit"));
         expect(output).not.toContain(join(root, "integration"));
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("globToRegex / matchesScope", () => {
+  it("matches exact file paths", () => {
+    expect(globToRegex("api/piece_views.py").test("api/piece_views.py")).toBe(true);
+    expect(globToRegex("api/piece_views.py").test("api/other.py")).toBe(false);
+  });
+
+  it("* matches within a single path segment", () => {
+    expect(globToRegex("api/piece*").test("api/piece_views.py")).toBe(true);
+    expect(globToRegex("api/piece*").test("api/piece_views/sub.py")).toBe(false);
+    expect(globToRegex("api/piece*").test("other/piece_views.py")).toBe(false);
+  });
+
+  it("** matches across path separators", () => {
+    expect(globToRegex("web/src/**").test("web/src/components/Foo.tsx")).toBe(true);
+    expect(globToRegex("web/src/**").test("api/views.py")).toBe(false);
+  });
+
+  it("matchesScope returns true when any pattern matches", () => {
+    expect(matchesScope("api/piece_views.py", ["api/serializers.py", "api/piece*"])).toBe(true);
+    expect(matchesScope("api/admin.py", ["api/piece*", "api/serializers.py"])).toBe(false);
+  });
+});
+
+describe("scope violations", () => {
+  it("flags files covered outside declared scope", async () => {
+    const root = makeTempRoot();
+    try {
+      const testDir = join(root, "api_piece_test");
+      writeCoverageFile(
+        testDir,
+        "coverage.dat",
+        [
+          fakeLcov("unit", [[1, 1]], "api/piece_views.py"),
+          fakeLcov("unit", [[1, 1]], "api/admin.py"),
+        ].join("\n"),
+      );
+      // Write .scope sidecar
+      writeFileSync(join(testDir, "coverage.dat.scope"), "api/piece_views.py\napi/models.py");
+
+      const db = await buildDatabase({
+        command: "scope-violations",
+        dbPath: join(root, "audit.sqlite3"),
+        reports: [testDir],
+        integrationRegex: /integration/i,
+        limit: 10,
+        minFiles: 8,
+        minBuckets: 3,
+      });
+
+      try {
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        reportScopeViolations(db, 10);
+        const output = logSpy.mock.calls.flat().join("\n");
+        // api/admin.py should appear as an indented violation
+        expect(output).toContain("    api/admin.py");
+        // api/piece_views.py is within scope — it should not appear as a violation (only in the declared line)
+        expect(output).not.toContain("    api/piece_views.py");
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports nothing when all covered files are within scope", async () => {
+    const root = makeTempRoot();
+    try {
+      const testDir = join(root, "api_workflow_test");
+      writeCoverageFile(
+        testDir,
+        "coverage.dat",
+        fakeLcov("unit", [[1, 1], [2, 1]], "api/workflow.py"),
+      );
+      writeFileSync(join(testDir, "coverage.dat.scope"), "api/workflow*");
+
+      const db = await buildDatabase({
+        command: "scope-violations",
+        dbPath: join(root, "audit.sqlite3"),
+        reports: [testDir],
+        integrationRegex: /integration/i,
+        limit: 10,
+        minFiles: 8,
+        minBuckets: 3,
+      });
+
+      try {
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        reportScopeViolations(db, 10);
+        const output = logSpy.mock.calls.flat().join("\n");
+        expect(output).toContain("none");
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("skips integration tests even when scope is declared and violations exist", async () => {
+    const root = makeTempRoot();
+    try {
+      const testDir = join(root, "integration_e2e");
+      writeCoverageFile(
+        testDir,
+        "coverage.dat",
+        [
+          fakeLcov("unit", [[1, 1]], "api/piece_views.py"),
+          fakeLcov("unit", [[1, 1]], "api/admin.py"),
+        ].join("\n"),
+      );
+      writeFileSync(join(testDir, "coverage.dat.scope"), "api/piece_views.py");
+
+      const db = await buildDatabase({
+        command: "scope-violations",
+        dbPath: join(root, "audit.sqlite3"),
+        reports: [testDir],
+        integrationRegex: /integration/i,
+        limit: 10,
+        minFiles: 8,
+        minBuckets: 3,
+      });
+
+      try {
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        reportScopeViolations(db, 10);
+        const output = logSpy.mock.calls.flat().join("\n");
+        // Integration test should not be flagged
+        expect(output).toContain("no tests have declared");
       } finally {
         db.close();
       }
