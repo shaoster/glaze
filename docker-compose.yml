@@ -169,7 +169,6 @@ services:
     restart: unless-stopped
     volumes:
       - ./otel-collector-config.yml:/etc/otel/config.yml:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
     command: ["--config=/etc/otel/config.yml"]
     environment:
       GRAFANA_CLOUD_OTLP_TOKEN: ${GRAFANA_CLOUD_OTLP_TOKEN:-}
