@@ -17,7 +17,7 @@ import { formatState, isTerminalState, SUCCESSORS } from "../util/workflow";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import { MasonryScroller, useContainerPosition, usePositioner, useResizeObserver } from "masonic";
-import { estimateCardHeight } from "./pieceCardHeight";
+import { DEFAULT_CARD_HEIGHT_ESTIMATE, estimateCardHeight } from "./pieceCardHeight";
 import { Link, useSearchParams } from "react-router-dom";
 import CloudinaryImage from "./CloudinaryImage";
 import TagAutocomplete from "./TagAutocomplete";
@@ -25,9 +25,17 @@ import TagChip from "./TagChip";
 import { DEFAULT_THUMBNAIL } from "./thumbnailConstants";
 
 // Kiln-glow amber used for stale indicator
+const SSR_FALLBACK_HEIGHT = 768; // standard portrait tablet height; only used before first paint
+
+const MASONRY_COLUMN_WIDTH_MOBILE = 160;
+const MASONRY_COLUMN_WIDTH_DESKTOP = 220;
+const MASONRY_GUTTER = 8;
+const MASONRY_MAX_COLUMNS_MOBILE = 2;
+const MASONRY_MAX_COLUMNS_DESKTOP = 4;
+
 function useWindowHeight(): number {
   const [height, setHeight] = useState(() =>
-    typeof window !== "undefined" ? window.innerHeight : 768,
+    typeof window !== "undefined" ? window.innerHeight : SSR_FALLBACK_HEIGHT,
   );
   useEffect(() => {
     const update = () => setHeight(window.innerHeight);
@@ -405,10 +413,16 @@ const PieceList = (props: PieceListProps) => {
 
   const windowHeight = useWindowHeight();
   const masonryRef = useRef<HTMLElement | null>(null);
-  const columnWidth = isMobile ? 160 : 220;
+  const columnWidth = isMobile ? MASONRY_COLUMN_WIDTH_MOBILE : MASONRY_COLUMN_WIDTH_DESKTOP;
   const { width: masonryWidth, offset: masonryOffset } = useContainerPosition(masonryRef, [isMobile]);
   const positioner = usePositioner(
-    { width: masonryWidth, columnWidth, columnGutter: 8, rowGutter: 8, maxColumnCount: isMobile ? 2 : 4 },
+    {
+      width: masonryWidth,
+      columnWidth,
+      columnGutter: MASONRY_GUTTER,
+      rowGutter: MASONRY_GUTTER,
+      maxColumnCount: isMobile ? MASONRY_MAX_COLUMNS_MOBILE : MASONRY_MAX_COLUMNS_DESKTOP,
+    },
     [filterKey],
   );
   // Pre-seed per-item height estimates from crop aspect ratios before masonic places items,
@@ -814,7 +828,7 @@ const PieceList = (props: PieceListProps) => {
               items={filteredPieces}
               render={MasonryPieceCard}
               itemKey={(piece) => piece.id}
-              itemHeightEstimate={260}
+              itemHeightEstimate={DEFAULT_CARD_HEIGHT_ESTIMATE}
               offset={masonryOffset}
               height={windowHeight}
             />

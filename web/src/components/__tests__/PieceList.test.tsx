@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceList from "../PieceList";
-import { estimateCardHeight } from "../pieceCardHeight";
+import { CARD_CHROME_HEIGHT, DEFAULT_CARD_HEIGHT_ESTIMATE, estimateCardHeight } from "../pieceCardHeight";
 import type { PieceSummary } from "../../util/types";
 
 vi.mock("../CloudinaryImage", () => ({
@@ -107,45 +107,43 @@ async function openFilters(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("estimateCardHeight", () => {
-  const CHROME = 60;
-
-  it("returns 260 when thumbnail is null", () => {
-    expect(estimateCardHeight({ thumbnail: null } as PieceSummary, 220)).toBe(260);
+  it("returns DEFAULT_CARD_HEIGHT_ESTIMATE when thumbnail is null", () => {
+    expect(estimateCardHeight({ thumbnail: null } as PieceSummary, 220)).toBe(DEFAULT_CARD_HEIGHT_ESTIMATE);
   });
 
-  it("returns 260 when crop is null", () => {
+  it("returns DEFAULT_CARD_HEIGHT_ESTIMATE when crop is null", () => {
     expect(
       estimateCardHeight({ thumbnail: { crop: null } } as PieceSummary, 220),
-    ).toBe(260);
+    ).toBe(DEFAULT_CARD_HEIGHT_ESTIMATE);
   });
 
-  it("returns 260 when crop is absent", () => {
+  it("returns DEFAULT_CARD_HEIGHT_ESTIMATE when crop is absent", () => {
     expect(
       estimateCardHeight({ thumbnail: {} } as PieceSummary, 220),
-    ).toBe(260);
+    ).toBe(DEFAULT_CARD_HEIGHT_ESTIMATE);
   });
 
   it("computes height from landscape crop aspect ratio", () => {
-    // 400×200 crop → ratio 0.5 → at width 220 → image height 110 + CHROME
+    // 400×200 crop → ratio 0.5 → at width 220 → image height 110 + CARD_CHROME_HEIGHT
     const piece = {
       thumbnail: { crop: { x: 0, y: 0, width: 400, height: 200 } },
     } as PieceSummary;
-    expect(estimateCardHeight(piece, 220)).toBe(Math.round(220 * 0.5) + CHROME);
+    expect(estimateCardHeight(piece, 220)).toBe(Math.round(220 * 0.5) + CARD_CHROME_HEIGHT);
   });
 
   it("computes height from portrait crop aspect ratio", () => {
-    // 200×400 crop → ratio 2 → at width 220 → image height 440 + CHROME
+    // 200×400 crop → ratio 2 → at width 220 → image height 440 + CARD_CHROME_HEIGHT
     const piece = {
       thumbnail: { crop: { x: 0, y: 0, width: 200, height: 400 } },
     } as PieceSummary;
-    expect(estimateCardHeight(piece, 220)).toBe(Math.round(220 * 2) + CHROME);
+    expect(estimateCardHeight(piece, 220)).toBe(Math.round(220 * 2) + CARD_CHROME_HEIGHT);
   });
 
-  it("returns 260 when crop.width is 0 (guard against division by zero)", () => {
+  it("returns DEFAULT_CARD_HEIGHT_ESTIMATE when crop.width is 0 (guard against division by zero)", () => {
     const piece = {
       thumbnail: { crop: { x: 0, y: 0, width: 0, height: 200 } },
     } as PieceSummary;
-    expect(estimateCardHeight(piece, 220)).toBe(260);
+    expect(estimateCardHeight(piece, 220)).toBe(DEFAULT_CARD_HEIGHT_ESTIMATE);
   });
 });
 
@@ -157,7 +155,7 @@ describe("PieceList", () => {
 
   describe("masonry height pre-seeding", () => {
     it("pre-seeds the positioner with crop-derived height for pieces with a crop", () => {
-      // 200×400 crop at columnWidth 220 → image height = 220*400/200 = 440 → + 60 chrome = 500
+      // 200×400 crop at columnWidth 220 → image height = 220*400/200 = 440 → + CARD_CHROME_HEIGHT
       const piece = makePiece({
         thumbnail: {
           url: "https://example.com/img.jpg",
@@ -167,7 +165,7 @@ describe("PieceList", () => {
         },
       });
       renderPieceList([piece]);
-      expect(mockPositioner.set).toHaveBeenCalledWith(0, 500);
+      expect(mockPositioner.set).toHaveBeenCalledWith(0, Math.round(220 * 400 / 200) + CARD_CHROME_HEIGHT);
     });
 
     it("does not pre-seed the positioner for pieces without a crop", () => {
