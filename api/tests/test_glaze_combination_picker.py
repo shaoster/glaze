@@ -70,6 +70,7 @@ class TestGlazeCombinationGetShape:
             "url": "https://example.com/tile.jpg",
             "cloudinary_public_id": "tile",
             "cloud_name": None,
+            "image_id": str(combo.test_tile_image.id),
         }
         assert item["is_food_safe"] is True
         assert item["runs"] is False

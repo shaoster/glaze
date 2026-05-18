@@ -322,8 +322,11 @@ class TestPieceDetail:
         )
 
         assert response.status_code == 200
-        assert response.json()["thumbnail"] == thumbnail
         piece.refresh_from_db()
+        assert response.json()["thumbnail"] == {
+            **thumbnail,
+            "image_id": str(piece.thumbnail.id),
+        }
         assert piece.thumbnail == {
             "url": thumbnail["url"],
             "cloudinary_public_id": thumbnail["cloudinary_public_id"],

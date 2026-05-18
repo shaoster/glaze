@@ -7,8 +7,12 @@ workflow-state-machine logic derived from workflow.yml).
 
 import logging
 import os
+from typing import TYPE_CHECKING
 
 import requests
+
+if TYPE_CHECKING:
+    from .models import CropRun
 from cloudinary import CloudinaryImage
 from django.apps import apps
 from django.conf import settings
@@ -55,24 +59,25 @@ SHARED_GLAZE_FIELDS: tuple[str, ...] = (
 )
 
 
-def calculate_subject_crop_remote(
+def calculate_subject_mask_remote(
     image_bytes: bytes | None = None, image_url: str | None = None
 ) -> dict | None:
-    """Offload subject detection to a remote ML service.
+    """Offload subject segmentation to a remote ML service.
 
     Accepts either raw image bytes or a public image URL.
-    Returns a JSON relative crop box: {"x": float, "y": float, "width": float, "height": float}.
+    Returns {"mask": "<b64>"} on success, {"mask": None} when no subject found,
+    or None on network/service error.
     """
     remote_url = getattr(settings, "REMOTE_REMBG_URL", None)
     auth_token = getattr(settings, "MODAL_AUTH_TOKEN", None)
 
     if not remote_url:
         logger.warning(
-            "calculate_subject_crop_remote called but REMOTE_REMBG_URL is not set."
+            "calculate_subject_mask_remote called but REMOTE_REMBG_URL is not set."
         )
         return None
 
-    logger.info(f"Offloading subject detection to remote service: {remote_url}")
+    logger.info(f"Offloading subject segmentation to remote service: {remote_url}")
     headers = {}
     if auth_token:
         headers["X-API-Key"] = auth_token
@@ -93,11 +98,152 @@ def calculate_subject_crop_remote(
             raise ValueError("Either image_bytes or image_url must be provided")
 
         response.raise_for_status()
-        crop = response.json()
-        return crop_to_dict(crop)
+        return response.json()
     except Exception as e:
-        logger.error(f"Remote subject detection failed: {e}")
+        logger.error(f"Remote subject segmentation failed: {e}")
         return None
+
+
+def upload_mask_to_cloudinary(mask_bytes: bytes, image) -> dict:
+    """Upload a PNG mask to Cloudinary and return the asset reference dict.
+
+    The mask is stored under the crop-masks/ folder, keyed by image.id.
+    The folder name is historical; this asset is the segmentation mask that the
+    crop bbox is derived from.
+    """
+    import cloudinary  # noqa: PLC0415
+    import cloudinary.uploader  # noqa: PLC0415
+
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
+    api_key = os.environ.get("CLOUDINARY_API_KEY", "").strip()
+    api_secret = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
+
+    if not cloud_name or not api_key or not api_secret:
+        raise ValueError(
+            "CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are required."
+        )
+
+    cloudinary.config(
+        cloud_name=cloud_name, api_key=api_key, api_secret=api_secret, secure=True
+    )
+
+    upload_folder = os.environ.get("CLOUDINARY_UPLOAD_FOLDER", "").strip().strip("/")
+    folder = "/".join(part for part in [upload_folder, "crop-masks"] if part)
+
+    result = cloudinary.uploader.upload(
+        mask_bytes,
+        public_id=str(image.id),
+        folder=folder,
+        overwrite=True,
+        resource_type="image",
+    )
+    return {
+        "cloud_name": result.get("cloud_name") or cloud_name,
+        "cloudinary_public_id": result.get("public_id"),
+    }
+
+
+def run_crop_inference(piece_state_image, async_task=None) -> "CropRun":
+    """Call the segment service, derive a crop bbox from its mask, persist CropRun."""
+    import base64  # noqa: PLC0415
+    import binascii  # noqa: PLC0415
+    import io  # noqa: PLC0415
+    import time  # noqa: PLC0415
+
+    from PIL import Image as PILImage  # noqa: PLC0415
+
+    from .models import CropRun  # noqa: PLC0415
+
+    image = piece_state_image.image
+
+    remote_url = getattr(settings, "REMOTE_REMBG_URL", None)
+    source = {
+        "type": "automated",
+        "backend": "rembg-u2net" if remote_url else "rembg-u2netp",
+        "deployment": "modal" if remote_url else "local",
+        "version": None,
+    }
+
+    start = time.monotonic()
+    try:
+        mask_response = calculate_subject_mask_remote(image_url=image.url)
+    except Exception as e:
+        logger.error(f"Segment service call failed for image {image.id}: {e}")
+        return CropRun.objects.create(
+            image=image,
+            piece_state_image=piece_state_image,
+            source=source,
+            status=CropRun.Status.ERROR,
+            error=str(e),
+            latency_ms=int((time.monotonic() - start) * 1000),
+            async_task=async_task,
+        )
+
+    latency_ms = int((time.monotonic() - start) * 1000)
+
+    if not mask_response or not mask_response.get("mask"):
+        return CropRun.objects.create(
+            image=image,
+            piece_state_image=piece_state_image,
+            source=source,
+            status=CropRun.Status.NO_SUBJECT,
+            latency_ms=latency_ms,
+            async_task=async_task,
+        )
+
+    try:
+        mask_bytes = base64.b64decode(mask_response["mask"], validate=True)
+
+        # The remote service returns a mask; derive the crop box locally.
+        pil_img = PILImage.open(io.BytesIO(mask_bytes))
+        pil_img.load()
+        alpha = pil_img.split()[3]
+        bbox = alpha.getbbox()  # (left, upper, right, lower) or None
+        if not bbox:
+            return CropRun.objects.create(
+                image=image,
+                piece_state_image=piece_state_image,
+                source=source,
+                status=CropRun.Status.NO_SUBJECT,
+                latency_ms=latency_ms,
+                async_task=async_task,
+            )
+    except (binascii.Error, OSError, IndexError, ValueError) as e:
+        logger.warning(f"Invalid segmentation mask for image {image.id}: {e}")
+        return CropRun.objects.create(
+            image=image,
+            piece_state_image=piece_state_image,
+            source=source,
+            status=CropRun.Status.ERROR,
+            error=str(e),
+            latency_ms=latency_ms,
+            async_task=async_task,
+        )
+
+    w, h = alpha.size
+    crop = {
+        "x": bbox[0] / w,
+        "y": bbox[1] / h,
+        "width": (bbox[2] - bbox[0]) / w,
+        "height": (bbox[3] - bbox[1]) / h,
+    }
+
+    mask_asset = None
+    try:
+        mask_asset = upload_mask_to_cloudinary(mask_bytes, image)
+    except Exception as e:
+        logger.warning(f"Mask upload failed for image {image.id}: {e}")
+
+    return CropRun.objects.create(
+        image=image,
+        piece_state_image=piece_state_image,
+        source=source,
+        status=CropRun.Status.SUCCESS,
+        crop=crop,
+        mask_asset=mask_asset,
+        latency_ms=latency_ms,
+        async_task=async_task,
+    )
 
 
 def get_or_create_location(user, name: str | None):
@@ -123,17 +269,20 @@ def image_to_dict(image) -> dict | None:
             "url": image.get("url") or "",
             "cloudinary_public_id": image.get("cloudinary_public_id"),
             "cloud_name": image.get("cloud_name"),
+            "image_id": image.get("image_id"),
         }
     if isinstance(image, str):
         return {
             "url": image,
             "cloudinary_public_id": None,
             "cloud_name": None,
+            "image_id": None,
         }
     return {
         "url": image.url,
         "cloudinary_public_id": image.cloudinary_public_id,
         "cloud_name": image.cloud_name,
+        "image_id": str(image.id) if hasattr(image, "id") else None,
     }
 
 
@@ -293,6 +442,7 @@ def captioned_image_to_dict(link) -> dict:
         "caption": link.caption,
         "crop": link.crop,
         "created": link.created,
+        "image_id": str(link.image_id) if link.image_id else None,
     }
 
 

@@ -13,4 +13,5 @@ app.autodiscover_tasks()
 @worker_process_init.connect
 def _init_otel(**kwargs):
     from backend.otel import configure_otel
+
     configure_otel()

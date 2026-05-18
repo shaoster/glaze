@@ -1,5 +1,5 @@
 """
-Unit tests for piece_image_crop_service.
+Unit tests for piece_image_segment_service.
 
 Heavy ML dependencies (rembg, OpenCV) are mocked so tests run fast in CI
 without downloading any model weights.
@@ -7,7 +7,9 @@ without downloading any model weights.
 
 import io
 import os
+import importlib
 import unittest
+import types
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -29,16 +31,16 @@ def _make_rgba(width: int, height: int, alpha: np.ndarray) -> Image.Image:
 def _single_blob_mask(width: int, height: int, box) -> np.ndarray:
     """Return a mask with a single white rectangle (the 'subject')."""
     mask = np.zeros((height, width), dtype=np.uint8)
-    l, t, r, b = box
-    mask[t:b, l:r] = 255
+    left, top, right, bottom = box
+    mask[top:bottom, left:right] = 255
     return mask
 
 
 def _noisy_mask(width: int, height: int, subject_box, noise_box) -> np.ndarray:
     """Return a mask with a large subject blob and a small noise blob."""
     mask = _single_blob_mask(width, height, subject_box)
-    l, t, r, b = noise_box
-    mask[t:b, l:r] = 255
+    left, top, right, bottom = noise_box
+    mask[top:bottom, left:right] = 255
     return mask
 
 
@@ -52,7 +54,7 @@ class TestDownloadWithRetry(unittest.TestCase):
 
     def _get_fn(self):
         # Import late so that other heavy deps (rembg) are already patched
-        from tools.piece_image_crop_service import create_app  # noqa
+        from tools.piece_image_segment_service import create_app  # noqa
 
         # We need to call create_app() with rembg mocked to retrieve the closure.
         # Instead, test the logic independently by reconstructing a minimal version.
@@ -121,7 +123,6 @@ class TestContourFiltering(unittest.TestCase):
         alpha = _single_blob_mask(W, H, (20, 20, 80, 80))
         left, upper, right, lower = self._compute_bbox(alpha, W, H, padding=0.10)
 
-        subj_w, subj_h = 60, 60
         pad = int(60 * 0.10)  # = 6
         self.assertEqual(left, max(0, 20 - pad))
         self.assertEqual(upper, max(0, 20 - pad))
@@ -213,7 +214,7 @@ class TestAuthVerification(unittest.TestCase):
         # Import inside test so the mock is already in sys.modules
         from fastapi.testclient import TestClient
 
-        from tools.piece_image_crop_service import create_app
+        from tools.piece_image_segment_service import create_app
 
         app = create_app()
         return TestClient(app)
@@ -254,6 +255,86 @@ class TestAuthVerification(unittest.TestCase):
             headers={"Content-Type": "image/png", "x-api-key": "wrong"},
         )
         self.assertEqual(resp.status_code, 403)
+
+    @patch("requests.Session.get")
+    def test_json_url_request_uses_download_with_retry(self, mock_get):
+        mock_resp = MagicMock()
+        mock_resp.content = io.BytesIO()
+        rgba = _make_rgba(100, 100, _single_blob_mask(100, 100, (10, 10, 90, 90)))
+        rgba.save(mock_resp.content, format="PNG")
+        mock_resp.content = mock_resp.content.getvalue()
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+
+        client = self._make_client(token=None)
+        resp = client.post("/", json={"url": "https://example.com/image.jpg"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(mock_get.call_count, 1)
+        self.assertEqual(mock_get.call_args.kwargs["timeout"], 30)
+
+
+class TestModalBootstrap(unittest.TestCase):
+    """Exercise the import-time Modal bootstrap path."""
+
+    def test_import_sets_up_modal_app(self):
+        fake_modal = types.ModuleType("modal")
+
+        class FakeBuilder:
+            def pip_install(self, *args, **kwargs):
+                return self
+
+            def run_commands(self, *args, **kwargs):
+                return self
+
+        class FakeImage:
+            @staticmethod
+            def debian_slim():
+                return FakeBuilder()
+
+        class FakeSecret:
+            @staticmethod
+            def from_name(name):
+                return f"secret:{name}"
+
+        class FakeApp:
+            def __init__(self, name, image=None, secrets=None):
+                self.name = name
+                self.image = image
+                self.secrets = secrets
+
+            def function(self):
+                def decorator(func):
+                    return func
+
+                return decorator
+
+        def asgi_app(label=None):
+            def decorator(func):
+                return func
+
+            return decorator
+
+        fake_modal.Image = FakeImage
+        fake_modal.Secret = FakeSecret
+        fake_modal.App = FakeApp
+        fake_modal.asgi_app = asgi_app
+
+        with patch.dict("sys.modules", {"modal": fake_modal}):
+            module = importlib.import_module("tools.piece_image_segment_service")
+            module = importlib.reload(module)
+            with patch.dict(
+                "sys.modules",
+                {
+                    "rembg": MagicMock(),
+                    "pillow_heif": MagicMock(),
+                },
+            ):
+                app = module.web()
+
+        self.assertIsInstance(module.app, FakeApp)
+        self.assertEqual(module.app.name, "piece-image-segment-service")
+        self.assertEqual(module.app.secrets, ["secret:piece-image-segment-secret"])
+        self.assertIsNotNone(app)
 
 
 if __name__ == "__main__":

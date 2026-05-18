@@ -22,6 +22,7 @@ from .cloudinary_views import (
     cloudinary_widget_config,
     cloudinary_widget_sign,
 )
+from .crop_run_views import CropRunViewSet, ImageCropRunsView
 from .global_entry_views import (
     _FAVORITES_REGISTRY,
     _apply_global_filters,
@@ -49,6 +50,8 @@ from .workflow_views import workflow_state_schema
 
 __all__ = [
     "_FAVORITES_REGISTRY",
+    "CropRunViewSet",
+    "ImageCropRunsView",
     "_apply_global_filters",
     "_check_async_tasks",
     "_check_database",

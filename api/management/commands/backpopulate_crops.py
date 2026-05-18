@@ -86,7 +86,7 @@ class Command(BaseCommand):
                 work_items.append(
                     {
                         "image_id": str(image.id),
-                        "piece_state_image_id": str(psi_id),
+                        "piece_state_image_id": psi_id,
                     }
                 )
 

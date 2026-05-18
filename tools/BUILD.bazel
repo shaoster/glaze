@@ -81,14 +81,14 @@ pytest_test(
     visibility = ["//visibility:public"],
 )
 
-# ── Piece image crop service ───────────────────────────────────────────────────
-# Local dev entry point for the Modal remote cropping service.
-# Run with: bazel run //tools:piece_image_crop_service
-# The service will listen on port 8080 for crop requests.
+# ── Piece image segment service ───────────────────────────────────────────────
+# Local dev entry point for the Modal remote segmentation service.
+# Run with: bazel run //tools:piece_image_segment_service
+# The service will listen on port 8080 for segment requests.
 
 py_binary(
-    name = "piece_image_crop_service",
-    srcs = ["piece_image_crop_service.py"],
+    name = "piece_image_segment_service",
+    srcs = ["piece_image_segment_service.py"],
     deps = [
         "@pypi//fastapi",
         "@pypi//uvicorn",
@@ -102,17 +102,17 @@ py_binary(
     visibility = ["//visibility:public"],
 )
 
-# ── Crop service unit tests ────────────────────────────────────────────────────
+# ── Segment service unit tests ─────────────────────────────────────────────────
 
 pytest_test(
-    name = "test_piece_image_crop_service",
+    name = "test_piece_image_segment_service",
     srcs = [
-        "piece_image_crop_service.py",
-        "tests/test_piece_image_crop_service.py",
+        "piece_image_segment_service.py",
+        "tests/test_piece_image_segment_service.py",
         "//tools:pytest_main.py",
     ],
     main = "//tools:pytest_main.py",
-    args = ["tools/tests/test_piece_image_crop_service.py"],
+    args = ["tools/tests/test_piece_image_segment_service.py"],
     deps = [
         "@pypi//fastapi",
         "@pypi//httpx",

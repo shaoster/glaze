@@ -608,6 +608,64 @@ class AsyncTask(models.Model):
         return f"AsyncTask({self.task_type}, {self.status}, {self.id})"
 
 
+class CropRun(models.Model):
+    """One row per segmentation inference.
+
+    The remote service produces a segmentation mask, Django derives the crop
+    bounding box from it, and human corrections can attach the same record to
+    the originating PieceStateImage.
+    """
+
+    class Status(models.TextChoices):
+        SUCCESS = "success", "Success"
+        NO_SUBJECT = "no_subject", "No Subject"
+        ERROR = "error", "Error"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    image = models.ForeignKey(
+        "Image", on_delete=models.PROTECT, related_name="crop_runs"
+    )
+    piece_state_image = models.ForeignKey(
+        "PieceStateImage",
+        on_delete=models.PROTECT,
+        related_name="crop_runs",
+        null=True,
+        blank=True,
+    )
+    source = models.JSONField()
+    # source schema: {
+    #   "type": "automated" | "human",
+    #   "backend": str | null,       # e.g. "rembg-u2net", "yolo-seg-v1"
+    #   "deployment": str | null,    # e.g. "modal", "local", "web-ui"
+    #   "version": str | null        # populated when backend registry lands (#419)
+    # }
+    submitter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="submitted_crop_runs",
+    )
+    crop = models.JSONField(null=True, blank=True)
+    mask_asset = models.JSONField(null=True, blank=True)
+    latency_ms = models.PositiveIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=32, choices=Status.choices)
+    error = models.TextField(null=True, blank=True)
+    notes = models.TextField(blank=True, default="")
+    async_task = models.ForeignKey(
+        "AsyncTask",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="crop_runs",
+    )
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created"]
+        indexes = [models.Index(fields=["piece_state_image", "-created"])]
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"

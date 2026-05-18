@@ -18,6 +18,7 @@ from .invitations import make_invite_token, send_invitation_email
 from .models import (
     AllowedEmail,
     AsyncTask,
+    CropRun,
     FiringTemperature,
     GlazeCombination,
     GlazeCombinationLayer,
@@ -930,6 +931,30 @@ class AsyncTaskAdmin(admin.ModelAdmin):
     search_fields = ("user__email", "user__username", "id")
     readonly_fields = ("id", "created", "last_modified")
     actions = [rerun_tasks]
+
+
+@admin.register(CropRun)
+class CropRunAdmin(admin.ModelAdmin):
+    list_display = (
+        "image",
+        "source_type",
+        "source_backend",
+        "submitter",
+        "status",
+        "latency_ms",
+        "created",
+    )
+    list_filter = ("status",)
+    readonly_fields = ("id", "created")
+    raw_id_fields = ("image", "async_task", "submitter")
+
+    @admin.display(description="type")
+    def source_type(self, obj):
+        return (obj.source or {}).get("type")
+
+    @admin.display(description="backend")
+    def source_backend(self, obj):
+        return (obj.source or {}).get("backend")
 
 
 @admin.register(Image)
