@@ -25,6 +25,10 @@ receivers:
       - postgres
       - redis
 
+  nginx:
+    endpoint: http://nginx/nginx_status
+    collection_interval: 30s
+
 exporters:
   otlphttp:
     endpoint: https://otlp-gateway-prod-us-east-3.grafana.net/otlp
@@ -40,5 +44,5 @@ service:
       receivers: [otlp]
       exporters: [otlphttp]
     metrics:
-      receivers: [otlp, postgresql, redis, docker_stats]
+      receivers: [otlp, postgresql, redis, docker_stats, nginx]
       exporters: [otlphttp]
