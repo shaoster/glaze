@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import SortIcon from "@mui/icons-material/Sort";
@@ -423,15 +423,15 @@ const PieceList = (props: PieceListProps) => {
       rowGutter: MASONRY_GUTTER,
       maxColumnCount: isMobile ? MASONRY_MAX_COLUMNS_MOBILE : MASONRY_MAX_COLUMNS_DESKTOP,
     },
-    [filterKey],
+    [filterKey, masonryWidth, columnWidth, isMobile],
   );
-  // Pre-seed per-item height estimates from crop aspect ratios before masonic places items,
-  // so initial column distribution reflects each card's actual proportions.
-  filteredPieces.forEach((piece, index) => {
-    if (piece.thumbnail?.crop && positioner.get(index) === undefined) {
-      positioner.set(index, estimateCardHeight(piece, positioner.columnWidth));
-    }
-  });
+  useLayoutEffect(() => {
+    filteredPieces.forEach((piece, index) => {
+      if (piece.thumbnail?.crop && positioner.get(index) === undefined) {
+        positioner.set(index, estimateCardHeight(piece, positioner.columnWidth));
+      }
+    });
+  }, [filteredPieces, positioner]);
   const resizeObserver = useResizeObserver(positioner);
 
   const toggleFilter = useCallback(
