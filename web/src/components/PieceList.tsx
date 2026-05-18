@@ -17,7 +17,7 @@ import { formatState, isTerminalState, SUCCESSORS } from "../util/workflow";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import { MasonryScroller, useContainerPosition, usePositioner, useResizeObserver } from "masonic";
-import { DEFAULT_CARD_HEIGHT_ESTIMATE, estimateCardHeight } from "./pieceCardHeight";
+import { DEFAULT_CARD_HEIGHT_ESTIMATE, estimateCardHeight, getThumbnailAspectRatio } from "./pieceCardHeight";
 import { Link, useSearchParams } from "react-router-dom";
 import CloudinaryImage from "./CloudinaryImage";
 import TagAutocomplete from "./TagAutocomplete";
@@ -114,6 +114,7 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
   const isStale = days >= 14 && !isTerminal;
   const label = formatState(piece.current_state.state);
   const detailPath = `/pieces/${piece.id}`;
+  const estimatedHeight = estimateCardHeight(piece, width);
 
   // Tags: show 2 visible + dashed overflow chip (non-expandable in card)
   const tags = piece.tags ?? [];
@@ -129,6 +130,8 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
     <Box
       component={Link}
       to={detailPath}
+      style={{ minHeight: estimatedHeight }}
+      data-estimated-height={estimatedHeight}
       sx={{
         display: "block",
         borderRadius: 2,
@@ -147,7 +150,14 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
       }}
     >
       {/* Thumbnail area */}
-      <Box sx={{ position: "relative", overflow: "hidden" }}>
+      <Box
+        data-testid="piece-thumbnail-shell"
+        sx={{
+          position: "relative",
+          overflow: "hidden",
+          aspectRatio: getThumbnailAspectRatio(piece),
+        }}
+      >
         <CloudinaryImage
           url={piece.thumbnail?.url ?? DEFAULT_THUMBNAIL}
           cloud_name={piece.thumbnail?.cloud_name}
