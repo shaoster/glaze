@@ -22,13 +22,12 @@ class TestAsyncTasks:
         url = reverse("tasks-submit")
         data = {"task_type": "ping", "input_params": {"test": "data"}}
 
-        def sync_submit(self_obj, task_obj):
-            self_obj._run_task(task_obj.id)
+        from api.tasks import _execute_task
 
         with patch(
             "api.tasks.InMemoryTaskInterface.submit",
             autospec=True,
-            side_effect=sync_submit,
+            side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
         ):
             response = client.post(url, data, format="json")
 
@@ -54,13 +53,12 @@ class TestAsyncTasks:
         url = reverse("tasks-submit")
         data = {"task_type": "non-existent"}
 
-        def sync_submit(self_obj, task_obj):
-            self_obj._run_task(task_obj.id)
+        from api.tasks import _execute_task
 
         with patch(
             "api.tasks.InMemoryTaskInterface.submit",
             autospec=True,
-            side_effect=sync_submit,
+            side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
         ):
             response = client.post(url, data, format="json")
 
@@ -76,10 +74,10 @@ class TestRunTaskErrorPaths:
     """Covers _run_task branches not exercised by the submit-via-API tests."""
 
     def _run_sync(self, task_id):
-        """Helper: execute _run_task synchronously in the test thread."""
-        from api.tasks import InMemoryTaskInterface
+        """Helper: execute task execution logic synchronously in the test thread."""
+        from api.tasks import _execute_task
 
-        InMemoryTaskInterface()._run_task(task_id)
+        _execute_task(task_id)
 
     def test_run_task_does_nothing_when_task_deleted(self, user):
         """If the AsyncTask row is deleted before execution, _run_task logs and returns."""
@@ -127,9 +125,9 @@ class TestDetectSubjectCropTask:
         return task
 
     def _run_sync(self, task_id):
-        from api.tasks import InMemoryTaskInterface
+        from api.tasks import _execute_task
 
-        InMemoryTaskInterface()._run_task(task_id)
+        _execute_task(task_id)
 
     def test_missing_image_id_raises(self, user):
         task = self._make_task(user, {})
@@ -321,9 +319,9 @@ class TestRemoteDetectSubjectCrop:
             input_params={"image_id": str(image.id), "piece_id": str(piece.id)},
         )
 
-        from api.tasks import InMemoryTaskInterface
+        from api.tasks import _execute_task
 
-        InMemoryTaskInterface()._run_task(task.id)
+        _execute_task(task.id)
 
         # Verify remote service was called with base URL, not bytes
         assert len(posted_calls) == 1

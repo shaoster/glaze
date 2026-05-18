@@ -1,13 +1,13 @@
 from unittest.mock import patch
 
 import pytest
-from rest_framework.test import APIClient, APIRequestFactory
 
 
 @pytest.mark.django_db
 class TestHealthReady:
     def _get_direct(self, rf):
         from api.health_views import health_ready
+
         request = rf.get("/api/health/ready/")
         return health_ready(request)
 
@@ -42,7 +42,8 @@ class TestHealthReady:
         assert body["checks"]["migrations"] is True
         assert body["checks"]["async_tasks"] is True
         # Exception detail must not leak.
-        response.render(); assert "boom" not in response.content.decode()
+        response.render()
+        assert "boom" not in response.content.decode()
 
     def test_returns_503_when_migrations_pending(self, rf):
         with patch("api.health_views._check_migrations", return_value=False):
@@ -60,8 +61,7 @@ class TestHealthReady:
         # Direct view call doesn't use standard Django settings for X-Forwarded-Host
         # in the same way the test client does, but we can still test the logic.
         from api.health_views import health_ready
-        request = rf.get(
-            "/api/health/ready/", HTTP_X_FORWARDED_HOST="159.223.154.68"
-        )
+
+        request = rf.get("/api/health/ready/", HTTP_X_FORWARDED_HOST="159.223.154.68")
         response = health_ready(request)
         assert response.status_code == 200

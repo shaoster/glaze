@@ -20,6 +20,15 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   web:
     image: ghcr.io/shaoster/glaze:${IMAGE_TAG:?Set IMAGE_TAG in .env}
     restart: unless-stopped
@@ -28,6 +37,7 @@ services:
     environment:
       PRODUCTION: "true"
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
+      CELERY_BROKER_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY}
       ALLOWED_HOST: ${ALLOWED_HOST}
       APP_ORIGIN: ${APP_ORIGIN}
@@ -55,6 +65,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       otelcol:
         condition: service_started
     # Probes the API readiness endpoint. A 200 response means database,
@@ -72,7 +84,63 @@ services:
       retries: 24
       start_period: 30s
 
+  worker:
+    image: ghcr.io/shaoster/glaze:${IMAGE_TAG:?Set IMAGE_TAG in .env}
+    restart: unless-stopped
+    command: python -m celery -A backend worker -l INFO
+    environment:
+      PRODUCTION: "true"
+      DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
+      CELERY_BROKER_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      ALLOWED_HOST: ${ALLOWED_HOST}
+      APP_ORIGIN: ${APP_ORIGIN}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      CLOUDINARY_UPLOAD_FOLDER: ${CLOUDINARY_UPLOAD_FOLDER:-}
+      CLOUDINARY_PUBLIC_UPLOAD_FOLDER: ${CLOUDINARY_PUBLIC_UPLOAD_FOLDER:-}
+      CLOUDINARY_UPLOAD_PRESET: ${CLOUDINARY_UPLOAD_PRESET:-}
+      REMOTE_REMBG_URL: ${REMOTE_REMBG_URL:-}
+      MODAL_AUTH_TOKEN: ${MODAL_AUTH_TOKEN:-}
+      OTEL_ENABLED: ${OTEL_ENABLED:-}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-glaze-worker}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otelcol:4317}
+      OTEL_SAMPLE_RATE: ${OTEL_SAMPLE_RATE:-1.0}
+      GRAFANA_CLOUD_OTLP_TOKEN: ${GRAFANA_CLOUD_OTLP_TOKEN:-}
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.resend.com}
+      EMAIL_PORT: ${EMAIL_PORT:-465}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-resend}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-true}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@potterdoc.com}
+      INVITE_LINK_BASE_URL: ${INVITE_LINK_BASE_URL:-https://potterdoc.com}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  deploy_init:
+    image: ghcr.io/shaoster/glaze:${IMAGE_TAG:?Set IMAGE_TAG in .env}
+    restart: "no"
+    # One-shot service that runs migrations and clears abandoned tasks
+    # before the new release starts serving traffic.
+    command: >
+      bash -c "python manage.py migrate --no-input &&
+               python manage.py clear_stuck_tasks --hours 1"
+    environment:
+      PRODUCTION: "true"
+      DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
+      SECRET_KEY: ${SECRET_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+
   otelcol:
+    # Memory Tip: If droplet memory is constrained, disabling this service
+    # and setting OTEL_ENABLED=false can save ~50-100MB+.
     image: otel/opentelemetry-collector-contrib:0.126.0
     restart: unless-stopped
     volumes:

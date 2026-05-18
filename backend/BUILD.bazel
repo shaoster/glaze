@@ -5,6 +5,7 @@ py_library(
     srcs = [
         "__init__.py",
         "asgi.py",
+        "celery.py",
         "middleware.py",
         "otel.py",
         "settings.py",
@@ -39,6 +40,8 @@ py_library(
         "@pypi//opentelemetry_instrumentation_django",
         "@pypi//opentelemetry_instrumentation_psycopg2",
         "@pypi//opentelemetry_exporter_otlp_proto_grpc",
+        "@pypi//celery",
+        "@pypi//redis",
     ],
     visibility = ["//visibility:public"],
 )
@@ -48,6 +51,7 @@ filegroup(
     srcs = [
         "__init__.py",
         "asgi.py",
+        "celery.py",
         "middleware.py",
         "otel.py",
         "settings.py",

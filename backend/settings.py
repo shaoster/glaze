@@ -327,3 +327,18 @@ else:
     EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
     EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
     EMAIL_USE_SSL = False
+
+# Celery and Async Task Backend
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "")
+# Default to "celery" if a broker URL is provided, otherwise fallback to "inmemory"
+# (which runs tasks in the current process, useful for local dev without Redis).
+ASYNC_TASK_BACKEND = os.environ.get(
+    "ASYNC_TASK_BACKEND", "celery" if CELERY_BROKER_URL else "inmemory"
+)
+
+# Celery Configuration
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_BACKEND = None  # Results are stored in the AsyncTask Postgres table
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes

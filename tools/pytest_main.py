@@ -28,9 +28,12 @@ if __name__ == "__main__":
     if cov_file:
         # Extract --cov=<pkg> and --expected-coverage=<glob> args injected by pytest_test().
         cov_srcs = [a[6:] for a in sys.argv[1:] if a.startswith("--cov=")]
-        scope_patterns = [a[19:] for a in sys.argv[1:] if a.startswith("--expected-coverage=")]
+        scope_patterns = [
+            a[19:] for a in sys.argv[1:] if a.startswith("--expected-coverage=")
+        ]
         pytest_args = [
-            a for a in sys.argv[1:]
+            a
+            for a in sys.argv[1:]
             if not a.startswith("--cov=") and not a.startswith("--expected-coverage=")
         ]
 
