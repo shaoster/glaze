@@ -11,6 +11,7 @@
 #   - ~/glaze/.env present (copy from .env.production.example)
 #   - Authenticated with ghcr.io (one-time):
 #       docker login ghcr.io -u shaoster -p <PAT with read:packages>
+#   - SSL certificates provisioned (one-time): run setup-nginx.sh
 #
 # On first run this script clones the repo to ~/glaze (public repo, no key needed).
 # Subsequent deploys fetch the commit matching the deployed image, persist that
@@ -49,24 +50,18 @@ mv "$env_tmp" .env
 trap - EXIT
 
 echo "--- pulling release image ---"
-docker compose pull
+docker compose --profile production pull
 
 echo "--- restarting services ---"
 # --force-recreate ensures containers always pick up .env changes even when
 # the image and compose spec are unchanged (e.g. secret rotation).
-docker compose up -d --force-recreate
+# --profile production includes the nginx container (excluded from CI smoke tests).
+docker compose --profile production up -d --force-recreate
 
 echo "--- pruning ---"
 docker container prune -f
 docker image prune -f
 
 echo "--- deploy complete ---"
-docker compose ps
+docker compose --profile production ps
 REMOTE
-
-# Nginx snippets are synced after a successful app deploy so a mid-deploy
-# failure does not leave new config files on the host without a reload.
-echo "--- syncing Nginx snippets ---"
-ssh "$HOST" "mkdir -p /etc/nginx/snippets"
-scp -r nginx/snippets/*.conf "$HOST":/etc/nginx/snippets/
-ssh "$HOST" "nginx -t && systemctl reload nginx"

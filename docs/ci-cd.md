@@ -98,3 +98,43 @@ PR merged to main
                  ├─ deploy job: SCP .env -> deploy.sh -> docker compose pull + restart -> GitHub Release
                  └─ deploy-modal job: modal deploy tools/piece_image_crop_service.py
 ```
+
+nginx config changes (in `nginx/conf.d/`) are deployed automatically with every release — `docker compose up -d --force-recreate` mounts the config at the checked-out SHA with no separate sync step.
+
+---
+
+## Production upstream topology
+
+```
+Internet :80/:443
+    └─ nginx container (nginx:alpine)
+         └─ web:8000  (2 replicas — Docker DNS round-robins across both)
+```
+
+`web` runs with `deploy.replicas: 2`; both replicas are only reachable within the Docker network (no host port bindings). Docker's internal DNS returns both replica IPs at nginx startup; nginx round-robins across them with `max_fails=1 fail_timeout=10s`. A raw-IP `default_server` block returns 444 before requests reach Django.
+
+### Operational commands
+
+```bash
+# Check replica readiness (runs against one replica; repeat to hit the other)
+docker compose exec nginx wget -qO- http://web:8000/api/health/ready/
+
+# Validate nginx config
+docker compose exec nginx nginx -t
+
+# Check TLS certificate expiry (host)
+certbot certificates
+
+# Watch nginx access/error log
+docker compose logs -f nginx
+
+# List replicas and their status
+docker compose ps web
+
+# Cert renewal dry run (should complete with zero nginx restarts)
+certbot renew --dry-run
+```
+
+### Rollback
+
+If a deploy leaves one or both API instances unhealthy, roll back by re-running `deploy.sh` with the previous commit SHA. The nginx container is unaffected unless `nginx/conf.d/` changed.

@@ -32,8 +32,11 @@ services:
   web:
     image: ghcr.io/shaoster/glaze:${IMAGE_TAG:?Set IMAGE_TAG in .env}
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:8000:8000"
+    # Two replicas run behind nginx. Docker's internal DNS resolves "web" to
+    # all replica IPs, so the nginx upstream round-robins across both without
+    # any host port bindings.
+    deploy:
+      replicas: 2
     environment:
       PRODUCTION: "true"
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
@@ -84,6 +87,25 @@ services:
       timeout: 5s
       retries: 24
       start_period: 30s
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    profiles: [production]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # nginx config is version-controlled and mounted read-only; every deploy
+      # picks up the config at the deployed git SHA automatically.
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # Let's Encrypt certs managed by certbot on the host OS.
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # ACME webroot challenge dir written by certbot on the host; nginx serves
+      # /.well-known/acme-challenge/ from here for zero-downtime renewal.
+      - /var/www/certbot-challenges:/var/www/certbot:ro
+    depends_on:
+      - web
 
   worker:
     image: ghcr.io/shaoster/glaze:${IMAGE_TAG:?Set IMAGE_TAG in .env}
