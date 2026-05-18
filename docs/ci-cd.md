@@ -108,18 +108,16 @@ nginx config changes (in `nginx/conf.d/`) are deployed automatically with every 
 ```
 Internet :80/:443
     └─ nginx container (nginx:alpine)
-         ├─ web:8000   (API instance 1)
-         └─ web2:8000  (API instance 2)
+         └─ web:8000  (2 replicas — Docker DNS round-robins across both)
 ```
 
-`web` and `web2` have no host port bindings; they are only reachable within the Docker network. nginx uses round-robin with `max_fails=1 fail_timeout=10s` — a single failure marks the backend unavailable for 10 seconds before retrying.
+`web` runs with `deploy.replicas: 2`; both replicas are only reachable within the Docker network (no host port bindings). Docker's embedded DNS resolver (`127.0.0.11`) is configured in nginx with `valid=10s` so replica IP changes are picked up within 10 seconds without an nginx reload. nginx round-robins across both IPs with `max_fails=1 fail_timeout=10s`.
 
 ### Operational commands
 
 ```bash
-# Check both backend readiness endpoints
+# Check replica readiness (runs against one replica; repeat to hit the other)
 docker compose exec nginx wget -qO- http://web:8000/api/health/ready/
-docker compose exec nginx wget -qO- http://web2:8000/api/health/ready/
 
 # Validate nginx config
 docker compose exec nginx nginx -t
@@ -130,9 +128,8 @@ certbot certificates
 # Watch nginx access/error log
 docker compose logs -f nginx
 
-# Remove one backend (nginx fails over to the other)
-docker compose stop web2
-docker compose start web2
+# List replicas and their status
+docker compose ps web
 
 # Cert renewal dry run (should complete with zero nginx restarts)
 certbot renew --dry-run
