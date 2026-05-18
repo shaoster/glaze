@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import SortIcon from "@mui/icons-material/Sort";
@@ -16,7 +16,8 @@ import type { PieceSummary, TagEntry } from "../util/types";
 import { formatState, isTerminalState, SUCCESSORS } from "../util/workflow";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
-import { Masonry } from "masonic";
+import { MasonryScroller, useContainerPosition, usePositioner, useResizeObserver } from "masonic";
+import { estimateCardHeight } from "./pieceCardHeight";
 import { Link, useSearchParams } from "react-router-dom";
 import CloudinaryImage from "./CloudinaryImage";
 import TagAutocomplete from "./TagAutocomplete";
@@ -389,6 +390,22 @@ const PieceList = (props: PieceListProps) => {
     const tags = [...activeTagIds].sort().join(",");
     return `${filters}|${tags}|${sortOrder}`;
   }, [activeFilters, activeTagIds, sortOrder]);
+
+  const masonryRef = useRef<HTMLElement | null>(null);
+  const columnWidth = isMobile ? 160 : 220;
+  const { width: masonryWidth, offset: masonryOffset } = useContainerPosition(masonryRef, [isMobile]);
+  const positioner = usePositioner(
+    { width: masonryWidth, columnWidth, columnGutter: 8, rowGutter: 8, maxColumnCount: isMobile ? 2 : 4 },
+    [filterKey],
+  );
+  // Pre-seed per-item height estimates from crop aspect ratios before masonic places items,
+  // so initial column distribution reflects each card's actual proportions.
+  filteredPieces.forEach((piece, index) => {
+    if (piece.thumbnail?.crop && positioner.get(index) === undefined) {
+      positioner.set(index, estimateCardHeight(piece, positioner.columnWidth));
+    }
+  });
+  const resizeObserver = useResizeObserver(positioner);
 
   const toggleFilter = useCallback(
     (filter: FilterCategory) => {
@@ -777,17 +794,18 @@ const PieceList = (props: PieceListProps) => {
             pointerEvents: showOverlay ? "none" : "auto",
           }}
         >
-          <Masonry
-            key={filterKey}
-            items={filteredPieces}
-            render={MasonryPieceCard}
-            itemKey={(piece) => piece.id}
-            itemHeightEstimate={260}
-            columnWidth={isMobile ? 160 : 220}
-            maxColumnCount={isMobile ? 2 : 4}
-            columnGutter={8}
-            rowGutter={8}
-          />
+          <Box ref={masonryRef as React.RefObject<HTMLDivElement>}>
+            <MasonryScroller
+              positioner={positioner}
+              resizeObserver={resizeObserver}
+              items={filteredPieces}
+              render={MasonryPieceCard}
+              itemKey={(piece) => piece.id}
+              itemHeightEstimate={260}
+              offset={masonryOffset}
+              height={typeof window !== "undefined" ? window.innerHeight : 768}
+            />
+          </Box>
         </Box>
 
         {/* Centered spinner overlay while fetching the next page */}
