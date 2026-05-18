@@ -38,6 +38,7 @@ services:
       PRODUCTION: "true"
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
       CELERY_BROKER_URL: redis://redis:6379/0
+      REDIS_CACHE_URL: redis://redis:6379/1
       SECRET_KEY: ${SECRET_KEY}
       ALLOWED_HOST: ${ALLOWED_HOST}
       APP_ORIGIN: ${APP_ORIGIN}
@@ -92,6 +93,7 @@ services:
       PRODUCTION: "true"
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
       CELERY_BROKER_URL: redis://redis:6379/0
+      REDIS_CACHE_URL: redis://redis:6379/1
       SECRET_KEY: ${SECRET_KEY}
       ALLOWED_HOST: ${ALLOWED_HOST}
       APP_ORIGIN: ${APP_ORIGIN}
@@ -133,6 +135,7 @@ services:
     environment:
       PRODUCTION: "true"
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
+      REDIS_CACHE_URL: redis://redis:6379/1
       SECRET_KEY: ${SECRET_KEY}
     depends_on:
       db:

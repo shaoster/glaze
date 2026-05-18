@@ -42,6 +42,7 @@ py_library(
         "@pypi//opentelemetry_exporter_otlp_proto_grpc",
         "@pypi//celery",
         "@pypi//redis",
+        "@pypi//django_redis",
     ],
     visibility = ["//visibility:public"],
 )

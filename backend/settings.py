@@ -328,6 +328,30 @@ else:
     EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
     EMAIL_USE_SSL = False
 
+# Caching
+# https://docs.djangoproject.com/en/6.0/ref/settings/#caches
+#
+# Use shared Redis cache in production if REDIS_CACHE_URL is provided.
+# Falls back to DummyCache to prevent accidental reliance on LocMemCache (per-process).
+REDIS_CACHE_URL = os.environ.get("REDIS_CACHE_URL", "")
+if REDIS_CACHE_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_CACHE_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+        }
+    }
+
+
 # Celery and Async Task Backend
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "")
 # Default to "celery" if a broker URL is provided, otherwise fallback to "inmemory"
