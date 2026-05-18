@@ -1,9 +1,19 @@
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
 from . import views
 from .workflow import get_global_model_and_field, get_global_names
 
+_router = DefaultRouter()
+_router.register(r"crop-runs", views.CropRunViewSet, basename="crop-run")
+
 urlpatterns = [
+    path("", include(_router.urls)),
+    path(
+        "images/<uuid:image_id>/crop-runs/",
+        views.ImageCropRunsView.as_view(),
+        name="image-crop-runs",
+    ),
     path(
         "admin/cloudinary-cleanup/",
         views.admin_cloudinary_cleanup,

@@ -140,3 +140,19 @@ export interface UISchema {
   required?: string[];
   additionalProperties?: boolean;
 }
+
+export type CropRunSource = {
+  type: "automated" | "human";
+  backend: string | null;
+  deployment: string | null;
+  version: string | null;
+};
+
+export type CropRun = {
+  id: string;
+  image_id: string;
+  source: CropRunSource;
+  crop: ImageCrop | null;
+  status: "success" | "no_subject" | "error";
+  created: Date;
+};

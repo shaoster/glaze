@@ -188,8 +188,8 @@ def ping_task(task: AsyncTask) -> Dict[str, str]:
 @TaskRegistry.register("detect_subject_crop")
 def detect_subject_crop(task: AsyncTask) -> dict | None:
     """Download an image, calculate its subject crop, and update the target model."""
-    from .models import Image, Piece, PieceStateImage
-    from .utils import calculate_subject_crop_remote
+    from .models import CropRun, Image, Piece, PieceStateImage
+    from .utils import run_crop_inference
 
     params = task.input_params or {}
     image_id = params.get("image_id")
@@ -209,9 +209,10 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
         return {"status": "skipped", "reason": "Not a Cloudinary image"}
 
     logger.info("Offloading subject detection to remote service.")
-    crop = calculate_subject_crop_remote(image_url=image.url)
-    if not crop:
-        return {"status": "skipped", "reason": "No subject detected"}
+    crop_run = run_crop_inference(image, async_task=task)
+    if crop_run.status != CropRun.Status.SUCCESS:
+        return {"status": "skipped", "reason": crop_run.error or crop_run.status}
+    crop = crop_run.crop
 
     updated = False
     if piece_id:

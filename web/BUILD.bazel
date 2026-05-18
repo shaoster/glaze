@@ -488,6 +488,15 @@ js_library(
 )
 
 js_library(
+    name = "report_bad_crop_dialog_src",
+    srcs = ["src/components/ReportBadCropDialog.tsx"],
+    deps = [
+        ":node_modules",
+        ":util_lib",
+    ],
+)
+
+js_library(
     name = "tag_manager_src",
     srcs = ["src/components/TagManager.tsx"],
     deps = [
@@ -810,6 +819,20 @@ vitest_test(
     expected_coverage = [
         "web/src/components/PiecePhoto*",
         "web/src/components/DeletePiecePhotoDialog*",
+    ],
+)
+
+vitest_test(
+    name = "web_report_bad_crop_dialog_test",
+    srcs = [
+        "src/components/__tests__/ReportBadCropDialog.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":report_bad_crop_dialog_src",
+    ],
+    expected_coverage = [
+        "web/src/components/ReportBadCropDialog*",
     ],
 )
 
@@ -1174,6 +1197,7 @@ test_suite(
         ":web_piece_list_page_test",
         ":web_piece_list_test",
         ":web_piece_share_controls_test",
+        ":web_report_bad_crop_dialog_test",
         ":web_invite_page_test",
         ":web_primitive_test",
         ":web_public_piece_shell_test",

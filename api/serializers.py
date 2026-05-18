@@ -50,6 +50,7 @@ from backend.otel import traced_class
 
 from .models import (
     AsyncTask,
+    CropRun,
     FiringTemperature,
     GlazeCombination,
     Piece,
@@ -236,6 +237,7 @@ class CaptionedImageSerializer(serializers.Serializer):
     )
     cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
     crop = serializers.JSONField(required=False, allow_null=True, default=None)
+    image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
 
 
 @traced_class
@@ -366,6 +368,7 @@ class ThumbnailSerializer(serializers.Serializer):
     )
     cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
     crop = serializers.JSONField(required=False, allow_null=True, default=None)
+    image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
 
 
 @traced_class
@@ -914,6 +917,23 @@ class AsyncTaskSerializer(serializers.ModelSerializer):
             "created",
             "last_modified",
         ]
+
+
+class CropRunSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CropRun
+        fields = ["id", "image_id", "source", "crop", "status", "created"]
+        read_only_fields = ["id", "image_id", "source", "crop", "status", "created"]
+
+
+class CropRunCreateSerializer(serializers.ModelSerializer):
+    image_id = serializers.UUIDField(write_only=True)
+    crop = serializers.JSONField(required=False, allow_null=True)
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
+
+    class Meta:
+        model = CropRun
+        fields = ["image_id", "crop", "notes"]
 
 
 class TaskSubmissionSerializer(serializers.Serializer):

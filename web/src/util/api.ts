@@ -16,10 +16,12 @@
 import axios from "axios";
 import type {
   CaptionedImage,
+  CropRun,
   FiringTemperatureRef,
   GlazeCombinationEntry,
   GlazeCombinationImageEntry,
   GlazeTypeRef,
+  ImageCrop,
   PieceDetail,
   PieceSummary,
   PieceState,
@@ -27,7 +29,6 @@ import type {
   StateSummary,
   TagEntry,
   Thumbnail,
-  ImageCrop,
   UISchema,
 } from "./types";
 
@@ -683,6 +684,25 @@ export async function deleteCloudinaryCleanupAssets(
     { data: { public_ids: publicIds } },
   );
   return data.deleted;
+}
+
+export async function getImageCropRuns(
+  imageId: string,
+  options?: { latest?: boolean },
+): Promise<CropRun[]> {
+  const params = options?.latest ? "?latest=1" : "";
+  const { data } = await client.get<CropRun[]>(
+    `images/${imageId}/crop-runs/${params}`,
+  );
+  return data;
+}
+
+export async function createHumanCropRun(payload: {
+  image_id: string;
+  crop?: ImageCrop | null;
+  notes?: string;
+}): Promise<void> {
+  await client.post("crop-runs/", payload);
 }
 
 /**

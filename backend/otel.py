@@ -118,7 +118,9 @@ def configure_otel() -> bool:
     trace.set_tracer_provider(provider)
 
     from opentelemetry import metrics
-    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+        OTLPMetricExporter,
+    )
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 
@@ -128,7 +130,11 @@ def configure_otel() -> bool:
     )
     meter_provider = MeterProvider(
         resource=resource,
-        metric_readers=[PeriodicExportingMetricReader(metric_exporter, export_interval_millis=30_000)],
+        metric_readers=[
+            PeriodicExportingMetricReader(
+                metric_exporter, export_interval_millis=30_000
+            )
+        ],
     )
     metrics.set_meter_provider(meter_provider)
 

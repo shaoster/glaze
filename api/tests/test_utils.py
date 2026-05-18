@@ -251,14 +251,14 @@ class TestUtilsCoverage:
         monkeypatch.setattr("builtins.open", mock_open)
         assert get_rss() == 0.0
 
-    def test_calculate_subject_crop_remote_no_url(self, settings):
-        from api.utils import calculate_subject_crop_remote
+    def test_calculate_subject_mask_remote_no_url(self, settings):
+        from api.utils import calculate_subject_mask_remote
 
         settings.REMOTE_REMBG_URL = None
-        assert calculate_subject_crop_remote(b"data") is None
+        assert calculate_subject_mask_remote(image_bytes=b"data") is None
 
-    def test_calculate_subject_crop_remote_request_failure(self, monkeypatch, settings):
-        from api.utils import calculate_subject_crop_remote
+    def test_calculate_subject_mask_remote_request_failure(self, monkeypatch, settings):
+        from api.utils import calculate_subject_mask_remote
 
         settings.REMOTE_REMBG_URL = "http://remote"
 
@@ -272,4 +272,4 @@ class TestUtilsCoverage:
             return MockResponse()
 
         monkeypatch.setattr("requests.post", mock_post)
-        assert calculate_subject_crop_remote(b"data") is None
+        assert calculate_subject_mask_remote(image_bytes=b"data") is None

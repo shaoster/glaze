@@ -1,5 +1,5 @@
 """
-Unit tests for piece_image_crop_service.
+Unit tests for piece_image_segment_service.
 
 Heavy ML dependencies (rembg, OpenCV) are mocked so tests run fast in CI
 without downloading any model weights.
@@ -29,16 +29,16 @@ def _make_rgba(width: int, height: int, alpha: np.ndarray) -> Image.Image:
 def _single_blob_mask(width: int, height: int, box) -> np.ndarray:
     """Return a mask with a single white rectangle (the 'subject')."""
     mask = np.zeros((height, width), dtype=np.uint8)
-    l, t, r, b = box
-    mask[t:b, l:r] = 255
+    left, top, right, bottom = box
+    mask[top:bottom, left:right] = 255
     return mask
 
 
 def _noisy_mask(width: int, height: int, subject_box, noise_box) -> np.ndarray:
     """Return a mask with a large subject blob and a small noise blob."""
     mask = _single_blob_mask(width, height, subject_box)
-    l, t, r, b = noise_box
-    mask[t:b, l:r] = 255
+    left, top, right, bottom = noise_box
+    mask[top:bottom, left:right] = 255
     return mask
 
 
@@ -52,7 +52,7 @@ class TestDownloadWithRetry(unittest.TestCase):
 
     def _get_fn(self):
         # Import late so that other heavy deps (rembg) are already patched
-        from tools.piece_image_crop_service import create_app  # noqa
+        from tools.piece_image_segment_service import create_app  # noqa
 
         # We need to call create_app() with rembg mocked to retrieve the closure.
         # Instead, test the logic independently by reconstructing a minimal version.
@@ -121,7 +121,6 @@ class TestContourFiltering(unittest.TestCase):
         alpha = _single_blob_mask(W, H, (20, 20, 80, 80))
         left, upper, right, lower = self._compute_bbox(alpha, W, H, padding=0.10)
 
-        subj_w, subj_h = 60, 60
         pad = int(60 * 0.10)  # = 6
         self.assertEqual(left, max(0, 20 - pad))
         self.assertEqual(upper, max(0, 20 - pad))
@@ -213,7 +212,7 @@ class TestAuthVerification(unittest.TestCase):
         # Import inside test so the mock is already in sys.modules
         from fastapi.testclient import TestClient
 
-        from tools.piece_image_crop_service import create_app
+        from tools.piece_image_segment_service import create_app
 
         app = create_app()
         return TestClient(app)
