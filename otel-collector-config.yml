@@ -17,6 +17,11 @@ receivers:
     endpoint: redis:6379
     collection_interval: 30s
 
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    collection_interval: 30s
+    container_labels_as_resource_attributes: true
+
 exporters:
   otlphttp:
     endpoint: https://otlp-gateway-prod-us-east-3.grafana.net/otlp
@@ -32,5 +37,5 @@ service:
       receivers: [otlp]
       exporters: [otlphttp]
     metrics:
-      receivers: [otlp, postgresql, redis]
+      receivers: [otlp, postgresql, redis, docker_stats]
       exporters: [otlphttp]
