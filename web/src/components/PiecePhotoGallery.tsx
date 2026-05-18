@@ -342,6 +342,7 @@ export default function PiecePhotoGallery({
           <PiecePhotoGalleryGrid
             images={images}
             canDeleteImages={canMutateCurrentStateImages}
+            currentThumbnailUrl={currentThumbnailUrl}
             onOpenImage={setLightboxIndex}
             onRequestDelete={setDeleteDialogIndex}
           />
