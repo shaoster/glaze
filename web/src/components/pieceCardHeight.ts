@@ -1,6 +1,8 @@
 import type { PieceSummary } from "../util/types";
 
-export const CARD_CHROME_HEIGHT = 60; // border (2) + body padding (18) + title (~20) + caption (~20)
+// Border, body padding, title, activity caption, and the tag row all live
+// below the thumbnail, so this needs to be closer to the full card chrome.
+export const CARD_CHROME_HEIGHT = 112;
 export const DEFAULT_CARD_HEIGHT_ESTIMATE = 260;
 
 /**
