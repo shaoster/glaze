@@ -65,3 +65,10 @@ docker image prune -f
 echo "--- deploy complete ---"
 docker compose --profile production ps
 REMOTE
+
+# Sync certbot renewal hooks so cert reload behavior stays in version control.
+echo "--- syncing certbot renewal hooks ---"
+ssh "$HOST" "mkdir -p /etc/letsencrypt/renewal-hooks/deploy"
+scp certbot/renewal-hooks/deploy/01-glaze-nginx-reload.sh \
+    "$HOST":/etc/letsencrypt/renewal-hooks/deploy/01-glaze-nginx-reload.sh
+ssh "$HOST" "chmod +x /etc/letsencrypt/renewal-hooks/deploy/01-glaze-nginx-reload.sh"

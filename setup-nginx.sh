@@ -10,8 +10,10 @@
 #      (port 80 must be free — run before `docker compose up`).
 #   3. Starts the Docker Compose stack (nginx container takes over port 80/443).
 #   4. Re-issues using the webroot challenge to switch renewal to zero-downtime mode.
-#   5. Installs a deploy hook that reloads the nginx container after each renewal.
-#   6. Opens firewall ports 80 and 443.
+#   5. Opens firewall ports 80 and 443.
+#
+# The certbot renewal hook (nginx reload after cert renewal) is tracked in
+# certbot/renewal-hooks/deploy/ and deployed automatically by deploy.sh.
 #
 # After this script runs, `certbot renew` (via systemd timer) handles cert renewal
 # automatically with zero downtime. Do not re-run — the force-renewal in step 4
@@ -73,17 +75,6 @@ certbot certonly \
     --email "${EMAIL}" \
     --domains "${DOMAIN}" \
     --force-renewal
-
-echo "--- installing nginx reload hook ---"
-# Runs after every successful renewal; reloads nginx to pick up the new cert.
-mkdir -p /etc/letsencrypt/renewal-hooks/deploy
-cat > /etc/letsencrypt/renewal-hooks/deploy/01-glaze-nginx-reload.sh <<'HOOK'
-#!/usr/bin/env bash
-set -euo pipefail
-cd ~/glaze
-docker compose exec -T nginx nginx -s reload
-HOOK
-chmod +x /etc/letsencrypt/renewal-hooks/deploy/01-glaze-nginx-reload.sh
 
 echo "--- configuring firewall ---"
 ufw allow 80/tcp
