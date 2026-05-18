@@ -18,14 +18,14 @@ import type { ImageCrop } from "../util/types";
 interface ReportBadCropDialogProps {
   open: boolean;
   onClose: () => void;
-  imageId: string;
+  pieceStateImageId: string;
   initialCrop?: ImageCrop | null;
 }
 
 export default function ReportBadCropDialog({
   open,
   onClose,
-  imageId,
+  pieceStateImageId,
   initialCrop,
 }: ReportBadCropDialogProps) {
   const [notes, setNotes] = useState("");
@@ -58,7 +58,11 @@ export default function ReportBadCropDialog({
     setSubmitting(true);
     setError(null);
     try {
-      await createHumanCropRun({ image_id: imageId, notes, crop });
+      await createHumanCropRun({
+        piece_state_image_id: pieceStateImageId,
+        notes,
+        crop,
+      });
       setSuccess(true);
       setTimeout(() => {
         handleClose();
@@ -75,8 +79,8 @@ export default function ReportBadCropDialog({
       <DialogTitle>Report Bad Crop</DialogTitle>
       <DialogContent>
         <DialogContentText sx={{ mb: 2 }}>
-          Let us know that the automatic crop for this image is incorrect.
-          Optionally describe what looks wrong.
+          Let us know that the automatic crop derived from segmentation is
+          incorrect. Optionally describe what looks wrong.
         </DialogContentText>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>

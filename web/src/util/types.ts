@@ -150,7 +150,7 @@ export type CropRunSource = {
 
 export type CropRun = {
   id: string;
-  image_id: string;
+  piece_state_image_id: string;
   source: CropRunSource;
   crop: ImageCrop | null;
   status: "success" | "no_subject" | "error";

@@ -609,7 +609,12 @@ class AsyncTask(models.Model):
 
 
 class CropRun(models.Model):
-    """One row per segmentation inference — automated pipeline or human correction."""
+    """One row per segmentation inference.
+
+    The remote service produces a segmentation mask, Django derives the crop
+    bounding box from it, and human corrections can attach the same record to
+    the originating PieceStateImage.
+    """
 
     class Status(models.TextChoices):
         SUCCESS = "success", "Success"
@@ -619,6 +624,13 @@ class CropRun(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     image = models.ForeignKey(
         "Image", on_delete=models.PROTECT, related_name="crop_runs"
+    )
+    piece_state_image = models.ForeignKey(
+        "PieceStateImage",
+        on_delete=models.PROTECT,
+        related_name="crop_runs",
+        null=True,
+        blank=True,
     )
     source = models.JSONField()
     # source schema: {
@@ -651,7 +663,7 @@ class CropRun(models.Model):
 
     class Meta:
         ordering = ["-created"]
-        indexes = [models.Index(fields=["image", "-created"])]
+        indexes = [models.Index(fields=["piece_state_image", "-created"])]
 
 
 class UserProfile(models.Model):

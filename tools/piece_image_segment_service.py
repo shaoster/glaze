@@ -1,16 +1,18 @@
 """
-Standalone piece image crop service for remote offloading.
+Standalone piece image segmentation service for remote offloading.
+This service returns a foreground mask; Django derives the crop box from it.
 Can be deployed to Modal.com or run locally.
 
 Deployment (Modal):
-    1. Set up a secret named 'piece-image-crop-secret' with 'AUTH_TOKEN'
-    2. modal deploy tools/piece_image_crop_service.py
+    1. Set up a secret named 'piece-image-segment-secret' with 'AUTH_TOKEN'
+    2. modal deploy tools/piece_image_segment_service.py
 
 Usage (Local):
     pip install fastapi uvicorn rembg onnxruntime pillow pillow-heif
-    uvicorn tools.piece_image_crop_service:fastapi_app --port 8080
+    uvicorn tools.piece_image_segment_service:fastapi_app --port 8080
 """
 
+import base64
 import io
 import logging
 import os
@@ -41,12 +43,12 @@ try:
     )
 
     # We use a secret to protect the endpoint
-    secret = modal.Secret.from_name("piece-image-crop-secret")
+    secret = modal.Secret.from_name("piece-image-segment-secret")
 
-    app = modal.App("piece-image-crop-service", image=image, secrets=[secret])
+    app = modal.App("piece-image-segment-service", image=image, secrets=[secret])
 
     @app.function()
-    @modal.asgi_app(label="crop")
+    @modal.asgi_app(label="segment")
     def web():
         return create_app()
 
@@ -67,7 +69,7 @@ def create_app():
     # Register HEIF support (HEIC conversion handled here)
     register_heif_opener()
 
-    fastapi_instance = FastAPI(title="Piece Image Crop Service")
+    fastapi_instance = FastAPI(title="Piece Image Segment Service")
 
     # Using the full u2net model for improved accuracy (higher memory but better edge detection)
     _SESSION = new_session("u2net")
@@ -97,8 +99,8 @@ def create_app():
         return resp.content
 
     @fastapi_instance.post("/")
-    async def detect_crop(request: Request, x_api_key: str = Header(None)):
-        """Receive image bytes OR a URL and return a relative crop box."""
+    async def segment_subject(request: Request, x_api_key: str = Header(None)):
+        """Receive image bytes or a URL and return a base64-encoded alpha mask."""
         await verify_auth(x_api_key)
 
         content_type = request.headers.get("Content-Type")
@@ -136,36 +138,30 @@ def create_app():
             logger.info(f"Processing image: {width}x{height}")
             output_image = remove(input_image, session=_SESSION)
 
-            # 2. Find non-transparent bounds
+            # 2. Check whether any subject was detected
             output_image = output_image.convert("RGBA")
             alpha = output_image.getchannel("A")
-            bbox = alpha.getbbox()
-
-            if not bbox:
+            if not alpha.getbbox():
                 logger.info("No subject detected.")
-                return {"x": 0, "y": 0, "width": 0, "height": 0}
+                return {"mask": None}
 
-            left, upper, right, lower = bbox
+            # 3. Build mask: zero RGB channels, keep alpha as foreground confidence
+            r_ch, g_ch, b_ch, a_ch = output_image.split()
+            mask_img = Image.merge(
+                "RGBA",
+                (
+                    Image.new("L", output_image.size, 0),
+                    Image.new("L", output_image.size, 0),
+                    Image.new("L", output_image.size, 0),
+                    a_ch,
+                ),
+            )
+            buf = io.BytesIO()
+            mask_img.save(buf, format="PNG")
+            mask_b64 = base64.b64encode(buf.getvalue()).decode()
 
-            # 3. Apply Padding to prevent "aggressive" cropping
-            # We add 10% of the subject's dimensions as a safety margin.
-            subj_w = right - left
-            subj_h = lower - upper
-            pad_w = int(subj_w * 0.10)
-            pad_h = int(subj_h * 0.10)
-
-            left = max(0, left - pad_w)
-            upper = max(0, upper - pad_h)
-            right = min(width, right + pad_w)
-            lower = min(height, lower + pad_h)
-
-            # 4. Return relative coordinates
-            return {
-                "x": left / width,
-                "y": upper / height,
-                "width": (right - left) / width,
-                "height": (lower - upper) / height,
-            }
+            # 4. Return the mask; bbox derivation happens on the Django side
+            return {"mask": mask_b64}
         except Exception as e:
             logger.exception("Error processing image")
             return Response(content=str(e), status_code=500)
@@ -180,7 +176,7 @@ def create_app():
 # --- Local Entry Point ---
 # NOTE: Do NOT call create_app() at module level — heavy deps (rembg, fastapi)
 # may not be present in the importing process's environment.  When run via
-# `bazel run //tools:piece_image_crop_service`, __main__ is the entry point.
+# `bazel run //tools:piece_image_segment_service`, __main__ is the entry point.
 if __name__ == "__main__":
     import uvicorn
 

@@ -187,7 +187,7 @@ def ping_task(task: AsyncTask) -> Dict[str, str]:
 
 @TaskRegistry.register("detect_subject_crop")
 def detect_subject_crop(task: AsyncTask) -> dict | None:
-    """Download an image, calculate its subject crop, and update the target model."""
+    """Download an image, get a segmentation mask, derive crop, update targets."""
     from .models import CropRun, Image, Piece, PieceStateImage
     from .utils import run_crop_inference
 
@@ -208,13 +208,46 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     if not image.cloud_name or not image.cloudinary_public_id:
         return {"status": "skipped", "reason": "Not a Cloudinary image"}
 
+    piece_state_image = None
+    if piece_state_image_id:
+        try:
+            piece_state_image = PieceStateImage.objects.select_related(
+                "image", "piece_state__piece"
+            ).get(id=piece_state_image_id)
+        except PieceStateImage.DoesNotExist:
+            return {
+                "status": "skipped",
+                "reason": f"PieceStateImage {piece_state_image_id} not found",
+            }
+    elif piece_id:
+        piece_state_image = (
+            PieceStateImage.objects.select_related("image", "piece_state__piece")
+            .filter(image=image, piece_state__piece_id=piece_id)
+            .order_by("-piece_state__created", "-pk")
+            .first()
+        )
+    else:
+        piece_state_image = (
+            PieceStateImage.objects.select_related("image", "piece_state__piece")
+            .filter(image=image)
+            .order_by("-piece_state__created", "-pk")
+            .first()
+        )
+
+    if piece_state_image is None:
+        return {
+            "status": "skipped",
+            "reason": f"No PieceStateImage found for image {image_id}",
+        }
+
     logger.info("Offloading subject detection to remote service.")
-    crop_run = run_crop_inference(image, async_task=task)
+    crop_run = run_crop_inference(piece_state_image, async_task=task)
     if crop_run.status != CropRun.Status.SUCCESS:
         return {"status": "skipped", "reason": crop_run.error or crop_run.status}
     crop = crop_run.crop
 
     updated = False
+    piece_skip_reason = None
     if piece_id:
         with transaction.atomic():
             piece = Piece.objects.select_for_update().get(id=piece_id)
@@ -223,31 +256,28 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
                 piece.save(update_fields=["thumbnail_crop"])
                 updated = True
             else:
-                return {
-                    "status": "skipped",
-                    "reason": "Piece already has a thumbnail crop",
-                }
+                piece_skip_reason = "Piece already has a thumbnail crop"
 
-    if piece_state_image_id:
-        try:
-            with transaction.atomic():
-                psi = PieceStateImage.objects.select_for_update().get(
-                    id=piece_state_image_id
-                )
-                if psi.crop is None:
-                    psi.crop = crop
-                    psi.save(update_fields=["crop"])
-                    updated = True
-                else:
-                    return {
-                        "status": "skipped",
-                        "reason": "PieceStateImage already has a crop",
-                    }
-        except PieceStateImage.DoesNotExist:
-            return {
-                "status": "skipped",
-                "reason": f"PieceStateImage {piece_state_image_id} not found",
-            }
+    psi_skip_reason = None
+    if piece_state_image is not None:
+        with transaction.atomic():
+            psi = PieceStateImage.objects.select_for_update().get(
+                id=piece_state_image.id
+            )
+            if psi.crop is None:
+                psi.crop = crop
+                psi.save(update_fields=["crop"])
+                updated = True
+            else:
+                psi_skip_reason = "PieceStateImage already has a crop"
+
+    if not updated:
+        return {
+            "status": "skipped",
+            "reason": psi_skip_reason
+            or piece_skip_reason
+            or "No crop targets were updated",
+        }
 
     return {"status": "success", "crop": crop, "updated": updated}
 

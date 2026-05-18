@@ -16,7 +16,7 @@ describe("ReportBadCropDialog", () => {
       <ReportBadCropDialog
         open
         onClose={vi.fn()}
-        imageId="img-1"
+        pieceStateImageId="psi-1"
         initialCrop={{ x: 0.1, y: 0.2, width: 0.8, height: 0.6 }}
       />,
     );
@@ -29,7 +29,7 @@ describe("ReportBadCropDialog", () => {
       <ReportBadCropDialog
         open={false}
         onClose={vi.fn()}
-        imageId="img-1"
+        pieceStateImageId="psi-1"
       />,
     );
     expect(screen.queryByText("Report Bad Crop")).toBeNull();
@@ -40,7 +40,7 @@ describe("ReportBadCropDialog", () => {
     const mockCreate = vi.mocked(api.createHumanCropRun);
     mockCreate.mockResolvedValueOnce({
       id: "run-1",
-      image_id: "img-abc",
+      piece_state_image_id: "psi-abc",
       source: {
         type: "human",
         backend: null,
@@ -56,7 +56,7 @@ describe("ReportBadCropDialog", () => {
       <ReportBadCropDialog
         open
         onClose={vi.fn()}
-        imageId="img-abc"
+        pieceStateImageId="psi-abc"
         initialCrop={crop}
       />,
     );
@@ -69,7 +69,7 @@ describe("ReportBadCropDialog", () => {
 
     await waitFor(() => {
       expect(mockCreate).toHaveBeenCalledWith({
-        image_id: "img-abc",
+        piece_state_image_id: "psi-abc",
         crop,
         notes: "wrong subject",
       });
@@ -80,7 +80,7 @@ describe("ReportBadCropDialog", () => {
     const mockCreate = vi.mocked(api.createHumanCropRun);
     mockCreate.mockResolvedValueOnce({
       id: "run-1",
-      image_id: "img-abc",
+      piece_state_image_id: "psi-abc",
       source: {
         type: "human",
         backend: null,
@@ -96,7 +96,7 @@ describe("ReportBadCropDialog", () => {
       <ReportBadCropDialog
         open
         onClose={vi.fn()}
-        imageId="img-abc"
+        pieceStateImageId="psi-abc"
         initialCrop={{ x: 0, y: 0, width: 1, height: 1 }}
       />,
     );
@@ -116,7 +116,7 @@ describe("ReportBadCropDialog", () => {
       <ReportBadCropDialog
         open
         onClose={vi.fn()}
-        imageId="img-abc"
+        pieceStateImageId="psi-abc"
         initialCrop={{ x: 0, y: 0, width: 1, height: 1 }}
       />,
     );
@@ -136,7 +136,7 @@ describe("ReportBadCropDialog", () => {
         new Promise((resolve) => {
           resolveSubmit = () => resolve({
             id: "run-1",
-            image_id: "img-abc",
+            piece_state_image_id: "psi-abc",
             source: {
               type: "human",
               backend: null,
@@ -154,7 +154,7 @@ describe("ReportBadCropDialog", () => {
       <ReportBadCropDialog
         open
         onClose={vi.fn()}
-        imageId="img-abc"
+        pieceStateImageId="psi-abc"
         initialCrop={{ x: 0, y: 0, width: 1, height: 1 }}
       />,
     );
@@ -178,7 +178,7 @@ describe("ReportBadCropDialog", () => {
       <ReportBadCropDialog
         open
         onClose={onClose}
-        imageId="img-abc"
+        pieceStateImageId="psi-abc"
         initialCrop={{ x: 0, y: 0, width: 1, height: 1 }}
       />,
     );

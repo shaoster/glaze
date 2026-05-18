@@ -108,6 +108,8 @@ def upload_mask_to_cloudinary(mask_bytes: bytes, image) -> dict:
     """Upload a PNG mask to Cloudinary and return the asset reference dict.
 
     The mask is stored under the crop-masks/ folder, keyed by image.id.
+    The folder name is historical; this asset is the segmentation mask that the
+    crop bbox is derived from.
     """
     import cloudinary  # noqa: PLC0415
     import cloudinary.uploader  # noqa: PLC0415
@@ -141,8 +143,8 @@ def upload_mask_to_cloudinary(mask_bytes: bytes, image) -> dict:
     }
 
 
-def run_crop_inference(image, async_task=None) -> "CropRun":
-    """Call the segment service, derive crop bbox, upload mask, persist CropRun."""
+def run_crop_inference(piece_state_image, async_task=None) -> "CropRun":
+    """Call the segment service, derive a crop bbox from its mask, persist CropRun."""
     import base64  # noqa: PLC0415
     import binascii  # noqa: PLC0415
     import io  # noqa: PLC0415
@@ -151,6 +153,8 @@ def run_crop_inference(image, async_task=None) -> "CropRun":
     from PIL import Image as PILImage  # noqa: PLC0415
 
     from .models import CropRun  # noqa: PLC0415
+
+    image = piece_state_image.image
 
     remote_url = getattr(settings, "REMOTE_REMBG_URL", None)
     source = {
@@ -162,11 +166,12 @@ def run_crop_inference(image, async_task=None) -> "CropRun":
 
     start = time.monotonic()
     try:
-        response = calculate_subject_mask_remote(image_url=image.url)
+        mask_response = calculate_subject_mask_remote(image_url=image.url)
     except Exception as e:
         logger.error(f"Segment service call failed for image {image.id}: {e}")
         return CropRun.objects.create(
             image=image,
+            piece_state_image=piece_state_image,
             source=source,
             status=CropRun.Status.ERROR,
             error=str(e),
@@ -176,9 +181,10 @@ def run_crop_inference(image, async_task=None) -> "CropRun":
 
     latency_ms = int((time.monotonic() - start) * 1000)
 
-    if not response or not response.get("mask"):
+    if not mask_response or not mask_response.get("mask"):
         return CropRun.objects.create(
             image=image,
+            piece_state_image=piece_state_image,
             source=source,
             status=CropRun.Status.NO_SUBJECT,
             latency_ms=latency_ms,
@@ -186,9 +192,9 @@ def run_crop_inference(image, async_task=None) -> "CropRun":
         )
 
     try:
-        mask_bytes = base64.b64decode(response["mask"], validate=True)
+        mask_bytes = base64.b64decode(mask_response["mask"], validate=True)
 
-        # Derive tight bbox from alpha channel
+        # The remote service returns a mask; derive the crop box locally.
         pil_img = PILImage.open(io.BytesIO(mask_bytes))
         pil_img.load()
         alpha = pil_img.split()[3]
@@ -196,6 +202,7 @@ def run_crop_inference(image, async_task=None) -> "CropRun":
         if not bbox:
             return CropRun.objects.create(
                 image=image,
+                piece_state_image=piece_state_image,
                 source=source,
                 status=CropRun.Status.NO_SUBJECT,
                 latency_ms=latency_ms,
@@ -205,6 +212,7 @@ def run_crop_inference(image, async_task=None) -> "CropRun":
         logger.warning(f"Invalid segmentation mask for image {image.id}: {e}")
         return CropRun.objects.create(
             image=image,
+            piece_state_image=piece_state_image,
             source=source,
             status=CropRun.Status.ERROR,
             error=str(e),
@@ -228,6 +236,7 @@ def run_crop_inference(image, async_task=None) -> "CropRun":
 
     return CropRun.objects.create(
         image=image,
+        piece_state_image=piece_state_image,
         source=source,
         status=CropRun.Status.SUCCESS,
         crop=crop,

@@ -6,7 +6,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import CropRun, Image, Piece, PieceStateImage
+from .models import CropRun, PieceStateImage
 from .serializers import CropRunCreateSerializer, CropRunSerializer
 
 
@@ -39,32 +39,21 @@ class CropRunViewSet(
     def get_queryset(self):
         user = self.request.user
         assert user.is_authenticated
-        qs = CropRun.objects.select_related("image", "submitter")
+        qs = CropRun.objects.select_related(
+            "piece_state_image", "piece_state_image__image", "submitter"
+        )
         if user.is_staff:
             return qs
-        owned_image_ids = set(
-            Piece.objects.filter(user=user).values_list("thumbnail_id", flat=True)
-        ) | set(
-            PieceStateImage.objects.filter(piece_state__piece__user=user).values_list(
-                "image_id", flat=True
-            )
-        )
-        return qs.filter(image_id__in=owned_image_ids)
+        return qs.filter(piece_state_image__piece_state__piece__user=user)
 
     def perform_create(self, serializer):
         user = self.request.user
         assert user.is_authenticated
-        image_id = serializer.validated_data["image_id"]
-        image = get_object_or_404(Image, id=image_id)
+        piece_state_image_id = serializer.validated_data["piece_state_image_id"]
+        piece_state_image = get_object_or_404(PieceStateImage, id=piece_state_image_id)
 
         if not user.is_staff:
-            owned = (
-                Piece.objects.filter(user=user, thumbnail=image).exists()
-                or PieceStateImage.objects.filter(
-                    piece_state__piece__user=user, image=image
-                ).exists()
-            )
-            if not owned:
+            if piece_state_image.piece_state.piece.user_id != user.id:
                 raise PermissionDenied(
                     "You may only submit crop runs for your own pieces."
                 )
@@ -76,7 +65,7 @@ class CropRunViewSet(
             "version": None,
         }
         return serializer.save(
-            image=image,
+            piece_state_image=piece_state_image,
             submitter=user,
             source=source,
             status=CropRun.Status.SUCCESS,
@@ -91,15 +80,11 @@ class ImageCropRunsView(generics.ListAPIView):
         image_id = self.kwargs["image_id"]
         user = self.request.user
         assert user.is_authenticated
-        qs = CropRun.objects.filter(image_id=image_id)
+        qs = CropRun.objects.filter(piece_state_image__image_id=image_id)
         if not user.is_staff:
-            owned = (
-                Piece.objects.filter(user=user, thumbnail_id=image_id).exists()
-                or PieceStateImage.objects.filter(
-                    piece_state__piece__user=user, image_id=image_id
-                ).exists()
-            )
-            if not owned:
+            if not PieceStateImage.objects.filter(
+                image_id=image_id, piece_state__piece__user=user
+            ).exists():
                 return CropRun.objects.none()
         if self.request.query_params.get("latest"):
             qs = qs[:1]

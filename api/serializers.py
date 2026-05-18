@@ -920,14 +920,33 @@ class AsyncTaskSerializer(serializers.ModelSerializer):
 
 
 class CropRunSerializer(serializers.ModelSerializer):
+    image_id = serializers.UUIDField(read_only=True)
+    piece_state_image_id = serializers.IntegerField(read_only=True, allow_null=True)
+
     class Meta:
         model = CropRun
-        fields = ["id", "image_id", "source", "crop", "status", "created"]
-        read_only_fields = ["id", "image_id", "source", "crop", "status", "created"]
+        fields = [
+            "id",
+            "image_id",
+            "piece_state_image_id",
+            "source",
+            "crop",
+            "status",
+            "created",
+        ]
+        read_only_fields = [
+            "id",
+            "image_id",
+            "piece_state_image_id",
+            "source",
+            "crop",
+            "status",
+            "created",
+        ]
 
 
 class CropRunCreateSerializer(serializers.ModelSerializer):
-    image_id = serializers.UUIDField(write_only=True)
+    piece_state_image_id = serializers.IntegerField(write_only=True)
     crop = serializers.JSONField()
     notes = serializers.CharField(required=False, allow_blank=True, default="")
 
@@ -939,7 +958,9 @@ class CropRunCreateSerializer(serializers.ModelSerializer):
             try:
                 cleaned[field] = float(value[field])
             except (KeyError, TypeError, ValueError) as exc:
-                raise serializers.ValidationError(f"Crop requires numeric {field}.") from exc
+                raise serializers.ValidationError(
+                    f"Crop requires numeric {field}."
+                ) from exc
             if not 0 <= cleaned[field] <= 1:
                 raise serializers.ValidationError(
                     f"Crop {field} must be between 0 and 1."
@@ -951,13 +972,15 @@ class CropRunCreateSerializer(serializers.ModelSerializer):
         return cleaned
 
     def create(self, validated_data):
-        validated_data.pop("image_id", None)
-        image = validated_data.pop("image")
+        validated_data.pop("piece_state_image_id", None)
+        piece_state_image = validated_data.pop("piece_state_image")
+        image = piece_state_image.image
         submitter = validated_data.pop("submitter")
         source = validated_data.pop("source")
         status = validated_data.pop("status")
         return CropRun.objects.create(
             image=image,
+            piece_state_image=piece_state_image,
             submitter=submitter,
             source=source,
             status=status,
@@ -966,7 +989,7 @@ class CropRunCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CropRun
-        fields = ["image_id", "crop", "notes"]
+        fields = ["piece_state_image_id", "crop", "notes"]
 
 
 class TaskSubmissionSerializer(serializers.Serializer):
