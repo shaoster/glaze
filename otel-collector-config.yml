@@ -21,6 +21,9 @@ receivers:
     endpoint: unix:///var/run/docker.sock
     collection_interval: 30s
     container_labels_as_resource_attributes: true
+    excluded_images:
+      - postgres
+      - redis
 
 exporters:
   otlphttp:
