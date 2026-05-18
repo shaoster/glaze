@@ -1,5 +1,5 @@
 import CloseIcon from "@mui/icons-material/Close";
-import { Box, IconButton, Typography, useTheme, useMediaQuery } from "@mui/material";
+import { Box, IconButton, Typography, useTheme, useMediaQuery, Tooltip } from "@mui/material";
 import type { ImageCrop } from "../util/types";
 import CloudinaryImage from "./CloudinaryImage";
 import { Masonry } from "masonic";
@@ -17,6 +17,7 @@ type PiecePhotoGalleryGridImage = {
 type PiecePhotoGalleryGridProps = {
   images: PiecePhotoGalleryGridImage[];
   canDeleteImages: boolean;
+  currentThumbnailUrl?: string;
   onOpenImage: (index: number) => void;
   onRequestDelete: (index: number) => void;
 };
@@ -24,6 +25,7 @@ type PiecePhotoGalleryGridProps = {
 export default function PiecePhotoGalleryGrid({
   images,
   canDeleteImages,
+  currentThumbnailUrl,
   onOpenImage,
   onRequestDelete,
 }: PiecePhotoGalleryGridProps) {
@@ -39,6 +41,8 @@ export default function PiecePhotoGalleryGrid({
   }
 
   const MasonryTile = ({ data: image, index, width }: { data: PiecePhotoGalleryGridImage; index: number; width: number }) => {
+    const isThumbnail = image.url === currentThumbnailUrl;
+
     return (
       <Box
         sx={{
@@ -83,29 +87,37 @@ export default function PiecePhotoGalleryGrid({
           </Box>
         </Box>
         {image.editableCurrentStateIndex !== null && canDeleteImages && (
-          <IconButton
-            aria-label={`Delete piece photo ${index + 1}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRequestDelete(index);
-            }}
-            size="small"
-            sx={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              width: 28,
-              height: 28,
-              color: "common.white",
-              backgroundColor: "rgba(0,0,0,0.52)",
-              backdropFilter: "blur(6px)",
-              "&:hover": {
-                backgroundColor: "rgba(0,0,0,0.68)",
-              },
-            }}
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
+          <Tooltip title={isThumbnail ? "Cannot delete the current piece thumbnail" : "Delete photo"}>
+            <span>
+              <IconButton
+                aria-label={`Delete piece photo ${index + 1}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRequestDelete(index);
+                }}
+                disabled={isThumbnail}
+                size="small"
+                sx={{
+                  position: "absolute",
+                  top: 8,
+                  right: 8,
+                  width: 28,
+                  height: 28,
+                  color: "common.white",
+                  backgroundColor: isThumbnail ? "rgba(0,0,0,0.24)" : "rgba(0,0,0,0.52)",
+                  backdropFilter: "blur(6px)",
+                  "&:hover": {
+                    backgroundColor: isThumbnail ? "rgba(0,0,0,0.24)" : "rgba(0,0,0,0.68)",
+                  },
+                  "&.Mui-disabled": {
+                    color: "rgba(255,255,255,0.45)",
+                  },
+                }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
         )}
       </Box>
     );

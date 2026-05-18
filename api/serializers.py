@@ -698,6 +698,29 @@ class PieceStateUpdateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Must be a JSON object.")
         return value
 
+    def validate(self, data: dict) -> dict:
+        instance: PieceState | None = self.instance
+        if instance and "images" in data:
+            piece = instance.piece
+            if piece.thumbnail:
+                # Get the URLs of the new images
+                new_image_urls = {img.get("url") for img in data["images"]}
+
+                # Check if the current thumbnail was in the old images and is NOT in the new images
+                old_images = instance.images
+                old_image_urls = {img["url"] for img in old_images}
+
+                if (
+                    piece.thumbnail.url in old_image_urls
+                    and piece.thumbnail.url not in new_image_urls
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "images": "Cannot delete the image currently used as the piece thumbnail."
+                        }
+                    )
+        return data
+
     def update(self, instance: PieceState, validated_data: dict) -> PieceState:
         if "notes" in validated_data:
             instance.notes = validated_data["notes"]

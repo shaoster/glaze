@@ -71,4 +71,41 @@ describe("PiecePhotoGalleryGrid", () => {
 
     expect(screen.getByRole("img")).toHaveAttribute("alt", "Piece photo");
   });
+
+  it("disables the delete button when the image is the current thumbnail", () => {
+    const onRequestDelete = vi.fn();
+    const thumbnailUrl = "https://example.com/thumbnail.jpg";
+
+    render(
+      <PiecePhotoGalleryGrid
+        images={[
+          {
+            url: thumbnailUrl,
+            caption: "Thumbnail Image",
+            stateLabel: "Throwing",
+            editableCurrentStateIndex: 0,
+          },
+          {
+            url: "https://example.com/other.jpg",
+            caption: "Other Image",
+            stateLabel: "Throwing",
+            editableCurrentStateIndex: 1,
+          },
+        ]}
+        canDeleteImages
+        currentThumbnailUrl={thumbnailUrl}
+        onOpenImage={vi.fn()}
+        onRequestDelete={onRequestDelete}
+      />,
+    );
+
+    const deleteButtons = screen.getAllByRole("button", { name: /delete piece photo/i });
+    expect(deleteButtons).toHaveLength(2);
+
+    // First button (thumbnail) should be disabled
+    expect(deleteButtons[0]).toBeDisabled();
+
+    // Second button (other) should be enabled
+    expect(deleteButtons[1]).not.toBeDisabled();
+  });
 });

@@ -329,7 +329,7 @@ def piece_current_state(request: Request, piece_id: str) -> Response:
         return Response(
             {"detail": "Piece has no states."}, status=status.HTTP_404_NOT_FOUND
         )
-    serializer = PieceStateUpdateSerializer(data=request.data)
+    serializer = PieceStateUpdateSerializer(current, data=request.data)
     serializer.is_valid(raise_exception=True)
     serializer.update(current, serializer.validated_data)
     piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
@@ -369,10 +369,19 @@ def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response
                 {"detail": "Cannot delete the 'designed' state."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        if piece.thumbnail:
+            state_image_urls = {img["url"] for img in ps.images}
+            if piece.thumbnail.url in state_image_urls:
+                return Response(
+                    {
+                        "detail": "Cannot delete a state that contains the current piece thumbnail."
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
         ps.delete()
         piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
         return Response(_serialize_piece_detail(piece, request))
-    serializer = PieceStateUpdateSerializer(data=request.data)
+    serializer = PieceStateUpdateSerializer(ps, data=request.data)
     serializer.is_valid(raise_exception=True)
     serializer.update(ps, serializer.validated_data)
     piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
