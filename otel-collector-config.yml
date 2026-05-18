@@ -17,13 +17,6 @@ receivers:
     endpoint: redis:6379
     collection_interval: 30s
 
-  docker_stats:
-    endpoint: unix:///var/run/docker.sock
-    collection_interval: 30s
-    excluded_images:
-      - postgres
-      - redis
-
   nginx:
     endpoint: http://nginx/nginx_status
     collection_interval: 30s
@@ -43,5 +36,5 @@ service:
       receivers: [otlp]
       exporters: [otlphttp]
     metrics:
-      receivers: [otlp, postgresql, redis, docker_stats, nginx]
+      receivers: [otlp, postgresql, redis, nginx]
       exporters: [otlphttp]
