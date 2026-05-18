@@ -148,6 +148,7 @@ services:
     command: ["--config=/etc/otel/config.yml"]
     environment:
       GRAFANA_CLOUD_OTLP_TOKEN: ${GRAFANA_CLOUD_OTLP_TOKEN:-}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
   mailpit:
     image: axllent/mailpit:latest

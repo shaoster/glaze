@@ -4,6 +4,19 @@ receivers:
       grpc:
         endpoint: 0.0.0.0:4317
 
+  postgresql:
+    endpoint: db:5432
+    username: glaze
+    password: ${env:POSTGRES_PASSWORD}
+    databases: [glaze]
+    collection_interval: 30s
+    tls:
+      insecure: true
+
+  redis:
+    endpoint: redis:6379
+    collection_interval: 30s
+
 exporters:
   otlphttp:
     endpoint: https://otlp-gateway-prod-us-east-3.grafana.net/otlp
@@ -17,4 +30,7 @@ service:
       exporters: [otlphttp]
     logs:
       receivers: [otlp]
+      exporters: [otlphttp]
+    metrics:
+      receivers: [otlp, postgresql, redis]
       exporters: [otlphttp]
