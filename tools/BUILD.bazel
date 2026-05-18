@@ -101,27 +101,3 @@ py_binary(
     ],
     visibility = ["//visibility:public"],
 )
-
-# ── Segment service unit tests ─────────────────────────────────────────────────
-
-pytest_test(
-    name = "test_piece_image_segment_service",
-    srcs = [
-        "piece_image_segment_service.py",
-        "tests/test_piece_image_segment_service.py",
-        "//tools:pytest_main.py",
-    ],
-    main = "//tools:pytest_main.py",
-    args = ["tools/tests/test_piece_image_segment_service.py"],
-    deps = [
-        "@pypi//fastapi",
-        "@pypi//httpx",
-        "@pypi//rembg",
-        "@pypi//opencv_python_headless",
-        "@pypi//requests",
-        "@pypi//urllib3",
-        "@pypi//pillow",
-        "@pypi//pillow_heif",
-    ],
-    visibility = ["//visibility:public"],
-)

@@ -11,10 +11,10 @@ To maintain stability on hardware with <1GB RAM, Glaze supports offloading the h
 - **Local Fallback**: If `REMOTE_REMBG_URL` is not configured, the system falls back to a local `u2netp` model with 640px downscaling.
 
 #### Step 1: Deploy the Microservice (Run from your LOCAL machine)
-1.  **Set up Auth Token**: Create a Modal secret named `piece-image-crop-secret` with an `AUTH_TOKEN` key.
+1.  **Set up Auth Token**: Create a Modal secret named `piece-image-segment-secret` with an `AUTH_TOKEN` key.
 2.  **Install Modal**: `bazel run @uv//:uv -- tool install modal`
 3.  **Authenticate**: `modal setup`
-4.  **Deploy**: `modal deploy tools/piece_image_crop_service.py`
+4.  **Deploy**: `modal deploy tools/piece_image_segment_service.py`
 5.  **Capture the URL**: The output will provide a permanent URL, e.g., `https://your-workspace-name--crop.modal.run`.
 
 #### Step 2: Configure the Backend (Run on the PRODUCTION host / Droplet)
@@ -23,7 +23,7 @@ Update your production `.env` file with the following variables:
 | Variable | Description |
 | :--- | :--- |
 | `REMOTE_REMBG_URL` | The URL of your deployed Modal service (e.g. `https://phil--crop.modal.run`). |
-| `MODAL_AUTH_TOKEN` | The secure token you generated for the `piece-image-crop-secret`. |
+| `MODAL_AUTH_TOKEN` | The secure token you generated for the `piece-image-segment-secret`. |
 
 ```bash
 # Example .env additions

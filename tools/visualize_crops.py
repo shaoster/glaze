@@ -9,7 +9,7 @@ Usage:
     bazel run //tools:visualize_crops -- https://res.cloudinary.com/.../image.jpg https://...
 
     # Test against production Modal instead of local service:
-    CROP_SERVICE_URL=https://shaoster--piece-image-crop-service-crop.modal.run \\
+    CROP_SERVICE_URL=https://shaoster--piece-image-segment-service-segment.modal.run \\
         bazel run //tools:visualize_crops -- https://...
 """
 

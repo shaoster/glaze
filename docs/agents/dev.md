@@ -11,10 +11,10 @@ python manage.py migrate
 uvicorn backend.asgi:application --port 8080 --reload  # or any free port; gz_start picks one automatically
 
 # Remote ML Offload (Optional, for 1GB RAM servers)
-# 1. Create a secret 'piece-image-crop-secret' with AUTH_TOKEN=xxx
+# 1. Create a secret 'piece-image-segment-secret' with AUTH_TOKEN=xxx
 pip install modal
 modal setup
-modal deploy tools/piece_image_crop_service.py
+modal deploy tools/piece_image_segment_service.py
 ```
 
 Set `REMOTE_REMBG_URL` and `MODAL_AUTH_TOKEN` in your `.env` to enable offloading.

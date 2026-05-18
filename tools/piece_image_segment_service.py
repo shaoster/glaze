@@ -9,7 +9,7 @@ Deployment (Modal):
 
 Usage (Local):
     pip install fastapi uvicorn rembg onnxruntime pillow pillow-heif
-    uvicorn tools.piece_image_segment_service:fastapi_app --port 8080
+    uvicorn tools.piece_image_segment_service:create_app --factory --port 8080
 """
 
 import base64
