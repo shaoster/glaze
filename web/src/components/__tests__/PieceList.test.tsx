@@ -50,21 +50,50 @@ vi.mock("masonic", () => ({
   MasonryScroller: ({
     items,
     render: RenderComponent,
+    itemHeightEstimate,
     itemKey,
   }: {
     items: PieceSummary[];
     render: React.ComponentType<{ data: PieceSummary; index: number; width: number }>;
+    itemHeightEstimate: number;
     itemKey?: (item: PieceSummary, index: number) => string | number;
   }) => (
-    <div data-testid="piece-grid">
-      {items.map((item, index) => (
-        <div
-          key={itemKey ? itemKey(item, index) : index}
-          data-key={itemKey ? itemKey(item, index) : index}
-        >
-          <RenderComponent data={item} index={index} width={240} />
-        </div>
-      ))}
+    <div data-testid="piece-grid" style={{ position: "relative" }}>
+      {(() => {
+        const gutter = 8;
+        const columnCount = mockPositioner.columnCount;
+        const columnWidth = mockPositioner.columnWidth;
+        const columnHeights = Array.from({ length: columnCount }, () => 0);
+        const seededHeights = new Map(
+          mockPositioner.set.mock.calls.map(([index, height]) => [index as number, height as number]),
+        );
+
+        return items.map((item, index) => {
+          const height = seededHeights.get(index) ?? itemHeightEstimate;
+          const column = columnHeights.indexOf(Math.min(...columnHeights));
+          const top = columnHeights[column];
+          const left = column * (columnWidth + gutter);
+          columnHeights[column] = top + height + gutter;
+
+          return (
+            <div
+              key={itemKey ? itemKey(item, index) : index}
+              data-key={itemKey ? itemKey(item, index) : index}
+              data-column={column}
+              data-top={top}
+              data-height={height}
+              style={{
+                position: "absolute",
+                top,
+                left,
+                width: columnWidth,
+              }}
+            >
+              <RenderComponent data={item} index={index} width={240} />
+            </div>
+          );
+        });
+      })()}
     </div>
   ),
   useContainerPosition: () => ({ width: 440, offset: 0 }),
@@ -108,8 +137,10 @@ async function openFilters(user: ReturnType<typeof userEvent.setup>) {
 
 describe("PieceList", () => {
   beforeEach(() => {
-    mockPositioner.set.mockClear();
-    mockPositioner.get.mockReturnValue(undefined);
+    mockPositioner.set.mockReset();
+    mockPositioner.get.mockReset();
+    mockPositioner.set.mockImplementation(() => undefined);
+    mockPositioner.get.mockImplementation(() => undefined);
   });
 
   describe("masonry height pre-seeding", () => {
@@ -145,6 +176,77 @@ describe("PieceList", () => {
       });
       renderPieceList([piece]);
       expect(mockPositioner.set).not.toHaveBeenCalled();
+    });
+
+    it("reserves the thumbnail crop ratio in the card shell", () => {
+      renderPieceList([
+        makePiece({
+          thumbnail: {
+            url: "https://example.com/img.jpg",
+            cloudinary_public_id: "id",
+            cloud_name: "demo",
+            crop: { x: 0, y: 0, width: 200, height: 400 },
+          },
+        }),
+      ]);
+
+      expect(screen.getByTestId("piece-thumbnail-shell")).toHaveStyle({
+        aspectRatio: "200 / 400",
+      });
+    });
+
+    it("reserves the crop-derived card height for mocked image payloads", () => {
+      const pieces = [
+        makePiece({
+          id: "portrait",
+          name: "Tall Pitcher",
+          thumbnail: {
+            url: "https://example.com/tall.jpg",
+            cloudinary_public_id: "pieces/tall",
+            cloud_name: "demo",
+            crop: { x: 0, y: 0, width: 200, height: 400 },
+          },
+        }),
+        makePiece({
+          id: "landscape",
+          name: "Low Tray",
+          thumbnail: {
+            url: "https://example.com/wide.jpg",
+            cloudinary_public_id: "pieces/wide",
+            cloud_name: "demo",
+            crop: { x: 0, y: 0, width: 400, height: 200 },
+          },
+        }),
+        makePiece({
+          id: "square",
+          name: "Small Cup",
+          thumbnail: {
+            url: "https://example.com/square.jpg",
+            cloudinary_public_id: "pieces/square",
+            cloud_name: "demo",
+            crop: { x: 0, y: 0, width: 200, height: 200 },
+          },
+        }),
+      ];
+
+      renderPieceList(pieces);
+
+      const cards = screen.getAllByRole("link");
+      expect(cards[0]).toHaveAttribute(
+        "data-estimated-height",
+        `${estimateCardHeight(pieces[0], 240)}`,
+      );
+      expect(cards[1]).toHaveAttribute(
+        "data-estimated-height",
+        `${estimateCardHeight(pieces[1], 240)}`,
+      );
+      expect(cards[2]).toHaveAttribute(
+        "data-estimated-height",
+        `${estimateCardHeight(pieces[2], 240)}`,
+      );
+      expect(Number(cards[0].getAttribute("data-estimated-height"))).toBeGreaterThan(
+        DEFAULT_CARD_HEIGHT_ESTIMATE,
+      );
     });
   });
 

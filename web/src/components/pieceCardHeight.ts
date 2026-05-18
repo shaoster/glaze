@@ -5,6 +5,14 @@ import type { PieceSummary } from "../util/types";
 export const CARD_CHROME_HEIGHT = 112;
 export const DEFAULT_CARD_HEIGHT_ESTIMATE = 260;
 
+export function getThumbnailAspectRatio(piece: PieceSummary): string | undefined {
+  const crop = piece.thumbnail?.crop;
+  if (crop && crop.width > 0 && crop.height > 0) {
+    return `${crop.width} / ${crop.height}`;
+  }
+  return undefined;
+}
+
 /**
  * Estimates the rendered card height from the thumbnail crop aspect ratio.
  * Falls back to DEFAULT_CARD_HEIGHT_ESTIMATE when no crop is available.
