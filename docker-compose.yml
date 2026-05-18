@@ -179,6 +179,9 @@ services:
     environment:
       GRAFANA_CLOUD_OTLP_TOKEN: ${GRAFANA_CLOUD_OTLP_TOKEN:-}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # otelcol's Docker SDK defaults to negotiating API 1.25, which Docker
+      # 27+ daemons reject (minimum 1.44). Pin explicitly to 1.44.
+      DOCKER_API_VERSION: "1.44"
 
   mailpit:
     image: axllent/mailpit:latest
