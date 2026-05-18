@@ -141,13 +141,13 @@ class TestCropRunViewSet:
         client = self._client(user)
         url = "/api/crop-runs/"
         payload = {
-            "piece_state_image_id": str(piece_state_image.id),
+            "piece_state_image_id": piece_state_image.id,
             "crop": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8},
         }
         response = client.post(url, payload, format="json")
         assert response.status_code == status.HTTP_201_CREATED
-        assert str(response.data["image_id"]) == str(piece_state_image.image_id)
-        assert str(response.data["piece_state_image_id"]) == str(piece_state_image.id)
+        assert response.data["image_id"] == str(piece_state_image.image_id)
+        assert response.data["piece_state_image_id"] == piece_state_image.id
         assert response.data["crop"] == payload["crop"]
         assert CropRun.objects.filter(
             piece_state_image=piece_state_image, source__type="human"
@@ -156,7 +156,7 @@ class TestCropRunViewSet:
     def test_human_run_requires_crop(self, user, piece_state_image):
         client = self._client(user)
         url = "/api/crop-runs/"
-        payload = {"piece_state_image_id": str(piece_state_image.id)}
+        payload = {"piece_state_image_id": piece_state_image.id}
         response = client.post(url, payload, format="json")
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -164,7 +164,7 @@ class TestCropRunViewSet:
         client = self._client(other_user)
         url = "/api/crop-runs/"
         payload = {
-            "piece_state_image_id": str(piece_state_image.id),
+            "piece_state_image_id": piece_state_image.id,
             "crop": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8},
         }
         response = client.post(url, payload, format="json")
@@ -177,13 +177,13 @@ class TestCropRunViewSet:
         client = self._client(admin)
         url = "/api/crop-runs/"
         payload = {
-            "piece_state_image_id": str(piece_state_image.id),
+            "piece_state_image_id": piece_state_image.id,
             "crop": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8},
         }
         response = client.post(url, payload, format="json")
         assert response.status_code == status.HTTP_201_CREATED
-        assert str(response.data["image_id"]) == str(piece_state_image.image_id)
-        assert str(response.data["piece_state_image_id"]) == str(piece_state_image.id)
+        assert response.data["image_id"] == str(piece_state_image.image_id)
+        assert response.data["piece_state_image_id"] == piece_state_image.id
 
     def test_list_returns_own_runs(self, user, piece_state_image):
         CropRun.objects.create(

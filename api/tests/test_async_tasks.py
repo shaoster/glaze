@@ -109,13 +109,13 @@ class TestRunTaskErrorPaths:
 class TestDetectSubjectCropTask:
     """Covers the detect_subject_crop task registered in api/tasks.py."""
 
-    def _make_cloudinary_image(self, user):
+    def _make_cloudinary_image(self, user, *, suffix: str = ""):
         from api.models import Image
 
         return Image.objects.create(
-            url="https://res.cloudinary.com/demo/image/upload/v1/pieces/mug.jpg",
+            url=f"https://res.cloudinary.com/demo/image/upload/v1/pieces/mug{suffix}.jpg",
             cloud_name="demo",
-            cloudinary_public_id="pieces/mug",
+            cloudinary_public_id=f"pieces/mug{suffix}",
         )
 
     def _make_piece_state_image(self, user, image):
@@ -151,12 +151,14 @@ class TestDetectSubjectCropTask:
             cloud_name=None,
             cloudinary_public_id=None,
         )
+        piece_state_image = self._make_piece_state_image(user, image)
         task = self._make_task(user, {"image_id": str(image.id)})
         self._run_sync(task.id)
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.SUCCESS
         assert task.result["status"] == "skipped"
         assert "Not a Cloudinary image" in task.result["reason"]
+        assert piece_state_image.image_id == image.id
 
     def _mock_crop_run(self, piece_state_image, status, crop=None, error=None):
         """Build a fake CropRun-like object for monkeypatching run_crop_inference."""
@@ -273,7 +275,7 @@ class TestDetectSubjectCropTask:
         )
         task = self._make_task(
             user,
-            {"image_id": str(image.id), "piece_state_image_id": str(psi.id)},
+            {"image_id": str(image.id), "piece_state_image_id": psi.id},
         )
         self._run_sync(task.id)
         psi.refresh_from_db()
@@ -299,7 +301,7 @@ class TestDetectSubjectCropTask:
         )
         task = self._make_task(
             user,
-            {"image_id": str(image.id), "piece_state_image_id": str(psi.id)},
+            {"image_id": str(image.id), "piece_state_image_id": psi.id},
         )
         self._run_sync(task.id)
         psi.refresh_from_db()
@@ -320,7 +322,7 @@ class TestDetectSubjectCropTask:
         monkeypatch.setattr(
             "api.utils.run_crop_inference", lambda psi, async_task=None: crop_run
         )
-        missing_psi_id = "999999999"  # integer PK; guaranteed not to exist
+        missing_psi_id = 999999999  # integer PK; guaranteed not to exist
         task = self._make_task(
             user,
             {"image_id": str(image.id), "piece_state_image_id": missing_psi_id},
@@ -329,7 +331,26 @@ class TestDetectSubjectCropTask:
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.SUCCESS
         assert task.result["status"] == "skipped"
-        assert missing_psi_id in task.result["reason"]
+        assert str(missing_psi_id) in task.result["reason"]
+
+    def test_piece_state_image_image_mismatch_is_skipped(self, user):
+        from api.models import Piece, PieceState, PieceStateImage
+
+        image = self._make_cloudinary_image(user)
+        other_image = self._make_cloudinary_image(user, suffix="-alt")
+        piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
+        state = PieceState.objects.create(piece=piece, user=user, state="designed")
+        psi = PieceStateImage.objects.create(piece_state=state, image=other_image, order=0)
+
+        task = self._make_task(
+            user,
+            {"image_id": str(image.id), "piece_state_image_id": psi.id},
+        )
+        self._run_sync(task.id)
+        task.refresh_from_db()
+        assert task.status == AsyncTask.Status.SUCCESS
+        assert task.result["status"] == "skipped"
+        assert "belongs to image" in task.result["reason"]
 
 
 @pytest.mark.django_db(transaction=True)

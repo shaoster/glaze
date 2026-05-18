@@ -698,7 +698,7 @@ export async function getImageCropRuns(
 }
 
 export async function createHumanCropRun(payload: {
-  piece_state_image_id: string;
+  piece_state_image_id: number;
   crop: ImageCrop;
   notes?: string;
 }): Promise<CropRun> {

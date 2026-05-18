@@ -18,7 +18,7 @@ import type { ImageCrop } from "../util/types";
 interface ReportBadCropDialogProps {
   open: boolean;
   onClose: () => void;
-  pieceStateImageId: string;
+  pieceStateImageId: number;
   initialCrop?: ImageCrop | null;
 }
 
