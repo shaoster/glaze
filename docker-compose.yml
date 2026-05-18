@@ -167,6 +167,11 @@ services:
     # and setting OTEL_ENABLED=false can save ~50-100MB+.
     image: otel/opentelemetry-collector-contrib:0.126.0
     restart: unless-stopped
+    # docker_stats receiver needs read access to the Docker socket.
+    # group_add adds the host docker group (GID 112 on this droplet) so the
+    # otelcol process can open /var/run/docker.sock without running as root.
+    group_add:
+      - "112"
     volumes:
       - ./otel-collector-config.yml:/etc/otel/config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
