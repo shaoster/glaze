@@ -2,12 +2,13 @@ load("//:python.bzl", "pytest_test")
 
 pytest_test(
     name = "test_piece_image_segment_service",
+    cov_src = "services.piece_image_segment_service",
     srcs = [
-        "test_piece_image_crop_service.py",
+        "test_piece_image_segment_service.py",
         "//tools:pytest_main.py",
     ],
     main = "//tools:pytest_main.py",
-    args = ["services/tests/test_piece_image_crop_service.py"],
+    args = ["services/tests/test_piece_image_segment_service.py"],
     deps = [
         "@pypi//fastapi",
         "@pypi//httpx",
@@ -17,7 +18,7 @@ pytest_test(
         "@pypi//urllib3",
         "@pypi//pillow",
         "@pypi//pillow_heif",
-        "//tools:piece_image_segment_service",
+        "//services:piece_image_segment_service",
     ],
     visibility = ["//visibility:public"],
 )

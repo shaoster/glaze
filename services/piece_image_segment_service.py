@@ -5,11 +5,11 @@ Can be deployed to Modal.com or run locally.
 
 Deployment (Modal):
     1. Set up a secret named 'piece-image-segment-secret' with 'AUTH_TOKEN'
-    2. modal deploy tools/piece_image_segment_service.py
+    2. modal deploy services
 
 Usage (Local):
     pip install fastapi uvicorn rembg onnxruntime pillow pillow-heif
-    uvicorn tools.piece_image_segment_service:create_app --factory --port 8080
+    uvicorn services.piece_image_segment_service:create_app --factory --port 8080
 """
 
 import base64
@@ -176,7 +176,7 @@ def create_app():
 # --- Local Entry Point ---
 # NOTE: Do NOT call create_app() at module level — heavy deps (rembg, fastapi)
 # may not be present in the importing process's environment.  When run via
-# `bazel run //tools:piece_image_segment_service`, __main__ is the entry point.
+# `bazel run //services:piece_image_segment_service`, __main__ is the entry point.
 if __name__ == "__main__":
     import uvicorn
 

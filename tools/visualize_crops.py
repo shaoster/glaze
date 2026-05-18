@@ -9,7 +9,7 @@ Usage:
     bazel run //tools:visualize_crops -- https://res.cloudinary.com/.../image.jpg https://...
 
     # Test against production Modal instead of local service:
-    CROP_SERVICE_URL=https://shaoster--piece-image-segment-service-segment.modal.run \\
+    SEGMENT_SERVICE_URL=https://shaoster--piece-image-segment-service-segment.modal.run \\
         bazel run //tools:visualize_crops -- https://...
 """
 
@@ -24,7 +24,7 @@ from PIL import Image, ImageDraw, ImageOps
 # Add the project root to the Python path (only used for DB mode)
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-CROP_SERVICE_URL = os.environ.get("CROP_SERVICE_URL", "http://localhost:8080")
+SEGMENT_SERVICE_URL = os.environ.get("SEGMENT_SERVICE_URL", "http://localhost:8080")
 AUTH_TOKEN = os.environ.get("MODAL_AUTH_TOKEN", "")
 
 
@@ -34,7 +34,7 @@ def process_url(url: str, output_dir: str, label: str) -> None:
 
     try:
         resp = requests.post(
-            CROP_SERVICE_URL,
+            SEGMENT_SERVICE_URL,
             headers={"x-api-key": AUTH_TOKEN, "Content-Type": "application/json"},
             json={"url": url},
             timeout=60,
@@ -95,7 +95,7 @@ def main() -> None:
     output_dir = os.path.join(os.path.dirname(__file__), "crop_tests")
     os.makedirs(output_dir, exist_ok=True)
 
-    print(f"Crop service: {CROP_SERVICE_URL}")
+    print(f"Segment service: {SEGMENT_SERVICE_URL}")
 
     if args.urls:
         # --- Direct URL mode: no DB needed ---

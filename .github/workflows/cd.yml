@@ -131,7 +131,7 @@ jobs:
             --notes "Docker image: \`ghcr.io/shaoster/glaze:${{ env.DEPLOY_SHA }}\`"
 
   deploy-modal:
-    name: Deploy Segment Service to Modal
+    name: Deploy Services to Modal
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     steps:
@@ -151,4 +151,4 @@ jobs:
         env:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-        run: modal deploy tools/piece_image_segment_service.py
+        run: modal deploy services
