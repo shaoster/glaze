@@ -25,6 +25,18 @@ import TagChip from "./TagChip";
 import { DEFAULT_THUMBNAIL } from "./thumbnailConstants";
 
 // Kiln-glow amber used for stale indicator
+function useWindowHeight(): number {
+  const [height, setHeight] = useState(() =>
+    typeof window !== "undefined" ? window.innerHeight : 768,
+  );
+  useEffect(() => {
+    const update = () => setHeight(window.innerHeight);
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return height;
+}
+
 const KILN_COLOR = "oklch(0.72 0.13 55)";
 
 type FilterCategory = "wip" | "completed" | "discarded" | "shared";
@@ -391,6 +403,7 @@ const PieceList = (props: PieceListProps) => {
     return `${filters}|${tags}|${sortOrder}`;
   }, [activeFilters, activeTagIds, sortOrder]);
 
+  const windowHeight = useWindowHeight();
   const masonryRef = useRef<HTMLElement | null>(null);
   const columnWidth = isMobile ? 160 : 220;
   const { width: masonryWidth, offset: masonryOffset } = useContainerPosition(masonryRef, [isMobile]);
@@ -803,7 +816,7 @@ const PieceList = (props: PieceListProps) => {
               itemKey={(piece) => piece.id}
               itemHeightEstimate={260}
               offset={masonryOffset}
-              height={typeof window !== "undefined" ? window.innerHeight : 768}
+              height={windowHeight}
             />
           </Box>
         </Box>
