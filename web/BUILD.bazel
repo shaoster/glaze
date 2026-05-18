@@ -429,7 +429,10 @@ js_library(
 
 js_library(
     name = "piece_list_src",
-    srcs = ["src/components/PieceList.tsx"],
+    srcs = [
+        "src/components/PieceList.tsx",
+        "src/components/pieceCardHeight.ts",
+    ],
     deps = [
         ":cloudinary_image_src",
         ":generated_types",

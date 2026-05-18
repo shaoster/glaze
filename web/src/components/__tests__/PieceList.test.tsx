@@ -4,6 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceList from "../PieceList";
+import { CARD_CHROME_HEIGHT, DEFAULT_CARD_HEIGHT_ESTIMATE, estimateCardHeight } from "../pieceCardHeight";
 import type { PieceSummary } from "../../util/types";
 
 vi.mock("../CloudinaryImage", () => ({
@@ -30,8 +31,23 @@ vi.mock("../CloudinaryImage", () => ({
   ),
 }));
 
+const { mockPositioner } = vi.hoisted(() => ({
+  mockPositioner: {
+    get: vi.fn().mockReturnValue(undefined),
+    set: vi.fn(),
+    columnWidth: 220,
+    columnCount: 2,
+    update: vi.fn(),
+    range: vi.fn(),
+    size: vi.fn().mockReturnValue(0),
+    estimateHeight: vi.fn().mockReturnValue(0),
+    shortestColumn: vi.fn().mockReturnValue(0),
+    all: vi.fn().mockReturnValue([]),
+  },
+}));
+
 vi.mock("masonic", () => ({
-  Masonry: ({
+  MasonryScroller: ({
     items,
     render: RenderComponent,
     itemKey,
@@ -51,6 +67,9 @@ vi.mock("masonic", () => ({
       ))}
     </div>
   ),
+  useContainerPosition: () => ({ width: 440, offset: 0 }),
+  usePositioner: () => mockPositioner,
+  useResizeObserver: () => undefined,
 }));
 
 function makePiece(overrides: Partial<PieceSummary> = {}): PieceSummary {
@@ -87,7 +106,89 @@ async function openFilters(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: /toggle filters/i }));
 }
 
+describe("estimateCardHeight", () => {
+  it("returns DEFAULT_CARD_HEIGHT_ESTIMATE when thumbnail is null", () => {
+    expect(estimateCardHeight({ thumbnail: null } as PieceSummary, 220)).toBe(DEFAULT_CARD_HEIGHT_ESTIMATE);
+  });
+
+  it("returns DEFAULT_CARD_HEIGHT_ESTIMATE when crop is null", () => {
+    expect(
+      estimateCardHeight({ thumbnail: { crop: null } } as PieceSummary, 220),
+    ).toBe(DEFAULT_CARD_HEIGHT_ESTIMATE);
+  });
+
+  it("returns DEFAULT_CARD_HEIGHT_ESTIMATE when crop is absent", () => {
+    expect(
+      estimateCardHeight({ thumbnail: {} } as PieceSummary, 220),
+    ).toBe(DEFAULT_CARD_HEIGHT_ESTIMATE);
+  });
+
+  it("computes height from landscape crop aspect ratio", () => {
+    // 400×200 crop → ratio 0.5 → at width 220 → image height 110 + CARD_CHROME_HEIGHT
+    const piece = {
+      thumbnail: { crop: { x: 0, y: 0, width: 400, height: 200 } },
+    } as PieceSummary;
+    expect(estimateCardHeight(piece, 220)).toBe(Math.round(220 * 0.5) + CARD_CHROME_HEIGHT);
+  });
+
+  it("computes height from portrait crop aspect ratio", () => {
+    // 200×400 crop → ratio 2 → at width 220 → image height 440 + CARD_CHROME_HEIGHT
+    const piece = {
+      thumbnail: { crop: { x: 0, y: 0, width: 200, height: 400 } },
+    } as PieceSummary;
+    expect(estimateCardHeight(piece, 220)).toBe(Math.round(220 * 2) + CARD_CHROME_HEIGHT);
+  });
+
+  it("returns DEFAULT_CARD_HEIGHT_ESTIMATE when crop.width is 0 (guard against division by zero)", () => {
+    const piece = {
+      thumbnail: { crop: { x: 0, y: 0, width: 0, height: 200 } },
+    } as PieceSummary;
+    expect(estimateCardHeight(piece, 220)).toBe(DEFAULT_CARD_HEIGHT_ESTIMATE);
+  });
+});
+
 describe("PieceList", () => {
+  beforeEach(() => {
+    mockPositioner.set.mockClear();
+    mockPositioner.get.mockReturnValue(undefined);
+  });
+
+  describe("masonry height pre-seeding", () => {
+    it("pre-seeds the positioner with crop-derived height for pieces with a crop", () => {
+      // 200×400 crop at columnWidth 220 → image height = 220*400/200 = 440 → + CARD_CHROME_HEIGHT
+      const piece = makePiece({
+        thumbnail: {
+          url: "https://example.com/img.jpg",
+          cloudinary_public_id: "id",
+          cloud_name: "demo",
+          crop: { x: 0, y: 0, width: 200, height: 400 },
+        },
+      });
+      renderPieceList([piece]);
+      expect(mockPositioner.set).toHaveBeenCalledWith(0, Math.round(220 * 400 / 200) + CARD_CHROME_HEIGHT);
+    });
+
+    it("does not pre-seed the positioner for pieces without a crop", () => {
+      const piece = makePiece({ thumbnail: null });
+      renderPieceList([piece]);
+      expect(mockPositioner.set).not.toHaveBeenCalled();
+    });
+
+    it("does not re-seed already-positioned items", () => {
+      mockPositioner.get.mockReturnValue({ top: 0, left: 0, height: 300, column: 0 });
+      const piece = makePiece({
+        thumbnail: {
+          url: "https://example.com/img.jpg",
+          cloudinary_public_id: "id",
+          cloud_name: "demo",
+          crop: { x: 0, y: 0, width: 200, height: 400 },
+        },
+      });
+      renderPieceList([piece]);
+      expect(mockPositioner.set).not.toHaveBeenCalled();
+    });
+  });
+
   describe("with no pieces", () => {
     it("renders the piece count as 0", () => {
       renderPieceList([]);
