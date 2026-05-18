@@ -98,3 +98,46 @@ PR merged to main
                  ├─ deploy job: SCP .env -> deploy.sh -> docker compose pull + restart -> GitHub Release
                  └─ deploy-modal job: modal deploy tools/piece_image_crop_service.py
 ```
+
+nginx config changes (in `nginx/conf.d/`) are deployed automatically with every release — `docker compose up -d --force-recreate` mounts the config at the checked-out SHA with no separate sync step.
+
+---
+
+## Production upstream topology
+
+```
+Internet :80/:443
+    └─ nginx container (nginx:alpine)
+         ├─ web:8000   (API instance 1)
+         └─ web2:8000  (API instance 2)
+```
+
+`web` and `web2` have no host port bindings; they are only reachable within the Docker network. nginx uses round-robin with `max_fails=1 fail_timeout=10s` — a single failure marks the backend unavailable for 10 seconds before retrying.
+
+### Operational commands
+
+```bash
+# Check both backend readiness endpoints
+docker compose exec nginx wget -qO- http://web:8000/api/health/ready/
+docker compose exec nginx wget -qO- http://web2:8000/api/health/ready/
+
+# Validate nginx config
+docker compose exec nginx nginx -t
+
+# Check TLS certificate expiry (host)
+certbot certificates
+
+# Watch nginx access/error log
+docker compose logs -f nginx
+
+# Remove one backend (nginx fails over to the other)
+docker compose stop web2
+docker compose start web2
+
+# Cert renewal dry run (should complete with zero nginx restarts)
+certbot renew --dry-run
+```
+
+### Rollback
+
+If a deploy leaves one or both API instances unhealthy, roll back by re-running `deploy.sh` with the previous commit SHA. The nginx container is unaffected unless `nginx/conf.d/` changed.
