@@ -273,3 +273,99 @@ class TestUtilsCoverage:
 
         monkeypatch.setattr("requests.post", mock_post)
         assert calculate_subject_mask_remote(image_bytes=b"data") is None
+
+    def test_calculate_subject_mask_remote_adds_auth_header(
+        self, monkeypatch, settings
+    ):
+        from api.utils import calculate_subject_mask_remote
+
+        settings.REMOTE_REMBG_URL = "http://remote"
+        settings.MODAL_AUTH_TOKEN = "secret"
+
+        captured = {}
+
+        class MockResponse:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {"mask": None}
+
+        def mock_post(*args, **kwargs):
+            captured["kwargs"] = kwargs
+            return MockResponse()
+
+        monkeypatch.setattr("requests.post", mock_post)
+        assert calculate_subject_mask_remote(image_bytes=b"data") == {"mask": None}
+        assert captured["kwargs"]["headers"]["X-API-Key"] == "secret"
+        assert captured["kwargs"]["headers"]["Content-Type"] == "application/octet-stream"
+
+    def test_calculate_subject_mask_remote_missing_input_returns_none(
+        self, settings
+    ):
+        from api.utils import calculate_subject_mask_remote
+
+        settings.REMOTE_REMBG_URL = "http://remote"
+        assert calculate_subject_mask_remote() is None
+
+    def test_upload_mask_to_cloudinary_uses_cloudinary_sdk(
+        self, monkeypatch, settings
+    ):
+        import sys
+        import types
+
+        from api.utils import upload_mask_to_cloudinary
+
+        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo")
+        monkeypatch.setenv("CLOUDINARY_API_KEY", "key")
+        monkeypatch.setenv("CLOUDINARY_API_SECRET", "secret")
+        monkeypatch.setenv("CLOUDINARY_UPLOAD_FOLDER", "uploads")
+
+        cloudinary = types.ModuleType("cloudinary")
+        uploader = types.ModuleType("cloudinary.uploader")
+        upload_calls = {}
+
+        def mock_config(**kwargs):
+            upload_calls["config"] = kwargs
+
+        def mock_upload(mask_bytes, public_id, folder, overwrite, resource_type):
+            upload_calls["upload"] = {
+                "mask_bytes": mask_bytes,
+                "public_id": public_id,
+                "folder": folder,
+                "overwrite": overwrite,
+                "resource_type": resource_type,
+            }
+            return {"cloud_name": "demo", "public_id": "mask-public-id"}
+
+        cloudinary.config = mock_config
+        uploader.upload = mock_upload
+        cloudinary.uploader = uploader
+
+        monkeypatch.setitem(sys.modules, "cloudinary", cloudinary)
+        monkeypatch.setitem(sys.modules, "cloudinary.uploader", uploader)
+
+        class DummyImage:
+            id = "image-1"
+
+        result = upload_mask_to_cloudinary(b"mask-bytes", DummyImage())
+        assert result == {
+            "cloud_name": "demo",
+            "cloudinary_public_id": "mask-public-id",
+        }
+        assert upload_calls["config"]["cloud_name"] == "demo"
+        assert upload_calls["upload"]["folder"] == "uploads/crop-masks"
+        assert upload_calls["upload"]["public_id"] == "image-1"
+
+    def test_upload_mask_to_cloudinary_requires_env(self, monkeypatch):
+        from api.utils import upload_mask_to_cloudinary
+
+        monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
+        monkeypatch.delenv("CLOUDINARY_API_KEY", raising=False)
+        monkeypatch.delenv("CLOUDINARY_API_SECRET", raising=False)
+
+        class DummyImage:
+            id = "image-1"
+
+        with pytest.raises(ValueError):
+            upload_mask_to_cloudinary(b"mask-bytes", DummyImage())

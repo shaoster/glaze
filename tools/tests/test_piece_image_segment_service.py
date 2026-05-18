@@ -7,7 +7,9 @@ without downloading any model weights.
 
 import io
 import os
+import importlib
 import unittest
+import types
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -253,6 +255,86 @@ class TestAuthVerification(unittest.TestCase):
             headers={"Content-Type": "image/png", "x-api-key": "wrong"},
         )
         self.assertEqual(resp.status_code, 403)
+
+    @patch("requests.Session.get")
+    def test_json_url_request_uses_download_with_retry(self, mock_get):
+        mock_resp = MagicMock()
+        mock_resp.content = io.BytesIO()
+        rgba = _make_rgba(100, 100, _single_blob_mask(100, 100, (10, 10, 90, 90)))
+        rgba.save(mock_resp.content, format="PNG")
+        mock_resp.content = mock_resp.content.getvalue()
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+
+        client = self._make_client(token=None)
+        resp = client.post("/", json={"url": "https://example.com/image.jpg"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(mock_get.call_count, 1)
+        self.assertEqual(mock_get.call_args.kwargs["timeout"], 30)
+
+
+class TestModalBootstrap(unittest.TestCase):
+    """Exercise the import-time Modal bootstrap path."""
+
+    def test_import_sets_up_modal_app(self):
+        fake_modal = types.ModuleType("modal")
+
+        class FakeBuilder:
+            def pip_install(self, *args, **kwargs):
+                return self
+
+            def run_commands(self, *args, **kwargs):
+                return self
+
+        class FakeImage:
+            @staticmethod
+            def debian_slim():
+                return FakeBuilder()
+
+        class FakeSecret:
+            @staticmethod
+            def from_name(name):
+                return f"secret:{name}"
+
+        class FakeApp:
+            def __init__(self, name, image=None, secrets=None):
+                self.name = name
+                self.image = image
+                self.secrets = secrets
+
+            def function(self):
+                def decorator(func):
+                    return func
+
+                return decorator
+
+        def asgi_app(label=None):
+            def decorator(func):
+                return func
+
+            return decorator
+
+        fake_modal.Image = FakeImage
+        fake_modal.Secret = FakeSecret
+        fake_modal.App = FakeApp
+        fake_modal.asgi_app = asgi_app
+
+        with patch.dict("sys.modules", {"modal": fake_modal}):
+            module = importlib.import_module("tools.piece_image_segment_service")
+            module = importlib.reload(module)
+            with patch.dict(
+                "sys.modules",
+                {
+                    "rembg": MagicMock(),
+                    "pillow_heif": MagicMock(),
+                },
+            ):
+                app = module.web()
+
+        self.assertIsInstance(module.app, FakeApp)
+        self.assertEqual(module.app.name, "piece-image-segment-service")
+        self.assertEqual(module.app.secrets, ["secret:piece-image-segment-secret"])
+        self.assertIsNotNone(app)
 
 
 if __name__ == "__main__":

@@ -114,6 +114,34 @@ class TestRunCropInference:
         assert crop_run.status == CropRun.Status.ERROR
         assert crop_run.error == "network failure"
 
+    def test_crop_run_on_invalid_mask_payload(self, piece_state_image):
+        from api.utils import run_crop_inference
+
+        with patch(
+            "api.utils.calculate_subject_mask_remote",
+            return_value={"mask": "not-base64"},
+        ):
+            crop_run = run_crop_inference(piece_state_image)
+
+        assert crop_run.status == CropRun.Status.ERROR
+        assert crop_run.error is not None
+
+    def test_crop_run_continues_when_mask_upload_fails(self, piece_state_image):
+        from api.utils import run_crop_inference
+
+        with patch(
+            "api.utils.calculate_subject_mask_remote",
+            return_value={"mask": MOCK_MASK_B64},
+        ):
+            with patch(
+                "api.utils.upload_mask_to_cloudinary",
+                side_effect=ValueError("upload failed"),
+            ):
+                crop_run = run_crop_inference(piece_state_image)
+
+        assert crop_run.status == CropRun.Status.SUCCESS
+        assert crop_run.mask_asset is None
+
     def test_crop_run_associates_async_task(self, piece_state_image, user):
         from api.utils import run_crop_inference
 
