@@ -111,7 +111,7 @@ Internet :80/:443
          └─ web:8000  (2 replicas — Docker DNS round-robins across both)
 ```
 
-`web` runs with `deploy.replicas: 2`; both replicas are only reachable within the Docker network (no host port bindings). Docker's embedded DNS resolver (`127.0.0.11`) is configured in nginx with `valid=10s` so replica IP changes are picked up within 10 seconds without an nginx reload. nginx round-robins across both IPs with `max_fails=1 fail_timeout=10s`.
+`web` runs with `deploy.replicas: 2`; both replicas are only reachable within the Docker network (no host port bindings). Docker's internal DNS returns both replica IPs at nginx startup; nginx round-robins across them with `max_fails=1 fail_timeout=10s`. A raw-IP `default_server` block returns 444 before requests reach Django.
 
 ### Operational commands
 

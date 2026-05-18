@@ -46,13 +46,20 @@ cd ~/glaze
 docker compose --profile production up -d
 
 echo "--- waiting for nginx to be ready ---"
+nginx_ready=false
 for i in $(seq 1 24); do
     if docker compose exec -T nginx nginx -t 2>/dev/null; then
+        nginx_ready=true
         break
     fi
     echo "  waiting... ($i/24)"
     sleep 5
 done
+if [[ "$nginx_ready" != "true" ]]; then
+    echo "ERROR: nginx did not become ready after 120s"
+    docker compose logs nginx
+    exit 1
+fi
 
 echo "--- switching cert renewal to webroot (zero-downtime) ---"
 # nginx is now serving /.well-known/acme-challenge/ from /var/www/certbot-challenges.

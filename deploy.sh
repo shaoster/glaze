@@ -50,7 +50,7 @@ mv "$env_tmp" .env
 trap - EXIT
 
 echo "--- pulling release image ---"
-docker compose pull
+docker compose --profile production pull
 
 echo "--- restarting services ---"
 # --force-recreate ensures containers always pick up .env changes even when
