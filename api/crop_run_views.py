@@ -1,9 +1,10 @@
 """Views for CropRun — unified segmentation-inference persistence and human corrections."""
 
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, mixins, viewsets
+from rest_framework import generics, mixins, status, viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from .models import CropRun, Image, Piece, PieceStateImage
 from .serializers import CropRunCreateSerializer, CropRunSerializer
@@ -20,6 +21,20 @@ class CropRunViewSet(
         if self.action == "create":
             return CropRunCreateSerializer
         return CropRunSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        crop_run = self.perform_create(serializer)
+        output_serializer = CropRunSerializer(
+            crop_run, context=self.get_serializer_context()
+        )
+        headers = self.get_success_headers(output_serializer.data)
+        return Response(
+            output_serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
 
     def get_queryset(self):
         user = self.request.user
@@ -60,14 +75,11 @@ class CropRunViewSet(
             "deployment": "web-ui",
             "version": None,
         }
-        crop = serializer.validated_data.get("crop")
-        CropRun.objects.create(
+        return serializer.save(
             image=image,
-            source=source,
             submitter=user,
-            crop=crop,
-            notes=serializer.validated_data.get("notes", ""),
-            status=CropRun.Status.SUCCESS if crop else CropRun.Status.NO_SUBJECT,
+            source=source,
+            status=CropRun.Status.SUCCESS,
         )
 
 

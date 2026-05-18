@@ -139,12 +139,24 @@ class TestCropRunViewSet:
         }
         response = client.post(url, payload, format="json")
         assert response.status_code == status.HTTP_201_CREATED
+        assert str(response.data["image_id"]) == str(image.id)
+        assert response.data["crop"] == payload["crop"]
         assert CropRun.objects.filter(image=image, source__type="human").exists()
+
+    def test_human_run_requires_crop(self, user, image):
+        client = self._client(user)
+        url = "/api/crop-runs/"
+        payload = {"image_id": str(image.id)}
+        response = client.post(url, payload, format="json")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_human_run_non_owner_denied(self, other_user, image):
         client = self._client(other_user)
         url = "/api/crop-runs/"
-        payload = {"image_id": str(image.id)}
+        payload = {
+            "image_id": str(image.id),
+            "crop": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8},
+        }
         response = client.post(url, payload, format="json")
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -154,9 +166,13 @@ class TestCropRunViewSet:
         )
         client = self._client(admin)
         url = "/api/crop-runs/"
-        payload = {"image_id": str(image.id)}
+        payload = {
+            "image_id": str(image.id),
+            "crop": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8},
+        }
         response = client.post(url, payload, format="json")
         assert response.status_code == status.HTTP_201_CREATED
+        assert str(response.data["image_id"]) == str(image.id)
 
     def test_list_returns_own_runs(self, user, piece_with_image, image):
         CropRun.objects.create(

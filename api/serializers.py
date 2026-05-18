@@ -928,8 +928,41 @@ class CropRunSerializer(serializers.ModelSerializer):
 
 class CropRunCreateSerializer(serializers.ModelSerializer):
     image_id = serializers.UUIDField(write_only=True)
-    crop = serializers.JSONField(required=False, allow_null=True)
+    crop = serializers.JSONField()
     notes = serializers.CharField(required=False, allow_blank=True, default="")
+
+    def validate_crop(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Crop must be an object.")
+        cleaned = {}
+        for field in ("x", "y", "width", "height"):
+            try:
+                cleaned[field] = float(value[field])
+            except (KeyError, TypeError, ValueError) as exc:
+                raise serializers.ValidationError(f"Crop requires numeric {field}.") from exc
+            if not 0 <= cleaned[field] <= 1:
+                raise serializers.ValidationError(
+                    f"Crop {field} must be between 0 and 1."
+                )
+        if cleaned["width"] <= 0 or cleaned["height"] <= 0:
+            raise serializers.ValidationError(
+                "Crop width and height must be greater than 0."
+            )
+        return cleaned
+
+    def create(self, validated_data):
+        validated_data.pop("image_id", None)
+        image = validated_data.pop("image")
+        submitter = validated_data.pop("submitter")
+        source = validated_data.pop("source")
+        status = validated_data.pop("status")
+        return CropRun.objects.create(
+            image=image,
+            submitter=submitter,
+            source=source,
+            status=status,
+            **validated_data,
+        )
 
     class Meta:
         model = CropRun

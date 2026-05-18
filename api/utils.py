@@ -144,6 +144,7 @@ def upload_mask_to_cloudinary(mask_bytes: bytes, image) -> dict:
 def run_crop_inference(image, async_task=None) -> "CropRun":
     """Call the segment service, derive crop bbox, upload mask, persist CropRun."""
     import base64  # noqa: PLC0415
+    import binascii  # noqa: PLC0415
     import io  # noqa: PLC0415
     import time  # noqa: PLC0415
 
@@ -184,17 +185,29 @@ def run_crop_inference(image, async_task=None) -> "CropRun":
             async_task=async_task,
         )
 
-    mask_bytes = base64.b64decode(response["mask"])
+    try:
+        mask_bytes = base64.b64decode(response["mask"], validate=True)
 
-    # Derive tight bbox from alpha channel
-    pil_img = PILImage.open(io.BytesIO(mask_bytes))
-    alpha = pil_img.split()[3]
-    bbox = alpha.getbbox()  # (left, upper, right, lower) or None
-    if not bbox:
+        # Derive tight bbox from alpha channel
+        pil_img = PILImage.open(io.BytesIO(mask_bytes))
+        pil_img.load()
+        alpha = pil_img.split()[3]
+        bbox = alpha.getbbox()  # (left, upper, right, lower) or None
+        if not bbox:
+            return CropRun.objects.create(
+                image=image,
+                source=source,
+                status=CropRun.Status.NO_SUBJECT,
+                latency_ms=latency_ms,
+                async_task=async_task,
+            )
+    except (binascii.Error, OSError, IndexError, ValueError) as e:
+        logger.warning(f"Invalid segmentation mask for image {image.id}: {e}")
         return CropRun.objects.create(
             image=image,
             source=source,
-            status=CropRun.Status.NO_SUBJECT,
+            status=CropRun.Status.ERROR,
+            error=str(e),
             latency_ms=latency_ms,
             async_task=async_task,
         )

@@ -17,6 +17,7 @@ describe("ReportBadCropDialog", () => {
         open
         onClose={vi.fn()}
         imageId="img-1"
+        initialCrop={{ x: 0.1, y: 0.2, width: 0.8, height: 0.6 }}
       />,
     );
     expect(screen.getByText("Report Bad Crop")).toBeTruthy();
@@ -34,19 +35,33 @@ describe("ReportBadCropDialog", () => {
     expect(screen.queryByText("Report Bad Crop")).toBeNull();
   });
 
-  it("calls createHumanCropRun with imageId and notes on submit", async () => {
+  it("calls createHumanCropRun with imageId, crop, and notes on submit", async () => {
+    const crop = { x: 0.1, y: 0.2, width: 0.5, height: 0.5 };
     const mockCreate = vi.mocked(api.createHumanCropRun);
-    mockCreate.mockResolvedValueOnce(undefined);
+    mockCreate.mockResolvedValueOnce({
+      id: "run-1",
+      image_id: "img-abc",
+      source: {
+        type: "human",
+        backend: null,
+        deployment: "web-ui",
+        version: null,
+      },
+      crop,
+      status: "success",
+      created: new Date(),
+    });
 
     render(
       <ReportBadCropDialog
         open
         onClose={vi.fn()}
         imageId="img-abc"
+        initialCrop={crop}
       />,
     );
 
-    const notesInput = screen.getByRole("textbox");
+    const notesInput = screen.getByRole("textbox", { name: /notes/i });
     fireEvent.change(notesInput, { target: { value: "wrong subject" } });
 
     const reportButton = screen.getByRole("button", { name: "Report" });
@@ -55,6 +70,7 @@ describe("ReportBadCropDialog", () => {
     await waitFor(() => {
       expect(mockCreate).toHaveBeenCalledWith({
         image_id: "img-abc",
+        crop,
         notes: "wrong subject",
       });
     });
@@ -62,13 +78,26 @@ describe("ReportBadCropDialog", () => {
 
   it("shows success alert after submission", async () => {
     const mockCreate = vi.mocked(api.createHumanCropRun);
-    mockCreate.mockResolvedValueOnce(undefined);
+    mockCreate.mockResolvedValueOnce({
+      id: "run-1",
+      image_id: "img-abc",
+      source: {
+        type: "human",
+        backend: null,
+        deployment: "web-ui",
+        version: null,
+      },
+      crop: { x: 0, y: 0, width: 1, height: 1 },
+      status: "success",
+      created: new Date(),
+    });
 
     render(
       <ReportBadCropDialog
         open
         onClose={vi.fn()}
         imageId="img-abc"
+        initialCrop={{ x: 0, y: 0, width: 1, height: 1 }}
       />,
     );
 
@@ -88,6 +117,7 @@ describe("ReportBadCropDialog", () => {
         open
         onClose={vi.fn()}
         imageId="img-abc"
+        initialCrop={{ x: 0, y: 0, width: 1, height: 1 }}
       />,
     );
 
@@ -100,11 +130,23 @@ describe("ReportBadCropDialog", () => {
 
   it("disables buttons while submitting", async () => {
     const mockCreate = vi.mocked(api.createHumanCropRun);
-    let resolveSubmit: () => void;
+    let resolveSubmit: (() => void) | undefined;
     mockCreate.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
-          resolveSubmit = () => resolve(undefined);
+          resolveSubmit = () => resolve({
+            id: "run-1",
+            image_id: "img-abc",
+            source: {
+              type: "human",
+              backend: null,
+              deployment: "web-ui",
+              version: null,
+            },
+            crop: { x: 0, y: 0, width: 1, height: 1 },
+            status: "success",
+            created: new Date(),
+          });
         }),
     );
 
@@ -113,6 +155,7 @@ describe("ReportBadCropDialog", () => {
         open
         onClose={vi.fn()}
         imageId="img-abc"
+        initialCrop={{ x: 0, y: 0, width: 1, height: 1 }}
       />,
     );
 
@@ -125,7 +168,7 @@ describe("ReportBadCropDialog", () => {
     });
 
     await act(async () => {
-      resolveSubmit!();
+      resolveSubmit?.();
     });
   });
 
@@ -136,6 +179,7 @@ describe("ReportBadCropDialog", () => {
         open
         onClose={onClose}
         imageId="img-abc"
+        initialCrop={{ x: 0, y: 0, width: 1, height: 1 }}
       />,
     );
 

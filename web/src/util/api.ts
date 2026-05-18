@@ -699,10 +699,11 @@ export async function getImageCropRuns(
 
 export async function createHumanCropRun(payload: {
   image_id: string;
-  crop?: ImageCrop | null;
+  crop: ImageCrop;
   notes?: string;
-}): Promise<void> {
-  await client.post("crop-runs/", payload);
+}): Promise<CropRun> {
+  const { data } = await client.post<CropRun>("crop-runs/", payload);
+  return data;
 }
 
 /**
