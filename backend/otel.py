@@ -129,9 +129,11 @@ def configure_otel() -> bool:
     log_provider = LoggerProvider(resource=resource)
     log_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
     otel_logs.set_logger_provider(log_provider)
-    logging.getLogger().addHandler(
-        LoggingHandler(level=logging.INFO, logger_provider=log_provider)
-    )
+    otel_handler = LoggingHandler(level=logging.INFO, logger_provider=log_provider)
+    # Attach to root and to every logger that opts out of propagation in settings.LOGGING,
+    # because non-propagating loggers never reach the root handler.
+    for name in ("", "api", "django", "django.request"):
+        logging.getLogger(name).addHandler(otel_handler)
 
     DjangoInstrumentor().instrument()
     Psycopg2Instrumentor().instrument()
