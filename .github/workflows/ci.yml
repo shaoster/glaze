@@ -95,6 +95,26 @@ jobs:
             }
             core.setOutput('skip_main', match ? 'true' : 'false');
 
+      - name: Security Audit (No Secrets in CI)
+        shell: bash
+        run: |
+          # [SECURITY MANDATE] Static analysis of this workflow file.
+          # CI MUST NEVER have access to production secrets. 
+          # Allowed secrets list:
+          # - BAZEL_REMOTE_API_KEY: BuildBuddy remote cache (low-entropy key)
+          
+          secrets=$(grep -oE '\$\{\{ secrets\.[A-Z0-9_]+ \}\}' .github/workflows/ci.yml | sort -u)
+          
+          for s in $secrets; do
+            if [[ "$s" != "\${{ secrets.BAZEL_REMOTE_API_KEY }}" ]]; then
+              echo "🚨 SECURITY VIOLATION: Unauthorized secret usage detected in ci.yml: $s" >&2
+              echo "Only BAZEL_REMOTE_API_KEY is allowed in the CI environment." >&2
+              echo "Production secrets MUST be restricted to cd.yml." >&2
+              exit 1
+            fi
+          done
+          echo "✅ CI Security Audit passed. No unauthorized secrets detected."
+
   lint:
     name: Lint
     needs: preflight
