@@ -14,7 +14,7 @@ uvicorn backend.asgi:application --port 8080 --reload  # or any free port; gz_st
 # 1. Create a secret 'piece-image-segment-secret' with AUTH_TOKEN=xxx
 pip install modal
 modal setup
-modal deploy services
+modal deploy -m services
 ```
 
 Set `REMOTE_REMBG_URL` and `MODAL_AUTH_TOKEN` in your `.env` to enable offloading.

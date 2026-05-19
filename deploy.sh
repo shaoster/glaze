@@ -21,9 +21,15 @@ set -euo pipefail
 
 HOST=${1:?Usage: ./deploy.sh user@host commit-sha}
 KNOWN_SHA=${2:?Usage: ./deploy.sh user@host commit-sha}
+SSH_OPTS=(
+    -o ConnectTimeout=30
+    -o ServerAliveInterval=60
+    -o ServerAliveCountMax=10
+    -o TCPKeepAlive=yes
+)
 
 echo "--- deploying application ---"
-ssh "$HOST" env KNOWN_SHA="$KNOWN_SHA" bash <<'REMOTE'
+ssh "${SSH_OPTS[@]}" "$HOST" env KNOWN_SHA="$KNOWN_SHA" bash <<'REMOTE'
 set -euo pipefail
 
 echo "--- bootstrapping repo (no-op if already cloned) ---"
@@ -123,7 +129,7 @@ REMOTE
 
 # Sync certbot renewal hooks so cert reload behavior stays in version control.
 echo "--- syncing certbot renewal hooks ---"
-ssh "$HOST" "mkdir -p /etc/letsencrypt/renewal-hooks/deploy"
-scp certbot/renewal-hooks/deploy/01-glaze-nginx-reload.sh \
+ssh "${SSH_OPTS[@]}" "$HOST" "mkdir -p /etc/letsencrypt/renewal-hooks/deploy"
+scp "${SSH_OPTS[@]}" certbot/renewal-hooks/deploy/01-glaze-nginx-reload.sh \
     "$HOST":/etc/letsencrypt/renewal-hooks/deploy/01-glaze-nginx-reload.sh
-ssh "$HOST" "chmod +x /etc/letsencrypt/renewal-hooks/deploy/01-glaze-nginx-reload.sh"
+ssh "${SSH_OPTS[@]}" "$HOST" "chmod +x /etc/letsencrypt/renewal-hooks/deploy/01-glaze-nginx-reload.sh"
