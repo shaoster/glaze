@@ -120,7 +120,12 @@ git add web/pnpm-lock.yaml   # fails: no web/web/pnpm-lock.yaml
 
 ## Environment Variables
 
-**`.env.local`** (loaded by `source env.sh`, read by Django):
+**`.env.example`** (repo root, committed) is the canonical reference for all variables.
+Each entry has an inline comment explaining what it enables and what degrades when absent.
+Read it directly when debugging a "why isn't this feature working in dev" question.
+When a variable is added, removed, or renamed, update `.env.example`'s comment too.
+
+**`.env.local`** (loaded by `source env.sh`, read by Django) — quick absent-behavior reference:
 
 | Variable | Absent behavior |
 |---|---|

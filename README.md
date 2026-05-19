@@ -146,6 +146,8 @@ cp .env.example .env.local
 cp web/.env.example web/.env.local
 ```
 
+Each variable in `.env.example` has an inline comment explaining what it enables and what degrades gracefully when it is absent. Keep those comments current whenever a variable is added, removed, or renamed — the file is the primary reference for onboarding and for debugging "why isn't this feature working in dev."
+
 ### Setup
 
 | Command    | Description                                                                                                                                                                                                             |

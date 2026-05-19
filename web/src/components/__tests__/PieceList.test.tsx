@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceList from "../PieceList";
-import { CARD_CHROME_HEIGHT, DEFAULT_CARD_HEIGHT_ESTIMATE, DEFAULT_THUMBNAIL_ASPECT_HEIGHT, DEFAULT_THUMBNAIL_ASPECT_WIDTH, estimateCardHeight } from "../pieceCardHeight";
+import { CARD_CHROME_HEIGHT, DEFAULT_CARD_HEIGHT_ESTIMATE, DEFAULT_THUMBNAIL_ASPECT_HEIGHT, DEFAULT_THUMBNAIL_ASPECT_WIDTH, estimateCardHeight, getThumbnailRequestedHeight } from "../pieceCardHeight";
 import type { PieceSummary } from "../../util/types";
 
 vi.mock("../CloudinaryImage", () => ({
@@ -222,7 +222,8 @@ describe("PieceList", () => {
       const image = container.querySelector("img")!;
       const rw = Number(image.getAttribute("data-requested-width"));
       const rh = Number(image.getAttribute("data-requested-height"));
-      expect(rh).toBe(Math.round((rw * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) / DEFAULT_THUMBNAIL_ASPECT_WIDTH));
+      const piece = { thumbnail: { crop: null } } as PieceSummary;
+      expect(rh).toBe(getThumbnailRequestedHeight(piece, rw));
     });
 
     it("reserves the crop-derived card height for mocked image payloads", () => {
