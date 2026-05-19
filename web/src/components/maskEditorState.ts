@@ -34,6 +34,7 @@ export type MaskEditorState = {
 
   // polygon params
   polygonVertices: Point[];
+  polygonClosed: boolean;        // true = editing mode; click selects rather than adds
   selectedVertex: number | null;
   polygonSimplifyEps: number;
   polygonLiveSnap: boolean;
@@ -84,6 +85,8 @@ export type MaskEditorAction =
   | { type: "set_polygon_live_snap"; on: boolean }
   | { type: "set_polygon_snap_radius"; radius: number }
   | { type: "polygon_vertices_set"; vertices: Point[] }
+  | { type: "polygon_closed" }
+  | { type: "polygon_reopened" }
   // grabcut
   | { type: "set_grabcut_rect"; rect: Rect | null }
   | { type: "set_grabcut_hint_mode"; mode: GrabCutHintMode }
@@ -115,6 +118,7 @@ export const INITIAL_STATE: MaskEditorState = {
   floodContiguous: true,
   floodAntiAlias: false,
   polygonVertices: [],
+  polygonClosed: false,
   selectedVertex: null,
   polygonSimplifyEps: 1.4,
   polygonLiveSnap: true,
@@ -203,7 +207,11 @@ export function maskEditorReducer(
     case "set_polygon_snap_radius":
       return { ...state, polygonSnapRadius: action.radius };
     case "polygon_vertices_set":
-      return { ...state, polygonVertices: action.vertices, selectedVertex: null, dirty: true };
+      return { ...state, polygonVertices: action.vertices, polygonClosed: false, selectedVertex: null, dirty: true };
+    case "polygon_closed":
+      return { ...state, polygonClosed: true };
+    case "polygon_reopened":
+      return { ...state, polygonClosed: false };
 
     case "set_grabcut_rect":
       return { ...state, grabcutRect: action.rect };

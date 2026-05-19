@@ -28,15 +28,18 @@ import type {
 interface PolygonInspectorProps {
   state: MaskEditorState;
   dispatch: Dispatch<MaskEditorAction>;
-  onCommitPolygon?: () => void;
+  onClosePolygon?: () => void;
+  onApplyPolygon?: () => void;
+  onReopenPolygon?: () => void;
   onInsertVertex?: () => void;
   onSmoothPolygon?: () => void;
   onSimplifyPolygon?: () => void;
 }
 
-function PolygonInspector({ state, dispatch, onCommitPolygon, onInsertVertex, onSmoothPolygon, onSimplifyPolygon }: PolygonInspectorProps) {
+function PolygonInspector({ state, dispatch, onClosePolygon, onApplyPolygon, onReopenPolygon, onInsertVertex, onSmoothPolygon, onSimplifyPolygon }: PolygonInspectorProps) {
   const nVerts = state.polygonVertices.length;
   const sel = state.selectedVertex;
+  const closed = state.polygonClosed;
   return (
     <InspectorShell
       title="Polygon"
@@ -85,10 +88,21 @@ function PolygonInspector({ state, dispatch, onCommitPolygon, onInsertVertex, on
           <ActionButton full onClick={onSmoothPolygon} disabled={nVerts < 3}>
             Smooth ×3
           </ActionButton>
-          <ActionButton primary full onClick={onCommitPolygon} disabled={nVerts < 3}>
-            Close path · ⏎
-          </ActionButton>
+          {!closed ? (
+            <ActionButton primary full onClick={onClosePolygon} disabled={nVerts < 3}>
+              Close path · ⏎
+            </ActionButton>
+          ) : (
+            <ActionButton full onClick={onReopenPolygon}>
+              Reopen path
+            </ActionButton>
+          )}
         </div>
+        {closed && (
+          <ActionButton primary full icon={<MEIcon name="check" size={11} />} onClick={onApplyPolygon} disabled={nVerts < 3}>
+            Apply to mask · ⏎
+          </ActionButton>
+        )}
       </Section>
 
       <Section
@@ -155,7 +169,7 @@ function PolygonInspector({ state, dispatch, onCommitPolygon, onInsertVertex, on
       </Section>
 
       <Section title="Keyboard">
-        <ShortcutRow keys={["⏎"]} label="finish polygon" />
+        <ShortcutRow keys={["⏎"]} label={closed ? "apply to mask" : "close path"} />
         <ShortcutRow keys={["I"]} label="insert at midpoint" />
         <ShortcutRow keys={["⌫"]} label="delete selected" />
         <ShortcutRow keys={["⇧", "drag"]} label="move along edge" />
@@ -860,7 +874,9 @@ interface MaskEditorInspectorProps {
   state: MaskEditorState;
   dispatch: Dispatch<MaskEditorAction>;
   activeTool: ToolName;
-  onCommitPolygon?: () => void;
+  onClosePolygon?: () => void;
+  onApplyPolygon?: () => void;
+  onReopenPolygon?: () => void;
   onInsertVertex?: () => void;
   onSmoothPolygon?: () => void;
   onSimplifyPolygon?: () => void;
@@ -874,7 +890,9 @@ export default function MaskEditorInspector({
   state,
   dispatch,
   activeTool,
-  onCommitPolygon,
+  onClosePolygon,
+  onApplyPolygon,
+  onReopenPolygon,
   onInsertVertex,
   onSmoothPolygon,
   onSimplifyPolygon,
@@ -891,7 +909,9 @@ export default function MaskEditorInspector({
         <PolygonInspector
           state={state}
           dispatch={dispatch}
-          onCommitPolygon={onCommitPolygon}
+          onClosePolygon={onClosePolygon}
+          onApplyPolygon={onApplyPolygon}
+          onReopenPolygon={onReopenPolygon}
           onInsertVertex={onInsertVertex}
           onSmoothPolygon={onSmoothPolygon}
           onSimplifyPolygon={onSimplifyPolygon}

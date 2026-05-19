@@ -201,7 +201,7 @@ interface MaskEditorCanvasProps {
   imageHeight: number;
   candidateMask?: string | null;
   onPushUndo: (snapshot: ImageData) => void;
-  onCommitPolygon: () => void;
+  onClosePolygon: () => void;
 }
 
 export default function MaskEditorCanvas({
@@ -216,7 +216,7 @@ export default function MaskEditorCanvas({
   imageHeight,
   candidateMask,
   onPushUndo,
-  onCommitPolygon,
+  onClosePolygon,
 }: MaskEditorCanvasProps) {
   const tool = state.activeTool;
   const dragRect = useRef<{ startX: number; startY: number; x: number; y: number; w: number; h: number } | null>(null);
@@ -379,13 +379,18 @@ export default function MaskEditorCanvas({
 
     const onClick = (e: MouseEvent) => {
       const p = canvasPoint(overlay, e);
-      if (findVertex(p) !== null) return; // hit existing vertex, don't add
+      const hit = findVertex(p);
+      if (hit !== null) {
+        dispatch({ type: "polygon_vertex_selected", index: hit });
+        return;
+      }
+      if (state.polygonClosed) return; // closed: no new vertices on click
       dispatch({ type: "polygon_vertex_added", point: p });
     };
 
     const onDblClick = (e: MouseEvent) => {
       e.preventDefault();
-      onCommitPolygon();
+      onClosePolygon();
     };
 
     const onContextMenu = (e: MouseEvent) => {
@@ -416,10 +421,11 @@ export default function MaskEditorCanvas({
   }, [
     tool,
     state.polygonVertices,
+    state.polygonClosed,
     state.selectedVertex,
     overlayCanvasRef,
     maskCanvasRef,
-    onCommitPolygon,
+    onClosePolygon,
     dispatch,
   ]);
 

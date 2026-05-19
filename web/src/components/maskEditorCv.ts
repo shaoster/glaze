@@ -8,11 +8,21 @@ export function getCv(): Promise<typeof OpenCV> {
   return cvPromise;
 }
 
+// ---- Hint pixel encoding ----
+// Orange (R>160, B<80) = GC_FGD; slate-blue (R<80, B>120) = GC_BGD.
+// These are visually distinct and detectable from an RGBA canvas read-back.
+export const HINT_FG_COLOR = "oklch(0.62 0.14 40)";
+export const HINT_BG_COLOR = "oklch(0.55 0.06 240)";
+
+function isHintFg(r: number, b: number): boolean { return r > 160 && b < 80; }
+function isHintBg(r: number, b: number): boolean { return r < 80 && b > 120; }
+
 // ---- GrabCut ----
 
 export async function runGrabCut(
   srcCanvas: HTMLCanvasElement,
   maskCanvas: HTMLCanvasElement,
+  hintsCanvas: HTMLCanvasElement | null,
   rect: { x: number; y: number; w: number; h: number },
   iterations: number,
 ): Promise<void> {
@@ -21,28 +31,33 @@ export async function runGrabCut(
   const W = srcCanvas.width;
   const H = srcCanvas.height;
 
-  // Read source image pixels into a cv.Mat (RGBA → RGB)
-  const srcCtx = srcCanvas.getContext("2d")!;
-  const srcData = srcCtx.getImageData(0, 0, W, H);
-
-  // Build RGB Mat from RGBA data
-  const rgba = cv.matFromImageData(srcData);
+  const rgba = cv.matFromImageData(srcCanvas.getContext("2d")!.getImageData(0, 0, W, H));
   const rgb = new cv.Mat();
   cv.cvtColor(rgba, rgb, cv.COLOR_RGBA2RGB);
   rgba.delete();
 
-  // Build grabcut mask from current mask canvas (alpha>128 → GC_FGD, else GC_PR_BGD)
-  const maskCtx = maskCanvas.getContext("2d")!;
-  const maskData = maskCtx.getImageData(0, 0, W, H);
+  // Build GrabCut mask from existing mask canvas: treat current foreground as PR_FGD.
+  const maskData = maskCanvas.getContext("2d")!.getImageData(0, 0, W, H);
   const gcMask = new cv.Mat(H, W, cv.CV_8UC1);
   for (let i = 0; i < W * H; i++) {
-    // alpha channel is at index i*4+3
-    gcMask.data[i] = maskData.data[i * 4 + 3] > 128 ? cv.GC_FGD : cv.GC_PR_BGD;
+    gcMask.data[i] = maskData.data[i * 4 + 3] > 128 ? cv.GC_PR_FGD : cv.GC_PR_BGD;
+  }
+
+  // Overlay hard hint strokes: orange = GC_FGD, slate-blue = GC_BGD.
+  let hasHints = false;
+  if (hintsCanvas) {
+    const hData = hintsCanvas.getContext("2d")!.getImageData(0, 0, W, H);
+    for (let i = 0; i < W * H; i++) {
+      if (hData.data[i * 4 + 3] < 128) continue;
+      const r = hData.data[i * 4];
+      const b = hData.data[i * 4 + 2];
+      if (isHintFg(r, b)) { gcMask.data[i] = cv.GC_FGD; hasHints = true; }
+      else if (isHintBg(r, b)) { gcMask.data[i] = cv.GC_BGD; hasHints = true; }
+    }
   }
 
   const bgdModel = new cv.Mat();
   const fgdModel = new cv.Mat();
-
   const cvRect = new cv.Rect(
     Math.round(rect.x),
     Math.round(rect.y),
@@ -50,13 +65,14 @@ export async function runGrabCut(
     Math.round(rect.h),
   );
 
-  // First run uses GC_INIT_WITH_RECT; if mask already has FGD pixels use GC_INIT_WITH_MASK
-  const hasMask = maskData.data.some((_, i) => i % 4 === 3 && maskData.data[i] > 128);
-  const mode = hasMask ? cv.GC_EVAL : cv.GC_INIT_WITH_RECT;
+  // First run (no hints yet) uses GC_INIT_WITH_RECT for a clean initialisation.
+  // Once hints are painted, switch to GC_EVAL so the hard pins are respected.
+  const mode = hasHints ? cv.GC_EVAL : cv.GC_INIT_WITH_RECT;
 
   cv.grabCut(rgb, gcMask, cvRect, bgdModel, fgdModel, iterations, mode);
 
-  // Write result back to mask canvas: GC_FGD(1) and GC_PR_FGD(3) → foreground
+  // Write result back: GC_FGD(1) and GC_PR_FGD(3) → foreground.
+  const maskCtx = maskCanvas.getContext("2d")!;
   const outData = maskCtx.createImageData(W, H);
   for (let i = 0; i < W * H; i++) {
     const label = gcMask.data[i];
@@ -90,10 +106,7 @@ export async function snapVerticesToEdges(
   const W = srcCanvas.width;
   const H = srcCanvas.height;
 
-  const srcCtx = srcCanvas.getContext("2d")!;
-  const srcData = srcCtx.getImageData(0, 0, W, H);
-
-  const rgba = cv.matFromImageData(srcData);
+  const rgba = cv.matFromImageData(srcCanvas.getContext("2d")!.getImageData(0, 0, W, H));
   const gray = new cv.Mat();
   cv.cvtColor(rgba, gray, cv.COLOR_RGBA2GRAY);
   rgba.delete();
@@ -102,16 +115,14 @@ export async function snapVerticesToEdges(
 
   if (operator === "canny") {
     const lo = edgeThreshold * 128;
-    const hi = lo * 2;
-    cv.Canny(gray, edges, lo, hi);
+    cv.Canny(gray, edges, lo, lo * 2);
   } else {
-    // Sobel / Scharr — compute gradient magnitude
     const gx = new cv.Mat();
     const gy = new cv.Mat();
     const absGx = new cv.Mat();
     const absGy = new cv.Mat();
     if (operator === "scharr") {
-      cv.Sobel(gray, gx, cv.CV_16S, 1, 0, -1); // ksize=-1 uses Scharr
+      cv.Sobel(gray, gx, cv.CV_16S, 1, 0, -1);
       cv.Sobel(gray, gy, cv.CV_16S, 0, 1, -1);
     } else {
       cv.Sobel(gray, gx, cv.CV_16S, 1, 0, 3);
@@ -127,34 +138,19 @@ export async function snapVerticesToEdges(
 
   const minStrength = edgeThreshold * 255;
 
-  // For each vertex, find the strongest edge pixel within snapRadius
   const snapped = vertices.map((v) => {
     const cx = Math.round(v.x);
     const cy = Math.round(v.y);
     const r = Math.round(snapRadius);
+    let bestX = v.x, bestY = v.y, bestStrength = minStrength;
 
-    let bestX = v.x;
-    let bestY = v.y;
-    let bestStrength = minStrength;
-
-    const x0 = Math.max(0, cx - r);
-    const x1 = Math.min(W - 1, cx + r);
-    const y0 = Math.max(0, cy - r);
-    const y1 = Math.min(H - 1, cy + r);
-
-    for (let py = y0; py <= y1; py++) {
-      for (let px = x0; px <= x1; px++) {
-        // Stay within circle
+    for (let py = Math.max(0, cy - r); py <= Math.min(H - 1, cy + r); py++) {
+      for (let px = Math.max(0, cx - r); px <= Math.min(W - 1, cx + r); px++) {
         if ((px - cx) * (px - cx) + (py - cy) * (py - cy) > r * r) continue;
-        const strength = edges.data[py * W + px];
-        if (strength > bestStrength) {
-          bestStrength = strength;
-          bestX = px;
-          bestY = py;
-        }
+        const s = edges.data[py * W + px];
+        if (s > bestStrength) { bestStrength = s; bestX = px; bestY = py; }
       }
     }
-
     return { x: bestX, y: bestY };
   });
 

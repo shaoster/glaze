@@ -165,7 +165,12 @@ export default function MaskEditor({
 
   // ---- Polygon operations ----
 
-  const handleCommitPolygon = useCallback(() => {
+  const handleClosePolygon = useCallback(() => {
+    if (state.polygonVertices.length < 3) return;
+    dispatch({ type: "polygon_closed" });
+  }, [state.polygonVertices.length]);
+
+  const handleApplyPolygon = useCallback(() => {
     const canvas = maskCanvasRef.current;
     if (!canvas || state.polygonVertices.length < 3) return;
     const ctx = canvas.getContext("2d")!;
@@ -245,7 +250,11 @@ export default function MaskEditor({
           if (tool === "grabcut") dispatch({ type: "set_grabcut_rect", rect: null });
           break;
         case "Enter":
-          if (tool === "polygon") { e.preventDefault(); handleCommitPolygon(); }
+          if (tool === "polygon") {
+            e.preventDefault();
+            if (state.polygonClosed) handleApplyPolygon();
+            else handleClosePolygon();
+          }
           break;
         case "Backspace": case "Delete":
           if (tool === "polygon" && state.selectedVertex != null) {
@@ -288,12 +297,14 @@ export default function MaskEditor({
     state.selectedVertex,
     state.snapRadius,
     state.polygonVertices,
+    state.polygonClosed,
     handleUndo,
     handleRedo,
     handleRunGrabCut,
     handleSnapAll,
     handleSnapVertex,
-    handleCommitPolygon,
+    handleClosePolygon,
+    handleApplyPolygon,
     handleInsertVertex,
   ]);
 
@@ -467,14 +478,16 @@ export default function MaskEditor({
           imageHeight={imageHeight}
           candidateMask={candidateMask}
           onPushUndo={handlePushUndo}
-          onCommitPolygon={handleCommitPolygon}
+          onClosePolygon={handleClosePolygon}
         />
 
         <MaskEditorInspector
           state={state}
           dispatch={dispatch}
           activeTool={state.activeTool}
-          onCommitPolygon={handleCommitPolygon}
+          onClosePolygon={handleClosePolygon}
+          onApplyPolygon={handleApplyPolygon}
+          onReopenPolygon={() => dispatch({ type: "polygon_reopened" })}
           onInsertVertex={handleInsertVertex}
           onSmoothPolygon={handleSmoothPolygon}
           onSimplifyPolygon={handleSimplifyPolygon}
