@@ -20,6 +20,16 @@ _gz_detect_shared_root() {
     cd "$common_dir/.." 2>/dev/null && pwd
 }
 
+_gz_prepend_path_once() {
+    local dir="$1"
+    [[ -d "$dir" ]] || return 0
+    case ":$PATH:" in
+        *":$dir:"*) return 0 ;;
+    esac
+    PATH="$dir:$PATH"
+    export PATH
+}
+
 _detected_root="$(_gz_detect_git_root)"
 _detected_root="${_detected_root:-$_GLAZE_SCRIPT_DIR}"
 
@@ -39,22 +49,49 @@ if [[ -z "$_GLAZE_AGENT_ENV_LOADED" || "${GLAZE_ROOT:-}" != "$_detected_root" ]]
     _GLAZE_LOGS="$GLAZE_ROOT/.dev-logs"
     mkdir -p "$_GLAZE_PIDS" "$_GLAZE_LOGS"
 
-    _gz_preferred_root_for() {
-        local rel="$1"
-        if [[ -e "$GLAZE_ROOT/$rel" ]]; then
-            printf '%s\n' "$GLAZE_ROOT"
-            return 0
-        fi
-        if [[ "$GLAZE_SHARED_ROOT" != "$GLAZE_ROOT" && -e "$GLAZE_SHARED_ROOT/$rel" ]]; then
-            printf '%s\n' "$GLAZE_SHARED_ROOT"
-            return 0
-        fi
-        printf '%s\n' "$GLAZE_ROOT"
+    _gz_env_rel_paths=(
+        ".env"
+        ".env.local"
+        "web/.env"
+        "web/.env.local"
+        "mobile/.env"
+        "mobile/.env.local"
+    )
+
+    _gz_has_env_files() {
+        local root="$1"
+        local rel
+        for rel in "${_gz_env_rel_paths[@]}"; do
+            [[ -f "$root/$rel" ]] && return 0
+        done
+        return 1
     }
 
-    # Activate Bazel-managed venv if present (built by `bazel run //:manage.venv`)
-    _GLAZE_VENV_ROOT="$(_gz_preferred_root_for ".manage.venv/bin/activate")"
-    [[ -f "$_GLAZE_VENV_ROOT/.manage.venv/bin/activate" ]] && source "$_GLAZE_VENV_ROOT/.manage.venv/bin/activate"
+    _gz_missing_env_error() {
+        local shared_has_env=0
+        if [[ "$GLAZE_SHARED_ROOT" != "$GLAZE_ROOT" ]] && _gz_has_env_files "$GLAZE_SHARED_ROOT"; then
+            shared_has_env=1
+        fi
+
+        if (( shared_has_env )); then
+            cat >&2 <<EOF
+This worktree has no valid .env or .env.local file.
+Copy the root checkout's .env.local into this worktree, then run \`source env.sh\`.
+EOF
+        else
+            if [[ "$GLAZE_SHARED_ROOT" == "$GLAZE_ROOT" ]]; then
+                cat >&2 <<EOF
+This repo checkout has no valid .env or .env.local file.
+Run \`cp .env.example .env.local && source env.sh\` to initialize it.
+EOF
+            else
+                cat >&2 <<EOF
+This worktree has no valid .env or .env.local file.
+Run \`cp .env.example .env.local\` in the root checkout, then copy or symlink it into this worktree and run \`source env.sh\` again.
+EOF
+            fi
+        fi
+    }
 
     # Load local env vars
     _gz_load_env_file() {
@@ -66,16 +103,17 @@ if [[ -z "$_GLAZE_AGENT_ENV_LOADED" || "${GLAZE_ROOT:-}" != "$_detected_root" ]]
         set +a
     }
 
-    _gz_load_preferred_env_file() {
-        local rel="$1"
-        local preferred_root
-        preferred_root="$(_gz_preferred_root_for "$rel")"
-        _gz_load_env_file "$preferred_root/$rel"
-    }
+    if ! _gz_has_env_files "$GLAZE_ROOT"; then
+        _gz_missing_env_error
+        return 1
+    fi
 
-    _gz_load_preferred_env_file ".env.local"
-    _gz_load_preferred_env_file "web/.env.local"
-    _gz_load_preferred_env_file "mobile/.env.local"
+    for _gz_env_rel in "${_gz_env_rel_paths[@]}"; do
+        _gz_load_env_file "$GLAZE_ROOT/$_gz_env_rel"
+    done
+    unset _gz_env_rel
+
+    _gz_prepend_path_once "$GLAZE_ROOT/web/node_modules/.bin"
 
     # Prevent Rust/rtk stack overflows from crashing the WSL2 VM
     ulimit -s unlimited 2>/dev/null || true
@@ -92,7 +130,7 @@ unset _detected_root
 # ---------------------------------------------------------------------------
 
 _gz_venv_root() {
-    _gz_preferred_root_for ".manage.venv/bin/activate"
+    printf '%s\n' "$GLAZE_ROOT"
 }
 
 _gz_port_is_free() {  # _gz_port_is_free <port>
@@ -260,26 +298,10 @@ gz_install_mcp_tools() {
 }
 
 gz_setup() {
-    local setup_mode="shared"
-    if [[ "${GLAZE_SETUP_ISOLATED:-0}" == "1" ]]; then
-        setup_mode="isolated"
+    if [[ $# -gt 0 ]]; then
+        echo "Usage: gz_setup"
+        return 2
     fi
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --isolated)
-                setup_mode="isolated"
-                ;;
-            --shared)
-                setup_mode="shared"
-                ;;
-            *)
-                echo "Usage: gz_setup [--shared|--isolated]"
-                return 2
-                ;;
-        esac
-        shift
-    done
 
     echo "=== Glaze: setting up development environment ==="
     # RTK
@@ -305,9 +327,9 @@ gz_setup() {
     echo "--- Syncing web dependencies via Bazel (@npm//:sync)..."
     (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel run @npm//:sync)
 
-    # Activate the venv in the current shell — it may not have been active at
-    # source time if the repo was freshly cloned and the venv didn't exist yet.
-    [[ -f "$GLAZE_ROOT/.manage.venv/bin/activate" ]] && source "$GLAZE_ROOT/.manage.venv/bin/activate"
+    echo "--- Reloading shell bootstrap..."
+    gz_reload
+    unset GLAZE_AGENT
 
     echo "=== Setup complete ==="
     echo "    Run 'gz_gentypes' to regenerate TypeScript types via Bazel (no backend)."
@@ -853,11 +875,11 @@ gz_logs() {    # gz_logs [backend|web|all]  — defaults to running servers
 # ---------------------------------------------------------------------------
 
 gz_reload() {
-    # Re-source this file, bypassing the double-source guard so edits take
-    # effect in the current shell.
+    # Re-source the interactive bootstrap so edits and newly materialized
+    # dependencies take effect in the current shell.
     unset _GLAZE_AGENT_ENV_LOADED
     # shellcheck disable=SC1091
-    source "$_GLAZE_SCRIPT_DIR/env-agent.sh"
+    source "$_GLAZE_SCRIPT_DIR/env.sh"
 }
 
 gz_gentypes() {
@@ -872,9 +894,9 @@ gz_gentypes() {
 
 _GZ_SHORTCUTS=(
     "gz_help           — show this list of shortcuts"
-    "gz_reload         — re-source env.sh in the current shell (picks up env-agent.sh edits)"
+    "gz_reload         — re-source env.sh in the current shell (picks up env/bootstrap edits)"
     "gz_install_mcp_tools — install MCP tool dependencies (jq, curl, git, gh)"
-    "gz_setup [--isolated] — setup (shared reuse by default; --isolated for per-worktree deps)"
+    "gz_setup          — setup the isolated worktree environment"
     "gz_manage <cmd>   — run any manage.py subcommand"
     "gz_migrate        — migrate"
     "gz_makemigrations — makemigrations"

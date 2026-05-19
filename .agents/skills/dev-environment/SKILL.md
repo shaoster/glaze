@@ -29,16 +29,16 @@ rtk bazel run @nodejs_linux_amd64//:npm -- install
 ```
 
 In a new environment, always run `gz_setup` before doing anything else.
-`gz_setup` reuses the main checkout's `.venv` and `web/node_modules` by default from a
-repo-local worktree. Use `gz_setup --isolated` (or `GLAZE_SETUP_ISOLATED=1 gz_setup`)
-when a branch needs its own dependency environment (changing Python or Node packages).
+`gz_setup` materializes the isolated worktree-local developer environment. Re-run it
+after changing Python or Node packages so the current shell and future shells pick up
+the refreshed `PATH` and activated environment.
 
 ## Shell Bootstrap
 
 | Script | Purpose |
 |---|---|
 | `env.sh` | Interactive shells: sources `~/.bashrc`, delegates to `env-agent.sh`, defines all `gz_*` helpers |
-| `env-agent.sh` | Lightweight, silent bootstrap for non-interactive shells: activates `.venv` if present, loads `.env.local` vars, exports `BASH_ENV` |
+| `env-agent.sh` | Lightweight, silent bootstrap for non-interactive shells: activates `.manage.venv` if present, loads `.env.local` vars, prepends repo-local dev bins, exports `BASH_ENV` |
 
 `env.sh` sources `env-agent.sh` — venv activation and env-var loading logic live in one place.
 
@@ -110,11 +110,11 @@ Always run `git` commands from the repo root. Wrap subdirectory commands in a su
 
 ```bash
 # ✅ correct — shell stays at repo root
-(cd web && rtk bazel run @nodejs_linux_amd64//:npx -- pnpm install)
+(cd web && pnpm install)
 git add web/pnpm-lock.yaml
 
 # ❌ incorrect — shell is now inside web/
-cd web && rtk bazel run @nodejs_linux_amd64//:npx -- pnpm install
+cd web && pnpm install
 git add web/pnpm-lock.yaml   # fails: no web/web/pnpm-lock.yaml
 ```
 
@@ -150,15 +150,22 @@ under `/home/phil/.cache/bazel`. It is large, slow to traverse, and not a source
 truth for anything in the repo. To inspect a Python package, read it from
 `.manage.venv/lib/python3.12/site-packages/` instead.
 
-## Symlinking `.env.local` into a Worktree
+## Copying `.env.local` into a Worktree
 
-When working in an agent worktree, symlink the untracked root `.env.local` into the
+When working in an agent worktree, copy the untracked root `.env.local` into the
 worktree so servers load Cloudinary and OAuth credentials:
 
 ```bash
-ln -s /home/phil/code/glaze/.env.local .env.local
-ln -s /home/phil/code/glaze/web/.env.local web/.env.local
+cp /home/phil/code/glaze/.env.local .env.local
 ```
+
+If the worktree also needs web-only overrides, copy `web/.env.local` separately
+afterward; do not symlink either file.
+
+`env.sh` and `env-agent.sh` only read `.env` / `.env.local` files from the current
+checkout. If a worktree does not have a valid env file, bootstrap fails fast and
+prints guidance for either copying the root checkout's env file or creating one
+from `.env.example`.
 
 **Avoid copying `.env.local` from prod** — prod env files often contain keys set to
 empty strings (e.g. `EMAIL_PORT=`) that are valid in shell but cause Django startup

@@ -55,6 +55,11 @@ rtk bazel test //api:api_test //api:api_mypy
 Commit `pyproject.toml`, `uv.lock`, `MODULE.bazel.lock` (updated automatically
 by Bazel), and the `BUILD.bazel` change together.
 
+If the package update introduced new executables or changed the materialized
+worktree environment, run `gz_reload` in the current shell so `PATH` refreshes
+immediately. If the worktree’s dependency environment itself needs to be
+re-materialized, rerun `gz_setup`.
+
 ## Adding a New npm Package
 
 Bazel resolves npm packages from `web/pnpm-lock.yaml`. After any `npm install`:
@@ -67,7 +72,7 @@ Prefer Python for standalone dev tooling when the dependency graph allows it. Us
 
 # Regenerate the pnpm lockfile from the updated package-lock.json
 # pnpm must run from web/ where package.json and pnpm-lock.yaml live
-(cd web && rtk bazel run @nodejs_linux_amd64//:npx -- pnpm import)
+(cd web && pnpm import)
 ```
 
 `pnpm` is available at `~/.nvm/versions/node/*/bin/pnpm` when nvm is active. If
@@ -85,3 +90,8 @@ Add the package to the appropriate `BUILD.bazel` entry if Bazel tests fail with 
 missing module error.
 
 Commit `web/package.json`, `web/package-lock.json`, and `web/pnpm-lock.yaml` together.
+
+If the package update introduced new executables or changed the materialized
+worktree environment, run `gz_reload` in the current shell so `PATH` refreshes
+immediately. If the worktree’s dependency environment itself needs to be
+re-materialized, rerun `gz_setup`.

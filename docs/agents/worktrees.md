@@ -79,6 +79,16 @@ git worktree add .agent-worktrees/codex/issue-47-fix-auth -b issue/47-fix-auth m
 git worktree add .agent-worktrees/codex/issue-49-add-export -b issue/49-add-export main
 git worktree add .agent-worktrees/codex/issue-50-clean-tags -b issue/50-clean-tags main
 
+# Copy local env files into each worktree (do not symlink)
+cp .env.local .agent-worktrees/codex/issue-47-fix-auth/.env.local
+cp .env.local .agent-worktrees/codex/issue-49-add-export/.env.local
+cp .env.local .agent-worktrees/codex/issue-50-clean-tags/.env.local
+
+# Copy web-only overrides separately if needed
+# cp web/.env.local .agent-worktrees/codex/issue-47-fix-auth/web/.env.local
+# cp web/.env.local .agent-worktrees/codex/issue-49-add-export/web/.env.local
+# cp web/.env.local .agent-worktrees/codex/issue-50-clean-tags/web/.env.local
+
 # List all worktrees
 git worktree list
 
@@ -96,7 +106,8 @@ git worktree list
 
 **Why `.agent-worktrees/`**: Keeping worktrees inside the project directory means
 agents already have file permissions, share the repo-local bootstrap, and avoid
-tool-reserved paths like `.codex`.
+tool-reserved paths like `.codex`. Each new worktree should own its own copied
+`.env.local` files rather than symlinking them from another checkout.
 
 ### Step 3: Apply existing work
 

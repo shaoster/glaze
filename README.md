@@ -61,7 +61,7 @@ This section is for folks who just want to fire up the whole stack quickly and s
 
 ```bash
 source env.sh
-gz_setup    # first-time only: creates venv, installs deps, runs migrations
+gz_setup    # materializes the worktree environment; rerun after dependency changes
 gz_start    # starts backend + web via the Bazel-run launcher
 ```
 
@@ -77,7 +77,7 @@ source env.sh
 
 **VS Code / Cursor:** the repo ships terminal profiles in [`.vscode/settings.json`](.vscode/settings.json) for Linux and macOS that automatically source `env.sh` in every new integrated terminal. Linux uses `bash`; macOS uses `zsh` with a repo-owned [`.vscode/.zshrc`](.vscode/.zshrc). The venv is activated and `gz_*` helpers are available from the moment the terminal opens.
 
-**AI coding agents (Claude Code, Codex, Cursor agent):** a companion script [`env-agent.sh`](env-agent.sh) provides a silent, lightweight bootstrap (venv activation + `.env.local` loading) for non-interactive shells. Claude Code picks it up via `.claude/settings.json`; Codex and other agents inherit it through `BASH_ENV` when launched from an `env.sh`-sourced terminal. Prefer repo-local worktrees under `.agent-worktrees/...` instead of `/tmp`; the bootstrap detects the active git worktree root automatically and falls back to the main checkout's `.env.local` and `.venv` when the worktree does not have its own yet. `gz_setup` reuses the shared `.venv` and `web/node_modules` by default, and `gz_setup --isolated` creates worktree-local dependency installs when a branch is changing Python or Node packages. Keep repo-local Codex-specific config in `.agent-config/codex/` rather than `.codex`, which may be reserved by the local Codex installation. See [`docs/agents/dev.md`](docs/agents/dev.md) for details.
+**AI coding agents (Claude Code, Codex, Cursor agent):** a companion script [`env-agent.sh`](env-agent.sh) provides a silent, lightweight bootstrap (venv activation + current-checkout `.env`/`.env.local` loading) for non-interactive shells. Claude Code picks it up via `.claude/settings.json`; Codex and other agents inherit it through `BASH_ENV` when launched from an `env.sh`-sourced terminal. Prefer repo-local worktrees under `.agent-worktrees/...` instead of `/tmp`; the bootstrap detects the active git worktree root automatically and expects the worktree to own its `.env`/`.env.local` files and materialized dependency environment after `gz_setup` has run. `gz_setup` materializes the isolated worktree-local developer environment, and `gz_reload` refreshes the current shell after setup so the new `PATH` is visible immediately. Keep repo-local Codex-specific config in `.agent-config/codex/` rather than `.codex`, which may be reserved by the local Codex installation. See [`docs/agents/dev.md`](docs/agents/dev.md) for details.
 
 ### Vibe Coding With Agents
 
@@ -152,7 +152,8 @@ Each variable in `.env.example` has an inline comment explaining what it enables
 
 | Command    | Description                                                                                                                                                                                                             |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gz_setup` | Setup helper: reuses shared deps by default in repo-local worktrees, or use `gz_setup --isolated` for fresh worktree-local `.venv` and `web/node_modules`. Also runs DB migrations and installs Node via nvm if needed. |
+| `gz_setup` | Setup helper: materializes the isolated worktree-local developer environment, refreshes the current shell with the new PATH, and runs DB migrations. Re-run after changing Python or Node dependencies. |
+| `gz_reload` | Re-source `env.sh` in the current shell after changing shell bootstrap, env files, or freshly materialized tools that should appear on `PATH` right now. |
 
 ### Servers
 

@@ -26,7 +26,13 @@ to stream a Postgres dump from the droplet and restore it into a disposable
 `postgres:17` container locally to verify the backup contains real data.
 
 See [`env.sh`](../../env.sh) for shell helpers (`gz_setup`, `gz_start`, etc.) that wrap these commands.
-In a new environment, run `source env.sh` once so the helpers are available. After that, `gz_start` will start the dev stack directly. Use `gz_setup` only when you want to repair a broken local environment or explicitly create isolated worktree-local dependencies with `--isolated`.
+In a new environment, run `source env.sh` once so the helpers are available. After that:
+
+- run `gz_setup` once per checkout or worktree to materialize the isolated developer environment
+- rerun `gz_setup` after changing Python or Node dependencies, because it rebuilds the materialized env and refreshes the current shell
+- run `gz_reload` when the env files or shell bootstrap changed and you want the current terminal to pick up the new PATH immediately
+
+`gz_start` then starts the dev stack directly once the environment is in place.
 
 ---
 
@@ -37,7 +43,7 @@ Two scripts handle environment bootstrap:
 | Script                               | Purpose                                                                                                                                                                        |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [`env.sh`](../../env.sh)             | Interactive Bash shells: sources `~/.bashrc`, delegates to `env-agent.sh`, then defines all `gz_*` helpers. Used as `bash --rcfile` by the VS Code/Cursor terminal profile. |
-| [`env-agent.sh`](../../env-agent.sh) | Lightweight, silent bootstrap for non-interactive shells: activates `.venv` if present, loads `.env.local` vars, exports `BASH_ENV` so child processes inherit the same setup. |
+| [`env-agent.sh`](../../env-agent.sh) | Lightweight, silent bootstrap for non-interactive shells: activates `.manage.venv` if present, loads the current checkout's `.env`/`.env.local` vars, prepends repo-local dev bins, exports `BASH_ENV` so child processes inherit the same setup. |
 
 `env.sh` sources `env-agent.sh` — the venv activation and env-var loading logic live in exactly one place.
 
@@ -45,17 +51,17 @@ For CI/CD workflow details, deployment variables, and GitHub Actions behavior, s
 
 ### VS Code / Cursor integrated terminal
 
-[`.vscode/settings.json`](../../.vscode/settings.json) configures `glaze` terminal profiles for Linux and macOS that automatically source `env.sh`. Linux uses `bash`; macOS uses `zsh` with repo-owned startup in [`.vscode/.zshrc`](../../.vscode/.zshrc). New terminals automatically get the full interactive environment (venv active, `gz_*` functions, `.env.local` loaded) without any manual `source` step.
+[`.vscode/settings.json`](../../.vscode/settings.json) configures `glaze` terminal profiles for Linux and macOS that automatically source `env.sh`. Linux uses `bash`; macOS uses `zsh` with repo-owned startup in [`.vscode/.zshrc`](../../.vscode/.zshrc). New terminals automatically get the full interactive environment (venv active, web `.bin` on `PATH`, `gz_*` functions, current-checkout `.env`/`.env.local` loaded) without any manual `source` step.
 
 `python.terminal.activateEnvironment` is disabled so VS Code does not double-activate the venv on top of what `env.sh` already did.
 
 ### Claude Code
 
-[`.claude/settings.json`](../../.claude/settings.json) sets `BASH_ENV=/path/to/env-agent.sh`. Every `bash -c "..."` command Claude Code runs sources `env-agent.sh` first, so `python`, `pytest`, `npm`, and `.env.local` vars are all available without a manual activation step.
+[`.claude/settings.json`](../../.claude/settings.json) sets `BASH_ENV=/path/to/env-agent.sh`. Every `bash -c "..."` command Claude Code runs sources `env-agent.sh` first, so `python`, `pytest`, `npm`, the workspace venv bin entry points, and `.env`/`.env.local` vars from the current checkout are all available without a manual activation step.
 
 ### Codex and other agents
 
-`env-agent.sh` exports `BASH_ENV` pointing at itself, so any agent process spawned from a shell that has already sourced `env.sh` (e.g. a VS Code terminal) automatically propagates the bootstrap to its own subshells. No per-tool config is needed for Codex or similar CLI agents launched from the integrated terminal.
+`env-agent.sh` exports `BASH_ENV` pointing at itself, so any agent process spawned from a shell that has already sourced `env.sh` (e.g. a VS Code terminal) automatically propagates the bootstrap to its own subshells. No per-tool config is needed for Codex or similar CLI agents launched from the integrated terminal, and each checkout must supply its own `.env`/`.env.local` files rather than borrowing them from another checkout.
 
 ### Agent worktree location
 
@@ -70,7 +76,7 @@ Keep repo-local agent configuration out of `.codex`, which may be reserved by th
 - Codex-specific local config: `.agent-config/codex/`
 - Shared agent assets and instructions: `.agents/`
 
-This keeps worktrees close to the repo-local bootstrap, makes cleanup easier, and avoids temp-directory permission/path surprises. `env-agent.sh` resolves the active git worktree root from the current working directory, then falls back to the main checkout's `.env.local` files and `.venv` when the worktree does not have its own copies yet.
+This keeps worktrees close to the repo-local bootstrap, makes cleanup easier, and avoids temp-directory permission/path surprises. `env-agent.sh` resolves the active git worktree root from the current working directory and expects that checkout to own its `.env`/`.env.local` files and materialized dependency environment after `gz_setup` has run.
 
 ### One terminal per worktree
 
@@ -209,21 +215,20 @@ Commit `requirements.txt`, `requirements.lock`, `MODULE.bazel.lock` (updated aut
 
 ### Updating pnpm-lock.yaml after npm installs
 
-Bazel resolves npm packages from `web/pnpm-lock.yaml`. After any `npm install` that adds or removes packages, regenerate the lockfile with `pnpm import` so Bazel picks up the change:
+Bazel resolves npm packages from `web/pnpm-lock.yaml`. After any native `npm install` that adds or removes packages, regenerate the lockfile with `pnpm import` so Bazel picks up the change:
 
 # Install the package normally (from the repo root or web/ — npm resolves via web/package.json)
 (cd web && rtk bazel run @nodejs_linux_amd64//:npm -- install react-swipeable)
 
 # Regenerate the pnpm lockfile from the updated package-lock.json
 # pnpm must be run from web/ where package.json and pnpm-lock.yaml live
-(cd web && rtk bazel run @nodejs_linux_amd64//:npx -- pnpm import)
 (cd web && pnpm import)
 
 # Commit both the updated package files
 git add web/package.json web/package-lock.json web/pnpm-lock.yaml
 ```
 
-`pnpm` is available at `~/.nvm/versions/node/*/bin/pnpm` when nvm is active. If `env-agent.sh` has sourced `.nvm/nvm.sh`, the `pnpm` binary is on `$PATH` and the `(cd web && pnpm import)` subshell inherits it.
+`pnpm` is available at `~/.nvm/versions/node/*/bin/pnpm` when nvm is active. If `env-agent.sh` has sourced `.nvm/nvm.sh`, the `pnpm` binary is on `$PATH` and the `(cd web && pnpm import)` subshell inherits it. If the current shell does not yet see the freshly changed PATH after a package update, run `gz_reload`; if the worktree needs the materialized env rebuilt, run `gz_setup` again.
 
 After updating the lockfile, check whether the new package needs to be added to a `js_library` `srcs` or `deps` in the relevant `BUILD.bazel`. Use `rtk bazel query 'labels(srcs, <library-target>)'` to inspect what a target currently includes, and add the package to the appropriate `BUILD.bazel` entry if Bazel tests fail with a missing module error.
 
@@ -250,11 +255,11 @@ Always run `git` commands from the repo root. When a command must run from a sub
 
 ```bash
 # ✅ correct — shell stays at repo root after this line
-(cd web && npx pnpm install)
+(cd web && pnpm install)
 git add web/pnpm-lock.yaml
 
 # ❌ incorrect — shell is now inside web/, breaking the git add
-cd web && npx pnpm install
+cd web && pnpm install
 git add web/pnpm-lock.yaml   # fails: no web/web/pnpm-lock.yaml
 ```
 
@@ -353,7 +358,7 @@ response is probably being buffered or retained.
 
 All vars are optional. The app runs without any of them; each missing group degrades gracefully.
 
-**`.env.local`** (loaded by `source env.sh`, read by Django):
+**`.env.local`** (loaded by `source env.sh` from the current checkout, read by Django):
 
 | Variable                   | Absent behavior                                                                       |
 | -------------------------- | ------------------------------------------------------------------------------------- |
