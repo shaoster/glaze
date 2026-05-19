@@ -64,9 +64,19 @@ vi.mock("masonic", () => ({
         const columnCount = mockPositioner.columnCount;
         const columnWidth = mockPositioner.columnWidth;
         const columnHeights = Array.from({ length: columnCount }, () => 0);
-        const seededHeights = new Map(
-          mockPositioner.set.mock.calls.map(([index, height]) => [index as number, height as number]),
-        );
+        const seededHeights = new Map<number, number>([
+          ...mockPositioner.set.mock.calls.map(([index, height]) => [
+            index as number,
+            height as number,
+          ]),
+          ...mockPositioner.update.mock.calls.flatMap(([updates]) =>
+            updates.flatMap((value, position) =>
+              position % 2 === 0
+                ? [[value as number, updates[position + 1] as number]]
+                : [],
+            ),
+          ),
+        ]);
 
         return items.map((item, index) => {
           const height = seededHeights.get(index) ?? itemHeightEstimate;
@@ -139,8 +149,10 @@ describe("PieceList", () => {
   beforeEach(() => {
     mockPositioner.set.mockReset();
     mockPositioner.get.mockReset();
+    mockPositioner.update.mockReset();
     mockPositioner.set.mockImplementation(() => undefined);
     mockPositioner.get.mockImplementation(() => undefined);
+    mockPositioner.update.mockImplementation(() => undefined);
   });
 
   describe("masonry height pre-seeding", () => {
@@ -155,13 +167,16 @@ describe("PieceList", () => {
         },
       });
       renderPieceList([piece]);
-      expect(mockPositioner.set).toHaveBeenCalledWith(0, Math.round(220 * 400 / 200) + CARD_CHROME_HEIGHT);
+      expect(mockPositioner.update).toHaveBeenCalledWith([
+        0,
+        Math.round(220 * 400 / 200) + CARD_CHROME_HEIGHT,
+      ]);
     });
 
     it("does not pre-seed the positioner for pieces without a crop", () => {
       const piece = makePiece({ thumbnail: null });
       renderPieceList([piece]);
-      expect(mockPositioner.set).not.toHaveBeenCalled();
+      expect(mockPositioner.update).not.toHaveBeenCalled();
     });
 
     it("applies the tall crop height before the first masonry pass", async () => {
@@ -202,7 +217,7 @@ describe("PieceList", () => {
         },
       });
       renderPieceList([piece]);
-      expect(mockPositioner.set).not.toHaveBeenCalled();
+      expect(mockPositioner.update).not.toHaveBeenCalled();
     });
 
     it("reserves the thumbnail crop ratio in the card shell", () => {
