@@ -1,4 +1,5 @@
 import type React from "react";
+import { useState } from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -46,6 +47,8 @@ const { mockPositioner } = vi.hoisted(() => ({
   },
 }));
 
+let rerenderMasonryScroller: (() => void) | undefined;
+
 vi.mock("masonic", () => ({
   MasonryScroller: ({
     items,
@@ -57,45 +60,60 @@ vi.mock("masonic", () => ({
     render: React.ComponentType<{ data: PieceSummary; index: number; width: number }>;
     itemHeightEstimate: number;
     itemKey?: (item: PieceSummary, index: number) => string | number;
-  }) => (
-    <div data-testid="piece-grid" style={{ position: "relative" }}>
-      {(() => {
-        const gutter = 8;
-        const columnCount = mockPositioner.columnCount;
-        const columnWidth = mockPositioner.columnWidth;
-        const columnHeights = Array.from({ length: columnCount }, () => 0);
-        const seededHeights = new Map(
-          mockPositioner.set.mock.calls.map(([index, height]) => [index as number, height as number]),
-        );
+  }) => {
+    const [, forceRender] = useState(0);
+    rerenderMasonryScroller = () => forceRender((value) => value + 1);
 
-        return items.map((item, index) => {
-          const height = seededHeights.get(index) ?? itemHeightEstimate;
-          const column = columnHeights.indexOf(Math.min(...columnHeights));
-          const top = columnHeights[column];
-          const left = column * (columnWidth + gutter);
-          columnHeights[column] = top + height + gutter;
+    return (
+      <div data-testid="piece-grid" style={{ position: "relative" }}>
+        {(() => {
+          const gutter = 8;
+          const columnCount = mockPositioner.columnCount;
+          const columnWidth = mockPositioner.columnWidth;
+          const columnHeights = Array.from({ length: columnCount }, () => 0);
+          const seededHeights = new Map<number, number>([
+            ...mockPositioner.set.mock.calls.map(([index, height]) => [
+              index as number,
+              height as number,
+            ]),
+            ...mockPositioner.update.mock.calls.flatMap(([updates]) =>
+              updates.flatMap((value, position) =>
+                position % 2 === 0
+                  ? [[value as number, updates[position + 1] as number]]
+                  : [],
+              ),
+            ),
+          ]);
 
-          return (
-            <div
-              key={itemKey ? itemKey(item, index) : index}
-              data-key={itemKey ? itemKey(item, index) : index}
-              data-column={column}
-              data-top={top}
-              data-height={height}
-              style={{
-                position: "absolute",
-                top,
-                left,
-                width: columnWidth,
-              }}
-            >
-              <RenderComponent data={item} index={index} width={240} />
-            </div>
-          );
-        });
-      })()}
-    </div>
-  ),
+          return items.map((item, index) => {
+            const height = seededHeights.get(index) ?? itemHeightEstimate;
+            const column = columnHeights.indexOf(Math.min(...columnHeights));
+            const top = columnHeights[column];
+            const left = column * (columnWidth + gutter);
+            columnHeights[column] = top + height + gutter;
+
+            return (
+              <div
+                key={itemKey ? itemKey(item, index) : index}
+                data-key={itemKey ? itemKey(item, index) : index}
+                data-column={column}
+                data-top={top}
+                data-height={height}
+                style={{
+                  position: "absolute",
+                  top,
+                  left,
+                  width: columnWidth,
+                }}
+              >
+                <RenderComponent data={item} index={index} width={240} />
+              </div>
+            );
+          });
+        })()}
+      </div>
+    );
+    },
   useContainerPosition: () => ({ width: 440, offset: 0 }),
   usePositioner: () => mockPositioner,
   useResizeObserver: () => undefined,
@@ -135,12 +153,32 @@ async function openFilters(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: /toggle filters/i }));
 }
 
+function RerenderHarness({ pieces }: { pieces: PieceSummary[] }) {
+  const [tick, setTick] = useState(0);
+
+  return (
+    <>
+      <button type="button" onClick={() => setTick((value) => value + 1)}>
+        rerender
+      </button>
+      <PieceList pieces={pieces} />
+      <span data-testid="tick">{tick}</span>
+    </>
+  );
+}
+
 describe("PieceList", () => {
   beforeEach(() => {
     mockPositioner.set.mockReset();
     mockPositioner.get.mockReset();
+    mockPositioner.update.mockReset();
     mockPositioner.set.mockImplementation(() => undefined);
     mockPositioner.get.mockImplementation(() => undefined);
+    mockPositioner.update.mockImplementation(() => {
+      rerenderMasonryScroller?.();
+      return undefined;
+    });
+    rerenderMasonryScroller = undefined;
   });
 
   describe("masonry height pre-seeding", () => {
@@ -155,13 +193,43 @@ describe("PieceList", () => {
         },
       });
       renderPieceList([piece]);
-      expect(mockPositioner.set).toHaveBeenCalledWith(0, Math.round(220 * 400 / 200) + CARD_CHROME_HEIGHT);
+      expect(mockPositioner.update).toHaveBeenCalledWith([
+        0,
+        Math.round(220 * 400 / 200) + CARD_CHROME_HEIGHT,
+      ]);
     });
 
     it("does not pre-seed the positioner for pieces without a crop", () => {
       const piece = makePiece({ thumbnail: null });
       renderPieceList([piece]);
-      expect(mockPositioner.set).not.toHaveBeenCalled();
+      expect(mockPositioner.update).not.toHaveBeenCalled();
+    });
+
+    it("applies the tall crop height before the first masonry pass", async () => {
+      const pieces = [
+        makePiece({
+          id: "tall",
+          thumbnail: {
+            url: "https://example.com/tall.jpg",
+            cloudinary_public_id: "id",
+            cloud_name: "demo",
+            crop: { x: 0, y: 0, width: 200, height: 400 },
+          },
+        }),
+        makePiece({ id: "middle" }),
+        makePiece({ id: "bottom" }),
+      ];
+
+      const { container } = renderPieceList(pieces);
+      const expectedHeight = estimateCardHeight(pieces[0], mockPositioner.columnWidth);
+
+      await waitFor(() => {
+        const cards = container.querySelectorAll('[data-testid="piece-grid"] > div');
+        expect(Number(cards[0]?.getAttribute("data-height"))).toBe(expectedHeight);
+        expect(Number(cards[0]?.getAttribute("data-height"))).toBeGreaterThan(
+          DEFAULT_CARD_HEIGHT_ESTIMATE,
+        );
+      });
     });
 
     it("does not re-seed already-positioned items", () => {
@@ -175,7 +243,29 @@ describe("PieceList", () => {
         },
       });
       renderPieceList([piece]);
-      expect(mockPositioner.set).not.toHaveBeenCalled();
+      expect(mockPositioner.update).not.toHaveBeenCalled();
+    });
+
+    it("does not reseed on an unrelated rerender", async () => {
+      const user = userEvent.setup();
+      const piece = makePiece({
+        thumbnail: {
+          url: "https://example.com/img.jpg",
+          cloudinary_public_id: "id",
+          cloud_name: "demo",
+          crop: { x: 0, y: 0, width: 200, height: 400 },
+        },
+      });
+      const router = createMemoryRouter(
+        [{ path: "/", element: <RerenderHarness pieces={[piece]} /> }],
+        { initialEntries: ["/"] },
+      );
+
+      render(<RouterProvider router={router} />);
+      expect(mockPositioner.update).toHaveBeenCalledTimes(1);
+
+      await user.click(screen.getByRole("button", { name: /rerender/i }));
+      expect(mockPositioner.update).toHaveBeenCalledTimes(1);
     });
 
     it("reserves the thumbnail crop ratio in the card shell", () => {

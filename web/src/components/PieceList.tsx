@@ -436,13 +436,34 @@ const PieceList = (props: PieceListProps) => {
     },
     [filterKey, masonryWidth, columnWidth, isMobile],
   );
+  const masonrySeedSignature = useMemo(
+    () =>
+      `${filterKey}|${masonryWidth}|${columnWidth}|${filteredPieces
+        .map((piece) => {
+          const crop = piece.thumbnail?.crop;
+          return crop
+            ? `${piece.id}:${crop.x}:${crop.y}:${crop.width}:${crop.height}`
+            : `${piece.id}:nocrop`;
+        })
+        .join(",")}`,
+    [filterKey, masonryWidth, columnWidth, filteredPieces],
+  );
+  const seededLayoutSignatureRef = useRef<string | null>(null);
   useLayoutEffect(() => {
+    if (seededLayoutSignatureRef.current === masonrySeedSignature) {
+      return;
+    }
+    const updates: number[] = [];
     filteredPieces.forEach((piece, index) => {
       if (piece.thumbnail?.crop && positioner.get(index) === undefined) {
-        positioner.set(index, estimateCardHeight(piece, positioner.columnWidth));
+        updates.push(index, estimateCardHeight(piece, positioner.columnWidth));
       }
     });
-  }, [filteredPieces, positioner]);
+    if (updates.length > 0) {
+      positioner.update(updates);
+    }
+    seededLayoutSignatureRef.current = masonrySeedSignature;
+  }, [filteredPieces, masonrySeedSignature, positioner]);
   const resizeObserver = useResizeObserver(positioner);
 
   const toggleFilter = useCallback(

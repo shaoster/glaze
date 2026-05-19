@@ -177,6 +177,37 @@ const mixedCropPieces: PieceSummary[] = [
   }),
 ];
 
+// Same data shape as the regression test that failed on first render:
+// one tall cropped card followed by two uncropped cards.
+const firstLoadOverlapPieces: PieceSummary[] = [
+  makePiece({
+    id: "r1",
+    name: "Tall Pitcher",
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    current_state: { state: "designed", created: new Date("2026-05-01") } as any,
+    thumbnail: {
+      url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+      cloudinary_public_id: "sample",
+      cloud_name: "demo",
+      crop: { x: 0.08, y: 0.0, width: 0.45, height: 0.92 },
+    },
+  }),
+  makePiece({
+    id: "r2",
+    name: "Uncropped Vase",
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    current_state: { state: "bisque_fired", created: new Date("2026-05-02") } as any,
+    thumbnail: null,
+  }),
+  makePiece({
+    id: "r3",
+    name: "Uncropped Bowl",
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    current_state: { state: "glaze_fired", created: new Date("2026-05-03") } as any,
+    thumbnail: null,
+  }),
+];
+
 export const Default: Story = {
   args: {
     pieces: mockPieces,
@@ -214,6 +245,37 @@ export const MixedCropAndNoCrop: Story = {
       handlers: [
         http.get("/api/pieces/", () =>
           HttpResponse.json({ count: mixedCropPieces.length, results: mixedCropPieces }),
+        ),
+      ],
+    },
+  },
+};
+
+/**
+ * Initial masonry layout.
+ *
+ * This uses the exact failure setup from the regression test: one tall cropped
+ * card followed by uncropped cards. It is the narrowest data shape that makes
+ * the initial masonry placement bug easy to inspect in the browser.
+ *
+ * If the bug is still present in your local browser, the second and third cards
+ * will start too high on first paint and then settle after a later layout tick.
+ *
+ * Source: [PR #549](https://github.com/shaoster/glaze/pull/549)
+ */
+export const InitialMasonryLayout: Story = {
+  name: "Initial masonry layout",
+  args: {
+    pieces: firstLoadOverlapPieces,
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get("/api/pieces/", () =>
+          HttpResponse.json({
+            count: firstLoadOverlapPieces.length,
+            results: firstLoadOverlapPieces,
+          }),
         ),
       ],
     },
