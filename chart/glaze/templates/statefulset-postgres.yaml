@@ -17,13 +17,17 @@ spec:
         app.kubernetes.io/name: {{ include "glaze.name" . }}-postgres
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
       containers:
         - name: postgres
           image: {{ .Values.postgres.image }}
           command:
             - postgres
             - -c
-            - shared_buffers=256MB
+            - shared_buffers=128MB
             - -c
             - work_mem=8MB
             - -c
