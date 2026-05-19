@@ -369,6 +369,8 @@ class ThumbnailSerializer(serializers.Serializer):
     cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
     crop = serializers.JSONField(required=False, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    width = serializers.IntegerField(required=False, allow_null=True, default=None, min_value=0)
+    height = serializers.IntegerField(required=False, allow_null=True, default=None, min_value=0)
 
 
 @traced_class

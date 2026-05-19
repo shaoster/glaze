@@ -115,6 +115,9 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
   const label = formatState(piece.current_state.state);
   const detailPath = `/pieces/${piece.id}`;
   const estimatedHeight = estimateCardHeight(piece, width);
+  const [thumbnailAspectRatio, setThumbnailAspectRatio] = useState(
+    () => getThumbnailAspectRatio(piece),
+  );
 
   // Tags: show 2 visible + dashed overflow chip (non-expandable in card)
   const tags = piece.tags ?? [];
@@ -155,7 +158,7 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
         sx={{
           position: "relative",
           overflow: "hidden",
-          aspectRatio: getThumbnailAspectRatio(piece),
+          aspectRatio: thumbnailAspectRatio,
         }}
       >
         <CloudinaryImage
@@ -170,6 +173,13 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
             width: "100%",
             height: "auto",
             display: "block",
+          }}
+          onLoad={(e) => {
+            if (piece.thumbnail?.width && piece.thumbnail?.height) return;
+            const img = e.currentTarget;
+            if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+              setThumbnailAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
+            }
           }}
         />
 
@@ -453,15 +463,11 @@ const PieceList = (props: PieceListProps) => {
     if (seededLayoutSignatureRef.current === masonrySeedSignature) {
       return;
     }
-    const updates: number[] = [];
     filteredPieces.forEach((piece, index) => {
       if (piece.thumbnail?.crop && positioner.get(index) === undefined) {
-        updates.push(index, estimateCardHeight(piece, positioner.columnWidth));
+        positioner.set(index, estimateCardHeight(piece, positioner.columnWidth));
       }
     });
-    if (updates.length > 0) {
-      positioner.update(updates);
-    }
     seededLayoutSignatureRef.current = masonrySeedSignature;
   }, [filteredPieces, masonrySeedSignature, positioner]);
   const resizeObserver = useResizeObserver(positioner);

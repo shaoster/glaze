@@ -7,6 +7,8 @@ export interface CloudinaryUploadWidgetResult {
     secure_url: string;
     public_id: string;
     resource_type: string;
+    width?: number;
+    height?: number;
     [key: string]: unknown;
   };
 }

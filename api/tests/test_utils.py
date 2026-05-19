@@ -298,19 +298,17 @@ class TestUtilsCoverage:
         monkeypatch.setattr("requests.post", mock_post)
         assert calculate_subject_mask_remote(image_bytes=b"data") == {"mask": None}
         assert captured["kwargs"]["headers"]["X-API-Key"] == "secret"
-        assert captured["kwargs"]["headers"]["Content-Type"] == "application/octet-stream"
+        assert (
+            captured["kwargs"]["headers"]["Content-Type"] == "application/octet-stream"
+        )
 
-    def test_calculate_subject_mask_remote_missing_input_returns_none(
-        self, settings
-    ):
+    def test_calculate_subject_mask_remote_missing_input_returns_none(self, settings):
         from api.utils import calculate_subject_mask_remote
 
         settings.REMOTE_REMBG_URL = "http://remote"
         assert calculate_subject_mask_remote() is None
 
-    def test_upload_mask_to_cloudinary_uses_cloudinary_sdk(
-        self, monkeypatch, settings
-    ):
+    def test_upload_mask_to_cloudinary_uses_cloudinary_sdk(self, monkeypatch, settings):
         import sys
         import types
 

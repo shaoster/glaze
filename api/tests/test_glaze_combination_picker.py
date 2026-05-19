@@ -71,6 +71,8 @@ class TestGlazeCombinationGetShape:
             "cloudinary_public_id": "tile",
             "cloud_name": None,
             "image_id": str(combo.test_tile_image.id),
+            "width": None,
+            "height": None,
         }
         assert item["is_food_safe"] is True
         assert item["runs"] is False

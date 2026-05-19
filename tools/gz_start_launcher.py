@@ -422,10 +422,7 @@ def start_backend(
     # pieces, users) carries over without a fresh bootstrap. Falls back to a
     # worktree-local db if DATABASE_URL is already set in the environment (explicit
     # override) or if no shared db exists yet.
-    if (
-        roots.workspace != roots.shared
-        and not backend_env.get("DATABASE_URL")
-    ):
+    if roots.workspace != roots.shared and not backend_env.get("DATABASE_URL"):
         shared_db = roots.shared / "db.sqlite3"
         if shared_db.exists():
             backend_env["DATABASE_URL"] = f"sqlite:///{shared_db}"
@@ -540,7 +537,11 @@ def start_web(
     if roots.workspace != roots.shared:
         worktree_nm = roots.workspace / "web" / "node_modules"
         shared_nm = roots.shared / "web" / "node_modules"
-        if not worktree_nm.exists() and not worktree_nm.is_symlink() and shared_nm.exists():
+        if (
+            not worktree_nm.exists()
+            and not worktree_nm.is_symlink()
+            and shared_nm.exists()
+        ):
             worktree_nm.symlink_to(shared_nm)
             print(f"web: symlinked node_modules from {shared_nm}")
 
