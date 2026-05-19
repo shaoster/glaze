@@ -432,9 +432,11 @@ def start_backend(
             print(f"backend: using shared db at {shared_db}")
 
     print(f"backend: starting on :{backend_port} ...")
-    db_path = Path(
-        backend_env.get("DATABASE_URL", "").removeprefix("sqlite:///")
-        or str(roots.workspace / "db.sqlite3")
+    _db_url = backend_env.get("DATABASE_URL", "")
+    db_path = (
+        Path(_db_url.removeprefix("sqlite:///"))
+        if _db_url.startswith("sqlite:///")
+        else roots.workspace / "db.sqlite3"
     )
 
     def run_migrate(extra_args: list[str]) -> None:

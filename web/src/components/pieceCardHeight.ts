@@ -35,14 +35,15 @@ export function estimateCardHeight(piece: PieceSummary, columnWidth: number): nu
   if (crop && crop.width > 0) {
     return Math.round((columnWidth * crop.height) / crop.width) + CARD_CHROME_HEIGHT;
   }
-  return getThumbnailRequestedHeight(piece, columnWidth) + CARD_CHROME_HEIGHT;
+  return Math.round((columnWidth * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) / DEFAULT_THUMBNAIL_ASPECT_WIDTH) + CARD_CHROME_HEIGHT;
 }
 
 /**
- * Returns the pixel height to request from Cloudinary for pieces without a crop,
+ * Returns the pixel height to request from Cloudinary for pieces without a valid crop,
  * or undefined for cropped pieces (Cloudinary infers height from the crop ratio).
  */
 export function getThumbnailRequestedHeight(piece: PieceSummary, columnWidth: number): number | undefined {
-  if (piece.thumbnail?.crop) return undefined;
+  const crop = piece.thumbnail?.crop;
+  if (crop && crop.width > 0) return undefined;
   return Math.round((columnWidth * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) / DEFAULT_THUMBNAIL_ASPECT_WIDTH);
 }
