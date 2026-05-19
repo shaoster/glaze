@@ -252,7 +252,7 @@ export const MixedCropAndNoCrop: Story = {
 };
 
 /**
- * First-load overlap repro.
+ * Initial masonry layout.
  *
  * This uses the exact failure setup from the regression test: one tall cropped
  * card followed by uncropped cards. It is the narrowest data shape that makes
@@ -260,9 +260,11 @@ export const MixedCropAndNoCrop: Story = {
  *
  * If the bug is still present in your local browser, the second and third cards
  * will start too high on first paint and then settle after a later layout tick.
+ *
+ * Source: [PR #549](https://github.com/shaoster/glaze/pull/549)
  */
-export const FirstLoadOverlapRepro: Story = {
-  name: "First-load overlap repro",
+export const InitialMasonryLayout: Story = {
+  name: "Initial masonry layout",
   args: {
     pieces: firstLoadOverlapPieces,
   },

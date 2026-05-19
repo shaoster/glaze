@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import SortIcon from "@mui/icons-material/Sort";
@@ -448,15 +448,22 @@ const PieceList = (props: PieceListProps) => {
     },
     [filterKey, masonryWidth, columnWidth, isMobile],
   );
-  const seededLayoutSignatureRef = useRef<string | null>(null);
-  if (seededLayoutSignatureRef.current !== masonrySeedSignature) {
+  const [seededLayoutSignature, setSeededLayoutSignature] = useState<string | null>(null);
+  useLayoutEffect(() => {
+    if (seededLayoutSignature === masonrySeedSignature) {
+      return;
+    }
+    let didSeed = false;
     filteredPieces.forEach((piece, index) => {
       if (piece.thumbnail?.crop && positioner.get(index) === undefined) {
         positioner.set(index, estimateCardHeight(piece, positioner.columnWidth));
+        didSeed = true;
       }
     });
-    seededLayoutSignatureRef.current = masonrySeedSignature;
-  }
+    if (didSeed || seededLayoutSignature !== masonrySeedSignature) {
+      setSeededLayoutSignature(masonrySeedSignature);
+    }
+  }, [filteredPieces, masonrySeedSignature, positioner, seededLayoutSignature]);
   const resizeObserver = useResizeObserver(positioner);
 
   const toggleFilter = useCallback(

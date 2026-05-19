@@ -164,7 +164,7 @@ describe("PieceList", () => {
       expect(mockPositioner.set).not.toHaveBeenCalled();
     });
 
-    it("applies the tall crop height before the first masonry pass", () => {
+    it("applies the tall crop height before the first masonry pass", async () => {
       const pieces = [
         makePiece({
           id: "tall",
@@ -180,13 +180,15 @@ describe("PieceList", () => {
       ];
 
       const { container } = renderPieceList(pieces);
-      const cards = container.querySelectorAll('[data-testid="piece-grid"] > div');
       const expectedHeight = estimateCardHeight(pieces[0], mockPositioner.columnWidth);
 
-      expect(Number(cards[0]?.getAttribute("data-height"))).toBe(expectedHeight);
-      expect(Number(cards[0]?.getAttribute("data-height"))).toBeGreaterThan(
-        DEFAULT_CARD_HEIGHT_ESTIMATE,
-      );
+      await waitFor(() => {
+        const cards = container.querySelectorAll('[data-testid="piece-grid"] > div');
+        expect(Number(cards[0]?.getAttribute("data-height"))).toBe(expectedHeight);
+        expect(Number(cards[0]?.getAttribute("data-height"))).toBeGreaterThan(
+          DEFAULT_CARD_HEIGHT_ESTIMATE,
+        );
+      });
     });
 
     it("does not re-seed already-positioned items", () => {
