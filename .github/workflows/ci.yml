@@ -179,6 +179,10 @@ jobs:
         env:
           IMAGE_TAG: latest
         run: |
+          # Ensure a dummy .env file exists for docker-compose.yml to read,
+          # as it now uses 'env_file: .env'. The actual values are provided
+          # via shell exports in the smoke test step.
+          touch .env
           # Pull third-party sidecar images (postgres, otelcol) before starting
           # the timed --wait block so image download doesn't eat into the
           # healthcheck timeout budget. Explicitly name services to avoid pulling
