@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-python manage.py migrate --no-input
 python manage.py load_public_library --skip-if-missing
 
 exec python -m gunicorn backend.asgi:application \

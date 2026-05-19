@@ -164,7 +164,7 @@ git commit -m "Update public library"
 
 **3. Automatic deployment on merge:**
 
-When the PR merges, CI builds and pushes a new Docker image. On the next `docker compose up -d`, the container runs `docker-entrypoint.sh`, which includes:
+When the PR merges, CI builds and pushes a new Docker image. On the next `docker compose up -d`, `deploy_init` applies migrations and the container runs `docker-entrypoint.sh`, which includes:
 
 ```bash
 gz_load_public_library --skip-if-missing

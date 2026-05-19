@@ -72,10 +72,12 @@ services:
         condition: service_healthy
       otelcol:
         condition: service_started
+      deploy_init:
+        condition: service_completed_successfully
     # Probes the API readiness endpoint. A 200 response means database,
     # migrations, and the async task backend are all usable. start_period
-    # covers entrypoint commands (migrate, collectstatic, load_public_library,
-    # clear_stuck_tasks) before the first probe.
+    # covers the entrypoint's load_public_library command before the first
+    # probe.
     healthcheck:
       test:
         - CMD
@@ -148,8 +150,8 @@ services:
   deploy_init:
     image: ghcr.io/shaoster/glaze:${IMAGE_TAG:?Set IMAGE_TAG in .env}
     restart: "no"
-    # One-shot service that runs migrations and clears abandoned tasks
-    # before the new release starts serving traffic.
+    # One-shot service that runs migrations and clears abandoned tasks before
+    # the new release starts serving traffic.
     command: >
       bash -c "python manage.py migrate --no-input &&
                python manage.py clear_stuck_tasks --hours 1"
