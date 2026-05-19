@@ -361,6 +361,10 @@ All vars are optional. The app runs without any of them; each missing group degr
 
 Glaze uses a multi-layered configuration strategy:
 
+### **[SECURITY MANDATE] No Production Secrets in CI**
+
+**The `ci.yml` workflow MUST NEVER have access to production secrets.** All CI jobs (tests, linting, OCI image build) must run against public placeholders or temporary test keys. Real production secrets (e.g. database passwords, live API keys) MUST be restricted to the `cd.yml` workflow.
+
 1. **GitHub Secrets / Variables**: The source of truth for environment-specific configuration. This includes both sensitive secrets (e.g. `POSTGRES_PASSWORD`) and non-sensitive settings (e.g. `ALLOWED_HOST`). These are injected into the host's `.env` file during deployment.
 2. **`docker-compose.yml`**: Defines internal service topology and constants (e.g. `DATABASE_URL: postgres://db:5432`). These are identical across all environments.
 3. **Build-time Injection (`ci.yml`)**: Static assets (Vite) cannot read runtime environment variables from the server. Configuration like `GOOGLE_OAUTH_CLIENT_ID` must be baked into the Javascript bundle during the image build in CI.

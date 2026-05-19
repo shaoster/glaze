@@ -109,7 +109,7 @@ jobs:
             if [[ "$s" != "\${{ secrets.BAZEL_REMOTE_API_KEY }}" ]]; then
               echo "🚨 SECURITY VIOLATION: Unauthorized secret usage detected in ci.yml: $s" >&2
               echo "Only BAZEL_REMOTE_API_KEY is allowed in the CI environment." >&2
-              echo "Production secrets MUST be restricted to cd.yml." >&2
+              echo "Real production secrets MUST be restricted to cd.yml." >&2
               exit 1
             fi
           done

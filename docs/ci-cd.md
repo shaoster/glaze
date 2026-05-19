@@ -8,7 +8,7 @@ Glaze uses a multi-layered approach to environment configuration. Understanding 
 
 ### **[SECURITY MANDATE] No Production Secrets in CI**
 
-**The `ci.yml` workflow MUST NEVER have access to production secrets.** All CI jobs (tests, linting, OCI image build) must run against public placeholders or temporary test keys. Real secrets (e.g. production database passwords, live API keys) are strictly reserved for the `cd.yml` workflow and the `glaze-droplet` GitHub Environment.
+**The `ci.yml` workflow MUST NEVER have access to production secrets.** All CI jobs (tests, linting, OCI image build) must run against public placeholders or temporary test keys. Real production secrets (e.g. database passwords, live API keys) MUST be restricted to the `cd.yml` workflow.
 
 | Layer | Type of Config | Rationale |
 |---|---|---|

@@ -79,6 +79,7 @@ Before opening or pushing to a PR, verify every item:
 - [ ] Remote PR state verified (e.g., via `gh pr view` or by checking the URL)
 - [ ] If conventions or constraints changed during PR work, append them to the relevant file under `docs/agents/`
 - [ ] **Security**: For any item flagged **[SECURITY]** in the plan — confirm the intended permission model is enforced in code (correct `permission_classes`, gate applied in all entry points, no unintended `AllowAny` exposure, token expiry and validation covered by tests)
+- [ ] **[SECURITY MANDATE] No Production Secrets in CI**: Verify that `ci.yml` (and its called actions/scripts) NEVER has access to real production secrets. All CI tests must use placeholders or test-only keys. Production secrets are strictly reserved for the `cd.yml` workflow.
 
 ## Scope Limits — Ask Before Acting
 
