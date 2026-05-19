@@ -177,6 +177,51 @@ const mixedCropPieces: PieceSummary[] = [
   }),
 ];
 
+// Matches the prod scale shown in the screenshot that reproduced the overlap:
+// 24+ pieces with mixed crops, no-crops, and tag counts. The root cause was
+// that MasonryScroller rendered on the first React commit when
+// useContainerPosition still returned width=0, so masonic measured Phase-1
+// items at columnWidth=0 and the thumbnail shell collapsed to 0 px.
+// This dataset exercises that path at realistic scale.
+const largePieceDataset: PieceSummary[] = Array.from({ length: 24 }, (_, i) => {
+  const states = ["designed", "bisque_fired", "glazed", "glaze_fired", "completed", "touching_up"] as const;
+  const crops: (PieceSummary["thumbnail"] & object)["crop"][] = [
+    { x: 0.05, y: 0.0, width: 0.45, height: 0.92 }, // portrait
+    null,
+    { x: 0.0, y: 0.1, width: 0.8, height: 0.8 }, // near-square
+    null,
+    { x: 0.0, y: 0.2, width: 0.9, height: 0.4 }, // landscape
+    null,
+  ];
+  const tagSets = [
+    [],
+    [{ id: "t1", name: "functional", color: "#E76F51", is_public: false }],
+    [
+      { id: "t2", name: "decorative", color: "#2A9D8F", is_public: true },
+      { id: "t3", name: "handle", color: "#264653", is_public: true },
+    ],
+    [
+      { id: "t4", name: "cup", color: "#E9C46A", is_public: true },
+      { id: "t5", name: "fluted", color: "#F4A261", is_public: false },
+      { id: "t6", name: "slip", color: "#E76F51", is_public: false },
+    ],
+  ];
+  const crop = crops[i % crops.length];
+  return makePiece({
+    id: `lp${i}`,
+    name: `Piece ${i + 1}`,
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    current_state: { state: states[i % states.length], created: new Date("2026-05-01") } as any,
+    thumbnail: {
+      url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+      cloudinary_public_id: "sample",
+      cloud_name: "demo",
+      crop: crop ?? null,
+    },
+    tags: tagSets[i % tagSets.length],
+  });
+});
+
 // Same data shape as the regression test that failed on first render:
 // one tall cropped card followed by two uncropped cards.
 const firstLoadOverlapPieces: PieceSummary[] = [
@@ -275,6 +320,42 @@ export const InitialMasonryLayout: Story = {
           HttpResponse.json({
             count: firstLoadOverlapPieces.length,
             results: firstLoadOverlapPieces,
+          }),
+        ),
+      ],
+    },
+  },
+};
+
+/**
+ * Prod-scale dataset: 24 pieces with mixed crops, no-crops, and tag counts.
+ *
+ * This matches the real-world scale visible in the prod screenshot that showed
+ * overlapping cards. The root cause was MasonryScroller rendering on the first
+ * React commit before `useContainerPosition` had measured the container — at
+ * that point masonic laid out Phase-1 items at `columnWidth=0`, the thumbnail
+ * shell collapsed to 0 px, and the resulting chrome-only heights were copied
+ * into the next positioner, causing all cards to be placed too close together.
+ *
+ * After the fix (`{masonryWidth > 0 && <MasonryScroller />}`), the grid is
+ * suppressed until the container width is known, so the first masonic render
+ * always uses the correct column width and measures card heights accurately.
+ *
+ * If you see cards overlapping on first paint in this story, the
+ * `masonryWidth > 0` guard in `PieceList.tsx` has been removed or bypassed.
+ */
+export const LargeDataset: Story = {
+  name: "Large dataset (24 pieces, prod scale)",
+  args: {
+    pieces: largePieceDataset,
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get("/api/pieces/", () =>
+          HttpResponse.json({
+            count: largePieceDataset.length,
+            results: largePieceDataset,
           }),
         ),
       ],
