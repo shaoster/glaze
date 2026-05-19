@@ -167,7 +167,10 @@ jobs:
           buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
 
       - name: Write Vite env file
-        run: printf 'VITE_GOOGLE_CLIENT_ID=%s\n' '${{ secrets.VITE_GOOGLE_CLIENT_ID }}' > web/.env.local
+        run: |
+          if [ -n "${{ vars.GOOGLE_OAUTH_CLIENT_ID }}" ]; then
+            printf 'GOOGLE_OAUTH_CLIENT_ID=%s\n' '${{ vars.GOOGLE_OAUTH_CLIENT_ID }}' > web/.env.local
+          fi
 
       - name: Build OCI image and load into docker
         run: bazel run --config=ci --stamp //:load

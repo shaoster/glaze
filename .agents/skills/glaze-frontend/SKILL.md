@@ -163,7 +163,7 @@ concept in multiple places, extract a reusable component in `web/src/components/
 
 - On load: calls `fetchCurrentUser()` (`GET /api/auth/me/`)
 - Authenticated → routed app shell with current-user chip and logout
-- Unauthenticated → login form with email/password + optional Google Sign-In button (`VITE_GOOGLE_CLIENT_ID`)
+- Unauthenticated → login form with email/password + optional Google Sign-In button (`GOOGLE_OAUTH_CLIENT_ID`)
 - `SIGN_UP_ENABLED = false` — create accounts via Django admin
 
 ## Frontend Routing for Piece Detail

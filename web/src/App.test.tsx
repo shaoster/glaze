@@ -408,7 +408,7 @@ describe("not_invited and waitlist flow", () => {
 
   it("successful Google sign-in logs the user in", async () => {
     vi.mocked(loginWithGoogleChecked).mockResolvedValue(MOCK_USER);
-    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", "test-client-id");
+    vi.stubEnv("GOOGLE_OAUTH_CLIENT_ID", "test-client-id");
 
     render(<App />);
     await waitFor(() =>
@@ -424,7 +424,7 @@ describe("not_invited and waitlist flow", () => {
   });
 
   it("shows generic error when Google sign-in fails (onError)", async () => {
-    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", "test-client-id");
+    vi.stubEnv("GOOGLE_OAUTH_CLIENT_ID", "test-client-id");
 
     render(<App />);
     await waitFor(() =>
@@ -488,8 +488,8 @@ describe("not_invited and waitlist flow", () => {
       new NotInvitedError("This email is not invited."),
     );
 
-    // GoogleLogin only renders when VITE_GOOGLE_CLIENT_ID is set.
-    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", "test-client-id");
+    // GoogleLogin only renders when GOOGLE_OAUTH_CLIENT_ID is set.
+    vi.stubEnv("GOOGLE_OAUTH_CLIENT_ID", "test-client-id");
 
     render(<App />);
     await waitFor(() =>

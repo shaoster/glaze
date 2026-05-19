@@ -489,7 +489,7 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 
 - On load, calls `fetchCurrentUser()` (`GET /api/auth/me/`).
 - Authenticated → routed app shell with current-user chip and logout action.
-- Unauthenticated → login form with email/password and optional Google Sign-In button (`VITE_GOOGLE_CLIENT_ID`).
+- Unauthenticated → login form with email/password and optional Google Sign-In button (`GOOGLE_OAUTH_CLIENT_ID`).
 - `Sign Up` is intentionally disabled (`SIGN_UP_ENABLED = false`); create accounts via Django admin.
 
 **Frontend routing for piece detail access:**
@@ -508,7 +508,7 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 
 **Google OAuth frontend:**
 
-- Uses `@react-oauth/google` when `VITE_GOOGLE_CLIENT_ID` is configured.
+- Uses `@react-oauth/google` when `GOOGLE_OAUTH_CLIENT_ID` is configured.
 - JWT credential is sent to `POST /api/auth/google/` for backend verification.
 
 **Frontend testing — Glaze-specific guidance:**

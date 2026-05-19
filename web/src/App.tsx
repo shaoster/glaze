@@ -190,7 +190,7 @@ function AuthLanding({
   onAuthenticated: (user: AuthUser) => void;
 }) {
   const location = useLocation();
-  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+  const GOOGLE_CLIENT_ID = import.meta.env.GOOGLE_OAUTH_CLIENT_ID as string | undefined;
   const prefillEmail = (location.state as { prefillEmail?: string } | null)?.prefillEmail ?? "";
   const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
@@ -761,7 +761,7 @@ export { Link };
 
 export default function App() {
   // Read at render time so vi.stubEnv works in tests.
-  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+  const GOOGLE_CLIENT_ID = import.meta.env.GOOGLE_OAUTH_CLIENT_ID as string | undefined;
   const {
     data: currentUser,
     loading,

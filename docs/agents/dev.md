@@ -355,13 +355,15 @@ All vars are optional. The app runs without any of them; each missing group degr
 | `CLOUDINARY_API_KEY`       | same as above                                                                         |
 | `CLOUDINARY_API_SECRET`    | same as above                                                                         |
 | `CLOUDINARY_UPLOAD_FOLDER` | uploads go to the root of the Cloudinary account (optional)                           |
-| `GOOGLE_OAUTH_CLIENT_ID`   | `POST /api/auth/google/` is non-functional; email/password login still works          |
+| `GOOGLE_OAUTH_CLIENT_ID`   | `POST /api/auth/google/` is non-functional; email/password login still works; Google Sign-In button not rendered |
 
-**`web/.env.local`** (read by Vite, injected into the frontend bundle):
+## Configuration Rationale
 
-| Variable                | Absent behavior                                                            |
-| ----------------------- | -------------------------------------------------------------------------- |
-| `VITE_GOOGLE_CLIENT_ID` | Google Sign-In button is not rendered; must match `GOOGLE_OAUTH_CLIENT_ID` |
+Glaze uses a multi-layered configuration strategy:
+
+1. **GitHub Secrets / Variables**: The source of truth for environment-specific configuration. This includes both sensitive secrets (e.g. `POSTGRES_PASSWORD`) and non-sensitive settings (e.g. `ALLOWED_HOST`). These are injected into the host's `.env` file during deployment.
+2. **`docker-compose.yml`**: Defines internal service topology and constants (e.g. `DATABASE_URL: postgres://db:5432`). These are identical across all environments.
+3. **Build-time Injection (`ci.yml`)**: Static assets (Vite) cannot read runtime environment variables from the server. Configuration like `GOOGLE_OAUTH_CLIENT_ID` must be baked into the Javascript bundle during the image build in CI.
 
 ---
 
