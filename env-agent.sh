@@ -396,12 +396,14 @@ gz_backup() {
         docker exec "$cid" pg_restore --version
         docker exec -i "$cid" pg_restore -U postgres -d glaze --no-owner --no-privileges < "$dump_path"
 
-        local table_count piece_count
+        local table_count piece_count user_count
         table_count=$(docker exec "$cid" psql -U postgres -d glaze -Atqc \
             "SELECT COUNT(*) FROM pg_catalog.pg_tables WHERE schemaname = 'public';")
         piece_count=$(docker exec "$cid" psql -U postgres -d glaze -Atqc \
             "SELECT COUNT(*) FROM api_piece;")
-        echo "Backed up $piece_count pieces."
+        user_count=$(docker exec "$cid" psql -U postgres -d glaze -Atqc \
+            "SELECT COUNT(*) FROM auth_user;")
+        echo "Backed up $piece_count pieces across $user_count users."
         echo "Verified restore: $table_count public tables, api_piece has $piece_count rows."
     )
 
