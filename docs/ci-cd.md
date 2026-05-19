@@ -154,3 +154,7 @@ certbot renew --dry-run
 ### Rollback
 
 If a deploy leaves one or both API instances unhealthy, roll back by re-running `deploy.sh` with the previous commit SHA. The nginx container is unaffected unless `nginx/conf.d/` changed.
+
+### Future Helm/k3s migration
+
+The concrete migration checklist for moving this stack from Docker Compose to Helm on k3s is tracked in [issue #547](https://github.com/shaoster/glaze/issues/547). It covers the resource mapping, the k3s rollout path, and the explicit Postgres backup and restore steps that must happen before any PVC churn.
