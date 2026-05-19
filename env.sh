@@ -18,4 +18,4 @@ source "$_GLAZE_SCRIPT_DIR/env-agent.sh"
 # This unsets the rtk prefix for all tool invocations.
 unset GLAZE_AGENT
 
-echo "Glaze ready — run 'gz_help' for shortcuts, 'gz_setup' for first-time install."
+echo "Glaze ready — run 'gz_help' for shortcuts."

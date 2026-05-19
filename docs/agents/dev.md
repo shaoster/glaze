@@ -25,8 +25,8 @@ If you need a production database snapshot for migration work, use `gz_backup`
 to stream a Postgres dump from the droplet and restore it into a disposable
 `postgres:17` container locally to verify the backup contains real data.
 
-See [`env.sh`](../../env.sh) for shell helpers (`gz_setup`, `gz_start`, etc.) that wrap these commands.
-In a new environment, run `source env.sh` once so the helpers are available. After that, `gz_start` will start the dev stack directly. Use `gz_setup` only when you want to repair a broken local environment or explicitly create isolated worktree-local dependencies with `--isolated`.
+See [`env.sh`](../../env.sh) for shell helpers (`gz_start`, `gz_sync`, etc.) that wrap these commands.
+In a new environment, run `source env.sh` once so the helpers are available and any missing local bootstrap state is created automatically. After that, `gz_start` will start the dev stack directly.
 
 ---
 
@@ -304,7 +304,6 @@ Start the app from a dedicated terminal:
 
 ```bash
 source env.sh
-gz_setup
 gz_start
 ```
 
