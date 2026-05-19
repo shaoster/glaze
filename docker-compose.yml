@@ -87,7 +87,10 @@ services:
   worker:
     image: ghcr.io/shaoster/glaze:${IMAGE_TAG:?Set IMAGE_TAG in .env}
     restart: unless-stopped
-    command: python -m celery -A backend worker -l INFO
+    entrypoint:
+      - bash
+      - -lc
+      - python -m celery -A backend worker -l INFO
     env_file: .env
     environment:
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
@@ -107,10 +110,13 @@ services:
     restart: "no"
     # One-shot service that runs migrations, seeds the public library, and
     # clears abandoned tasks before the new release starts serving traffic.
-    command: >
-      bash -c "python manage.py migrate --no-input &&
-               python manage.py load_public_library --skip-if-missing &&
-               python manage.py clear_stuck_tasks --hours 1"
+    entrypoint:
+      - bash
+      - -lc
+      - >
+        python manage.py migrate --no-input &&
+        python manage.py load_public_library --skip-if-missing &&
+        python manage.py clear_stuck_tasks --hours 1
     env_file: .env
     environment:
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
