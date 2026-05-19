@@ -44,6 +44,10 @@ const TOP_BTN: React.CSSProperties = {
 
 export default function MaskEditor({
   open = false,
+  imageUrl,
+  imageWidth,
+  imageHeight,
+  candidateMask,
   onCommit,
   onCancel,
 }: MaskEditorProps) {
@@ -51,21 +55,70 @@ export default function MaskEditor({
   const maskCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  const undoCount = state.undoStack.length;
-  const redoCount = state.redoStack.length;
+  // ImageData stacks live here so they never enter React state
+  const undoCanvasStack = useRef<ImageData[]>([]);
+  const redoCanvasStack = useRef<ImageData[]>([]);
+
+  const undoCount = state.undoStack;
+  const redoCount = state.redoStack;
+
+  // Called by MaskEditorCanvas after each paint op — snapshot is pre-op state
+  const handlePushUndo = useCallback((snapshot: ImageData) => {
+    undoCanvasStack.current = [...undoCanvasStack.current, snapshot].slice(-20);
+    redoCanvasStack.current = [];
+    dispatch({ type: "tool_applied" });
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    const canvas = maskCanvasRef.current;
+    if (!canvas || undoCanvasStack.current.length === 0) return;
+    const ctx = canvas.getContext("2d")!;
+    // Save current canvas state for redo
+    const current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    redoCanvasStack.current = [current, ...redoCanvasStack.current].slice(0, 20);
+    // Restore previous
+    const prev = undoCanvasStack.current[undoCanvasStack.current.length - 1];
+    undoCanvasStack.current = undoCanvasStack.current.slice(0, -1);
+    ctx.putImageData(prev, 0, 0);
+    dispatch({ type: "undo" });
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    const canvas = maskCanvasRef.current;
+    if (!canvas || redoCanvasStack.current.length === 0) return;
+    const ctx = canvas.getContext("2d")!;
+    // Save current canvas state for undo
+    const current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    undoCanvasStack.current = [...undoCanvasStack.current, current].slice(-20);
+    // Restore redo target
+    const next = redoCanvasStack.current[0];
+    redoCanvasStack.current = redoCanvasStack.current.slice(1);
+    ctx.putImageData(next, 0, 0);
+    dispatch({ type: "redo" });
+  }, []);
 
   const handleCommit = useCallback(() => {
     const canvas = maskCanvasRef.current;
     if (!canvas) return;
-    canvas.toBlob((blob) => {
+    // Output: RGB zeroed, alpha = foreground mask
+    const ctx = canvas.getContext("2d")!;
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < imageData.data.length; i += 4) {
+      imageData.data[i] = 0;
+      imageData.data[i + 1] = 0;
+      imageData.data[i + 2] = 0;
+    }
+    const tmp = document.createElement("canvas");
+    tmp.width = canvas.width;
+    tmp.height = canvas.height;
+    tmp.getContext("2d")!.putImageData(imageData, 0, 0);
+    tmp.toBlob((blob) => {
       if (blob) onCommit(blob);
     }, "image/png");
   }, [onCommit]);
 
   const handleRunGrabCut = useCallback(() => {
-    // GrabCut via @opencvjs/web — implementation wired here when opencv is loaded.
     dispatch({ type: "assist_started" });
-    // Stub: immediately fail with informative message until opencv integration is wired.
     setTimeout(() => {
       dispatch({
         type: "assist_failed",
@@ -181,7 +234,7 @@ export default function MaskEditor({
               style={TOP_BTN}
               title="Undo · ⌘Z"
               disabled={undoCount === 0}
-              onClick={() => dispatch({ type: "undo" })}
+              onClick={handleUndo}
             >
               <MEIcon name="undo" size={14} />
             </button>
@@ -189,7 +242,7 @@ export default function MaskEditor({
               style={{ ...TOP_BTN, borderLeft: `1px solid ${T.line}` }}
               title="Redo · ⇧⌘Z"
               disabled={redoCount === 0}
-              onClick={() => dispatch({ type: "redo" })}
+              onClick={handleRedo}
             >
               <MEIcon name="redo" size={14} />
             </button>
@@ -254,8 +307,14 @@ export default function MaskEditor({
 
         <MaskEditorCanvas
           state={state}
+          dispatch={dispatch}
           maskCanvasRef={maskCanvasRef}
           overlayCanvasRef={overlayCanvasRef}
+          imageUrl={imageUrl}
+          imageWidth={imageWidth}
+          imageHeight={imageHeight}
+          candidateMask={candidateMask}
+          onPushUndo={handlePushUndo}
         />
 
         <MaskEditorInspector

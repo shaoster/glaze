@@ -18,7 +18,7 @@ interface MaskEditorFooterProps {
 export default function MaskEditorFooter({ state }: MaskEditorFooterProps) {
   const usesWasm = state.activeTool === "grabcut" || state.activeTool === "snap";
   const perf = TOOL_PERF[state.activeTool];
-  const undoCount = state.undoStack.length;
+  const undoCount = state.undoStack;
 
   return (
     <div

@@ -1,225 +1,306 @@
+import { useRef, useEffect, useState } from "react";
+import type { Dispatch } from "react";
 import { Pill } from "./MaskEditorShared";
 import { T } from "./maskEditorTokens";
-import type { MaskEditorState, ToolName } from "./maskEditorState";
+import type { MaskEditorState, MaskEditorAction, ToolName, Point } from "./maskEditorState";
 
-// ---- Vase silhouette constants (from design) ----
-const VASE_PATH =
-  "M 292 140 Q 282 160 288 180 Q 264 220 268 270 Q 266 330 278 370 Q 286 392 320 392 Q 354 392 362 370 Q 374 330 372 270 Q 376 220 352 180 Q 358 160 348 140 Z";
+// ---- Coordinate helpers ----
 
-const VERTICES = [
-  { x: 292, y: 140 }, { x: 288, y: 180 }, { x: 268, y: 220 }, { x: 268, y: 270 },
-  { x: 270, y: 320 }, { x: 278, y: 370 }, { x: 300, y: 392 }, { x: 320, y: 392 },
-  { x: 340, y: 392 }, { x: 362, y: 370 }, { x: 370, y: 320 }, { x: 372, y: 270 },
-  { x: 376, y: 220 }, { x: 352, y: 180 }, { x: 348, y: 140 }, { x: 320, y: 132 },
-];
-
-// ---- Pottery illustration (from design) ----
-function PotteryImage() {
-  return (
-    <svg
-      viewBox="0 0 640 480"
-      preserveAspectRatio="xMidYMid slice"
-      style={{ display: "block", width: "100%", height: "100%" }}
-    >
-      <defs>
-        <linearGradient id="me-bg-tabletop" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="oklch(0.42 0.025 60)" />
-          <stop offset="65%" stopColor="oklch(0.32 0.018 50)" />
-          <stop offset="100%" stopColor="oklch(0.22 0.012 45)" />
-        </linearGradient>
-        <radialGradient id="me-bg-glow" cx="0.55" cy="0.4" r="0.6">
-          <stop offset="0%" stopColor="oklch(0.62 0.04 80 / 0.4)" />
-          <stop offset="100%" stopColor="oklch(0.3 0.02 60 / 0)" />
-        </radialGradient>
-        <radialGradient id="me-vase-clay" cx="0.4" cy="0.3">
-          <stop offset="0%" stopColor="oklch(0.68 0.10 35)" />
-          <stop offset="60%" stopColor="oklch(0.52 0.09 30)" />
-          <stop offset="100%" stopColor="oklch(0.38 0.07 28)" />
-        </radialGradient>
-        <filter id="me-grain">
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="1.2"
-            numOctaves="2"
-            stitchTiles="stitch"
-          />
-          <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.08 0" />
-        </filter>
-      </defs>
-      <rect width="640" height="480" fill="url(#me-bg-tabletop)" />
-      <rect width="640" height="480" fill="url(#me-bg-glow)" />
-      <line x1="0" y1="360" x2="640" y2="360" stroke="oklch(0.5 0.02 60)" strokeWidth="1" opacity="0.6" />
-      <ellipse cx="120" cy="340" rx="42" ry="78" fill="oklch(0.36 0.02 80)" opacity="0.55" />
-      <ellipse cx="540" cy="350" rx="56" ry="62" fill="oklch(0.39 0.025 60)" opacity="0.6" />
-      <rect x="450" y="280" width="80" height="60" fill="oklch(0.34 0.018 60)" opacity="0.5" />
-      <g transform="translate(320 290)">
-        <ellipse cx="0" cy="100" rx="62" ry="6" fill="oklch(0.15 0.01 45)" opacity="0.7" />
-        <path
-          d="M -28 -150 Q -38 -130 -32 -110 Q -56 -70 -52 -20 Q -54 40 -42 80 Q -34 102 0 102 Q 34 102 42 80 Q 54 40 52 -20 Q 56 -70 32 -110 Q 38 -130 28 -150 Z"
-          fill="url(#me-vase-clay)"
-        />
-        <path
-          d="M -30 -130 Q -50 -60 -38 30 Q -40 70 -30 95"
-          fill="none"
-          stroke="oklch(0.85 0.04 70 / 0.25)"
-          strokeWidth="3"
-        />
-        <path d="M 22 -140 Q 50 -60 45 50 Q 40 90 22 100" fill="oklch(0.2 0.02 30 / 0.35)" />
-      </g>
-      <rect width="640" height="480" filter="url(#me-grain)" opacity="0.6" />
-    </svg>
-  );
+function canvasPoint(
+  canvas: HTMLCanvasElement,
+  e: PointerEvent | MouseEvent,
+): Point {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: ((e.clientX - rect.left) * canvas.width) / rect.width,
+    y: ((e.clientY - rect.top) * canvas.height) / rect.height,
+  };
 }
 
-// ---- Per-tool SVG overlays ----
-function OverlayMaskFill({ opacity = 0.42 }: { opacity?: number }) {
-  return (
-    <path
-      d={VASE_PATH}
-      fill={T.accent}
-      fillOpacity={opacity}
-      stroke={T.accent}
-      strokeWidth="1.5"
-      strokeOpacity="0.9"
-    />
-  );
+// ---- Brush painting ----
+
+function paintCircle(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  erase: boolean,
+) {
+  ctx.save();
+  if (erase) {
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "rgba(0,0,0,1)";
+  } else {
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = T.accent;
+  }
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
-function PolygonOverlay({ selectedVertex }: { selectedVertex: number | null }) {
-  const sel = selectedVertex ?? 9;
-  const d =
-    VERTICES.map((v, i) => (i === 0 ? `M ${v.x} ${v.y}` : `L ${v.x} ${v.y}`)).join(" ") + " Z";
-  return (
-    <g>
-      <path d={d} fill={T.accent} fillOpacity="0.18" stroke={T.accent} strokeWidth="1.5" />
-      {VERTICES.map((v, i) => {
-        const isSel = i === sel;
-        return (
-          <g key={i}>
-            {isSel && (
-              <circle cx={v.x} cy={v.y} r="10" fill="none" stroke={T.accent} strokeWidth="1" strokeDasharray="2 2" opacity="0.8" />
-            )}
-            <rect
-              x={v.x - (isSel ? 5 : 3)} y={v.y - (isSel ? 5 : 3)}
-              width={isSel ? 10 : 6} height={isSel ? 10 : 6}
-              fill={isSel ? T.accent : T.bg}
-              stroke={isSel ? T.text : T.accent}
-              strokeWidth="1.5"
-            />
-          </g>
-        );
-      })}
-      <circle cx="270" cy="240" r="3" fill="none" stroke={T.text} strokeWidth="1" strokeDasharray="1 1" opacity="0.7" />
-      <text x="278" y="245" fill={T.textDim} fontSize="9" fontFamily={T.fontMono}>+ insert</text>
-      <g transform="translate(370 360)">
-        <rect x="0" y="0" width="58" height="18" rx="3" fill={T.bg2} stroke={T.line} />
-        <text x="6" y="12" fill={T.text} fontSize="10" fontFamily={T.fontMono}>v{sel} · 362,370</text>
-      </g>
-    </g>
-  );
+// ---- Flood fill ----
+
+function floodFill(
+  maskCanvas: HTMLCanvasElement,
+  srcCanvas: HTMLCanvasElement,
+  seedX: number,
+  seedY: number,
+  tolerance: number,
+  connectivity: "4" | "8",
+  mode: "add" | "subtract",
+) {
+  const W = maskCanvas.width;
+  const H = maskCanvas.height;
+  const maskCtx = maskCanvas.getContext("2d")!;
+  const srcCtx = srcCanvas.getContext("2d")!;
+  const maskData = maskCtx.getImageData(0, 0, W, H);
+  const srcData = srcCtx.getImageData(0, 0, W, H);
+
+  const sx = Math.round(Math.max(0, Math.min(W - 1, seedX)));
+  const sy = Math.round(Math.max(0, Math.min(H - 1, seedY)));
+
+  const seedOff = (sy * W + sx) * 4;
+  const seedR = srcData.data[seedOff];
+  const seedG = srcData.data[seedOff + 1];
+  const seedB = srcData.data[seedOff + 2];
+
+  const paintAlpha = mode === "add" ? 255 : 0;
+  // Tolerance maps 0–255 to squared Euclidean distance in RGB space (0–255 each)
+  const tolSq = tolerance * tolerance * 3;
+
+  const visited = new Uint8Array(W * H);
+  const queue: number[] = [sy * W + sx];
+  visited[sy * W + sx] = 1;
+
+  const DIRS4 = [-1, 1, -W, W];
+  const DIRS8 = [-1, 1, -W, W, -W - 1, -W + 1, W - 1, W + 1];
+  const dirs = connectivity === "4" ? DIRS4 : DIRS8;
+
+  while (queue.length > 0) {
+    const pos = queue.pop()!;
+    const off = pos * 4;
+
+    const dr = srcData.data[off] - seedR;
+    const dg = srcData.data[off + 1] - seedG;
+    const db = srcData.data[off + 2] - seedB;
+    if (dr * dr + dg * dg + db * db > tolSq) continue;
+
+    maskData.data[off + 3] = paintAlpha;
+
+    const px = pos % W;
+    const py = Math.floor(pos / W);
+
+    for (const d of dirs) {
+      const npos = pos + d;
+      if (npos < 0 || npos >= W * H) continue;
+      const nx = npos % W;
+      const ny = Math.floor(npos / W);
+      // Prevent wrap-around at row edges
+      if (Math.abs(nx - px) > 1 || Math.abs(ny - py) > 1) continue;
+      if (visited[npos]) continue;
+      visited[npos] = 1;
+      queue.push(npos);
+    }
+  }
+
+  maskCtx.putImageData(maskData, 0, 0);
 }
 
-function FloodOverlay() {
-  return (
-    <g>
-      <OverlayMaskFill opacity={0.36} />
-      <path
-        d="M 282 200 Q 278 240 286 280 Q 296 282 300 240 Q 296 210 282 200 Z"
-        fill={T.ok} fillOpacity="0.5" stroke={T.ok} strokeWidth="1.2" strokeDasharray="3 2"
-      />
-      <g transform="translate(290 240)">
-        <circle r="14" fill="none" stroke={T.text} strokeWidth="1" opacity="0.7" />
-        <circle r="3" fill={T.text} />
-        <line x1="-22" y1="0" x2="-16" y2="0" stroke={T.text} strokeWidth="1" />
-        <line x1="16" y1="0" x2="22" y2="0" stroke={T.text} strokeWidth="1" />
-        <line x1="0" y1="-22" x2="0" y2="-16" stroke={T.text} strokeWidth="1" />
-        <line x1="0" y1="16" x2="0" y2="22" stroke={T.text} strokeWidth="1" />
-      </g>
-      <g transform="translate(310 226)">
-        <rect width="118" height="34" rx="4" fill={T.bg2} stroke={T.line} />
-        <text x="8" y="14" fill={T.textDim} fontSize="9" fontFamily={T.fontMono}>sample  rgb(98,52,38)</text>
-        <text x="8" y="27" fill={T.accent} fontSize="9" fontFamily={T.fontMono}>+ add  ·  ~4.2k px</text>
-      </g>
-    </g>
-  );
+// ---- Polygon fill ----
+
+function fillPolygon(
+  maskCanvas: HTMLCanvasElement,
+  vertices: Point[],
+  mode: "add" | "subtract",
+) {
+  if (vertices.length < 3) return;
+  const ctx = maskCanvas.getContext("2d")!;
+  ctx.save();
+  if (mode === "subtract") {
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "rgba(0,0,0,1)";
+  } else {
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = T.accent;
+  }
+  ctx.beginPath();
+  ctx.moveTo(vertices[0].x, vertices[0].y);
+  for (let i = 1; i < vertices.length; i++) {
+    ctx.lineTo(vertices[i].x, vertices[i].y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
 }
 
-function GrabCutOverlay() {
-  return (
-    <g>
-      <path d={VASE_PATH} fill={T.accent} fillOpacity="0.28" stroke={T.accent} strokeWidth="1.2" />
-      <rect x="252" y="118" width="140" height="290" fill="none" stroke={T.text} strokeWidth="1.5" strokeDasharray="5 4" />
-      {([[252, 118], [392, 118], [252, 408], [392, 408]] as [number, number][]).map(([x, y], i) => (
-        <rect key={i} x={x - 3} y={y - 3} width="6" height="6" fill={T.text} />
-      ))}
-      <path d="M 312 200 Q 318 220 314 240 Q 322 260 318 280" fill="none" stroke={T.accent} strokeWidth="3" strokeLinecap="round" opacity="0.95" />
-      <path d="M 328 220 Q 332 250 326 290" fill="none" stroke={T.accent} strokeWidth="3" strokeLinecap="round" opacity="0.95" />
-      <path d="M 220 280 Q 200 290 180 280 Q 175 296 200 308" fill="none" stroke={T.slate} strokeWidth="3" strokeLinecap="round" opacity="0.95" />
-      <path d="M 420 260 Q 440 250 460 270" fill="none" stroke={T.slate} strokeWidth="3" strokeLinecap="round" opacity="0.95" />
-      <g transform="translate(252 100)">
-        <rect width="58" height="16" rx="2" fill={T.bg2} stroke={T.line} />
-        <text x="6" y="11" fontSize="9" fill={T.textDim} fontFamily={T.fontMono}>rect · 140×290</text>
-      </g>
-      <g transform="translate(440 380)">
-        <rect width="172" height="58" rx="4" fill={T.bg2} stroke={T.line} fillOpacity="0.92" />
-        <line x1="10" y1="18" x2="26" y2="18" stroke={T.accent} strokeWidth="3" strokeLinecap="round" />
-        <text x="34" y="22" fontSize="10" fill={T.text} fontFamily={T.fontMono}>foreground hint</text>
-        <line x1="10" y1="36" x2="26" y2="36" stroke={T.slate} strokeWidth="3" strokeLinecap="round" />
-        <text x="34" y="40" fontSize="10" fill={T.text} fontFamily={T.fontMono}>background hint</text>
-        <line x1="10" y1="50" x2="26" y2="50" stroke={T.text} strokeWidth="1.5" strokeDasharray="3 2" />
-        <text x="34" y="54" fontSize="10" fill={T.textDim} fontFamily={T.fontMono}>bounding rect</text>
-      </g>
-    </g>
-  );
+// ---- Overlay canvas drawing ----
+
+function drawBrushCursor(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  erase: boolean,
+) {
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = erase ? T.slate : T.accent;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([3, 3]);
+  ctx.stroke();
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(x, y, 2, 0, Math.PI * 2);
+  ctx.fillStyle = erase ? T.slate : T.accent;
+  ctx.setLineDash([]);
+  ctx.fill();
+  ctx.restore();
 }
 
-function ContourSnapOverlay() {
-  const drag = { x: 240, y: 305 };
-  const snapTarget = { x: 262, y: 312 };
-  return (
-    <g>
-      <path d={VASE_PATH} fill="none" stroke={T.accent} strokeWidth="1.5" />
-      <g opacity="0.55">
-        {Array.from({ length: 30 }).map((_, i) => {
-          const t = i / 29;
-          const y = 160 + t * 220;
-          const x = 268 + Math.sin(t * 3.2) * 8;
-          const len = 4 + ((i * 37) % 9);
-          return (
-            <line key={i} x1={x - len} y1={y} x2={x + len} y2={y} stroke={T.kiln} strokeWidth="1" strokeLinecap="round" opacity={0.3 + ((i * 13) % 7) / 14} />
-          );
-        })}
-      </g>
-      {VERTICES.map((v, i) => (
-        <rect key={i} x={v.x - 2.5} y={v.y - 2.5} width="5" height="5" fill={T.bg} stroke={T.accent} strokeWidth="1.2" />
-      ))}
-      <circle cx={drag.x} cy={drag.y} r="22" fill="none" stroke={T.text} strokeWidth="1" strokeDasharray="3 3" opacity="0.7" />
-      <circle cx={drag.x} cy={drag.y} r="22" fill={T.accent} fillOpacity="0.06" />
-      <line x1={drag.x} y1={drag.y} x2={snapTarget.x} y2={snapTarget.y} stroke={T.kiln} strokeWidth="1.5" strokeDasharray="2 2" />
-      <rect x={drag.x - 4} y={drag.y - 4} width="8" height="8" fill={T.text} stroke={T.accent} strokeWidth="1.5" />
-      <circle cx={snapTarget.x} cy={snapTarget.y} r="6" fill="none" stroke={T.kiln} strokeWidth="1.5" />
-      <circle cx={snapTarget.x} cy={snapTarget.y} r="2.5" fill={T.kiln} />
-      <text x={drag.x - 21} y={drag.y - 26} fontSize="9" fill={T.textDim} fontFamily={T.fontMono}>r = 22 px</text>
-      <g transform={`translate(${snapTarget.x + 12} ${snapTarget.y - 6})`}>
-        <rect width="78" height="16" rx="2" fill={T.bg2} stroke="oklch(0.78 0.13 75 / 0.5)" />
-        <text x="6" y="11" fontSize="9" fill={T.kiln} fontFamily={T.fontMono}>edge · 0.83 ▲</text>
-      </g>
-    </g>
-  );
+function drawPolygonOverlay(
+  ctx: CanvasRenderingContext2D,
+  vertices: Point[],
+  selectedVertex: number | null,
+  hoverPoint: Point | null,
+) {
+  const W = ctx.canvas.width;
+  const H = ctx.canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  if (vertices.length === 0) return;
+
+  ctx.save();
+
+  // Fill preview
+  if (vertices.length >= 3) {
+    ctx.beginPath();
+    ctx.moveTo(vertices[0].x, vertices[0].y);
+    for (let i = 1; i < vertices.length; i++) ctx.lineTo(vertices[i].x, vertices[i].y);
+    ctx.closePath();
+    ctx.fillStyle = T.accentTint;
+    ctx.fill();
+  }
+
+  // Edges
+  ctx.beginPath();
+  ctx.moveTo(vertices[0].x, vertices[0].y);
+  for (let i = 1; i < vertices.length; i++) ctx.lineTo(vertices[i].x, vertices[i].y);
+  if (vertices.length >= 3) ctx.closePath();
+  ctx.strokeStyle = T.accent;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([]);
+  ctx.stroke();
+
+  // Preview line to cursor
+  if (hoverPoint && vertices.length > 0) {
+    const last = vertices[vertices.length - 1];
+    ctx.beginPath();
+    ctx.moveTo(last.x, last.y);
+    ctx.lineTo(hoverPoint.x, hoverPoint.y);
+    ctx.strokeStyle = T.accent;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Vertex handles
+  for (let i = 0; i < vertices.length; i++) {
+    const v = vertices[i];
+    const isSel = i === selectedVertex;
+    const size = isSel ? 10 : 6;
+    ctx.fillStyle = isSel ? T.accent : T.bg;
+    ctx.strokeStyle = isSel ? T.text : T.accent;
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(v.x - size / 2, v.y - size / 2, size, size);
+    ctx.strokeRect(v.x - size / 2, v.y - size / 2, size, size);
+  }
+
+  ctx.restore();
+}
+
+function drawGrabCutOverlay(
+  ctx: CanvasRenderingContext2D,
+  rect: { x: number; y: number; w: number; h: number } | null,
+  dragging: { x: number; y: number; w: number; h: number } | null,
+) {
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  const r = dragging ?? rect;
+  if (!r || r.w === 0 || r.h === 0) return;
+
+  const { x, y, w, h } = r;
+  ctx.save();
+  ctx.strokeStyle = T.text;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 4]);
+  ctx.strokeRect(x, y, w, h);
+  ctx.setLineDash([]);
+
+  // Corner handles
+  for (const [cx, cy] of [[x, y], [x + w, y], [x, y + h], [x + w, y + h]] as [number, number][]) {
+    ctx.fillStyle = T.text;
+    ctx.fillRect(cx - 3, cy - 3, 6, 6);
+  }
+
+  // Size label
+  ctx.fillStyle = T.bg2;
+  ctx.fillRect(x, y - 18, 80, 16);
+  ctx.fillStyle = T.textDim;
+  ctx.font = `9px ${T.fontMono}`;
+  ctx.fillText(`${Math.round(Math.abs(w))}×${Math.round(Math.abs(h))}`, x + 4, y - 6);
+  ctx.restore();
 }
 
 // ---- Context strip ----
-const CONTEXT_META: Record<ToolName, { left: string; right: string }> = {
-  prefill:  { left: "PRE-FILL · applying candidate mask", right: "" },
-  brush:    { left: "BRUSH · r 16 · paint", right: "cursor 0, 0" },
-  polygon:  { left: "POLY · 16 vertices · ε 1.4", right: "cursor 270, 240  ·  hover edge v8↔v9" },
-  flood:    { left: "FLOOD · add · tol 28 · 4-way", right: "cursor 290, 240  ·  sample rgb(98,52,38)" },
-  grabcut:  { left: "GRABCUT · rect 140×290 · iter 5", right: "cursor 312, 240  ·  hint FG" },
-  snap:     { left: "SNAP · sobel · r 22 · τ 0.42", right: "cursor 240, 305  ·  target 262, 312" },
-};
 
-function ContextStrip({ tool }: { tool: ToolName }) {
-  const meta = CONTEXT_META[tool];
+function ContextStrip({
+  tool,
+  cursor,
+  brushRadius,
+  brushMode,
+  floodTolerance,
+  floodMode,
+  floodConnectivity,
+  polygonVertices,
+  polygonSimplifyEps,
+  grabcutRect,
+  grabcutIterations,
+  snapEdgeOperator,
+  snapRadius,
+  snapEdgeThreshold,
+}: {
+  tool: ToolName;
+  cursor: Point | null;
+  brushRadius: number;
+  brushMode: "paint" | "erase";
+  floodTolerance: number;
+  floodMode: "add" | "subtract";
+  floodConnectivity: "4" | "8";
+  polygonVertices: Point[];
+  polygonSimplifyEps: number;
+  grabcutRect: { x: number; y: number; w: number; h: number } | null;
+  grabcutIterations: number;
+  snapEdgeOperator: string;
+  snapRadius: number;
+  snapEdgeThreshold: number;
+}) {
+  const cx = cursor ? Math.round(cursor.x) : 0;
+  const cy = cursor ? Math.round(cursor.y) : 0;
+
+  const leftText: Record<ToolName, string> = {
+    prefill: "PRE-FILL · applying candidate mask",
+    brush: `BRUSH · r ${brushRadius} · ${brushMode}`,
+    polygon: `POLY · ${polygonVertices.length} vertices · ε ${polygonSimplifyEps}`,
+    flood: `FLOOD · ${floodMode} · tol ${floodTolerance} · ${floodConnectivity}-way`,
+    grabcut: grabcutRect
+      ? `GRABCUT · rect ${Math.round(grabcutRect.w)}×${Math.round(grabcutRect.h)} · iter ${grabcutIterations}`
+      : "GRABCUT · drag to set rect",
+    snap: `SNAP · ${snapEdgeOperator} · r ${snapRadius} · τ ${snapEdgeThreshold}`,
+  };
+
   return (
     <div
       style={{
@@ -236,48 +317,388 @@ function ContextStrip({ tool }: { tool: ToolName }) {
         flexShrink: 0,
       }}
     >
-      <span style={{ color: T.textDim }}>{meta.left}</span>
-      <span>{meta.right}</span>
+      <span style={{ color: T.textDim }}>{leftText[tool]}</span>
+      <span>{cursor ? `cursor ${cx}, ${cy}` : ""}</span>
     </div>
   );
 }
 
-// ---- Tool label for corner badge ----
+// ---- Tool label ----
 const TOOL_LABELS: Record<ToolName, string> = {
-  prefill:  "PRE-FILL",
-  brush:    "BRUSH · paint",
-  polygon:  "POLYGON · v9 selected",
-  flood:    "FLOOD · add",
-  grabcut:  "GRABCUT · 5 iter",
-  snap:     "CONTOUR SNAP",
+  prefill: "PRE-FILL",
+  brush: "BRUSH",
+  polygon: "POLYGON",
+  flood: "FLOOD FILL",
+  grabcut: "GRABCUT",
+  snap: "CONTOUR SNAP",
 };
 
-// ---- Main canvas area ----
+// ---- Main component ----
+
 interface MaskEditorCanvasProps {
   state: MaskEditorState;
+  dispatch: Dispatch<MaskEditorAction>;
   maskCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   overlayCanvasRef: React.RefObject<HTMLCanvasElement | null>;
+  imageUrl: string;
+  imageWidth: number;
+  imageHeight: number;
+  candidateMask?: string | null;
+  onPushUndo: (snapshot: ImageData) => void;
 }
 
 export default function MaskEditorCanvas({
   state,
+  dispatch,
   maskCanvasRef,
   overlayCanvasRef,
+  imageUrl,
+  imageWidth,
+  imageHeight,
+  candidateMask,
+  onPushUndo,
 }: MaskEditorCanvasProps) {
   const tool = state.activeTool;
+  const srcCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isPainting = useRef(false);
+  const dragRect = useRef<{ startX: number; startY: number; x: number; y: number; w: number; h: number } | null>(null);
+  const draggingVertexIdx = useRef<number | null>(null);
+  const [cursor, setCursor] = useState<Point | null>(null);
 
-  const overlay = {
-    prefill:  null,
-    brush:    <OverlayMaskFill />,
-    polygon:  <PolygonOverlay selectedVertex={state.selectedVertex} />,
-    flood:    <FloodOverlay />,
-    grabcut:  <GrabCutOverlay />,
-    snap:     <ContourSnapOverlay />,
-  }[tool];
+  // ---- Initialize canvas dimensions ----
+  useEffect(() => {
+    const mask = maskCanvasRef.current;
+    const overlay = overlayCanvasRef.current;
+    if (!mask || !overlay) return;
+    mask.width = imageWidth;
+    mask.height = imageHeight;
+    overlay.width = imageWidth;
+    overlay.height = imageHeight;
+  }, [imageWidth, imageHeight, maskCanvasRef, overlayCanvasRef]);
+
+  // ---- Load source image into offscreen canvas for flood fill pixel access ----
+  useEffect(() => {
+    if (!imageUrl) return;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = imageWidth;
+      c.height = imageHeight;
+      c.getContext("2d")!.drawImage(img, 0, 0, imageWidth, imageHeight);
+      srcCanvasRef.current = c;
+    };
+    img.src = imageUrl;
+  }, [imageUrl, imageWidth, imageHeight]);
+
+  // ---- Load candidateMask onto maskCanvas ----
+  useEffect(() => {
+    const mask = maskCanvasRef.current;
+    if (!mask || !candidateMask) return;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const ctx = mask.getContext("2d")!;
+      ctx.clearRect(0, 0, mask.width, mask.height);
+      // Draw mask — threshold alpha > 128 → paint foreground color
+      const tmp = document.createElement("canvas");
+      tmp.width = mask.width;
+      tmp.height = mask.height;
+      const tmpCtx = tmp.getContext("2d")!;
+      tmpCtx.drawImage(img, 0, 0, mask.width, mask.height);
+      const imgData = tmpCtx.getImageData(0, 0, mask.width, mask.height);
+      const outData = ctx.createImageData(mask.width, mask.height);
+      // Parse T.accent into RGBA for painting (approximate from oklch string — use warm orange)
+      for (let i = 0; i < imgData.data.length; i += 4) {
+        if (imgData.data[i + 3] > 128) {
+          outData.data[i] = 220;
+          outData.data[i + 1] = 90;
+          outData.data[i + 2] = 40;
+          outData.data[i + 3] = 255;
+        }
+      }
+      ctx.putImageData(outData, 0, 0);
+      dispatch({ type: "hydrate", hadMask: true });
+    };
+    img.src = candidateMask;
+  }, [candidateMask, maskCanvasRef, dispatch]);
+
+  // ---- Redraw polygon overlay ----
+  useEffect(() => {
+    if (tool !== "polygon") return;
+    const overlay = overlayCanvasRef.current;
+    if (!overlay) return;
+    const ctx = overlay.getContext("2d")!;
+    drawPolygonOverlay(ctx, state.polygonVertices, state.selectedVertex, null);
+  }, [tool, state.polygonVertices, state.selectedVertex, overlayCanvasRef]);
+
+  // ---- Redraw grabcut overlay ----
+  useEffect(() => {
+    if (tool !== "grabcut") return;
+    const overlay = overlayCanvasRef.current;
+    if (!overlay) return;
+    const ctx = overlay.getContext("2d")!;
+    drawGrabCutOverlay(ctx, state.grabcutRect, null);
+  }, [tool, state.grabcutRect, overlayCanvasRef]);
+
+  // ---- Clear overlay when switching tools ----
+  useEffect(() => {
+    const overlay = overlayCanvasRef.current;
+    if (!overlay) return;
+    if (tool !== "polygon" && tool !== "grabcut") {
+      overlay.getContext("2d")!.clearRect(0, 0, overlay.width, overlay.height);
+    }
+  }, [tool, overlayCanvasRef]);
+
+  // ---- Brush pointer events (on maskCanvas) ----
+  useEffect(() => {
+    const canvas = maskCanvasRef.current;
+    const overlay = overlayCanvasRef.current;
+    if (!canvas || !overlay) return;
+    if (tool !== "brush") return;
+
+    const ctx = canvas.getContext("2d")!;
+    const oCtx = overlay.getContext("2d")!;
+
+    const onDown = (e: PointerEvent) => {
+      e.preventDefault();
+      canvas.setPointerCapture(e.pointerId);
+      isPainting.current = true;
+      const snap = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      onPushUndo(snap);
+      const p = canvasPoint(canvas, e);
+      paintCircle(ctx, p.x, p.y, state.brushRadius, state.brushMode === "erase");
+    };
+
+    const onMove = (e: PointerEvent) => {
+      const p = canvasPoint(canvas, e);
+      setCursor(p);
+      drawBrushCursor(oCtx, p.x, p.y, state.brushRadius, state.brushMode === "erase");
+      if (!isPainting.current) return;
+      e.preventDefault();
+      paintCircle(ctx, p.x, p.y, state.brushRadius, state.brushMode === "erase");
+    };
+
+    const onUp = () => {
+      isPainting.current = false;
+    };
+
+    const onLeave = () => {
+      setCursor(null);
+      oCtx.clearRect(0, 0, overlay.width, overlay.height);
+    };
+
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("pointercancel", onUp);
+    canvas.addEventListener("pointerleave", onLeave);
+    return () => {
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointercancel", onUp);
+      canvas.removeEventListener("pointerleave", onLeave);
+    };
+  }, [tool, state.brushRadius, state.brushMode, maskCanvasRef, overlayCanvasRef, onPushUndo]);
+
+  // ---- Flood fill click (on maskCanvas) ----
+  useEffect(() => {
+    const canvas = maskCanvasRef.current;
+    if (!canvas) return;
+    if (tool !== "flood") return;
+
+    const onClick = (e: MouseEvent) => {
+      const src = srcCanvasRef.current;
+      if (!src) return;
+      const p = canvasPoint(canvas, e);
+      const ctx = canvas.getContext("2d")!;
+      const snap = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      onPushUndo(snap);
+      floodFill(canvas, src, p.x, p.y, state.floodTolerance, state.floodConnectivity, state.floodMode);
+      dispatch({ type: "tool_applied" });
+    };
+
+    canvas.addEventListener("click", onClick);
+    return () => canvas.removeEventListener("click", onClick);
+  }, [tool, state.floodTolerance, state.floodConnectivity, state.floodMode, maskCanvasRef, onPushUndo, dispatch]);
+
+  // ---- Polygon pointer events (on overlayCanvas) ----
+  useEffect(() => {
+    const overlay = overlayCanvasRef.current;
+    const mask = maskCanvasRef.current;
+    if (!overlay || !mask) return;
+    if (tool !== "polygon") return;
+
+    const oCtx = overlay.getContext("2d")!;
+
+    const HANDLE_HIT = 8;
+
+    const findVertex = (p: Point): number | null => {
+      for (let i = 0; i < state.polygonVertices.length; i++) {
+        const v = state.polygonVertices[i];
+        if (Math.abs(v.x - p.x) <= HANDLE_HIT && Math.abs(v.y - p.y) <= HANDLE_HIT) return i;
+      }
+      return null;
+    };
+
+    const onDown = (e: PointerEvent) => {
+      const p = canvasPoint(overlay, e);
+      const hit = findVertex(p);
+      if (hit !== null) {
+        draggingVertexIdx.current = hit;
+        overlay.setPointerCapture(e.pointerId);
+        dispatch({ type: "polygon_vertex_selected", index: hit });
+      }
+    };
+
+    const onMove = (e: PointerEvent) => {
+      const p = canvasPoint(overlay, e);
+      setCursor(p);
+      if (draggingVertexIdx.current !== null) {
+        dispatch({ type: "polygon_vertex_moved", index: draggingVertexIdx.current, point: p });
+      } else {
+        drawPolygonOverlay(oCtx, state.polygonVertices, state.selectedVertex, p);
+      }
+    };
+
+    const onUp = () => {
+      draggingVertexIdx.current = null;
+    };
+
+    const onClick = (e: MouseEvent) => {
+      const p = canvasPoint(overlay, e);
+      if (findVertex(p) !== null) return; // hit existing vertex, don't add
+      dispatch({ type: "polygon_vertex_added", point: p });
+    };
+
+    const onDblClick = (e: MouseEvent) => {
+      e.preventDefault();
+      const maskCtx = mask.getContext("2d")!;
+      const snap = maskCtx.getImageData(0, 0, mask.width, mask.height);
+      onPushUndo(snap);
+      fillPolygon(mask, state.polygonVertices, state.floodMode);
+      dispatch({ type: "tool_applied" });
+      dispatch({ type: "polygon_vertex_selected", index: null });
+      // Clear vertices after commit
+      for (let i = state.polygonVertices.length - 1; i >= 0; i--) {
+        dispatch({ type: "polygon_vertex_deleted", index: i });
+      }
+    };
+
+    const onContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      const p = canvasPoint(overlay, e);
+      const hit = findVertex(p);
+      if (hit !== null) dispatch({ type: "polygon_vertex_deleted", index: hit });
+    };
+
+    const onLeave = () => setCursor(null);
+
+    overlay.addEventListener("pointerdown", onDown);
+    overlay.addEventListener("pointermove", onMove);
+    overlay.addEventListener("pointerup", onUp);
+    overlay.addEventListener("click", onClick);
+    overlay.addEventListener("dblclick", onDblClick);
+    overlay.addEventListener("contextmenu", onContextMenu);
+    overlay.addEventListener("pointerleave", onLeave);
+    return () => {
+      overlay.removeEventListener("pointerdown", onDown);
+      overlay.removeEventListener("pointermove", onMove);
+      overlay.removeEventListener("pointerup", onUp);
+      overlay.removeEventListener("click", onClick);
+      overlay.removeEventListener("dblclick", onDblClick);
+      overlay.removeEventListener("contextmenu", onContextMenu);
+      overlay.removeEventListener("pointerleave", onLeave);
+    };
+  }, [
+    tool,
+    state.polygonVertices,
+    state.selectedVertex,
+    state.floodMode,
+    overlayCanvasRef,
+    maskCanvasRef,
+    onPushUndo,
+    dispatch,
+  ]);
+
+  // ---- GrabCut rect drag (on overlayCanvas) ----
+  useEffect(() => {
+    const overlay = overlayCanvasRef.current;
+    if (!overlay) return;
+    if (tool !== "grabcut") return;
+
+    const oCtx = overlay.getContext("2d")!;
+
+    const onDown = (e: PointerEvent) => {
+      const p = canvasPoint(overlay, e);
+      overlay.setPointerCapture(e.pointerId);
+      dragRect.current = { startX: p.x, startY: p.y, x: p.x, y: p.y, w: 0, h: 0 };
+    };
+
+    const onMove = (e: PointerEvent) => {
+      const p = canvasPoint(overlay, e);
+      setCursor(p);
+      if (!dragRect.current) return;
+      const r = dragRect.current;
+      r.x = Math.min(p.x, r.startX);
+      r.y = Math.min(p.y, r.startY);
+      r.w = Math.abs(p.x - r.startX);
+      r.h = Math.abs(p.y - r.startY);
+      drawGrabCutOverlay(oCtx, state.grabcutRect, r);
+    };
+
+    const onUp = () => {
+      if (!dragRect.current) return;
+      const r = dragRect.current;
+      if (r.w > 4 && r.h > 4) {
+        dispatch({ type: "set_grabcut_rect", rect: { x: r.x, y: r.y, w: r.w, h: r.h } });
+      }
+      dragRect.current = null;
+    };
+
+    const onLeave = () => setCursor(null);
+
+    overlay.addEventListener("pointerdown", onDown);
+    overlay.addEventListener("pointermove", onMove);
+    overlay.addEventListener("pointerup", onUp);
+    overlay.addEventListener("pointerleave", onLeave);
+    return () => {
+      overlay.removeEventListener("pointerdown", onDown);
+      overlay.removeEventListener("pointermove", onMove);
+      overlay.removeEventListener("pointerup", onUp);
+      overlay.removeEventListener("pointerleave", onLeave);
+    };
+  }, [tool, state.grabcutRect, overlayCanvasRef, dispatch]);
+
+  // ---- Canvas pointer events for cursor tracking (prefill/snap) ----
+  useEffect(() => {
+    const overlay = overlayCanvasRef.current;
+    if (!overlay) return;
+    if (tool !== "prefill" && tool !== "snap") return;
+    const onMove = (e: PointerEvent) => setCursor(canvasPoint(overlay, e));
+    const onLeave = () => setCursor(null);
+    overlay.addEventListener("pointermove", onMove);
+    overlay.addEventListener("pointerleave", onLeave);
+    return () => {
+      overlay.removeEventListener("pointermove", onMove);
+      overlay.removeEventListener("pointerleave", onLeave);
+    };
+  }, [tool, overlayCanvasRef]);
+
+  // Cursor style per tool
+  const cursorStyle: Record<ToolName, string> = {
+    prefill: "default",
+    brush: "none",
+    polygon: "crosshair",
+    flood: "crosshair",
+    grabcut: "crosshair",
+    snap: "default",
+  };
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      {/* canvas viewport */}
+      {/* Canvas viewport */}
       <div
         style={{
           flex: 1,
@@ -288,7 +709,7 @@ export default function MaskEditorCanvas({
           borderBottom: `1px solid ${T.line}`,
         }}
       >
-        {/* checker for off-canvas margin */}
+        {/* Checker background for transparency */}
         <div
           style={{
             position: "absolute",
@@ -304,65 +725,77 @@ export default function MaskEditorCanvas({
           }}
         />
 
-        {/* SVG canvas (image + overlays) */}
-        <svg
-          viewBox="0 0 640 480"
-          preserveAspectRatio="xMidYMid meet"
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-        >
-          <foreignObject x="0" y="0" width="640" height="480">
-            <div style={{ width: 640, height: 480 }}>
-              <PotteryImage />
-            </div>
-          </foreignObject>
-          <rect x="0" y="0" width="640" height="480" fill="none" stroke={T.textMute} strokeWidth="1" strokeDasharray="2 3" opacity="0.4" />
-          {overlay}
-        </svg>
+        {/* Source image */}
+        <img
+          src={imageUrl}
+          alt=""
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            display: "block",
+            userSelect: "none",
+            pointerEvents: "none",
+          }}
+        />
 
-        {/* mask canvas (alpha = foreground) */}
+        {/* Mask canvas — alpha channel = foreground */}
         <canvas
           ref={maskCanvasRef}
-          width={640}
-          height={480}
           style={{
             position: "absolute",
             inset: 0,
             width: "100%",
             height: "100%",
-            pointerEvents: tool === "brush" ? "auto" : "none",
-            opacity: 0,
+            opacity: 0.55,
+            cursor: cursorStyle[tool],
+            pointerEvents: tool === "brush" || tool === "flood" ? "auto" : "none",
           }}
         />
 
-        {/* overlay canvas (polygon vertices, grabcut rect) */}
+        {/* Overlay canvas — cursor, polygon, grabcut rect */}
         <canvas
           ref={overlayCanvasRef}
-          width={640}
-          height={480}
           style={{
             position: "absolute",
             inset: 0,
             width: "100%",
             height: "100%",
-            pointerEvents: ["polygon", "grabcut", "snap"].includes(tool) ? "auto" : "none",
+            cursor: cursorStyle[tool],
+            pointerEvents: ["polygon", "grabcut", "snap", "prefill"].includes(tool) ? "auto" : "none",
           }}
         />
 
-        {/* corner badges */}
-        <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 6 }}>
+        {/* Corner badges */}
+        <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 6, pointerEvents: "none" }}>
           <Pill>{TOOL_LABELS[tool]}</Pill>
-          <Pill kind="slate">640 × 480</Pill>
+          <Pill kind="slate">{imageWidth} × {imageHeight}</Pill>
         </div>
-        <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 6 }}>
-          <Pill>67%</Pill>
-          {state.dirty && <Pill kind="accent">● mask dirty</Pill>}
+        <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 6, pointerEvents: "none" }}>
+          {state.dirty && <Pill kind="accent">● unsaved</Pill>}
         </div>
       </div>
 
-      <ContextStrip tool={tool} />
+      <ContextStrip
+        tool={tool}
+        cursor={cursor}
+        brushRadius={state.brushRadius}
+        brushMode={state.brushMode}
+        floodTolerance={state.floodTolerance}
+        floodMode={state.floodMode}
+        floodConnectivity={state.floodConnectivity}
+        polygonVertices={state.polygonVertices}
+        polygonSimplifyEps={state.polygonSimplifyEps}
+        grabcutRect={state.grabcutRect}
+        grabcutIterations={state.grabcutIterations}
+        snapEdgeOperator={state.snapEdgeOperator}
+        snapRadius={state.snapRadius}
+        snapEdgeThreshold={state.snapEdgeThreshold}
+      />
     </div>
   );
 }
 
-// Export canvas ref type helper
 export type MaskCanvasRef = React.RefObject<HTMLCanvasElement | null>;

@@ -58,9 +58,9 @@ export type MaskEditorState = {
   snapRejectBelow: boolean;
   snapAcrossDiscontinuities: boolean;
 
-  // undo/redo — canvas snapshots (ImageData serialized as Uint8ClampedArray)
-  undoStack: ImageData[];
-  redoStack: ImageData[];
+  // undo/redo counts — actual ImageData snapshots live in MaskEditor refs
+  undoStack: number;
+  redoStack: number;
 
   // assist operations
   assistStatus: AssistStatus;
@@ -71,7 +71,7 @@ export type MaskEditorState = {
 };
 
 export type MaskEditorAction =
-  | { type: "hydrate"; snapshot: ImageData | null }
+  | { type: "hydrate"; hadMask: boolean }
   | { type: "set_tool"; tool: ToolName }
   // brush
   | { type: "set_brush_radius"; radius: number }
@@ -103,10 +103,10 @@ export type MaskEditorAction =
   | { type: "set_snap_edge_operator"; operator: EdgeOperator }
   | { type: "set_snap_reject_below"; on: boolean }
   | { type: "set_snap_across_discontinuities"; on: boolean }
-  // canvas mutations
-  | { type: "tool_applied"; snapshot: ImageData }
+  // canvas mutations — ImageData lives in component refs, state tracks counts
+  | { type: "tool_applied" }
   | { type: "assist_started" }
-  | { type: "assist_succeeded"; snapshot: ImageData; ms: number }
+  | { type: "assist_succeeded"; ms: number }
   | { type: "assist_failed"; error: string }
   | { type: "undo" }
   | { type: "redo" };
@@ -138,17 +138,21 @@ export const INITIAL_STATE: MaskEditorState = {
   snapEdgeOperator: "sobel",
   snapRejectBelow: true,
   snapAcrossDiscontinuities: false,
-  undoStack: [],
-  redoStack: [],
+  undoStack: 0,
+  redoStack: 0,
   assistStatus: "idle",
   assistError: null,
   lastAssistMs: null,
   dirty: false,
 };
 
-function pushUndo(state: MaskEditorState, snapshot: ImageData): MaskEditorState {
-  const stack = [...state.undoStack, snapshot].slice(-MAX_UNDO);
-  return { ...state, undoStack: stack, redoStack: [], dirty: true };
+function pushUndo(state: MaskEditorState): MaskEditorState {
+  return {
+    ...state,
+    undoStack: Math.min(state.undoStack + 1, MAX_UNDO),
+    redoStack: 0,
+    dirty: true,
+  };
 }
 
 export function maskEditorReducer(
@@ -159,7 +163,7 @@ export function maskEditorReducer(
     case "hydrate":
       return {
         ...INITIAL_STATE,
-        undoStack: action.snapshot ? [action.snapshot] : [],
+        undoStack: action.hadMask ? 1 : 0,
       };
 
     case "set_tool":
@@ -236,13 +240,13 @@ export function maskEditorReducer(
       return { ...state, snapAcrossDiscontinuities: action.on };
 
     case "tool_applied":
-      return pushUndo(state, action.snapshot);
+      return pushUndo(state);
 
     case "assist_started":
       return { ...state, assistStatus: "loading", assistError: null };
     case "assist_succeeded":
       return {
-        ...pushUndo(state, action.snapshot),
+        ...pushUndo(state),
         assistStatus: "idle",
         lastAssistMs: action.ms,
       };
@@ -254,22 +258,19 @@ export function maskEditorReducer(
       };
 
     case "undo": {
-      if (state.undoStack.length === 0) return state;
-      const stack = [...state.undoStack];
-      const top = stack.pop()!;
+      if (state.undoStack === 0) return state;
       return {
         ...state,
-        undoStack: stack,
-        redoStack: [top, ...state.redoStack].slice(0, MAX_UNDO),
+        undoStack: state.undoStack - 1,
+        redoStack: Math.min(state.redoStack + 1, MAX_UNDO),
       };
     }
     case "redo": {
-      if (state.redoStack.length === 0) return state;
-      const [top, ...rest] = state.redoStack;
+      if (state.redoStack === 0) return state;
       return {
         ...state,
-        undoStack: [...state.undoStack, top].slice(-MAX_UNDO),
-        redoStack: rest,
+        undoStack: Math.min(state.undoStack + 1, MAX_UNDO),
+        redoStack: state.redoStack - 1,
       };
     }
 
