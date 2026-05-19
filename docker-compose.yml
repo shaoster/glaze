@@ -156,10 +156,10 @@ services:
     entrypoint:
       - bash
       - -lc
-    command: >
-      python manage.py migrate --no-input &&
-      python manage.py load_public_library --skip-if-missing &&
-      python manage.py clear_stuck_tasks --hours 1
+      - >
+        python manage.py migrate --no-input &&
+        python manage.py load_public_library --skip-if-missing &&
+        python manage.py clear_stuck_tasks --hours 1
     environment:
       PRODUCTION: "true"
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
