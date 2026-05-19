@@ -164,6 +164,28 @@ describe("PieceList", () => {
       expect(mockPositioner.set).not.toHaveBeenCalled();
     });
 
+    it.skip("reproduces the first-load overlap on the initial masonry pass", () => {
+      const pieces = [
+        makePiece({
+          id: "tall",
+          thumbnail: {
+            url: "https://example.com/tall.jpg",
+            cloudinary_public_id: "id",
+            cloud_name: "demo",
+            crop: { x: 0, y: 0, width: 200, height: 400 },
+          },
+        }),
+        makePiece({ id: "middle" }),
+        makePiece({ id: "bottom" }),
+      ];
+
+      const { container } = renderPieceList(pieces);
+      const cards = container.querySelectorAll('[data-testid="piece-grid"] > div');
+
+      expect(Number(cards[1]?.getAttribute("data-top"))).toBe(560);
+      expect(Number(cards[2]?.getAttribute("data-top"))).toBe(560);
+    });
+
     it("does not re-seed already-positioned items", () => {
       mockPositioner.get.mockReturnValue({ top: 0, left: 0, height: 300, column: 0 });
       const piece = makePiece({
