@@ -26,6 +26,7 @@ function drawPolygonOverlay(
   vertices: Point[],
   selectedVertex: number | null,
   hoverPoint: Point | null,
+  closed = false,
 ) {
   const W = ctx.canvas.width;
   const H = ctx.canvas.height;
@@ -67,27 +68,33 @@ function drawPolygonOverlay(
     ctx.setLineDash([]);
   }
 
-  // Vertex handles
+  // Vertex handles — circles when closed (editing mode), squares when open (adding mode)
   for (let i = 0; i < vertices.length; i++) {
     const v = vertices[i];
     const isSel = i === selectedVertex;
     const size = isSel ? 10 : 6;
-    ctx.fillStyle = isSel ? T.accent : T.bg;
+    ctx.fillStyle = isSel ? T.accent : (closed ? T.bg2 : T.bg);
     ctx.strokeStyle = isSel ? T.text : T.accent;
     ctx.lineWidth = 1.5;
-    ctx.fillRect(v.x - size / 2, v.y - size / 2, size, size);
-    ctx.strokeRect(v.x - size / 2, v.y - size / 2, size, size);
+    if (closed) {
+      ctx.beginPath();
+      ctx.arc(v.x, v.y, size / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      ctx.fillRect(v.x - size / 2, v.y - size / 2, size, size);
+      ctx.strokeRect(v.x - size / 2, v.y - size / 2, size, size);
+    }
   }
 
   ctx.restore();
 }
 
-function drawGrabCutOverlay(
+function drawGrabCutRect(
   ctx: CanvasRenderingContext2D,
   rect: { x: number; y: number; w: number; h: number } | null,
   dragging: { x: number; y: number; w: number; h: number } | null,
 ) {
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   const r = dragging ?? rect;
   if (!r || r.w === 0 || r.h === 0) return;
 
@@ -285,32 +292,20 @@ export default function MaskEditorCanvas({
     img.src = candidateMask;
   }, [candidateMask, maskCanvasRef, dispatch]);
 
-  // ---- Redraw polygon overlay (also shown in snap mode so snapped positions are visible) ----
+  // ---- Composite overlay redraw ----
+  // Polygon vertices persist across tool switches; grabcut rect composites on top when active.
   useEffect(() => {
-    if (tool !== "polygon" && tool !== "snap") return;
     const overlay = overlayCanvasRef.current;
     if (!overlay) return;
     const ctx = overlay.getContext("2d")!;
-    drawPolygonOverlay(ctx, state.polygonVertices, state.selectedVertex, null);
-  }, [tool, state.polygonVertices, state.selectedVertex, overlayCanvasRef]);
-
-  // ---- Redraw grabcut overlay ----
-  useEffect(() => {
-    if (tool !== "grabcut") return;
-    const overlay = overlayCanvasRef.current;
-    if (!overlay) return;
-    const ctx = overlay.getContext("2d")!;
-    drawGrabCutOverlay(ctx, state.grabcutRect, null);
-  }, [tool, state.grabcutRect, overlayCanvasRef]);
-
-  // ---- Clear overlay when switching tools ----
-  useEffect(() => {
-    const overlay = overlayCanvasRef.current;
-    if (!overlay) return;
-    if (tool !== "polygon" && tool !== "grabcut" && tool !== "snap") {
-      overlay.getContext("2d")!.clearRect(0, 0, overlay.width, overlay.height);
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    if (state.polygonVertices.length > 0) {
+      drawPolygonOverlay(ctx, state.polygonVertices, state.selectedVertex, null, state.polygonClosed);
     }
-  }, [tool, overlayCanvasRef]);
+    if (tool === "grabcut") {
+      drawGrabCutRect(ctx, state.grabcutRect, null);
+    }
+  }, [tool, state.polygonVertices, state.polygonClosed, state.selectedVertex, state.grabcutRect, overlayCanvasRef]);
 
   // ---- Flood fill click (on maskCanvas) ----
   useEffect(() => {
@@ -368,8 +363,9 @@ export default function MaskEditorCanvas({
       setCursor(p);
       if (draggingVertexIdx.current !== null) {
         dispatch({ type: "polygon_vertex_moved", index: draggingVertexIdx.current, point: p });
-      } else {
-        drawPolygonOverlay(oCtx, state.polygonVertices, state.selectedVertex, p);
+      } else if (!state.polygonClosed) {
+        // Preview edge to cursor only when open (adding vertices)
+        drawPolygonOverlay(oCtx, state.polygonVertices, state.selectedVertex, p, false);
       }
     };
 
@@ -496,7 +492,12 @@ export default function MaskEditorCanvas({
       r.y = Math.min(p.y, r.startY);
       r.w = Math.abs(p.x - r.startX);
       r.h = Math.abs(p.y - r.startY);
-      drawGrabCutOverlay(oCtx, state.grabcutRect, r);
+      // Composite: clear, polygon, then live drag rect
+      oCtx.clearRect(0, 0, overlay.width, overlay.height);
+      if (state.polygonVertices.length > 0) {
+        drawPolygonOverlay(oCtx, state.polygonVertices, state.selectedVertex, null, state.polygonClosed);
+      }
+      drawGrabCutRect(oCtx, state.grabcutRect, r);
     };
 
     const onUp = () => {
