@@ -250,10 +250,10 @@ export default function MaskEditor({
           if (tool === "grabcut") dispatch({ type: "set_grabcut_rect", rect: null });
           break;
         case "Enter":
-          if (tool === "polygon") {
+          // Enter only closes the path. Apply requires the "Apply to mask" button.
+          if (tool === "polygon" && !state.polygonClosed) {
             e.preventDefault();
-            if (state.polygonClosed) handleApplyPolygon();
-            else handleClosePolygon();
+            handleClosePolygon();
           }
           break;
         case "Backspace": case "Delete":

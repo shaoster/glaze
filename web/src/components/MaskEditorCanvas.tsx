@@ -1,10 +1,10 @@
 import { useRef, useEffect, useState } from "react";
 import type { Dispatch } from "react";
-import { Pill } from "./MaskEditorShared";
+import { Pill, Spinner } from "./MaskEditorShared";
 import { T } from "./maskEditorTokens";
 import type { MaskEditorState, MaskEditorAction, ToolName, Point } from "./maskEditorState";
 import { floodFill } from "./maskEditorCanvasOps";
-import { HINT_FG_COLOR, HINT_BG_COLOR } from "./maskEditorCv";
+import { HINT_FG_COLOR, HINT_BG_COLOR, isCvReady, getCv } from "./maskEditorCv";
 
 // ---- Coordinate helpers ----
 
@@ -35,7 +35,7 @@ function drawPolygonOverlay(
 
   ctx.save();
 
-  // Fill preview
+  // Fill preview (subtle tint)
   if (vertices.length >= 3) {
     ctx.beginPath();
     ctx.moveTo(vertices[0].x, vertices[0].y);
@@ -45,46 +45,60 @@ function drawPolygonOverlay(
     ctx.fill();
   }
 
-  // Edges
-  ctx.beginPath();
-  ctx.moveTo(vertices[0].x, vertices[0].y);
-  for (let i = 1; i < vertices.length; i++) ctx.lineTo(vertices[i].x, vertices[i].y);
-  if (vertices.length >= 3) ctx.closePath();
+  // Helper: draw edge path
+  const drawEdgePath = () => {
+    ctx.beginPath();
+    ctx.moveTo(vertices[0].x, vertices[0].y);
+    for (let i = 1; i < vertices.length; i++) ctx.lineTo(vertices[i].x, vertices[i].y);
+    if (vertices.length >= 3) ctx.closePath();
+  };
+
+  // Two-pass edges: dark shadow stroke then colored stroke for contrast on any background
+  ctx.setLineDash([]);
+  drawEdgePath();
+  ctx.strokeStyle = "rgba(0,0,0,0.55)";
+  ctx.lineWidth = 3.5;
+  ctx.stroke();
+  drawEdgePath();
   ctx.strokeStyle = T.accent;
   ctx.lineWidth = 1.5;
-  ctx.setLineDash([]);
   ctx.stroke();
 
-  // Preview line to cursor
+  // Preview line to cursor (open mode only)
   if (hoverPoint && vertices.length > 0) {
     const last = vertices[vertices.length - 1];
     ctx.beginPath();
     ctx.moveTo(last.x, last.y);
     ctx.lineTo(hoverPoint.x, hoverPoint.y);
+    ctx.strokeStyle = "rgba(0,0,0,0.45)";
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
     ctx.strokeStyle = T.accent;
     ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
     ctx.stroke();
     ctx.setLineDash([]);
   }
 
-  // Vertex handles — circles when closed (editing mode), squares when open (adding mode)
+  // Vertex handles — white fill with colored outline for max contrast
   for (let i = 0; i < vertices.length; i++) {
     const v = vertices[i];
     const isSel = i === selectedVertex;
-    const size = isSel ? 10 : 6;
-    ctx.fillStyle = isSel ? T.accent : (closed ? T.bg2 : T.bg);
-    ctx.strokeStyle = isSel ? T.text : T.accent;
+    const r = isSel ? 6 : 4;
+    // Shadow
+    ctx.beginPath();
+    ctx.arc(v.x, v.y, r + 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fill();
+    // Fill
+    ctx.beginPath();
+    ctx.arc(v.x, v.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = isSel ? T.accent : "white";
+    ctx.fill();
+    // Ring
+    ctx.strokeStyle = isSel ? "white" : T.accent;
     ctx.lineWidth = 1.5;
-    if (closed) {
-      ctx.beginPath();
-      ctx.arc(v.x, v.y, size / 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    } else {
-      ctx.fillRect(v.x - size / 2, v.y - size / 2, size, size);
-      ctx.strokeRect(v.x - size / 2, v.y - size / 2, size, size);
-    }
+    ctx.stroke();
   }
 
   ctx.restore();
@@ -230,6 +244,13 @@ export default function MaskEditorCanvas({
   const draggingVertexIdx = useRef<number | null>(null);
   const hintPainting = useRef(false);
   const [cursor, setCursor] = useState<Point | null>(null);
+  const [cvLoaded, setCvLoaded] = useState(isCvReady);
+
+  // Track WASM ready state so the UI can show a loading indicator
+  useEffect(() => {
+    if (cvLoaded) return;
+    getCv().then(() => setCvLoaded(true));
+  }, [cvLoaded]);
 
   // ---- Initialize canvas dimensions ----
   useEffect(() => {
@@ -687,6 +708,12 @@ export default function MaskEditorCanvas({
         <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 6, pointerEvents: "none" }}>
           <Pill>{TOOL_LABELS[tool]}</Pill>
           <Pill kind="slate">{imageWidth} × {imageHeight}</Pill>
+          {(tool === "grabcut" || tool === "snap") && !cvLoaded && (
+            <Pill kind="warn">
+              <Spinner size={9} />
+              opencv.js loading…
+            </Pill>
+          )}
         </div>
         <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 6, pointerEvents: "none" }}>
           {state.dirty && <Pill kind="accent">● unsaved</Pill>}

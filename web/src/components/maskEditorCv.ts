@@ -2,11 +2,19 @@ import { loadOpenCV, type OpenCV } from "@opencvjs/web";
 
 // Singleton promise — WASM only loads once, subsequent calls return the same instance.
 let cvPromise: Promise<typeof OpenCV> | null = null;
+let cvReady = false;
 
 export function getCv(): Promise<typeof OpenCV> {
-  if (!cvPromise) cvPromise = loadOpenCV();
+  if (!cvPromise) {
+    cvPromise = loadOpenCV().then((cv) => { cvReady = true; return cv; });
+  }
   return cvPromise;
 }
+
+export function isCvReady(): boolean { return cvReady; }
+
+// Kick off WASM download immediately so it's ready when the user needs it.
+getCv();
 
 // ---- Hint pixel encoding ----
 // Orange (R>160, B<80) = GC_FGD; slate-blue (R<80, B>120) = GC_BGD.

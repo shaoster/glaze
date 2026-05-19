@@ -100,7 +100,7 @@ function PolygonInspector({ state, dispatch, onClosePolygon, onApplyPolygon, onR
         </div>
         {closed && (
           <ActionButton primary full icon={<MEIcon name="check" size={11} />} onClick={onApplyPolygon} disabled={nVerts < 3}>
-            Apply to mask · ⏎
+            Apply to mask
           </ActionButton>
         )}
       </Section>
@@ -169,7 +169,7 @@ function PolygonInspector({ state, dispatch, onClosePolygon, onApplyPolygon, onR
       </Section>
 
       <Section title="Keyboard">
-        <ShortcutRow keys={["⏎"]} label={closed ? "apply to mask" : "close path"} />
+        <ShortcutRow keys={["⏎"]} label="close path (apply via button)" />
         <ShortcutRow keys={["I"]} label="insert at midpoint" />
         <ShortcutRow keys={["⌫"]} label="delete selected" />
         <ShortcutRow keys={["⇧", "drag"]} label="move along edge" />
