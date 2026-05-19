@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import SortIcon from "@mui/icons-material/Sort";
@@ -426,6 +426,16 @@ const PieceList = (props: PieceListProps) => {
   const masonryRef = useRef<HTMLElement | null>(null);
   const columnWidth = isMobile ? MASONRY_COLUMN_WIDTH_MOBILE : MASONRY_COLUMN_WIDTH_DESKTOP;
   const { width: masonryWidth, offset: masonryOffset } = useContainerPosition(masonryRef, [isMobile]);
+  const positioner = usePositioner(
+    {
+      width: masonryWidth,
+      columnWidth,
+      columnGutter: MASONRY_GUTTER,
+      rowGutter: MASONRY_GUTTER,
+      maxColumnCount: isMobile ? MASONRY_MAX_COLUMNS_MOBILE : MASONRY_MAX_COLUMNS_DESKTOP,
+    },
+    [filterKey, masonryWidth, columnWidth, isMobile],
+  );
   const masonrySeedSignature = useMemo(
     () =>
       `${filterKey}|${masonryWidth}|${columnWidth}|${filteredPieces
@@ -438,28 +448,22 @@ const PieceList = (props: PieceListProps) => {
         .join(",")}`,
     [filterKey, masonryWidth, columnWidth, filteredPieces],
   );
-  const positioner = usePositioner(
-    {
-      width: masonryWidth,
-      columnWidth,
-      columnGutter: MASONRY_GUTTER,
-      rowGutter: MASONRY_GUTTER,
-      maxColumnCount: isMobile ? MASONRY_MAX_COLUMNS_MOBILE : MASONRY_MAX_COLUMNS_DESKTOP,
-    },
-    [filterKey, masonryWidth, columnWidth, isMobile],
-  );
-  const seededHeightUpdates = useMemo(() => {
+  const seededLayoutSignatureRef = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (seededLayoutSignatureRef.current === masonrySeedSignature) {
+      return;
+    }
     const updates: number[] = [];
     filteredPieces.forEach((piece, index) => {
       if (piece.thumbnail?.crop && positioner.get(index) === undefined) {
         updates.push(index, estimateCardHeight(piece, positioner.columnWidth));
       }
     });
-    return updates;
+    if (updates.length > 0) {
+      positioner.update(updates);
+    }
+    seededLayoutSignatureRef.current = masonrySeedSignature;
   }, [filteredPieces, masonrySeedSignature, positioner]);
-  if (seededHeightUpdates.length > 0) {
-    positioner.update(seededHeightUpdates);
-  }
   const resizeObserver = useResizeObserver(positioner);
 
   const toggleFilter = useCallback(
