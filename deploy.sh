@@ -58,6 +58,12 @@ trap - EXIT
 echo "--- pulling release image ---"
 docker compose --profile production pull
 
+echo "--- running deploy bootstrap ---"
+# Run the one-shot bootstrap against the new image before we move traffic.
+# This keeps migrations and public-library refreshes tied to each release
+# while still leaving deploy_init as a completion-gated service.
+docker compose --profile production up --no-deps deploy_init
+
 echo "--- rolling deploy: web ---"
 # Step 1: Record the ID of the current (old) container.
 OLD_CONTAINER_ID=$(docker compose --profile production ps -q web | head -n 1)

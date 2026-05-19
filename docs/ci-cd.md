@@ -56,7 +56,7 @@ Runs automatically after CI completes successfully on `main`, or manually via `w
 
 | Job | What it does |
 |---|---|
-| **Deploy to droplet** | Renders `.env.production.template` with secrets and variables into `/tmp/.env`, SCPs it to the droplet, then runs `deploy.sh` to pull the new image and restart the stack. Creates a GitHub Release tagged `release-<sha>` on success. Runs in the `glaze-droplet` environment with `concurrency: deploy-production` (never cancels in-progress deploys). |
+| **Deploy to droplet** | Renders `.env.production.template` with secrets and variables into `/tmp/.env`, SCPs it to the droplet, then runs `deploy.sh` to pull the new image, run the one-shot `deploy_init` bootstrap, and perform the rolling restart. Creates a GitHub Release tagged `release-<sha>` on success. Runs in the `glaze-droplet` environment with `concurrency: deploy-production` (never cancels in-progress deploys). |
 | **Deploy Services to Modal** | Deploys the `services/` directory to Modal using `modal deploy -m services`. Runs in parallel with the droplet deploy. |
 
 #### Required secrets / variables
@@ -111,7 +111,7 @@ PR merged to main
   └─ CI: preflight checks artifact -> skip lint/coverage if already validated
        └─ image job always runs -> pushes ghcr.io/shaoster/glaze:latest + :<sha>
             └─ CD triggered by workflow_run on success
-                 ├─ deploy job: SCP .env -> deploy.sh -> docker compose pull + restart -> GitHub Release
+                 ├─ deploy job: SCP .env -> deploy.sh -> pull image -> run deploy_init -> rolling restart -> GitHub Release
                  └─ deploy-modal job: modal deploy -m services
 ```
 
