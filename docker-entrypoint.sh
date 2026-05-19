@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-python manage.py load_public_library --skip-if-missing
-
 exec python -m gunicorn backend.asgi:application \
     --bind 0.0.0.0:8000 \
     --worker-class uvicorn.workers.UvicornWorker \

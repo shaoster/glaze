@@ -268,7 +268,7 @@ web/
 workflow.yml               Source of truth for piece states and valid transitions
 env.sh                     Development shell helpers
 docker-compose.yml         Production stack: web + Postgres
-docker-entrypoint.sh       Container startup: load public library, exec Gunicorn
+docker-entrypoint.sh       Container startup: exec Gunicorn
 deploy.sh                  SSH deploy helper (called by gz_deploy)
 .env.production.example    Template for droplet secrets (copy to .env)
 render.yaml                Render Blueprint for managed PaaS deployment
