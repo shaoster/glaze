@@ -32,7 +32,7 @@ Runs on every pull request and every push to `main`. Skips doc-only changes (`.m
 | **Preflight** | Always | Computes a CI fingerprint to optimize runs, and performs an automated **Security Audit** by statically analyzing `ci.yml`. The job will fail immediately if any secrets other than `BAZEL_REMOTE_API_KEY` or `GITHUB_TOKEN` are detected, ensuring production secrets never enter the CI environment. |
 | **Lint** | PRs always; `main` only when `skip_main=false` | Runs `gz_lint` (`bazel build --config=lint //...`) - ruff, ESLint, tsc, and mypy. |
 | **Coverage & Test** | PRs always; `main` only when `skip_main=false` | Runs `gz_test --coverage` (`bazel coverage //...`) then uploads the merged LCOV report to Codecov. |
-| **Build & smoke-test OCI image** | Always (including `main` regardless of `skip_main`) | Builds the OCI image with Bazel (`bazel run --config=ci --stamp //:load`), writes `GOOGLE_OAUTH_CLIENT_ID` into `web/.env.local` before the build so it is baked into the JS bundle, generates a runtime `.env` file from the production template (aligning with the CD process), pre-pulls sidecar images (Postgres, OpenTelemetry Collector), starts the full `docker compose` stack, and waits up to 300 s for the healthcheck to pass. On `push` to `main`, also pushes the image to `ghcr.io/shaoster/glaze` tagged with `:latest` and the commit SHA. |
+| **Build & smoke-test OCI image** | Always (including `main` regardless of `skip_main`) | Builds the OCI image with Bazel (`bazel run --config=ci --stamp //:load`), writes `GOOGLE_OAUTH_CLIENT_ID` into `web/.env.local` before the build so it is baked into the JS bundle, generates a runtime `.env` file from the production template, pre-pulls sidecar images (Postgres, OpenTelemetry Collector), starts the full `docker compose` stack, and waits up to 300 s for the one-shot `deploy_init` bootstrap to finish and the `web` healthcheck to pass. On `push` to `main`, also pushes the image to `ghcr.io/shaoster/glaze` tagged with `:latest` and the commit SHA. |
 | **Record fingerprint** | PRs only, after all three above succeed | Uploads a tiny artifact named `ci-fingerprint-<hash>` (retained 30 days). The Preflight job on the next `main` push checks for this artifact to decide whether `skip_main=true`. |
 
 #### Skip-main optimization
@@ -56,8 +56,8 @@ Runs automatically after CI completes successfully on `main`, or manually via `w
 
 | Job | What it does |
 |---|---|
-| **Deploy to droplet** | Renders `.env.production.template` with secrets and variables into `/tmp/.env`, SCPs it to the droplet, then runs `deploy.sh` to pull the new image and restart the stack. Creates a GitHub Release tagged `release-<sha>` on success. Runs in the `glaze-droplet` environment with `concurrency: deploy-production` (never cancels in-progress deploys). |
-| **Deploy Services to Modal** | Deploys the `services/` directory to Modal using `modal deploy services`. Runs in parallel with the droplet deploy. |
+| **Deploy to droplet** | Renders `.env.production.template` with secrets and variables into `/tmp/.env`, SCPs it to the droplet, then runs `deploy.sh` to pull the new image, run the one-shot `deploy_init` bootstrap, and perform the rolling restart. Creates a GitHub Release tagged `release-<sha>` on success. Runs in the `glaze-droplet` environment with `concurrency: deploy-production` (never cancels in-progress deploys). |
+| **Deploy Services to Modal** | Deploys the `services/` directory to Modal using `modal deploy -m services`. Runs in parallel with the droplet deploy. |
 
 #### Required secrets / variables
 
@@ -111,8 +111,8 @@ PR merged to main
   └─ CI: preflight checks artifact -> skip lint/coverage if already validated
        └─ image job always runs -> pushes ghcr.io/shaoster/glaze:latest + :<sha>
             └─ CD triggered by workflow_run on success
-                 ├─ deploy job: SCP .env -> deploy.sh -> docker compose pull + restart -> GitHub Release
-                 └─ deploy-modal job: modal deploy services
+                 ├─ deploy job: SCP .env -> deploy.sh -> pull image -> run deploy_init -> rolling restart -> GitHub Release
+                 └─ deploy-modal job: modal deploy -m services
 ```
 
 nginx config changes (in `nginx/conf.d/`) are deployed automatically with every release — `docker compose up -d --force-recreate` mounts the config at the checked-out SHA with no separate sync step.
@@ -124,10 +124,10 @@ nginx config changes (in `nginx/conf.d/`) are deployed automatically with every 
 ```
 Internet :80/:443
     └─ nginx container (nginx:alpine)
-         └─ web:8000  (2 replicas — Docker DNS round-robins across both)
+         └─ web:8000  (1 steady-state replica; deploys briefly scale to 2)
 ```
 
-`web` runs with `deploy.replicas: 2`; both replicas are only reachable within the Docker network (no host port bindings). Docker's internal DNS returns both replica IPs at nginx startup; nginx round-robins across them with `max_fails=1 fail_timeout=10s`. A raw-IP `default_server` block returns 444 before requests reach Django.
+`web` runs with `deploy.replicas: 1` in steady state. Rolling deploys temporarily scale it to 2 replicas while the new image starts, then scale back to 1. Both replicas are only reachable within the Docker network (no host port bindings). Docker's internal DNS returns whatever live replica IPs exist at nginx startup; nginx round-robins across them with `max_fails=1 fail_timeout=10s`. A raw-IP `default_server` block returns 444 before requests reach Django.
 
 ### Operational commands
 

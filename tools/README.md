@@ -14,7 +14,7 @@ To maintain stability on hardware with <1GB RAM, Glaze supports offloading the h
 1.  **Set up Auth Token**: Create a Modal secret named `piece-image-segment-secret` with an `AUTH_TOKEN` key.
 2.  **Install Modal**: `bazel run @uv//:uv -- tool install modal`
 3.  **Authenticate**: `modal setup`
-4.  **Deploy**: `modal deploy services`
+4.  **Deploy**: `modal deploy -m services`
 5.  **Capture the URL**: The output will provide a permanent URL, e.g., `https://your-workspace-name--crop.modal.run`.
 
 #### Step 2: Configure the Backend (Run on the PRODUCTION host / Droplet)

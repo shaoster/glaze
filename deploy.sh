@@ -21,9 +21,15 @@ set -euo pipefail
 
 HOST=${1:?Usage: ./deploy.sh user@host commit-sha}
 KNOWN_SHA=${2:?Usage: ./deploy.sh user@host commit-sha}
+SSH_OPTS=(
+    -o ConnectTimeout=30
+    -o ServerAliveInterval=60
+    -o ServerAliveCountMax=10
+    -o TCPKeepAlive=yes
+)
 
 echo "--- deploying application ---"
-ssh "$HOST" env KNOWN_SHA="$KNOWN_SHA" bash <<'REMOTE'
+ssh "${SSH_OPTS[@]}" "$HOST" env KNOWN_SHA="$KNOWN_SHA" bash <<'REMOTE'
 set -euo pipefail
 
 echo "--- bootstrapping repo (no-op if already cloned) ---"
@@ -51,6 +57,12 @@ trap - EXIT
 
 echo "--- pulling release image ---"
 docker compose --profile production pull
+
+echo "--- running deploy bootstrap ---"
+# Run the one-shot bootstrap against the new image before we move traffic.
+# This keeps migrations and public-library refreshes tied to each release
+# while still leaving deploy_init as a completion-gated service.
+docker compose --profile production up --no-deps deploy_init
 
 echo "--- rolling deploy: web ---"
 # Step 1: Record the ID of the current (old) container.
@@ -123,7 +135,7 @@ REMOTE
 
 # Sync certbot renewal hooks so cert reload behavior stays in version control.
 echo "--- syncing certbot renewal hooks ---"
-ssh "$HOST" "mkdir -p /etc/letsencrypt/renewal-hooks/deploy"
-scp certbot/renewal-hooks/deploy/01-glaze-nginx-reload.sh \
+ssh "${SSH_OPTS[@]}" "$HOST" "mkdir -p /etc/letsencrypt/renewal-hooks/deploy"
+scp "${SSH_OPTS[@]}" certbot/renewal-hooks/deploy/01-glaze-nginx-reload.sh \
     "$HOST":/etc/letsencrypt/renewal-hooks/deploy/01-glaze-nginx-reload.sh
-ssh "$HOST" "chmod +x /etc/letsencrypt/renewal-hooks/deploy/01-glaze-nginx-reload.sh"
+ssh "${SSH_OPTS[@]}" "$HOST" "chmod +x /etc/letsencrypt/renewal-hooks/deploy/01-glaze-nginx-reload.sh"
