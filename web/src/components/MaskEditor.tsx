@@ -55,6 +55,7 @@ export default function MaskEditor({
   const [state, dispatch] = useReducer(maskEditorReducer, INITIAL_STATE);
   const maskCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+  const hintsCanvasRef = useRef<HTMLCanvasElement>(null);
   const srcCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // ImageData stacks live here so they never enter React state
@@ -127,7 +128,7 @@ export default function MaskEditor({
     dispatch({ type: "assist_started" });
     const snap = mask.getContext("2d")!.getImageData(0, 0, mask.width, mask.height);
     handlePushUndo(snap);
-    runGrabCut(src, mask, state.grabcutRect, state.grabcutIterations)
+    runGrabCut(src, mask, hintsCanvasRef.current, state.grabcutRect, state.grabcutIterations)
       .then(() => {
         dispatch({ type: "assist_succeeded", ms: Math.round(performance.now() - t0) });
       })
@@ -261,6 +262,22 @@ export default function MaskEditor({
         case "]":
           if (tool === "snap") dispatch({ type: "set_snap_radius", radius: Math.min(64, state.snapRadius + 4) });
           break;
+        case "ArrowLeft": case "ArrowUp":
+          if (tool === "snap" && state.polygonVertices.length > 0) {
+            e.preventDefault();
+            const n = state.polygonVertices.length;
+            const cur = state.selectedVertex ?? 0;
+            dispatch({ type: "polygon_vertex_selected", index: (cur - 1 + n) % n });
+          }
+          break;
+        case "ArrowRight": case "ArrowDown":
+          if (tool === "snap" && state.polygonVertices.length > 0) {
+            e.preventDefault();
+            const n = state.polygonVertices.length;
+            const cur = state.selectedVertex ?? -1;
+            dispatch({ type: "polygon_vertex_selected", index: (cur + 1) % n });
+          }
+          break;
       }
     };
 
@@ -270,6 +287,7 @@ export default function MaskEditor({
     state.activeTool,
     state.selectedVertex,
     state.snapRadius,
+    state.polygonVertices,
     handleUndo,
     handleRedo,
     handleRunGrabCut,
@@ -442,6 +460,7 @@ export default function MaskEditor({
           dispatch={dispatch}
           maskCanvasRef={maskCanvasRef}
           overlayCanvasRef={overlayCanvasRef}
+          hintsCanvasRef={hintsCanvasRef}
           srcCanvasRef={srcCanvasRef}
           imageUrl={imageUrl}
           imageWidth={imageWidth}

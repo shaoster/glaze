@@ -689,13 +689,31 @@ interface SnapInspectorProps {
 }
 
 function SnapInspector({ state, dispatch, onSnapVertex, onSnapAll }: SnapInspectorProps) {
-  const nVerts = state.polygonVertices.length || 16;
+  const nVerts = state.polygonVertices.length;
   const sel = state.selectedVertex;
+  const hasVerts = nVerts > 0;
   return (
     <InspectorShell
       title="Contour snap"
       sub="Pulls polygon vertices toward the nearest strong image edge. Use on whole contours or per-vertex."
     >
+      {!hasVerts && (
+        <div
+          style={{
+            margin: "12px 0 4px",
+            padding: "10px 12px",
+            borderRadius: 6,
+            border: `1px dashed ${T.lineSoft}`,
+            background: T.bg,
+            fontFamily: T.fontMono,
+            fontSize: 10.5,
+            color: T.textMute,
+            lineHeight: 1.5,
+          }}
+        >
+          Draw a polygon path first, then switch to Contour snap to pull vertices to image edges.
+        </div>
+      )}
       <Section title="Target">
         <Segmented
           value={state.snapTarget}
@@ -766,30 +784,31 @@ function SnapInspector({ state, dispatch, onSnapVertex, onSnapAll }: SnapInspect
 
       <Section
         title="Run"
-        action={<Pill kind="warn">1 vertex · 0.83</Pill>}
+        action={hasVerts ? <Pill kind={sel != null ? "accent" : "default"}>v{sel ?? "—"} / {nVerts}</Pill> : undefined}
       >
         <div
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}
         >
-          <ActionButton full onClick={onSnapVertex} disabled={sel == null}>
-            Snap v{sel ?? "—"}
+          <ActionButton full onClick={onSnapVertex} disabled={sel == null || !hasVerts}>
+            Snap v{sel ?? "—"} · S
           </ActionButton>
-          <ActionButton primary full onClick={onSnapAll}>
-            Snap all ({nVerts})
+          <ActionButton primary full onClick={onSnapAll} disabled={!hasVerts}>
+            Snap all ({nVerts}) · ⇧S
           </ActionButton>
         </div>
-        <div
-          style={{
-            marginTop: 10,
-            fontFamily: T.fontMono,
-            fontSize: 10,
-            color: T.textMute,
-          }}
-        >
-          Hovered vertex v{sel ?? "—"} → would move{" "}
-          <span style={{ color: T.kiln }}>+22 px →</span> at edge confidence{" "}
-          <span style={{ color: T.text }}>0.83</span>.
-        </div>
+        {hasVerts && (
+          <div
+            style={{
+              marginTop: 8,
+              fontFamily: T.fontMono,
+              fontSize: 10,
+              color: T.textMute,
+              lineHeight: 1.6,
+            }}
+          >
+            Click a vertex to select · ←/→ cycle through vertices
+          </div>
+        )}
       </Section>
 
       <Section title="Safety">
@@ -810,7 +829,8 @@ function SnapInspector({ state, dispatch, onSnapVertex, onSnapAll }: SnapInspect
       <Section title="Keyboard">
         <ShortcutRow keys={["S"]} label="snap selected vertex" />
         <ShortcutRow keys={["⇧", "S"]} label="snap all" />
-        <ShortcutRow keys={["⌥", "drag"]} label="constrain to edge" />
+        <ShortcutRow keys={["←", "→"]} label="cycle through vertices" />
+        <ShortcutRow keys={["click"]} label="select vertex" />
         <ShortcutRow keys={["[", "]"]} label="adjust radius" />
       </Section>
     </InspectorShell>

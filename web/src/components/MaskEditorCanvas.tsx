@@ -4,6 +4,7 @@ import { Pill } from "./MaskEditorShared";
 import { T } from "./maskEditorTokens";
 import type { MaskEditorState, MaskEditorAction, ToolName, Point } from "./maskEditorState";
 import { floodFill } from "./maskEditorCanvasOps";
+import { HINT_FG_COLOR, HINT_BG_COLOR } from "./maskEditorCv";
 
 // ---- Coordinate helpers ----
 
@@ -193,6 +194,7 @@ interface MaskEditorCanvasProps {
   dispatch: Dispatch<MaskEditorAction>;
   maskCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   overlayCanvasRef: React.RefObject<HTMLCanvasElement | null>;
+  hintsCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   srcCanvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
   imageUrl: string;
   imageWidth: number;
@@ -207,6 +209,7 @@ export default function MaskEditorCanvas({
   dispatch,
   maskCanvasRef,
   overlayCanvasRef,
+  hintsCanvasRef,
   srcCanvasRef,
   imageUrl,
   imageWidth,
@@ -218,18 +221,21 @@ export default function MaskEditorCanvas({
   const tool = state.activeTool;
   const dragRect = useRef<{ startX: number; startY: number; x: number; y: number; w: number; h: number } | null>(null);
   const draggingVertexIdx = useRef<number | null>(null);
+  const hintPainting = useRef(false);
   const [cursor, setCursor] = useState<Point | null>(null);
 
   // ---- Initialize canvas dimensions ----
   useEffect(() => {
     const mask = maskCanvasRef.current;
     const overlay = overlayCanvasRef.current;
+    const hints = hintsCanvasRef.current;
     if (!mask || !overlay) return;
     mask.width = imageWidth;
     mask.height = imageHeight;
     overlay.width = imageWidth;
     overlay.height = imageHeight;
-  }, [imageWidth, imageHeight, maskCanvasRef, overlayCanvasRef]);
+    if (hints) { hints.width = imageWidth; hints.height = imageHeight; }
+  }, [imageWidth, imageHeight, maskCanvasRef, overlayCanvasRef, hintsCanvasRef]);
 
   // ---- Load source image into offscreen canvas for flood fill pixel access ----
   useEffect(() => {
@@ -279,9 +285,9 @@ export default function MaskEditorCanvas({
     img.src = candidateMask;
   }, [candidateMask, maskCanvasRef, dispatch]);
 
-  // ---- Redraw polygon overlay ----
+  // ---- Redraw polygon overlay (also shown in snap mode so snapped positions are visible) ----
   useEffect(() => {
-    if (tool !== "polygon") return;
+    if (tool !== "polygon" && tool !== "snap") return;
     const overlay = overlayCanvasRef.current;
     if (!overlay) return;
     const ctx = overlay.getContext("2d")!;
@@ -301,7 +307,7 @@ export default function MaskEditorCanvas({
   useEffect(() => {
     const overlay = overlayCanvasRef.current;
     if (!overlay) return;
-    if (tool !== "polygon" && tool !== "grabcut") {
+    if (tool !== "polygon" && tool !== "grabcut" && tool !== "snap") {
       overlay.getContext("2d")!.clearRect(0, 0, overlay.width, overlay.height);
     }
   }, [tool, overlayCanvasRef]);
@@ -417,6 +423,50 @@ export default function MaskEditorCanvas({
     dispatch,
   ]);
 
+  // ---- GrabCut hint painting (FG/BG scribbles on hintsCanvas) ----
+  useEffect(() => {
+    const hints = hintsCanvasRef.current;
+    if (!hints || tool !== "grabcut") return;
+    const hintMode = state.grabcutHintMode;
+    if (hintMode === "rect") return; // rect drag is handled by overlay, not hints
+
+    const ctx = hints.getContext("2d")!;
+    const color = hintMode === "foreground" ? HINT_FG_COLOR : HINT_BG_COLOR;
+    const radius = state.grabcutBrushRadius;
+
+    const onDown = (e: PointerEvent) => {
+      hintPainting.current = true;
+      hints.setPointerCapture(e.pointerId);
+      const p = canvasPoint(hints, e);
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    const onMove = (e: PointerEvent) => {
+      const p = canvasPoint(hints, e);
+      setCursor(p);
+      if (!hintPainting.current) return;
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    const onUp = () => { hintPainting.current = false; };
+    const onLeave = () => setCursor(null);
+
+    hints.addEventListener("pointerdown", onDown);
+    hints.addEventListener("pointermove", onMove);
+    hints.addEventListener("pointerup", onUp);
+    hints.addEventListener("pointerleave", onLeave);
+    return () => {
+      hints.removeEventListener("pointerdown", onDown);
+      hints.removeEventListener("pointermove", onMove);
+      hints.removeEventListener("pointerup", onUp);
+      hints.removeEventListener("pointerleave", onLeave);
+    };
+  }, [tool, state.grabcutHintMode, state.grabcutBrushRadius, hintsCanvasRef]);
+
   // ---- GrabCut rect drag (on overlayCanvas) ----
   useEffect(() => {
     const overlay = overlayCanvasRef.current;
@@ -466,11 +516,49 @@ export default function MaskEditorCanvas({
     };
   }, [tool, state.grabcutRect, overlayCanvasRef, dispatch]);
 
-  // ---- Canvas pointer events for cursor tracking (prefill/snap) ----
+  // ---- Snap mode: click to select vertex ----
+  useEffect(() => {
+    const overlay = overlayCanvasRef.current;
+    if (!overlay || tool !== "snap") return;
+
+    const HANDLE_HIT = 10;
+    const vertices = state.polygonVertices;
+
+    const findVertex = (p: Point): number | null => {
+      let best: number | null = null;
+      let bestDist = HANDLE_HIT;
+      for (let i = 0; i < vertices.length; i++) {
+        const dx = vertices[i].x - p.x;
+        const dy = vertices[i].y - p.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < bestDist) { bestDist = d; best = i; }
+      }
+      return best;
+    };
+
+    const onMove = (e: PointerEvent) => setCursor(canvasPoint(overlay, e));
+    const onClick = (e: MouseEvent) => {
+      const p = canvasPoint(overlay, e);
+      const hit = findVertex(p);
+      if (hit !== null) dispatch({ type: "polygon_vertex_selected", index: hit });
+    };
+    const onLeave = () => setCursor(null);
+
+    overlay.addEventListener("pointermove", onMove);
+    overlay.addEventListener("click", onClick);
+    overlay.addEventListener("pointerleave", onLeave);
+    return () => {
+      overlay.removeEventListener("pointermove", onMove);
+      overlay.removeEventListener("click", onClick);
+      overlay.removeEventListener("pointerleave", onLeave);
+    };
+  }, [tool, state.polygonVertices, overlayCanvasRef, dispatch]);
+
+  // ---- Canvas pointer events for cursor tracking (prefill) ----
   useEffect(() => {
     const overlay = overlayCanvasRef.current;
     if (!overlay) return;
-    if (tool !== "prefill" && tool !== "snap") return;
+    if (tool !== "prefill") return;
     const onMove = (e: PointerEvent) => setCursor(canvasPoint(overlay, e));
     const onLeave = () => setCursor(null);
     overlay.addEventListener("pointermove", onMove);
@@ -549,7 +637,7 @@ export default function MaskEditorCanvas({
           }}
         />
 
-        {/* Overlay canvas — cursor, polygon, grabcut rect */}
+        {/* Overlay canvas — cursor, polygon, grabcut rect (only rect mode) */}
         <canvas
           ref={overlayCanvasRef}
           style={{
@@ -558,7 +646,28 @@ export default function MaskEditorCanvas({
             width: "100%",
             height: "100%",
             cursor: cursorStyle[tool],
-            pointerEvents: ["polygon", "grabcut", "snap", "prefill"].includes(tool) ? "auto" : "none",
+            pointerEvents: (
+              tool === "polygon" ||
+              tool === "snap" ||
+              tool === "prefill" ||
+              (tool === "grabcut" && state.grabcutHintMode === "rect")
+            ) ? "auto" : "none",
+          }}
+        />
+
+        {/* Hints canvas — FG/BG scribbles for GrabCut */}
+        <canvas
+          ref={hintsCanvasRef}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            cursor: tool === "grabcut" && state.grabcutHintMode !== "rect" ? "crosshair" : "default",
+            pointerEvents: (
+              tool === "grabcut" && state.grabcutHintMode !== "rect"
+            ) ? "auto" : "none",
+            opacity: 0.7,
           }}
         />
 
