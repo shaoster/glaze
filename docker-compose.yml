@@ -152,9 +152,12 @@ services:
     restart: "no"
     # One-shot service that runs migrations and clears abandoned tasks before
     # the new release starts serving traffic.
+    entrypoint:
+      - bash
+      - -lc
     command: >
-      bash -c "python manage.py migrate --no-input &&
-               python manage.py clear_stuck_tasks --hours 1"
+      python manage.py migrate --no-input &&
+      python manage.py clear_stuck_tasks --hours 1
     environment:
       PRODUCTION: "true"
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
