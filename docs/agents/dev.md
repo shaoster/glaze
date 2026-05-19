@@ -18,6 +18,9 @@ modal deploy -m services
 ```
 
 Set `REMOTE_REMBG_URL` and `MODAL_AUTH_TOKEN` in your `.env` to enable offloading.
+This Modal deploy command is separate from the CI smoke test. The smoke test
+uses Docker Compose, waits for the one-shot `deploy_init` bootstrap to finish,
+and only then expects the `web` readiness probe to pass.
 
 See [`env.sh`](../../env.sh) for shell helpers (`gz_setup`, `gz_start`, etc.) that wrap these commands.
 In a new environment, run `source env.sh` once so the helpers are available. After that, `gz_start` will start the dev stack directly. Use `gz_setup` only when you want to repair a broken local environment or explicitly create isolated worktree-local dependencies with `--isolated`.
