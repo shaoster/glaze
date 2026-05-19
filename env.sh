@@ -5,17 +5,19 @@
 # When used as --rcfile, ~/.bashrc is not loaded automatically — do it first.
 [[ -f ~/.bashrc ]] && source ~/.bashrc
 
-if [[ -n "${GLAZE_ROOT:-}" ]]; then
-    _GLAZE_SCRIPT_DIR="$GLAZE_ROOT"
-else
-    _GLAZE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-fi
+_GLAZE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Bootstrap: everything (helpers, venv, env vars) defined in env-agent.sh.
 source "$_GLAZE_SCRIPT_DIR/env-agent.sh"
+_env_agent_rc=$?
+if [[ $_env_agent_rc -ne 0 ]]; then
+    return $_env_agent_rc
+fi
 
 # If we're in an interactive shell OR CI, we're likely a developer/bot, not an agent.
 # This unsets the rtk prefix for all tool invocations.
 unset GLAZE_AGENT
 
-echo "Glaze ready — run 'gz_help' for shortcuts, 'gz_setup' for first-time install."
+if [[ -n "${PS1:-}" ]]; then
+    echo "Glaze ready — run 'gz_help' for shortcuts."
+fi

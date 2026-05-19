@@ -39,16 +39,17 @@ if [[ -z "$_GLAZE_AGENT_ENV_LOADED" || "${GLAZE_ROOT:-}" != "$_detected_root" ]]
     _GLAZE_LOGS="$GLAZE_ROOT/.dev-logs"
     mkdir -p "$_GLAZE_PIDS" "$_GLAZE_LOGS"
 
+    _gz_prepend_path_once() {
+        local dir="$1"
+        [[ -d "$dir" ]] || return 0
+        case ":${PATH:-}:" in
+            *":$dir:"*) return 0 ;;
+        esac
+        PATH="$dir${PATH:+:$PATH}"
+        export PATH
+    }
+
     _gz_preferred_root_for() {
-        local rel="$1"
-        if [[ -e "$GLAZE_ROOT/$rel" ]]; then
-            printf '%s\n' "$GLAZE_ROOT"
-            return 0
-        fi
-        if [[ "$GLAZE_SHARED_ROOT" != "$GLAZE_ROOT" && -e "$GLAZE_SHARED_ROOT/$rel" ]]; then
-            printf '%s\n' "$GLAZE_SHARED_ROOT"
-            return 0
-        fi
         printf '%s\n' "$GLAZE_ROOT"
     }
 
@@ -75,7 +76,86 @@ if [[ -z "$_GLAZE_AGENT_ENV_LOADED" || "${GLAZE_ROOT:-}" != "$_detected_root" ]]
 
     _gz_load_preferred_env_file ".env.local"
     _gz_load_preferred_env_file "web/.env.local"
-    _gz_load_preferred_env_file "mobile/.env.local"
+
+    _gz_bazel() {
+        if command -v rtk &>/dev/null; then
+            rtk bazel "$@"
+        else
+            bazel "$@"
+        fi
+    }
+
+    _gz_manage_venv_looks_ready() {
+        [[ -f "$GLAZE_ROOT/.manage.venv/bin/activate" ]] || return 1
+        [[ -L "$GLAZE_ROOT/.manage.venv" ]] || return 0
+        local link_target
+        link_target="$(readlink -f "$GLAZE_ROOT/.manage.venv" 2>/dev/null)" || return 1
+        [[ -n "$link_target" && -d "$link_target" ]]
+    }
+
+    _gz_resolved_db_path() {
+        local db_url="${DATABASE_URL:-}"
+        if [[ -z "$db_url" ]]; then
+            printf '%s\n' "$GLAZE_ROOT/db.sqlite3"
+            return 0
+        fi
+        if [[ "$db_url" != sqlite:* ]]; then
+            return 1
+        fi
+        python3 - "$db_url" "$GLAZE_ROOT" <<'PY'
+import os
+import sys
+from urllib.parse import unquote, urlparse
+
+db_url = sys.argv[1]
+root = sys.argv[2]
+parsed = urlparse(db_url)
+if parsed.scheme != "sqlite":
+    raise SystemExit(1)
+path = unquote(parsed.path or "")
+if path.startswith("//"):
+    path = path[1:]
+if not path:
+    raise SystemExit(1)
+if path.startswith("/"):
+    print(path)
+else:
+    print(os.path.abspath(os.path.join(root, path)))
+PY
+    }
+
+    _gz_ensure_bootstrap() {
+        if [[ -n "${BASH_ENV:-}" ]] && ! command -v rtk &>/dev/null; then
+            echo "--- Installing RTK (for test optimizations and type generation)..."
+            curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+            export PATH="$HOME/.local/bin:$PATH"
+            mkdir -p ~/.claude
+            rtk init -g --auto-patch
+        fi
+
+        if ! _gz_manage_venv_looks_ready; then
+            if [[ -e "$GLAZE_ROOT/.manage.venv" || -L "$GLAZE_ROOT/.manage.venv" ]]; then
+                rm -rf "$GLAZE_ROOT/.manage.venv"
+            fi
+            echo "--- Building Python venv with Bazel (//:manage.venv)..."
+            (cd "$GLAZE_ROOT" && _gz_bazel run //:manage.venv)
+        fi
+
+        local db_path=""
+        if db_path="$(_gz_resolved_db_path 2>/dev/null)"; then
+            if [[ ! -e "$db_path" ]]; then
+                echo "--- Running migrations..."
+                (cd "$GLAZE_ROOT" && _gz_bazel run //:manage -- migrate --run-syncdb)
+            fi
+        fi
+
+        [[ -f "$GLAZE_ROOT/.manage.venv/bin/activate" ]] && source "$GLAZE_ROOT/.manage.venv/bin/activate"
+    }
+
+    _gz_ensure_bootstrap
+
+    _gz_prepend_path_once "$GLAZE_ROOT/web/node_modules/.bin"
+    _gz_prepend_path_once "$GLAZE_ROOT/bin"
 
     # Prevent Rust/rtk stack overflows from crashing the WSL2 VM
     ulimit -s unlimited 2>/dev/null || true
@@ -230,10 +310,6 @@ _gz_ensure_node() {
     ${GLAZE_AGENT:+rtk }nvm use 20
 }
 
-# ---------------------------------------------------------------------------
-# Setup
-# ---------------------------------------------------------------------------
-
 gz_install_mcp_tools() {
     echo "=== Installing MCP tool dependencies ==="
     local tools=(jq curl git gh)
@@ -259,59 +335,18 @@ gz_install_mcp_tools() {
     echo "=== MCP tools installed ==="
 }
 
-gz_setup() {
-    local setup_mode="shared"
-    if [[ "${GLAZE_SETUP_ISOLATED:-0}" == "1" ]]; then
-        setup_mode="isolated"
-    fi
+gz_sync() {
+    echo "=== Glaze: syncing package manager state ==="
+    echo "--- Syncing Python dependencies via uv..."
+    uv sync
 
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --isolated)
-                setup_mode="isolated"
-                ;;
-            --shared)
-                setup_mode="shared"
-                ;;
-            *)
-                echo "Usage: gz_setup [--shared|--isolated]"
-                return 2
-                ;;
-        esac
-        shift
-    done
+    echo "--- Syncing web dependencies via pnpm import..."
+    (cd "$GLAZE_ROOT/web" && pnpm import)
 
-    echo "=== Glaze: setting up development environment ==="
-    # RTK
-    if ! command -v rtk &>/dev/null; then
-        echo "--- Installing RTK (for test optimizations and type generation)..."
-        curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
-        export PATH="$HOME/.local/bin:$PATH"
-        mkdir -p ~/.claude
-        rtk init -g --auto-patch
-    fi
+    echo "--- Reloading shell bootstrap..."
+    gz_reload
 
-    # Python — materializes .manage.venv/ at the workspace root via aspect_rules_py.
-    echo "--- Building Python venv with Bazel (//:manage.venv)..."
-    (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel run //:manage.venv)
-
-    # Database
-    echo "--- Running migrations..."
-    (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel run //:manage -- migrate --run-syncdb)
-
-    # Node + web deps — pnpm install via aspect_rules_js's @npm//:sync. This
-    # runs pnpm under the Bazel-managed node toolchain and materializes a
-    # normal pnpm tree at web/node_modules/ that both Bazel and the IDE read.
-    echo "--- Syncing web dependencies via Bazel (@npm//:sync)..."
-    (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel run @npm//:sync)
-
-    # Activate the venv in the current shell — it may not have been active at
-    # source time if the repo was freshly cloned and the venv didn't exist yet.
-    [[ -f "$GLAZE_ROOT/.manage.venv/bin/activate" ]] && source "$GLAZE_ROOT/.manage.venv/bin/activate"
-
-    echo "=== Setup complete ==="
-    echo "    Run 'gz_gentypes' to regenerate TypeScript types via Bazel (no backend)."
-    echo "    Run 'gz_start' to start both servers."
+    echo "=== Sync complete ==="
 }
 
 # ---------------------------------------------------------------------------
@@ -853,11 +888,11 @@ gz_logs() {    # gz_logs [backend|web|all]  — defaults to running servers
 # ---------------------------------------------------------------------------
 
 gz_reload() {
-    # Re-source this file, bypassing the double-source guard so edits take
-    # effect in the current shell.
+    # Re-source the interactive bootstrap so env/bootstrap edits take effect in
+    # the current shell.
     unset _GLAZE_AGENT_ENV_LOADED
     # shellcheck disable=SC1091
-    source "$_GLAZE_SCRIPT_DIR/env-agent.sh"
+    source "$_GLAZE_SCRIPT_DIR/env.sh"
 }
 
 gz_gentypes() {
@@ -872,9 +907,9 @@ gz_gentypes() {
 
 _GZ_SHORTCUTS=(
     "gz_help           — show this list of shortcuts"
-    "gz_reload         — re-source env.sh in the current shell (picks up env-agent.sh edits)"
+    "gz_reload         — re-source env.sh in the current shell (picks up env/bootstrap edits)"
+    "gz_sync           — reconcile uv/npm package edits and reload the shell"
     "gz_install_mcp_tools — install MCP tool dependencies (jq, curl, git, gh)"
-    "gz_setup [--isolated] — setup (shared reuse by default; --isolated for per-worktree deps)"
     "gz_manage <cmd>   — run any manage.py subcommand"
     "gz_migrate        — migrate"
     "gz_makemigrations — makemigrations"

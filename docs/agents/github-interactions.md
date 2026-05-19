@@ -81,7 +81,7 @@ Project-specific definition-of-done checks (e.g. serializer/type alignment, work
 
 ### Environment Setup
 
-When running in a github action, or in any remote sandboxed environment, first `source env-agent.sh && gz_setup` to set up the test environment.
+When running in a github action, or in any remote sandboxed environment, first `source env-agent.sh` to set up the test environment.
 
 To run all tests, use `gz_test`.
 To run all linters, use `gz_lint`.

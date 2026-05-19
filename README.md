@@ -46,7 +46,7 @@ Before cloning, ensure the following are installed on your system:
 |---|---|---|
 | OS | Ubuntu 22.04+ or Debian 12+ (WSL2 on Windows works; macOS untested) | — |
 | [Bazelisk](https://github.com/bazelbuild/bazelisk) | Yes — aliased as `bazel`; downloads Bazel 8.5.1 automatically via `.bazelversion` | [Bazelisk releases](https://github.com/bazelbuild/bazelisk/releases) or `brew install bazelisk` |
-| `curl` | Yes — used by `gz_setup` to bootstrap RTK | `apt install curl` |
+| `curl` | Yes — used by the lazy shell bootstrap to install RTK when needed | `apt install curl` |
 | `git` | Yes | `apt install git` |
 
 Python (3.12) and Node (22) are managed hermetically by Bazel — no manual installs needed once Bazelisk is present.
@@ -61,13 +61,17 @@ This section is for folks who just want to fire up the whole stack quickly and s
 
 ```bash
 source env.sh
-gz_setup    # materializes the worktree environment; rerun after dependency changes
 gz_start    # starts backend + web via the Bazel-run launcher
 ```
 
 ## Development helpers (`env.sh`)
 
-Use these shortcuts once you've sourced `env.sh`; they wrap common CLI sequences so you can focus on implementing features instead of hunting for the right flags. The `env.sh` script sets up Python/Node paths, loads useful aliases (`gz_setup`, `gz_start`, etc.), and keeps environment-specific tweaks (like log rotation and virtualenv activation) centralized, so every developer runs commands against the same configuration without manually sourcing multiple files.
+<figure>
+  <img src="docs/diagrams/dev-local-flow.svg" alt="Glaze shell workflow state machine with healthy shell state in the center" width="100%">
+  <figcaption>Healthy is the steady state. Fresh and existing checkouts both source <code>env.sh</code>, which lazily bootstraps any missing local shell state on first load. Package edits return to healthy via <code>gz_sync</code>, <code>.env*</code> edits return via <code>gz_reload</code>, and <code>gz_start</code> launches the stack from healthy.</figcaption>
+</figure>
+
+Use these shortcuts once you've sourced `env.sh`; they wrap common CLI sequences so you can focus on implementing features instead of hunting for the right flags. The `env.sh` script sets up Python/Node paths, loads useful aliases (`gz_start`, etc.), and keeps environment-specific tweaks (like log rotation and virtualenv activation) centralized, so every developer runs commands against the same configuration without manually sourcing multiple files. On a fresh checkout, `source env.sh` also materializes any missing local bootstrap state needed for a healthy shell.
 
 Source the file to load all shortcuts into your shell:
 
@@ -77,25 +81,24 @@ source env.sh
 
 **VS Code / Cursor:** the repo ships terminal profiles in [`.vscode/settings.json`](.vscode/settings.json) for Linux and macOS that automatically source `env.sh` in every new integrated terminal. Linux uses `bash`; macOS uses `zsh` with a repo-owned [`.vscode/.zshrc`](.vscode/.zshrc). The venv is activated and `gz_*` helpers are available from the moment the terminal opens.
 
-**AI coding agents (Claude Code, Codex, Cursor agent):** a companion script [`env-agent.sh`](env-agent.sh) provides a silent, lightweight bootstrap (venv activation + current-checkout `.env`/`.env.local` loading) for non-interactive shells. Claude Code picks it up via `.claude/settings.json`; Codex and other agents inherit it through `BASH_ENV` when launched from an `env.sh`-sourced terminal. Prefer repo-local worktrees under `.agent-worktrees/...` instead of `/tmp`; the bootstrap detects the active git worktree root automatically and expects the worktree to own its `.env`/`.env.local` files and materialized dependency environment after `gz_setup` has run. `gz_setup` materializes the isolated worktree-local developer environment, and `gz_reload` refreshes the current shell after setup so the new `PATH` is visible immediately. Keep repo-local Codex-specific config in `.agent-config/codex/` rather than `.codex`, which may be reserved by the local Codex installation. See [`docs/agents/dev.md`](docs/agents/dev.md) for details.
+**AI coding agents (Claude Code, Codex, Cursor agent):** a companion script [`env-agent.sh`](env-agent.sh) provides a silent, lightweight bootstrap (venv activation + current-checkout `.env`/`.env.local` loading) for non-interactive shells. Claude Code picks it up via `.claude/settings.json`; Codex and other agents inherit it through `BASH_ENV` when launched from an `env.sh`-sourced terminal. Prefer repo-local worktrees under `.agent-worktrees/...` instead of `/tmp`; the bootstrap detects the active git worktree root automatically and expects the worktree to own its `.env`/`.env.local` files and materialized dependency environment. `env.sh` will lazily create the minimal local bootstrap state needed for a healthy shell on first load, and `gz_reload` refreshes the current shell after shell/bootstrap/env-file edits so the new `PATH` is visible immediately. Keep repo-local Codex-specific config in `.agent-config/codex/` rather than `.codex`, which may be reserved by the local Codex installation. See [`docs/agents/dev.md`](docs/agents/dev.md) for details.
 
 ### Managing Package Dependencies
 
 Use the package managers you already know to edit dependency manifests, then hand the result back to the repo’s Bazel-aware workflow.
 
 **Python**
-- Use the Bazel-managed `uv` entrypoint from the repo root to edit Python dependencies.
+- Use the repo-local `uv` wrapper from the repo root to edit Python dependencies. `source env.sh` prepends the wrapper directory to `PATH`, and the wrapper dispatches to the Bazel-managed toolchain.
 - Typical commands: `uv add`, `uv remove`, `uv lock`, `uv sync`.
 - After changing Python packages, run `gz_sync` so the materialized environment and Bazel view stay aligned.
 
 **Web**
-- Use `npm` inside [`web/`](web/) to edit JavaScript dependencies.
+- Use the repo-local `npm` wrapper inside [`web/`](web/) to edit JavaScript dependencies. `source env.sh` prepends the wrapper directory to `PATH`, and the wrapper dispatches to the Bazel-managed toolchain.
 - After `npm install`, regenerate `web/pnpm-lock.yaml` from `web/package-lock.json` with `pnpm import`.
-- The reconciliation step should use the repo’s Bazel-aware Node toolchain so the `pnpm` side stays aligned with CI and Bazel.
+- The reconciliation step should use the repo-local `pnpm` wrapper so the `pnpm` side stays aligned with CI and Bazel.
 - After changing web packages, run `gz_sync` so the current shell and repo locks stay in sync.
 
 **When to use which helper**
-- Run `gz_setup` when the worktree’s materialized dependency environment itself needs to be rebuilt.
 - Run `gz_sync` after native `uv` or `npm` dependency changes.
 - Run `gz_reload` when shell bootstrap files or env files changed and you only need the current terminal to pick up the new `PATH` immediately.
 
@@ -130,7 +133,6 @@ gz_cd 292
 From there, use the normal helpers:
 
 ```bash
-gz_setup
 gz_start
 ```
 
@@ -172,7 +174,6 @@ Each variable in `.env.example` has an inline comment explaining what it enables
 
 | Command    | Description                                                                                                                                                                                                             |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gz_setup` | Setup helper: materializes the isolated worktree-local developer environment, refreshes the current shell with the new PATH, and runs DB migrations. Re-run after the dependency environment itself changes. |
 | `gz_sync` | Reconcile native package-manager edits with the Bazel-aware workflow and refresh the current shell. Use this after `uv` or `npm` dependency changes. |
 | `gz_reload` | Re-source `env.sh` in the current shell after changing shell bootstrap, env files, or freshly materialized tools that should appear on `PATH` right now. |
 

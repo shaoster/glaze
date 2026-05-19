@@ -20,18 +20,17 @@ allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 
 ```bash
 # Backend
-rtk bazel run @uv//:uv -- sync
-rtk bazel run @uv//:uv -- run python manage.py migrate
+uv sync
+uv run python manage.py migrate
 
 # Web (separate terminal)
 cd web
-rtk bazel run @nodejs_linux_amd64//:npm -- install
+npm install
 ```
 
-In a new environment, always run `gz_setup` before doing anything else.
-`gz_setup` reuses the main checkout's `.venv` and `web/node_modules` by default from a
-repo-local worktree. Use `gz_setup --isolated` (or `GLAZE_SETUP_ISOLATED=1 gz_setup`)
-when a branch needs its own dependency environment (changing Python or Node packages).
+In a new environment, always run `source env.sh` before doing anything else.
+The bootstrap lazily materializes the minimal local state needed for a healthy shell
+and keeps the repo-local developer environment consistent across worktrees.
 
 ## Shell Bootstrap
 
@@ -81,7 +80,6 @@ clean kill path.
 Agents should not start servers autonomously. When suggesting server startup to users:
 
 ```bash
-gz_setup
 gz_start          # starts Django + Vite, opens browser, registers EXIT cleanup trap
 gz_stop           # stop servers in current worktree
 gz_status         # see what's running and on which ports
@@ -110,11 +108,11 @@ Always run `git` commands from the repo root. Wrap subdirectory commands in a su
 
 ```bash
 # ✅ correct — shell stays at repo root
-(cd web && rtk bazel run @nodejs_linux_amd64//:npx -- pnpm install)
+(cd web && pnpm install)
 git add web/pnpm-lock.yaml
 
 # ❌ incorrect — shell is now inside web/
-cd web && rtk bazel run @nodejs_linux_amd64//:npx -- pnpm install
+cd web && pnpm install
 git add web/pnpm-lock.yaml   # fails: no web/web/pnpm-lock.yaml
 ```
 
@@ -150,15 +148,17 @@ under `/home/phil/.cache/bazel`. It is large, slow to traverse, and not a source
 truth for anything in the repo. To inspect a Python package, read it from
 `.manage.venv/lib/python3.12/site-packages/` instead.
 
-## Symlinking `.env.local` into a Worktree
+## Copying `.env.local` into a Worktree
 
-When working in an agent worktree, symlink the untracked root `.env.local` into the
+When working in an agent worktree, copy the untracked root `.env.local` into the
 worktree so servers load Cloudinary and OAuth credentials:
 
 ```bash
-ln -s /home/phil/code/glaze/.env.local .env.local
-ln -s /home/phil/code/glaze/web/.env.local web/.env.local
+cp /home/phil/code/glaze/.env.local .env.local
 ```
+
+If the worktree also needs web-only overrides, copy `web/.env.local` separately
+afterward; do not symlink either file.
 
 **Avoid copying `.env.local` from prod** — prod env files often contain keys set to
 empty strings (e.g. `EMAIL_PORT=`) that are valid in shell but cause Django startup

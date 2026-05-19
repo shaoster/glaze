@@ -96,7 +96,10 @@ git worktree list
 
 **Why `.agent-worktrees/`**: Keeping worktrees inside the project directory means
 agents already have file permissions, share the repo-local bootstrap, and avoid
-tool-reserved paths like `.codex`.
+tool-reserved paths like `.codex`. Each new worktree should copy the root
+checkout's `.env.local` into place rather than symlinking it, so the checkout
+owns its own env files and the shell bootstrap can fail fast when they are
+missing.
 
 ### Step 3: Apply existing work
 
