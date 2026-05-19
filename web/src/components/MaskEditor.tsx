@@ -58,47 +58,79 @@ export default function MaskEditor({
   const hintsCanvasRef = useRef<HTMLCanvasElement>(null);
   const srcCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // ImageData stacks live here so they never enter React state
-  const undoCanvasStack = useRef<ImageData[]>([]);
-  const redoCanvasStack = useRef<ImageData[]>([]);
+  // Undo/redo stacks — snapshots of mask canvas + hints canvas + polygon vertices
+  type UndoEntry = { mask: ImageData; hints: ImageData | null; vertices: Point[]; polygonClosed: boolean };
+  const undoCanvasStack = useRef<UndoEntry[]>([]);
+  const redoCanvasStack = useRef<UndoEntry[]>([]);
 
   const undoCount = state.undoStack;
   const redoCount = state.redoStack;
 
-  // Called by MaskEditorCanvas after each paint op — snapshot is pre-op state
-  const handlePushUndo = useCallback((snapshot: ImageData) => {
-    undoCanvasStack.current = [...undoCanvasStack.current, snapshot].slice(-20);
+  // Stable ref so event handlers always call the latest logic without re-registering
+  const pushUndoRef = useRef<() => void>(() => {});
+  pushUndoRef.current = () => {
+    const mask = maskCanvasRef.current;
+    const hints = hintsCanvasRef.current;
+    if (!mask) return;
+    const mCtx = mask.getContext("2d")!;
+    const entry: UndoEntry = {
+      mask: mCtx.getImageData(0, 0, mask.width, mask.height),
+      hints: hints ? hints.getContext("2d")!.getImageData(0, 0, hints.width, hints.height) : null,
+      vertices: [...state.polygonVertices],
+      polygonClosed: state.polygonClosed,
+    };
+    undoCanvasStack.current = [...undoCanvasStack.current, entry].slice(-20);
     redoCanvasStack.current = [];
     dispatch({ type: "tool_applied" });
+  };
+  // Stable callback passed to children — never changes reference
+  const handlePushUndo = useCallback(() => pushUndoRef.current(), []);
+
+  const restoreEntry = useCallback((entry: UndoEntry) => {
+    const mask = maskCanvasRef.current;
+    const hints = hintsCanvasRef.current;
+    if (!mask) return;
+    mask.getContext("2d")!.putImageData(entry.mask, 0, 0);
+    if (hints) {
+      if (entry.hints) hints.getContext("2d")!.putImageData(entry.hints, 0, 0);
+      else hints.getContext("2d")!.clearRect(0, 0, hints.width, hints.height);
+    }
+    dispatch({ type: "polygon_state_restored", vertices: entry.vertices, closed: entry.polygonClosed });
   }, []);
+
+  const captureCurrentEntry = useCallback((): UndoEntry | null => {
+    const mask = maskCanvasRef.current;
+    const hints = hintsCanvasRef.current;
+    if (!mask) return null;
+    return {
+      mask: mask.getContext("2d")!.getImageData(0, 0, mask.width, mask.height),
+      hints: hints ? hints.getContext("2d")!.getImageData(0, 0, hints.width, hints.height) : null,
+      vertices: [...state.polygonVertices],
+      polygonClosed: state.polygonClosed,
+    };
+  }, [state.polygonVertices, state.polygonClosed]);
 
   const handleUndo = useCallback(() => {
-    const canvas = maskCanvasRef.current;
-    if (!canvas || undoCanvasStack.current.length === 0) return;
-    const ctx = canvas.getContext("2d")!;
-    // Save current canvas state for redo
-    const current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    if (undoCanvasStack.current.length === 0) return;
+    const current = captureCurrentEntry();
+    if (!current) return;
     redoCanvasStack.current = [current, ...redoCanvasStack.current].slice(0, 20);
-    // Restore previous
     const prev = undoCanvasStack.current[undoCanvasStack.current.length - 1];
     undoCanvasStack.current = undoCanvasStack.current.slice(0, -1);
-    ctx.putImageData(prev, 0, 0);
+    restoreEntry(prev);
     dispatch({ type: "undo" });
-  }, []);
+  }, [captureCurrentEntry, restoreEntry]);
 
   const handleRedo = useCallback(() => {
-    const canvas = maskCanvasRef.current;
-    if (!canvas || redoCanvasStack.current.length === 0) return;
-    const ctx = canvas.getContext("2d")!;
-    // Save current canvas state for undo
-    const current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    if (redoCanvasStack.current.length === 0) return;
+    const current = captureCurrentEntry();
+    if (!current) return;
     undoCanvasStack.current = [...undoCanvasStack.current, current].slice(-20);
-    // Restore redo target
     const next = redoCanvasStack.current[0];
     redoCanvasStack.current = redoCanvasStack.current.slice(1);
-    ctx.putImageData(next, 0, 0);
+    restoreEntry(next);
     dispatch({ type: "redo" });
-  }, []);
+  }, [captureCurrentEntry, restoreEntry]);
 
   const handleCommit = useCallback(() => {
     const canvas = maskCanvasRef.current;
@@ -125,9 +157,8 @@ export default function MaskEditor({
     const src = srcCanvasRef.current;
     if (!mask || !src || !state.grabcutRect) return;
     const t0 = performance.now();
+    handlePushUndo();
     dispatch({ type: "assist_started" });
-    const snap = mask.getContext("2d")!.getImageData(0, 0, mask.width, mask.height);
-    handlePushUndo(snap);
     runGrabCut(src, mask, hintsCanvasRef.current, state.grabcutRect, state.grabcutIterations)
       .then(() => {
         dispatch({ type: "assist_succeeded", ms: Math.round(performance.now() - t0) });
@@ -141,6 +172,7 @@ export default function MaskEditor({
     const src = srcCanvasRef.current;
     if (!src || state.polygonVertices.length === 0) return;
     const targets = vertexIndices.map((i) => state.polygonVertices[i]);
+    handlePushUndo();
     dispatch({ type: "assist_started" });
     snapVerticesToEdges(src, targets, state.snapRadius, state.snapEdgeThreshold, state.snapEdgeOperator)
       .then((snapped) => {
@@ -173,8 +205,7 @@ export default function MaskEditor({
   const handleApplyPolygon = useCallback(() => {
     const canvas = maskCanvasRef.current;
     if (!canvas || state.polygonVertices.length < 3) return;
-    const ctx = canvas.getContext("2d")!;
-    handlePushUndo(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    handlePushUndo();
     fillPolygon(canvas, state.polygonVertices, state.floodMode);
     dispatch({ type: "tool_applied" });
     dispatch({ type: "polygon_vertices_set", vertices: [] });
@@ -184,6 +215,7 @@ export default function MaskEditor({
     const verts = state.polygonVertices;
     const sel = state.selectedVertex;
     if (verts.length < 2 || sel == null) return;
+    handlePushUndo();
     const next = (sel + 1) % verts.length;
     const mid = {
       x: (verts[sel].x + verts[next].x) / 2,
@@ -192,17 +224,19 @@ export default function MaskEditor({
     const newVerts = [...verts.slice(0, sel + 1), mid, ...verts.slice(sel + 1)];
     dispatch({ type: "polygon_vertices_set", vertices: newVerts });
     dispatch({ type: "polygon_vertex_selected", index: sel + 1 });
-  }, [state.polygonVertices, state.selectedVertex]);
+  }, [state.polygonVertices, state.selectedVertex, handlePushUndo]);
 
   const handleSmoothPolygon = useCallback(() => {
     if (state.polygonVertices.length < 3) return;
+    handlePushUndo();
     dispatch({ type: "polygon_vertices_set", vertices: smoothPolygon(state.polygonVertices) });
-  }, [state.polygonVertices]);
+  }, [state.polygonVertices, handlePushUndo]);
 
   const handleSimplifyPolygon = useCallback(() => {
     if (state.polygonVertices.length < 3) return;
+    handlePushUndo();
     dispatch({ type: "polygon_vertices_set", vertices: simplifyPolygon(state.polygonVertices, state.polygonSimplifyEps) });
-  }, [state.polygonVertices, state.polygonSimplifyEps]);
+  }, [state.polygonVertices, state.polygonSimplifyEps, handlePushUndo]);
 
   // ---- Flood commit (fills the whole current mask region — no-op, just shows user can re-click) ----
   // "Commit fill" in the inspector confirms the last flood op, which is already live on canvas.

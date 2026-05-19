@@ -221,7 +221,7 @@ interface MaskEditorCanvasProps {
   imageWidth: number;
   imageHeight: number;
   candidateMask?: string | null;
-  onPushUndo: (snapshot: ImageData) => void;
+  onPushUndo: () => void;
   onClosePolygon: () => void;
 }
 
@@ -338,9 +338,7 @@ export default function MaskEditorCanvas({
       const src = srcCanvasRef.current;
       if (!src) return;
       const p = canvasPoint(canvas, e);
-      const ctx = canvas.getContext("2d")!;
-      const snap = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      onPushUndo(snap);
+      onPushUndo();
       floodFill(canvas, src, p.x, p.y, state.floodTolerance, state.floodConnectivity, state.floodMode);
       dispatch({ type: "tool_applied" });
     };
@@ -373,6 +371,7 @@ export default function MaskEditorCanvas({
       const p = canvasPoint(overlay, e);
       const hit = findVertex(p);
       if (hit !== null) {
+        onPushUndo(); // snapshot before drag starts
         draggingVertexIdx.current = hit;
         overlay.setPointerCapture(e.pointerId);
         dispatch({ type: "polygon_vertex_selected", index: hit });
@@ -402,6 +401,7 @@ export default function MaskEditorCanvas({
         return;
       }
       if (state.polygonClosed) return; // closed: no new vertices on click
+      onPushUndo(); // snapshot before adding vertex
       dispatch({ type: "polygon_vertex_added", point: p });
     };
 
@@ -414,7 +414,10 @@ export default function MaskEditorCanvas({
       e.preventDefault();
       const p = canvasPoint(overlay, e);
       const hit = findVertex(p);
-      if (hit !== null) dispatch({ type: "polygon_vertex_deleted", index: hit });
+      if (hit !== null) {
+        onPushUndo(); // snapshot before deleting vertex
+        dispatch({ type: "polygon_vertex_deleted", index: hit });
+      }
     };
 
     const onLeave = () => {
@@ -448,6 +451,7 @@ export default function MaskEditorCanvas({
     overlayCanvasRef,
     maskCanvasRef,
     onClosePolygon,
+    onPushUndo,
     dispatch,
   ]);
 
@@ -463,6 +467,7 @@ export default function MaskEditorCanvas({
     const radius = state.grabcutBrushRadius;
 
     const onDown = (e: PointerEvent) => {
+      onPushUndo(); // snapshot before first stroke pixel
       hintPainting.current = true;
       hints.setPointerCapture(e.pointerId);
       const p = canvasPoint(hints, e);

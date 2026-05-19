@@ -87,6 +87,7 @@ export type MaskEditorAction =
   | { type: "polygon_vertices_set"; vertices: Point[] }
   | { type: "polygon_closed" }
   | { type: "polygon_reopened" }
+  | { type: "polygon_state_restored"; vertices: Point[]; closed: boolean }
   // grabcut
   | { type: "set_grabcut_rect"; rect: Rect | null }
   | { type: "set_grabcut_hint_mode"; mode: GrabCutHintMode }
@@ -212,6 +213,8 @@ export function maskEditorReducer(
       return { ...state, polygonClosed: true };
     case "polygon_reopened":
       return { ...state, polygonClosed: false };
+    case "polygon_state_restored":
+      return { ...state, polygonVertices: action.vertices, polygonClosed: action.closed, selectedVertex: null, dirty: true };
 
     case "set_grabcut_rect":
       return { ...state, grabcutRect: action.rect };
