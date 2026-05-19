@@ -175,6 +175,7 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
             display: "block",
           }}
           onLoad={(e) => {
+            if (piece.thumbnail?.width && piece.thumbnail?.height) return;
             const img = e.currentTarget;
             if (img.naturalWidth > 0 && img.naturalHeight > 0) {
               setThumbnailAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);

@@ -533,8 +533,9 @@ describe("PieceList", () => {
         ) + CARD_CHROME_HEIGHT;
         expect(mockPositioner.set).toHaveBeenCalledWith(1, naiveHeight);
 
-        // pieces[2]: no crop → not seeded
+        // pieces[2]: no crop → not seeded; exactly 2 set() calls total
         expect(mockPositioner.set).not.toHaveBeenCalledWith(2, expect.anything());
+        expect(mockPositioner.set).toHaveBeenCalledTimes(2);
       });
 
       // The true-pixel height for pieces[0] must differ from the naive height

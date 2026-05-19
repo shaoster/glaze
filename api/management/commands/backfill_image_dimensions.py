@@ -25,7 +25,7 @@ class Command(BaseCommand):
             "--batch-size",
             type=int,
             default=50,
-            help="Number of Cloudinary API calls per second (rate-limit friendly).",
+            help="Number of images to fetch before sleeping 1 second (rate-limit friendly).",
         )
 
     def handle(self, *args, **options):
