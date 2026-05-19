@@ -1,6 +1,6 @@
 # Helm + k3s Migration Plan
 
-This document turns [issue #277](https://github.com/shaoster/glaze/issues/277) into a concrete migration checklist for moving Glaze production from `docker-compose` to Helm on k3s.
+This document turns [issue #547](https://github.com/shaoster/glaze/issues/547) into a concrete migration checklist for moving Glaze production from `docker-compose` to Helm on k3s.
 
 The intended production shape is:
 
