@@ -133,7 +133,7 @@ When a variable is added, removed, or renamed, update `.env.example`'s comment t
 | `CLOUDINARY_API_KEY` | same as above |
 | `CLOUDINARY_API_SECRET` | same as above |
 | `CLOUDINARY_UPLOAD_FOLDER` | uploads go to root of Cloudinary account (optional) |
-| `GOOGLE_OAUTH_CLIENT_ID` | `POST /api/auth/google/` non-functional; email/password login still works; Google Sign-In button not rendered |
+| `GOOGLE_OAUTH_CLIENT_ID` | `POST /api/auth/google/` non-functional; email/password login still works |
 
 ## Configuration Rationale
 
