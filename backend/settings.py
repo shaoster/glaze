@@ -170,9 +170,7 @@ if IS_PRODUCTION:
         )
     }
 elif os.environ.get("DATABASE_URL"):
-    DATABASES = {
-        "default": dj_database_url.config(conn_max_age=0)
-    }
+    DATABASES = {"default": dj_database_url.config(conn_max_age=0)}
 else:
     DATABASES = {
         "default": {

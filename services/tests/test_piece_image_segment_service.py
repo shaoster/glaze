@@ -5,11 +5,11 @@ Heavy ML dependencies (rembg, OpenCV) are mocked so tests run fast in CI
 without downloading any model weights.
 """
 
+import importlib
 import io
 import os
-import importlib
-import unittest
 import types
+import unittest
 from unittest.mock import MagicMock, patch
 
 import numpy as np

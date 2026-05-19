@@ -340,7 +340,9 @@ class TestDetectSubjectCropTask:
         other_image = self._make_cloudinary_image(user, suffix="-alt")
         piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
         state = PieceState.objects.create(piece=piece, user=user, state="designed")
-        psi = PieceStateImage.objects.create(piece_state=state, image=other_image, order=0)
+        psi = PieceStateImage.objects.create(
+            piece_state=state, image=other_image, order=0
+        )
 
         task = self._make_task(
             user,
