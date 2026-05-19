@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1420 520" role="img" aria-labelledby="workflow-title workflow-desc" width="1420" height="520" preserveAspectRatio="xMidYMid meet">
   <title id="workflow-title">Glaze shell workflow state machine</title>
   <desc id="workflow-desc">A healthy shell state in the center. Fresh checkouts source env.sh, which can bootstrap missing local state automatically. Existing checkouts source env.sh and can go directly to healthy. Package edits return to healthy via gz_sync. .env edits return to healthy via gz_reload. From healthy, gz_start launches the stack.</desc>
+  <rect width="100%" height="100%" fill="#ffffff"></rect>
   <defs>
     <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
       <path d="M0,0 L10,3.5 L0,7 Z" fill="#475569"></path>
@@ -18,7 +19,7 @@
       .sub { fill: #334155; font: 500 14px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       .arrow { stroke: #64748b; stroke-width: 3; fill: none; marker-end: url(#arrowhead); }
       .arrow-soft { stroke: #94a3b8; stroke-width: 2.5; fill: none; marker-end: url(#arrowhead); stroke-dasharray: 6 5; }
-      .arrow-label { fill: #334155; font: 600 14px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .arrow-label { fill: #0f172a; font: 700 14px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
       .small-note { fill: #475569; font: 500 13px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     </style>
   </defs>
@@ -30,10 +31,10 @@
   <text class="label" x="1260" y="44" text-anchor="middle">existing checkout</text>
 
   <path class="arrow" d="M250 60 L550 108"></path>
-  <text class="arrow-label" x="395" y="80" text-anchor="middle">source env.sh</text>
+  <text class="arrow-label" x="395" y="116" text-anchor="middle">source env.sh</text>
 
   <path class="arrow" d="M1170 60 L870 108"></path>
-  <text class="arrow-label" x="1045" y="80" text-anchor="middle">source env.sh</text>
+  <text class="arrow-label" x="1045" y="116" text-anchor="middle">source env.sh</text>
 
   <rect class="state source" x="550" y="78" width="320" height="88" rx="16" ry="16"></rect>
   <text class="label" x="710" y="114" text-anchor="middle">source</text>
@@ -48,27 +49,27 @@
   <text class="sub" x="710" y="283" text-anchor="middle">repo-ready shell with Bazel-aware uv, npm, and pnpm</text>
   <text class="small-note" x="710" y="306" text-anchor="middle">Use this as the steady state after source, sync, or reload.</text>
 
-  <rect class="state package" x="40" y="222" width="340" height="120" rx="16" ry="16"></rect>
+  <rect class="state package" x="70" y="222" width="280" height="120" rx="16" ry="16"></rect>
   <text class="label" x="210" y="266" text-anchor="middle">package edits</text>
   <text class="sub" x="210" y="289" text-anchor="middle">uv add/remove/lock</text>
   <text class="sub" x="210" y="309" text-anchor="middle">npm install / uninstall</text>
 
-  <path class="arrow" d="M450 282 L380 282"></path>
-  <text class="arrow-label" x="415" y="254" text-anchor="middle">uv / npm changes</text>
+  <path class="arrow" d="M450 282 L350 282"></path>
+  <text class="arrow-label" x="400" y="207" text-anchor="middle">uv / npm changes</text>
 
-  <path class="arrow" d="M380 302 L450 302"></path>
-  <text class="arrow-label" x="415" y="309" text-anchor="middle">gz_sync</text>
+  <path class="arrow" d="M350 302 L450 302"></path>
+  <text class="arrow-label" x="400" y="354" text-anchor="middle">gz_sync</text>
 
-  <rect class="state env" x="1040" y="222" width="340" height="120" rx="16" ry="16"></rect>
+  <rect class="state env" x="1070" y="222" width="280" height="120" rx="16" ry="16"></rect>
   <text class="label" x="1210" y="266" text-anchor="middle">.env* edits</text>
   <text class="sub" x="1210" y="289" text-anchor="middle">.env / .env.local changes</text>
   <text class="sub" x="1210" y="309" text-anchor="middle">shell bootstrap inputs</text>
 
-  <path class="arrow" d="M970 282 L1040 282"></path>
-  <text class="arrow-label" x="1005" y="254" text-anchor="middle">update .env*</text>
+  <path class="arrow" d="M970 282 L1070 282"></path>
+  <text class="arrow-label" x="1020" y="207" text-anchor="middle">update .env*</text>
 
-  <path class="arrow" d="M1040 302 L970 302"></path>
-  <text class="arrow-label" x="1005" y="309" text-anchor="middle">gz_reload</text>
+  <path class="arrow" d="M1070 302 L970 302"></path>
+  <text class="arrow-label" x="1020" y="354" text-anchor="middle">gz_reload</text>
 
   <rect class="state running" x="550" y="384" width="320" height="72" rx="16" ry="16"></rect>
   <text class="label" x="710" y="420" text-anchor="middle">running stack</text>
