@@ -1,6 +1,5 @@
 export type ToolName =
   | "prefill"
-  | "brush"
   | "polygon"
   | "flood"
   | "grabcut"
@@ -24,10 +23,6 @@ export type Point = { x: number; y: number };
 
 export type MaskEditorState = {
   activeTool: ToolName;
-
-  // brush params
-  brushRadius: number;
-  brushMode: "paint" | "erase";
 
   // flood fill params
   floodMode: FloodMode;
@@ -73,9 +68,6 @@ export type MaskEditorState = {
 export type MaskEditorAction =
   | { type: "hydrate"; hadMask: boolean }
   | { type: "set_tool"; tool: ToolName }
-  // brush
-  | { type: "set_brush_radius"; radius: number }
-  | { type: "set_brush_mode"; mode: "paint" | "erase" }
   // flood
   | { type: "set_flood_mode"; mode: FloodMode }
   | { type: "set_flood_tolerance"; tolerance: number }
@@ -91,6 +83,7 @@ export type MaskEditorAction =
   | { type: "set_polygon_simplify_eps"; eps: number }
   | { type: "set_polygon_live_snap"; on: boolean }
   | { type: "set_polygon_snap_radius"; radius: number }
+  | { type: "polygon_vertices_set"; vertices: Point[] }
   // grabcut
   | { type: "set_grabcut_rect"; rect: Rect | null }
   | { type: "set_grabcut_hint_mode"; mode: GrabCutHintMode }
@@ -115,8 +108,6 @@ const MAX_UNDO = 20;
 
 export const INITIAL_STATE: MaskEditorState = {
   activeTool: "polygon",
-  brushRadius: 16,
-  brushMode: "paint",
   floodMode: "add",
   floodTolerance: 28,
   floodSampleSize: 3,
@@ -169,11 +160,6 @@ export function maskEditorReducer(
     case "set_tool":
       return { ...state, activeTool: action.tool };
 
-    case "set_brush_radius":
-      return { ...state, brushRadius: action.radius };
-    case "set_brush_mode":
-      return { ...state, brushMode: action.mode };
-
     case "set_flood_mode":
       return { ...state, floodMode: action.mode };
     case "set_flood_tolerance":
@@ -216,6 +202,8 @@ export function maskEditorReducer(
       return { ...state, polygonLiveSnap: action.on };
     case "set_polygon_snap_radius":
       return { ...state, polygonSnapRadius: action.radius };
+    case "polygon_vertices_set":
+      return { ...state, polygonVertices: action.vertices, selectedVertex: null, dirty: true };
 
     case "set_grabcut_rect":
       return { ...state, grabcutRect: action.rect };

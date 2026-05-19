@@ -1,4 +1,4 @@
-import { useReducer, useRef, useCallback } from "react";
+import { useReducer, useRef, useCallback, useEffect } from "react";
 import Dialog from "@mui/material/Dialog";
 import MEIcon from "./MaskEditorIcons";
 import { Pill } from "./MaskEditorShared";
@@ -11,10 +11,10 @@ import {
   INITIAL_STATE,
   maskEditorReducer,
 } from "./maskEditorState";
+import { fillPolygon, smoothPolygon, simplifyPolygon } from "./maskEditorCanvasOps";
 
 export type ToolName =
   | "prefill"
-  | "brush"
   | "polygon"
   | "flood"
   | "grabcut"
@@ -146,6 +146,123 @@ export default function MaskEditor({
       });
     }, 0);
   }, []);
+
+  // ---- Polygon operations ----
+
+  const handleCommitPolygon = useCallback(() => {
+    const canvas = maskCanvasRef.current;
+    if (!canvas || state.polygonVertices.length < 3) return;
+    const ctx = canvas.getContext("2d")!;
+    handlePushUndo(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    fillPolygon(canvas, state.polygonVertices, state.floodMode);
+    dispatch({ type: "tool_applied" });
+    dispatch({ type: "polygon_vertices_set", vertices: [] });
+  }, [state.polygonVertices, state.floodMode, handlePushUndo]);
+
+  const handleInsertVertex = useCallback(() => {
+    const verts = state.polygonVertices;
+    const sel = state.selectedVertex;
+    if (verts.length < 2 || sel == null) return;
+    const next = (sel + 1) % verts.length;
+    const mid = {
+      x: (verts[sel].x + verts[next].x) / 2,
+      y: (verts[sel].y + verts[next].y) / 2,
+    };
+    const newVerts = [...verts.slice(0, sel + 1), mid, ...verts.slice(sel + 1)];
+    dispatch({ type: "polygon_vertices_set", vertices: newVerts });
+    dispatch({ type: "polygon_vertex_selected", index: sel + 1 });
+  }, [state.polygonVertices, state.selectedVertex]);
+
+  const handleSmoothPolygon = useCallback(() => {
+    if (state.polygonVertices.length < 3) return;
+    dispatch({ type: "polygon_vertices_set", vertices: smoothPolygon(state.polygonVertices) });
+  }, [state.polygonVertices]);
+
+  const handleSimplifyPolygon = useCallback(() => {
+    if (state.polygonVertices.length < 3) return;
+    dispatch({ type: "polygon_vertices_set", vertices: simplifyPolygon(state.polygonVertices, state.polygonSimplifyEps) });
+  }, [state.polygonVertices, state.polygonSimplifyEps]);
+
+  // ---- Flood commit (fills the whole current mask region — no-op, just shows user can re-click) ----
+  // "Commit fill" in the inspector confirms the last flood op, which is already live on canvas.
+  // We just dispatch tool_applied to mark dirty if not already marked.
+  const handleFloodCommit = useCallback(() => {
+    dispatch({ type: "tool_applied" });
+  }, []);
+
+  // ---- Global keyboard shortcuts ----
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+
+      const mod = e.metaKey || e.ctrlKey;
+      const tool = state.activeTool;
+
+      if (mod) {
+        if (e.key === "z" && !e.shiftKey) { e.preventDefault(); handleUndo(); }
+        else if ((e.key === "z" && e.shiftKey) || e.key === "y") { e.preventDefault(); handleRedo(); }
+        else if (e.key === "Enter" && tool === "grabcut") { e.preventDefault(); handleRunGrabCut(); }
+        return;
+      }
+
+      switch (e.key) {
+        case "p": case "P": dispatch({ type: "set_tool", tool: "prefill" }); break;
+        case "g": case "G":
+          if (tool === "grabcut") dispatch({ type: "set_grabcut_hint_mode", mode: "background" });
+          else dispatch({ type: "set_tool", tool: "polygon" });
+          break;
+        case "f": case "F":
+          if (tool === "grabcut") dispatch({ type: "set_grabcut_hint_mode", mode: "foreground" });
+          else dispatch({ type: "set_tool", tool: "flood" });
+          break;
+        case "c": case "C": dispatch({ type: "set_tool", tool: "grabcut" }); break;
+        case "s": case "S":
+          if (tool === "snap") {
+            if (e.shiftKey) handleSnapAll();
+            else handleSnapVertex();
+          } else {
+            dispatch({ type: "set_tool", tool: "snap" });
+          }
+          break;
+        case "r": case "R":
+          if (tool === "grabcut") dispatch({ type: "set_grabcut_rect", rect: null });
+          break;
+        case "Enter":
+          if (tool === "polygon") { e.preventDefault(); handleCommitPolygon(); }
+          break;
+        case "Backspace": case "Delete":
+          if (tool === "polygon" && state.selectedVertex != null) {
+            e.preventDefault();
+            dispatch({ type: "polygon_vertex_deleted", index: state.selectedVertex });
+          }
+          break;
+        case "i": case "I":
+          if (tool === "polygon") handleInsertVertex();
+          break;
+        case "[":
+          if (tool === "snap") dispatch({ type: "set_snap_radius", radius: Math.max(2, state.snapRadius - 4) });
+          break;
+        case "]":
+          if (tool === "snap") dispatch({ type: "set_snap_radius", radius: Math.min(64, state.snapRadius + 4) });
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [
+    state.activeTool,
+    state.selectedVertex,
+    state.snapRadius,
+    handleUndo,
+    handleRedo,
+    handleRunGrabCut,
+    handleSnapAll,
+    handleSnapVertex,
+    handleCommitPolygon,
+    handleInsertVertex,
+  ]);
 
   return (
     <Dialog
@@ -315,12 +432,18 @@ export default function MaskEditor({
           imageHeight={imageHeight}
           candidateMask={candidateMask}
           onPushUndo={handlePushUndo}
+          onCommitPolygon={handleCommitPolygon}
         />
 
         <MaskEditorInspector
           state={state}
           dispatch={dispatch}
           activeTool={state.activeTool}
+          onCommitPolygon={handleCommitPolygon}
+          onInsertVertex={handleInsertVertex}
+          onSmoothPolygon={handleSmoothPolygon}
+          onSimplifyPolygon={handleSimplifyPolygon}
+          onFloodCommit={handleFloodCommit}
           onRunGrabCut={handleRunGrabCut}
           onSnapVertex={handleSnapVertex}
           onSnapAll={handleSnapAll}

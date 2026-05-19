@@ -5,7 +5,6 @@ import type { MaskEditorAction, ToolName } from "./maskEditorState";
 
 const TOOLS: { id: ToolName; label: string; icon: Parameters<typeof MEIcon>[0]["name"]; kbd: string }[] = [
   { id: "prefill",  label: "Pre-fill",       icon: "layers",  kbd: "P" },
-  { id: "brush",    label: "Brush · Eraser",  icon: "brush",   kbd: "B" },
   { id: "polygon",  label: "Polygon edit",    icon: "polygon", kbd: "G" },
   { id: "flood",    label: "Flood fill",      icon: "flood",   kbd: "F" },
   { id: "grabcut",  label: "GrabCut",         icon: "grabcut", kbd: "C" },

@@ -3,6 +3,7 @@ import type { Dispatch } from "react";
 import { Pill } from "./MaskEditorShared";
 import { T } from "./maskEditorTokens";
 import type { MaskEditorState, MaskEditorAction, ToolName, Point } from "./maskEditorState";
+import { floodFill } from "./maskEditorCanvasOps";
 
 // ---- Coordinate helpers ----
 
@@ -17,149 +18,7 @@ function canvasPoint(
   };
 }
 
-// ---- Brush painting ----
-
-function paintCircle(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  radius: number,
-  erase: boolean,
-) {
-  ctx.save();
-  if (erase) {
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.fillStyle = "rgba(0,0,0,1)";
-  } else {
-    ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = T.accent;
-  }
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-// ---- Flood fill ----
-
-function floodFill(
-  maskCanvas: HTMLCanvasElement,
-  srcCanvas: HTMLCanvasElement,
-  seedX: number,
-  seedY: number,
-  tolerance: number,
-  connectivity: "4" | "8",
-  mode: "add" | "subtract",
-) {
-  const W = maskCanvas.width;
-  const H = maskCanvas.height;
-  const maskCtx = maskCanvas.getContext("2d")!;
-  const srcCtx = srcCanvas.getContext("2d")!;
-  const maskData = maskCtx.getImageData(0, 0, W, H);
-  const srcData = srcCtx.getImageData(0, 0, W, H);
-
-  const sx = Math.round(Math.max(0, Math.min(W - 1, seedX)));
-  const sy = Math.round(Math.max(0, Math.min(H - 1, seedY)));
-
-  const seedOff = (sy * W + sx) * 4;
-  const seedR = srcData.data[seedOff];
-  const seedG = srcData.data[seedOff + 1];
-  const seedB = srcData.data[seedOff + 2];
-
-  const paintAlpha = mode === "add" ? 255 : 0;
-  // Tolerance maps 0–255 to squared Euclidean distance in RGB space (0–255 each)
-  const tolSq = tolerance * tolerance * 3;
-
-  const visited = new Uint8Array(W * H);
-  const queue: number[] = [sy * W + sx];
-  visited[sy * W + sx] = 1;
-
-  const DIRS4 = [-1, 1, -W, W];
-  const DIRS8 = [-1, 1, -W, W, -W - 1, -W + 1, W - 1, W + 1];
-  const dirs = connectivity === "4" ? DIRS4 : DIRS8;
-
-  while (queue.length > 0) {
-    const pos = queue.pop()!;
-    const off = pos * 4;
-
-    const dr = srcData.data[off] - seedR;
-    const dg = srcData.data[off + 1] - seedG;
-    const db = srcData.data[off + 2] - seedB;
-    if (dr * dr + dg * dg + db * db > tolSq) continue;
-
-    maskData.data[off + 3] = paintAlpha;
-
-    const px = pos % W;
-    const py = Math.floor(pos / W);
-
-    for (const d of dirs) {
-      const npos = pos + d;
-      if (npos < 0 || npos >= W * H) continue;
-      const nx = npos % W;
-      const ny = Math.floor(npos / W);
-      // Prevent wrap-around at row edges
-      if (Math.abs(nx - px) > 1 || Math.abs(ny - py) > 1) continue;
-      if (visited[npos]) continue;
-      visited[npos] = 1;
-      queue.push(npos);
-    }
-  }
-
-  maskCtx.putImageData(maskData, 0, 0);
-}
-
-// ---- Polygon fill ----
-
-function fillPolygon(
-  maskCanvas: HTMLCanvasElement,
-  vertices: Point[],
-  mode: "add" | "subtract",
-) {
-  if (vertices.length < 3) return;
-  const ctx = maskCanvas.getContext("2d")!;
-  ctx.save();
-  if (mode === "subtract") {
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.fillStyle = "rgba(0,0,0,1)";
-  } else {
-    ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = T.accent;
-  }
-  ctx.beginPath();
-  ctx.moveTo(vertices[0].x, vertices[0].y);
-  for (let i = 1; i < vertices.length; i++) {
-    ctx.lineTo(vertices[i].x, vertices[i].y);
-  }
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}
-
 // ---- Overlay canvas drawing ----
-
-function drawBrushCursor(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  radius: number,
-  erase: boolean,
-) {
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = erase ? T.slate : T.accent;
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([3, 3]);
-  ctx.stroke();
-  // Center dot
-  ctx.beginPath();
-  ctx.arc(x, y, 2, 0, Math.PI * 2);
-  ctx.fillStyle = erase ? T.slate : T.accent;
-  ctx.setLineDash([]);
-  ctx.fill();
-  ctx.restore();
-}
 
 function drawPolygonOverlay(
   ctx: CanvasRenderingContext2D,
@@ -259,8 +118,6 @@ function drawGrabCutOverlay(
 function ContextStrip({
   tool,
   cursor,
-  brushRadius,
-  brushMode,
   floodTolerance,
   floodMode,
   floodConnectivity,
@@ -274,8 +131,6 @@ function ContextStrip({
 }: {
   tool: ToolName;
   cursor: Point | null;
-  brushRadius: number;
-  brushMode: "paint" | "erase";
   floodTolerance: number;
   floodMode: "add" | "subtract";
   floodConnectivity: "4" | "8";
@@ -292,7 +147,6 @@ function ContextStrip({
 
   const leftText: Record<ToolName, string> = {
     prefill: "PRE-FILL · applying candidate mask",
-    brush: `BRUSH · r ${brushRadius} · ${brushMode}`,
     polygon: `POLY · ${polygonVertices.length} vertices · ε ${polygonSimplifyEps}`,
     flood: `FLOOD · ${floodMode} · tol ${floodTolerance} · ${floodConnectivity}-way`,
     grabcut: grabcutRect
@@ -326,7 +180,6 @@ function ContextStrip({
 // ---- Tool label ----
 const TOOL_LABELS: Record<ToolName, string> = {
   prefill: "PRE-FILL",
-  brush: "BRUSH",
   polygon: "POLYGON",
   flood: "FLOOD FILL",
   grabcut: "GRABCUT",
@@ -345,6 +198,7 @@ interface MaskEditorCanvasProps {
   imageHeight: number;
   candidateMask?: string | null;
   onPushUndo: (snapshot: ImageData) => void;
+  onCommitPolygon: () => void;
 }
 
 export default function MaskEditorCanvas({
@@ -357,10 +211,10 @@ export default function MaskEditorCanvas({
   imageHeight,
   candidateMask,
   onPushUndo,
+  onCommitPolygon,
 }: MaskEditorCanvasProps) {
   const tool = state.activeTool;
   const srcCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const isPainting = useRef(false);
   const dragRect = useRef<{ startX: number; startY: number; x: number; y: number; w: number; h: number } | null>(null);
   const draggingVertexIdx = useRef<number | null>(null);
   const [cursor, setCursor] = useState<Point | null>(null);
@@ -450,58 +304,6 @@ export default function MaskEditorCanvas({
     }
   }, [tool, overlayCanvasRef]);
 
-  // ---- Brush pointer events (on maskCanvas) ----
-  useEffect(() => {
-    const canvas = maskCanvasRef.current;
-    const overlay = overlayCanvasRef.current;
-    if (!canvas || !overlay) return;
-    if (tool !== "brush") return;
-
-    const ctx = canvas.getContext("2d")!;
-    const oCtx = overlay.getContext("2d")!;
-
-    const onDown = (e: PointerEvent) => {
-      e.preventDefault();
-      canvas.setPointerCapture(e.pointerId);
-      isPainting.current = true;
-      const snap = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      onPushUndo(snap);
-      const p = canvasPoint(canvas, e);
-      paintCircle(ctx, p.x, p.y, state.brushRadius, state.brushMode === "erase");
-    };
-
-    const onMove = (e: PointerEvent) => {
-      const p = canvasPoint(canvas, e);
-      setCursor(p);
-      drawBrushCursor(oCtx, p.x, p.y, state.brushRadius, state.brushMode === "erase");
-      if (!isPainting.current) return;
-      e.preventDefault();
-      paintCircle(ctx, p.x, p.y, state.brushRadius, state.brushMode === "erase");
-    };
-
-    const onUp = () => {
-      isPainting.current = false;
-    };
-
-    const onLeave = () => {
-      setCursor(null);
-      oCtx.clearRect(0, 0, overlay.width, overlay.height);
-    };
-
-    canvas.addEventListener("pointerdown", onDown);
-    canvas.addEventListener("pointermove", onMove);
-    canvas.addEventListener("pointerup", onUp);
-    canvas.addEventListener("pointercancel", onUp);
-    canvas.addEventListener("pointerleave", onLeave);
-    return () => {
-      canvas.removeEventListener("pointerdown", onDown);
-      canvas.removeEventListener("pointermove", onMove);
-      canvas.removeEventListener("pointerup", onUp);
-      canvas.removeEventListener("pointercancel", onUp);
-      canvas.removeEventListener("pointerleave", onLeave);
-    };
-  }, [tool, state.brushRadius, state.brushMode, maskCanvasRef, overlayCanvasRef, onPushUndo]);
-
   // ---- Flood fill click (on maskCanvas) ----
   useEffect(() => {
     const canvas = maskCanvasRef.current;
@@ -574,16 +376,7 @@ export default function MaskEditorCanvas({
 
     const onDblClick = (e: MouseEvent) => {
       e.preventDefault();
-      const maskCtx = mask.getContext("2d")!;
-      const snap = maskCtx.getImageData(0, 0, mask.width, mask.height);
-      onPushUndo(snap);
-      fillPolygon(mask, state.polygonVertices, state.floodMode);
-      dispatch({ type: "tool_applied" });
-      dispatch({ type: "polygon_vertex_selected", index: null });
-      // Clear vertices after commit
-      for (let i = state.polygonVertices.length - 1; i >= 0; i--) {
-        dispatch({ type: "polygon_vertex_deleted", index: i });
-      }
+      onCommitPolygon();
     };
 
     const onContextMenu = (e: MouseEvent) => {
@@ -615,10 +408,9 @@ export default function MaskEditorCanvas({
     tool,
     state.polygonVertices,
     state.selectedVertex,
-    state.floodMode,
     overlayCanvasRef,
     maskCanvasRef,
-    onPushUndo,
+    onCommitPolygon,
     dispatch,
   ]);
 
@@ -689,7 +481,6 @@ export default function MaskEditorCanvas({
   // Cursor style per tool
   const cursorStyle: Record<ToolName, string> = {
     prefill: "default",
-    brush: "none",
     polygon: "crosshair",
     flood: "crosshair",
     grabcut: "crosshair",
@@ -751,7 +542,7 @@ export default function MaskEditorCanvas({
             height: "100%",
             opacity: 0.55,
             cursor: cursorStyle[tool],
-            pointerEvents: tool === "brush" || tool === "flood" ? "auto" : "none",
+            pointerEvents: tool === "flood" ? "auto" : "none",
           }}
         />
 
@@ -781,8 +572,6 @@ export default function MaskEditorCanvas({
       <ContextStrip
         tool={tool}
         cursor={cursor}
-        brushRadius={state.brushRadius}
-        brushMode={state.brushMode}
         floodTolerance={state.floodTolerance}
         floodMode={state.floodMode}
         floodConnectivity={state.floodConnectivity}

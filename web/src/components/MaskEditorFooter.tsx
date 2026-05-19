@@ -4,7 +4,6 @@ import type { MaskEditorState, ToolName } from "./maskEditorState";
 
 const TOOL_PERF: Record<ToolName, string> = {
   prefill:  "— · candidate load",
-  brush:    "— · canvas-only",
   polygon:  "— · canvas-only",
   flood:    "~38 ms · canvas",
   grabcut:  "482 ms · last",

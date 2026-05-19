@@ -28,10 +28,14 @@ import type {
 interface PolygonInspectorProps {
   state: MaskEditorState;
   dispatch: Dispatch<MaskEditorAction>;
+  onCommitPolygon?: () => void;
+  onInsertVertex?: () => void;
+  onSmoothPolygon?: () => void;
+  onSimplifyPolygon?: () => void;
 }
 
-function PolygonInspector({ state, dispatch }: PolygonInspectorProps) {
-  const nVerts = state.polygonVertices.length || 16;
+function PolygonInspector({ state, dispatch, onCommitPolygon, onInsertVertex, onSmoothPolygon, onSimplifyPolygon }: PolygonInspectorProps) {
+  const nVerts = state.polygonVertices.length;
   const sel = state.selectedVertex;
   return (
     <InspectorShell
@@ -52,9 +56,6 @@ function PolygonInspector({ state, dispatch }: PolygonInspectorProps) {
           }}
         >
           <Stat label="vertices" value={nVerts} />
-          <Stat label="perimeter" value="912 px" />
-          <Stat label="area" value="18,420 px" />
-          <Stat label="bbox" value="252 × 290" />
         </div>
       </Section>
 
@@ -78,9 +79,15 @@ function PolygonInspector({ state, dispatch }: PolygonInspectorProps) {
           >
             Delete v{sel ?? "—"}
           </ActionButton>
-          <ActionButton full>Insert here</ActionButton>
-          <ActionButton full>Smooth ×3</ActionButton>
-          <ActionButton full>Close path</ActionButton>
+          <ActionButton full onClick={onInsertVertex} disabled={sel == null || nVerts < 2}>
+            Insert here · I
+          </ActionButton>
+          <ActionButton full onClick={onSmoothPolygon} disabled={nVerts < 3}>
+            Smooth ×3
+          </ActionButton>
+          <ActionButton primary full onClick={onCommitPolygon} disabled={nVerts < 3}>
+            Close path · ⏎
+          </ActionButton>
         </div>
       </Section>
 
@@ -119,7 +126,7 @@ function PolygonInspector({ state, dispatch }: PolygonInspectorProps) {
           <span style={{ color: T.ok }}>Δ IoU −0.4%</span>
         </div>
         <div style={{ marginTop: 10 }}>
-          <ActionButton primary full>
+          <ActionButton primary full onClick={onSimplifyPolygon} disabled={nVerts < 3}>
             Apply simplify
           </ActionButton>
         </div>
@@ -226,9 +233,10 @@ function ToneHistogram() {
 interface FloodInspectorProps {
   state: MaskEditorState;
   dispatch: Dispatch<MaskEditorAction>;
+  onFloodCommit?: () => void;
 }
 
-function FloodInspector({ state, dispatch }: FloodInspectorProps) {
+function FloodInspector({ state, dispatch, onFloodCommit }: FloodInspectorProps) {
   return (
     <InspectorShell
       title="Flood fill"
@@ -368,7 +376,7 @@ function FloodInspector({ state, dispatch }: FloodInspectorProps) {
           <span style={{ color: T.ok }}>+1.4% FG</span>
         </div>
         <div style={{ height: 10 }} />
-        <ActionButton primary full icon={<MEIcon name="check" size={11} />}>
+        <ActionButton primary full icon={<MEIcon name="check" size={11} />} onClick={onFloodCommit}>
           Commit fill
         </ActionButton>
       </Section>
@@ -832,6 +840,11 @@ interface MaskEditorInspectorProps {
   state: MaskEditorState;
   dispatch: Dispatch<MaskEditorAction>;
   activeTool: ToolName;
+  onCommitPolygon?: () => void;
+  onInsertVertex?: () => void;
+  onSmoothPolygon?: () => void;
+  onSimplifyPolygon?: () => void;
+  onFloodCommit?: () => void;
   onRunGrabCut?: () => void;
   onSnapVertex?: () => void;
   onSnapAll?: () => void;
@@ -841,6 +854,11 @@ export default function MaskEditorInspector({
   state,
   dispatch,
   activeTool,
+  onCommitPolygon,
+  onInsertVertex,
+  onSmoothPolygon,
+  onSimplifyPolygon,
+  onFloodCommit,
   onRunGrabCut,
   onSnapVertex,
   onSnapAll,
@@ -848,12 +866,19 @@ export default function MaskEditorInspector({
   switch (activeTool) {
     case "prefill":
       return <PlaceholderInspector title="Pre-fill" />;
-    case "brush":
-      return <PlaceholderInspector title="Brush · Eraser" />;
     case "polygon":
-      return <PolygonInspector state={state} dispatch={dispatch} />;
+      return (
+        <PolygonInspector
+          state={state}
+          dispatch={dispatch}
+          onCommitPolygon={onCommitPolygon}
+          onInsertVertex={onInsertVertex}
+          onSmoothPolygon={onSmoothPolygon}
+          onSimplifyPolygon={onSimplifyPolygon}
+        />
+      );
     case "flood":
-      return <FloodInspector state={state} dispatch={dispatch} />;
+      return <FloodInspector state={state} dispatch={dispatch} onFloodCommit={onFloodCommit} />;
     case "grabcut":
       return (
         <GrabCutInspector
