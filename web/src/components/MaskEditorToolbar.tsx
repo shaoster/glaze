@@ -7,6 +7,7 @@ const TOOLS: { id: ToolName; label: string; icon: Parameters<typeof MEIcon>[0]["
   { id: "prefill",  label: "Pre-fill",       icon: "layers",  kbd: "P" },
   { id: "polygon",  label: "Polygon edit",    icon: "polygon", kbd: "G" },
   { id: "flood",    label: "Flood fill",      icon: "flood",   kbd: "F" },
+  { id: "eraser",   label: "Eraser",          icon: "eraser",  kbd: "E" },
   { id: "grabcut",  label: "GrabCut",         icon: "grabcut", kbd: "C" },
   { id: "snap",     label: "Contour snap",    icon: "snap",    kbd: "S" },
 ];

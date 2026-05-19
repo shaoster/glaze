@@ -179,6 +179,32 @@ function PolygonInspector({ state, dispatch, onClosePolygon, onApplyPolygon, onR
   );
 }
 
+// ---- Eraser inspector ----
+function EraserInspector({ state, dispatch }: { state: MaskEditorState; dispatch: Dispatch<MaskEditorAction> }) {
+  return (
+    <InspectorShell
+      title="Eraser"
+      sub="Paint over the mask to remove foreground regions. Undo-able per stroke."
+    >
+      <Section title="Brush">
+        <MESlider
+          label="Radius"
+          value={state.eraserRadius}
+          min={2}
+          max={120}
+          unit=" px"
+          tickAt={30}
+          onChange={(v) => dispatch({ type: "set_eraser_radius", radius: v })}
+        />
+      </Section>
+      <Section title="Keyboard">
+        <ShortcutRow keys={["["]} label="decrease radius" />
+        <ShortcutRow keys={["]"]} label="increase radius" />
+      </Section>
+    </InspectorShell>
+  );
+}
+
 // ---- Tone histogram ----
 function ToneHistogram() {
   const bars = Array.from({ length: 32 }, (_, i) => {
@@ -920,6 +946,8 @@ export default function MaskEditorInspector({
       );
     case "flood":
       return <FloodInspector state={state} dispatch={dispatch} onFloodCommit={onFloodCommit} />;
+    case "eraser":
+      return <EraserInspector state={state} dispatch={dispatch} />;
     case "grabcut":
       return (
         <GrabCutInspector

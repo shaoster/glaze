@@ -2,6 +2,7 @@ export type ToolName =
   | "prefill"
   | "polygon"
   | "flood"
+  | "eraser"
   | "grabcut"
   | "snap";
 
@@ -23,6 +24,9 @@ export type Point = { x: number; y: number };
 
 export type MaskEditorState = {
   activeTool: ToolName;
+
+  // eraser params
+  eraserRadius: number;
 
   // flood fill params
   floodMode: FloodMode;
@@ -69,6 +73,8 @@ export type MaskEditorState = {
 export type MaskEditorAction =
   | { type: "hydrate"; hadMask: boolean }
   | { type: "set_tool"; tool: ToolName }
+  // eraser
+  | { type: "set_eraser_radius"; radius: number }
   // flood
   | { type: "set_flood_mode"; mode: FloodMode }
   | { type: "set_flood_tolerance"; tolerance: number }
@@ -112,6 +118,7 @@ const MAX_UNDO = 20;
 
 export const INITIAL_STATE: MaskEditorState = {
   activeTool: "polygon",
+  eraserRadius: 16,
   floodMode: "add",
   floodTolerance: 28,
   floodSampleSize: 3,
@@ -164,6 +171,9 @@ export function maskEditorReducer(
 
     case "set_tool":
       return { ...state, activeTool: action.tool };
+
+    case "set_eraser_radius":
+      return { ...state, eraserRadius: action.radius };
 
     case "set_flood_mode":
       return { ...state, floodMode: action.mode };

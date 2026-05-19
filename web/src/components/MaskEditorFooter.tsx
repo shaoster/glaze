@@ -6,6 +6,7 @@ const TOOL_PERF: Record<ToolName, string> = {
   prefill:  "— · candidate load",
   polygon:  "— · canvas-only",
   flood:    "~38 ms · canvas",
+  eraser:   "— · canvas-only",
   grabcut:  "482 ms · last",
   snap:     "24 ms · last",
 };

@@ -50,7 +50,7 @@ function drawPolygonOverlay(
     ctx.beginPath();
     ctx.moveTo(vertices[0].x, vertices[0].y);
     for (let i = 1; i < vertices.length; i++) ctx.lineTo(vertices[i].x, vertices[i].y);
-    if (vertices.length >= 3) ctx.closePath();
+    if (closed && vertices.length >= 3) ctx.closePath();
   };
 
   // Two-pass edges: dark shadow stroke then colored stroke for contrast on any background
@@ -140,6 +140,7 @@ function drawGrabCutRect(
 function ContextStrip({
   tool,
   cursor,
+  eraserRadius,
   floodTolerance,
   floodMode,
   floodConnectivity,
@@ -153,6 +154,7 @@ function ContextStrip({
 }: {
   tool: ToolName;
   cursor: Point | null;
+  eraserRadius: number;
   floodTolerance: number;
   floodMode: "add" | "subtract";
   floodConnectivity: "4" | "8";
@@ -171,6 +173,7 @@ function ContextStrip({
     prefill: "PRE-FILL · applying candidate mask",
     polygon: `POLY · ${polygonVertices.length} vertices · ε ${polygonSimplifyEps}`,
     flood: `FLOOD · ${floodMode} · tol ${floodTolerance} · ${floodConnectivity}-way`,
+    eraser: `ERASER · r ${eraserRadius} px`,
     grabcut: grabcutRect
       ? `GRABCUT · rect ${Math.round(grabcutRect.w)}×${Math.round(grabcutRect.h)} · iter ${grabcutIterations}`
       : "GRABCUT · drag to set rect",
@@ -204,6 +207,7 @@ const TOOL_LABELS: Record<ToolName, string> = {
   prefill: "PRE-FILL",
   polygon: "POLYGON",
   flood: "FLOOD FILL",
+  eraser: "ERASER",
   grabcut: "GRABCUT",
   snap: "CONTOUR SNAP",
 };
@@ -327,6 +331,51 @@ export default function MaskEditorCanvas({
       drawGrabCutRect(ctx, state.grabcutRect, null);
     }
   }, [tool, state.polygonVertices, state.polygonClosed, state.selectedVertex, state.grabcutRect, overlayCanvasRef]);
+
+  // ---- Eraser (paint alpha=0 circles on maskCanvas) ----
+  useEffect(() => {
+    const canvas = maskCanvasRef.current;
+    if (!canvas || tool !== "eraser") return;
+
+    const eraserPainting = { active: false };
+
+    const paint = (e: PointerEvent) => {
+      const p = canvasPoint(canvas, e);
+      const ctx = canvas.getContext("2d")!;
+      ctx.save();
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, state.eraserRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(0,0,0,1)";
+      ctx.fill();
+      ctx.restore();
+    };
+
+    const onDown = (e: PointerEvent) => {
+      onPushUndo();
+      eraserPainting.active = true;
+      canvas.setPointerCapture(e.pointerId);
+      paint(e);
+    };
+    const onMove = (e: PointerEvent) => {
+      const p = canvasPoint(canvas, e);
+      setCursor(p);
+      if (eraserPainting.active) paint(e);
+    };
+    const onUp = () => { eraserPainting.active = false; };
+    const onLeave = () => setCursor(null);
+
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("pointerleave", onLeave);
+    return () => {
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointerleave", onLeave);
+    };
+  }, [tool, state.eraserRadius, maskCanvasRef, onPushUndo]);
 
   // ---- Flood fill click (on maskCanvas) ----
   useEffect(() => {
@@ -498,7 +547,7 @@ export default function MaskEditorCanvas({
       hints.removeEventListener("pointerup", onUp);
       hints.removeEventListener("pointerleave", onLeave);
     };
-  }, [tool, state.grabcutHintMode, state.grabcutBrushRadius, hintsCanvasRef]);
+  }, [tool, state.grabcutHintMode, state.grabcutBrushRadius, hintsCanvasRef, onPushUndo]);
 
   // ---- GrabCut rect drag (on overlayCanvas) ----
   useEffect(() => {
@@ -552,7 +601,7 @@ export default function MaskEditorCanvas({
       overlay.removeEventListener("pointerup", onUp);
       overlay.removeEventListener("pointerleave", onLeave);
     };
-  }, [tool, state.grabcutRect, overlayCanvasRef, dispatch]);
+  }, [tool, state.grabcutRect, state.polygonVertices, state.polygonClosed, state.selectedVertex, overlayCanvasRef, dispatch]);
 
   // ---- Snap mode: click to select vertex ----
   useEffect(() => {
@@ -612,6 +661,7 @@ export default function MaskEditorCanvas({
     prefill: "default",
     polygon: "crosshair",
     flood: "crosshair",
+    eraser: "cell",
     grabcut: "crosshair",
     snap: "default",
   };
@@ -671,7 +721,7 @@ export default function MaskEditorCanvas({
             height: "100%",
             opacity: 0.55,
             cursor: cursorStyle[tool],
-            pointerEvents: tool === "flood" ? "auto" : "none",
+            pointerEvents: (tool === "flood" || tool === "eraser") ? "auto" : "none",
           }}
         />
 
@@ -728,6 +778,7 @@ export default function MaskEditorCanvas({
       <ContextStrip
         tool={tool}
         cursor={cursor}
+        eraserRadius={state.eraserRadius}
         floodTolerance={state.floodTolerance}
         floodMode={state.floodMode}
         floodConnectivity={state.floodConnectivity}

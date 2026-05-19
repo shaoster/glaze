@@ -10,6 +10,7 @@ import MaskEditorFooter from "./MaskEditorFooter";
 import {
   INITIAL_STATE,
   maskEditorReducer,
+  type Point,
 } from "./maskEditorState";
 import { fillPolygon, smoothPolygon, simplifyPolygon } from "./maskEditorCanvasOps";
 import { runGrabCut, snapVerticesToEdges } from "./maskEditorCv";
@@ -18,6 +19,7 @@ export type ToolName =
   | "prefill"
   | "polygon"
   | "flood"
+  | "eraser"
   | "grabcut"
   | "snap";
 
@@ -66,23 +68,26 @@ export default function MaskEditor({
   const undoCount = state.undoStack;
   const redoCount = state.redoStack;
 
-  // Stable ref so event handlers always call the latest logic without re-registering
+  // Stable ref so event handlers always call the latest logic without re-registering.
+  // Synced via useEffect (not during render) to satisfy react-hooks/refs.
   const pushUndoRef = useRef<() => void>(() => {});
-  pushUndoRef.current = () => {
-    const mask = maskCanvasRef.current;
-    const hints = hintsCanvasRef.current;
-    if (!mask) return;
-    const mCtx = mask.getContext("2d")!;
-    const entry: UndoEntry = {
-      mask: mCtx.getImageData(0, 0, mask.width, mask.height),
-      hints: hints ? hints.getContext("2d")!.getImageData(0, 0, hints.width, hints.height) : null,
-      vertices: [...state.polygonVertices],
-      polygonClosed: state.polygonClosed,
+  useEffect(() => {
+    pushUndoRef.current = () => {
+      const mask = maskCanvasRef.current;
+      const hints = hintsCanvasRef.current;
+      if (!mask) return;
+      const mCtx = mask.getContext("2d")!;
+      const entry: UndoEntry = {
+        mask: mCtx.getImageData(0, 0, mask.width, mask.height),
+        hints: hints ? hints.getContext("2d")!.getImageData(0, 0, hints.width, hints.height) : null,
+        vertices: [...state.polygonVertices],
+        polygonClosed: state.polygonClosed,
+      };
+      undoCanvasStack.current = [...undoCanvasStack.current, entry].slice(-20);
+      redoCanvasStack.current = [];
+      dispatch({ type: "tool_applied" });
     };
-    undoCanvasStack.current = [...undoCanvasStack.current, entry].slice(-20);
-    redoCanvasStack.current = [];
-    dispatch({ type: "tool_applied" });
-  };
+  });
   // Stable callback passed to children — never changes reference
   const handlePushUndo = useCallback(() => pushUndoRef.current(), []);
 
@@ -184,7 +189,7 @@ export default function MaskEditor({
       .catch((err: unknown) => {
         dispatch({ type: "assist_failed", error: String(err) });
       });
-  }, [state.polygonVertices, state.snapRadius, state.snapEdgeThreshold, state.snapEdgeOperator]);
+  }, [state.polygonVertices, state.snapRadius, state.snapEdgeThreshold, state.snapEdgeOperator, handlePushUndo]);
 
   const handleSnapVertex = useCallback(() => {
     if (state.selectedVertex == null) return;
@@ -263,6 +268,7 @@ export default function MaskEditor({
 
       switch (e.key) {
         case "p": case "P": dispatch({ type: "set_tool", tool: "prefill" }); break;
+        case "e": case "E": dispatch({ type: "set_tool", tool: "eraser" }); break;
         case "g": case "G":
           if (tool === "grabcut") dispatch({ type: "set_grabcut_hint_mode", mode: "background" });
           else dispatch({ type: "set_tool", tool: "polygon" });
@@ -301,9 +307,11 @@ export default function MaskEditor({
           break;
         case "[":
           if (tool === "snap") dispatch({ type: "set_snap_radius", radius: Math.max(2, state.snapRadius - 4) });
+          else if (tool === "eraser") dispatch({ type: "set_eraser_radius", radius: Math.max(2, state.eraserRadius - 4) });
           break;
         case "]":
           if (tool === "snap") dispatch({ type: "set_snap_radius", radius: Math.min(64, state.snapRadius + 4) });
+          else if (tool === "eraser") dispatch({ type: "set_eraser_radius", radius: Math.min(120, state.eraserRadius + 4) });
           break;
         case "ArrowLeft": case "ArrowUp":
           if (tool === "snap" && state.polygonVertices.length > 0) {
@@ -330,6 +338,7 @@ export default function MaskEditor({
     state.activeTool,
     state.selectedVertex,
     state.snapRadius,
+    state.eraserRadius,
     state.polygonVertices,
     state.polygonClosed,
     handleUndo,

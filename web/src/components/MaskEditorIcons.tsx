@@ -45,6 +45,12 @@ const PATHS = {
       <path d="M20 18 c0 1.5 -1.2 3 -2.5 3 s-2.5 -1.5 -2.5 -3 c0 -1.2 2.5 -4 2.5 -4 s2.5 2.8 2.5 4 Z" />
     </>
   ),
+  eraser: (
+    <>
+      <path d="M20 20 H9 L4 15 l10 -10 7 7 -1 8 Z" />
+      <line x1="4" y1="15" x2="14" y2="5" />
+    </>
+  ),
   grabcut: (
     <>
       <rect x="3" y="3" width="18" height="18" rx="1" strokeDasharray="3 3" />
