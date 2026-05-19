@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "glaze.fullname" . }}-worker
+  labels:
+    {{- include "glaze.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.worker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "glaze.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        {{- include "glaze.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+    spec:
+      containers:
+        - name: worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - bash
+            - -lc
+            - python -m celery -A backend worker -l INFO
+          envFrom:
+            - configMapRef:
+                name: {{ include "glaze.fullname" . }}-env
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: POSTGRES_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: SECRET_KEY
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.name=glaze-worker"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
