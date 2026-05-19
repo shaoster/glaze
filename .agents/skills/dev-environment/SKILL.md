@@ -165,6 +165,11 @@ empty strings (e.g. `EMAIL_PORT=`) that are valid in shell but cause Django star
 errors (`invalid literal for int() with base 10: ''`). If you must copy, strip any
 lines whose value is empty before using the file.
 
+**`.env.example` uses commented-out `# VAR=` for variables without defaults.** Never
+set a variable to an empty string in `.env.local` — omit it entirely or comment it
+out. The same rule applies when adding new variables to `.env.example`: comment out
+any entry that has no safe default value.
+
 ## Worktree Database Isolation
 
 `gz_start` in a worktree automatically resolves the database to use:
