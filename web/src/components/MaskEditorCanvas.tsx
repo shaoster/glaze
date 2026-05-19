@@ -193,6 +193,7 @@ interface MaskEditorCanvasProps {
   dispatch: Dispatch<MaskEditorAction>;
   maskCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   overlayCanvasRef: React.RefObject<HTMLCanvasElement | null>;
+  srcCanvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
   imageUrl: string;
   imageWidth: number;
   imageHeight: number;
@@ -206,6 +207,7 @@ export default function MaskEditorCanvas({
   dispatch,
   maskCanvasRef,
   overlayCanvasRef,
+  srcCanvasRef,
   imageUrl,
   imageWidth,
   imageHeight,
@@ -214,7 +216,6 @@ export default function MaskEditorCanvas({
   onCommitPolygon,
 }: MaskEditorCanvasProps) {
   const tool = state.activeTool;
-  const srcCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const dragRect = useRef<{ startX: number; startY: number; x: number; y: number; w: number; h: number } | null>(null);
   const draggingVertexIdx = useRef<number | null>(null);
   const [cursor, setCursor] = useState<Point | null>(null);
@@ -243,7 +244,8 @@ export default function MaskEditorCanvas({
       srcCanvasRef.current = c;
     };
     img.src = imageUrl;
-  }, [imageUrl, imageWidth, imageHeight]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imageUrl, imageWidth, imageHeight]); // srcCanvasRef is a stable mutable ref
 
   // ---- Load candidateMask onto maskCanvas ----
   useEffect(() => {
@@ -323,7 +325,8 @@ export default function MaskEditorCanvas({
 
     canvas.addEventListener("click", onClick);
     return () => canvas.removeEventListener("click", onClick);
-  }, [tool, state.floodTolerance, state.floodConnectivity, state.floodMode, maskCanvasRef, onPushUndo, dispatch]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool, state.floodTolerance, state.floodConnectivity, state.floodMode, maskCanvasRef, onPushUndo, dispatch]); // srcCanvasRef is a stable mutable ref
 
   // ---- Polygon pointer events (on overlayCanvas) ----
   useEffect(() => {

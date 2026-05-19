@@ -12,6 +12,7 @@ import {
   maskEditorReducer,
 } from "./maskEditorState";
 import { fillPolygon, smoothPolygon, simplifyPolygon } from "./maskEditorCanvasOps";
+import { runGrabCut, snapVerticesToEdges } from "./maskEditorCv";
 
 export type ToolName =
   | "prefill"
@@ -54,6 +55,7 @@ export default function MaskEditor({
   const [state, dispatch] = useReducer(maskEditorReducer, INITIAL_STATE);
   const maskCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+  const srcCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // ImageData stacks live here so they never enter React state
   const undoCanvasStack = useRef<ImageData[]>([]);
@@ -118,34 +120,47 @@ export default function MaskEditor({
   }, [onCommit]);
 
   const handleRunGrabCut = useCallback(() => {
+    const mask = maskCanvasRef.current;
+    const src = srcCanvasRef.current;
+    if (!mask || !src || !state.grabcutRect) return;
+    const t0 = performance.now();
     dispatch({ type: "assist_started" });
-    setTimeout(() => {
-      dispatch({
-        type: "assist_failed",
-        error: "opencv.js not yet initialized — wire cv.grabCut() here.",
+    const snap = mask.getContext("2d")!.getImageData(0, 0, mask.width, mask.height);
+    handlePushUndo(snap);
+    runGrabCut(src, mask, state.grabcutRect, state.grabcutIterations)
+      .then(() => {
+        dispatch({ type: "assist_succeeded", ms: Math.round(performance.now() - t0) });
+      })
+      .catch((err: unknown) => {
+        dispatch({ type: "assist_failed", error: String(err) });
       });
-    }, 0);
-  }, []);
+  }, [state.grabcutRect, state.grabcutIterations, handlePushUndo]);
+
+  const handleSnapVertices = useCallback((vertexIndices: number[]) => {
+    const src = srcCanvasRef.current;
+    if (!src || state.polygonVertices.length === 0) return;
+    const targets = vertexIndices.map((i) => state.polygonVertices[i]);
+    dispatch({ type: "assist_started" });
+    snapVerticesToEdges(src, targets, state.snapRadius, state.snapEdgeThreshold, state.snapEdgeOperator)
+      .then((snapped) => {
+        const newVerts = [...state.polygonVertices];
+        vertexIndices.forEach((vi, si) => { newVerts[vi] = snapped[si]; });
+        dispatch({ type: "polygon_vertices_set", vertices: newVerts });
+        dispatch({ type: "assist_succeeded", ms: 0 });
+      })
+      .catch((err: unknown) => {
+        dispatch({ type: "assist_failed", error: String(err) });
+      });
+  }, [state.polygonVertices, state.snapRadius, state.snapEdgeThreshold, state.snapEdgeOperator]);
 
   const handleSnapVertex = useCallback(() => {
-    dispatch({ type: "assist_started" });
-    setTimeout(() => {
-      dispatch({
-        type: "assist_failed",
-        error: "Contour snap not yet wired — call cv.Canny() here.",
-      });
-    }, 0);
-  }, []);
+    if (state.selectedVertex == null) return;
+    handleSnapVertices([state.selectedVertex]);
+  }, [state.selectedVertex, handleSnapVertices]);
 
   const handleSnapAll = useCallback(() => {
-    dispatch({ type: "assist_started" });
-    setTimeout(() => {
-      dispatch({
-        type: "assist_failed",
-        error: "Contour snap (all) not yet wired.",
-      });
-    }, 0);
-  }, []);
+    handleSnapVertices(state.polygonVertices.map((_, i) => i));
+  }, [state.polygonVertices, handleSnapVertices]);
 
   // ---- Polygon operations ----
 
@@ -427,6 +442,7 @@ export default function MaskEditor({
           dispatch={dispatch}
           maskCanvasRef={maskCanvasRef}
           overlayCanvasRef={overlayCanvasRef}
+          srcCanvasRef={srcCanvasRef}
           imageUrl={imageUrl}
           imageWidth={imageWidth}
           imageHeight={imageHeight}
