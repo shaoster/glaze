@@ -166,6 +166,9 @@ jobs:
           deps-key: ${{ needs.preflight.outputs.deps_key }}
           buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
 
+      # The frontend is a static bundle that cannot read server environment
+      # variables at runtime. We must bake the public Google Client ID into
+      # the JS bundle during the image build step.
       - name: Write Vite env file
         run: |
           if [ -n "${{ vars.GOOGLE_OAUTH_CLIENT_ID }}" ]; then
@@ -175,14 +178,24 @@ jobs:
       - name: Build OCI image and load into docker
         run: bazel run --config=ci --stamp //:load
 
+      # Align with the CD process by generating a real .env file from the 
+      # production template. This ensures the smoke test validates the 
+      # same configuration mechanism used on the droplet.
+      - name: Generate .env for smoke test
+        env:
+          POSTGRES_PASSWORD: ci
+          SECRET_KEY: smoke-test-key-must-be-at-least-32-chars-long
+          ALLOWED_HOST: localhost
+          APP_ORIGIN: http://localhost:8000
+          OTEL_ENABLED: "true"
+          # Optional vars are intentionally left unset to test default fallbacks
+        run: |
+          envsubst < .env.production.template | grep -vE '^[A-Z0-9_]+=$' > .env
+
       - name: Pre-pull sidecar images
         env:
           IMAGE_TAG: latest
         run: |
-          # Ensure a dummy .env file exists for docker-compose.yml to read,
-          # as it now uses 'env_file: .env'. The actual values are provided
-          # via shell exports in the smoke test step.
-          touch .env
           # Pull third-party sidecar images (postgres, otelcol) before starting
           # the timed --wait block so image download doesn't eat into the
           # healthcheck timeout budget. Explicitly name services to avoid pulling
@@ -194,16 +207,7 @@ jobs:
           IMAGE_TAG: latest
         run: |
           set -euo pipefail
-          export POSTGRES_PASSWORD=ci
-          export SECRET_KEY=$(openssl rand -hex 32)
-          export ALLOWED_HOST=localhost
-          export APP_ORIGIN=http://localhost:8000
-          # Enable OTel so configure_otel() runs its full import path on startup.
-          # otelcol is already running as a sidecar; missing packages surface here
-          # rather than only in production. OTLP endpoint uses the compose service
-          # name — docker-compose.yml already defaults to http://otelcol:4317.
-          export OTEL_ENABLED=true
-          # `--wait` blocks until every service with a healthcheck reports
+          # --wait blocks until every service with a healthcheck reports
           # healthy. The web service's healthcheck (defined in
           # docker-compose.yml) is the pass criterion.
           # Timeout is 300s: migrate + load_public_library (249 records) +
