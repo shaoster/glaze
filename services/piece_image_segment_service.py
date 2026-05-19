@@ -5,7 +5,7 @@ Can be deployed to Modal.com or run locally.
 
 Deployment (Modal):
     1. Set up a secret named 'piece-image-segment-secret' with 'AUTH_TOKEN'
-    2. modal deploy -m services
+    2. modal deploy services/piece_image_segment_service.py
 
 Usage (Local):
     pip install fastapi uvicorn rembg onnxruntime pillow pillow-heif
