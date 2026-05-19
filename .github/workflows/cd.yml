@@ -88,36 +88,99 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H $(echo "${{ vars.DEPLOY_HOST }}" | cut -d@ -f2) >> ~/.ssh/known_hosts
 
-      - name: Render and ship .env
+      - name: Sync secrets to cluster
         env:
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
-          APP_ORIGIN: ${{ vars.APP_ORIGIN }}
-          GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
-          CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+          GRAFANA_CLOUD_OTLP_TOKEN: ${{ secrets.GRAFANA_CLOUD_OTLP_TOKEN }}
+          MODAL_AUTH_TOKEN: ${{ secrets.MODAL_AUTH_TOKEN }}
+        run: |
+          # Write secrets to a tmpfs-backed file, apply to cluster, then delete.
+          cat > /tmp/glaze-secrets.env << EOF
+          POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+          SECRET_KEY=${SECRET_KEY}
+          CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+          CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+          EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+          GRAFANA_CLOUD_OTLP_TOKEN=${GRAFANA_CLOUD_OTLP_TOKEN}
+          MODAL_AUTH_TOKEN=${MODAL_AUTH_TOKEN}
+          EOF
+          scp /tmp/glaze-secrets.env "${DEPLOY_HOST}":~/glaze-secrets.env
+          rm /tmp/glaze-secrets.env
+          ssh "${DEPLOY_HOST}" "
+            KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl create secret generic glaze-secrets \
+              --from-env-file=\$HOME/glaze-secrets.env \
+              --dry-run=client -o yaml | \
+            KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -
+            rm \$HOME/glaze-secrets.env
+          "
+
+      - name: Ship chart and render values override
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
+          APP_ORIGIN: ${{ vars.APP_ORIGIN }}
+          INVITE_LINK_BASE_URL: ${{ vars.INVITE_LINK_BASE_URL }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
+          CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_UPLOAD_FOLDER }}
           CLOUDINARY_UPLOAD_PRESET: ${{ vars.CLOUDINARY_UPLOAD_PRESET }}
           CLOUDINARY_PUBLIC_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_PUBLIC_UPLOAD_FOLDER }}
           EMAIL_HOST: ${{ vars.EMAIL_HOST }}
           EMAIL_PORT: ${{ vars.EMAIL_PORT }}
           EMAIL_HOST_USER: ${{ vars.EMAIL_HOST_USER }}
-          EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
           EMAIL_USE_SSL: ${{ vars.EMAIL_USE_SSL }}
           DEFAULT_FROM_EMAIL: ${{ vars.DEFAULT_FROM_EMAIL }}
-          INVITE_LINK_BASE_URL: ${{ vars.INVITE_LINK_BASE_URL }}
           REMOTE_REMBG_URL: ${{ vars.REMOTE_REMBG_URL }}
-          MODAL_AUTH_TOKEN: ${{ secrets.MODAL_AUTH_TOKEN }}
-          GRAFANA_CLOUD_OTLP_TOKEN: ${{ secrets.GRAFANA_CLOUD_OTLP_TOKEN }}
           OTEL_ENABLED: ${{ vars.OTEL_ENABLED }}
         run: |
-          envsubst < .env.production.template | grep -vE '^[A-Z0-9_]+=$' > /tmp/.env
-          scp /tmp/.env "${{ vars.DEPLOY_HOST }}":~/glaze/.env
+          cat > /tmp/values-override.yaml << EOF
+          image:
+            tag: "${{ env.DEPLOY_SHA }}"
+          appConfig:
+            allowedHost: "${ALLOWED_HOST}"
+            appOrigin: "${APP_ORIGIN}"
+            inviteLinkBaseUrl: "${INVITE_LINK_BASE_URL}"
+            googleOauthClientId: "${GOOGLE_OAUTH_CLIENT_ID}"
+            cloudinaryCloudName: "${CLOUDINARY_CLOUD_NAME}"
+            cloudinaryUploadFolder: "${CLOUDINARY_UPLOAD_FOLDER}"
+            cloudinaryUploadPreset: "${CLOUDINARY_UPLOAD_PRESET}"
+            cloudinaryPublicUploadFolder: "${CLOUDINARY_PUBLIC_UPLOAD_FOLDER}"
+            emailHost: "${EMAIL_HOST}"
+            emailPort: "${EMAIL_PORT}"
+            emailHostUser: "${EMAIL_HOST_USER}"
+            emailUseSsl: "${EMAIL_USE_SSL}"
+            defaultFromEmail: "${DEFAULT_FROM_EMAIL}"
+            remoteRembgUrl: "${REMOTE_REMBG_URL}"
+            otelEnabled: "${OTEL_ENABLED}"
+          ingress:
+            hosts:
+              - host: "${ALLOWED_HOST}"
+                paths:
+                  - path: /
+                    pathType: ImplementationSpecific
+            tls:
+              - secretName: glaze-tls
+                hosts:
+                  - "${ALLOWED_HOST}"
+          EOF
+          scp -r chart/glaze "${DEPLOY_HOST}":~/glaze-chart-deploy/
+          scp /tmp/values-override.yaml "${DEPLOY_HOST}":~/glaze-values-override.yaml
 
-      - name: Deploy
-        run: ./deploy.sh "${{ vars.DEPLOY_HOST }}" "${{ env.DEPLOY_SHA }}"
+      - name: Deploy via Helm
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          ssh "${DEPLOY_HOST}" "
+            KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm upgrade --install glaze ~/glaze-chart-deploy/ \
+              -f ~/glaze-values-override.yaml \
+              --timeout 5m \
+              --wait
+          "
 
       - name: Create GitHub Release
         env:

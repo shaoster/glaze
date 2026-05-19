@@ -50,6 +50,42 @@ spec:
                 secretKeyRef:
                   name: glaze-secrets
                   key: SECRET_KEY
+            - name: DATABASE_URL
+              value: "postgres://{{ .Values.postgres.user }}:$(POSTGRES_PASSWORD)@{{ include "glaze.fullname" . }}-postgres:5432/{{ .Values.postgres.database }}"
+            - name: CLOUDINARY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: CLOUDINARY_API_KEY
+            - name: CLOUDINARY_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: CLOUDINARY_API_SECRET
+            - name: EMAIL_HOST_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: EMAIL_HOST_PASSWORD
+                  optional: true
+            - name: GRAFANA_CLOUD_OTLP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: GRAFANA_CLOUD_OTLP_TOKEN
+                  optional: true
+            - name: MODAL_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: MODAL_AUTH_TOKEN
+                  optional: true
+            - name: GOOGLE_OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: GOOGLE_OAUTH_CLIENT_SECRET
+                  optional: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
 ---

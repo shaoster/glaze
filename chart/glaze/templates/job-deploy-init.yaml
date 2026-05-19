@@ -8,6 +8,7 @@ metadata:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
+  backoffLimit: 3
   template:
     metadata:
       name: {{ include "glaze.fullname" . }}-deploy-init
@@ -26,9 +27,6 @@ spec:
               python manage.py migrate --no-input &&
               python manage.py load_public_library --skip-if-missing &&
               python manage.py clear_stuck_tasks --hours 1
-          envFrom:
-            - configMapRef:
-                name: {{ include "glaze.fullname" . }}-env
           env:
             - name: POSTGRES_PASSWORD
               valueFrom:
@@ -40,3 +38,9 @@ spec:
                 secretKeyRef:
                   name: glaze-secrets
                   key: SECRET_KEY
+            - name: DATABASE_URL
+              value: "postgres://{{ .Values.postgres.user }}:$(POSTGRES_PASSWORD)@{{ include "glaze.fullname" . }}-postgres:5432/{{ .Values.postgres.database }}"
+            - name: CELERY_BROKER_URL
+              value: "redis://{{ include "glaze.fullname" . }}-redis:6379/0"
+            - name: REDIS_CACHE_URL
+              value: "redis://{{ include "glaze.fullname" . }}-redis:6379/1"

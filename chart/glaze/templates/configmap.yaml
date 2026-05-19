@@ -50,8 +50,23 @@ metadata:
   labels:
     {{- include "glaze.labels" . | nindent 4 }}
 data:
-  DATABASE_URL: "postgres://{{ .Values.postgres.user }}:$(POSTGRES_PASSWORD)@{{ include "glaze.fullname" . }}-postgres:5432/{{ .Values.postgres.database }}"
   CELERY_BROKER_URL: "redis://{{ include "glaze.fullname" . }}-redis:6379/0"
   REDIS_CACHE_URL: "redis://{{ include "glaze.fullname" . }}-redis:6379/1"
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://{{ include "glaze.fullname" . }}-otelcol:4317"
   OTEL_RESOURCE_ATTRIBUTES: "service.name=glaze"
+  PRODUCTION: "true"
+  ALLOWED_HOST: {{ .Values.appConfig.allowedHost | quote }}
+  APP_ORIGIN: {{ .Values.appConfig.appOrigin | quote }}
+  INVITE_LINK_BASE_URL: {{ .Values.appConfig.inviteLinkBaseUrl | quote }}
+  GOOGLE_OAUTH_CLIENT_ID: {{ .Values.appConfig.googleOauthClientId | quote }}
+  CLOUDINARY_CLOUD_NAME: {{ .Values.appConfig.cloudinaryCloudName | quote }}
+  CLOUDINARY_UPLOAD_FOLDER: {{ .Values.appConfig.cloudinaryUploadFolder | quote }}
+  CLOUDINARY_UPLOAD_PRESET: {{ .Values.appConfig.cloudinaryUploadPreset | quote }}
+  CLOUDINARY_PUBLIC_UPLOAD_FOLDER: {{ .Values.appConfig.cloudinaryPublicUploadFolder | quote }}
+  EMAIL_HOST: {{ .Values.appConfig.emailHost | quote }}
+  EMAIL_PORT: {{ .Values.appConfig.emailPort | quote }}
+  EMAIL_HOST_USER: {{ .Values.appConfig.emailHostUser | quote }}
+  EMAIL_USE_SSL: {{ .Values.appConfig.emailUseSsl | quote }}
+  DEFAULT_FROM_EMAIL: {{ .Values.appConfig.defaultFromEmail | quote }}
+  REMOTE_REMBG_URL: {{ .Values.appConfig.remoteRembgUrl | quote }}
+  OTEL_ENABLED: {{ .Values.appConfig.otelEnabled | quote }}

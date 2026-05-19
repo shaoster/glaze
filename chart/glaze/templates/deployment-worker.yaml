@@ -38,6 +38,24 @@ spec:
                 secretKeyRef:
                   name: glaze-secrets
                   key: SECRET_KEY
+            - name: DATABASE_URL
+              value: "postgres://{{ .Values.postgres.user }}:$(POSTGRES_PASSWORD)@{{ include "glaze.fullname" . }}-postgres:5432/{{ .Values.postgres.database }}"
+            - name: CLOUDINARY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: CLOUDINARY_API_KEY
+            - name: CLOUDINARY_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: CLOUDINARY_API_SECRET
+            - name: GRAFANA_CLOUD_OTLP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: GRAFANA_CLOUD_OTLP_TOKEN
+                  optional: true
             - name: OTEL_RESOURCE_ATTRIBUTES
               value: "service.name=glaze-worker"
           resources:
