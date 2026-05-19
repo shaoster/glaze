@@ -15,13 +15,18 @@ export const DEFAULT_CARD_HEIGHT_ESTIMATE =
     (220 * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) / DEFAULT_THUMBNAIL_ASPECT_WIDTH,
   ) + CARD_CHROME_HEIGHT; // 165 + 112 = 277 for a 220px column
 
-// Always returns an aspect-ratio CSS string. Pieces with a crop use the crop's
-// exact ratio; pieces without fall back to DEFAULT_THUMBNAIL_ASPECT_WIDTH:HEIGHT.
-// Returning a defined value for every piece keeps the thumbnail shell from
-// collapsing to zero height while the Cloudinary image is loading.
+// Always returns an aspect-ratio CSS string. When original image dimensions are
+// stored, uses (crop.width * origW) / (crop.height * origH) — the true pixel
+// aspect ratio of the cropped region. Falls back to the naive crop fraction when
+// dimensions are absent, and to 4:3 when there is no crop.
 export function getThumbnailAspectRatio(piece: PieceSummary): string {
   const crop = piece.thumbnail?.crop;
+  const origW = piece.thumbnail?.width;
+  const origH = piece.thumbnail?.height;
   if (crop && crop.width > 0 && crop.height > 0) {
+    if (origW && origH) {
+      return `${crop.width * origW} / ${crop.height * origH}`;
+    }
     return `${crop.width} / ${crop.height}`;
   }
   return `${DEFAULT_THUMBNAIL_ASPECT_WIDTH} / ${DEFAULT_THUMBNAIL_ASPECT_HEIGHT}`;
@@ -29,10 +34,16 @@ export function getThumbnailAspectRatio(piece: PieceSummary): string {
 
 /**
  * Estimates the rendered card height from the thumbnail crop aspect ratio.
+ * When original image dimensions are available uses the true pixel ratio.
  */
 export function estimateCardHeight(piece: PieceSummary, columnWidth: number): number {
   const crop = piece.thumbnail?.crop;
+  const origW = piece.thumbnail?.width;
+  const origH = piece.thumbnail?.height;
   if (crop && crop.width > 0) {
+    if (origW && origH) {
+      return Math.round((columnWidth * crop.height * origH) / (crop.width * origW)) + CARD_CHROME_HEIGHT;
+    }
     return Math.round((columnWidth * crop.height) / crop.width) + CARD_CHROME_HEIGHT;
   }
   return Math.round((columnWidth * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) / DEFAULT_THUMBNAIL_ASPECT_WIDTH) + CARD_CHROME_HEIGHT;

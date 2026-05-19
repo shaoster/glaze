@@ -172,12 +172,12 @@ describe("PieceList", () => {
     mockPositioner.set.mockReset();
     mockPositioner.get.mockReset();
     mockPositioner.update.mockReset();
-    mockPositioner.set.mockImplementation(() => undefined);
-    mockPositioner.get.mockImplementation(() => undefined);
-    mockPositioner.update.mockImplementation(() => {
+    mockPositioner.set.mockImplementation(() => {
       rerenderMasonryScroller?.();
       return undefined;
     });
+    mockPositioner.get.mockImplementation(() => undefined);
+    mockPositioner.update.mockImplementation(() => undefined);
     rerenderMasonryScroller = undefined;
   });
 
@@ -193,16 +193,33 @@ describe("PieceList", () => {
         },
       });
       renderPieceList([piece]);
-      expect(mockPositioner.update).toHaveBeenCalledWith([
+      expect(mockPositioner.set).toHaveBeenCalledWith(
         0,
         Math.round(220 * 400 / 200) + CARD_CHROME_HEIGHT,
-      ]);
+      );
+    });
+
+    it("uses set, not update, when seeding unplaced items (update crashes on undefined items)", () => {
+      // positioner.update() reads items[index].height immediately and throws if the
+      // item hasn't been placed yet. Only positioner.set() is safe for new items.
+      const piece = makePiece({
+        thumbnail: {
+          url: "https://example.com/img.jpg",
+          cloudinary_public_id: "id",
+          cloud_name: "demo",
+          crop: { x: 0, y: 0, width: 200, height: 400 },
+        },
+      });
+      renderPieceList([piece]);
+      expect(mockPositioner.update).not.toHaveBeenCalled();
+      expect(mockPositioner.set).toHaveBeenCalled();
     });
 
     it("does not pre-seed the positioner for pieces without a crop", () => {
       const piece = makePiece({ thumbnail: null });
       renderPieceList([piece]);
       expect(mockPositioner.update).not.toHaveBeenCalled();
+      expect(mockPositioner.set).not.toHaveBeenCalled();
     });
 
     it("applies the tall crop height before the first masonry pass", async () => {
@@ -243,6 +260,7 @@ describe("PieceList", () => {
         },
       });
       renderPieceList([piece]);
+      expect(mockPositioner.set).not.toHaveBeenCalled();
       expect(mockPositioner.update).not.toHaveBeenCalled();
     });
 
@@ -262,10 +280,10 @@ describe("PieceList", () => {
       );
 
       render(<RouterProvider router={router} />);
-      expect(mockPositioner.update).toHaveBeenCalledTimes(1);
+      expect(mockPositioner.set).toHaveBeenCalledTimes(1);
 
       await user.click(screen.getByRole("button", { name: /rerender/i }));
-      expect(mockPositioner.update).toHaveBeenCalledTimes(1);
+      expect(mockPositioner.set).toHaveBeenCalledTimes(1);
     });
 
     it("reserves the thumbnail crop ratio in the card shell", () => {
@@ -425,6 +443,109 @@ describe("PieceList", () => {
       // Ensures the itemHeightEstimate passed to MasonryScroller is consistent
       // with what estimateCardHeight returns for no-crop pieces on desktop.
       expect(DEFAULT_CARD_HEIGHT_ESTIMATE).toBe(fallbackAt(220));
+    });
+
+    it("uses true pixel ratio when original image dimensions are stored", () => {
+      // Crop fractions are relative to their respective original dimension:
+      // w_0.71875 means 71.875% of origWidth, h_0.8225 means 82.25% of origHeight.
+      // For a 1000×800 original the cropped region is 718.75×658px (landscape).
+      // Naive crop.h/crop.w = 0.8225/0.71875 ≈ 1.14 (portrait) — wrong.
+      // True ratio = (0.71875*1000) / (0.8225*800) = 718.75/658 ≈ 1.09 (landscape).
+      const piece = {
+        thumbnail: {
+          crop: { x: 0.125, y: 0, width: 0.71875, height: 0.8225 },
+          width: 1000,
+          height: 800,
+        },
+      } as PieceSummary;
+      const expected = Math.round((220 * 0.8225 * 800) / (0.71875 * 1000)) + CARD_CHROME_HEIGHT;
+      expect(estimateCardHeight(piece, 220)).toBe(expected);
+    });
+
+    it("naive crop ratio diverges from true pixel ratio for non-square originals", () => {
+      // Without origW/origH (unknown original size) we fall back to crop.h/crop.w.
+      // This is wrong for non-square originals but unavoidable until dimensions are stored.
+      const pieceNoDims = {
+        thumbnail: {
+          crop: { x: 0.125, y: 0, width: 0.71875, height: 0.8225 },
+          width: null,
+          height: null,
+        },
+      } as PieceSummary;
+      const pieceWithDims = {
+        thumbnail: {
+          crop: { x: 0.125, y: 0, width: 0.71875, height: 0.8225 },
+          width: 1000,
+          height: 800,
+        },
+      } as PieceSummary;
+      // The two estimates must differ — if they're ever equal the fix has been lost.
+      expect(estimateCardHeight(pieceNoDims, 220)).not.toBe(
+        estimateCardHeight(pieceWithDims, 220),
+      );
+    });
+  });
+
+  describe("prod-mirroring layout: crops with known dimensions and pieces without crops", () => {
+    it("seeded heights match estimated heights for all card types", async () => {
+      // Mirrors the shape of prod data that caused first-load overlap:
+      //   • pieces[0]: crop with known orig dims (1000×800) — should seed correctly
+      //   • pieces[1]: crop with unknown orig dims (null) — naive fallback
+      //   • pieces[2]: no crop — 4:3 fallback, not seeded
+      const pieces = [
+        makePiece({
+          id: "with-dims",
+          thumbnail: {
+            url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+            cloudinary_public_id: "sample",
+            cloud_name: "demo",
+            crop: { x: 0.125, y: 0, width: 0.71875, height: 0.8225 },
+            width: 1000,
+            height: 800,
+          },
+        }),
+        makePiece({
+          id: "no-dims",
+          thumbnail: {
+            url: "https://res.cloudinary.com/demo/image/upload/other.jpg",
+            cloudinary_public_id: "other",
+            cloud_name: "demo",
+            crop: { x: 0, y: 0, width: 0.8, height: 0.9 },
+            width: null,
+            height: null,
+          },
+        }),
+        makePiece({ id: "no-crop", thumbnail: null }),
+      ];
+
+      renderPieceList(pieces);
+
+      await waitFor(() => {
+        // pieces[0]: set called with true pixel ratio height
+        const trueHeight = Math.round(
+          (mockPositioner.columnWidth * 0.8225 * 800) / (0.71875 * 1000),
+        ) + CARD_CHROME_HEIGHT;
+        expect(mockPositioner.set).toHaveBeenCalledWith(0, trueHeight);
+
+        // pieces[1]: set called with naive fallback (no orig dims)
+        const naiveHeight = Math.round(
+          (mockPositioner.columnWidth * 0.9) / 0.8,
+        ) + CARD_CHROME_HEIGHT;
+        expect(mockPositioner.set).toHaveBeenCalledWith(1, naiveHeight);
+
+        // pieces[2]: no crop → not seeded
+        expect(mockPositioner.set).not.toHaveBeenCalledWith(2, expect.anything());
+      });
+
+      // The true-pixel height for pieces[0] must differ from the naive height
+      // (proves orig dims are being used, not ignored).
+      const naiveForPieces0 = Math.round(
+        (mockPositioner.columnWidth * 0.8225) / 0.71875,
+      ) + CARD_CHROME_HEIGHT;
+      const trueForPieces0 = Math.round(
+        (mockPositioner.columnWidth * 0.8225 * 800) / (0.71875 * 1000),
+      ) + CARD_CHROME_HEIGHT;
+      expect(trueForPieces0).not.toBe(naiveForPieces0);
     });
   });
 

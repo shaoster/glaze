@@ -326,6 +326,8 @@ class TestPieceDetail:
         assert response.json()["thumbnail"] == {
             **thumbnail,
             "image_id": str(piece.thumbnail.id),
+            "width": None,
+            "height": None,
         }
         assert piece.thumbnail == {
             "url": thumbnail["url"],

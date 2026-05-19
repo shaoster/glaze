@@ -283,6 +283,8 @@ def image_to_dict(image) -> dict | None:
         "cloudinary_public_id": image.cloudinary_public_id,
         "cloud_name": image.cloud_name,
         "image_id": str(image.id) if hasattr(image, "id") else None,
+        "width": getattr(image, "width", None),
+        "height": getattr(image, "height", None),
     }
 
 
@@ -418,6 +420,12 @@ def normalize_image_payload(payload: object, user=None):
     cloud_name = data["cloud_name"]
     public_id = data["cloudinary_public_id"]
     defaults = {"url": url, "user": user}
+    raw_width = payload.get("width") if isinstance(payload, dict) else None
+    raw_height = payload.get("height") if isinstance(payload, dict) else None
+    if raw_width:
+        defaults["width"] = int(raw_width)
+    if raw_height:
+        defaults["height"] = int(raw_height)
     if cloud_name and public_id:
         image, _ = Image.objects.update_or_create(
             cloud_name=cloud_name,
@@ -798,10 +806,10 @@ def _seed_dev_pieces(user, count: int = 75) -> None:
             # Relative {x,y,width,height} coords — all values ≤ 1.0.
             # estimateCardHeight uses width/height ratio, so these produce
             # realistic portrait, landscape, and square cards.
-            {"x": 0.05, "y": 0.0, "width": 0.5,  "height": 0.75},  # portrait 2:3
-            {"x": 0.0,  "y": 0.1, "width": 0.75, "height": 0.5},   # landscape 3:2
-            {"x": 0.1,  "y": 0.1, "width": 0.8,  "height": 0.8},   # square 1:1
-            {"x": 0.05, "y": 0.0, "width": 0.6,  "height": 0.8},   # portrait 3:4
+            {"x": 0.05, "y": 0.0, "width": 0.5, "height": 0.75},  # portrait 2:3
+            {"x": 0.0, "y": 0.1, "width": 0.75, "height": 0.5},  # landscape 3:2
+            {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8},  # square 1:1
+            {"x": 0.05, "y": 0.0, "width": 0.6, "height": 0.8},  # portrait 3:4
         ]
         dev_crop = rng.choice(DEV_CROP_SHAPES) if rng.random() < 0.6 else None
 

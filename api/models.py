@@ -120,6 +120,8 @@ class Image(models.Model):
     url = models.CharField(max_length=2048)
     cloudinary_public_id = models.CharField(max_length=1024, null=True, blank=True)
     cloud_name = models.CharField(max_length=255, null=True, blank=True)
+    width = models.PositiveIntegerField(null=True, blank=True)
+    height = models.PositiveIntegerField(null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
 
