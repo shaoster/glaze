@@ -560,8 +560,9 @@ function GrabCutInspector({ state, dispatch, onRunGrabCut }: GrabCutInspectorPro
           primary
           full
           icon={<MEIcon name="play" size={11} />}
+          loading={isLoading}
           onClick={onRunGrabCut}
-          disabled={isLoading || !state.grabcutRect}
+          disabled={!state.grabcutRect}
         >
           {isLoading ? "Running…" : "Refine mask  ·  ⌘↵"}
         </ActionButton>
@@ -803,10 +804,10 @@ function SnapInspector({ state, dispatch, onSnapVertex, onSnapAll }: SnapInspect
         <div
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}
         >
-          <ActionButton full onClick={onSnapVertex} disabled={sel == null || !hasVerts}>
+          <ActionButton full loading={state.assistStatus === "loading"} onClick={onSnapVertex} disabled={sel == null || !hasVerts}>
             Snap v{sel ?? "—"} · S
           </ActionButton>
-          <ActionButton primary full onClick={onSnapAll} disabled={!hasVerts}>
+          <ActionButton primary full loading={state.assistStatus === "loading"} onClick={onSnapAll} disabled={!hasVerts}>
             Snap all ({nVerts}) · ⇧S
           </ActionButton>
         </div>

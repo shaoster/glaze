@@ -521,6 +521,32 @@ export function ShortcutRow({ keys, label }: ShortcutRowProps) {
   );
 }
 
+// ---- Spinner ----
+export function Spinner({ size = 12 }: { size?: number }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        border: `${Math.max(1.5, size / 8)}px solid currentColor`,
+        borderTopColor: "transparent",
+        animation: "me-spin 0.6s linear infinite",
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+// Inject keyframe once — safe to call multiple times
+if (typeof document !== "undefined" && !document.getElementById("me-keyframes")) {
+  const style = document.createElement("style");
+  style.id = "me-keyframes";
+  style.textContent = `@keyframes me-spin { to { transform: rotate(360deg); } }`;
+  document.head.appendChild(style);
+}
+
 // ---- ActionButton ----
 interface ActionButtonProps {
   children: ReactNode;
@@ -528,6 +554,7 @@ interface ActionButtonProps {
   dim?: boolean;
   full?: boolean;
   icon?: ReactNode;
+  loading?: boolean;
   onClick?: () => void;
   disabled?: boolean;
 }
@@ -538,13 +565,15 @@ export function ActionButton({
   dim,
   full,
   icon,
+  loading,
   onClick,
   disabled,
 }: ActionButtonProps) {
+  const isDisabled = disabled || loading;
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
+      disabled={isDisabled}
       style={{
         width: full ? "100%" : "auto",
         padding: "7px 12px",
@@ -559,8 +588,8 @@ export function ActionButton({
         fontSize: 11.5,
         fontFamily: T.fontUi,
         fontWeight: primary ? 600 : 500,
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.5 : 1,
+        cursor: isDisabled ? "not-allowed" : "pointer",
+        opacity: isDisabled ? 0.5 : 1,
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
@@ -570,7 +599,7 @@ export function ActionButton({
           : "none",
       }}
     >
-      {icon}
+      {loading ? <Spinner size={12} /> : icon}
       {children}
     </button>
   );

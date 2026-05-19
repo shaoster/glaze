@@ -396,7 +396,12 @@ export default function MaskEditorCanvas({
       if (hit !== null) dispatch({ type: "polygon_vertex_deleted", index: hit });
     };
 
-    const onLeave = () => setCursor(null);
+    const onLeave = () => {
+      setCursor(null);
+      // Redraw without hover preview line
+      oCtx.clearRect(0, 0, overlay.width, overlay.height);
+      drawPolygonOverlay(oCtx, state.polygonVertices, state.selectedVertex, null, state.polygonClosed);
+    };
 
     overlay.addEventListener("pointerdown", onDown);
     overlay.addEventListener("pointermove", onMove);
