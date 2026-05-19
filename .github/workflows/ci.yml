@@ -100,17 +100,17 @@ jobs:
         run: |
           # [SECURITY MANDATE] Static analysis of this workflow file.
           # CI MUST NEVER have access to production secrets. 
-          # Allowed secrets list:
-          # - BAZEL_REMOTE_API_KEY: BuildBuddy remote cache (low-entropy key)
-          # - GITHUB_TOKEN: Built-in GitHub token for registry auth
           
-          # Extract secret names only (e.g. BAZEL_REMOTE_API_KEY) to avoid shell splitting on whitespace.
+          # Whitelist of secrets allowed in CI.
+          ALLOWED="BAZEL_REMOTE_API_KEY GITHUB_TOKEN"
+          
+          # Extract secret names only (e.g. BAZEL_REMOTE_API_KEY)
           secrets=$(grep -oE 'secrets\.[A-Z0-9_]+' .github/workflows/ci.yml | cut -d. -f2 | sort -u)
           
           for s in $secrets; do
-            if [[ "$s" != "BAZEL_REMOTE_API_KEY" && "$s" != "GITHUB_TOKEN" ]]; then
+            if [[ ! " $ALLOWED " =~ " $s " ]]; then
               echo "🚨 SECURITY VIOLATION: Unauthorized secret usage detected in ci.yml: secrets.$s" >&2
-              echo "Only BAZEL_REMOTE_API_KEY and GITHUB_TOKEN are allowed in the CI environment." >&2
+              echo "Only the following secrets are allowed in CI: $ALLOWED" >&2
               echo "Real production secrets MUST be restricted to cd.yml." >&2
               exit 1
             fi
