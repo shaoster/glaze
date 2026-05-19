@@ -149,4 +149,19 @@ jobs:
         env:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-        run: modal deploy -m services
+        run: |
+          shopt -s nullglob
+          deployed=0
+          for service in services/*.py; do
+            if [ "$(basename "$service")" = "__init__.py" ]; then
+              continue
+            fi
+
+            modal deploy "$service"
+            deployed=1
+          done
+
+          if [ "$deployed" -eq 0 ]; then
+            echo "No Modal service modules found under services/." >&2
+            exit 1
+          fi
