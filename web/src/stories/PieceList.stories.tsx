@@ -183,9 +183,11 @@ const mixedCropPieces: PieceSummary[] = [
 // useContainerPosition still returned width=0, so masonic measured Phase-1
 // items at columnWidth=0 and the thumbnail shell collapsed to 0 px.
 // This dataset exercises that path at realistic scale.
+type ThumbnailCrop = { x: number; y: number; width: number; height: number } | null;
+
 const largePieceDataset: PieceSummary[] = Array.from({ length: 24 }, (_, i) => {
   const states = ["designed", "bisque_fired", "glazed", "glaze_fired", "completed", "touching_up"] as const;
-  const crops: (PieceSummary["thumbnail"] & object)["crop"][] = [
+  const crops: ThumbnailCrop[] = [
     { x: 0.05, y: 0.0, width: 0.45, height: 0.92 }, // portrait
     null,
     { x: 0.0, y: 0.1, width: 0.8, height: 0.8 }, // near-square

@@ -200,8 +200,11 @@ describe("PieceList", () => {
       expect(screen.queryByTestId("piece-grid")).not.toBeInTheDocument();
     });
 
-    it("renders the masonry grid once container width is known", () => {
-      mockContainerPosition.width = 440;
+    it("renders the masonry grid when container width is exactly 1 (boundary)", () => {
+      // Verifies the guard is `> 0` not `>= some threshold`. A wrong condition
+      // like `> 1` would let width=0 contaminate the positioner for narrow
+      // containers.
+      mockContainerPosition.width = 1;
       renderPieceList([makePiece()]);
       expect(screen.getByTestId("piece-grid")).toBeInTheDocument();
     });

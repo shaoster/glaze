@@ -854,14 +854,8 @@ const PieceList = (props: PieceListProps) => {
           }}
         >
           <Box ref={masonryRef as React.RefObject<HTMLDivElement>}>
-            {/* Guard: masonic must not render until the container width is
-                known. On the first React commit useContainerPosition still
-                returns width=0, so masonic's Phase-1 items are laid out at
-                columnWidth=0, the thumbnail shell collapses to 0 px, and
-                offsetHeight measurements are chrome-only (~112 px). Those
-                contaminated heights are copied into the next positioner when
-                the real width arrives, causing the initial overlap that only
-                resolves on the next ResizeObserver tick (i.e. first scroll). */}
+            {/* Suppress until width is known — rendering at width=0 contaminates
+                the positioner with chrome-only heights. See PR #551. */}
             {masonryWidth > 0 && (
               <MasonryScroller
                 positioner={positioner}
