@@ -1,0 +1,74 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/shaoster/glaze
+  pullPolicy: IfNotPresent
+  # Overridden by --set image.tag during deploy
+  tag: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Sensitive variables should be in a secret named 'glaze-secrets'
+# manually created via:
+# kubectl create secret generic glaze-secrets --from-env-file=.env.production
+# These keys are expected to be in that secret:
+# - POSTGRES_PASSWORD
+# - SECRET_KEY
+# - CLOUDINARY_URL (if applicable)
+# - GOOGLE_OAUTH_CLIENT_ID (if applicable)
+# - GOOGLE_OAUTH_CLIENT_SECRET (if applicable)
+
+postgres:
+  image: postgres:17
+  user: glaze
+  database: glaze
+  persistence:
+    size: 10Gi
+    storageClass: local-path
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+
+redis:
+  image: redis:7-alpine
+  persistence:
+    size: 1Gi
+    storageClass: local-path
+
+worker:
+  replicaCount: 1
+
+otelcol:
+  enabled: true
+  image: otel/opentelemetry-collector-contrib:0.126.0
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+  hosts:
+    - host: glaze.example.com
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls:
+    - secretName: glaze-tls
+      hosts:
+        - glaze.example.com
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,63 @@
+{{- if .Values.otelcol.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "glaze.fullname" . }}-otelcol
+  labels:
+    {{- include "glaze.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "glaze.name" . }}-otelcol
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "glaze.name" . }}-otelcol
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: otelcol
+          image: {{ .Values.otelcol.image }}
+          command:
+            - "/otelcol-contrib"
+            - "--config=/etc/otel/config.yml"
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: POSTGRES_PASSWORD
+            - name: GRAFANA_CLOUD_OTLP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: GRAFANA_CLOUD_OTLP_TOKEN
+          ports:
+            - containerPort: 4317
+              name: otlp-grpc
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otel/config.yml
+              subPath: otel-collector-config.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "glaze.fullname" . }}-otel-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "glaze.fullname" . }}-otelcol
+  labels:
+    {{- include "glaze.labels" . | nindent 4 }}
+spec:
+  ports:
+    - port: 4317
+      targetPort: 4317
+      name: otlp-grpc
+  selector:
+    app.kubernetes.io/name: {{ include "glaze.name" . }}-otelcol
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

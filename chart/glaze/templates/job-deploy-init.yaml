@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "glaze.fullname" . }}-deploy-init
+  labels:
+    {{- include "glaze.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      name: {{ include "glaze.fullname" . }}-deploy-init
+      labels:
+        {{- include "glaze.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: deploy-init
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - bash
+            - -lc
+            - >
+              python manage.py migrate --no-input &&
+              python manage.py load_public_library --skip-if-missing &&
+              python manage.py clear_stuck_tasks --hours 1
+          envFrom:
+            - configMapRef:
+                name: {{ include "glaze.fullname" . }}-env
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: POSTGRES_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: SECRET_KEY
