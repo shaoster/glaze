@@ -401,6 +401,7 @@ gz_backup() {
             "SELECT COUNT(*) FROM pg_catalog.pg_tables WHERE schemaname = 'public';")
         piece_count=$(docker exec "$cid" psql -U postgres -d glaze -Atqc \
             "SELECT COUNT(*) FROM api_piece;")
+        echo "Backed up $piece_count pieces."
         echo "Verified restore: $table_count public tables, api_piece has $piece_count rows."
     )
 
