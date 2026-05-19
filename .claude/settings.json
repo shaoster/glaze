@@ -37,7 +37,9 @@
       "Bash(echo '# Prevent rtk/Rust stack overflows from crashing the WSL2 VM')",
       "Bash(echo 'ulimit -s unlimited')",
       "Bash(ulimit -s unlimited)",
-      "Bash(ulimit -s)"
+      "Bash(ulimit -s)",
+      "Bash(sed -n '5,12p' /home/phil/code/glaze/.agent-worktrees/claude/issue-masonry-debug/.agents/skills/react-testing/SKILL.md)",
+      "Bash(sed -n '5,12p' /home/phil/code/glaze/.agent-worktrees/claude/issue-masonry-debug/.agents/skills/dev-testing/SKILL.md)"
     ],
     "additionalDirectories": [
       "/tmp"

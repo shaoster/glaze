@@ -10,10 +10,10 @@ services:
         -c max_connections=60
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    env_file: .env
     environment:
       POSTGRES_DB: glaze
       POSTGRES_USER: glaze
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U glaze -d glaze"]
       interval: 5s
@@ -36,35 +36,12 @@ services:
     # Docker's internal DNS resolves "web" to all live replica IPs.
     deploy:
       replicas: 1
+    env_file: .env
     environment:
-      PRODUCTION: "true"
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
       CELERY_BROKER_URL: redis://redis:6379/0
       REDIS_CACHE_URL: redis://redis:6379/1
-      SECRET_KEY: ${SECRET_KEY}
-      ALLOWED_HOST: ${ALLOWED_HOST}
-      APP_ORIGIN: ${APP_ORIGIN}
-      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
-      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
-      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
-      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
-      CLOUDINARY_UPLOAD_FOLDER: ${CLOUDINARY_UPLOAD_FOLDER:-}
-      CLOUDINARY_PUBLIC_UPLOAD_FOLDER: ${CLOUDINARY_PUBLIC_UPLOAD_FOLDER:-}
-      CLOUDINARY_UPLOAD_PRESET: ${CLOUDINARY_UPLOAD_PRESET:-}
-      REMOTE_REMBG_URL: ${REMOTE_REMBG_URL:-}
-      MODAL_AUTH_TOKEN: ${MODAL_AUTH_TOKEN:-}
-      OTEL_ENABLED: ${OTEL_ENABLED:-}
-      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-glaze}
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otelcol:4317}
-      OTEL_SAMPLE_RATE: ${OTEL_SAMPLE_RATE:-1.0}
-      GRAFANA_CLOUD_OTLP_TOKEN: ${GRAFANA_CLOUD_OTLP_TOKEN:-}
-      EMAIL_HOST: ${EMAIL_HOST:-smtp.resend.com}
-      EMAIL_PORT: ${EMAIL_PORT:-465}
-      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-resend}
-      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
-      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-true}
-      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@potterdoc.com}
-      INVITE_LINK_BASE_URL: ${INVITE_LINK_BASE_URL:-https://potterdoc.com}
+      OTEL_SERVICE_NAME: glaze
     depends_on:
       db:
         condition: service_healthy
@@ -110,36 +87,16 @@ services:
   worker:
     image: ghcr.io/shaoster/glaze:${IMAGE_TAG:?Set IMAGE_TAG in .env}
     restart: unless-stopped
-    command: python -m celery -A backend worker -l INFO
+    entrypoint:
+      - bash
+      - -lc
+      - python -m celery -A backend worker -l INFO
+    env_file: .env
     environment:
-      PRODUCTION: "true"
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
       CELERY_BROKER_URL: redis://redis:6379/0
       REDIS_CACHE_URL: redis://redis:6379/1
-      SECRET_KEY: ${SECRET_KEY}
-      ALLOWED_HOST: ${ALLOWED_HOST}
-      APP_ORIGIN: ${APP_ORIGIN}
-      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
-      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
-      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
-      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
-      CLOUDINARY_UPLOAD_FOLDER: ${CLOUDINARY_UPLOAD_FOLDER:-}
-      CLOUDINARY_PUBLIC_UPLOAD_FOLDER: ${CLOUDINARY_PUBLIC_UPLOAD_FOLDER:-}
-      CLOUDINARY_UPLOAD_PRESET: ${CLOUDINARY_UPLOAD_PRESET:-}
-      REMOTE_REMBG_URL: ${REMOTE_REMBG_URL:-}
-      MODAL_AUTH_TOKEN: ${MODAL_AUTH_TOKEN:-}
-      OTEL_ENABLED: ${OTEL_ENABLED:-}
-      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-glaze-worker}
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otelcol:4317}
-      OTEL_SAMPLE_RATE: ${OTEL_SAMPLE_RATE:-1.0}
-      GRAFANA_CLOUD_OTLP_TOKEN: ${GRAFANA_CLOUD_OTLP_TOKEN:-}
-      EMAIL_HOST: ${EMAIL_HOST:-smtp.resend.com}
-      EMAIL_PORT: ${EMAIL_PORT:-465}
-      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-resend}
-      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
-      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-true}
-      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@potterdoc.com}
-      INVITE_LINK_BASE_URL: ${INVITE_LINK_BASE_URL:-https://potterdoc.com}
+      OTEL_SERVICE_NAME: glaze-worker
     depends_on:
       db:
         condition: service_healthy
@@ -160,10 +117,10 @@ services:
         python manage.py migrate --no-input &&
         python manage.py load_public_library --skip-if-missing &&
         python manage.py clear_stuck_tasks --hours 1
+    env_file: .env
     environment:
-      PRODUCTION: "true"
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
-      SECRET_KEY: ${SECRET_KEY}
+      REDIS_CACHE_URL: redis://redis:6379/1
     depends_on:
       db:
         condition: service_healthy
@@ -176,8 +133,8 @@ services:
     volumes:
       - ./otel-collector-config.yml:/etc/otel/config.yml:ro
     command: ["--config=/etc/otel/config.yml"]
+    env_file: .env
     environment:
-      GRAFANA_CLOUD_OTLP_TOKEN: ${GRAFANA_CLOUD_OTLP_TOKEN:-}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
   mailpit:

@@ -126,13 +126,15 @@ git add web/pnpm-lock.yaml   # fails: no web/web/pnpm-lock.yaml
 | `CLOUDINARY_API_KEY` | same as above |
 | `CLOUDINARY_API_SECRET` | same as above |
 | `CLOUDINARY_UPLOAD_FOLDER` | uploads go to root of Cloudinary account (optional) |
-| `GOOGLE_OAUTH_CLIENT_ID` | `POST /api/auth/google/` non-functional; email/password login still works |
+| `GOOGLE_OAUTH_CLIENT_ID` | `POST /api/auth/google/` non-functional; email/password login still works; Google Sign-In button not rendered |
 
-**`web/.env.local`** (read by Vite):
+## Configuration Rationale
 
-| Variable | Absent behavior |
-|---|---|
-| `VITE_GOOGLE_CLIENT_ID` | Google Sign-In button not rendered; must match `GOOGLE_OAUTH_CLIENT_ID` |
+Understanding where config lives:
+
+1. **GitHub Secrets / Variables**: Source of truth for environment-specific configuration. Includes sensitive secrets (passwords, API keys) and non-sensitive vars (service URLs, hostnames). Injected into `.env` at deploy time.
+2. **`docker-compose.yml`**: Defines internal topology (e.g., `DATABASE_URL: postgres://db:5432`). Use this for constants that only depend on the Docker network.
+3. **Build-time Injection (`ci.yml`)**: Static frontend assets (Vite) cannot read server environment variables at runtime. Public vars like `GOOGLE_OAUTH_CLIENT_ID` must be baked into the JS bundle during the image build in CI.
 
 ## Off-Limits Paths
 

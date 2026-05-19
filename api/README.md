@@ -20,7 +20,7 @@ PotterDoc now runs as a user-scoped application with session authentication.
 
 PotterDoc supports Google Sign-In using OAuth 2.0 with OpenID Connect. The flow works as follows:
 
-1. **Frontend**: The web app uses `@react-oauth/google` to display a Google Sign-In button when `VITE_GOOGLE_CLIENT_ID` is configured.
+1. **Frontend**: The web app uses `@react-oauth/google` to display a Google Sign-In button when `GOOGLE_OAUTH_CLIENT_ID` is configured.
 2. **Google Authentication**: User clicks the button, Google handles authentication and returns a JWT credential.
 3. **Backend Verification**: The frontend sends the JWT to `POST /api/auth/google/`, where Django verifies the token with Google's servers using `google-auth`.
 4. **User Creation/Login**:
@@ -32,7 +32,6 @@ PotterDoc supports Google Sign-In using OAuth 2.0 with OpenID Connect. The flow 
 **Environment Variables Required:**
 
 - `GOOGLE_OAUTH_CLIENT_ID`: Your Google OAuth client ID from Google Cloud Console
-- `VITE_GOOGLE_CLIENT_ID`: Same client ID, exposed to the frontend (must match backend)
 
 Per-user data isolation rules:
 

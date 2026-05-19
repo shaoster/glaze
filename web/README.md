@@ -158,11 +158,9 @@ PotterDoc supports Google Sign-In using OAuth 2.0 with OpenID Connect. To enable
 
    ```bash
    export GOOGLE_OAUTH_CLIENT_ID=<your-google-client-id>
-   export VITE_GOOGLE_CLIENT_ID=<same-client-id>
    ```
 
-   The `GOOGLE_OAUTH_CLIENT_ID` is used by the Django backend to verify Google JWT tokens.
-   The `VITE_GOOGLE_CLIENT_ID` is exposed to the frontend and must match the backend value.
+   **Note on Build-time Variables:** The `GOOGLE_OAUTH_CLIENT_ID` is used by the Django backend to verify Google JWT tokens at runtime. However, because the frontend is a static bundle running in the browser, it must have this value "baked in" during the build step. In production, this is handled by the `ci.yml` workflow during the OCI image build. Local development handled this via Vite's `loadEnv` and `define` configuration.
 
 3. **User flow:**
    - Existing email/password users can sign in with Google (account linking)

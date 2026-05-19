@@ -95,6 +95,28 @@ jobs:
             }
             core.setOutput('skip_main', match ? 'true' : 'false');
 
+      - name: Security Audit (No Secrets in CI)
+        shell: bash
+        run: |
+          # [SECURITY MANDATE] Static analysis of this workflow file.
+          # CI MUST NEVER have access to production secrets. 
+          
+          # Whitelist of secrets allowed in CI.
+          ALLOWED="BAZEL_REMOTE_API_KEY GITHUB_TOKEN"
+          
+          # Extract secret names only (e.g. BAZEL_REMOTE_API_KEY)
+          secrets=$(grep -oE 'secrets\.[A-Z0-9_]+' .github/workflows/ci.yml | cut -d. -f2 | sort -u)
+          
+          for s in $secrets; do
+            if [[ ! " $ALLOWED " =~ " $s " ]]; then
+              echo "🚨 SECURITY VIOLATION: Unauthorized secret usage detected in ci.yml: secrets.$s" >&2
+              echo "Only the following secrets are allowed in CI: $ALLOWED" >&2
+              echo "Real production secrets MUST be restricted to cd.yml." >&2
+              exit 1
+            fi
+          done
+          echo "✅ CI Security Audit passed. No unauthorized secrets detected."
+
   lint:
     name: Lint
     needs: preflight
@@ -166,15 +188,36 @@ jobs:
           deps-key: ${{ needs.preflight.outputs.deps_key }}
           buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
 
+      # The frontend is a static bundle that cannot read server environment
+      # variables at runtime. We must bake the public Google Client ID into
+      # the JS bundle during the image build step.
       - name: Write Vite env file
-        run: printf 'VITE_GOOGLE_CLIENT_ID=%s\n' '${{ secrets.VITE_GOOGLE_CLIENT_ID }}' > web/.env.local
+        run: |
+          if [ -n "${{ vars.GOOGLE_OAUTH_CLIENT_ID }}" ]; then
+            printf 'GOOGLE_OAUTH_CLIENT_ID=%s\n' '${{ vars.GOOGLE_OAUTH_CLIENT_ID }}' > web/.env.local
+          fi
 
       - name: Build OCI image and load into docker
         run: bazel run --config=ci --stamp //:load
 
-      - name: Pre-pull sidecar images
+      # Align with the CD process by generating a real .env file from the 
+      # production template. This ensures the smoke test validates the 
+      # same configuration mechanism used on the droplet.
+      - name: Generate .env for smoke test
         env:
           IMAGE_TAG: latest
+          POSTGRES_PASSWORD: ci
+          SECRET_KEY: smoke-test-key-must-be-at-least-32-chars-long
+          ALLOWED_HOST: localhost
+          APP_ORIGIN: http://localhost:8000
+          OTEL_ENABLED: "true"
+          # Optional vars are intentionally left unset to test default fallbacks
+        run: |
+          # We include IMAGE_TAG in the .env so docker-compose.yml can interpolate it.
+          printf 'IMAGE_TAG=%s\n' "$IMAGE_TAG" > .env
+          envsubst < .env.production.template | grep -vE '^[A-Z0-9_]+=$' >> .env
+
+      - name: Pre-pull sidecar images
         run: |
           # Pull third-party sidecar images (postgres, otelcol) before starting
           # the timed --wait block so image download doesn't eat into the
@@ -183,20 +226,9 @@ jobs:
           docker compose pull db otelcol
 
       - name: Smoke test via docker compose
-        env:
-          IMAGE_TAG: latest
         run: |
           set -euo pipefail
-          export POSTGRES_PASSWORD=ci
-          export SECRET_KEY=$(openssl rand -hex 32)
-          export ALLOWED_HOST=localhost
-          export APP_ORIGIN=http://localhost:8000
-          # Enable OTel so configure_otel() runs its full import path on startup.
-          # otelcol is already running as a sidecar; missing packages surface here
-          # rather than only in production. OTLP endpoint uses the compose service
-          # name — docker-compose.yml already defaults to http://otelcol:4317.
-          export OTEL_ENABLED=true
-          # `--wait` blocks until every service with a healthcheck reports
+          # --wait blocks until every service with a healthcheck reports
           # healthy. The web service's healthcheck (defined in
           # docker-compose.yml) is the pass criterion.
           # Timeout is 300s: migrate + load_public_library (249 records) +
@@ -212,8 +244,6 @@ jobs:
 
       - name: Tear down compose
         if: always()
-        env:
-          IMAGE_TAG: latest
         run: docker compose down -v --remove-orphans || true
 
       - name: Log in to GitHub Container Registry

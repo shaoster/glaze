@@ -39,7 +39,6 @@ jobs:
           ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
           APP_ORIGIN: ${{ vars.APP_ORIGIN }}
           GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
-          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
           CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
@@ -96,7 +95,6 @@ jobs:
           ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
           APP_ORIGIN: ${{ vars.APP_ORIGIN }}
           GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
-          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
           CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
@@ -115,7 +113,7 @@ jobs:
           GRAFANA_CLOUD_OTLP_TOKEN: ${{ secrets.GRAFANA_CLOUD_OTLP_TOKEN }}
           OTEL_ENABLED: ${{ vars.OTEL_ENABLED }}
         run: |
-          envsubst < .env.production.template > /tmp/.env
+          envsubst < .env.production.template | grep -vE '^[A-Z0-9_]+=$' > /tmp/.env
           scp /tmp/.env "${{ vars.DEPLOY_HOST }}":~/glaze/.env
 
       - name: Deploy
