@@ -349,6 +349,64 @@ gz_prod_shell() {    # gz_prod_shell [-c "cmd"]  — piping avoids SSH quoting i
 }
 gz_prod_dbshell()    { gz_prod dbshell "$@"; }
 
+gz_backup() {
+    # Stream a production Postgres dump locally, then restore it into a
+    # disposable postgres:17 container to verify the dump is readable and
+    # contains application data.
+    local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
+    local dump_path="${1:-}"
+    if [[ -z "$dump_path" ]]; then
+        dump_path="$(mktemp /tmp/glaze-prod-postgres-XXXXXX.dump)"
+    elif [[ -e "$dump_path" ]]; then
+        echo "gz_backup: refusing to overwrite existing file: $dump_path" >&2
+        return 1
+    fi
+
+    command -v docker >/dev/null || {
+        echo "gz_backup: docker is required locally" >&2
+        return 1
+    }
+    docker info >/dev/null 2>&1 || {
+        echo "gz_backup: docker daemon is not reachable locally" >&2
+        return 1
+    }
+
+    echo "--- backing up production postgres from $host ---"
+    ssh "$host" "cd ~/glaze && docker compose exec -T db pg_dump -U glaze -d glaze -Fc" > "$dump_path"
+    sha256sum "$dump_path"
+    ls -lh "$dump_path"
+
+    echo "--- verifying dump in disposable postgres:17 container ---"
+    (
+        set -euo pipefail
+        local cid
+        cid=$(docker run -d --rm -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=glaze postgres:17)
+        cleanup() {
+            docker stop "$cid" >/dev/null 2>&1 || true
+        }
+        trap cleanup EXIT
+
+        for _ in $(seq 1 30); do
+            if docker exec "$cid" pg_isready -U postgres >/dev/null 2>&1; then
+                break
+            fi
+            sleep 2
+        done
+
+        docker exec "$cid" pg_restore --version
+        docker exec -i "$cid" pg_restore -U postgres -d glaze --no-owner --no-privileges < "$dump_path"
+
+        local table_count piece_count
+        table_count=$(docker exec "$cid" psql -U postgres -d glaze -Atqc \
+            "SELECT COUNT(*) FROM pg_catalog.pg_tables WHERE schemaname = 'public';")
+        piece_count=$(docker exec "$cid" psql -U postgres -d glaze -Atqc \
+            "SELECT COUNT(*) FROM api_piece;")
+        echo "Verified restore: $table_count public tables, api_piece has $piece_count rows."
+    )
+
+    echo "Backup saved to $dump_path"
+}
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -825,6 +883,7 @@ _GZ_SHORTCUTS=(
     "gz_prod <cmd>     — run any manage.py subcommand on production (requires GLAZE_PROD_HOST in .env.local)"
     "gz_prod_shell     — Django shell on production"
     "gz_prod_dbshell   — database shell on production"
+    "gz_backup [file]  — back up prod Postgres and verify it in a disposable postgres:17 container"
     "gz_test           — run affected tests via Bazel (smart detection on branches; --all to run everything)"
     "gz_test_common    — run workflow schema/integrity tests (pytest tests/)"
     "gz_test_backend   — run Django API tests (pytest api/)"
