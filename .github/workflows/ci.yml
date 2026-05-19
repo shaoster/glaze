@@ -104,11 +104,12 @@ jobs:
           # - BAZEL_REMOTE_API_KEY: BuildBuddy remote cache (low-entropy key)
           # - GITHUB_TOKEN: Built-in GitHub token for registry auth
           
-          secrets=$(grep -oE '\$\{\{ secrets\.[A-Z0-9_]+ \}\}' .github/workflows/ci.yml | sort -u)
+          # Extract secret names only (e.g. BAZEL_REMOTE_API_KEY) to avoid shell splitting on whitespace.
+          secrets=$(grep -oE 'secrets\.[A-Z0-9_]+' .github/workflows/ci.yml | cut -d. -f2 | sort -u)
           
           for s in $secrets; do
-            if [[ "$s" != "\${{ secrets.BAZEL_REMOTE_API_KEY }}" && "$s" != "\${{ secrets.GITHUB_TOKEN }}" ]]; then
-              echo "🚨 SECURITY VIOLATION: Unauthorized secret usage detected in ci.yml: $s" >&2
+            if [[ "$s" != "BAZEL_REMOTE_API_KEY" && "$s" != "GITHUB_TOKEN" ]]; then
+              echo "🚨 SECURITY VIOLATION: Unauthorized secret usage detected in ci.yml: secrets.$s" >&2
               echo "Only BAZEL_REMOTE_API_KEY and GITHUB_TOKEN are allowed in the CI environment." >&2
               echo "Real production secrets MUST be restricted to cd.yml." >&2
               exit 1
