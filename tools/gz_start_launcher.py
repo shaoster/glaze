@@ -418,8 +418,24 @@ def start_backend(
     backend_env = env.copy()
     backend_env["APP_ORIGIN"] = f"http://localhost:{web_port}"
 
+    # In a worktree, prefer the shared checkout's db.sqlite3 so dev data (seeded
+    # pieces, users) carries over without a fresh bootstrap. Falls back to a
+    # worktree-local db if DATABASE_URL is already set in the environment (explicit
+    # override) or if no shared db exists yet.
+    if (
+        roots.workspace != roots.shared
+        and not backend_env.get("DATABASE_URL")
+    ):
+        shared_db = roots.shared / "db.sqlite3"
+        if shared_db.exists():
+            backend_env["DATABASE_URL"] = f"sqlite:///{shared_db}"
+            print(f"backend: using shared db at {shared_db}")
+
     print(f"backend: starting on :{backend_port} ...")
-    db_path = roots.workspace / "db.sqlite3"
+    db_path = Path(
+        backend_env.get("DATABASE_URL", "").removeprefix("sqlite:///")
+        or str(roots.workspace / "db.sqlite3")
+    )
 
     def run_migrate(extra_args: list[str]) -> None:
         migrate_cmd = [
@@ -513,6 +529,18 @@ def start_web(
     # when running as a non-build action. We provide a fallback to '.' to suppress this.
     if sys.platform.startswith("linux"):
         web_env.setdefault("BAZEL_BINDIR", ".")
+
+    # The js_binary wrapper does `cd web` relative to roots.workspace before starting
+    # Vite. Vite writes a temp .mjs file there to load vite.config.ts, and Node
+    # resolves imports (including 'vite' itself) from that directory. In a worktree
+    # web/node_modules doesn't exist, so we symlink it from the shared checkout so
+    # Node can find packages without a full reinstall.
+    if roots.workspace != roots.shared:
+        worktree_nm = roots.workspace / "web" / "node_modules"
+        shared_nm = roots.shared / "web" / "node_modules"
+        if not worktree_nm.exists() and not worktree_nm.is_symlink() and shared_nm.exists():
+            worktree_nm.symlink_to(shared_nm)
+            print(f"web: symlinked node_modules from {shared_nm}")
 
     print(f"web: starting on :{web_port} ...")
     web_binary = web_executable_path(roots)

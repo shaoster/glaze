@@ -1,13 +1,15 @@
 ---
 model: opus
 created: 2026-05-08
-modified: 2026-05-08
+modified: 2026-05-18
 reviewed: 2026-05-08
 name: glaze-frontend
 description: |
   Glaze-specific frontend conventions: TypeScript data model, component inventory,
   module paths, state chip design system, type generation pipeline, Cloudinary upload
-  flow, auth UI, piece detail routing, and frontend testing guidance.
+  flow, auth UI, and piece detail routing. Includes test file location reminders
+  (which files to add/update) but not testing patterns — load react-testing for
+  async assertions, mock boundaries, and debugging prod-only visual bugs.
   Invoke for any frontend work touching Glaze domain components, UI patterns, or the
   API/type pipeline.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
@@ -179,7 +181,9 @@ concept in multiple places, extract a reusable component in `web/src/components/
 - `CloudinaryImage` uses `cloudinary_public_id` and `cloud_name` for optimized delivery — both always present
 - Cloudinary is optional: if env vars absent, config endpoint returns 503 and UI falls back to URL-paste mode
 
-## Frontend Testing Guidance
+## Test File Locations
+
+For testing patterns, async assertions, mock boundaries, and debugging visual bugs, load the `react-testing` skill. The reminders below are only about *where* to put tests, not *how* to write them.
 
 - Every new or modified React component → add/update test in `web/src/components/__tests__/`
 - Every new or modified `workflow.ts` helper → add/update test in `web/src/util/workflow.test.ts`, mocking `workflow.yml` with a minimal fixture — never import `workflow.yml` directly

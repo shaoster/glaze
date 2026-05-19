@@ -1,13 +1,16 @@
 ---
 model: opus
 created: 2026-05-08
-modified: 2026-05-08
+modified: 2026-05-18
 reviewed: 2026-05-08
 name: dev-testing
 description: |
-  Glaze test and lint commands: Bazel test/lint targets, individual suite commands,
-  auto-fix workflow, web build helper, CI job breakdown, and BUILD.bazel source-slice
-  hygiene. Invoke when prepping a PR, running tests, or investigating a CI failure.
+  Test execution and language-agnostic testing strategy: Bazel test/lint targets,
+  individual suite commands, CI job breakdown, BUILD.bazel source-slice hygiene,
+  regression test validity (verifying a new test fails on the buggy baseline), and
+  tautological constant test antipatterns. Invoke when running the test suite,
+  prepping a PR, investigating a CI failure, or evaluating test quality for any
+  language (Python, TypeScript, or otherwise).
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 ---
 
@@ -139,6 +142,50 @@ rtk bazel query 'labels(srcs, //api:api_lib)'         # confirm Python file incl
 rtk bazel query 'labels(srcs, //web:util_lib)'         # confirm util file included
 rtk bazel query 'labels(srcs, //web:<component>_src)'  # confirm component file included
 ```
+
+## Regression Test Validity
+
+When adding a regression test for a bugfix, verify the test would actually have caught
+the bug — not just that it passes with the fix applied. The standard procedure:
+
+```bash
+# From the worktree containing both the fix and the new test:
+git stash   # or checkout a clean baseline without the fix
+rtk bazel test //web:web_<component>_test --test_output=errors
+# The new test should FAIL here.
+git stash pop
+rtk bazel test //web:web_<component>_test --test_output=errors
+# The new test should PASS here.
+```
+
+A test that passes on the buggy baseline is not a regression test — it is noise that
+will never catch a future recurrence of the bug.
+
+## Tautological Constant Tests
+
+When a test compares a function's output against an exported constant, check that
+the constant and the function don't share the same formula at the same input value.
+If they do, the test passes trivially on both the correct and any broken implementation
+that happens to change both together.
+
+```ts
+// ❌ tautological — passes even if the formula is wrong, because DEFAULT_FOO_HEIGHT
+//    is computed from the same expression at the same input width
+expect(estimateFooHeight({ thumbnail: null }, 220)).toBe(DEFAULT_FOO_HEIGHT);
+// DEFAULT_FOO_HEIGHT = Math.round(220 * 0.75) + 112  ← same formula, same input
+
+// ✅ use a different input that exercises the formula independently
+expect(estimateFooHeight({ thumbnail: null }, 160)).toBe(
+  Math.round(160 * DEFAULT_ASPECT_HEIGHT / DEFAULT_ASPECT_WIDTH) + CHROME_HEIGHT,
+);
+// Also add a separate test that pins the constant to its reference input:
+expect(DEFAULT_FOO_HEIGHT).toBe(
+  Math.round(220 * DEFAULT_ASPECT_HEIGHT / DEFAULT_ASPECT_WIDTH) + CHROME_HEIGHT,
+);
+```
+
+This also applies to tests that compare two calls to the same function: they prove
+internal consistency but not correctness.
 
 ## Test Locations
 

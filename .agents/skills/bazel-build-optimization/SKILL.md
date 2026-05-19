@@ -5,7 +5,7 @@ description: |
   profiling, custom rules, and .bazelrc configuration. In Glaze, invoke when modifying
   .bazelrc, MODULE.bazel, or lint.bzl; diagnosing slow or cache-missing CI builds;
   or writing a new Bazel rule or aspect. For routine BUILD.bazel source-file additions
-  (new test srcs, new js_library targets), use /dev-testing instead.
+  (new test srcs, new js_library targets), use the dev-testing skill instead.
 source: https://github.com/wshobson/agents/tree/main/plugins/developer-essentials/skills/bazel-build-optimization
 ---
 

@@ -169,6 +169,10 @@ if IS_PRODUCTION:
             conn_health_checks=True,
         )
     }
+elif os.environ.get("DATABASE_URL"):
+    DATABASES = {
+        "default": dj_database_url.config(conn_max_age=0)
+    }
 else:
     DATABASES = {
         "default": {

@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceList from "../PieceList";
-import { CARD_CHROME_HEIGHT, DEFAULT_CARD_HEIGHT_ESTIMATE, estimateCardHeight } from "../pieceCardHeight";
+import { CARD_CHROME_HEIGHT, DEFAULT_CARD_HEIGHT_ESTIMATE, DEFAULT_THUMBNAIL_ASPECT_HEIGHT, DEFAULT_THUMBNAIL_ASPECT_WIDTH, estimateCardHeight } from "../pieceCardHeight";
 import type { PieceSummary } from "../../util/types";
 
 vi.mock("../CloudinaryImage", () => ({
@@ -195,6 +195,36 @@ describe("PieceList", () => {
       });
     });
 
+    it("falls back to 4/3 aspect ratio on the thumbnail shell for pieces without a crop", () => {
+      // Without this fallback the shell collapses to zero height while
+      // CloudinaryImage loads (opacity:0, no intrinsic size), causing masonic
+      // to measure the card as chrome-only height and place the next card too
+      // close, resulting in visible overlap once the image loads.
+      renderPieceList([makePiece({ thumbnail: null })]);
+      expect(screen.getByTestId("piece-thumbnail-shell")).toHaveStyle({
+        aspectRatio: `${DEFAULT_THUMBNAIL_ASPECT_WIDTH} / ${DEFAULT_THUMBNAIL_ASPECT_HEIGHT}`,
+      });
+    });
+
+    it("passes requestedHeight matching the 4/3 fallback to CloudinaryImage for pieces without a crop", () => {
+      // The Cloudinary fill request must match the shell aspect ratio so the
+      // delivered image fills the container without driving reflow after load.
+      const { container } = renderPieceList([
+        makePiece({
+          thumbnail: {
+            url: "https://example.com/img.jpg",
+            cloudinary_public_id: "pieces/nocrop",
+            cloud_name: "demo",
+            crop: null,
+          },
+        }),
+      ]);
+      const image = container.querySelector("img")!;
+      const rw = Number(image.getAttribute("data-requested-width"));
+      const rh = Number(image.getAttribute("data-requested-height"));
+      expect(rh).toBe(Math.round((rw * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) / DEFAULT_THUMBNAIL_ASPECT_WIDTH));
+    });
+
     it("reserves the crop-derived card height for mocked image payloads", () => {
       const pieces = [
         makePiece({
@@ -251,20 +281,30 @@ describe("PieceList", () => {
   });
 
   describe("estimateCardHeight", () => {
-    it("returns DEFAULT_CARD_HEIGHT_ESTIMATE when thumbnail is null", () => {
-      expect(estimateCardHeight({ thumbnail: null } as PieceSummary, 220)).toBe(DEFAULT_CARD_HEIGHT_ESTIMATE);
+    // Helper: the 4:3 fallback height at an arbitrary column width.
+    // Uses a width that differs from the reference 220px so the test is not
+    // tautological (DEFAULT_CARD_HEIGHT_ESTIMATE is also computed at 220px).
+    function fallbackAt(columnWidth: number) {
+      return (
+        Math.round((columnWidth * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) / DEFAULT_THUMBNAIL_ASPECT_WIDTH) +
+        CARD_CHROME_HEIGHT
+      );
+    }
+
+    it("falls back to 4:3 aspect ratio height when thumbnail is null", () => {
+      expect(estimateCardHeight({ thumbnail: null } as PieceSummary, 160)).toBe(fallbackAt(160));
     });
 
-    it("returns DEFAULT_CARD_HEIGHT_ESTIMATE when crop is null", () => {
+    it("falls back to 4:3 aspect ratio height when crop is null", () => {
       expect(
-        estimateCardHeight({ thumbnail: { crop: null } } as PieceSummary, 220),
-      ).toBe(DEFAULT_CARD_HEIGHT_ESTIMATE);
+        estimateCardHeight({ thumbnail: { crop: null } } as PieceSummary, 160),
+      ).toBe(fallbackAt(160));
     });
 
-    it("returns DEFAULT_CARD_HEIGHT_ESTIMATE when crop is absent", () => {
+    it("falls back to 4:3 aspect ratio height when crop is absent", () => {
       expect(
-        estimateCardHeight({ thumbnail: {} } as PieceSummary, 220),
-      ).toBe(DEFAULT_CARD_HEIGHT_ESTIMATE);
+        estimateCardHeight({ thumbnail: {} } as PieceSummary, 160),
+      ).toBe(fallbackAt(160));
     });
 
     it("computes height from landscape crop aspect ratio", () => {
@@ -283,11 +323,17 @@ describe("PieceList", () => {
       expect(estimateCardHeight(piece, 220)).toBe(Math.round(220 * 2) + CARD_CHROME_HEIGHT);
     });
 
-    it("returns DEFAULT_CARD_HEIGHT_ESTIMATE when crop.width is 0 (guard against division by zero)", () => {
+    it("falls back to 4:3 aspect ratio height when crop.width is 0 (guard against division by zero)", () => {
       const piece = {
         thumbnail: { crop: { x: 0, y: 0, width: 0, height: 200 } },
       } as PieceSummary;
-      expect(estimateCardHeight(piece, 220)).toBe(DEFAULT_CARD_HEIGHT_ESTIMATE);
+      expect(estimateCardHeight(piece, 160)).toBe(fallbackAt(160));
+    });
+
+    it("DEFAULT_CARD_HEIGHT_ESTIMATE equals the 4:3 fallback at the desktop column width", () => {
+      // Ensures the itemHeightEstimate passed to MasonryScroller is consistent
+      // with what estimateCardHeight returns for no-crop pieces on desktop.
+      expect(DEFAULT_CARD_HEIGHT_ESTIMATE).toBe(fallbackAt(220));
     });
   });
 
@@ -321,7 +367,10 @@ describe("PieceList", () => {
       ).toBe(true);
     });
 
-    it("sizes Cloudinary thumbnail requests to the column width", () => {
+    it("passes only requestedWidth (not requestedHeight) to CloudinaryImage for cropped pieces", () => {
+      // For cropped pieces, Cloudinary infers height from the crop ratio after
+      // scale().width() — passing requestedHeight would override that inference.
+      // requestedHeight is only set for no-crop pieces (covered by the separate test above).
       const { container } = renderPieceList([
         makePiece({
           thumbnail: {
