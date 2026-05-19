@@ -1,14 +1,17 @@
 ---
 model: opus
 created: 2026-05-08
-modified: 2026-05-08
+modified: 2026-05-18
 reviewed: 2026-05-08
 name: react-testing
 description: |
-  React/frontend testing patterns: async assertion hygiene, mock boundaries,
-  what to test vs. what to skip, Autocomplete wrapper pattern, workflow fixture
-  mocking, and the Bazel web test command. Invoke when writing or fixing
-  frontend tests, or when a test is flaky or unclear.
+  React/frontend-specific testing patterns and browser-based debugging: async
+  assertion hygiene, mock boundaries, Autocomplete wrapper pattern, workflow
+  fixture mocking. Also covers debugging prod-only visual bugs — when to ask
+  for a screenshot, how to extend dev seeding to reproduce a rendering condition,
+  and why jsdom misses layout/async-load failures. Invoke when writing or fixing
+  frontend tests, when a visual bug doesn't reproduce locally, or when
+  investigating why a layout behaves differently in prod vs. dev.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 ---
 
@@ -84,6 +87,63 @@ render(<Controlled />);
 ```
 
 See `GlobalEntryDialog.test.tsx` for a concrete example.
+
+## Debugging Prod-Only Visual Bugs
+
+jsdom has no layout engine and no image loading. A test suite that passes against a
+prod-only layout bug usually means the tests don't exercise the rendering condition
+that causes the failure. Before writing speculative fixes:
+
+**1. Ask for a screenshot or screen recording before analyzing any code.**
+
+For visual bugs, a screenshot immediately rules out entire categories of root cause.
+Ask for it before reading the component tree or proposing hypotheses — the diff
+between "all cards are at top:0" and "cards overlap mid-column" points to completely
+different bugs. Do not proceed to static analysis until you have visual evidence.
+
+**2. Ask the developer to localize the failure in the browser.**
+
+The developer can use DevTools to measure DOM state that's invisible to tests:
+```js
+// Measure actual rendered dimensions on first load
+document.getElementById('my-container').getBoundingClientRect()
+// Check computed style driving the layout
+getComputedStyle(document.querySelector('[data-testid="piece-thumbnail-shell"]')).aspectRatio
+```
+Ask specifically: does the bug appear on first paint, or only after a scroll/resize?
+Does it affect all items or only a specific data shape (e.g. items without a crop field)?
+
+**3. Extend dev seeding to exercise the specific code path.**
+
+If prod has data the dev database doesn't, manufacture it — don't try to infer the
+bug from prod screenshots alone. Target the exact field that differs:
+
+```python
+# Clear a field on the first page of results to match prod's missing-data condition
+pieces = Piece.objects.order_by('-fields_last_modified')[:24]
+for i, p in enumerate(pieces):
+    p.thumbnail_crop = some_crop if i % 2 == 0 else None
+    p.save(update_fields=['thumbnail_crop'])
+```
+
+A dev repro is worth more than any amount of static analysis. Do not write the fix
+until the bug is visible in the dev browser.
+
+**4. Identify why jsdom missed it.**
+
+Common gaps between jsdom and the browser for layout bugs:
+- **Async asset loading**: jsdom doesn't load images, so components that render at
+  `opacity:0` (loading state) with no intrinsic size never trigger the zero-height
+  collapse that causes masonry overlap in the real browser.
+- **No ResizeObserver firing**: jsdom's ResizeObserver is a no-op stub; layout
+  corrections that depend on it never fire.
+- **Static mocks returning fixed dimensions**: mocks that return a fixed
+  `{ width: 440 }` from `useContainerPosition` hide the real width=0 first-render
+  case.
+
+Once the repro is in hand, write a test that captures the specific invariant the
+bug violated (e.g. "thumbnail shell always has a non-undefined aspect-ratio") rather
+than trying to simulate the visual overlap itself.
 
 ## Workflow/Config Fixture Mocking
 

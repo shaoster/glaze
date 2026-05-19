@@ -83,11 +83,11 @@ bazel query "rdeps(//..., set(\$(git diff --name-only main | sed 's/.*/\"&\"/' |
 | Django/DRF: serializers, auth, user isolation, CORS, production settings | [`.agents/skills/django-api/SKILL.md`](.agents/skills/django-api/SKILL.md) |
 | Django admin: custom widgets, inlines, static files, FK wrapping | [`.agents/skills/django-admin/SKILL.md`](.agents/skills/django-admin/SKILL.md) |
 | React: component patterns, state shape, reducer migration, MUI conventions | [`.agents/skills/react-conventions/SKILL.md`](.agents/skills/react-conventions/SKILL.md) |
-| Frontend testing: async assertions, mock boundaries, Autocomplete wrappers | [`.agents/skills/react-testing/SKILL.md`](.agents/skills/react-testing/SKILL.md) |
+| Frontend testing: async assertions, mock boundaries, Autocomplete wrappers; debugging prod-only visual bugs and establishing dev repros | [`.agents/skills/react-testing/SKILL.md`](.agents/skills/react-testing/SKILL.md) |
 | Opening PRs, issue bodies, DoD checklist, branch naming, scope limits | [`.agents/skills/github-pr/SKILL.md`](.agents/skills/github-pr/SKILL.md) |
 | Modifying ci.yml, cd.yml, or static.yml | [`.agents/skills/github-actions/SKILL.md`](.agents/skills/github-actions/SKILL.md) |
-| **Bootstrapping**: Dev environment setup, shell bootstrap, worktree navigation | [`.agents/skills/dev-environment/SKILL.md`](.agents/skills/dev-environment/SKILL.md) |
-| **Execution**: Running any build, test, or lint command; CI failures | [`.agents/skills/dev-testing/SKILL.md`](.agents/skills/dev-testing/SKILL.md) |
+| **Bootstrapping**: Dev environment setup, shell bootstrap, worktree navigation, worktree database isolation, .env.local pitfalls | [`.agents/skills/dev-environment/SKILL.md`](.agents/skills/dev-environment/SKILL.md) |
+| **Execution**: Running any build, test, or lint command; CI failures; general testing strategy (regression validity, tautological tests) | [`.agents/skills/dev-testing/SKILL.md`](.agents/skills/dev-testing/SKILL.md) |
 | Auditing Bazel dependencies for OCI image, test, and lint targets | [`.agents/skills/deps/SKILL.md`](.agents/skills/deps/SKILL.md) |
 | Adding Python or npm packages, lock files, BUILD.bazel | [`.agents/skills/dev-packages/SKILL.md`](.agents/skills/dev-packages/SKILL.md) |
 | Bazel build optimization, remote caching, .bazelrc | [`.agents/skills/bazel-build-optimization/SKILL.md`](.agents/skills/bazel-build-optimization/SKILL.md) |

@@ -7,8 +7,10 @@ name: dev-environment
 description: |
   Glaze dev environment setup: shell bootstrap (env.sh / env-agent.sh), VS Code
   terminal profile, Claude Code BASH_ENV, worktree navigation (gz_cd, gz_worktrees),
-  one-terminal-per-worktree rule, and environment variables. Invoke when setting up
-  a fresh environment, navigating worktrees, or suggesting how to run servers locally.
+  one-terminal-per-worktree rule, environment variables, worktree database isolation
+  (gz_start db resolution, bazel run //:manage footgun), and .env.local copy pitfalls.
+  Invoke when setting up a fresh environment, navigating worktrees, suggesting how to
+  run servers locally, or troubleshooting database/env-var mismatches in a worktree.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 ---
 
@@ -118,7 +120,12 @@ git add web/pnpm-lock.yaml   # fails: no web/web/pnpm-lock.yaml
 
 ## Environment Variables
 
-**`.env.local`** (loaded by `source env.sh`, read by Django):
+**`.env.example`** (repo root, committed) is the canonical reference for all variables.
+Each entry has an inline comment explaining what it enables and what degrades when absent.
+Read it directly when debugging a "why isn't this feature working in dev" question.
+When a variable is added, removed, or renamed, update `.env.example`'s comment too.
+
+**`.env.local`** (loaded by `source env.sh`, read by Django) — quick absent-behavior reference:
 
 | Variable | Absent behavior |
 |---|---|
@@ -126,7 +133,7 @@ git add web/pnpm-lock.yaml   # fails: no web/web/pnpm-lock.yaml
 | `CLOUDINARY_API_KEY` | same as above |
 | `CLOUDINARY_API_SECRET` | same as above |
 | `CLOUDINARY_UPLOAD_FOLDER` | uploads go to root of Cloudinary account (optional) |
-| `GOOGLE_OAUTH_CLIENT_ID` | `POST /api/auth/google/` non-functional; email/password login still works; Google Sign-In button not rendered |
+| `GOOGLE_OAUTH_CLIENT_ID` | `POST /api/auth/google/` non-functional; email/password login still works |
 
 ## Configuration Rationale
 
@@ -152,3 +159,36 @@ worktree so servers load Cloudinary and OAuth credentials:
 ln -s /home/phil/code/glaze/.env.local .env.local
 ln -s /home/phil/code/glaze/web/.env.local web/.env.local
 ```
+
+**Avoid copying `.env.local` from prod** — prod env files often contain keys set to
+empty strings (e.g. `EMAIL_PORT=`) that are valid in shell but cause Django startup
+errors (`invalid literal for int() with base 10: ''`). If you must copy, strip any
+lines whose value is empty before using the file.
+
+**`.env.example` uses commented-out `# VAR=` for variables without defaults.** Never
+set a variable to an empty string in `.env.local` — omit it entirely or comment it
+out. The same rule applies when adding new variables to `.env.example`: comment out
+any entry that has no safe default value.
+
+## Worktree Database Isolation
+
+`gz_start` in a worktree automatically resolves the database to use:
+- If a `db.sqlite3` exists in the main checkout and none exists in the worktree,
+  the backend server shares the main checkout's database via `DATABASE_URL`.
+- If a `db.sqlite3` exists in the worktree, that one is used.
+
+This means a fresh worktree shares the main dev database by default, which is
+usually what you want. To force a worktree-local database, run migrations first:
+
+```bash
+DATABASE_URL=sqlite:////absolute/path/to/worktree/db.sqlite3 \
+  .manage.venv/bin/python manage.py migrate
+```
+
+Then restart `gz_start` — it will detect the new worktree db and use it.
+
+**The `bazel run //:manage` command always uses the main checkout's database**
+regardless of which worktree you're in (Bazel resolves `BASE_DIR` from its execroot).
+Use `.manage.venv/bin/python manage.py` with an explicit `DATABASE_URL` for any
+management command that must target a specific worktree database. See the backend
+skill for the full pattern.

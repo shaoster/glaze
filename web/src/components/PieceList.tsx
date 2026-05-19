@@ -17,7 +17,7 @@ import { formatState, isTerminalState, SUCCESSORS } from "../util/workflow";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import { MasonryScroller, useContainerPosition, usePositioner, useResizeObserver } from "masonic";
-import { DEFAULT_CARD_HEIGHT_ESTIMATE, estimateCardHeight, getThumbnailAspectRatio } from "./pieceCardHeight";
+import { DEFAULT_CARD_HEIGHT_ESTIMATE, estimateCardHeight, getThumbnailAspectRatio, getThumbnailRequestedHeight } from "./pieceCardHeight";
 import { Link, useSearchParams } from "react-router-dom";
 import CloudinaryImage from "./CloudinaryImage";
 import TagAutocomplete from "./TagAutocomplete";
@@ -165,6 +165,7 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
           crop={piece.thumbnail?.crop}
           context="gallery"
           requestedWidth={Math.round(width)}
+          requestedHeight={getThumbnailRequestedHeight(piece, Math.round(width))}
           style={{
             width: "100%",
             height: "auto",

@@ -7,8 +7,11 @@ name: glaze-backend
 description: |
   Glaze-specific backend conventions: model factory pattern, GlobalModel, globals
   visibility tiers, API endpoints, image FK normalization, Cloudinary cleanup,
-  Django admin customizations, Google OAuth backend, and Glaze Import Tool.
-  Invoke for any backend work touching Glaze domain models, API endpoints, or admin.
+  Django admin customizations, Google OAuth backend, Glaze Import Tool, and
+  debugging prod-only backend bugs (data state gaps, Django shell data manipulation,
+  management commands for reproducing specific conditions).
+  Invoke for any backend work touching Glaze domain models, API endpoints, admin,
+  or when a backend bug only reproduces with specific prod data shapes.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 ---
 
@@ -180,3 +183,59 @@ Keep `api/manual_tile_imports.py` and `api/tests/test_manual_square_crop_import.
 - New global domain models: `_register_globals()` auto-generates the model at import time; auto-enrolled in parameterised tests in `api/tests/test_globals.py` — focus new tests on model-specific constraints and API behavior
 - Prefer the API client (`client.post(...)`) for request/response tests over direct ORM
 - Add to existing test files that cover the same module — do not create new cross-cutting files
+
+## Debugging Prod-Only Backend Bugs
+
+The most common reason a backend bug only reproduces in prod is a **data state gap**:
+dev seeding always populates a field that prod sometimes leaves null, or dev always
+creates rows in a particular order that prod doesn't guarantee.
+
+**1. Find the data condition that differs.**
+
+Ask the developer what the failing request looks like in prod — the API response,
+the relevant model fields, or the Django admin view. A single `null` where dev always
+has a value is usually enough to narrow it down.
+
+**2. Manufacture the specific data state in the dev database.**
+
+Use the Django shell to patch the database directly rather than trying to reproduce
+the condition through the normal UI flow:
+
+```bash
+# Target the worktree database explicitly (see note below about bazel run //:manage)
+DATABASE_URL=sqlite:////home/phil/code/glaze/.agent-worktrees/claude/issue-<N>-<slug>/db.sqlite3 \
+  .manage.venv/bin/python manage.py shell -c "
+from api.models import Piece
+# e.g. clear thumbnail_crop on the first page to match prod's null condition
+pieces = list(Piece.objects.order_by('-fields_last_modified')[:24])
+for i, p in enumerate(pieces):
+    p.thumbnail_crop = None if i % 2 == 0 else p.thumbnail_crop
+    p.save(update_fields=['thumbnail_crop'])
+print('done')
+"
+```
+
+For complex or repeatable setups, write a management command under
+`api/management/commands/` so the operation is self-documenting and can be re-run.
+
+**3. Confirm the bug reproduces before writing any fix.**
+
+Hit the endpoint with `curl` or the Django test client against the patched data and
+confirm the error reproduces. Do not write the fix until you can demonstrate the failure.
+
+**⚠️ `bazel run //:manage` uses the main checkout's database, not the worktree's.**
+
+`bazel run //:manage` resolves `BASE_DIR` from the Bazel execroot, which points at
+the main checkout regardless of which worktree you're in. Any migration or shell
+command run this way silently hits the wrong database.
+
+Always use the worktree's `.manage.venv` directly with an explicit `DATABASE_URL`:
+
+```bash
+# ❌ uses main checkout db regardless of which worktree you're in
+bazel run //:manage -- shell
+
+# ✅ uses worktree db
+DATABASE_URL=sqlite:////absolute/path/to/worktree/db.sqlite3 \
+  .manage.venv/bin/python manage.py shell
+```
