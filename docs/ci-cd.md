@@ -29,7 +29,7 @@ Runs on every pull request and every push to `main`. Skips doc-only changes (`.m
 
 | Job | Trigger | What it does |
 |---|---|---|
-| **Preflight** | Always | Computes a CI fingerprint to optimize runs, and performs an automated **Security Audit** by statically analyzing `ci.yml`. The job will fail immediately if any secrets other than `BAZEL_REMOTE_API_KEY` are detected, ensuring production secrets never enter the CI environment. |
+| **Preflight** | Always | Computes a CI fingerprint to optimize runs, and performs an automated **Security Audit** by statically analyzing `ci.yml`. The job will fail immediately if any secrets other than `BAZEL_REMOTE_API_KEY` or `GITHUB_TOKEN` are detected, ensuring production secrets never enter the CI environment. |
 | **Lint** | PRs always; `main` only when `skip_main=false` | Runs `gz_lint` (`bazel build --config=lint //...`) - ruff, ESLint, tsc, and mypy. |
 | **Coverage & Test** | PRs always; `main` only when `skip_main=false` | Runs `gz_test --coverage` (`bazel coverage //...`) then uploads the merged LCOV report to Codecov. |
 | **Build & smoke-test OCI image** | Always (including `main` regardless of `skip_main`) | Builds the OCI image with Bazel (`bazel run --config=ci --stamp //:load`), writes `GOOGLE_OAUTH_CLIENT_ID` into `web/.env.local` before the build so it is baked into the JS bundle, generates a runtime `.env` file from the production template (aligning with the CD process), pre-pulls sidecar images (Postgres, OpenTelemetry Collector), starts the full `docker compose` stack, and waits up to 300 s for the healthcheck to pass. On `push` to `main`, also pushes the image to `ghcr.io/shaoster/glaze` tagged with `:latest` and the commit SHA. |
