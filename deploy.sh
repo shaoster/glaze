@@ -53,44 +53,61 @@ echo "--- pulling release image ---"
 docker compose --profile production pull
 
 echo "--- rolling deploy: web ---"
-# Phase 1: start a second replica with the new image alongside the old one.
-docker compose --profile production up -d --no-recreate --scale web=2
-# Wait until both replicas are healthy before touching the old one.
-echo "  waiting for 2 healthy web replicas..."
-for i in $(seq 1 20); do
+# Step 1: Record the ID of the current (old) container.
+OLD_CONTAINER_ID=$(docker compose --profile production ps -q web | head -n 1)
+
+# Step 2: Spin up a second instance with the NEW image.
+# --no-recreate is crucial: it keeps the old container running while starting the new one.
+echo "  starting new web instance..."
+docker compose --profile production up -d --no-recreate --no-deps --scale web=2
+
+# Step 3: Wait for the NEW instance to be healthy.
+# We look for at least 2 healthy instances (the old one should already be healthy).
+echo "  waiting for new instance to pass health checks..."
+for i in $(seq 1 30); do
     healthy=$(docker compose ps --format json | python3 -c "
 import sys, json
-containers = [json.loads(l) for l in sys.stdin if l.strip()]
-web = [c for c in containers if c.get('Service') == 'web']
-print(sum(1 for c in web if c.get('Health') == 'healthy'))
+raw = sys.stdin.read().strip()
+if not raw:
+    print(0); sys.exit()
+try:
+    data = json.loads(raw)
+    containers = data if isinstance(data, list) else [data]
+except:
+    containers = [json.loads(l) for l in raw.splitlines() if l.strip()]
+web_healthy = [c for c in containers if (c.get('Service') == 'web' or c.get('service') == 'web') and (c.get('Health') == 'healthy' or c.get('health') == 'healthy')]
+print(len(web_healthy))
 " 2>/dev/null || echo 0)
     if [[ "$healthy" -ge 2 ]]; then
-        echo "  both replicas healthy"
+        echo "  new instance is healthy"
         break
     fi
-    echo "  $healthy/2 healthy ($i/20)"
-    sleep 15
+    echo "  waiting... ($i/30)"
+    sleep 10
 done
-# Phase 2: recreate the stale first replica (new-image replica serves traffic).
-docker compose --profile production up -d --scale web=2
-echo "  waiting for 2 healthy web replicas after recreation..."
-for i in $(seq 1 20); do
-    healthy=$(docker compose ps --format json | python3 -c "
-import sys, json
-containers = [json.loads(l) for l in sys.stdin if l.strip()]
-web = [c for c in containers if c.get('Service') == 'web']
-print(sum(1 for c in web if c.get('Health') == 'healthy'))
-" 2>/dev/null || echo 0)
-    if [[ "$healthy" -ge 2 ]]; then
-        echo "  both replicas healthy"
-        break
-    fi
-    echo "  $healthy/2 healthy ($i/20)"
-    sleep 15
-done
-# Phase 3: scale back to 1 steady-state replica.
+
+# Step 4: Reload Nginx. 
+# It will now round-robin between the old (healthy) and new (healthy) container.
+echo "  reloading nginx (traffic now shared)..."
+docker compose --profile production exec -T nginx nginx -s reload
+
+# Step 5: Remove the OLD container only.
+# By stopping and removing the specific container ID we recorded earlier, 
+# we leave the new healthy one serving traffic.
+if [[ -n "$OLD_CONTAINER_ID" ]]; then
+    echo "  removing old instance ($OLD_CONTAINER_ID)..."
+    docker stop "$OLD_CONTAINER_ID" >/dev/null
+    docker rm "$OLD_CONTAINER_ID" >/dev/null
+fi
+
+# Step 6: Finalize state.
+# 'up -d --scale web=1' will now see one healthy container and do nothing to it,
+# effectively promoting it to the primary instance.
 docker compose --profile production up -d --scale web=1
-echo "  scaled back to 1 replica"
+echo "  scaled back to 1 instance"
+
+# Step 7: Final Nginx reload to stop routing to the now-deleted old IP.
+docker compose --profile production exec -T nginx nginx -s reload
 
 echo "--- restarting other services ---"
 # --force-recreate picks up .env changes (e.g. secret rotation) for non-web services.
