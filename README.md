@@ -81,7 +81,7 @@ source env.sh
 
 **VS Code / Cursor:** the repo ships terminal profiles in [`.vscode/settings.json`](.vscode/settings.json) for Linux and macOS that automatically source `env.sh` in every new integrated terminal. Linux uses `bash`; macOS uses `zsh` with a repo-owned [`.vscode/.zshrc`](.vscode/.zshrc). The venv is activated and `gz_*` helpers are available from the moment the terminal opens.
 
-**AI coding agents (Claude Code, Codex, Cursor agent):** a companion script [`env-agent.sh`](env-agent.sh) provides a silent, lightweight bootstrap (venv activation + current-checkout `.env`/`.env.local` loading) for non-interactive shells. Claude Code picks it up via `.claude/settings.json`; Codex and other agents inherit it through `BASH_ENV` when launched from an `env.sh`-sourced terminal. Prefer repo-local worktrees under `.agent-worktrees/...` instead of `/tmp`; the bootstrap detects the active git worktree root automatically and expects the worktree to own its `.env`/`.env.local` files and materialized dependency environment after `gz_setup` has run. `gz_setup` materializes the isolated worktree-local developer environment, and `gz_reload` refreshes the current shell after setup so the new `PATH` is visible immediately. Keep repo-local Codex-specific config in `.agent-config/codex/` rather than `.codex`, which may be reserved by the local Codex installation. See [`docs/agents/dev.md`](docs/agents/dev.md) for details.
+**AI coding agents (Claude Code, Codex, Cursor agent):** a companion script [`env-agent.sh`](env-agent.sh) provides a silent, lightweight bootstrap (venv activation + current-checkout `.env`/`.env.local` loading) for non-interactive shells. Claude Code picks it up via `.claude/settings.json`; Codex and other agents inherit it through `BASH_ENV` when launched from an `env.sh`-sourced terminal. Prefer repo-local worktrees under `.agent-worktrees/...` instead of `/tmp`; the bootstrap detects the active git worktree root automatically and expects the worktree to own its `.env`/`.env.local` files and materialized dependency environment. `gz_reload` refreshes the current shell after shell/bootstrap/env-file edits so the new `PATH` is visible immediately. Keep repo-local Codex-specific config in `.agent-config/codex/` rather than `.codex`, which may be reserved by the local Codex installation. See [`docs/agents/dev.md`](docs/agents/dev.md) for details.
 **AI coding agents (Claude Code, Codex, Cursor agent):** a companion script [`env-agent.sh`](env-agent.sh) provides a silent, lightweight bootstrap (venv activation + current-checkout `.env`/`.env.local` loading) for non-interactive shells. Claude Code picks it up via `.claude/settings.json`; Codex and other agents inherit it through `BASH_ENV` when launched from an `env.sh`-sourced terminal. Prefer repo-local worktrees under `.agent-worktrees/...` instead of `/tmp`; the bootstrap detects the active git worktree root automatically and expects the worktree to own its `.env`/`.env.local` files and materialized dependency environment. `env.sh` will lazily create the minimal local bootstrap state needed for a healthy shell on first load, and `gz_reload` refreshes the current shell after shell/bootstrap/env-file edits so the new `PATH` is visible immediately. Keep repo-local Codex-specific config in `.agent-config/codex/` rather than `.codex`, which may be reserved by the local Codex installation. See [`docs/agents/dev.md`](docs/agents/dev.md) for details.
 
 ### Managing Package Dependencies
@@ -89,14 +89,14 @@ source env.sh
 Use the package managers you already know to edit dependency manifests, then hand the result back to the repo’s Bazel-aware workflow.
 
 **Python**
-- Use the Bazel-managed `uv` entrypoint from the repo root to edit Python dependencies.
+- Use the repo-local `uv` wrapper from the repo root to edit Python dependencies. `source env.sh` prepends the wrapper directory to `PATH`, and the wrapper dispatches to the Bazel-managed toolchain.
 - Typical commands: `uv add`, `uv remove`, `uv lock`, `uv sync`.
 - After changing Python packages, run `gz_sync` so the materialized environment and Bazel view stay aligned.
 
 **Web**
-- Use `npm` inside [`web/`](web/) to edit JavaScript dependencies.
+- Use the repo-local `npm` wrapper inside [`web/`](web/) to edit JavaScript dependencies. `source env.sh` prepends the wrapper directory to `PATH`, and the wrapper dispatches to the Bazel-managed toolchain.
 - After `npm install`, regenerate `web/pnpm-lock.yaml` from `web/package-lock.json` with `pnpm import`.
-- The reconciliation step should use the repo’s Bazel-aware Node toolchain so the `pnpm` side stays aligned with CI and Bazel.
+- The reconciliation step should use the repo-local `pnpm` wrapper so the `pnpm` side stays aligned with CI and Bazel.
 - After changing web packages, run `gz_sync` so the current shell and repo locks stay in sync.
 
 **When to use which helper**

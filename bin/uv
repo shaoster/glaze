@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${GLAZE_ROOT:=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+
+if command -v rtk >/dev/null 2>&1; then
+    exec rtk bazel run @uv//:uv -- "$@"
+fi
+exec bazel run @uv//:uv -- "$@"

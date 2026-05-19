@@ -39,6 +39,16 @@ if [[ -z "$_GLAZE_AGENT_ENV_LOADED" || "${GLAZE_ROOT:-}" != "$_detected_root" ]]
     _GLAZE_LOGS="$GLAZE_ROOT/.dev-logs"
     mkdir -p "$_GLAZE_PIDS" "$_GLAZE_LOGS"
 
+    _gz_prepend_path_once() {
+        local dir="$1"
+        [[ -d "$dir" ]] || return 0
+        case ":${PATH:-}:" in
+            *":$dir:"*) return 0 ;;
+        esac
+        PATH="$dir${PATH:+:$PATH}"
+        export PATH
+    }
+
     _gz_preferred_root_for() {
         printf '%s\n' "$GLAZE_ROOT"
     }
@@ -66,7 +76,6 @@ if [[ -z "$_GLAZE_AGENT_ENV_LOADED" || "${GLAZE_ROOT:-}" != "$_detected_root" ]]
 
     _gz_load_preferred_env_file ".env.local"
     _gz_load_preferred_env_file "web/.env.local"
-    _gz_load_preferred_env_file "mobile/.env.local"
 
     _gz_bazel() {
         if command -v rtk &>/dev/null; then
@@ -74,6 +83,14 @@ if [[ -z "$_GLAZE_AGENT_ENV_LOADED" || "${GLAZE_ROOT:-}" != "$_detected_root" ]]
         else
             bazel "$@"
         fi
+    }
+
+    _gz_manage_venv_looks_ready() {
+        [[ -f "$GLAZE_ROOT/.manage.venv/bin/activate" ]] || return 1
+        [[ -L "$GLAZE_ROOT/.manage.venv" ]] || return 0
+        local link_target
+        link_target="$(readlink -f "$GLAZE_ROOT/.manage.venv" 2>/dev/null)" || return 1
+        [[ -n "$link_target" && -d "$link_target" ]]
     }
 
     _gz_resolved_db_path() {
@@ -116,7 +133,10 @@ PY
             rtk init -g --auto-patch
         fi
 
-        if [[ ! -f "$GLAZE_ROOT/.manage.venv/bin/activate" ]]; then
+        if ! _gz_manage_venv_looks_ready; then
+            if [[ -e "$GLAZE_ROOT/.manage.venv" || -L "$GLAZE_ROOT/.manage.venv" ]]; then
+                rm -rf "$GLAZE_ROOT/.manage.venv"
+            fi
             echo "--- Building Python venv with Bazel (//:manage.venv)..."
             (cd "$GLAZE_ROOT" && _gz_bazel run //:manage.venv)
         fi
@@ -133,6 +153,9 @@ PY
     }
 
     _gz_ensure_bootstrap
+
+    _gz_prepend_path_once "$GLAZE_ROOT/web/node_modules/.bin"
+    _gz_prepend_path_once "$GLAZE_ROOT/bin"
 
     # Prevent Rust/rtk stack overflows from crashing the WSL2 VM
     ulimit -s unlimited 2>/dev/null || true
@@ -310,6 +333,20 @@ gz_install_mcp_tools() {
         return 1
     fi
     echo "=== MCP tools installed ==="
+}
+
+gz_sync() {
+    echo "=== Glaze: syncing package manager state ==="
+    echo "--- Syncing Python dependencies via uv..."
+    uv sync
+
+    echo "--- Syncing web dependencies via pnpm import..."
+    (cd "$GLAZE_ROOT/web" && pnpm import)
+
+    echo "--- Reloading shell bootstrap..."
+    gz_reload
+
+    echo "=== Sync complete ==="
 }
 
 # ---------------------------------------------------------------------------
@@ -851,11 +888,11 @@ gz_logs() {    # gz_logs [backend|web|all]  — defaults to running servers
 # ---------------------------------------------------------------------------
 
 gz_reload() {
-    # Re-source this file, bypassing the double-source guard so edits take
-    # effect in the current shell.
+    # Re-source the interactive bootstrap so env/bootstrap edits take effect in
+    # the current shell.
     unset _GLAZE_AGENT_ENV_LOADED
     # shellcheck disable=SC1091
-    source "$_GLAZE_SCRIPT_DIR/env-agent.sh"
+    source "$_GLAZE_SCRIPT_DIR/env.sh"
 }
 
 gz_gentypes() {
@@ -870,7 +907,8 @@ gz_gentypes() {
 
 _GZ_SHORTCUTS=(
     "gz_help           — show this list of shortcuts"
-    "gz_reload         — re-source env.sh in the current shell (picks up env-agent.sh edits)"
+    "gz_reload         — re-source env.sh in the current shell (picks up env/bootstrap edits)"
+    "gz_sync           — reconcile uv/npm package edits and reload the shell"
     "gz_install_mcp_tools — install MCP tool dependencies (jq, curl, git, gh)"
     "gz_manage <cmd>   — run any manage.py subcommand"
     "gz_migrate        — migrate"

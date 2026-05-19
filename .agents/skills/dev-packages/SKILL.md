@@ -63,16 +63,15 @@ Prefer Python for standalone dev tooling when the dependency graph allows it. Us
 
 ```bash
 # Install the package
-(cd web && rtk bazel run @nodejs_linux_amd64//:npm -- install react-swipeable)
+(cd web && npm install react-swipeable)
 
 # Regenerate the pnpm lockfile from the updated package-lock.json
 # pnpm must run from web/ where package.json and pnpm-lock.yaml live
-(cd web && rtk bazel run @nodejs_linux_amd64//:npx -- pnpm import)
+(cd web && pnpm import)
 ```
 
-`pnpm` is available at `~/.nvm/versions/node/*/bin/pnpm` when nvm is active. If
-`env-agent.sh` has sourced `.nvm/nvm.sh`, the `pnpm` binary is on `$PATH` and the
-subshell inherits it.
+`source env.sh` prepends the repo-local `bin/` directory, so `npm` and `pnpm`
+resolve to the Bazel-aware wrappers by default.
 
 After updating the lockfile, check whether the new package needs to be added to a
 `js_library` `srcs` or `deps` in the relevant `BUILD.bazel`:
