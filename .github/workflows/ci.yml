@@ -190,7 +190,7 @@ jobs:
           OTEL_ENABLED: "true"
           # Optional vars are intentionally left unset to test default fallbacks
         run: |
-          envsubst < .env.production.template | grep -vE '^[A-Z0-9_]+=$' > .env
+          envsubst < .env.production.template | grep -vE '^[A-Z0-9_]+=$' > /tmp/.env
 
       - name: Pre-pull sidecar images
         env:
@@ -200,7 +200,7 @@ jobs:
           # the timed --wait block so image download doesn't eat into the
           # healthcheck timeout budget. Explicitly name services to avoid pulling
           # the web service and overwriting the locally-built Bazel image.
-          docker compose pull db otelcol
+          docker compose --env-file /tmp/.env pull db otelcol
 
       - name: Smoke test via docker compose
         env:
@@ -212,11 +212,11 @@ jobs:
           # docker-compose.yml) is the pass criterion.
           # Timeout is 300s: migrate + load_public_library (249 records) +
           # gunicorn startup can exceed 120s on a cold runner.
-          docker compose up -d --wait --wait-timeout 300 || {
-            docker compose logs web | tail -100
+          docker compose --env-file /tmp/.env up -d --wait --wait-timeout 300 || {
+            docker compose --env-file /tmp/.env logs web | tail -100
             exit 1
           }
-          docker compose logs web | tail -50
+          docker compose --env-file /tmp/.env logs web | tail -50
 
       - if: failure()
         uses: ./.github/actions/collect-failure-diagnostics
@@ -225,7 +225,7 @@ jobs:
         if: always()
         env:
           IMAGE_TAG: latest
-        run: docker compose down -v --remove-orphans || true
+        run: docker compose --env-file /tmp/.env down -v --remove-orphans || true
 
       - name: Log in to GitHub Container Registry
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
