@@ -1,0 +1,279 @@
+export type ToolName =
+  | "prefill"
+  | "brush"
+  | "polygon"
+  | "flood"
+  | "grabcut"
+  | "snap";
+
+export type GrabCutHintMode = "rect" | "foreground" | "background";
+
+export type EdgeOperator = "sobel" | "scharr" | "canny";
+
+export type FloodMode = "add" | "subtract";
+
+export type FloodConnectivity = "4" | "8";
+
+export type SnapTarget = "vertex" | "all";
+
+export type AssistStatus = "idle" | "loading" | "error";
+
+export type Rect = { x: number; y: number; w: number; h: number };
+
+export type Point = { x: number; y: number };
+
+export type MaskEditorState = {
+  activeTool: ToolName;
+
+  // brush params
+  brushRadius: number;
+  brushMode: "paint" | "erase";
+
+  // flood fill params
+  floodMode: FloodMode;
+  floodTolerance: number;
+  floodSampleSize: number;
+  floodConnectivity: FloodConnectivity;
+  floodContiguous: boolean;
+  floodAntiAlias: boolean;
+
+  // polygon params
+  polygonVertices: Point[];
+  selectedVertex: number | null;
+  polygonSimplifyEps: number;
+  polygonLiveSnap: boolean;
+  polygonSnapRadius: number;
+
+  // grabcut params
+  grabcutRect: Rect | null;
+  grabcutHintMode: GrabCutHintMode;
+  grabcutBrushRadius: number;
+  grabcutIterations: number;
+
+  // contour snap params
+  snapTarget: SnapTarget;
+  snapRadius: number;
+  snapEdgeThreshold: number;
+  snapEdgeOperator: EdgeOperator;
+  snapRejectBelow: boolean;
+  snapAcrossDiscontinuities: boolean;
+
+  // undo/redo — canvas snapshots (ImageData serialized as Uint8ClampedArray)
+  undoStack: ImageData[];
+  redoStack: ImageData[];
+
+  // assist operations
+  assistStatus: AssistStatus;
+  assistError: string | null;
+  lastAssistMs: number | null;
+
+  dirty: boolean;
+};
+
+export type MaskEditorAction =
+  | { type: "hydrate"; snapshot: ImageData | null }
+  | { type: "set_tool"; tool: ToolName }
+  // brush
+  | { type: "set_brush_radius"; radius: number }
+  | { type: "set_brush_mode"; mode: "paint" | "erase" }
+  // flood
+  | { type: "set_flood_mode"; mode: FloodMode }
+  | { type: "set_flood_tolerance"; tolerance: number }
+  | { type: "set_flood_sample_size"; size: number }
+  | { type: "set_flood_connectivity"; connectivity: FloodConnectivity }
+  | { type: "set_flood_contiguous"; contiguous: boolean }
+  | { type: "set_flood_anti_alias"; antiAlias: boolean }
+  // polygon
+  | { type: "polygon_vertex_added"; point: Point }
+  | { type: "polygon_vertex_moved"; index: number; point: Point }
+  | { type: "polygon_vertex_deleted"; index: number }
+  | { type: "polygon_vertex_selected"; index: number | null }
+  | { type: "set_polygon_simplify_eps"; eps: number }
+  | { type: "set_polygon_live_snap"; on: boolean }
+  | { type: "set_polygon_snap_radius"; radius: number }
+  // grabcut
+  | { type: "set_grabcut_rect"; rect: Rect | null }
+  | { type: "set_grabcut_hint_mode"; mode: GrabCutHintMode }
+  | { type: "set_grabcut_brush_radius"; radius: number }
+  | { type: "set_grabcut_iterations"; iterations: number }
+  // snap
+  | { type: "set_snap_target"; target: SnapTarget }
+  | { type: "set_snap_radius"; radius: number }
+  | { type: "set_snap_edge_threshold"; threshold: number }
+  | { type: "set_snap_edge_operator"; operator: EdgeOperator }
+  | { type: "set_snap_reject_below"; on: boolean }
+  | { type: "set_snap_across_discontinuities"; on: boolean }
+  // canvas mutations
+  | { type: "tool_applied"; snapshot: ImageData }
+  | { type: "assist_started" }
+  | { type: "assist_succeeded"; snapshot: ImageData; ms: number }
+  | { type: "assist_failed"; error: string }
+  | { type: "undo" }
+  | { type: "redo" };
+
+const MAX_UNDO = 20;
+
+export const INITIAL_STATE: MaskEditorState = {
+  activeTool: "polygon",
+  brushRadius: 16,
+  brushMode: "paint",
+  floodMode: "add",
+  floodTolerance: 28,
+  floodSampleSize: 3,
+  floodConnectivity: "4",
+  floodContiguous: true,
+  floodAntiAlias: false,
+  polygonVertices: [],
+  selectedVertex: null,
+  polygonSimplifyEps: 1.4,
+  polygonLiveSnap: true,
+  polygonSnapRadius: 8,
+  grabcutRect: null,
+  grabcutHintMode: "rect",
+  grabcutBrushRadius: 6,
+  grabcutIterations: 5,
+  snapTarget: "vertex",
+  snapRadius: 22,
+  snapEdgeThreshold: 0.42,
+  snapEdgeOperator: "sobel",
+  snapRejectBelow: true,
+  snapAcrossDiscontinuities: false,
+  undoStack: [],
+  redoStack: [],
+  assistStatus: "idle",
+  assistError: null,
+  lastAssistMs: null,
+  dirty: false,
+};
+
+function pushUndo(state: MaskEditorState, snapshot: ImageData): MaskEditorState {
+  const stack = [...state.undoStack, snapshot].slice(-MAX_UNDO);
+  return { ...state, undoStack: stack, redoStack: [], dirty: true };
+}
+
+export function maskEditorReducer(
+  state: MaskEditorState,
+  action: MaskEditorAction,
+): MaskEditorState {
+  switch (action.type) {
+    case "hydrate":
+      return {
+        ...INITIAL_STATE,
+        undoStack: action.snapshot ? [action.snapshot] : [],
+      };
+
+    case "set_tool":
+      return { ...state, activeTool: action.tool };
+
+    case "set_brush_radius":
+      return { ...state, brushRadius: action.radius };
+    case "set_brush_mode":
+      return { ...state, brushMode: action.mode };
+
+    case "set_flood_mode":
+      return { ...state, floodMode: action.mode };
+    case "set_flood_tolerance":
+      return { ...state, floodTolerance: action.tolerance };
+    case "set_flood_sample_size":
+      return { ...state, floodSampleSize: action.size };
+    case "set_flood_connectivity":
+      return { ...state, floodConnectivity: action.connectivity };
+    case "set_flood_contiguous":
+      return { ...state, floodContiguous: action.contiguous };
+    case "set_flood_anti_alias":
+      return { ...state, floodAntiAlias: action.antiAlias };
+
+    case "polygon_vertex_added":
+      return {
+        ...state,
+        polygonVertices: [...state.polygonVertices, action.point],
+        selectedVertex: state.polygonVertices.length,
+        dirty: true,
+      };
+    case "polygon_vertex_moved": {
+      const verts = [...state.polygonVertices];
+      verts[action.index] = action.point;
+      return { ...state, polygonVertices: verts, dirty: true };
+    }
+    case "polygon_vertex_deleted": {
+      const verts = state.polygonVertices.filter((_, i) => i !== action.index);
+      return {
+        ...state,
+        polygonVertices: verts,
+        selectedVertex: null,
+        dirty: true,
+      };
+    }
+    case "polygon_vertex_selected":
+      return { ...state, selectedVertex: action.index };
+    case "set_polygon_simplify_eps":
+      return { ...state, polygonSimplifyEps: action.eps };
+    case "set_polygon_live_snap":
+      return { ...state, polygonLiveSnap: action.on };
+    case "set_polygon_snap_radius":
+      return { ...state, polygonSnapRadius: action.radius };
+
+    case "set_grabcut_rect":
+      return { ...state, grabcutRect: action.rect };
+    case "set_grabcut_hint_mode":
+      return { ...state, grabcutHintMode: action.mode };
+    case "set_grabcut_brush_radius":
+      return { ...state, grabcutBrushRadius: action.radius };
+    case "set_grabcut_iterations":
+      return { ...state, grabcutIterations: action.iterations };
+
+    case "set_snap_target":
+      return { ...state, snapTarget: action.target };
+    case "set_snap_radius":
+      return { ...state, snapRadius: action.radius };
+    case "set_snap_edge_threshold":
+      return { ...state, snapEdgeThreshold: action.threshold };
+    case "set_snap_edge_operator":
+      return { ...state, snapEdgeOperator: action.operator };
+    case "set_snap_reject_below":
+      return { ...state, snapRejectBelow: action.on };
+    case "set_snap_across_discontinuities":
+      return { ...state, snapAcrossDiscontinuities: action.on };
+
+    case "tool_applied":
+      return pushUndo(state, action.snapshot);
+
+    case "assist_started":
+      return { ...state, assistStatus: "loading", assistError: null };
+    case "assist_succeeded":
+      return {
+        ...pushUndo(state, action.snapshot),
+        assistStatus: "idle",
+        lastAssistMs: action.ms,
+      };
+    case "assist_failed":
+      return {
+        ...state,
+        assistStatus: "error",
+        assistError: action.error,
+      };
+
+    case "undo": {
+      if (state.undoStack.length === 0) return state;
+      const stack = [...state.undoStack];
+      const top = stack.pop()!;
+      return {
+        ...state,
+        undoStack: stack,
+        redoStack: [top, ...state.redoStack].slice(0, MAX_UNDO),
+      };
+    }
+    case "redo": {
+      if (state.redoStack.length === 0) return state;
+      const [top, ...rest] = state.redoStack;
+      return {
+        ...state,
+        undoStack: [...state.undoStack, top].slice(-MAX_UNDO),
+        redoStack: rest,
+      };
+    }
+
+    default:
+      return state;
+  }
+}
