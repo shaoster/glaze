@@ -32,20 +32,24 @@ vi.mock("../CloudinaryImage", () => ({
   ),
 }));
 
-const { mockPositioner } = vi.hoisted(() => ({
-  mockPositioner: {
-    get: vi.fn().mockReturnValue(undefined),
-    set: vi.fn(),
-    columnWidth: 220,
-    columnCount: 2,
-    update: vi.fn(),
-    range: vi.fn(),
-    size: vi.fn().mockReturnValue(0),
-    estimateHeight: vi.fn().mockReturnValue(0),
-    shortestColumn: vi.fn().mockReturnValue(0),
-    all: vi.fn().mockReturnValue([]),
-  },
-}));
+const { mockPositioner, mockContainerPosition } = vi.hoisted(() => {
+  const mockContainerPosition = { width: 440, offset: 0 };
+  return {
+    mockPositioner: {
+      get: vi.fn().mockReturnValue(undefined),
+      set: vi.fn(),
+      columnWidth: 220,
+      columnCount: 2,
+      update: vi.fn(),
+      range: vi.fn(),
+      size: vi.fn().mockReturnValue(0),
+      estimateHeight: vi.fn().mockReturnValue(0),
+      shortestColumn: vi.fn().mockReturnValue(0),
+      all: vi.fn().mockReturnValue([]),
+    },
+    mockContainerPosition,
+  };
+});
 
 let rerenderMasonryScroller: (() => void) | undefined;
 
@@ -114,7 +118,7 @@ vi.mock("masonic", () => ({
       </div>
     );
     },
-  useContainerPosition: () => ({ width: 440, offset: 0 }),
+  useContainerPosition: () => ({ width: mockContainerPosition.width, offset: mockContainerPosition.offset }),
   usePositioner: () => mockPositioner,
   useResizeObserver: () => undefined,
 }));
@@ -179,6 +183,31 @@ describe("PieceList", () => {
       return undefined;
     });
     rerenderMasonryScroller = undefined;
+    mockContainerPosition.width = 440;
+    mockContainerPosition.offset = 0;
+  });
+
+  describe("MasonryScroller container-width guard", () => {
+    it("does not render the masonry grid when container width is zero", () => {
+      // Root cause of the prod-only initial-overlap bug: useContainerPosition
+      // returns width=0 on the first React commit. If MasonryScroller renders
+      // then, masonic lays out Phase-1 items at columnWidth=0, the thumbnail
+      // shell collapses, and offsetHeight measurements are chrome-only (~112 px).
+      // Those heights are copied into the next positioner when the real width
+      // arrives, causing items to be placed too close and overlap.
+      mockContainerPosition.width = 0;
+      renderPieceList([makePiece()]);
+      expect(screen.queryByTestId("piece-grid")).not.toBeInTheDocument();
+    });
+
+    it("renders the masonry grid when container width is exactly 1 (boundary)", () => {
+      // Verifies the guard is `> 0` not `>= some threshold`. A wrong condition
+      // like `> 1` would let width=0 contaminate the positioner for narrow
+      // containers.
+      mockContainerPosition.width = 1;
+      renderPieceList([makePiece()]);
+      expect(screen.getByTestId("piece-grid")).toBeInTheDocument();
+    });
   });
 
   describe("masonry height pre-seeding", () => {

@@ -854,16 +854,20 @@ const PieceList = (props: PieceListProps) => {
           }}
         >
           <Box ref={masonryRef as React.RefObject<HTMLDivElement>}>
-            <MasonryScroller
-              positioner={positioner}
-              resizeObserver={resizeObserver}
-              items={filteredPieces}
-              render={MasonryPieceCard}
-              itemKey={(piece) => piece.id}
-              itemHeightEstimate={DEFAULT_CARD_HEIGHT_ESTIMATE}
-              offset={masonryOffset}
-              height={windowHeight}
-            />
+            {/* Suppress until width is known — rendering at width=0 contaminates
+                the positioner with chrome-only heights. See PR #551. */}
+            {masonryWidth > 0 && (
+              <MasonryScroller
+                positioner={positioner}
+                resizeObserver={resizeObserver}
+                items={filteredPieces}
+                render={MasonryPieceCard}
+                itemKey={(piece) => piece.id}
+                itemHeightEstimate={DEFAULT_CARD_HEIGHT_ESTIMATE}
+                offset={masonryOffset}
+                height={windowHeight}
+              />
+            )}
           </Box>
         </Box>
 
