@@ -183,6 +183,7 @@ jobs:
       # same configuration mechanism used on the droplet.
       - name: Generate .env for smoke test
         env:
+          IMAGE_TAG: latest
           POSTGRES_PASSWORD: ci
           SECRET_KEY: smoke-test-key-must-be-at-least-32-chars-long
           ALLOWED_HOST: localhost
@@ -190,21 +191,19 @@ jobs:
           OTEL_ENABLED: "true"
           # Optional vars are intentionally left unset to test default fallbacks
         run: |
-          envsubst < .env.production.template | grep -vE '^[A-Z0-9_]+=$' > /tmp/.env
+          # We include IMAGE_TAG in the .env so docker-compose.yml can interpolate it.
+          printf 'IMAGE_TAG=%s\n' "$IMAGE_TAG" > .env
+          envsubst < .env.production.template | grep -vE '^[A-Z0-9_]+=$' >> .env
 
       - name: Pre-pull sidecar images
-        env:
-          IMAGE_TAG: latest
         run: |
           # Pull third-party sidecar images (postgres, otelcol) before starting
           # the timed --wait block so image download doesn't eat into the
           # healthcheck timeout budget. Explicitly name services to avoid pulling
           # the web service and overwriting the locally-built Bazel image.
-          docker compose --env-file /tmp/.env pull db otelcol
+          docker compose pull db otelcol
 
       - name: Smoke test via docker compose
-        env:
-          IMAGE_TAG: latest
         run: |
           set -euo pipefail
           # --wait blocks until every service with a healthcheck reports
@@ -212,20 +211,18 @@ jobs:
           # docker-compose.yml) is the pass criterion.
           # Timeout is 300s: migrate + load_public_library (249 records) +
           # gunicorn startup can exceed 120s on a cold runner.
-          docker compose --env-file /tmp/.env up -d --wait --wait-timeout 300 || {
-            docker compose --env-file /tmp/.env logs web | tail -100
+          docker compose up -d --wait --wait-timeout 300 || {
+            docker compose logs web | tail -100
             exit 1
           }
-          docker compose --env-file /tmp/.env logs web | tail -50
+          docker compose logs web | tail -50
 
       - if: failure()
         uses: ./.github/actions/collect-failure-diagnostics
 
       - name: Tear down compose
         if: always()
-        env:
-          IMAGE_TAG: latest
-        run: docker compose --env-file /tmp/.env down -v --remove-orphans || true
+        run: docker compose down -v --remove-orphans || true
 
       - name: Log in to GitHub Container Registry
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
