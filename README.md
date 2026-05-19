@@ -251,6 +251,7 @@ Run locally with `gz_story`. See [`web/README.md`](web/README.md) for details.
 ## Deployment and CI/CD
 
 Deployment details, GitHub Actions workflows, and environment variables live in [`docs/ci-cd.md`](docs/ci-cd.md).
+The longer-term Helm/k3s migration checklist lives in [`docs/helm-k3s-migration.md`](docs/helm-k3s-migration.md).
 
 ## Project structure
 
