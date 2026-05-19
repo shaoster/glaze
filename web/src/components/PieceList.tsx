@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import SortIcon from "@mui/icons-material/Sort";
@@ -426,6 +426,18 @@ const PieceList = (props: PieceListProps) => {
   const masonryRef = useRef<HTMLElement | null>(null);
   const columnWidth = isMobile ? MASONRY_COLUMN_WIDTH_MOBILE : MASONRY_COLUMN_WIDTH_DESKTOP;
   const { width: masonryWidth, offset: masonryOffset } = useContainerPosition(masonryRef, [isMobile]);
+  const masonrySeedSignature = useMemo(
+    () =>
+      `${filterKey}|${masonryWidth}|${columnWidth}|${filteredPieces
+        .map((piece) => {
+          const crop = piece.thumbnail?.crop;
+          return crop
+            ? `${piece.id}:${crop.x}:${crop.y}:${crop.width}:${crop.height}`
+            : `${piece.id}:nocrop`;
+        })
+        .join(",")}`,
+    [filterKey, masonryWidth, columnWidth, filteredPieces],
+  );
   const positioner = usePositioner(
     {
       width: masonryWidth,
@@ -436,13 +448,15 @@ const PieceList = (props: PieceListProps) => {
     },
     [filterKey, masonryWidth, columnWidth, isMobile],
   );
-  useLayoutEffect(() => {
+  const seededLayoutSignatureRef = useRef<string | null>(null);
+  if (seededLayoutSignatureRef.current !== masonrySeedSignature) {
     filteredPieces.forEach((piece, index) => {
       if (piece.thumbnail?.crop && positioner.get(index) === undefined) {
         positioner.set(index, estimateCardHeight(piece, positioner.columnWidth));
       }
     });
-  }, [filteredPieces, positioner]);
+    seededLayoutSignatureRef.current = masonrySeedSignature;
+  }
   const resizeObserver = useResizeObserver(positioner);
 
   const toggleFilter = useCallback(
