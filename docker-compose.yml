@@ -72,10 +72,11 @@ services:
         condition: service_healthy
       otelcol:
         condition: service_started
+      deploy_init:
+        condition: service_completed_successfully
     # Probes the API readiness endpoint. A 200 response means database,
     # migrations, and the async task backend are all usable. start_period
-    # covers entrypoint commands (migrate, collectstatic, load_public_library,
-    # clear_stuck_tasks) before the first probe.
+    # covers Gunicorn startup after the bootstrap service has completed.
     healthcheck:
       test:
         - CMD
@@ -144,19 +145,24 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      deploy_init:
+        condition: service_completed_successfully
 
   deploy_init:
     image: ghcr.io/shaoster/glaze:${IMAGE_TAG:?Set IMAGE_TAG in .env}
     restart: "no"
-    # One-shot service that runs migrations and clears abandoned tasks
-    # before the new release starts serving traffic.
-    command: >
-      bash -c "python manage.py migrate --no-input &&
-               python manage.py clear_stuck_tasks --hours 1"
+    # One-shot service that runs migrations, seeds the public library, and
+    # clears abandoned tasks before the new release starts serving traffic.
+    entrypoint:
+      - bash
+      - -lc
+      - >
+        python manage.py migrate --no-input &&
+        python manage.py load_public_library --skip-if-missing &&
+        python manage.py clear_stuck_tasks --hours 1
     environment:
       PRODUCTION: "true"
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
-      REDIS_CACHE_URL: redis://redis:6379/1
       SECRET_KEY: ${SECRET_KEY}
     depends_on:
       db:

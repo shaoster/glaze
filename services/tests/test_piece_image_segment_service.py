@@ -54,7 +54,7 @@ class TestDownloadWithRetry(unittest.TestCase):
 
     def _get_fn(self):
         # Import late so that other heavy deps (rembg) are already patched
-        from tools.piece_image_segment_service import create_app  # noqa
+        from services.piece_image_segment_service import create_app  # noqa
 
         # We need to call create_app() with rembg mocked to retrieve the closure.
         # Instead, test the logic independently by reconstructing a minimal version.
@@ -214,7 +214,7 @@ class TestAuthVerification(unittest.TestCase):
         # Import inside test so the mock is already in sys.modules
         from fastapi.testclient import TestClient
 
-        from tools.piece_image_segment_service import create_app
+        from services.piece_image_segment_service import create_app
 
         app = create_app()
         return TestClient(app)
@@ -320,7 +320,7 @@ class TestModalBootstrap(unittest.TestCase):
         fake_modal.asgi_app = asgi_app
 
         with patch.dict("sys.modules", {"modal": fake_modal}):
-            module = importlib.import_module("tools.piece_image_segment_service")
+            module = importlib.import_module("services.piece_image_segment_service")
             module = importlib.reload(module)
             with patch.dict(
                 "sys.modules",

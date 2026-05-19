@@ -164,10 +164,12 @@ git commit -m "Update public library"
 
 **3. Automatic deployment on merge:**
 
-When the PR merges, CI builds and pushes a new Docker image. On the next `docker compose up -d`, the container runs `docker-entrypoint.sh`, which includes:
+When the PR merges, CI builds and pushes a new Docker image. On the next `docker compose up -d`, `deploy_init` applies migrations, loads the public library, and clears stuck tasks before the app container starts:
 
 ```bash
-gz_load_public_library --skip-if-missing
+python manage.py migrate --no-input &&
+python manage.py load_public_library --skip-if-missing &&
+python manage.py clear_stuck_tasks --hours 1
 ```
 
 `load_public_library` does an idempotent `update_or_create` for each record — running it multiple times is safe. The `--skip-if-missing` flag lets fresh deployments start cleanly before any fixture has been committed yet.

@@ -40,7 +40,7 @@ Runs automatically after CI completes successfully on `main`, or manually via `w
 | Job | What it does |
 |---|---|
 | **Deploy to droplet** | Renders `.env.production.template` with secrets and variables into `/tmp/.env`, SCPs it to the droplet, then runs `deploy.sh` to pull the new image and restart the stack. Creates a GitHub Release tagged `release-<sha>` on success. Runs in the `glaze-droplet` environment with `concurrency: deploy-production` (never cancels in-progress deploys). |
-| **Deploy ML Microservice to Modal** | Deploys `tools/piece_image_crop_service.py` to Modal using `modal deploy`. Runs in parallel with the droplet deploy. |
+| **Deploy Services to Modal** | Deploys the `services/` directory to Modal using `modal deploy services`. Runs in parallel with the droplet deploy. |
 
 #### Required secrets / variables
 
@@ -65,7 +65,7 @@ All are scoped to the `glaze-droplet` environment in **Settings -> Environments*
 | `CLOUDINARY_UPLOAD_FOLDER` | Variable | Cloudinary folder for user-uploaded images |
 | `CLOUDINARY_UPLOAD_PRESET` | Variable | Cloudinary upload preset |
 | `CLOUDINARY_PUBLIC_UPLOAD_FOLDER` | Variable | Cloudinary folder for public library images |
-| `REMOTE_REMBG_URL` | Variable | URL of the Modal crop microservice |
+| `REMOTE_REMBG_URL` | Variable | URL of the Modal segment microservice |
 | `OTEL_ENABLED` | Variable | Set to `true` to enable OpenTelemetry on startup |
 
 ---
@@ -96,7 +96,7 @@ PR merged to main
        └─ image job always runs -> pushes ghcr.io/shaoster/glaze:latest + :<sha>
             └─ CD triggered by workflow_run on success
                  ├─ deploy job: SCP .env -> deploy.sh -> docker compose pull + restart -> GitHub Release
-                 └─ deploy-modal job: modal deploy tools/piece_image_crop_service.py
+                 └─ deploy-modal job: modal deploy services
 ```
 
 nginx config changes (in `nginx/conf.d/`) are deployed automatically with every release — `docker compose up -d --force-recreate` mounts the config at the checked-out SHA with no separate sync step.

@@ -1,0 +1,21 @@
+load("@aspect_rules_py//py:defs.bzl", "py_binary")
+
+# ── Piece image segment service ───────────────────────────────────────────────
+# Local dev entry point for the Modal remote segmentation service.
+# Run with: bazel run //services:piece_image_segment_service
+# The service will listen on port 8080 for segment requests.
+
+py_binary(
+    name = "piece_image_segment_service",
+    srcs = ["piece_image_segment_service.py"],
+    deps = [
+        "@pypi//fastapi",
+        "@pypi//uvicorn",
+        "@pypi//rembg",
+        "@pypi//requests",
+        "@pypi//urllib3",
+        "@pypi//pillow",
+        "@pypi//pillow_heif",
+    ],
+    visibility = ["//visibility:public"],
+)

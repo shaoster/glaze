@@ -1,0 +1,24 @@
+load("//:python.bzl", "pytest_test")
+
+pytest_test(
+    name = "test_piece_image_segment_service",
+    cov_src = "services.piece_image_segment_service",
+    srcs = [
+        "test_piece_image_segment_service.py",
+        "//tools:pytest_main.py",
+    ],
+    main = "//tools:pytest_main.py",
+    args = ["services/tests/test_piece_image_segment_service.py"],
+    deps = [
+        "@pypi//fastapi",
+        "@pypi//httpx",
+        "@pypi//rembg",
+        "@pypi//opencv_python_headless",
+        "@pypi//requests",
+        "@pypi//urllib3",
+        "@pypi//pillow",
+        "@pypi//pillow_heif",
+        "//services:piece_image_segment_service",
+    ],
+    visibility = ["//visibility:public"],
+)
