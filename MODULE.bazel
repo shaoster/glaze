@@ -12,6 +12,8 @@ bazel_dep(name = "aspect_rules_lint", version = "2.5.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "rules_oci", version = "2.3.0")
 bazel_dep(name = "rules_pkg", version = "1.1.0")
+# rules_distroless is beta (no stable API). Test celery_worker_image builds
+# manually after any version bump — do not upgrade blindly.
 bazel_dep(name = "rules_distroless", version = "0.8.0")
 
 # ── Python toolchain ──────────────────────────────────────────────────────────
