@@ -414,7 +414,7 @@ gz_backup() {
     }
 
     echo "--- backing up production postgres from $host ---"
-    ssh "$host" "$KC kubectl exec glaze-postgres-0 -- pg_dump -U glaze -d glaze -Fc" > "$dump_path"
+    ssh "$host" "$KC kubectl exec glaze-postgres-0 -- bash -c 'PGPASSWORD=\"\$POSTGRES_PASSWORD\" pg_dump -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -Fc'" > "$dump_path"
     sha256sum "$dump_path"
     ls -lh "$dump_path"
 
