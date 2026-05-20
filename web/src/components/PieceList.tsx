@@ -17,7 +17,7 @@ import { formatState, isTerminalState, SUCCESSORS } from "../util/workflow";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import { MasonryScroller, createPositioner, useContainerPosition, useResizeObserver } from "masonic";
-import { DEFAULT_CARD_HEIGHT_ESTIMATE, estimateCardHeight, getThumbnailAspectRatio, getThumbnailRequestedHeight } from "./pieceCardHeight";
+import { DEFAULT_CARD_HEIGHT_ESTIMATE, getPieceCardLayout } from "./pieceCardHeight";
 import { Link, useSearchParams } from "react-router-dom";
 import CloudinaryImage from "./CloudinaryImage";
 import TagAutocomplete from "./TagAutocomplete";
@@ -140,9 +140,9 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
   const isStale = days >= 14 && !isTerminal;
   const label = formatState(piece.current_state.state);
   const detailPath = `/pieces/${piece.id}`;
-  const estimatedHeight = estimateCardHeight(piece, width);
+  const layout = getPieceCardLayout(piece, width);
   const [thumbnailAspectRatio, setThumbnailAspectRatio] = useState(
-    () => getThumbnailAspectRatio(piece),
+    () => layout.thumbnailAspectRatio,
   );
 
   // Tags: show 2 visible + dashed overflow chip (non-expandable in card)
@@ -159,8 +159,8 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
     <Box
       component={Link}
       to={detailPath}
-      style={{ minHeight: estimatedHeight }}
-      data-estimated-height={estimatedHeight}
+      style={{ minHeight: layout.estimatedHeight }}
+      data-estimated-height={layout.estimatedHeight}
       sx={{
         display: "block",
         borderRadius: 2,
@@ -194,7 +194,7 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
           crop={piece.thumbnail?.crop}
           context="gallery"
           requestedWidth={Math.round(width)}
-          requestedHeight={getThumbnailRequestedHeight(piece, Math.round(width))}
+          requestedHeight={layout.requestedHeight}
           style={{
             width: "100%",
             height: "100%",
@@ -480,7 +480,7 @@ const PieceList = (props: PieceListProps) => {
 
     filteredPieces.forEach((piece, index) => {
       if (piece.thumbnail?.crop) {
-        nextPositioner.set(index, estimateCardHeight(piece, nextPositioner.columnWidth));
+        nextPositioner.set(index, getPieceCardLayout(piece, nextPositioner.columnWidth).estimatedHeight);
       }
     });
 

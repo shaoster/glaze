@@ -450,7 +450,7 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 
 **Existing components:**
 
-- [`PieceList.tsx`](../../web/src/components/PieceList.tsx) — masonry orchestration layer for `PieceSummary` objects. It is responsible for preventing the list from flashing an incorrect first frame: measure width first, seed crop-backed heights before paint, and let un-cropped cards fall back to the default estimate until Masonic learns their true size.
+- [`PieceList.tsx`](../../web/src/components/PieceList.tsx) — masonry orchestration layer for `PieceSummary` objects. It prevents the list from flashing an incorrect first frame by waiting for a real width, seeding crop-backed heights before paint, and letting un-cropped cards fall back to the default estimate until Masonic measures them.
 - [`NewPieceDialog.tsx`](../../web/src/components/NewPieceDialog.tsx) — dialog for creating a new piece; name, optional notes, thumbnail gallery
 - [`WorkflowState.tsx`](../../web/src/components/WorkflowState.tsx) — edits the current `PieceState`: notes, location, additional fields, images (upload or URL), caption editing, lightbox launch
 - [`GlobalEntryField.tsx`](../../web/src/components/GlobalEntryField.tsx) — chip + button wrapper that shows the currently selected global entry and opens the `GlobalEntryDialog` picker on click.
