@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import SortIcon from "@mui/icons-material/Sort";
@@ -16,7 +16,7 @@ import type { PieceSummary, TagEntry } from "../util/types";
 import { formatState, isTerminalState, SUCCESSORS } from "../util/workflow";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
-import { MasonryScroller, useContainerPosition, usePositioner, useResizeObserver } from "masonic";
+import { MasonryScroller, createPositioner, useContainerPosition, useResizeObserver } from "masonic";
 import { DEFAULT_CARD_HEIGHT_ESTIMATE, estimateCardHeight, getThumbnailAspectRatio, getThumbnailRequestedHeight } from "./pieceCardHeight";
 import { Link, useSearchParams } from "react-router-dom";
 import CloudinaryImage from "./CloudinaryImage";
@@ -32,6 +32,32 @@ const MASONRY_COLUMN_WIDTH_DESKTOP = 220;
 const MASONRY_GUTTER = 8;
 const MASONRY_MAX_COLUMNS_MOBILE = 2;
 const MASONRY_MAX_COLUMNS_DESKTOP = 4;
+
+function getMasonryColumns(
+  width = 0,
+  minimumWidth = 0,
+  gutter = 8,
+  columnCount?: number,
+  maxColumnCount?: number,
+  maxColumnWidth?: number,
+): [number, number] {
+  columnCount =
+    columnCount ||
+    Math.min(
+      Math.floor((width + gutter) / (minimumWidth + gutter)),
+      maxColumnCount || Infinity,
+    ) ||
+    1;
+  let computedColumnWidth = Math.floor(
+    (width - gutter * (columnCount - 1)) / columnCount,
+  );
+
+  if (maxColumnWidth !== undefined && computedColumnWidth > maxColumnWidth) {
+    computedColumnWidth = maxColumnWidth;
+  }
+
+  return [computedColumnWidth, columnCount];
+}
 
 function useWindowHeight(): number {
   const [height, setHeight] = useState(() =>
@@ -437,40 +463,29 @@ const PieceList = (props: PieceListProps) => {
   const masonryRef = useRef<HTMLElement | null>(null);
   const columnWidth = isMobile ? MASONRY_COLUMN_WIDTH_MOBILE : MASONRY_COLUMN_WIDTH_DESKTOP;
   const { width: masonryWidth, offset: masonryOffset } = useContainerPosition(masonryRef, [isMobile]);
-  const positioner = usePositioner(
-    {
-      width: masonryWidth,
+  const positioner = useMemo(() => {
+    const [computedColumnWidth, computedColumnCount] = getMasonryColumns(
+      masonryWidth,
       columnWidth,
-      columnGutter: MASONRY_GUTTER,
-      rowGutter: MASONRY_GUTTER,
-      maxColumnCount: isMobile ? MASONRY_MAX_COLUMNS_MOBILE : MASONRY_MAX_COLUMNS_DESKTOP,
-    },
-    [filterKey, masonryWidth, columnWidth, isMobile],
-  );
-  const masonrySeedSignature = useMemo(
-    () =>
-      `${filterKey}|${masonryWidth}|${columnWidth}|${filteredPieces
-        .map((piece) => {
-          const crop = piece.thumbnail?.crop;
-          return crop
-            ? `${piece.id}:${crop.x}:${crop.y}:${crop.width}:${crop.height}`
-            : `${piece.id}:nocrop`;
-        })
-        .join(",")}`,
-    [filterKey, masonryWidth, columnWidth, filteredPieces],
-  );
-  const seededLayoutSignatureRef = useRef<string | null>(null);
-  useLayoutEffect(() => {
-    if (seededLayoutSignatureRef.current === masonrySeedSignature) {
-      return;
-    }
+      MASONRY_GUTTER,
+      undefined,
+      isMobile ? MASONRY_MAX_COLUMNS_MOBILE : MASONRY_MAX_COLUMNS_DESKTOP,
+    );
+    const nextPositioner = createPositioner(
+      computedColumnCount,
+      computedColumnWidth,
+      MASONRY_GUTTER,
+      MASONRY_GUTTER,
+    );
+
     filteredPieces.forEach((piece, index) => {
-      if (piece.thumbnail?.crop && positioner.get(index) === undefined) {
-        positioner.set(index, estimateCardHeight(piece, positioner.columnWidth));
+      if (piece.thumbnail?.crop) {
+        nextPositioner.set(index, estimateCardHeight(piece, nextPositioner.columnWidth));
       }
     });
-    seededLayoutSignatureRef.current = masonrySeedSignature;
-  }, [filteredPieces, masonrySeedSignature, positioner]);
+
+    return nextPositioner;
+  }, [filteredPieces, masonryWidth, columnWidth, isMobile, filterKey]);
   const resizeObserver = useResizeObserver(positioner);
 
   const toggleFilter = useCallback(
