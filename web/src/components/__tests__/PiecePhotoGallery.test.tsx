@@ -564,7 +564,9 @@ describe("PiecePhotoGallery", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-      const moveBtn = screen.getByRole("button", { name: /move to state/i });
+      // The mock lightbox is a plain div inside the RTL container, which the open gallery Dialog
+      // marks aria-hidden. Use hidden:true to bypass that filter.
+      const moveBtn = screen.getByRole("button", { name: /move to state/i, hidden: true });
 
       expect(moveBtn).toBeDisabled();
     });
@@ -586,7 +588,7 @@ describe("PiecePhotoGallery", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-      const moveBtn = screen.getByRole("button", { name: /move to state/i });
+      const moveBtn = screen.getByRole("button", { name: /move to state/i, hidden: true });
 
       expect(moveBtn).not.toBeDisabled();
     });
@@ -608,7 +610,7 @@ describe("PiecePhotoGallery", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-      await userEvent.click(screen.getByRole("button", { name: /move to state/i }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i, hidden: true }));
 
       // Image at index 0 has stateId "state-current"; dialog should only show "state-past"
       expect(screen.getByText("Move image to state")).toBeInTheDocument();
@@ -633,7 +635,7 @@ describe("PiecePhotoGallery", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 2" }));
-      await userEvent.click(screen.getByRole("button", { name: /move to state/i }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i, hidden: true }));
 
       // Image at index 1 has stateId "state-past"; dialog should only show "state-current"
       expect(screen.getByText("Wheel Thrown")).toBeInTheDocument();
@@ -667,7 +669,7 @@ describe("PiecePhotoGallery", () => {
       };
       const pieceAfterRemove = makeUpdatedPiece({
         current_state: currentStateAfterRemove,
-        history: [currentStateAfterRemove, pastStateAfterRemove],
+        history: [pastStateAfterRemove],
       });
       const finalPiece = makeUpdatedPiece();
 
@@ -692,7 +694,7 @@ describe("PiecePhotoGallery", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-      await userEvent.click(screen.getByRole("button", { name: /move to state/i }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i, hidden: true }));
       await userEvent.click(screen.getByText("Designed"));
 
       await waitFor(() => expect(updateCurrentStateFn).toHaveBeenCalledWith(
@@ -770,7 +772,7 @@ describe("PiecePhotoGallery", () => {
       // Open photo 2 (index 1) — the past-state image with stateId="state-past"
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 2" }));
-      await userEvent.click(screen.getByRole("button", { name: /move to state/i }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i, hidden: true }));
       // Picker shows only "state-current" ("Wheel Thrown") since source is "state-past"
       await userEvent.click(screen.getByText("Wheel Thrown"));
 
@@ -810,7 +812,7 @@ describe("PiecePhotoGallery", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-      await userEvent.click(screen.getByRole("button", { name: /move to state/i }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i, hidden: true }));
       await userEvent.click(screen.getByText("Designed"));
 
       await waitFor(() =>
@@ -835,7 +837,7 @@ describe("PiecePhotoGallery", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-      await userEvent.click(screen.getByRole("button", { name: /move to state/i }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i, hidden: true }));
       expect(screen.getByText("Move image to state")).toBeInTheDocument();
 
       await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
