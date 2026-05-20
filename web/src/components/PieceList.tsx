@@ -171,7 +171,8 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
           requestedHeight={getThumbnailRequestedHeight(piece, Math.round(width))}
           style={{
             width: "100%",
-            height: "auto",
+            height: "100%",
+            objectFit: "cover",
             display: "block",
           }}
           onLoad={(e) => {
