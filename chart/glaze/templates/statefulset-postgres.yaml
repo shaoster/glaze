@@ -32,7 +32,7 @@ spec:
           image: {{ .Values.postgres.image }}
           args:
             - -c
-            - shared_buffers=128MB
+            - shared_buffers={{ .Values.postgres.sharedBuffers }}
             - -c
             - work_mem=8MB
             - -c

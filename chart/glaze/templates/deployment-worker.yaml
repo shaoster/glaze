@@ -16,6 +16,10 @@ spec:
         {{- include "glaze.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: worker
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
       containers:
         - name: worker
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -23,7 +27,7 @@ spec:
           command:
             - bash
             - -lc
-            - python -m celery -A backend worker -l INFO
+            - python -m celery -A backend worker -l INFO --uid=1000 --gid=1000
           envFrom:
             - configMapRef:
                 name: {{ include "glaze.fullname" . }}-env
@@ -59,4 +63,4 @@ spec:
             - name: OTEL_RESOURCE_ATTRIBUTES
               value: "service.name=glaze-worker"
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml .Values.worker.resources | nindent 12 }}
