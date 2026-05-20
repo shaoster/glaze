@@ -1,0 +1,5 @@
+host: headlamp.potterdoc.com
+
+# htpasswd-formatted string: generate with `htpasswd -nb <user> <pass>`
+# The chart expects this as a plain htpasswd line (not base64); Helm will encode it.
+htpasswd: ""

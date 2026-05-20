@@ -17,13 +17,22 @@ spec:
         app.kubernetes.io/name: {{ include "glaze.name" . }}-postgres
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      securityContext: {}
+      initContainers:
+        - name: fix-data-perms
+          image: busybox:1.37
+          command: ["sh", "-c", "chmod 700 /var/lib/postgresql/data || true"]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          securityContext:
+            runAsUser: 0
       containers:
         - name: postgres
           image: {{ .Values.postgres.image }}
-          command:
-            - postgres
+          args:
             - -c
-            - shared_buffers=256MB
+            - shared_buffers={{ .Values.postgres.sharedBuffers }}
             - -c
             - work_mem=8MB
             - -c

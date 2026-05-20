@@ -1,5 +1,5 @@
 name: Collect failure diagnostics
-description: On job failure, capture system, bazel JVM, and (if present) docker compose state, then upload as a 14-day artifact for offline triage.
+description: On job failure, capture system and bazel JVM state, then upload as a 14-day artifact for offline triage.
 
 runs:
   using: composite
@@ -18,12 +18,8 @@ runs:
         # message points at) and the active invocation profile.
         find ~/.cache/bazel -maxdepth 6 -name jvm.out -exec cp -v {} "$d/" \;
         find ~/.cache/bazel -maxdepth 6 -name 'command.profile.gz' -exec cp -v {} "$d/" \;
-        # Docker / compose state — only meaningful in jobs that touch docker,
-        # but harmless to attempt elsewhere (commands return non-zero, ignored).
+        # Docker state — captures any containers still running after a failure.
         docker ps -a > "$d/docker-ps.txt" 2>&1
-        docker compose ps > "$d/compose-ps.txt" 2>&1
-        # Use docker logs directly — docker compose logs requires env vars
-        # (IMAGE_TAG etc.) that are unavailable in the diagnostics step.
         for cid in $(docker ps -aq 2>/dev/null); do
           name=$(docker inspect --format '{{.Name}}' "$cid" | tr -d '/')
           docker logs "$cid" > "$d/container-${name}.log" 2>&1
