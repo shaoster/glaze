@@ -100,10 +100,10 @@ ingress:
 # Resources for web deployment
 resources:
   requests:
-    memory: "96Mi"
+    memory: "128Mi"
     cpu: "50m"
   limits:
-    memory: "192Mi"
+    memory: "384Mi"
 
 nodeSelector: {}
 tolerations: []

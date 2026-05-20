@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: headlamp-basic-auth
+  namespace: kube-system
+type: Opaque
+stringData:
+  users: {{ .Values.htpasswd | quote }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: headlamp-auth
+  namespace: kube-system
+spec:
+  basicAuth:
+    secret: headlamp-basic-auth

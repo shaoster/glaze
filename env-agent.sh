@@ -368,18 +368,24 @@ gz_showmigrations()  { gz_manage showmigrations "$@"; }
 gz_dump_public_library() { gz_manage dump_public_library "$@"; }
 gz_load_public_library() { gz_manage load_public_library "$@"; }
 
-gz_prod() {          # gz_prod <manage.py subcommand> [args…]
+_gz_prod_kube() {    # internal: "KUBECONFIG=... kubectl exec deployment/glaze-web -- ..."
     local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
-    ssh "$host" "cd ~/glaze && docker compose exec web python manage.py $*"
+    local KC="KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
+    ssh "$host" "$KC kubectl exec deployment/glaze-web -- $*"
+}
+
+gz_prod() {          # gz_prod <manage.py subcommand> [args…]
+    _gz_prod_kube "python manage.py $*"
 }
 
 gz_prod_shell() {    # gz_prod_shell [-c "cmd"]  — piping avoids SSH quoting issues
     local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
+    local KC="KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
     if [[ "$1" == "-c" ]]; then
         echo "${2:?gz_prod_shell -c requires a command string}" \
-            | ssh "$host" "cd ~/glaze && docker compose exec -T web python manage.py shell"
+            | ssh "$host" "$KC kubectl exec -i deployment/glaze-web -- python manage.py shell"
     else
-        ssh "$host" "cd ~/glaze && docker compose exec web python manage.py shell $*"
+        ssh "$host" "$KC kubectl exec -it deployment/glaze-web -- python manage.py shell $*"
     fi
 }
 gz_prod_dbshell()    { gz_prod dbshell "$@"; }
@@ -389,6 +395,7 @@ gz_backup() {
     # disposable postgres:17 container to verify the dump is readable and
     # contains application data.
     local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
+    local KC="KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
     local dump_path="${1:-}"
     if [[ -z "$dump_path" ]]; then
         dump_path="$(mktemp /tmp/glaze-prod-postgres-XXXXXX.dump)"
@@ -407,7 +414,7 @@ gz_backup() {
     }
 
     echo "--- backing up production postgres from $host ---"
-    ssh "$host" "cd ~/glaze && docker compose exec -T db pg_dump -U glaze -d glaze -Fc" > "$dump_path"
+    ssh "$host" "$KC kubectl exec glaze-postgres-0 -- pg_dump -U glaze -d glaze -Fc" > "$dump_path"
     sha256sum "$dump_path"
     ls -lh "$dump_path"
 

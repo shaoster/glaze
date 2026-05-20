@@ -95,6 +95,7 @@ jobs:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
           EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
           GRAFANA_CLOUD_OTLP_TOKEN: ${{ secrets.GRAFANA_CLOUD_OTLP_TOKEN }}
           MODAL_AUTH_TOKEN: ${{ secrets.MODAL_AUTH_TOKEN }}
@@ -105,6 +106,7 @@ jobs:
           SECRET_KEY=${SECRET_KEY}
           CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
           CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+          GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
           EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
           GRAFANA_CLOUD_OTLP_TOKEN=${GRAFANA_CLOUD_OTLP_TOKEN}
           MODAL_AUTH_TOKEN=${MODAL_AUTH_TOKEN}
@@ -176,11 +178,26 @@ jobs:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
         run: |
           ssh "${DEPLOY_HOST}" "
-            KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm upgrade --install glaze ~/glaze-chart-deploy/ \
+            KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm upgrade --install glaze ~/glaze-chart-deploy/glaze/ \
               -f ~/glaze-values-override.yaml \
               --timeout 5m \
               --wait
           "
+
+      - name: Smoke test
+        env:
+          ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
+        run: |
+          for i in $(seq 1 6); do
+            if curl -sf "https://${ALLOWED_HOST}/api/health/ready/" --max-time 10; then
+              echo "Smoke test passed"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "Smoke test failed after 6 attempts" >&2
+          exit 1
 
       - name: Create GitHub Release
         env:

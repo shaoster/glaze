@@ -28,12 +28,18 @@ spec:
             httpGet:
               path: /api/health/ready/
               port: 8000
+              httpHeaders:
+                - name: Host
+                  value: {{ .Values.appConfig.allowedHost | default "localhost" | quote }}
             initialDelaySeconds: 60
             periodSeconds: 30
           readinessProbe:
             httpGet:
               path: /api/health/ready/
               port: 8000
+              httpHeaders:
+                - name: Host
+                  value: {{ .Values.appConfig.allowedHost | default "localhost" | quote }}
             initialDelaySeconds: 15
             periodSeconds: 10
           envFrom:

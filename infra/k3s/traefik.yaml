@@ -37,3 +37,8 @@ spec:
       effect: "NoSchedule"
     service:
       ipFamilyPolicy: "PreferDualStack"
+    ports:
+      web:
+        hostPort: 80
+      websecure:
+        hostPort: 443

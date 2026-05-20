@@ -63,10 +63,24 @@ data:
   CLOUDINARY_UPLOAD_FOLDER: {{ .Values.appConfig.cloudinaryUploadFolder | quote }}
   CLOUDINARY_UPLOAD_PRESET: {{ .Values.appConfig.cloudinaryUploadPreset | quote }}
   CLOUDINARY_PUBLIC_UPLOAD_FOLDER: {{ .Values.appConfig.cloudinaryPublicUploadFolder | quote }}
-  EMAIL_HOST: {{ .Values.appConfig.emailHost | quote }}
-  EMAIL_PORT: {{ .Values.appConfig.emailPort | quote }}
-  EMAIL_HOST_USER: {{ .Values.appConfig.emailHostUser | quote }}
-  EMAIL_USE_SSL: {{ .Values.appConfig.emailUseSsl | quote }}
-  DEFAULT_FROM_EMAIL: {{ .Values.appConfig.defaultFromEmail | quote }}
-  REMOTE_REMBG_URL: {{ .Values.appConfig.remoteRembgUrl | quote }}
-  OTEL_ENABLED: {{ .Values.appConfig.otelEnabled | quote }}
+  {{- with .Values.appConfig.emailHost }}
+  EMAIL_HOST: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.appConfig.emailPort }}
+  EMAIL_PORT: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.appConfig.emailHostUser }}
+  EMAIL_HOST_USER: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.appConfig.emailUseSsl }}
+  EMAIL_USE_SSL: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.appConfig.defaultFromEmail }}
+  DEFAULT_FROM_EMAIL: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.appConfig.remoteRembgUrl }}
+  REMOTE_REMBG_URL: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.appConfig.otelEnabled }}
+  OTEL_ENABLED: {{ . | quote }}
+  {{- end }}
