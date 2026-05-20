@@ -46,9 +46,8 @@ import TagManager from "./TagManager";
 import StateTransition from "./StateTransition";
 import PieceHistory from "./PieceHistory";
 import ProcessSummary from "./ProcessSummary";
-import SmallTutorialInlay, {
-  SMALL_TUTORIAL_INLAY_PLACEMENTS,
-} from "./SmallTutorialInlay";
+import SmallTutorialInlay from "./SmallTutorialInlay";
+import { SMALL_TUTORIAL_INLAY_PLACEMENTS } from "./SmallTutorialInlayConfig";
 import GlobalEntryField from "./GlobalEntryField";
 import PiecePhotoGallery, {
   type PiecePhotoGalleryImage,

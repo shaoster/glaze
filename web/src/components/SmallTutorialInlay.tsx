@@ -17,22 +17,12 @@ import {
   useCurrentUser,
   useSaveUserPreferences,
 } from "./CurrentUserContext";
-
-export const SMALL_TUTORIAL_INLAY_PLACEMENTS = {
-  RIGHT: "right",
-} as const;
-
-export type SmallTutorialInlayPlacement =
-  (typeof SMALL_TUTORIAL_INLAY_PLACEMENTS)[keyof typeof SMALL_TUTORIAL_INLAY_PLACEMENTS];
-
-export const SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING = {
-  TAIL_PROTRUSION_PX: 6,
-  MIN_LEFT_EDGE_GAP_PX: 4,
-} as const;
-
-export const SMALL_TUTORIAL_INLAY_RIGHT_HORIZONTAL_OFFSET_PX =
-  SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX +
-  SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.MIN_LEFT_EDGE_GAP_PX;
+import {
+  SMALL_TUTORIAL_INLAY_PLACEMENTS,
+  SMALL_TUTORIAL_INLAY_RIGHT_HORIZONTAL_OFFSET_PX,
+  SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING,
+  type SmallTutorialInlayPlacement,
+} from "./SmallTutorialInlayConfig";
 
 export interface SmallTutorialInlayProps {
   attachedElement: HTMLElement | null;

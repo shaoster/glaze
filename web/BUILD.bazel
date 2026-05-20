@@ -572,6 +572,7 @@ js_library(
         "src/components/NavigationBlocker.tsx",
         "src/components/PieceDetail.tsx",
         "src/components/SmallTutorialInlay.tsx",
+        "src/components/SmallTutorialInlayConfig.ts",
     ],
     deps = [
         ":autosave_src",

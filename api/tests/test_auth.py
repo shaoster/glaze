@@ -90,3 +90,48 @@ class TestAuthEndpointsMocked:
         assert user.profile.preferences == {
             "process_summary_fields": ["piece.created"],
         }
+
+    def test_auth_preferences_patch_merges_existing_preferences(self, client, user):
+        UserProfile.objects.create(
+            user=user,
+            preferences={
+                "process_summary_fields": ["piece.name"],
+                "tutorials": {
+                    "summary_customize_popover": "show",
+                    "other_tutorial": "show",
+                },
+                "theme": "dark",
+            },
+        )
+
+        response = client.patch(
+            "/api/auth/preferences/",
+            {
+                "preferences": {
+                    "tutorials": {
+                        "summary_customize_popover": "don't",
+                    }
+                }
+            },
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert response.json()["preferences"] == {
+            "process_summary_fields": ["piece.name"],
+            "tutorials": {
+                "summary_customize_popover": "don't",
+                "other_tutorial": "show",
+            },
+            "theme": "dark",
+        }
+
+        user.profile.refresh_from_db()
+        assert user.profile.preferences == {
+            "process_summary_fields": ["piece.name"],
+            "tutorials": {
+                "summary_customize_popover": "don't",
+                "other_tutorial": "show",
+            },
+            "theme": "dark",
+        }

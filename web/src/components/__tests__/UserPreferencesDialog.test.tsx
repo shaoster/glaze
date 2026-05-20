@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -117,5 +117,60 @@ describe("UserPreferencesDialog", () => {
     expect(
       screen.queryByText("Select the fields that should appear in your process summaries. Images are excluded."),
     ).not.toBeInTheDocument();
+  });
+
+  it("saves the full preferences document when toggling tutorials", async () => {
+    const user = userEvent.setup();
+    const saveUserPreferences = vi.fn(async (preferences) => preferences);
+    const onClose = vi.fn();
+
+    render(
+      <PreferencesDialogProvider
+        openPreferencesDialog={vi.fn()}
+        saveUserPreferences={saveUserPreferences}
+      >
+        <CurrentUserProvider
+          currentUser={{
+            id: 1,
+            email: "user@example.com",
+            first_name: "Jane",
+            last_name: "Doe",
+            is_staff: false,
+            openid_subject: "",
+            profile_image_url: "",
+            preferences: {
+              process_summary_fields: ["piece.name"],
+              tutorials: {
+                summary_customize_popover: "show",
+              },
+            },
+          }}
+        >
+          <UserPreferencesDialog
+            open
+            activeSectionId="tutorials"
+            onClose={onClose}
+            onSectionChange={vi.fn()}
+          />
+        </CurrentUserProvider>
+      </PreferencesDialogProvider>,
+    );
+
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "Show the summary customization tip",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(saveUserPreferences).toHaveBeenCalledWith({
+        process_summary_fields: ["piece.name"],
+        tutorials: {
+          summary_customize_popover: "don't",
+        },
+      });
+      expect(onClose).toHaveBeenCalled();
+    });
   });
 });

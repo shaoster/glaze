@@ -12,9 +12,7 @@ import type { UserPreferences } from "../../util/api";
 import {
   TUTORIAL_TOGGLE_KEYS,
 } from "../../util/tutorials";
-import {
-  SMALL_TUTORIAL_INLAY_PLACEMENTS,
-} from "../SmallTutorialInlay";
+import { SMALL_TUTORIAL_INLAY_PLACEMENTS } from "../SmallTutorialInlayConfig";
 
 function makeCurrentUser() {
   return {
