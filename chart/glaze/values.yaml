@@ -64,6 +64,8 @@ redis:
 
 worker:
   replicaCount: 1
+  image:
+    repository: ghcr.io/shaoster/glaze-worker
   resources:
     requests:
       memory: "128Mi"

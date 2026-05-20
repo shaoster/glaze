@@ -229,6 +229,42 @@ oci_push(
     # Example: bazel run //:push -- --tag $(git rev-parse --short HEAD)
 )
 
+# Add a non-root 'celery' user (uid/gid 1001) so the worker image can drop privileges.
+genrule(
+    name = "celery_user_files",
+    srcs = [],
+    outs = ["celery_user_files.tar"],
+    cmd = """
+set -e
+d=$$(mktemp -d)
+mkdir -p "$$d/etc" "$$d/home/celery"
+# Single-entry passwd/group — this layer only adds the celery user.
+printf 'celery:x:1001:1001::/home/celery:/bin/sh\\n' > "$$d/etc/passwd"
+printf 'celery:x:1001:\\n' > "$$d/etc/group"
+# Pack files; set ownership of home dir to uid/gid 1001 via --owner/--group flags.
+tar -cf $@ \
+    --owner=1001 --group=1001 \
+    -C "$$d" home \
+    --owner=0 --group=0 \
+    -C "$$d" etc
+rm -rf "$$d"
+""",
+)
+
+oci_image(
+    name = "celery_worker_image",
+    base = ":image",
+    tars = [":celery_user_files"],
+    user = "celery",
+    entrypoint = ["python", "-m", "celery", "-A", "backend", "worker", "-l", "INFO"],
+)
+
+oci_push(
+    name = "push_worker",
+    image = ":celery_worker_image",
+    repository = "ghcr.io/shaoster/glaze-worker",
+)
+
 # Load the freshly-built image into the local docker daemon so CI (and devs)
 # can `docker compose up` against it without a registry round-trip.
 # `bazel run //:load` tags it as ghcr.io/shaoster/glaze:latest, matching the
