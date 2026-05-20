@@ -1,18 +1,6 @@
-const CACHE_NAME = "glaze-shell-v2";
-const APP_SHELL = [
-  "/",
-  "/index.html",
-  "/site.webmanifest",
-  "/favicon.svg",
-  "/pwa-icon.svg",
-  "/mask-icon.svg",
-  "/apple-touch-icon.svg",
-];
+const CACHE_PREFIX = "glaze-shell-";
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)),
-  );
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
@@ -23,7 +11,7 @@ self.addEventListener("activate", (event) => {
       .then((cacheNames) =>
         Promise.all(
           cacheNames
-            .filter((cacheName) => cacheName !== CACHE_NAME)
+            .filter((cacheName) => cacheName.startsWith(CACHE_PREFIX))
             .map((cacheName) => caches.delete(cacheName)),
         ),
       ),
@@ -52,38 +40,6 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const responseClone = response.clone();
-          caches
-            .open(CACHE_NAME)
-            .then((cache) => cache.put("/index.html", responseClone));
-          return response;
-        })
-        .catch(async () => {
-          const cachedResponse = await caches.match("/index.html");
-          return cachedResponse ?? Response.error();
-        }),
-    );
-    return;
+    event.respondWith(fetch(request, { cache: "no-store" }));
   }
-
-  event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      const networkFetch = fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches
-              .open(CACHE_NAME)
-              .then((cache) => cache.put(request, responseClone));
-          }
-          return response;
-        })
-        .catch(() => cachedResponse);
-
-      return cachedResponse ?? networkFetch;
-    }),
-  );
 });

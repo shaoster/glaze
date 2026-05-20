@@ -47,8 +47,15 @@ export default defineConfig(({ mode }) => {
           "admin-widget": path.resolve(root, "src/admin.tsx"),
         },
         output: {
-          entryFileNames: "[name].js",
-          chunkFileNames: "chunks/[name].js",
+          // Hash the frontend entry and split chunks so each release gets its
+          // own immutable asset URLs. The admin widget stays stable because
+          // Django loads it via `static("admin-widget.js")`.
+          entryFileNames(chunkInfo) {
+            return chunkInfo.name === "admin-widget"
+              ? "[name].js"
+              : "[name]-[hash].js";
+          },
+          chunkFileNames: "chunks/[name]-[hash].js",
           assetFileNames: "assets/[name].[ext]",
         },
       },
