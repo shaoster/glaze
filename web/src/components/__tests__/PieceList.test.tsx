@@ -13,12 +13,14 @@ vi.mock("../CloudinaryImage", () => ({
     crop,
     requestedHeight,
     requestedWidth,
+    style,
     url,
     alt,
   }: {
     crop?: unknown;
     requestedHeight?: number;
     requestedWidth?: number;
+    style?: React.CSSProperties;
     url: string;
     alt?: string;
   }) => (
@@ -28,6 +30,7 @@ vi.mock("../CloudinaryImage", () => ({
       data-crop={crop ? "yes" : "no"}
       data-requested-height={requestedHeight}
       data-requested-width={requestedWidth}
+      style={style}
     />
   ),
 }));
@@ -628,6 +631,26 @@ describe("PieceList", () => {
       expect(image.getAttribute("data-crop")).toBe("yes");
       expect(image.getAttribute("data-requested-width")).toBe("240");
       expect(image.hasAttribute("data-requested-height")).toBe(false);
+    });
+
+    it("fills the thumbnail shell so cropped images do not leave a visible gap", () => {
+      const { container } = renderPieceList([
+        makePiece({
+          thumbnail: {
+            url: "https://example.com/tall.jpg",
+            cloudinary_public_id: "pieces/tall",
+            cloud_name: "demo",
+            crop: { x: 0, y: 0, width: 200, height: 400 },
+          },
+        }),
+      ]);
+
+      const image = container.querySelector("img")!;
+      expect(image).toHaveStyle({
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+      });
     });
 
     it("card links to piece detail page", () => {
