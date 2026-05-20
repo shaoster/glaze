@@ -33,6 +33,7 @@ import {
 import {
   addPieceState,
   extractErrorMessage,
+  moveImage,
   updateCurrentState,
   updatePastState,
   updatePiece,
@@ -421,13 +422,13 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     onPieceUpdated,
     updatePieceFn: canEdit ? updatePiece : undefined,
     updateCurrentStateFn: canEdit ? updateCurrentState : undefined,
-    pieceStates: [
-      { id: currentState.id, label: formatState(currentState.state) },
-      ...piece.history.map((s) => ({ id: s.id, label: formatState(s.state) })),
-    ],
-    currentStateId: currentState.id,
-    isEditable: piece.is_editable,
-    updatePastStateFn: canEdit ? updatePastState : undefined,
+    pieceStates: canEdit
+      ? [
+          { id: currentState.id, label: formatState(currentState.state) },
+          ...piece.history.map((s) => ({ id: s.id, label: formatState(s.state) })),
+        ]
+      : undefined,
+    moveImageFn: canEdit ? moveImage : undefined,
   } satisfies ComponentProps<typeof PiecePhotoGallery>;
 
   return (

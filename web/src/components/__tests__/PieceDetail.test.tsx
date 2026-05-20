@@ -141,6 +141,7 @@ vi.mock("../../util/api", () => ({
   updatePastState: vi.fn(),
   addPieceState: vi.fn(),
   updatePiece: vi.fn(),
+  moveImage: vi.fn(),
   createTagEntry: vi.fn(),
   createGlobalEntry: vi.fn(),
   toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),

@@ -153,7 +153,7 @@ def auth_preferences(request: Request) -> Response:
     if "preferences" in serializer.validated_data:
         existing_preferences = cast(
             dict[str, Any],
-            profile.preferences if isinstance(profile.preferences, dict) else {}
+            profile.preferences if isinstance(profile.preferences, dict) else {},
         )
         incoming_preferences = cast(
             dict[str, Any], serializer.validated_data["preferences"]

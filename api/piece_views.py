@@ -9,9 +9,10 @@ from typing import Callable
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.db.models import DateTimeField, OuterRef, Prefetch, Q, Subquery
+from django.db import transaction
+from django.db.models import DateTimeField, Max, OuterRef, Prefetch, Q, Subquery
 from django.db.models.functions import Coalesce, Greatest
-from django.http import StreamingHttpResponse
+from django.http import Http404, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
@@ -31,8 +32,10 @@ from .models import (
     AsyncTask,
     FavoriteGlazeCombination,
     GlazeCombination,
+    Image,
     Piece,
     PieceState,
+    PieceStateImage,
     UserProfile,
 )
 from .serializer_registry import (
@@ -74,6 +77,10 @@ _PIECE_ORDERING_MAP = {
 }
 _DEFAULT_ORDERING = "-last_modified"
 _DEFAULT_PAGE_SIZE = 24
+
+
+class PieceImageMoveSerializer(drf_serializers.Serializer):
+    piece_state_id = drf_serializers.UUIDField(required=False)
 
 
 @traced
@@ -385,4 +392,62 @@ def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response
     serializer.is_valid(raise_exception=True)
     serializer.update(ps, serializer.validated_data)
     piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
+    return Response(_serialize_piece_detail(piece, request))
+
+
+@extend_schema(
+    methods=["PATCH"],
+    request=PieceImageMoveSerializer,
+    responses={200: PieceDetailSerializer},
+    description=(
+        "Move a user-owned image from one piece state to another atomically. "
+        "Requires the piece to be in editable mode. Returns the full updated piece. "
+        "Omitting `piece_state_id` is a no-op that returns the current piece state."
+    ),
+)
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def piece_image_detail(request, image_id, piece_state_id):
+    """Move a user-owned PieceStateImage link to a different state atomically."""
+    image = get_object_or_404(Image, pk=image_id, user=request.user)
+    request_serializer = PieceImageMoveSerializer(data=request.data)
+    request_serializer.is_valid(raise_exception=True)
+    target_state_id = request_serializer.validated_data.get("piece_state_id")
+
+    with transaction.atomic():
+        link = get_object_or_404(
+            PieceStateImage.objects.select_for_update().select_related(
+                "piece_state__piece"
+            ),
+            image=image,
+            piece_state_id=piece_state_id,
+        )
+        piece = link.piece_state.piece
+        if piece.user_id != request.user.pk:
+            raise Http404
+        if not piece.is_editable:
+            return Response(
+                {"detail": "Piece is not in editable mode."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if target_state_id and target_state_id != link.piece_state_id:
+            to_state = get_object_or_404(piece.states, pk=target_state_id)
+            duplicate_link = (
+                PieceStateImage.objects.select_for_update()
+                .filter(piece_state=to_state, image=image)
+                .exclude(pk=link.pk)
+                .first()
+            )
+            if duplicate_link is not None:
+                link.delete()
+            else:
+                next_order = (
+                    to_state.image_links.aggregate(m=Max("order"))["m"] or -1
+                ) + 1
+                link.piece_state = to_state
+                link.order = next_order
+                link.save(update_fields=["piece_state", "order"])
+
+    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece.pk)
     return Response(_serialize_piece_detail(piece, request))

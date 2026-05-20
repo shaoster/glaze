@@ -583,7 +583,11 @@ class PieceStateImage(models.Model):
             models.UniqueConstraint(
                 fields=["piece_state", "order"],
                 name="uniq_piece_state_image_order",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["piece_state", "image"],
+                name="uniq_piece_state_image",
+            ),
         ]
 
     def __str__(self) -> str:

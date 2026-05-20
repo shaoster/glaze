@@ -8,18 +8,16 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   IconButton,
-  List,
-  ListItemButton,
-  ListItemText,
+  MenuItem,
+  Select,
   TextField,
   Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
 import type { CaptionedImage, PieceDetail } from "../util/types";
-import { updateCurrentState, updatePastState, updatePiece } from "../util/api";
+import { moveImage, updateCurrentState, updatePiece } from "../util/api";
 import DeletePiecePhotoDialog from "./DeletePiecePhotoDialog";
 import ImageLightbox from "./ImageLightbox";
 import PiecePhotoGalleryGrid from "./PiecePhotoGalleryGrid";
@@ -51,9 +49,7 @@ type PiecePhotoGalleryProps = {
   updatePieceFn?: typeof updatePiece;
   updateCurrentStateFn?: typeof updateCurrentState;
   pieceStates?: PieceStateRef[];
-  currentStateId?: string;
-  isEditable?: boolean;
-  updatePastStateFn?: typeof updatePastState;
+  moveImageFn?: typeof moveImage;
 };
 
 function isEditableImage(
@@ -62,15 +58,6 @@ function isEditableImage(
   return image.editableCurrentStateIndex !== null;
 }
 
-function toEditablePhoto(image: CaptionedImage): EditablePiecePhoto {
-  return {
-    url: image.url,
-    caption: image.caption,
-    cloudinary_public_id: image.cloudinary_public_id ?? null,
-    cloud_name: image.cloud_name ?? null,
-    crop: image.crop ?? null,
-  };
-}
 
 export default function PiecePhotoGallery({
   images,
@@ -82,9 +69,7 @@ export default function PiecePhotoGallery({
   updatePieceFn,
   updateCurrentStateFn,
   pieceStates,
-  currentStateId,
-  isEditable,
-  updatePastStateFn,
+  moveImageFn,
 }: PiecePhotoGalleryProps) {
   const theme = useTheme();
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -95,7 +80,6 @@ export default function PiecePhotoGallery({
   const [captionSaveError, setCaptionSaveError] = useState<string | null>(null);
   const [deleteDialogIndex, setDeleteDialogIndex] = useState<number | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
-  const [moveDialogImageIndex, setMoveDialogImageIndex] = useState<number | null>(null);
   const [moveSaving, setMoveSaving] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
 
@@ -103,6 +87,7 @@ export default function PiecePhotoGallery({
     if (lightboxIndex === null) return;
     setCaptionEditing(false);
     setCaptionSaveError(null);
+    setMoveError(null);
     setCaptionDraft(images[lightboxIndex]?.caption ?? "");
   }, [images, lightboxIndex]);
 
@@ -192,6 +177,25 @@ export default function PiecePhotoGallery({
     }
   }
 
+  async function handleMoveImage(toStateId: string) {
+    if (!activeImage?.image_id || !moveImageFn || !onPieceUpdated) return;
+    setMoveSaving(true);
+    setMoveError(null);
+    try {
+      const updated = await moveImageFn(
+        activeImage.image_id,
+        activeImage.stateId,
+        toStateId,
+      );
+      onPieceUpdated(updated);
+      setLightboxIndex(null);
+    } catch {
+      setMoveError("Failed to move photo. Please try again.");
+    } finally {
+      setMoveSaving(false);
+    }
+  }
+
   async function handleDeleteImage() {
     if (deleteDialogIndex === null || !updateCurrentStateFn) {
       return;
@@ -216,68 +220,6 @@ export default function PiecePhotoGallery({
     }
   }
 
-  async function handleMoveImage(targetStateId: string) {
-    if (
-      moveDialogImageIndex === null ||
-      !pieceId ||
-      !onPieceUpdated ||
-      !updateCurrentStateFn ||
-      !updatePastStateFn
-    ) {
-      return;
-    }
-    const image = images[moveDialogImageIndex];
-    const sourceStateId = image.stateId;
-
-    const nextSourceImages = images
-      .filter((img) => img.stateId === sourceStateId && img !== image)
-      .map(toEditablePhoto);
-
-    setMoveSaving(true);
-    setMoveError(null);
-    try {
-      let updatedAfterSource: PieceDetail;
-      if (sourceStateId === currentStateId) {
-        updatedAfterSource = await updateCurrentStateFn(pieceId, {
-          notes: currentStateNotes!,
-          images: nextSourceImages,
-          custom_fields: normalizeFields(currentStateCustomFields ?? {}),
-        });
-      } else {
-        updatedAfterSource = await updatePastStateFn(pieceId, sourceStateId, {
-          images: nextSourceImages,
-        });
-      }
-
-      const allStates = [updatedAfterSource.current_state, ...updatedAfterSource.history];
-      const targetState = allStates.find((s) => s.id === targetStateId);
-      if (!targetState) {
-        throw new Error("Target state not found.");
-      }
-      const nextTargetImages = [...targetState.images.map(toEditablePhoto), toEditablePhoto(image)];
-
-      let finalPiece: PieceDetail;
-      if (targetStateId === currentStateId) {
-        finalPiece = await updateCurrentStateFn(pieceId, {
-          notes: updatedAfterSource.current_state.notes,
-          images: nextTargetImages,
-          custom_fields: normalizeFields(updatedAfterSource.current_state.custom_fields ?? {}),
-        });
-      } else {
-        finalPiece = await updatePastStateFn(pieceId, targetStateId, {
-          images: nextTargetImages,
-        });
-      }
-      onPieceUpdated(finalPiece);
-      setMoveDialogImageIndex(null);
-      setLightboxIndex(null);
-    } catch {
-      setMoveError("Failed to move image. Please try again.");
-    } finally {
-      setMoveSaving(false);
-    }
-  }
-
   const triggerLabel = `${photoCount} photo${photoCount === 1 ? "" : "s"}`;
 
   const canMutateCurrentStateImages =
@@ -292,11 +234,6 @@ export default function PiecePhotoGallery({
   const canEditCaption =
     editableCurrentStateIndex !== null &&
     canMutateCurrentStateImages;
-  const canMove =
-    canMutateCurrentStateImages &&
-    isEditable === true &&
-    updatePastStateFn !== undefined &&
-    (pieceStates?.length ?? 0) > 1;
 
   const footer = activeImage ? (
     <Box sx={{ display: "grid", gap: 0.75, justifyItems: "center" }}>
@@ -392,34 +329,50 @@ export default function PiecePhotoGallery({
           {captionSaveError}
         </Typography>
       )}
+      {moveImageFn &&
+        activeImage.image_id &&
+        pieceStates &&
+        pieceStates.length > 1 && (
+          <Select
+            size="small"
+            displayEmpty
+            value=""
+            disabled={moveSaving}
+            onChange={(e) => {
+              if (e.target.value) void handleMoveImage(e.target.value);
+            }}
+            aria-label="Move photo to state"
+            sx={{
+              color: "rgba(255,255,255,0.85)",
+              fontSize: "0.75rem",
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: "rgba(255,255,255,0.35)",
+              },
+              "& .MuiSvgIcon-root": { color: "rgba(255,255,255,0.6)" },
+            }}
+          >
+            <MenuItem value="" disabled>
+              {moveSaving ? "Moving…" : "Move to…"}
+            </MenuItem>
+            {pieceStates
+              .filter((s) => s.id !== activeImage.stateId)
+              .map((s) => (
+                <MenuItem key={s.id} value={s.id}>
+                  {s.label}
+                </MenuItem>
+              ))}
+          </Select>
+        )}
+      {moveError && (
+        <Typography variant="caption" sx={{ color: "error.light" }}>
+          {moveError}
+        </Typography>
+      )}
       <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.55)" }}>
         {editableCurrentStateIndex !== null
           ? "Added in current state"
           : `Added in ${activeImage.stateLabel}`}
       </Typography>
-      {canMove ? (
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() => setMoveDialogImageIndex(lightboxIndex)}
-          sx={{ color: "white", borderColor: "rgba(255,255,255,0.35)" }}
-        >
-          Move to state
-        </Button>
-      ) : canMutateCurrentStateImages && !isEditable && updatePastStateFn !== undefined && (pieceStates?.length ?? 0) > 1 ? (
-        <Tooltip title="Piece must be editable to move images.">
-          <span>
-            <Button
-              size="small"
-              variant="outlined"
-              disabled
-              sx={{ color: "rgba(255,255,255,0.35)", borderColor: "rgba(255,255,255,0.2)" }}
-            >
-              Move to state
-            </Button>
-          </span>
-        </Tooltip>
-      ) : null}
     </Box>
   ) : null;
 
@@ -490,49 +443,6 @@ export default function PiecePhotoGallery({
         onCancel={() => setDeleteDialogIndex(null)}
         onConfirm={() => void handleDeleteImage()}
       />
-
-      {moveDialogImageIndex !== null && (
-        <Dialog
-          open
-          // Intentionally swallow backdrop/escape close while a save is in flight.
-          onClose={() => !moveSaving && setMoveDialogImageIndex(null)}
-          maxWidth="xs"
-          fullWidth
-        >
-          <DialogTitle>Move image to state</DialogTitle>
-          <DialogContent>
-            <List disablePadding>
-              {(pieceStates ?? [])
-                .filter((s) => s.id !== images[moveDialogImageIndex]?.stateId)
-                .map((s) => (
-                  <ListItemButton
-                    key={s.id}
-                    onClick={() => void handleMoveImage(s.id)}
-                    disabled={moveSaving}
-                  >
-                    <ListItemText primary={s.label} />
-                  </ListItemButton>
-                ))}
-            </List>
-            {moveError && (
-              <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-                {moveError}
-              </Typography>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => {
-                setMoveDialogImageIndex(null);
-                setMoveError(null);
-              }}
-              disabled={moveSaving}
-            >
-              Cancel
-            </Button>
-          </DialogActions>
-        </Dialog>
-      )}
     </>
   );
 }
