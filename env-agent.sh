@@ -92,7 +92,7 @@ if [[ -z "$_GLAZE_AGENT_ENV_LOADED" || "${GLAZE_ROOT:-}" != "$_detected_root" ]]
             local _wt_slug
             _wt_slug="$(basename "$GLAZE_ROOT")"
             "${cmd[@]}" --output_base="$HOME/.cache/bazel-worktrees/$_wt_slug" \
-                        --disk_cache="$HOME/.cache/bazel-shared-disk-cache" "$@"
+                        --disk_cache="$HOME/.cache/bazel-disk-cache" "$@"
         else
             "${cmd[@]}" "$@"
         fi
