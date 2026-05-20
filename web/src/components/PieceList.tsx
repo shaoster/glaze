@@ -453,12 +453,6 @@ const PieceList = (props: PieceListProps) => {
   }, [activeFilters, activeTagIds, activeTags]);
 
   const hasActiveFilters = activeFilters.length > 0 || activeTagIds.length > 0;
-  const filterKey = useMemo(() => {
-    const filters = [...activeFilters].sort().join(",");
-    const tags = [...activeTagIds].sort().join(",");
-    return `${filters}|${tags}|${sortOrder}`;
-  }, [activeFilters, activeTagIds, sortOrder]);
-
   const windowHeight = useWindowHeight();
   const masonryRef = useRef<HTMLElement | null>(null);
   const columnWidth = isMobile ? MASONRY_COLUMN_WIDTH_MOBILE : MASONRY_COLUMN_WIDTH_DESKTOP;
@@ -485,7 +479,7 @@ const PieceList = (props: PieceListProps) => {
     });
 
     return nextPositioner;
-  }, [filteredPieces, masonryWidth, columnWidth, isMobile, filterKey]);
+  }, [filteredPieces, masonryWidth, columnWidth, isMobile]);
   const resizeObserver = useResizeObserver(positioner);
 
   const toggleFilter = useCallback(

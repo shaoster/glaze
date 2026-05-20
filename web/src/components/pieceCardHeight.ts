@@ -31,6 +31,7 @@ function getThumbnailMetrics(piece: PieceSummary) {
   if (hasCrop && crop) {
     return {
       hasCrop: true,
+      crop,
       aspectRatio: hasOriginalDimensions
         ? `${crop.width * origW} / ${crop.height * origH}`
         : `${crop.width} / ${crop.height}`,
@@ -55,7 +56,7 @@ export function getPieceCardLayout(
   const thumbnail = getThumbnailMetrics(piece);
 
   if (thumbnail.hasCrop) {
-    const crop = piece.thumbnail?.crop!;
+    const crop = thumbnail.crop;
     const origW = piece.thumbnail?.width;
     const origH = piece.thumbnail?.height;
     return {
