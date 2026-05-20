@@ -1,13 +1,19 @@
-import { Box, Typography } from "@mui/material";
-import type { PieceState } from "../util/types";
+import { Box, Button, Typography } from "@mui/material";
+import type { PieceDetail, PieceState } from "../util/types";
 import {
   getProcessSummaryDefinition,
+  getProcessSummaryFieldOptions,
   type WorkflowSummaryComputeDefinition,
   type WorkflowSummaryCondition,
   type WorkflowSummaryItem,
 } from "../util/workflow";
+import {
+  useOpenPreferencesDialog,
+  useCurrentUser,
+} from "./CurrentUserContext";
 
 type ProcessSummaryProps = {
+  piece: PieceDetail;
   history: PieceState[];
 };
 
@@ -17,9 +23,87 @@ type RenderedSummaryItem = {
   description?: string;
 };
 
+type RenderedSelectedField = RenderedSummaryItem & {
+  ref: string;
+};
+
 export default function ProcessSummary({
+  piece,
   history,
 }: ProcessSummaryProps) {
+  const currentUser = useCurrentUser();
+  const openPreferencesDialog = useOpenPreferencesDialog();
+  const selectedRefs = currentUser?.preferences.process_summary_fields ?? [];
+
+  if (selectedRefs.length > 0) {
+    const fieldsByGroup = renderSelectedFields(piece, history, selectedRefs);
+    if (fieldsByGroup.length > 0) {
+      return (
+        <Box sx={{ display: "grid", gap: 2 }}>
+          {fieldsByGroup.map((section) => (
+            <Box key={section.title}>
+              <Typography
+                variant="subtitle2"
+                sx={{ mb: 1, color: "text.secondary", fontWeight: 700 }}
+              >
+                {section.title}
+              </Typography>
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: 1,
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                }}
+              >
+                {section.fields.map((field) => (
+                  <Box
+                    key={field.ref}
+                    sx={{
+                      minWidth: 0,
+                      borderTop: "1px solid",
+                      borderColor: "divider",
+                      pt: 0.75,
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                      {field.label}
+                    </Typography>
+                    <Typography variant="body1" sx={{ overflowWrap: "anywhere" }}>
+                      {field.value}
+                    </Typography>
+                    {field.description ? (
+                      <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                        {field.description}
+                      </Typography>
+                    ) : null}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      );
+    }
+
+    return (
+      <Box sx={{ py: 0.5 }}>
+        <Typography variant="body2" color="text.secondary">
+          No selected summary fields have values for this piece.
+        </Typography>
+        {openPreferencesDialog ? (
+          <Button
+            variant="text"
+            size="small"
+            onClick={() => openPreferencesDialog("process-summary")}
+            sx={{ mt: 0.5, px: 0, alignSelf: "flex-start" }}
+          >
+            Choose summary fields
+          </Button>
+        ) : null}
+      </Box>
+    );
+  }
+
   const sections = getProcessSummaryDefinition()
     .map((section) => ({
       title: section.title,
@@ -80,6 +164,34 @@ export default function ProcessSummary({
   );
 }
 
+function renderSelectedFields(
+  piece: PieceDetail,
+  history: PieceState[],
+  selectedRefs: string[],
+): { title: string; fields: RenderedSelectedField[] }[] {
+  const options = new Map(
+    getProcessSummaryFieldOptions().map((option) => [option.ref, option]),
+  );
+  const grouped = new Map<string, RenderedSelectedField[]>();
+
+  for (const ref of selectedRefs) {
+    const option = options.get(ref);
+    if (!option) continue;
+    const value = formatRefValue(piece, history, ref);
+    if (!value) continue;
+    const fields = grouped.get(option.group) ?? [];
+    fields.push({
+      ref,
+      label: option.label,
+      value,
+      description: option.description,
+    });
+    grouped.set(option.group, fields);
+  }
+
+  return Array.from(grouped, ([title, fields]) => ({ title, fields }));
+}
+
 function renderSummaryItem(
   item: WorkflowSummaryItem,
   history: PieceState[],
@@ -94,7 +206,7 @@ function renderSummaryItem(
   }
   if (item.kind === "value") {
     const value = getFieldValue(history, item.stateId, item.fieldName);
-    const formatted = formatValue(value);
+    const formatted = formatSummaryValue(value);
     return formatted
       ? { label: item.label, value: formatted, description: item.description }
       : null;
@@ -132,6 +244,40 @@ function getFieldValue(
 ): unknown {
   const state = [...history].reverse().find((entry) => entry.state === stateId);
   return state?.custom_fields?.[fieldName];
+}
+
+function formatRefValue(
+  piece: PieceDetail,
+  history: PieceState[],
+  ref: string,
+): string {
+  if (ref.startsWith("piece.")) {
+    return formatSummaryValue(getPieceFieldValue(piece, ref.slice(6)));
+  }
+  const [stateId, fieldName] = ref.split(".", 2);
+  if (!stateId || !fieldName) {
+    return "";
+  }
+  const state = [...history].reverse().find((entry) => entry.state === stateId);
+  if (!state) {
+    return "";
+  }
+  if (fieldName === "created" || fieldName === "last_modified") {
+    return formatDateValue(state[fieldName]);
+  }
+  if (fieldName === "notes") {
+    return formatSummaryValue(state.notes);
+  }
+  return formatSummaryValue(state.custom_fields?.[fieldName]);
+}
+
+function getPieceFieldValue(piece: PieceDetail, fieldName: string): unknown {
+  if (fieldName === "name") return piece.name;
+  if (fieldName === "created") return piece.created;
+  if (fieldName === "last_modified") return piece.last_modified;
+  if (fieldName === "current_location") return piece.current_location;
+  if (fieldName === "showcase_story") return piece.showcase_story;
+  return undefined;
 }
 
 function getNumericValue(
@@ -192,9 +338,19 @@ function formatComputedValue(
   return compute.unit ? `${formatted} ${compute.unit}` : formatted;
 }
 
-function formatValue(value: unknown): string {
+function formatDateValue(value: unknown): string {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+    return "";
+  }
+  return value.toLocaleString();
+}
+
+function formatSummaryValue(value: unknown): string {
   if (value === null || value === undefined || value === "") {
     return "";
+  }
+  if (value instanceof Date) {
+    return formatDateValue(value);
   }
   if (typeof value === "string" || typeof value === "number") {
     return String(value);
@@ -202,9 +358,12 @@ function formatValue(value: unknown): string {
   if (typeof value === "boolean") {
     return value ? "Yes" : "No";
   }
-  if (typeof value === "object" && "name" in value) {
+  if (typeof value === "object" && value !== null && "name" in value) {
     const name = (value as { name?: unknown }).name;
     return typeof name === "string" ? name : "";
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => formatSummaryValue(item)).filter(Boolean).join(", ");
   }
   return "";
 }

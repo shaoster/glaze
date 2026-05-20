@@ -18,7 +18,7 @@ import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import { MasonryScroller, createPositioner, useContainerPosition, useResizeObserver } from "masonic";
 import { DEFAULT_CARD_HEIGHT_ESTIMATE, getPieceCardLayout } from "./pieceCardHeight";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import CloudinaryImage from "./CloudinaryImage";
 import TagAutocomplete from "./TagAutocomplete";
 import TagChip from "./TagChip";
@@ -131,9 +131,10 @@ function daysSince(date: Date): number {
 interface PieceCardProps {
   piece: PieceSummary;
   width: number;
+  returnTo: { pathname: string; search: string; hash: string } | null;
 }
 
-const PieceCard = ({ piece, width }: PieceCardProps) => {
+const PieceCard = ({ piece, width, returnTo }: PieceCardProps) => {
   const theme = useTheme();
   const isTerminal = isTerminalState(piece.current_state.state);
   const days = daysSince(new Date(piece.last_modified));
@@ -159,6 +160,7 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
     <Box
       component={Link}
       to={detailPath}
+      state={returnTo ? { returnTo } : undefined}
       style={{ minHeight: layout.estimatedHeight }}
       data-estimated-height={layout.estimatedHeight}
       sx={{
@@ -344,10 +346,6 @@ const PieceCard = ({ piece, width }: PieceCardProps) => {
   );
 };
 
-function MasonryPieceCard({ data, width }: { data: PieceSummary; index: number; width: number }) {
-  return <PieceCard piece={data} width={width} />;
-}
-
 type PieceListProps = {
   pieces: PieceSummary[];
   onNewPiece?: () => void;
@@ -372,6 +370,7 @@ const PieceList = (props: PieceListProps) => {
   } = props;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeFilters = useMemo(
     () => parseFilterParam(searchParams.get("filter")),
@@ -877,7 +876,24 @@ const PieceList = (props: PieceListProps) => {
                 positioner={positioner}
                 resizeObserver={resizeObserver}
                 items={filteredPieces}
-                render={MasonryPieceCard}
+                render={({
+                  data,
+                  width,
+                }: {
+                  data: PieceSummary;
+                  index: number;
+                  width: number;
+                }) => (
+                  <PieceCard
+                    piece={data}
+                    width={width}
+                    returnTo={{
+                      pathname: location.pathname,
+                      search: location.search,
+                      hash: location.hash,
+                    }}
+                  />
+                )}
                 itemKey={(piece) => piece.id}
                 itemHeightEstimate={DEFAULT_CARD_HEIGHT_ESTIMATE}
                 offset={masonryOffset}

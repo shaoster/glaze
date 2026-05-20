@@ -338,6 +338,7 @@ import {
   getGlobalThumbnailField,
   getStateMetadata,
   getProcessSummaryDefinition,
+  getProcessSummaryFieldOptions,
   isFavoritableGlobal,
   isTerminalState,
   isTaggableGlobal,
@@ -838,6 +839,30 @@ describe("getProcessSummaryDefinition", () => {
       label: "Sum",
       compute: expect.objectContaining({ op: "sum" }),
     });
+  });
+});
+
+describe("getProcessSummaryFieldOptions", () => {
+  it("includes piece fields and state fields while excluding images", () => {
+    const options = getProcessSummaryFieldOptions();
+    expect(options).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ref: "piece.name",
+          label: "Name",
+          group: "Piece",
+        }),
+        expect.objectContaining({
+          ref: "wheel_thrown.clay_weight_lbs",
+          label: "Clay Weight Lbs",
+        }),
+        expect.objectContaining({
+          ref: "submitted_to_bisque_fire.notes",
+          label: "Notes",
+        }),
+      ]),
+    );
+    expect(options.find((option) => option.ref === "piece.thumbnail")).toBeUndefined();
   });
 });
 

@@ -1,42 +1,93 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import ProcessSummary from "../ProcessSummary";
-import type { PieceState } from "../../util/types";
+import {
+  CurrentUserProvider,
+  PreferencesDialogProvider,
+} from "../CurrentUserContext";
+import type { PieceDetail } from "../../util/types";
 
-function makeState(
-  state: string,
-  additionalFields: Record<string, unknown> = {},
-): PieceState {
+function makePiece(
+  overrides: Partial<PieceDetail> = {},
+  historyOverrides: Array<Record<string, unknown>> = [],
+): PieceDetail {
+  const history = historyOverrides.length
+    ? historyOverrides
+    : [
+        {
+          state: "completed",
+          notes: "",
+          images: [],
+          custom_fields: {},
+          created: new Date("2026-01-01T00:00:00Z"),
+          last_modified: new Date("2026-01-01T00:00:00Z"),
+        },
+      ];
   return {
-    state,
-    notes: "",
-    images: [],
-    custom_fields: additionalFields,
+    id: "piece-1",
+    name: "Test Bowl",
     created: new Date("2026-01-01T00:00:00Z"),
     last_modified: new Date("2026-01-01T00:00:00Z"),
-  } as PieceState;
+    thumbnail: null,
+    shared: false,
+    is_editable: false,
+    can_edit: true,
+    current_state: history[history.length - 1] as PieceDetail["current_state"],
+    current_location: "",
+    tags: [],
+    showcase_story: "",
+    showcase_fields: [],
+    history,
+    ...overrides,
+  };
 }
 
 describe("ProcessSummary", () => {
   it("renders direct values, computed values, and conditional text", () => {
+    const history = [
+      {
+        state: "wheel_thrown",
+        notes: "",
+        images: [],
+        custom_fields: {
+          clay_weight_lbs: 4,
+          clay_body: { id: "clay-1", name: "Speckled Buff" },
+        },
+        created: new Date("2026-01-01T00:00:00Z"),
+        last_modified: new Date("2026-01-01T00:00:00Z"),
+      },
+      {
+        state: "trimmed",
+        notes: "",
+        images: [],
+        custom_fields: { trimmed_weight_lbs: 3.25 },
+        created: new Date("2026-01-01T00:00:00Z"),
+        last_modified: new Date("2026-01-01T00:00:00Z"),
+      },
+      {
+        state: "submitted_to_bisque_fire",
+        notes: "",
+        images: [],
+        custom_fields: {
+          length_in: 6,
+          width_in: 3,
+          height_in: 2,
+        },
+        created: new Date("2026-01-01T00:00:00Z"),
+        last_modified: new Date("2026-01-01T00:00:00Z"),
+      },
+      {
+        state: "completed",
+        notes: "",
+        images: [],
+        custom_fields: {},
+        created: new Date("2026-01-01T00:00:00Z"),
+        last_modified: new Date("2026-01-01T00:00:00Z"),
+      },
+    ] as PieceDetail["history"];
+
     render(
-      <ProcessSummary
-        history={[
-          makeState("wheel_thrown", {
-            clay_weight_lbs: 4,
-            clay_body: { id: "clay-1", name: "Speckled Buff" },
-          }),
-          makeState("trimmed", {
-            trimmed_weight_lbs: 3.25,
-          }),
-          makeState("submitted_to_bisque_fire", {
-            length_in: 6,
-            width_in: 3,
-            height_in: 2,
-          }),
-          makeState("completed"),
-        ]}
-      />,
+      <ProcessSummary piece={makePiece({}, history)} history={history} />,
     );
 
     expect(screen.getByText("Making")).toBeInTheDocument();
@@ -59,11 +110,40 @@ describe("ProcessSummary", () => {
   it("honors state_exists and state_missing visibility", () => {
     render(
       <ProcessSummary
+        piece={makePiece()}
         history={[
-          makeState("wheel_thrown", { clay_weight_lbs: 4 }),
-          makeState("trimmed", { trimmed_weight_lbs: 3.25 }),
-          makeState("waxed"),
-          makeState("completed"),
+          {
+            state: "wheel_thrown",
+            notes: "",
+            images: [],
+            custom_fields: { clay_weight_lbs: 4 },
+            created: new Date("2026-01-01T00:00:00Z"),
+            last_modified: new Date("2026-01-01T00:00:00Z"),
+          },
+          {
+            state: "trimmed",
+            notes: "",
+            images: [],
+            custom_fields: { trimmed_weight_lbs: 3.25 },
+            created: new Date("2026-01-01T00:00:00Z"),
+            last_modified: new Date("2026-01-01T00:00:00Z"),
+          },
+          {
+            state: "waxed",
+            notes: "",
+            images: [],
+            custom_fields: {},
+            created: new Date("2026-01-01T00:00:00Z"),
+            last_modified: new Date("2026-01-01T00:00:00Z"),
+          },
+          {
+            state: "completed",
+            notes: "",
+            images: [],
+            custom_fields: {},
+            created: new Date("2026-01-01T00:00:00Z"),
+            last_modified: new Date("2026-01-01T00:00:00Z"),
+          },
         ]}
       />,
     );
@@ -75,10 +155,32 @@ describe("ProcessSummary", () => {
   it("uses the latest matching state value and hides empty sections", () => {
     const { container } = render(
       <ProcessSummary
+        piece={makePiece()}
         history={[
-          makeState("wheel_thrown", { clay_weight_lbs: 4 }),
-          makeState("wheel_thrown", { clay_weight_lbs: "5.5" }),
-          makeState("completed"),
+          {
+            state: "wheel_thrown",
+            notes: "",
+            images: [],
+            custom_fields: { clay_weight_lbs: 4 },
+            created: new Date("2026-01-01T00:00:00Z"),
+            last_modified: new Date("2026-01-01T00:00:00Z"),
+          },
+          {
+            state: "wheel_thrown",
+            notes: "",
+            images: [],
+            custom_fields: { clay_weight_lbs: 5.5 },
+            created: new Date("2026-01-01T00:00:00Z"),
+            last_modified: new Date("2026-01-01T00:00:00Z"),
+          },
+          {
+            state: "completed",
+            notes: "",
+            images: [],
+            custom_fields: {},
+            created: new Date("2026-01-01T00:00:00Z"),
+            last_modified: new Date("2026-01-01T00:00:00Z"),
+          },
         ]}
       />,
     );
@@ -88,10 +190,111 @@ describe("ProcessSummary", () => {
     expect(container).not.toBeEmptyDOMElement();
   });
 
-  it("renders nothing when a state has no summary", () => {
-    const { container } = render(
+  it("renders selected fields from user preferences", () => {
+    render(
+      <CurrentUserProvider
+        currentUser={{
+          id: 1,
+          email: "user@example.com",
+          first_name: "Jane",
+          last_name: "Doe",
+          is_staff: false,
+          openid_subject: "",
+          profile_image_url: "",
+          preferences: {
+            process_summary_fields: ["piece.name", "wheel_thrown.clay_weight_lbs"],
+            tutorials: {
+              summary_customize_popover: "show",
+            },
+          },
+        }}
+        >
+        <ProcessSummary
+          piece={makePiece()}
+          history={[
+            {
+              state: "wheel_thrown",
+              notes: "",
+              images: [],
+              custom_fields: { clay_weight_lbs: 4 },
+              created: new Date("2026-01-01T00:00:00Z"),
+              last_modified: new Date("2026-01-01T00:00:00Z"),
+            },
+            {
+              state: "completed",
+              notes: "",
+              images: [],
+              custom_fields: {},
+              created: new Date("2026-01-01T00:00:00Z"),
+              last_modified: new Date("2026-01-01T00:00:00Z"),
+            },
+          ]}
+        />
+      </CurrentUserProvider>,
     );
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByText("Piece")).toBeInTheDocument();
+    expect(screen.getByText("Name")).toBeInTheDocument();
+    expect(screen.getByText("Test Bowl")).toBeInTheDocument();
+    expect(screen.getByText("Thrown")).toBeInTheDocument();
+    expect(screen.getByText("Clay Weight Lbs")).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
+    expect(screen.queryByText("Making")).not.toBeInTheDocument();
+  });
+
+  it("shows an empty state with a link to the summary field selector", async () => {
+    const openPreferencesDialog = vi.fn();
+    const saveUserPreferences = vi.fn().mockResolvedValue({
+      process_summary_fields: ["piece.current_location"],
+      tutorials: {
+        summary_customize_popover: "don't",
+      },
+    });
+
+    render(
+      <PreferencesDialogProvider
+        openPreferencesDialog={openPreferencesDialog}
+        saveUserPreferences={saveUserPreferences}
+      >
+        <CurrentUserProvider
+          currentUser={{
+            id: 1,
+            email: "user@example.com",
+            first_name: "Jane",
+            last_name: "Doe",
+            is_staff: false,
+            openid_subject: "",
+            profile_image_url: "",
+            preferences: {
+              process_summary_fields: ["piece.current_location"],
+              tutorials: {
+                summary_customize_popover: "show",
+              },
+            },
+          }}
+        >
+          <ProcessSummary
+            piece={makePiece({ current_location: "" })}
+            history={[
+              {
+                state: "completed",
+                notes: "",
+                images: [],
+                custom_fields: {},
+                created: new Date("2026-01-01T00:00:00Z"),
+                last_modified: new Date("2026-01-01T00:00:00Z"),
+              },
+            ]}
+          />
+        </CurrentUserProvider>
+      </PreferencesDialogProvider>,
+    );
+
+    expect(
+      screen.getByText("No selected summary fields have values for this piece."),
+    ).toBeInTheDocument();
+    screen.getByRole("button", { name: "Choose summary fields" }).click();
+    expect(openPreferencesDialog).toHaveBeenCalledWith("process-summary");
+    expect(screen.queryByText("Making")).not.toBeInTheDocument();
   });
 });

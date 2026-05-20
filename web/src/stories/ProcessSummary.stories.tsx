@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import ProcessSummary from "../components/ProcessSummary";
-import type { PieceState } from "../util/types";
+import type { PieceDetail, PieceState } from "../util/types";
 
 // Minimal history simulating the typical pottery workflow:
 // designed → trimmed → bisque_fired → glazed → glaze_fired → completed
@@ -43,6 +43,23 @@ const history: PieceState[] = [
   },
 ];
 
+const piece = {
+  id: "piece-1",
+  name: "Celadon Bowl",
+  created: new Date("2025-01-01"),
+  last_modified: new Date("2025-01-20"),
+  thumbnail: null,
+  shared: false,
+  is_editable: false,
+  can_edit: true,
+  current_state: history[history.length - 1],
+  current_location: "",
+  tags: [],
+  showcase_story: "",
+  showcase_fields: [],
+  history,
+} satisfies PieceDetail;
+
 /**
  * ProcessSummary component providing a high-level timeline of a piece's history.
  *
@@ -65,9 +82,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const WithHistory: Story = {
-  args: { history },
+  args: { piece, history },
 };
 
 export const EmptyHistory: Story = {
-  args: { history: [] },
+  args: { piece: { ...piece, history: [], current_state: history[0] }, history: [] },
 };

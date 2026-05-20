@@ -224,6 +224,7 @@ js_library(
         "src/util/normalizeWorkflowFields.ts",
         "src/util/optionalValues.ts",
         "src/util/types.ts",
+        "src/util/tutorials.ts",
         "src/util/useAsync.ts",
         "src/util/workflow.ts",
     ],
@@ -244,6 +245,7 @@ js_library(
             "src/assets/**/*",
             "src/components/**/*",
             "src/pages/**/*",
+            "src/stories/**/*",
             "*.json",
             "*.config.*",
             "public/**/*",
@@ -543,7 +545,10 @@ js_library(
 
 js_library(
     name = "process_summary_src",
-    srcs = ["src/components/ProcessSummary.tsx"],
+    srcs = [
+        "src/components/CurrentUserContext.tsx",
+        "src/components/ProcessSummary.tsx",
+    ],
     deps = [
         ":node_modules",
         ":util_lib",
@@ -566,6 +571,8 @@ js_library(
     srcs = [
         "src/components/NavigationBlocker.tsx",
         "src/components/PieceDetail.tsx",
+        "src/components/SmallTutorialInlay.tsx",
+        "src/components/SmallTutorialInlayConfig.ts",
     ],
     deps = [
         ":autosave_src",
@@ -896,6 +903,7 @@ vitest_test(
     name = "web_workflow_summary_test",
     srcs = [
         "src/components/__tests__/ProcessSummary.test.tsx",
+        "src/components/__tests__/SmallTutorialInlay.test.tsx",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [
@@ -903,6 +911,7 @@ vitest_test(
     ],
     expected_coverage = [
         "web/src/components/ProcessSummary*",
+        "web/src/components/SmallTutorialInlay*",
     ],
 )
 

@@ -4,7 +4,7 @@ import json
 import os
 import re
 from collections import defaultdict
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 from django.apps import apps
 from django.conf import settings
@@ -55,6 +55,7 @@ from .serializers import (
     PieceUpdateSerializer,
     RegisterSerializer,
     TaskSubmissionSerializer,
+    UserPreferencesSerializer,
 )
 from .utils import bootstrap_dev_user
 from .workflow import (
@@ -126,6 +127,60 @@ def auth_logout(request: Request) -> Response:
 @traced
 def auth_me(request: Request) -> Response:
     return Response(AuthUserSerializer(request.user).data)
+
+
+@extend_schema(
+    request=UserPreferencesSerializer,
+    responses={200: UserPreferencesSerializer},
+    description="Return or update the current user's saved preferences.",
+)
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+@traced
+def auth_preferences(request: Request) -> Response:
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    if request.method == "GET":
+        return Response(
+            {
+                "preferences": profile.preferences
+                if isinstance(profile.preferences, dict)
+                else {}
+            }
+        )
+
+    serializer = UserPreferencesSerializer(data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    if "preferences" in serializer.validated_data:
+        existing_preferences = cast(
+            dict[str, Any],
+            profile.preferences if isinstance(profile.preferences, dict) else {}
+        )
+        incoming_preferences = cast(
+            dict[str, Any], serializer.validated_data["preferences"]
+        )
+        merged_preferences: dict[str, Any] = {
+            **existing_preferences,
+            **incoming_preferences,
+        }
+        if "tutorials" in incoming_preferences:
+            existing_tutorials = existing_preferences.get("tutorials")
+            incoming_tutorials = incoming_preferences.get("tutorials")
+            if isinstance(existing_tutorials, dict) and isinstance(
+                incoming_tutorials, dict
+            ):
+                merged_preferences["tutorials"] = {
+                    **cast(dict[str, Any], existing_tutorials),
+                    **cast(dict[str, Any], incoming_tutorials),
+                }
+        profile.preferences = merged_preferences
+        profile.save(update_fields=["preferences"])
+    return Response(
+        {
+            "preferences": profile.preferences
+            if isinstance(profile.preferences, dict)
+            else {}
+        }
+    )
 
 
 @extend_schema(

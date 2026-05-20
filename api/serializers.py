@@ -369,8 +369,12 @@ class ThumbnailSerializer(serializers.Serializer):
     cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
     crop = serializers.JSONField(required=False, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
-    width = serializers.IntegerField(required=False, allow_null=True, default=None, min_value=0)
-    height = serializers.IntegerField(required=False, allow_null=True, default=None, min_value=0)
+    width = serializers.IntegerField(
+        required=False, allow_null=True, default=None, min_value=0
+    )
+    height = serializers.IntegerField(
+        required=False, allow_null=True, default=None, min_value=0
+    )
 
 
 @traced_class
@@ -881,6 +885,25 @@ def _replace_piece_tags(piece: Piece, user, tag_ids: list[str]) -> None:
         piece_tag_model.objects.create(piece=piece, tag=tags_by_id[tag_id], order=order)
 
 
+class TutorialPreferencesSerializer(serializers.Serializer):
+    summary_customize_popover = serializers.ChoiceField(
+        choices=[("show", "show"), ("don't", "don't")],
+        required=False,
+    )
+
+
+class SavedUserPreferencesSerializer(serializers.Serializer):
+    process_summary_fields = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+    )
+    tutorials = TutorialPreferencesSerializer(required=False)
+
+
+class UserPreferencesSerializer(serializers.Serializer):
+    preferences = SavedUserPreferencesSerializer(required=False)
+
+
 class AuthUserSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     email = serializers.EmailField(read_only=True)
@@ -889,6 +912,7 @@ class AuthUserSerializer(serializers.Serializer):
     is_staff = serializers.BooleanField(read_only=True)
     openid_subject = serializers.SerializerMethodField()
     profile_image_url = serializers.SerializerMethodField()
+    preferences = serializers.SerializerMethodField()
 
     @extend_schema_field(serializers.CharField(allow_blank=True))
     def get_openid_subject(self, obj) -> str:
@@ -899,6 +923,12 @@ class AuthUserSerializer(serializers.Serializer):
     def get_profile_image_url(self, obj) -> str:
         profile = getattr(obj, "profile", None)
         return profile.profile_image_url if profile else ""
+
+    @extend_schema_field(SavedUserPreferencesSerializer())
+    def get_preferences(self, obj) -> dict:
+        profile = getattr(obj, "profile", None)
+        preferences = getattr(profile, "preferences", None) if profile else None
+        return preferences if isinstance(preferences, dict) else {}
 
 
 class GoogleAuthSerializer(serializers.Serializer):

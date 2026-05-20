@@ -317,7 +317,9 @@ class Piece(models.Model):
             thumbnail = self.thumbnail if self.thumbnail_id else None
             if thumbnail is None or not thumbnail.cloudinary_public_id:
                 raise ValidationError(
-                    {"thumbnail_crop": "thumbnail_crop requires a Cloudinary-backed thumbnail."}
+                    {
+                        "thumbnail_crop": "thumbnail_crop requires a Cloudinary-backed thumbnail."
+                    }
                 )
 
     def save(self, *args, **kwargs):
@@ -687,6 +689,7 @@ class UserProfile(models.Model):
     )
     openid_subject = models.CharField(max_length=255, blank=True, default="")
     profile_image_url = models.URLField(blank=True, default="")
+    preferences = models.JSONField(blank=True, default=dict)
 
     def __str__(self) -> str:
         return f"Profile({self.user})"

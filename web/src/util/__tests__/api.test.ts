@@ -303,6 +303,12 @@ describe("auth endpoints", () => {
     is_staff: false,
     openid_subject: "",
     profile_image_url: "",
+    preferences: {
+      process_summary_fields: [],
+      tutorials: {
+        summary_customize_popover: "show",
+      },
+    },
   };
 
   it("ensureCsrfCookie fetches the CSRF endpoint", async () => {
@@ -411,6 +417,82 @@ describe("auth endpoints", () => {
 
     expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
     expect(mockClient.post).toHaveBeenCalledWith("auth/logout/", {});
+  });
+
+  it("fetchUserPreferences returns normalized preferences", async () => {
+    const { fetchUserPreferences } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: {
+        preferences: { process_summary_fields: ["piece.name", 123] },
+      },
+    });
+
+    await expect(fetchUserPreferences()).resolves.toEqual({
+      preferences: {
+        process_summary_fields: ["piece.name"],
+        tutorials: {
+          summary_customize_popover: "show",
+        },
+      },
+    });
+    expect(mockClient.get).toHaveBeenCalledWith("auth/preferences/");
+  });
+
+  it("fetchCurrentUser normalizes tutorial defaults", async () => {
+    const { fetchCurrentUser } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: {
+        ...authUser,
+        preferences: {
+          process_summary_fields: ["piece.name"],
+        },
+      },
+    });
+
+    await expect(fetchCurrentUser()).resolves.toEqual({
+      ...authUser,
+      preferences: {
+        process_summary_fields: ["piece.name"],
+        tutorials: {
+          summary_customize_popover: "show",
+        },
+      },
+    });
+  });
+
+  it("updateUserPreferences fetches CSRF before patching preferences", async () => {
+    const { updateUserPreferences } = await loadApiModule();
+    mockClient.get.mockResolvedValue({});
+    mockClient.patch.mockResolvedValue({
+      data: {
+        preferences: { process_summary_fields: ["piece.created"] },
+      },
+    });
+
+    await expect(
+      updateUserPreferences({
+        process_summary_fields: ["piece.created"],
+        tutorials: {
+          summary_customize_popover: "show",
+        },
+      }),
+    ).resolves.toEqual({
+      preferences: {
+        process_summary_fields: ["piece.created"],
+        tutorials: {
+          summary_customize_popover: "show",
+        },
+      },
+    });
+    expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
+    expect(mockClient.patch).toHaveBeenCalledWith("auth/preferences/", {
+      preferences: {
+        process_summary_fields: ["piece.created"],
+        tutorials: {
+          summary_customize_popover: "show",
+        },
+      },
+    });
   });
 });
 
