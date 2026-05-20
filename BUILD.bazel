@@ -1,5 +1,6 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@aspect_rules_py//py:defs.bzl", "py_binary")
+load("@rules_distroless//distroless:defs.bzl", "group", "passwd")
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 
@@ -229,32 +230,37 @@ oci_push(
     # Example: bazel run //:push -- --tag $(git rev-parse --short HEAD)
 )
 
-# Add a non-root 'celery' user (uid/gid 1001) so the worker image can drop privileges.
-genrule(
-    name = "celery_user_files",
-    srcs = [],
-    outs = ["celery_user_files.tar"],
-    cmd = """
-set -e
-d=$$(mktemp -d)
-mkdir -p "$$d/etc" "$$d/home/celery"
-# Single-entry passwd/group — this layer only adds the celery user.
-printf 'celery:x:1001:1001::/home/celery:/bin/sh\\n' > "$$d/etc/passwd"
-printf 'celery:x:1001:\\n' > "$$d/etc/group"
-# Pack files; set ownership of home dir to uid/gid 1001 via --owner/--group flags.
-tar -cf $@ \
-    --owner=1001 --group=1001 \
-    -C "$$d" home \
-    --owner=0 --group=0 \
-    -C "$$d" etc
-rm -rf "$$d"
-""",
+# passwd/group layers for the celery worker image.
+# rules_distroless generates /etc/passwd and /etc/group as additive OCI layers,
+# appending celery (uid/gid 1001) without clobbering existing base image users.
+passwd(
+    name = "celery_passwd",
+    entries = [
+        {
+            "username": "celery",
+            "uid": 1001,
+            "gid": 1001,
+            "gecos": [],
+            "home": "/home/celery",
+            "shell": "/usr/sbin/nologin",
+        },
+    ],
+)
+
+group(
+    name = "celery_group",
+    entries = [
+        {
+            "name": "celery",
+            "gid": 1001,
+        },
+    ],
 )
 
 oci_image(
     name = "celery_worker_image",
     base = ":image",
-    tars = [":celery_user_files"],
+    tars = [":celery_passwd", ":celery_group"],
     user = "celery",
     entrypoint = ["python", "-m", "celery", "-A", "backend", "worker", "-l", "INFO"],
 )
