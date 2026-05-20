@@ -109,8 +109,8 @@ function makeSingleImage(
 }
 
 const DEFAULT_PIECE_STATES = [
-  { id: "state-current", state: "wheel_thrown" as const, label: "Wheel Thrown" },
-  { id: "state-past", state: "designed" as const, label: "Designed" },
+  { id: "state-current", label: "Wheel Thrown" },
+  { id: "state-past", label: "Designed" },
 ];
 
 function makeUpdatedPiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
@@ -564,8 +564,7 @@ describe("PiecePhotoGallery", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-      const lightbox = screen.getByLabelText("Mock lightbox");
-      const moveBtn = within(lightbox).getByRole("button", { name: /move to state/i });
+      const moveBtn = screen.getByRole("button", { name: /move to state/i });
 
       expect(moveBtn).toBeDisabled();
     });
@@ -587,8 +586,7 @@ describe("PiecePhotoGallery", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-      const lightbox = screen.getByLabelText("Mock lightbox");
-      const moveBtn = within(lightbox).getByRole("button", { name: /move to state/i });
+      const moveBtn = screen.getByRole("button", { name: /move to state/i });
 
       expect(moveBtn).not.toBeDisabled();
     });
@@ -610,8 +608,7 @@ describe("PiecePhotoGallery", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-      const lightbox = screen.getByLabelText("Mock lightbox");
-      await userEvent.click(within(lightbox).getByRole("button", { name: /move to state/i }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i }));
 
       // Image at index 0 has stateId "state-current"; dialog should only show "state-past"
       expect(screen.getByText("Move image to state")).toBeInTheDocument();
@@ -671,8 +668,7 @@ describe("PiecePhotoGallery", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-      const lightbox = screen.getByLabelText("Mock lightbox");
-      await userEvent.click(within(lightbox).getByRole("button", { name: /move to state/i }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i }));
       await userEvent.click(screen.getByText("Designed"));
 
       await waitFor(() => expect(updateCurrentStateFn).toHaveBeenCalledWith(
@@ -684,6 +680,87 @@ describe("PiecePhotoGallery", () => {
         "state-past",
         expect.objectContaining({
           images: [expect.objectContaining({ url: "https://example.com/a.jpg" })],
+        }),
+      ));
+      await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(finalPiece));
+    });
+
+    it("moves a past-state image to the current state via two sequential updatePastState / updateCurrentState calls", async () => {
+      const pastStateAfterRemove = {
+        id: "state-past",
+        state: "designed" as const,
+        notes: "",
+        created: new Date("2024-01-14T10:00:00Z"),
+        last_modified: new Date("2024-01-14T10:00:00Z"),
+        images: [],
+        previous_state: null,
+        next_state: "wheel_thrown" as const,
+        custom_fields: {},
+        has_been_edited: false,
+      };
+      const currentStateWithOriginalImage = {
+        id: "state-current",
+        state: "wheel_thrown" as const,
+        notes: "Current notes",
+        created: new Date("2024-01-16T10:00:00Z"),
+        last_modified: new Date("2024-01-16T10:00:00Z"),
+        images: [
+          {
+            url: "https://example.com/a.jpg",
+            caption: "Freshly thrown",
+            cloudinary_public_id: "piece/a",
+            cloud_name: null,
+            crop: null,
+            created: new Date("2024-01-16T10:00:00Z"),
+          },
+        ],
+        previous_state: "designed" as const,
+        next_state: null,
+        custom_fields: {},
+        has_been_edited: false,
+      };
+      const pieceAfterSourceRemove = makeUpdatedPiece({
+        current_state: currentStateWithOriginalImage,
+        history: [currentStateWithOriginalImage, pastStateAfterRemove],
+      });
+      const finalPiece = makeUpdatedPiece();
+      const updatePastStateFn = vi.fn().mockResolvedValue(pieceAfterSourceRemove);
+      const updateCurrentStateFn = vi.fn().mockResolvedValue(finalPiece);
+      const onPieceUpdated = vi.fn();
+
+      render(
+        <PiecePhotoGallery
+          images={makeImages()}
+          pieceId="piece-1"
+          currentStateNotes="Current notes"
+          currentStateCustomFields={{}}
+          onPieceUpdated={onPieceUpdated}
+          updateCurrentStateFn={updateCurrentStateFn}
+          updatePastStateFn={updatePastStateFn}
+          pieceStates={DEFAULT_PIECE_STATES}
+          currentStateId="state-current"
+          isEditable={true}
+        />,
+      );
+
+      // Open photo 2 (index 1) — the past-state image with stateId="state-past"
+      await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 2" }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i }));
+      // Picker shows only "state-current" ("Wheel Thrown") since source is "state-past"
+      await userEvent.click(screen.getByText("Wheel Thrown"));
+
+      await waitFor(() => expect(updatePastStateFn).toHaveBeenCalledWith(
+        "piece-1",
+        "state-past",
+        expect.objectContaining({ images: [] }),
+      ));
+      await waitFor(() => expect(updateCurrentStateFn).toHaveBeenCalledWith(
+        "piece-1",
+        expect.objectContaining({
+          images: expect.arrayContaining([
+            expect.objectContaining({ url: "https://example.com/b.jpg" }),
+          ]),
         }),
       ));
       await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(finalPiece));
@@ -709,8 +786,7 @@ describe("PiecePhotoGallery", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-      const lightbox = screen.getByLabelText("Mock lightbox");
-      await userEvent.click(within(lightbox).getByRole("button", { name: /move to state/i }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i }));
       await userEvent.click(screen.getByText("Designed"));
 
       await waitFor(() =>
@@ -735,8 +811,7 @@ describe("PiecePhotoGallery", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
       await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-      const lightbox = screen.getByLabelText("Mock lightbox");
-      await userEvent.click(within(lightbox).getByRole("button", { name: /move to state/i }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i }));
       expect(screen.getByText("Move image to state")).toBeInTheDocument();
 
       await userEvent.click(screen.getByRole("button", { name: "Cancel" }));

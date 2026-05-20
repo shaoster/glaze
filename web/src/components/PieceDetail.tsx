@@ -397,7 +397,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     onPieceUpdated,
     updatePieceFn: canEdit ? updatePiece : undefined,
     updateCurrentStateFn: canEdit ? updateCurrentState : undefined,
-    pieceStates: piece.history.map((s) => ({ id: s.id, state: s.state, label: formatState(s.state) })),
+    pieceStates: piece.history.map((s) => ({ id: s.id, label: formatState(s.state) })),
     currentStateId: currentState.id,
     isEditable: piece.is_editable,
     updatePastStateFn: canEdit ? updatePastState : undefined,

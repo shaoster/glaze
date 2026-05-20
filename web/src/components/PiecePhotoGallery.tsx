@@ -18,7 +18,7 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import type { CaptionedImage, PieceDetail, State } from "../util/types";
+import type { CaptionedImage, PieceDetail } from "../util/types";
 import { updateCurrentState, updatePastState, updatePiece } from "../util/api";
 import DeletePiecePhotoDialog from "./DeletePiecePhotoDialog";
 import ImageLightbox from "./ImageLightbox";
@@ -38,7 +38,6 @@ export type EditablePiecePhoto = Pick<
 
 type PieceStateRef = {
   id: string;
-  state: State;
   label: string;
 };
 
