@@ -799,27 +799,12 @@ def _seed_dev_pieces(user, count: int = 75) -> None:
         # 10 % chance of recycling instead of stopping at the chosen state.
         recycled = stop > 0 and rng.random() < 0.10
 
-        # Give ~60% of pieces a synthetic crop with varied aspect ratios so the
-        # masonry height pre-seeding and CloudinaryImage crop path are exercised
-        # locally without a real Cloudinary upload.
-        DEV_CROP_SHAPES = [
-            # Relative {x,y,width,height} coords — all values ≤ 1.0.
-            # estimateCardHeight uses width/height ratio, so these produce
-            # realistic portrait, landscape, and square cards.
-            {"x": 0.05, "y": 0.0, "width": 0.5, "height": 0.75},  # portrait 2:3
-            {"x": 0.0, "y": 0.1, "width": 0.75, "height": 0.5},  # landscape 3:2
-            {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8},  # square 1:1
-            {"x": 0.05, "y": 0.0, "width": 0.6, "height": 0.8},  # portrait 3:4
-        ]
-        dev_crop = rng.choice(DEV_CROP_SHAPES) if rng.random() < 0.6 else None
-
         p = Piece.objects.create(
             user=user,
             name=f"{adj} {form} #{i + 1}",
             thumbnail=normalize_image_payload(
                 {"url": T[thumb], "cloudinary_public_id": None}, user=user
             ),
-            thumbnail_crop=dev_crop,
         )
 
         # Attach 0–3 random tags to each piece

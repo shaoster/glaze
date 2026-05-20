@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.apps import apps
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -310,6 +311,18 @@ class Piece(models.Model):
         if cs is None:
             return self.fields_last_modified
         return max(self.fields_last_modified, cs.last_modified)
+
+    def clean(self):
+        if self.thumbnail_crop is not None:
+            thumbnail = self.thumbnail if self.thumbnail_id else None
+            if thumbnail is None or not thumbnail.cloudinary_public_id:
+                raise ValidationError(
+                    {"thumbnail_crop": "thumbnail_crop requires a Cloudinary-backed thumbnail."}
+                )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return self.name
