@@ -18,7 +18,6 @@ on:
       - ".idea/**"
       - "LICENSE"
       - "LICENSE.*"
-      - "deploy.sh"
       - "setup-*.sh"
       - "nginx/**"
   pull_request:
@@ -33,7 +32,6 @@ on:
       - ".idea/**"
       - "LICENSE"
       - "LICENSE.*"
-      - "deploy.sh"
       - "setup-*.sh"
       - "nginx/**"
 
@@ -200,51 +198,37 @@ jobs:
       - name: Build OCI image and load into docker
         run: bazel run --config=ci --stamp //:load
 
-      # Align with the CD process by generating a real .env file from the 
-      # production template. This ensures the smoke test validates the 
-      # same configuration mechanism used on the droplet.
-      - name: Generate .env for smoke test
-        env:
-          IMAGE_TAG: latest
-          POSTGRES_PASSWORD: ci
-          SECRET_KEY: smoke-test-key-must-be-at-least-32-chars-long
-          ALLOWED_HOST: localhost
-          APP_ORIGIN: http://localhost:8000
-          OTEL_ENABLED: "true"
-          # Optional vars are intentionally left unset to test default fallbacks
+      - name: Lint and validate Helm chart
         run: |
-          # We include IMAGE_TAG in the .env so docker-compose.yml can interpolate it.
-          printf 'IMAGE_TAG=%s\n' "$IMAGE_TAG" > .env
-          envsubst < .env.production.template | grep -vE '^[A-Z0-9_]+=$' >> .env
+          helm lint chart/glaze/ \
+            --set image.tag=ci \
+            --set appConfig.allowedHost=localhost \
+            --set appConfig.appOrigin=http://localhost \
+            --set appConfig.inviteLinkBaseUrl=http://localhost/accept-invite \
+            --set appConfig.googleOauthClientId=ci \
+            --set appConfig.cloudinaryCloudName=ci \
+            --set appConfig.cloudinaryUploadFolder=ci \
+            --set appConfig.cloudinaryUploadPreset=ci \
+            --set appConfig.cloudinaryPublicUploadFolder=ci
 
-      - name: Pre-pull sidecar images
-        run: |
-          # Pull third-party sidecar images (postgres, otelcol) before starting
-          # the timed --wait block so image download doesn't eat into the
-          # healthcheck timeout budget. Explicitly name services to avoid pulling
-          # the web service and overwriting the locally-built Bazel image.
-          docker compose pull db otelcol
-
-      - name: Smoke test via docker compose
-        run: |
-          set -euo pipefail
-          # --wait blocks until every service with a healthcheck reports
-          # healthy. The web service's healthcheck (defined in
-          # docker-compose.yml) is the pass criterion.
-          # Timeout is 300s: migrate + load_public_library (249 records) +
-          # gunicorn startup can exceed 120s on a cold runner.
-          docker compose up -d --wait --wait-timeout 300 || {
-            docker compose logs web | tail -100
-            exit 1
-          }
-          docker compose logs web | tail -50
+          # Render full manifest and verify no empty required env vars leak through
+          helm template glaze chart/glaze/ \
+            --set image.tag=ci \
+            --set appConfig.allowedHost=localhost \
+            --set appConfig.appOrigin=http://localhost \
+            --set appConfig.inviteLinkBaseUrl=http://localhost/accept-invite \
+            --set appConfig.googleOauthClientId=ci \
+            --set appConfig.cloudinaryCloudName=ci \
+            --set appConfig.cloudinaryUploadFolder=ci \
+            --set appConfig.cloudinaryUploadPreset=ci \
+            --set appConfig.cloudinaryPublicUploadFolder=ci \
+            | grep -E '^\s+[A-Z_]+:\s*""' && {
+              echo "Empty required env vars found in rendered chart" >&2
+              exit 1
+            } || true
 
       - if: failure()
         uses: ./.github/actions/collect-failure-diagnostics
-
-      - name: Tear down compose
-        if: always()
-        run: docker compose down -v --remove-orphans || true
 
       - name: Log in to GitHub Container Registry
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

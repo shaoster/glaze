@@ -624,7 +624,7 @@ gz_push() {
 }
 
 gz_deploy() {
-    # Push the current image and deploy it to the production droplet.
+    # Push the current image and trigger CD via helm upgrade on the droplet.
     # Usage: gz_deploy [--no-push]
     # Reads GLAZE_PROD_HOST from .env.local (e.g. GLAZE_PROD_HOST=user@host).
     local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
@@ -633,7 +633,14 @@ gz_deploy() {
     if [[ "${1:-}" != "--no-push" ]]; then
         gz_push || return $?
     fi
-    "$GLAZE_ROOT/deploy.sh" "$host" "$sha"
+    echo "Triggering helm upgrade on $host for image tag $sha..."
+    ssh "$host" "
+        KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm upgrade glaze ~/glaze-chart-deploy/glaze/ \
+            -f ~/glaze-values-override.yaml \
+            --set image.tag=$sha \
+            --timeout 5m \
+            --wait
+    "
 }
 
 # ---------------------------------------------------------------------------
