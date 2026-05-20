@@ -78,10 +78,22 @@ if [[ -z "$_GLAZE_AGENT_ENV_LOADED" || "${GLAZE_ROOT:-}" != "$_detected_root" ]]
     _gz_load_preferred_env_file "web/.env.local"
 
     _gz_bazel() {
+        local -a cmd
         if command -v rtk &>/dev/null; then
-            rtk bazel "$@"
+            cmd=(rtk bazel)
         else
-            bazel "$@"
+            cmd=(bazel)
+        fi
+        # When running inside a worktree that lives beneath the shared root,
+        # bazel refuses to start ("called from a bazel output directory") because
+        # it finds the parent workspace. A per-worktree --output_base sidesteps
+        # this by giving each worktree its own isolated output directory.
+        if [[ -n "${GLAZE_SHARED_ROOT:-}" && "$GLAZE_ROOT" != "$GLAZE_SHARED_ROOT" ]]; then
+            local _wt_slug
+            _wt_slug="$(basename "$GLAZE_ROOT")"
+            "${cmd[@]}" --output_base="$HOME/.cache/bazel-worktrees/$_wt_slug" "$@"
+        else
+            "${cmd[@]}" "$@"
         fi
     }
 
