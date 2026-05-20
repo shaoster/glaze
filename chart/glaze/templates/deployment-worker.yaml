@@ -56,6 +56,7 @@ spec:
                   name: glaze-secrets
                   key: GRAFANA_CLOUD_OTLP_TOKEN
                   optional: true
+            # Intentionally overrides the ConfigMap value (service.name=glaze) for the worker.
             - name: OTEL_RESOURCE_ATTRIBUTES
               value: "service.name=glaze-worker"
           resources:
