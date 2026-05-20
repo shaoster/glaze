@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import {
+  createMemoryRouter,
+  RouterProvider,
+  useLocation,
+} from "react-router-dom";
 import PieceDetailPage from "../PieceDetailPage";
 import * as api from "../../util/api";
 import type { PieceDetail } from "../../util/types";
@@ -153,6 +157,60 @@ describe("PieceDetailPage", () => {
     await waitFor(() =>
       expect(screen.getByTestId("pieces-page")).toBeInTheDocument(),
     );
+  });
+
+  it("returns to the originating pieces list state even if preferences are in history", async () => {
+    function PiecesPage() {
+      const location = useLocation();
+      return (
+        <div data-testid="pieces-page">
+          pieces{location.search}
+        </div>
+      );
+    }
+
+    const router = createMemoryRouter(
+      [
+        {
+          path: "/pieces/:id",
+          element: <PieceDetailPage showBackToPieces />,
+        },
+        { path: "/", element: <PiecesPage /> },
+        { path: "/preferences/:sectionId", element: <div data-testid="prefs-page" /> },
+      ],
+      {
+        initialEntries: [
+          { pathname: "/", search: "?sort=created&filter=wip" },
+          {
+            pathname: "/preferences/process-summary",
+          },
+          {
+            pathname: "/pieces/piece-1",
+            state: {
+              returnTo: {
+                pathname: "/",
+                search: "?sort=created&filter=wip",
+                hash: "",
+              },
+            },
+          },
+        ],
+        initialIndex: 2,
+      },
+    );
+
+    render(<RouterProvider router={router} />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Back to Pieces/i }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pieces-page")).toHaveTextContent(
+        "pieces?sort=created&filter=wip",
+      );
+    });
+    expect(screen.queryByTestId("prefs-page")).not.toBeInTheDocument();
   });
 
   it("navigates back to the analyze page when opened from the gallery", async () => {

@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Box,
   Button,
   Checkbox,
@@ -14,42 +17,63 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 import {
   fetchUserPreferences,
-  updateUserPreferences,
-  type AuthUser,
   type UserPreferences,
+  type TutorialVisibility,
 } from "../util/api";
+import { TUTORIAL_TOGGLE_KEYS } from "../util/tutorials";
 import { useAsync, useAsyncFn } from "../util/useAsync";
 import { getProcessSummaryFieldOptions } from "../util/workflow";
-import { useCurrentUser } from "./CurrentUserContext";
+import {
+  useCurrentUser,
+  useSaveUserPreferences,
+  type PreferencesSectionId,
+} from "./CurrentUserContext";
 
 type UserPreferencesDialogProps = {
   open: boolean;
+  activeSectionId: PreferencesSectionId | null;
   onClose: () => void;
-  onSaved: (user: AuthUser) => void;
+  onSectionChange: (sectionId: PreferencesSectionId | null) => void;
 };
 
 export default function UserPreferencesDialog({
   open,
+  activeSectionId,
   onClose,
-  onSaved,
+  onSectionChange,
 }: UserPreferencesDialogProps) {
   const currentUser = useCurrentUser();
+  const saveUserPreferences = useSaveUserPreferences();
   const { data, loading, error } = useAsync(fetchUserPreferences, [open], {
     enabled: open,
   });
   const options = useMemo(() => getProcessSummaryFieldOptions(), []);
   const saveState = useAsyncFn(
-    async (preferences: UserPreferences) => updateUserPreferences(preferences),
-    [],
+    async (preferences: UserPreferences) => {
+      if (!saveUserPreferences) {
+        return null;
+      }
+      return saveUserPreferences(preferences);
+    },
+    [saveUserPreferences],
   );
   const initialSelectedRefs =
     data?.preferences.process_summary_fields ??
     currentUser?.preferences.process_summary_fields ??
     [];
-  const preferencesKey = initialSelectedRefs.join("|");
+  const initialTutorialVisibility =
+    data?.preferences.tutorials[
+      TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP
+    ] ??
+    currentUser?.preferences.tutorials[
+      TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP
+    ] ??
+    "show";
+  const preferencesKey = `${initialSelectedRefs.join("|")}::${initialTutorialVisibility}`;
 
   const sections = useMemo(() => {
     const grouped = new Map<string, typeof options>();
@@ -74,16 +98,6 @@ export default function UserPreferencesDialog({
       <DialogTitle>Preferences</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2}>
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Process Summary
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Choose which fields should appear in your process summaries.
-              Images are excluded.
-            </Typography>
-          </Box>
-
           {error ? (
             <Typography color="error">
               Failed to load your preferences.
@@ -94,17 +108,20 @@ export default function UserPreferencesDialog({
             key={preferencesKey}
             sections={sections}
             initialSelectedRefs={initialSelectedRefs}
-            onSave={async (selectedRefs) => {
+            initialTutorialVisibility={initialTutorialVisibility}
+            activeSectionId={activeSectionId}
+            onSectionChange={onSectionChange}
+            onSave={async (selectedRefs, tutorialVisibility) => {
               const response = await saveState.execute({
                 process_summary_fields: selectedRefs,
+                tutorials: {
+                  [TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP]:
+                    tutorialVisibility,
+                },
               });
-              if (!response || !currentUser) {
+              if (!response) {
                 return;
               }
-              onSaved({
-                ...currentUser,
-                preferences: response.preferences,
-              });
               onClose();
             }}
             onCancel={onClose}
@@ -123,17 +140,28 @@ export default function UserPreferencesDialog({
 function PreferencesForm({
   sections,
   initialSelectedRefs,
+  initialTutorialVisibility,
+  activeSectionId,
+  onSectionChange,
   onSave,
   onCancel,
   isSaving,
 }: {
   sections: { title: string; fields: { ref: string; label: string }[] }[];
   initialSelectedRefs: string[];
-  onSave: (selectedRefs: string[]) => Promise<void>;
+  initialTutorialVisibility: TutorialVisibility;
+  activeSectionId: PreferencesSectionId | null;
+  onSectionChange: (sectionId: PreferencesSectionId | null) => void;
+  onSave: (
+    selectedRefs: string[],
+    tutorialVisibility: TutorialVisibility,
+  ) => Promise<void>;
   onCancel: () => void;
   isSaving: boolean;
 }) {
   const [selectedRefs, setSelectedRefs] = useState(initialSelectedRefs);
+  const [tutorialVisibility, setTutorialVisibility] =
+    useState<TutorialVisibility>(initialTutorialVisibility);
 
   function toggleRef(ref: string) {
     setSelectedRefs((prev) =>
@@ -144,44 +172,118 @@ function PreferencesForm({
   return (
     <>
       <Stack spacing={2}>
-        {sections.map((section) => (
-          <Box key={section.title}>
-            <Typography
-              variant="subtitle2"
-              sx={{
-                mb: 1,
-                color: "text.secondary",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
-              {section.title}
-            </Typography>
-            <FormGroup>
-              {section.fields.map((field) => (
-                <FormControlLabel
-                  key={field.ref}
-                  control={
-                    <Checkbox
-                      checked={selectedRefs.includes(field.ref)}
-                      onChange={() => toggleRef(field.ref)}
-                    />
-                  }
-                  label={
-                    <Stack spacing={0.25}>
-                      <Typography variant="body2">{field.label}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {field.ref}
-                      </Typography>
-                    </Stack>
-                  }
-                />
+        <Accordion
+          disableGutters
+          expanded={activeSectionId === "process-summary"}
+          onChange={(_, expanded) => {
+            if (expanded) {
+              onSectionChange("process-summary");
+            } else if (activeSectionId === "process-summary") {
+              onSectionChange(null);
+            }
+          }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Stack spacing={0.25}>
+              <Typography variant="subtitle1" component="span">
+                Process Summary
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Choose which fields appear in process summaries.
+              </Typography>
+            </Stack>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Stack spacing={2}>
+              {sections.map((section) => (
+                <Box key={section.title}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      mb: 1,
+                      color: "text.secondary",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {section.title}
+                  </Typography>
+                  <FormGroup>
+                    {section.fields.map((field) => (
+                      <FormControlLabel
+                        key={field.ref}
+                        control={
+                          <Checkbox
+                            checked={selectedRefs.includes(field.ref)}
+                            onChange={() => toggleRef(field.ref)}
+                          />
+                        }
+                        label={
+                          <Stack spacing={0.25}>
+                            <Typography variant="body2">
+                              {field.label}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {field.ref}
+                            </Typography>
+                          </Stack>
+                        }
+                      />
+                    ))}
+                  </FormGroup>
+                  <Divider sx={{ mt: 1.5 }} />
+                </Box>
               ))}
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
+        <Accordion
+          disableGutters
+          expanded={activeSectionId === "tutorials"}
+          onChange={(_, expanded) => {
+            if (expanded) {
+              onSectionChange("tutorials");
+            } else if (activeSectionId === "tutorials") {
+              onSectionChange(null);
+            }
+          }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Stack spacing={0.25}>
+              <Typography variant="subtitle1" component="span">
+                Tutorials
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Small stubs that point to upcoming guided help.
+              </Typography>
+            </Stack>
+          </AccordionSummary>
+          <AccordionDetails>
+            <FormGroup>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={tutorialVisibility === "show"}
+                    onChange={() =>
+                      setTutorialVisibility((prev) =>
+                        prev === "show" ? "don't" : "show",
+                      )
+                    }
+                  />
+                }
+                label={
+                  <Stack spacing={0.25}>
+                    <Typography variant="body2">
+                      Show the summary customization tip
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Controls the summary guidance shown on piece details.
+                    </Typography>
+                  </Stack>
+                }
+              />
             </FormGroup>
-            <Divider sx={{ mt: 1.5 }} />
-          </Box>
-        ))}
+          </AccordionDetails>
+        </Accordion>
       </Stack>
       <DialogActions>
         <Button onClick={onCancel} disabled={isSaving}>
@@ -189,7 +291,7 @@ function PreferencesForm({
         </Button>
         <Button
           variant="contained"
-          onClick={() => void onSave(selectedRefs)}
+          onClick={() => void onSave(selectedRefs, tutorialVisibility)}
           disabled={isSaving}
         >
           Save

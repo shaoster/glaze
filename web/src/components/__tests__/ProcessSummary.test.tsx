@@ -1,7 +1,10 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import ProcessSummary from "../ProcessSummary";
-import { CurrentUserProvider } from "../CurrentUserContext";
+import {
+  CurrentUserProvider,
+  PreferencesDialogProvider,
+} from "../CurrentUserContext";
 import type { PieceDetail } from "../../util/types";
 
 function makePiece(
@@ -200,9 +203,12 @@ describe("ProcessSummary", () => {
           profile_image_url: "",
           preferences: {
             process_summary_fields: ["piece.name", "wheel_thrown.clay_weight_lbs"],
+            tutorials: {
+              summary_customize_popover: "show",
+            },
           },
         }}
-      >
+        >
         <ProcessSummary
           piece={makePiece()}
           history={[
@@ -233,6 +239,62 @@ describe("ProcessSummary", () => {
     expect(screen.getByText("Thrown")).toBeInTheDocument();
     expect(screen.getByText("Clay Weight Lbs")).toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument();
+    expect(screen.queryByText("Making")).not.toBeInTheDocument();
+  });
+
+  it("shows an empty state with a link to the summary field selector", async () => {
+    const openPreferencesDialog = vi.fn();
+    const saveUserPreferences = vi.fn().mockResolvedValue({
+      process_summary_fields: ["piece.current_location"],
+      tutorials: {
+        summary_customize_popover: "don't",
+      },
+    });
+
+    render(
+      <PreferencesDialogProvider
+        openPreferencesDialog={openPreferencesDialog}
+        saveUserPreferences={saveUserPreferences}
+      >
+        <CurrentUserProvider
+          currentUser={{
+            id: 1,
+            email: "user@example.com",
+            first_name: "Jane",
+            last_name: "Doe",
+            is_staff: false,
+            openid_subject: "",
+            profile_image_url: "",
+            preferences: {
+              process_summary_fields: ["piece.current_location"],
+              tutorials: {
+                summary_customize_popover: "show",
+              },
+            },
+          }}
+        >
+          <ProcessSummary
+            piece={makePiece({ current_location: "" })}
+            history={[
+              {
+                state: "completed",
+                notes: "",
+                images: [],
+                custom_fields: {},
+                created: new Date("2026-01-01T00:00:00Z"),
+                last_modified: new Date("2026-01-01T00:00:00Z"),
+              },
+            ]}
+          />
+        </CurrentUserProvider>
+      </PreferencesDialogProvider>,
+    );
+
+    expect(
+      screen.getByText("No selected summary fields have values for this piece."),
+    ).toBeInTheDocument();
+    screen.getByRole("button", { name: "Choose summary fields" }).click();
+    expect(openPreferencesDialog).toHaveBeenCalledWith("process-summary");
     expect(screen.queryByText("Making")).not.toBeInTheDocument();
   });
 });

@@ -57,8 +57,28 @@ vi.mock("./components/PieceDetail", () => ({
 }));
 
 vi.mock("./components/UserPreferencesDialog", () => ({
-  default: ({ open }: { open: boolean }) =>
-    open ? <div>User Preferences Dialog</div> : null,
+  default: ({
+    open,
+    activeSectionId,
+    onClose,
+    onSectionChange,
+  }: {
+    open: boolean;
+    activeSectionId: "process-summary" | "tutorials" | null;
+    onClose: () => void;
+    onSectionChange: (sectionId: "process-summary" | "tutorials" | null) => void;
+  }) =>
+    open ? (
+      <div>
+        <div>User Preferences Dialog</div>
+        <div>Active Section: {activeSectionId ?? "none"}</div>
+        <button onClick={() => onSectionChange("process-summary")}>
+          Process Summary
+        </button>
+        <button onClick={() => onSectionChange("tutorials")}>Tutorials</button>
+        <button onClick={onClose}>Cancel</button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("./components/GlazeCombinationGallery", () => ({
@@ -72,6 +92,7 @@ vi.mock("./pages/GlazeImportToolPage", () => ({
 // Now import App and the mocked api
 import {
   fetchCurrentUser,
+  fetchPiece,
   loginWithEmail,
   loginWithGoogleChecked,
   logoutUser,
@@ -91,6 +112,9 @@ const MOCK_USER = {
   profile_image_url: "",
   preferences: {
     process_summary_fields: [],
+    tutorials: {
+      summary_customize_popover: "show",
+    },
   },
 };
 
@@ -382,7 +406,7 @@ describe("App auth flow", () => {
     expect(screen.queryByText("Glaze Import Tool")).not.toBeInTheDocument();
   });
 
-  it("opens the preferences dialog from the user menu", async () => {
+  it("navigates to the piece summary preferences route from the user menu", async () => {
     vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_USER);
 
     render(<App />);
@@ -397,6 +421,65 @@ describe("App auth flow", () => {
     await userEvent.click(screen.getByText("Preferences"));
 
     expect(screen.getByText("User Preferences Dialog")).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/preferences/process-summary");
+  });
+
+  it("opens the tutorials preferences route directly", async () => {
+    vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_USER);
+    window.history.pushState({}, "", "/preferences/tutorials");
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("User Preferences Dialog")).toBeInTheDocument();
+    });
+
+    expect(window.location.pathname).toBe("/preferences/tutorials");
+  });
+
+  it("cancels preferences back to the current piece detail instead of the pieces list return target", async () => {
+    vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_USER);
+    vi.mocked(fetchPiece).mockResolvedValue({
+      id: "piece-1",
+      name: "Tall Mug",
+      created: new Date("2024-01-01T00:00:00Z"),
+      last_modified: new Date("2024-01-02T00:00:00Z"),
+      thumbnail: null,
+      shared: false,
+      can_edit: true,
+      is_editable: false,
+      current_state: {
+        id: "state-1",
+        state: "designed",
+        notes: "",
+        created: new Date("2024-01-01T00:00:00Z"),
+        last_modified: new Date("2024-01-01T00:00:00Z"),
+        images: [],
+        custom_fields: {},
+        has_been_edited: false,
+        previous_state: null,
+        next_state: null,
+      },
+      history: [],
+      current_location: "",
+      tags: [],
+      showcase_story: "",
+      showcase_fields: [],
+    });
+    window.history.pushState({}, "", "/pieces/piece-1");
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Piece Detail Content")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText("Pat Potter"));
+    await userEvent.click(screen.getByText("Preferences"));
+    await userEvent.click(screen.getByText("Tutorials"));
+    await userEvent.click(screen.getByText("Cancel"));
+
+    expect(window.location.pathname).toBe("/pieces/piece-1");
   });
 
   it("activates the analyze tab on direct navigation to /analyze", async () => {

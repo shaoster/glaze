@@ -15,7 +15,9 @@ import {
   RouterProvider,
   createBrowserRouter,
   createRoutesFromElements,
+  useMatch,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 import {
   Alert,
@@ -50,13 +52,19 @@ import {
   logoutUser,
   NotInvitedError,
   requestWaitlist,
+  updateUserPreferences,
+  type UserPreferences,
 } from "./util/api";
 import { useAsync } from "./util/useAsync";
 import ErrorBoundary from "./components/ErrorBoundary";
 import PublicPieceShell from "./components/PublicPieceShell";
 import UserPreferencesDialog from "./components/UserPreferencesDialog";
-import { CurrentUserProvider } from "./components/CurrentUserContext";
+import {
+  CurrentUserProvider,
+  PreferencesDialogProvider,
+} from "./components/CurrentUserContext";
 import type { AuthUser } from "./util/api";
+import type { PreferencesSectionId } from "./components/CurrentUserContext";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const PieceListPage = lazy(() => import("./pages/PieceListPage"));
@@ -564,159 +572,200 @@ function AppShell({
   onCurrentUserUpdated: (user: AuthUser) => void;
 }) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-  const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const navigate = useNavigate();
+  const preferencesRootMatch = useMatch("/preferences");
+  const preferencesSectionMatch = useMatch("/preferences/:sectionId");
+  const preferencesSectionId =
+    (preferencesSectionMatch?.params.sectionId as PreferencesSectionId | undefined) ??
+    null;
+  const preferencesOpen =
+    preferencesRootMatch !== null || preferencesSectionMatch !== null;
 
   const displayName = useMemo(() => {
     const fullName =
       `${currentUser.first_name} ${currentUser.last_name}`.trim();
     return fullName || currentUser.email;
   }, [currentUser]);
+  const saveUserPreferences = useCallback(
+    async (preferences: UserPreferences) => {
+      const response = await updateUserPreferences(preferences);
+      onCurrentUserUpdated({
+        ...currentUser,
+        preferences: response.preferences,
+      });
+      return response.preferences;
+    },
+    [currentUser, onCurrentUserUpdated],
+  );
+  const openPreferencesDialog = useCallback(
+    (sectionId: PreferencesSectionId | null = "process-summary") => {
+      navigate(sectionId ? `/preferences/${sectionId}` : "/preferences");
+    },
+    [navigate],
+  );
+  const switchPreferencesSection = useCallback(
+    (sectionId: PreferencesSectionId | null) => {
+      navigate(sectionId ? `/preferences/${sectionId}` : "/preferences", {
+        replace: true,
+      });
+    },
+    [navigate],
+  );
+  const closePreferencesDialog = useCallback(() => {
+    navigate(-1);
+  }, [navigate]);
 
   return (
     <CurrentUserProvider currentUser={currentUser}>
-      <Container
-        maxWidth="lg"
-        sx={{
-          minHeight: "100dvh",
-          pt: {
-            xs: "max(12px, calc(env(safe-area-inset-top) + 8px))",
-            sm: 2,
-          },
-          pb: 2,
-          pl: {
-            xs: "max(16px, env(safe-area-inset-left))",
-            sm: 3,
-          },
-          pr: {
-            xs: "max(16px, env(safe-area-inset-right))",
-            sm: 3,
-          },
-        }}
+      <PreferencesDialogProvider
+        openPreferencesDialog={openPreferencesDialog}
+        saveUserPreferences={saveUserPreferences}
       >
-        <Box
+        <Container
+          maxWidth="lg"
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 1.5,
-            mb: 0,
-            flexDirection: "row",
-            flexWrap: "nowrap",
+            minHeight: "100dvh",
+            pt: {
+              xs: "max(12px, calc(env(safe-area-inset-top) + 8px))",
+              sm: 2,
+            },
+            pb: 2,
+            pl: {
+              xs: "max(16px, env(safe-area-inset-left))",
+              sm: 3,
+            },
+            pr: {
+              xs: "max(16px, env(safe-area-inset-right))",
+              sm: 3,
+            },
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Box
-              component="img"
-              src="/favicon.svg"
-              alt="PotterDoc app icon"
-              sx={{
-                width: 22,
-                height: 22,
-                flexShrink: 0,
-                display: "block",
-              }}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 1.5,
+              mb: 0,
+              flexDirection: "row",
+              flexWrap: "nowrap",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box
+                component="img"
+                src="/favicon.svg"
+                alt="PotterDoc app icon"
+                sx={{
+                  width: 22,
+                  height: 22,
+                  flexShrink: 0,
+                  display: "block",
+                }}
+              />
+              <Typography
+                variant="h6"
+                component="p"
+                color="text.primary"
+                display="inline"
+              >
+                PotterDoc
+              </Typography>
+            </Box>
+            <Chip
+              label={displayName}
+              color="primary"
+              variant="outlined"
+              size="small"
+              onClick={(e) => setMenuAnchor(e.currentTarget)}
+              onDelete={(e) => setMenuAnchor(e.currentTarget)}
+              deleteIcon={<ExpandMoreIcon />}
+              sx={{ cursor: "pointer", flexShrink: 0 }}
             />
-            <Typography
-              variant="h6"
-              component="p"
-              color="text.primary"
-              display="inline"
+            <Menu
+              anchorEl={menuAnchor}
+              open={Boolean(menuAnchor)}
+              onClose={() => setMenuAnchor(null)}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
             >
-              PotterDoc
-            </Typography>
+              <MenuItem
+                onClick={() => {
+                  setMenuAnchor(null);
+                  openPreferencesDialog("process-summary");
+                }}
+              >
+                <ListItemIcon>
+                  <SettingsIcon fontSize="small" />
+                </ListItemIcon>
+                Preferences
+              </MenuItem>
+              {currentUser.is_staff ? (
+                <>
+                  <MenuItem
+                    component={Link}
+                    to="/tools/glaze-import"
+                    onClick={() => setMenuAnchor(null)}
+                  >
+                    <ListItemIcon>
+                      <CropFreeIcon fontSize="small" />
+                    </ListItemIcon>
+                    Glaze Import Tool
+                  </MenuItem>
+                  <MenuItem
+                    component={Link}
+                    to="/tools/cloudinary-cleanup"
+                    onClick={() => setMenuAnchor(null)}
+                  >
+                    <ListItemIcon>
+                      <CleaningServicesIcon fontSize="small" />
+                    </ListItemIcon>
+                    Cloudinary Cleanup
+                  </MenuItem>
+                  <MenuItem
+                    component="a"
+                    href="/admin/"
+                    onClick={() => setMenuAnchor(null)}
+                  >
+                    <ListItemIcon>
+                      <AdminPanelSettingsIcon fontSize="small" />
+                    </ListItemIcon>
+                    Admin Tool
+                  </MenuItem>
+                </>
+              ) : null}
+              <MenuItem
+                onClick={() => {
+                  setMenuAnchor(null);
+                  onLogout();
+                }}
+              >
+                <ListItemIcon>
+                  <LogoutIcon fontSize="small" />
+                </ListItemIcon>
+                Log out
+              </MenuItem>
+            </Menu>
           </Box>
-          <Chip
-            label={displayName}
-            color="primary"
-            variant="outlined"
-            size="small"
-            onClick={(e) => setMenuAnchor(e.currentTarget)}
-            onDelete={(e) => setMenuAnchor(e.currentTarget)}
-            deleteIcon={<ExpandMoreIcon />}
-            sx={{ cursor: "pointer", flexShrink: 0 }}
+          <ErrorBoundary>
+            <Suspense
+              fallback={
+                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              }
+            >
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
+          <UserPreferencesDialog
+            open={preferencesOpen}
+            activeSectionId={preferencesSectionId}
+            onClose={closePreferencesDialog}
+            onSectionChange={switchPreferencesSection}
           />
-          <Menu
-            anchorEl={menuAnchor}
-            open={Boolean(menuAnchor)}
-            onClose={() => setMenuAnchor(null)}
-            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-            transformOrigin={{ vertical: "top", horizontal: "right" }}
-          >
-            <MenuItem
-              onClick={() => {
-                setMenuAnchor(null);
-                setPreferencesOpen(true);
-              }}
-            >
-              <ListItemIcon>
-                <SettingsIcon fontSize="small" />
-              </ListItemIcon>
-              Preferences
-            </MenuItem>
-            {currentUser.is_staff ? (
-              <>
-                <MenuItem
-                  component={Link}
-                  to="/tools/glaze-import"
-                  onClick={() => setMenuAnchor(null)}
-                >
-                  <ListItemIcon>
-                    <CropFreeIcon fontSize="small" />
-                  </ListItemIcon>
-                  Glaze Import Tool
-                </MenuItem>
-                <MenuItem
-                  component={Link}
-                  to="/tools/cloudinary-cleanup"
-                  onClick={() => setMenuAnchor(null)}
-                >
-                  <ListItemIcon>
-                    <CleaningServicesIcon fontSize="small" />
-                  </ListItemIcon>
-                  Cloudinary Cleanup
-                </MenuItem>
-                <MenuItem
-                  component="a"
-                  href="/admin/"
-                  onClick={() => setMenuAnchor(null)}
-                >
-                  <ListItemIcon>
-                    <AdminPanelSettingsIcon fontSize="small" />
-                  </ListItemIcon>
-                  Admin Tool
-                </MenuItem>
-              </>
-            ) : null}
-            <MenuItem
-              onClick={() => {
-                setMenuAnchor(null);
-                onLogout();
-              }}
-            >
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              Log out
-            </MenuItem>
-          </Menu>
-        </Box>
-        <ErrorBoundary>
-          <Suspense
-            fallback={
-              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-                <CircularProgress />
-              </Box>
-            }
-          >
-            <Outlet />
-          </Suspense>
-        </ErrorBoundary>
-        <UserPreferencesDialog
-          open={preferencesOpen}
-          onClose={() => setPreferencesOpen(false)}
-          onSaved={onCurrentUserUpdated}
-        />
-      </Container>
+        </Container>
+      </PreferencesDialogProvider>
     </CurrentUserProvider>
   );
 }
@@ -778,6 +827,11 @@ function AuthenticatedApp({
                 </ErrorBoundary>
               }
             />
+            <Route
+              path="/preferences"
+              element={<Box sx={{ minHeight: "100dvh" }} />}
+            />
+            <Route path="/preferences/:sectionId" element={<Box sx={{ minHeight: "100dvh" }} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>,
         ),

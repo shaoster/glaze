@@ -15,11 +15,15 @@ export default function PieceDetailPage({
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const fromGallery =
-    (location.state as { fromGallery?: boolean } | null)?.fromGallery === true;
-  // location.key is 'default' only when the user landed directly on this URL
-  // without navigating from elsewhere in the app.
-  const hasAppHistory = location.key !== "default";
+  const state = location.state as
+    | {
+        fromGallery?: boolean;
+        returnTo?: { pathname: string; search: string; hash?: string };
+      }
+    | null
+    | undefined;
+  const fromGallery = state?.fromGallery === true;
+  const returnTo = state?.returnTo ?? null;
   const showBackButton = fromGallery || showBackToPieces;
   // id is always defined — this component is only rendered via the /pieces/:id route
   const {
@@ -36,10 +40,15 @@ export default function PieceDetailPage({
           <Button
             variant="text"
             onClick={() => {
-          if (fromGallery) navigate("/analyze");
-          else if (hasAppHistory) navigate(-1);
-          else navigate("/");
-        }}
+              if (fromGallery) navigate("/analyze");
+              else if (returnTo) {
+                navigate(
+                  `${returnTo.pathname}${returnTo.search}${returnTo.hash ?? ""}`,
+                );
+              } else {
+                navigate("/");
+              }
+            }}
             sx={{ px: 0 }}
           >
             {fromGallery ? "← Back to Gallery" : "← Back to Pieces"}

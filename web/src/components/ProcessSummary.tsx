@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import type { PieceDetail, PieceState } from "../util/types";
 import {
   getProcessSummaryDefinition,
@@ -7,7 +7,10 @@ import {
   type WorkflowSummaryCondition,
   type WorkflowSummaryItem,
 } from "../util/workflow";
-import { useCurrentUser } from "./CurrentUserContext";
+import {
+  useOpenPreferencesDialog,
+  useCurrentUser,
+} from "./CurrentUserContext";
 
 type ProcessSummaryProps = {
   piece: PieceDetail;
@@ -29,6 +32,7 @@ export default function ProcessSummary({
   history,
 }: ProcessSummaryProps) {
   const currentUser = useCurrentUser();
+  const openPreferencesDialog = useOpenPreferencesDialog();
   const selectedRefs = currentUser?.preferences.process_summary_fields ?? [];
 
   if (selectedRefs.length > 0) {
@@ -80,6 +84,24 @@ export default function ProcessSummary({
         </Box>
       );
     }
+
+    return (
+      <Box sx={{ py: 0.5 }}>
+        <Typography variant="body2" color="text.secondary">
+          No selected summary fields have values for this piece.
+        </Typography>
+        {openPreferencesDialog ? (
+          <Button
+            variant="text"
+            size="small"
+            onClick={() => openPreferencesDialog("process-summary")}
+            sx={{ mt: 0.5, px: 0, alignSelf: "flex-start" }}
+          >
+            Choose summary fields
+          </Button>
+        ) : null}
+      </Box>
+    );
   }
 
   const sections = getProcessSummaryDefinition()

@@ -885,6 +885,25 @@ def _replace_piece_tags(piece: Piece, user, tag_ids: list[str]) -> None:
         piece_tag_model.objects.create(piece=piece, tag=tags_by_id[tag_id], order=order)
 
 
+class TutorialPreferencesSerializer(serializers.Serializer):
+    summary_customize_popover = serializers.ChoiceField(
+        choices=[("show", "show"), ("don't", "don't")],
+        required=False,
+    )
+
+
+class SavedUserPreferencesSerializer(serializers.Serializer):
+    process_summary_fields = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+    )
+    tutorials = TutorialPreferencesSerializer(required=False)
+
+
+class UserPreferencesSerializer(serializers.Serializer):
+    preferences = SavedUserPreferencesSerializer(required=False)
+
+
 class AuthUserSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     email = serializers.EmailField(read_only=True)
@@ -905,15 +924,11 @@ class AuthUserSerializer(serializers.Serializer):
         profile = getattr(obj, "profile", None)
         return profile.profile_image_url if profile else ""
 
-    @extend_schema_field(serializers.DictField(child=serializers.JSONField()))
+    @extend_schema_field(SavedUserPreferencesSerializer())
     def get_preferences(self, obj) -> dict:
         profile = getattr(obj, "profile", None)
         preferences = getattr(profile, "preferences", None) if profile else None
         return preferences if isinstance(preferences, dict) else {}
-
-
-class UserPreferencesSerializer(serializers.Serializer):
-    preferences = serializers.DictField(child=serializers.JSONField(), required=False)
 
 
 class GoogleAuthSerializer(serializers.Serializer):

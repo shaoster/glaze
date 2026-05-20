@@ -305,6 +305,9 @@ describe("auth endpoints", () => {
     profile_image_url: "",
     preferences: {
       process_summary_fields: [],
+      tutorials: {
+        summary_customize_popover: "show",
+      },
     },
   };
 
@@ -425,9 +428,36 @@ describe("auth endpoints", () => {
     });
 
     await expect(fetchUserPreferences()).resolves.toEqual({
-      preferences: { process_summary_fields: ["piece.name"] },
+      preferences: {
+        process_summary_fields: ["piece.name"],
+        tutorials: {
+          summary_customize_popover: "show",
+        },
+      },
     });
     expect(mockClient.get).toHaveBeenCalledWith("auth/preferences/");
+  });
+
+  it("fetchCurrentUser normalizes tutorial defaults", async () => {
+    const { fetchCurrentUser } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: {
+        ...authUser,
+        preferences: {
+          process_summary_fields: ["piece.name"],
+        },
+      },
+    });
+
+    await expect(fetchCurrentUser()).resolves.toEqual({
+      ...authUser,
+      preferences: {
+        process_summary_fields: ["piece.name"],
+        tutorials: {
+          summary_customize_popover: "show",
+        },
+      },
+    });
   });
 
   it("updateUserPreferences fetches CSRF before patching preferences", async () => {
@@ -440,13 +470,28 @@ describe("auth endpoints", () => {
     });
 
     await expect(
-      updateUserPreferences({ process_summary_fields: ["piece.created"] }),
+      updateUserPreferences({
+        process_summary_fields: ["piece.created"],
+        tutorials: {
+          summary_customize_popover: "show",
+        },
+      }),
     ).resolves.toEqual({
-      preferences: { process_summary_fields: ["piece.created"] },
+      preferences: {
+        process_summary_fields: ["piece.created"],
+        tutorials: {
+          summary_customize_popover: "show",
+        },
+      },
     });
     expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
     expect(mockClient.patch).toHaveBeenCalledWith("auth/preferences/", {
-      preferences: { process_summary_fields: ["piece.created"] },
+      preferences: {
+        process_summary_fields: ["piece.created"],
+        tutorials: {
+          summary_customize_popover: "show",
+        },
+      },
     });
   });
 });

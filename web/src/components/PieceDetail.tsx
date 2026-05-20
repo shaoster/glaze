@@ -1,5 +1,6 @@
 import {
   type ComponentProps,
+  type Ref,
   type ReactNode,
   useEffect,
   useRef,
@@ -37,6 +38,7 @@ import {
   updatePiece,
 } from "../util/api";
 import { useAsyncFn } from "../util/useAsync";
+import { TUTORIAL_TOGGLE_KEYS } from "../util/tutorials";
 import CloudinaryImage from "./CloudinaryImage";
 import NavigationBlocker from "./NavigationBlocker";
 import WorkflowState from "./WorkflowState";
@@ -44,12 +46,16 @@ import TagManager from "./TagManager";
 import StateTransition from "./StateTransition";
 import PieceHistory from "./PieceHistory";
 import ProcessSummary from "./ProcessSummary";
+import SmallTutorialInlay, {
+  SMALL_TUTORIAL_INLAY_PLACEMENTS,
+} from "./SmallTutorialInlay";
 import GlobalEntryField from "./GlobalEntryField";
 import PiecePhotoGallery, {
   type PiecePhotoGalleryImage,
 } from "./PiecePhotoGallery";
 import { PieceDetailSaveStatusProvider } from "./PieceDetailSaveStatusContext";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
+import { useOpenPreferencesDialog } from "./CurrentUserContext";
 import ShareControls from "./PieceShareControls";
 import { useAutosave } from "./useAutosave";
 import AutosaveStatus from "./AutosaveStatus";
@@ -63,10 +69,19 @@ type SectionCardProps = {
   eyebrow?: string;
   title?: string;
   subtitle?: string;
+  titleRef?: Ref<HTMLHeadingElement>;
+  titleAdornment?: ReactNode;
   children: ReactNode;
 };
 
-function SectionCard({ eyebrow, title, subtitle, children }: SectionCardProps) {
+function SectionCard({
+  eyebrow,
+  title,
+  subtitle,
+  titleRef,
+  titleAdornment,
+  children,
+}: SectionCardProps) {
   return (
     <Box
       sx={(theme) => ({
@@ -97,19 +112,26 @@ function SectionCard({ eyebrow, title, subtitle, children }: SectionCardProps) {
               </Typography>
             )}
             {(title || subtitle) && (
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 1,
-                  alignItems: "baseline",
-                  justifyContent: "space-between",
-                  flexWrap: "wrap",
-                }}
-              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1.5,
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                  }}
+                >
                 {title ? (
-                  <Typography variant="h6" component="h3">
-                    {title}
-                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography variant="h6" component="h3" ref={titleRef}>
+                      {title}
+                    </Typography>
+                    {titleAdornment ? (
+                      <Box sx={{ ml: 0.5, display: "flex", alignItems: "center" }}>
+                        {titleAdornment}
+                      </Box>
+                    ) : null}
+                  </Box>
                 ) : (
                   <Box />
                 )}
@@ -222,10 +244,13 @@ export default function PieceDetail({
 
 function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   const theme = useTheme();
+  const openPreferencesDialog = useOpenPreferencesDialog();
   const [isDirty, setIsDirty] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(piece.name);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const [processSummaryTitleElement, setProcessSummaryTitleElement] =
+    useState<HTMLHeadingElement | null>(null);
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
   const currentState = piece.current_state;
   const isTerminal = isTerminalState(currentState.state);
@@ -700,7 +725,18 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
         )}
 
         <Box sx={{ mb: 2.5 }}>
-          <SectionCard title="Process Summary">
+          <SectionCard
+            title="Process Summary"
+            titleRef={setProcessSummaryTitleElement}
+            titleAdornment={
+              <SmallTutorialInlay
+                attachedElement={processSummaryTitleElement}
+                tutorialKey={TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP}
+                placement={SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT}
+                onClick={() => openPreferencesDialog?.("process-summary")}
+              />
+            }
+          >
             <ProcessSummary piece={piece} history={piece.history} />
           </SectionCard>
         </Box>

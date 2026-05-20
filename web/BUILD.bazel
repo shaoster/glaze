@@ -224,6 +224,7 @@ js_library(
         "src/util/normalizeWorkflowFields.ts",
         "src/util/optionalValues.ts",
         "src/util/types.ts",
+        "src/util/tutorials.ts",
         "src/util/useAsync.ts",
         "src/util/workflow.ts",
     ],
@@ -570,6 +571,7 @@ js_library(
     srcs = [
         "src/components/NavigationBlocker.tsx",
         "src/components/PieceDetail.tsx",
+        "src/components/SmallTutorialInlay.tsx",
     ],
     deps = [
         ":autosave_src",
@@ -900,6 +902,7 @@ vitest_test(
     name = "web_workflow_summary_test",
     srcs = [
         "src/components/__tests__/ProcessSummary.test.tsx",
+        "src/components/__tests__/SmallTutorialInlay.test.tsx",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [
@@ -907,6 +910,7 @@ vitest_test(
     ],
     expected_coverage = [
         "web/src/components/ProcessSummary*",
+        "web/src/components/SmallTutorialInlay*",
     ],
 )
 
