@@ -109,7 +109,7 @@ export default defineConfig([
 The web UI is organized around a small set of React components in `src/components/`. Each component owns a distinct slice of product behavior:
 
 - `NewPieceDialog.tsx`: Creates a new piece from the list page, including name entry, optional notes, location selection/creation, curated thumbnail picking, save validation, and discard-confirmation when the form is dirty.
-- `PieceList.tsx`: Renders the main pieces table with thumbnail, name, current state, created date, and last modified date, and supports navigation into a piece detail page from each row.
+- `PieceList.tsx`: Renders the main piece masonry on the list page. It filters and sorts `PieceSummary` rows, measures the container width, seeds a Masonic positioner before the first paint, and renders crop-aware thumbnail cards so the initial layout is already correct instead of correcting itself after mount.
 - `PieceDetail.tsx`: Displays a single piece header, renders the current editable workflow state, exposes valid next-state transitions from `workflow.yml`, blocks navigation when edits are unsaved, and lets the user expand past state history with image previews. When **edit piece history** mode is active (`is_editable=true`), clicking any past state in the Timeline section **rewinds** the view to that state — the top editing panel switches to show that historical state (using `updatePastState` to save changes), and all later states in the timeline are greyed out. Clicking the rewound state again (or the ✕ dismiss button on the banner) clears the rewind. Sealing the piece automatically resets the view to the topologically latest state.
 - `WorkflowState.tsx`: Handles editing the current state itself, including notes, current location, workflow-driven additional fields, save/error states, image URL entry, optional Cloudinary uploads, caption editing, image removal, and lightbox launch for current-state images.
 - `GlobalEntryField.tsx` + `GlobalEntryDialog.tsx`: Together provide the reusable UI for workflow globals — `GlobalEntryField` renders the autocomplete chip input and select affordance, while `GlobalEntryDialog` hosts the searchable list, inline creation form, and Cloudinary image upload for the selected global type.
@@ -117,6 +117,19 @@ The web UI is organized around a small set of React components in `src/component
 - `WorkflowSummary.tsx`: Renders the read-only summary section declared on terminal states in `workflow.yml` — displays promoted field values, computed numeric results, and static text with optional `when` conditions.
 - `PieceShareControls.tsx`: Owner-only sharing controls shown on terminal pieces — toggles the public sharing flag and provides a copyable share link.
 - `PublicPieceShell.tsx`: Thin unauthenticated route wrapper that renders `PieceDetailPage` for publicly shared terminal pieces, without the main app shell.
+
+## Piece list masonry data flow
+
+`PieceList.tsx` is the unusual list container that must solve both product filtering and layout correctness at the same time. The reason it feels more complicated than a normal table is that the list used to flash an incorrect first frame whenever the grid mounted before width or height data was trustworthy.
+
+The current design prevents that bad first frame:
+
+- `useContainerPosition()` waits for a real container width before `MasonryScroller` mounts, because a width-0 first commit would poison the cache with chrome-only measurements.
+- `PieceList` seeds Masonic's positioner before paint with crop-backed heights, because a post-mount correction pass is what caused the overlap/flicker race.
+- Cards without crops intentionally stay on the default `itemHeightEstimate`, because their true height is not known until Masonic measures them.
+- Each thumbnail shell reserves its crop aspect ratio up front, and `CloudinaryImage` receives matching dimensions so the image load does not force a second layout correction.
+
+If this ever changes, the first question to ask is "will the first paint still be correct without relying on a later scroll or resize?" If the answer is no, the old bug is back.
 
 ## Cloudinary image uploads (web)
 
