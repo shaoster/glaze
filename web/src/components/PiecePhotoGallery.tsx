@@ -407,7 +407,7 @@ export default function PiecePhotoGallery({
         >
           Move to state
         </Button>
-      ) : canMutateCurrentStateImages && !isEditable ? (
+      ) : canMutateCurrentStateImages && !isEditable && updatePastStateFn !== undefined && (pieceStates?.length ?? 0) > 1 ? (
         <Tooltip title="Piece must be editable to move images.">
           <span>
             <Button

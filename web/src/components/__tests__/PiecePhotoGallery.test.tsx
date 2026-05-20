@@ -615,7 +615,7 @@ describe("PiecePhotoGallery", () => {
 
       // Image at index 0 has stateId "state-current"; dialog should only show "state-past"
       expect(screen.getByText("Move image to state")).toBeInTheDocument();
-      expect(screen.getByRole("option") || screen.getByText("Designed")).toBeInTheDocument();
+      expect(screen.getByText("Designed")).toBeInTheDocument();
       expect(screen.queryByText("Wheel Thrown")).not.toBeInTheDocument();
     });
 
