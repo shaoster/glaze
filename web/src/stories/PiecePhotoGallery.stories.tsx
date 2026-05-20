@@ -34,6 +34,7 @@ const mockImages = [
     cloudinary_public_id: "test1",
     cloud_name: "glaze",
     stateLabel: "Thrown",
+    stateId: "state-1",
     editableCurrentStateIndex: null,
   },
   {
@@ -42,6 +43,7 @@ const mockImages = [
     cloudinary_public_id: "test2",
     cloud_name: "glaze",
     stateLabel: "Trimmed",
+    stateId: "state-2",
     editableCurrentStateIndex: null,
   },
 ];

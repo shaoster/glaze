@@ -74,6 +74,7 @@ function makeImages(): PiecePhotoGalleryImage[] {
       cloudinary_public_id: "piece/a",
       cloud_name: null,
       stateLabel: "Throwing",
+      stateId: "state-current",
       editableCurrentStateIndex: 0,
     },
     {
@@ -83,6 +84,7 @@ function makeImages(): PiecePhotoGalleryImage[] {
       cloudinary_public_id: "piece/b",
       cloud_name: null,
       stateLabel: "Trimming",
+      stateId: "state-past",
       editableCurrentStateIndex: null,
     },
   ];
@@ -99,11 +101,17 @@ function makeSingleImage(
       cloudinary_public_id: "piece/solo",
       cloud_name: null,
       stateLabel: "Throwing",
+      stateId: "state-current",
       editableCurrentStateIndex: 0,
       ...overrides,
     },
   ];
 }
+
+const DEFAULT_PIECE_STATES = [
+  { id: "state-current", label: "Wheel Thrown" },
+  { id: "state-past", label: "Designed" },
+];
 
 function makeUpdatedPiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
   const state = {
@@ -519,6 +527,325 @@ describe("PiecePhotoGallery", () => {
     await waitFor(() =>
       expect(screen.queryByLabelText("Mock lightbox")).not.toBeInTheDocument(),
     );
+  });
+
+  describe("move image to state", () => {
+    it("does not show 'Move to state' button when pieceStates is not provided", async () => {
+      render(
+        <PiecePhotoGallery
+          images={makeImages()}
+          pieceId="piece-1"
+          currentStateNotes="Current notes"
+          onPieceUpdated={vi.fn()}
+          updateCurrentStateFn={vi.fn()}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+
+      expect(screen.queryByRole("button", { name: /move to state/i })).not.toBeInTheDocument();
+    });
+
+    it("shows 'Move to state' button disabled with tooltip when !isEditable", async () => {
+      render(
+        <PiecePhotoGallery
+          images={makeImages()}
+          pieceId="piece-1"
+          currentStateNotes="Current notes"
+          onPieceUpdated={vi.fn()}
+          updateCurrentStateFn={vi.fn()}
+          updatePastStateFn={vi.fn()}
+          pieceStates={DEFAULT_PIECE_STATES}
+          currentStateId="state-current"
+          isEditable={false}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+      // The mock lightbox is a plain div inside the RTL container, which the open gallery Dialog
+      // marks aria-hidden. Use hidden:true to bypass that filter.
+      const moveBtn = screen.getByRole("button", { name: /move to state/i, hidden: true });
+
+      expect(moveBtn).toBeDisabled();
+    });
+
+    it("shows 'Move to state' button enabled when isEditable", async () => {
+      render(
+        <PiecePhotoGallery
+          images={makeImages()}
+          pieceId="piece-1"
+          currentStateNotes="Current notes"
+          onPieceUpdated={vi.fn()}
+          updateCurrentStateFn={vi.fn()}
+          updatePastStateFn={vi.fn()}
+          pieceStates={DEFAULT_PIECE_STATES}
+          currentStateId="state-current"
+          isEditable={true}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+      const moveBtn = screen.getByRole("button", { name: /move to state/i, hidden: true });
+
+      expect(moveBtn).not.toBeDisabled();
+    });
+
+    it("opens state picker dialog showing only other states", async () => {
+      render(
+        <PiecePhotoGallery
+          images={makeImages()}
+          pieceId="piece-1"
+          currentStateNotes="Current notes"
+          onPieceUpdated={vi.fn()}
+          updateCurrentStateFn={vi.fn()}
+          updatePastStateFn={vi.fn()}
+          pieceStates={DEFAULT_PIECE_STATES}
+          currentStateId="state-current"
+          isEditable={true}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i, hidden: true }));
+
+      // Image at index 0 has stateId "state-current"; dialog should only show "state-past"
+      expect(screen.getByText("Move image to state")).toBeInTheDocument();
+      expect(screen.getByText("Designed")).toBeInTheDocument();
+      expect(screen.queryByText("Wheel Thrown")).not.toBeInTheDocument();
+    });
+
+    it("opens state picker showing current state when a past-state image is open", async () => {
+      render(
+        <PiecePhotoGallery
+          images={makeImages()}
+          pieceId="piece-1"
+          currentStateNotes="Current notes"
+          onPieceUpdated={vi.fn()}
+          updateCurrentStateFn={vi.fn()}
+          updatePastStateFn={vi.fn()}
+          pieceStates={DEFAULT_PIECE_STATES}
+          currentStateId="state-current"
+          isEditable={true}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 2" }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i, hidden: true }));
+
+      // Image at index 1 has stateId "state-past"; dialog should only show "state-current"
+      expect(screen.getByText("Wheel Thrown")).toBeInTheDocument();
+      expect(screen.queryByText("Designed")).not.toBeInTheDocument();
+    });
+
+    it("moves a current-state image to a past state via two sequential API calls", async () => {
+      const pastStateAfterRemove = {
+        id: "state-past",
+        state: "designed" as const,
+        notes: "",
+        created: new Date("2024-01-14T10:00:00Z"),
+        last_modified: new Date("2024-01-14T10:00:00Z"),
+        images: [],
+        previous_state: null,
+        next_state: "wheel_thrown" as const,
+        custom_fields: {},
+        has_been_edited: false,
+      };
+      const currentStateAfterRemove = {
+        id: "state-current",
+        state: "wheel_thrown" as const,
+        notes: "Current notes",
+        created: new Date("2024-01-16T10:00:00Z"),
+        last_modified: new Date("2024-01-16T10:00:00Z"),
+        images: [],
+        previous_state: "designed" as const,
+        next_state: null,
+        custom_fields: {},
+        has_been_edited: false,
+      };
+      const pieceAfterRemove = makeUpdatedPiece({
+        current_state: currentStateAfterRemove,
+        history: [pastStateAfterRemove],
+      });
+      const finalPiece = makeUpdatedPiece();
+
+      const updateCurrentStateFn = vi.fn().mockResolvedValue(pieceAfterRemove);
+      const updatePastStateFn = vi.fn().mockResolvedValue(finalPiece);
+      const onPieceUpdated = vi.fn();
+
+      render(
+        <PiecePhotoGallery
+          images={makeImages()}
+          pieceId="piece-1"
+          currentStateNotes="Current notes"
+          currentStateCustomFields={{}}
+          onPieceUpdated={onPieceUpdated}
+          updateCurrentStateFn={updateCurrentStateFn}
+          updatePastStateFn={updatePastStateFn}
+          pieceStates={DEFAULT_PIECE_STATES}
+          currentStateId="state-current"
+          isEditable={true}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i, hidden: true }));
+      await userEvent.click(screen.getByText("Designed"));
+
+      await waitFor(() => expect(updateCurrentStateFn).toHaveBeenCalledWith(
+        "piece-1",
+        expect.objectContaining({ images: [] }),
+      ));
+      await waitFor(() => expect(updatePastStateFn).toHaveBeenCalledWith(
+        "piece-1",
+        "state-past",
+        expect.objectContaining({
+          images: [expect.objectContaining({ url: "https://example.com/a.jpg" })],
+        }),
+      ));
+      await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(finalPiece));
+    });
+
+    it("moves a past-state image to the current state via two sequential updatePastState / updateCurrentState calls", async () => {
+      const pastStateAfterRemove = {
+        id: "state-past",
+        state: "designed" as const,
+        notes: "",
+        created: new Date("2024-01-14T10:00:00Z"),
+        last_modified: new Date("2024-01-14T10:00:00Z"),
+        images: [],
+        previous_state: null,
+        next_state: "wheel_thrown" as const,
+        custom_fields: {},
+        has_been_edited: false,
+      };
+      const currentStateWithOriginalImage = {
+        id: "state-current",
+        state: "wheel_thrown" as const,
+        notes: "Current notes",
+        created: new Date("2024-01-16T10:00:00Z"),
+        last_modified: new Date("2024-01-16T10:00:00Z"),
+        images: [
+          {
+            url: "https://example.com/a.jpg",
+            caption: "Freshly thrown",
+            cloudinary_public_id: "piece/a",
+            cloud_name: null,
+            crop: null,
+            created: new Date("2024-01-16T10:00:00Z"),
+          },
+        ],
+        previous_state: "designed" as const,
+        next_state: null,
+        custom_fields: {},
+        has_been_edited: false,
+      };
+      const pieceAfterSourceRemove = makeUpdatedPiece({
+        current_state: currentStateWithOriginalImage,
+        history: [pastStateAfterRemove],
+      });
+      const finalPiece = makeUpdatedPiece();
+      const updatePastStateFn = vi.fn().mockResolvedValue(pieceAfterSourceRemove);
+      const updateCurrentStateFn = vi.fn().mockResolvedValue(finalPiece);
+      const onPieceUpdated = vi.fn();
+
+      render(
+        <PiecePhotoGallery
+          images={makeImages()}
+          pieceId="piece-1"
+          currentStateNotes="Current notes"
+          currentStateCustomFields={{}}
+          onPieceUpdated={onPieceUpdated}
+          updateCurrentStateFn={updateCurrentStateFn}
+          updatePastStateFn={updatePastStateFn}
+          pieceStates={DEFAULT_PIECE_STATES}
+          currentStateId="state-current"
+          isEditable={true}
+        />,
+      );
+
+      // Open photo 2 (index 1) — the past-state image with stateId="state-past"
+      await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 2" }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i, hidden: true }));
+      // Picker shows only "state-current" ("Wheel Thrown") since source is "state-past"
+      await userEvent.click(screen.getByText("Wheel Thrown"));
+
+      await waitFor(() => expect(updatePastStateFn).toHaveBeenCalledWith(
+        "piece-1",
+        "state-past",
+        expect.objectContaining({ images: [] }),
+      ));
+      await waitFor(() => expect(updateCurrentStateFn).toHaveBeenCalledWith(
+        "piece-1",
+        expect.objectContaining({
+          images: expect.arrayContaining([
+            expect.objectContaining({ url: "https://example.com/b.jpg" }),
+          ]),
+        }),
+      ));
+      await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(finalPiece));
+    });
+
+    it("shows error message when move API call fails", async () => {
+      const updateCurrentStateFn = vi.fn().mockRejectedValue(new Error("Network error"));
+      const updatePastStateFn = vi.fn();
+
+      render(
+        <PiecePhotoGallery
+          images={makeImages()}
+          pieceId="piece-1"
+          currentStateNotes="Current notes"
+          onPieceUpdated={vi.fn()}
+          updateCurrentStateFn={updateCurrentStateFn}
+          updatePastStateFn={updatePastStateFn}
+          pieceStates={DEFAULT_PIECE_STATES}
+          currentStateId="state-current"
+          isEditable={true}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i, hidden: true }));
+      await userEvent.click(screen.getByText("Designed"));
+
+      await waitFor(() =>
+        expect(screen.getByText("Failed to move image. Please try again.")).toBeInTheDocument(),
+      );
+    });
+
+    it("closes move dialog on cancel", async () => {
+      render(
+        <PiecePhotoGallery
+          images={makeImages()}
+          pieceId="piece-1"
+          currentStateNotes="Current notes"
+          onPieceUpdated={vi.fn()}
+          updateCurrentStateFn={vi.fn()}
+          updatePastStateFn={vi.fn()}
+          pieceStates={DEFAULT_PIECE_STATES}
+          currentStateId="state-current"
+          isEditable={true}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i, hidden: true }));
+      expect(screen.getByText("Move image to state")).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      await waitFor(() =>
+        expect(screen.queryByText("Move image to state")).not.toBeInTheDocument(),
+      );
+    });
   });
 
   it("exits image deletion early when the pending image is no longer editable", async () => {

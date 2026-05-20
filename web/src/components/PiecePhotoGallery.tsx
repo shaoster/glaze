@@ -8,14 +8,18 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogTitle,
   IconButton,
+  List,
+  ListItemButton,
+  ListItemText,
   TextField,
   Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
 import type { CaptionedImage, PieceDetail } from "../util/types";
-import { updateCurrentState, updatePiece } from "../util/api";
+import { updateCurrentState, updatePastState, updatePiece } from "../util/api";
 import DeletePiecePhotoDialog from "./DeletePiecePhotoDialog";
 import ImageLightbox from "./ImageLightbox";
 import PiecePhotoGalleryGrid from "./PiecePhotoGalleryGrid";
@@ -23,6 +27,7 @@ import { normalizeFields } from "../util/normalizeWorkflowFields";
 
 export type PiecePhotoGalleryImage = CaptionedImage & {
   stateLabel: string;
+  stateId: string;
   editableCurrentStateIndex: number | null;
 };
 
@@ -30,6 +35,11 @@ export type EditablePiecePhoto = Pick<
   CaptionedImage,
   "url" | "caption" | "cloudinary_public_id" | "cloud_name" | "crop"
 >;
+
+type PieceStateRef = {
+  id: string;
+  label: string;
+};
 
 type PiecePhotoGalleryProps = {
   images: PiecePhotoGalleryImage[];
@@ -40,12 +50,26 @@ type PiecePhotoGalleryProps = {
   onPieceUpdated?: (updated: PieceDetail) => void;
   updatePieceFn?: typeof updatePiece;
   updateCurrentStateFn?: typeof updateCurrentState;
+  pieceStates?: PieceStateRef[];
+  currentStateId?: string;
+  isEditable?: boolean;
+  updatePastStateFn?: typeof updatePastState;
 };
 
 function isEditableImage(
   image: PiecePhotoGalleryImage,
 ): image is PiecePhotoGalleryImage & { editableCurrentStateIndex: number } {
   return image.editableCurrentStateIndex !== null;
+}
+
+function toEditablePhoto(image: CaptionedImage): EditablePiecePhoto {
+  return {
+    url: image.url,
+    caption: image.caption,
+    cloudinary_public_id: image.cloudinary_public_id ?? null,
+    cloud_name: image.cloud_name ?? null,
+    crop: image.crop ?? null,
+  };
 }
 
 export default function PiecePhotoGallery({
@@ -57,6 +81,10 @@ export default function PiecePhotoGallery({
   onPieceUpdated,
   updatePieceFn,
   updateCurrentStateFn,
+  pieceStates,
+  currentStateId,
+  isEditable,
+  updatePastStateFn,
 }: PiecePhotoGalleryProps) {
   const theme = useTheme();
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -67,6 +95,9 @@ export default function PiecePhotoGallery({
   const [captionSaveError, setCaptionSaveError] = useState<string | null>(null);
   const [deleteDialogIndex, setDeleteDialogIndex] = useState<number | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
+  const [moveDialogImageIndex, setMoveDialogImageIndex] = useState<number | null>(null);
+  const [moveSaving, setMoveSaving] = useState(false);
+  const [moveError, setMoveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (lightboxIndex === null) return;
@@ -185,6 +216,68 @@ export default function PiecePhotoGallery({
     }
   }
 
+  async function handleMoveImage(targetStateId: string) {
+    if (
+      moveDialogImageIndex === null ||
+      !pieceId ||
+      !onPieceUpdated ||
+      !updateCurrentStateFn ||
+      !updatePastStateFn
+    ) {
+      return;
+    }
+    const image = images[moveDialogImageIndex];
+    const sourceStateId = image.stateId;
+
+    const nextSourceImages = images
+      .filter((img) => img.stateId === sourceStateId && img !== image)
+      .map(toEditablePhoto);
+
+    setMoveSaving(true);
+    setMoveError(null);
+    try {
+      let updatedAfterSource: PieceDetail;
+      if (sourceStateId === currentStateId) {
+        updatedAfterSource = await updateCurrentStateFn(pieceId, {
+          notes: currentStateNotes!,
+          images: nextSourceImages,
+          custom_fields: normalizeFields(currentStateCustomFields ?? {}),
+        });
+      } else {
+        updatedAfterSource = await updatePastStateFn(pieceId, sourceStateId, {
+          images: nextSourceImages,
+        });
+      }
+
+      const allStates = [updatedAfterSource.current_state, ...updatedAfterSource.history];
+      const targetState = allStates.find((s) => s.id === targetStateId);
+      if (!targetState) {
+        throw new Error("Target state not found.");
+      }
+      const nextTargetImages = [...targetState.images.map(toEditablePhoto), toEditablePhoto(image)];
+
+      let finalPiece: PieceDetail;
+      if (targetStateId === currentStateId) {
+        finalPiece = await updateCurrentStateFn(pieceId, {
+          notes: updatedAfterSource.current_state.notes,
+          images: nextTargetImages,
+          custom_fields: normalizeFields(updatedAfterSource.current_state.custom_fields ?? {}),
+        });
+      } else {
+        finalPiece = await updatePastStateFn(pieceId, targetStateId, {
+          images: nextTargetImages,
+        });
+      }
+      onPieceUpdated(finalPiece);
+      setMoveDialogImageIndex(null);
+      setLightboxIndex(null);
+    } catch {
+      setMoveError("Failed to move image. Please try again.");
+    } finally {
+      setMoveSaving(false);
+    }
+  }
+
   const triggerLabel = `${photoCount} photo${photoCount === 1 ? "" : "s"}`;
 
   const canMutateCurrentStateImages =
@@ -199,6 +292,11 @@ export default function PiecePhotoGallery({
   const canEditCaption =
     editableCurrentStateIndex !== null &&
     canMutateCurrentStateImages;
+  const canMove =
+    canMutateCurrentStateImages &&
+    isEditable === true &&
+    updatePastStateFn !== undefined &&
+    (pieceStates?.length ?? 0) > 1;
 
   const footer = activeImage ? (
     <Box sx={{ display: "grid", gap: 0.75, justifyItems: "center" }}>
@@ -299,6 +397,29 @@ export default function PiecePhotoGallery({
           ? "Added in current state"
           : `Added in ${activeImage.stateLabel}`}
       </Typography>
+      {canMove ? (
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => setMoveDialogImageIndex(lightboxIndex)}
+          sx={{ color: "white", borderColor: "rgba(255,255,255,0.35)" }}
+        >
+          Move to state
+        </Button>
+      ) : canMutateCurrentStateImages && !isEditable && updatePastStateFn !== undefined && (pieceStates?.length ?? 0) > 1 ? (
+        <Tooltip title="Piece must be editable to move images.">
+          <span>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled
+              sx={{ color: "rgba(255,255,255,0.35)", borderColor: "rgba(255,255,255,0.2)" }}
+            >
+              Move to state
+            </Button>
+          </span>
+        </Tooltip>
+      ) : null}
     </Box>
   ) : null;
 
@@ -369,6 +490,49 @@ export default function PiecePhotoGallery({
         onCancel={() => setDeleteDialogIndex(null)}
         onConfirm={() => void handleDeleteImage()}
       />
+
+      {moveDialogImageIndex !== null && (
+        <Dialog
+          open
+          // Intentionally swallow backdrop/escape close while a save is in flight.
+          onClose={() => !moveSaving && setMoveDialogImageIndex(null)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle>Move image to state</DialogTitle>
+          <DialogContent>
+            <List disablePadding>
+              {(pieceStates ?? [])
+                .filter((s) => s.id !== images[moveDialogImageIndex]?.stateId)
+                .map((s) => (
+                  <ListItemButton
+                    key={s.id}
+                    onClick={() => void handleMoveImage(s.id)}
+                    disabled={moveSaving}
+                  >
+                    <ListItemText primary={s.label} />
+                  </ListItemButton>
+                ))}
+            </List>
+            {moveError && (
+              <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                {moveError}
+              </Typography>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setMoveDialogImageIndex(null);
+                setMoveError(null);
+              }}
+              disabled={moveSaving}
+            >
+              Cancel
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </>
   );
 }

@@ -278,6 +278,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
       return state.images.map((image, imageIndex) => ({
         ...image,
         stateLabel: formatState(state.state),
+        stateId: state.id,
         editableCurrentStateIndex:
           canEdit && isCurrentState ? imageIndex : null,
       }));
@@ -396,6 +397,13 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     onPieceUpdated,
     updatePieceFn: canEdit ? updatePiece : undefined,
     updateCurrentStateFn: canEdit ? updateCurrentState : undefined,
+    pieceStates: [
+      { id: currentState.id, label: formatState(currentState.state) },
+      ...piece.history.map((s) => ({ id: s.id, label: formatState(s.state) })),
+    ],
+    currentStateId: currentState.id,
+    isEditable: piece.is_editable,
+    updatePastStateFn: canEdit ? updatePastState : undefined,
   } satisfies ComponentProps<typeof PiecePhotoGallery>;
 
   return (
