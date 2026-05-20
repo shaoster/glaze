@@ -1,4 +1,7 @@
+import importlib
+
 import pytest
+from django.apps import apps as django_apps
 from rest_framework.test import APIClient
 
 from api.models import (
@@ -148,6 +151,20 @@ class TestPieceImagePatch:
         )
         assert response.status_code == 404
 
+    def test_invalid_target_state_uuid_returns_400(
+        self, auth_client, editable_piece_with_two_states, user
+    ):
+        _, state1, _ = editable_piece_with_two_states
+        img = Image.objects.create(user=user, url="https://example.com/img.jpg")
+        PieceStateImage.objects.create(piece_state=state1, image=img, order=0)
+
+        response = auth_client.patch(
+            self._url(img.id, state1.id),
+            {"piece_state_id": "not-a-uuid"},
+            format="json",
+        )
+        assert response.status_code == 400
+
 
 @pytest.mark.django_db
 class TestBackfillImageUser:
@@ -157,15 +174,23 @@ class TestBackfillImageUser:
         img = Image.objects.create(url="https://example.com/img.jpg")  # user=None
         PieceStateImage.objects.create(piece_state=state, image=img, order=0)
 
-        # Simulate what the migration does
-        for link in PieceStateImage.objects.select_related(
-            "image", "piece_state__piece__user"
-        ).filter(image__user__isnull=True):
-            piece_user = link.piece_state.piece.user
-            if piece_user:
-                Image.objects.filter(pk=link.image_id, user__isnull=True).update(
-                    user=piece_user
-                )
-
+        migration = importlib.import_module("api.migrations.0018_backfill_image_user")
+        migration.populate_image_user(django_apps, None)
         img.refresh_from_db()
         assert img.user_id == user.id
+
+    def test_migration_skips_ambiguous_ownership(self, user, other_user):
+        piece = Piece.objects.create(user=user, name="Bowl")
+        other_piece = Piece.objects.create(user=other_user, name="Plate")
+        state = PieceState.objects.create(piece=piece, state=ENTRY_STATE, order=0)
+        other_state = PieceState.objects.create(
+            piece=other_piece, state=ENTRY_STATE, order=0
+        )
+        img = Image.objects.create(url="https://example.com/img.jpg")  # user=None
+        PieceStateImage.objects.create(piece_state=state, image=img, order=0)
+        PieceStateImage.objects.create(piece_state=other_state, image=img, order=0)
+
+        migration = importlib.import_module("api.migrations.0018_backfill_image_user")
+        migration.populate_image_user(django_apps, None)
+        img.refresh_from_db()
+        assert img.user_id is None

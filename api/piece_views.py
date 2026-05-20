@@ -79,6 +79,10 @@ _DEFAULT_ORDERING = "-last_modified"
 _DEFAULT_PAGE_SIZE = 24
 
 
+class PieceImageMoveSerializer(drf_serializers.Serializer):
+    piece_state_id = drf_serializers.UUIDField(required=False)
+
+
 @traced
 def _piece_queryset(request: Request):
     user_id = request.user.id
@@ -393,10 +397,7 @@ def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response
 
 @extend_schema(
     methods=["PATCH"],
-    request=inline_serializer(
-        name="PieceImageMoveRequest",
-        fields={"piece_state_id": drf_serializers.UUIDField(required=False)},
-    ),
+    request=PieceImageMoveSerializer,
     responses={200: PieceDetailSerializer},
     description=(
         "Move a user-owned image from one piece state to another atomically. "
@@ -409,28 +410,44 @@ def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response
 def piece_image_detail(request, image_id, piece_state_id):
     """Move a user-owned PieceStateImage link to a different state atomically."""
     image = get_object_or_404(Image, pk=image_id, user=request.user)
-    link = get_object_or_404(
-        PieceStateImage.objects.select_related("piece_state__piece"),
-        image=image,
-        piece_state_id=piece_state_id,
-    )
-    piece = link.piece_state.piece
-    if piece.user_id != request.user.pk:
-        raise Http404
-    if not piece.is_editable:
-        return Response(
-            {"detail": "Piece is not in editable mode."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
+    request_serializer = PieceImageMoveSerializer(data=request.data)
+    request_serializer.is_valid(raise_exception=True)
+    target_state_id = request_serializer.validated_data.get("piece_state_id")
 
-    target_state_id = request.data.get("piece_state_id")
-    if target_state_id:
-        to_state = get_object_or_404(piece.states, pk=target_state_id)
-        with transaction.atomic():
-            next_order = (to_state.image_links.aggregate(m=Max("order"))["m"] or -1) + 1
-            link.piece_state = to_state
-            link.order = next_order
-            link.save(update_fields=["piece_state", "order"])
+    with transaction.atomic():
+        link = get_object_or_404(
+            PieceStateImage.objects.select_for_update().select_related(
+                "piece_state__piece"
+            ),
+            image=image,
+            piece_state_id=piece_state_id,
+        )
+        piece = link.piece_state.piece
+        if piece.user_id != request.user.pk:
+            raise Http404
+        if not piece.is_editable:
+            return Response(
+                {"detail": "Piece is not in editable mode."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if target_state_id and target_state_id != link.piece_state_id:
+            to_state = get_object_or_404(piece.states, pk=target_state_id)
+            duplicate_link = (
+                PieceStateImage.objects.select_for_update()
+                .filter(piece_state=to_state, image=image)
+                .exclude(pk=link.pk)
+                .first()
+            )
+            if duplicate_link is not None:
+                link.delete()
+            else:
+                next_order = (
+                    to_state.image_links.aggregate(m=Max("order"))["m"] or -1
+                ) + 1
+                link.piece_state = to_state
+                link.order = next_order
+                link.save(update_fields=["piece_state", "order"])
 
     piece = get_object_or_404(_piece_detail_queryset(request), pk=piece.pk)
     return Response(_serialize_piece_detail(piece, request))

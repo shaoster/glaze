@@ -5,14 +5,21 @@ def populate_image_user(apps, schema_editor):
     """Backfill Image.user from the owning piece for images linked via PieceStateImage."""
     PieceStateImage = apps.get_model("api", "PieceStateImage")
     Image = apps.get_model("api", "Image")
-    for link in PieceStateImage.objects.select_related(
-        "image", "piece_state__piece__user"
-    ).filter(image__user__isnull=True):
-        piece_user = link.piece_state.piece.user
-        if piece_user:
-            Image.objects.filter(pk=link.image_id, user__isnull=True).update(
-                user=piece_user
-            )
+    image_ids = (
+        PieceStateImage.objects.filter(image__user__isnull=True)
+        .values_list("image_id", flat=True)
+        .distinct()
+    )
+    for image_id in image_ids:
+        owner_ids = list(
+            PieceStateImage.objects.filter(image_id=image_id)
+            .exclude(piece_state__piece__user_id__isnull=True)
+            .values_list("piece_state__piece__user_id", flat=True)
+            .distinct()
+        )
+        if len(owner_ids) != 1:
+            continue
+        Image.objects.filter(pk=image_id, user__isnull=True).update(user_id=owner_ids[0])
 
 
 def reverse_populate_image_user(apps, schema_editor):
