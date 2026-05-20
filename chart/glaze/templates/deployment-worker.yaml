@@ -16,10 +16,6 @@ spec:
         {{- include "glaze.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: worker
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
       containers:
         - name: worker
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -27,7 +23,7 @@ spec:
           command:
             - bash
             - -lc
-            - python -m celery -A backend worker -l INFO --uid=1000 --gid=1000
+            - python -m celery -A backend worker -l INFO
           envFrom:
             - configMapRef:
                 name: {{ include "glaze.fullname" . }}-env
