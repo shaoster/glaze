@@ -687,6 +687,7 @@ class UserProfile(models.Model):
     )
     openid_subject = models.CharField(max_length=255, blank=True, default="")
     profile_image_url = models.URLField(blank=True, default="")
+    preferences = models.JSONField(blank=True, default=dict)
 
     def __str__(self) -> str:
         return f"Profile({self.user})"

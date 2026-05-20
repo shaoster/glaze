@@ -303,6 +303,9 @@ describe("auth endpoints", () => {
     is_staff: false,
     openid_subject: "",
     profile_image_url: "",
+    preferences: {
+      process_summary_fields: [],
+    },
   };
 
   it("ensureCsrfCookie fetches the CSRF endpoint", async () => {
@@ -411,6 +414,40 @@ describe("auth endpoints", () => {
 
     expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
     expect(mockClient.post).toHaveBeenCalledWith("auth/logout/", {});
+  });
+
+  it("fetchUserPreferences returns normalized preferences", async () => {
+    const { fetchUserPreferences } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: {
+        preferences: { process_summary_fields: ["piece.name", 123] },
+      },
+    });
+
+    await expect(fetchUserPreferences()).resolves.toEqual({
+      preferences: { process_summary_fields: ["piece.name"] },
+    });
+    expect(mockClient.get).toHaveBeenCalledWith("auth/preferences/");
+  });
+
+  it("updateUserPreferences fetches CSRF before patching preferences", async () => {
+    const { updateUserPreferences } = await loadApiModule();
+    mockClient.get.mockResolvedValue({});
+    mockClient.patch.mockResolvedValue({
+      data: {
+        preferences: { process_summary_fields: ["piece.created"] },
+      },
+    });
+
+    await expect(
+      updateUserPreferences({ process_summary_fields: ["piece.created"] }),
+    ).resolves.toEqual({
+      preferences: { process_summary_fields: ["piece.created"] },
+    });
+    expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
+    expect(mockClient.patch).toHaveBeenCalledWith("auth/preferences/", {
+      preferences: { process_summary_fields: ["piece.created"] },
+    });
   });
 });
 

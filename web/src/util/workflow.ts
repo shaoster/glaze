@@ -229,6 +229,13 @@ export interface WorkflowSummarySection {
   fields: WorkflowSummaryItem[];
 }
 
+export interface ProcessSummaryFieldOption {
+  ref: string;
+  label: string;
+  group: string;
+  description?: string;
+}
+
 /**
  * Returns the compose_from map for the given global, if declared. Each entry
  * maps an M2M field name on the model to the global type it references.
@@ -487,6 +494,72 @@ export function getProcessSummaryDefinition(): WorkflowSummarySection[] {
       .map((item) => buildSummaryItem(item))
       .filter((item): item is WorkflowSummaryItem => item !== null),
   }));
+}
+
+export function getProcessSummaryFieldOptions(): ProcessSummaryFieldOption[] {
+  const options: ProcessSummaryFieldOption[] = [
+    {
+      ref: "piece.name",
+      label: "Name",
+      group: "Piece",
+    },
+    {
+      ref: "piece.created",
+      label: "Created",
+      group: "Piece",
+    },
+    {
+      ref: "piece.last_modified",
+      label: "Last Modified",
+      group: "Piece",
+    },
+    {
+      ref: "piece.current_location",
+      label: "Current Location",
+      group: "Piece",
+    },
+    {
+      ref: "piece.showcase_story",
+      label: "Showcase Story",
+      group: "Piece",
+    },
+  ];
+
+  for (const state of workflowDef.states) {
+    const group = state.past_friendly_name || formatPastState(state.id);
+    options.push(
+      {
+        ref: `${state.id}.notes`,
+        label: "Notes",
+        group,
+      },
+      {
+        ref: `${state.id}.created`,
+        label: "Created",
+        group,
+      },
+      {
+        ref: `${state.id}.last_modified`,
+        label: "Last Modified",
+        group,
+      },
+    );
+
+    for (const [fieldName, fieldDef] of Object.entries(state.fields ?? {})) {
+      const resolved = buildResolvedField(fieldName, fieldDef);
+      if (resolved.type === "image") {
+        continue;
+      }
+      options.push({
+        ref: `${state.id}.${fieldName}`,
+        label: resolved.label,
+        group,
+        description: resolved.description,
+      });
+    }
+  }
+
+  return options;
 }
 
 function isStateRefField(def: FieldDefinition): boolean {

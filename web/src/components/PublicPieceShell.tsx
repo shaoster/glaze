@@ -135,9 +135,8 @@ function ShowcaseView({ piece }: { piece: PieceDetail }) {
       <Typography variant="subtitle2" sx={{ mb: 2, color: "text.secondary", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>
         Process Summary
       </Typography>
-      <ProcessSummary history={piece.history} />
+      <ProcessSummary piece={piece} history={piece.history} />
     </Box>
   );
 }
-
 

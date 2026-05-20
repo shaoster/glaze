@@ -39,6 +39,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import CropFreeIcon from "@mui/icons-material/CropFree";
 import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import SettingsIcon from "@mui/icons-material/Settings";
 import { alpha, ThemeProvider, createTheme } from "@mui/material/styles";
 
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
@@ -53,6 +54,8 @@ import {
 import { useAsync } from "./util/useAsync";
 import ErrorBoundary from "./components/ErrorBoundary";
 import PublicPieceShell from "./components/PublicPieceShell";
+import UserPreferencesDialog from "./components/UserPreferencesDialog";
+import { CurrentUserProvider } from "./components/CurrentUserContext";
 import type { AuthUser } from "./util/api";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -554,11 +557,14 @@ function UnauthenticatedApp({
 function AppShell({
   currentUser,
   onLogout,
+  onCurrentUserUpdated,
 }: {
   currentUser: AuthUser;
   onLogout: () => void;
+  onCurrentUserUpdated: (user: AuthUser) => void;
 }) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
 
   const displayName = useMemo(() => {
     const fullName =
@@ -567,149 +573,175 @@ function AppShell({
   }, [currentUser]);
 
   return (
-    <Container
-      maxWidth="lg"
-      sx={{
-        minHeight: "100dvh",
-        pt: {
-          xs: "max(12px, calc(env(safe-area-inset-top) + 8px))",
-          sm: 2,
-        },
-        pb: 2,
-        pl: {
-          xs: "max(16px, env(safe-area-inset-left))",
-          sm: 3,
-        },
-        pr: {
-          xs: "max(16px, env(safe-area-inset-right))",
-          sm: 3,
-        },
-      }}
-    >
-      <Box
+    <CurrentUserProvider currentUser={currentUser}>
+      <Container
+        maxWidth="lg"
         sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 1.5,
-          mb: 0,
-          flexDirection: "row",
-          flexWrap: "nowrap",
+          minHeight: "100dvh",
+          pt: {
+            xs: "max(12px, calc(env(safe-area-inset-top) + 8px))",
+            sm: 2,
+          },
+          pb: 2,
+          pl: {
+            xs: "max(16px, env(safe-area-inset-left))",
+            sm: 3,
+          },
+          pr: {
+            xs: "max(16px, env(safe-area-inset-right))",
+            sm: 3,
+          },
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Box
-            component="img"
-            src="/favicon.svg"
-            alt="PotterDoc app icon"
-            sx={{
-              width: 22,
-              height: 22,
-              flexShrink: 0,
-              display: "block",
-            }}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 1.5,
+            mb: 0,
+            flexDirection: "row",
+            flexWrap: "nowrap",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Box
+              component="img"
+              src="/favicon.svg"
+              alt="PotterDoc app icon"
+              sx={{
+                width: 22,
+                height: 22,
+                flexShrink: 0,
+                display: "block",
+              }}
+            />
+            <Typography
+              variant="h6"
+              component="p"
+              color="text.primary"
+              display="inline"
+            >
+              PotterDoc
+            </Typography>
+          </Box>
+          <Chip
+            label={displayName}
+            color="primary"
+            variant="outlined"
+            size="small"
+            onClick={(e) => setMenuAnchor(e.currentTarget)}
+            onDelete={(e) => setMenuAnchor(e.currentTarget)}
+            deleteIcon={<ExpandMoreIcon />}
+            sx={{ cursor: "pointer", flexShrink: 0 }}
           />
-          <Typography
-            variant="h6"
-            component="p"
-            color="text.primary"
-            display="inline"
+          <Menu
+            anchorEl={menuAnchor}
+            open={Boolean(menuAnchor)}
+            onClose={() => setMenuAnchor(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
           >
-            PotterDoc
-          </Typography>
+            <MenuItem
+              onClick={() => {
+                setMenuAnchor(null);
+                setPreferencesOpen(true);
+              }}
+            >
+              <ListItemIcon>
+                <SettingsIcon fontSize="small" />
+              </ListItemIcon>
+              Preferences
+            </MenuItem>
+            {currentUser.is_staff ? (
+              <>
+                <MenuItem
+                  component={Link}
+                  to="/tools/glaze-import"
+                  onClick={() => setMenuAnchor(null)}
+                >
+                  <ListItemIcon>
+                    <CropFreeIcon fontSize="small" />
+                  </ListItemIcon>
+                  Glaze Import Tool
+                </MenuItem>
+                <MenuItem
+                  component={Link}
+                  to="/tools/cloudinary-cleanup"
+                  onClick={() => setMenuAnchor(null)}
+                >
+                  <ListItemIcon>
+                    <CleaningServicesIcon fontSize="small" />
+                  </ListItemIcon>
+                  Cloudinary Cleanup
+                </MenuItem>
+                <MenuItem
+                  component="a"
+                  href="/admin/"
+                  onClick={() => setMenuAnchor(null)}
+                >
+                  <ListItemIcon>
+                    <AdminPanelSettingsIcon fontSize="small" />
+                  </ListItemIcon>
+                  Admin Tool
+                </MenuItem>
+              </>
+            ) : null}
+            <MenuItem
+              onClick={() => {
+                setMenuAnchor(null);
+                onLogout();
+              }}
+            >
+              <ListItemIcon>
+                <LogoutIcon fontSize="small" />
+              </ListItemIcon>
+              Log out
+            </MenuItem>
+          </Menu>
         </Box>
-        <Chip
-          label={displayName}
-          color="primary"
-          variant="outlined"
-          size="small"
-          onClick={(e) => setMenuAnchor(e.currentTarget)}
-          onDelete={(e) => setMenuAnchor(e.currentTarget)}
-          deleteIcon={<ExpandMoreIcon />}
-          sx={{ cursor: "pointer", flexShrink: 0 }}
-        />
-        <Menu
-          anchorEl={menuAnchor}
-          open={Boolean(menuAnchor)}
-          onClose={() => setMenuAnchor(null)}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          transformOrigin={{ vertical: "top", horizontal: "right" }}
-        >
-          {currentUser.is_staff ? (
-            <>
-              <MenuItem
-                component={Link}
-                to="/tools/glaze-import"
-                onClick={() => setMenuAnchor(null)}
-              >
-                <ListItemIcon>
-                  <CropFreeIcon fontSize="small" />
-                </ListItemIcon>
-                Glaze Import Tool
-              </MenuItem>
-              <MenuItem
-                component={Link}
-                to="/tools/cloudinary-cleanup"
-                onClick={() => setMenuAnchor(null)}
-              >
-                <ListItemIcon>
-                  <CleaningServicesIcon fontSize="small" />
-                </ListItemIcon>
-                Cloudinary Cleanup
-              </MenuItem>
-              <MenuItem
-                component="a"
-                href="/admin/"
-                onClick={() => setMenuAnchor(null)}
-              >
-                <ListItemIcon>
-                  <AdminPanelSettingsIcon fontSize="small" />
-                </ListItemIcon>
-                Admin Tool
-              </MenuItem>
-            </>
-          ) : null}
-          <MenuItem
-            onClick={() => {
-              setMenuAnchor(null);
-              onLogout();
-            }}
+        <ErrorBoundary>
+          <Suspense
+            fallback={
+              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                <CircularProgress />
+              </Box>
+            }
           >
-            <ListItemIcon>
-              <LogoutIcon fontSize="small" />
-            </ListItemIcon>
-            Log out
-          </MenuItem>
-        </Menu>
-      </Box>
-      <ErrorBoundary>
-        <Suspense
-          fallback={
-            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-              <CircularProgress />
-            </Box>
-          }
-        >
-          <Outlet />
-        </Suspense>
-      </ErrorBoundary>
-    </Container>
+            <Outlet />
+          </Suspense>
+        </ErrorBoundary>
+        <UserPreferencesDialog
+          open={preferencesOpen}
+          onClose={() => setPreferencesOpen(false)}
+          onSaved={onCurrentUserUpdated}
+        />
+      </Container>
+    </CurrentUserProvider>
   );
 }
 
 function AuthenticatedApp({
   currentUser,
   onLogout,
+  onCurrentUserUpdated,
 }: {
   currentUser: AuthUser;
   onLogout: () => void;
+  onCurrentUserUpdated: (user: AuthUser) => void;
 }) {
   const router = useMemo(
     () =>
       createBrowserRouter(
         createRoutesFromElements(
           <Route
-            element={<AppShell currentUser={currentUser} onLogout={onLogout} />}
+            element={
+              <AppShell
+                currentUser={currentUser}
+                onLogout={onLogout}
+                onCurrentUserUpdated={onCurrentUserUpdated}
+              />
+            }
           >
             <Route path="/" element={<LandingPage />}>
               <Route index element={<PieceListPage />} />
@@ -750,7 +782,7 @@ function AuthenticatedApp({
           </Route>,
         ),
       ),
-    [currentUser, onLogout],
+    [currentUser, onLogout, onCurrentUserUpdated],
   );
 
   return <RouterProvider router={router} />;
@@ -768,6 +800,12 @@ export default function App() {
     setData: setCurrentUser,
   } = useAsync<AuthUser | null>(fetchCurrentUser);
   const handleAuthenticated = useCallback(
+    (user: AuthUser) => {
+      setCurrentUser(user);
+    },
+    [setCurrentUser],
+  );
+  const handleCurrentUserUpdated = useCallback(
     (user: AuthUser) => {
       setCurrentUser(user);
     },
@@ -802,7 +840,11 @@ export default function App() {
             <CircularProgress />
           </Container>
         ) : currentUser ? (
-          <AuthenticatedApp currentUser={currentUser} onLogout={handleLogout} />
+          <AuthenticatedApp
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            onCurrentUserUpdated={handleCurrentUserUpdated}
+          />
         ) : (
           <UnauthenticatedApp onAuthenticated={handleAuthenticated} />
         )}

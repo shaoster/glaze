@@ -56,6 +56,11 @@ vi.mock("./components/PieceDetail", () => ({
   default: () => <div>Piece Detail Content</div>,
 }));
 
+vi.mock("./components/UserPreferencesDialog", () => ({
+  default: ({ open }: { open: boolean }) =>
+    open ? <div>User Preferences Dialog</div> : null,
+}));
+
 vi.mock("./components/GlazeCombinationGallery", () => ({
   default: () => <div>Glaze Combinations</div>,
 }));
@@ -84,6 +89,9 @@ const MOCK_USER = {
   is_staff: false,
   openid_subject: "",
   profile_image_url: "",
+  preferences: {
+    process_summary_fields: [],
+  },
 };
 
 const MOCK_ADMIN_USER = {
@@ -372,6 +380,23 @@ describe("App auth flow", () => {
     await userEvent.click(screen.getByText("Pat Potter"));
 
     expect(screen.queryByText("Glaze Import Tool")).not.toBeInTheDocument();
+  });
+
+  it("opens the preferences dialog from the user menu", async () => {
+    vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_USER);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /new piece/i }),
+      ).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText("Pat Potter"));
+    await userEvent.click(screen.getByText("Preferences"));
+
+    expect(screen.getByText("User Preferences Dialog")).toBeInTheDocument();
   });
 
   it("activates the analyze tab on direct navigation to /analyze", async () => {

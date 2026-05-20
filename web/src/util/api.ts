@@ -40,6 +40,11 @@ export type AuthUser = {
   is_staff: boolean;
   openid_subject: string;
   profile_image_url: string;
+  preferences: UserPreferences;
+};
+
+export type UserPreferences = {
+  process_summary_fields: string[];
 };
 
 const client = axios.create({ baseURL: "/api/" });
@@ -169,6 +174,18 @@ function mapPieceDetail(raw: Wire<PieceDetail>): PieceDetail {
   };
 }
 
+function normalizeUserPreferences(
+  preferences: Partial<UserPreferences> | null | undefined,
+): UserPreferences {
+  return {
+    process_summary_fields: Array.isArray(preferences?.process_summary_fields)
+      ? preferences.process_summary_fields.filter(
+          (value): value is string => typeof value === "string",
+        )
+      : [],
+  };
+}
+
 // ---------------------------------------------------------------------------
 // API calls
 // ---------------------------------------------------------------------------
@@ -237,7 +254,10 @@ export async function registerWithEmail(payload: {
 export async function fetchCurrentUser(): Promise<AuthUser | null> {
   try {
     const { data } = await client.get<AuthUser>("auth/me/");
-    return data;
+    return {
+      ...data,
+      preferences: normalizeUserPreferences(data.preferences),
+    };
   } catch (error) {
     if (
       axios.isAxiosError(error) &&
@@ -258,6 +278,32 @@ export async function loginWithGoogle(credential: string): Promise<AuthUser> {
 export async function logoutUser(): Promise<void> {
   await ensureCsrfCookie();
   await client.post("auth/logout/", {});
+}
+
+export type UserPreferencesResponse = {
+  preferences: UserPreferences;
+};
+
+export async function fetchUserPreferences(): Promise<UserPreferencesResponse> {
+  const { data } = await client.get<UserPreferencesResponse>("auth/preferences/");
+  return {
+    preferences: normalizeUserPreferences(data.preferences),
+  };
+}
+
+export async function updateUserPreferences(
+  preferences: UserPreferences,
+): Promise<UserPreferencesResponse> {
+  await ensureCsrfCookie();
+  const { data } = await client.patch<UserPreferencesResponse>(
+    "auth/preferences/",
+    {
+      preferences,
+    },
+  );
+  return {
+    preferences: normalizeUserPreferences(data.preferences),
+  };
 }
 
 export type ApiError = { detail?: string; code?: string };

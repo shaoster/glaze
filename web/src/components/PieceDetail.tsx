@@ -701,7 +701,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
 
         <Box sx={{ mb: 2.5 }}>
           <SectionCard title="Process Summary">
-            <ProcessSummary history={piece.history} />
+            <ProcessSummary piece={piece} history={piece.history} />
           </SectionCard>
         </Box>
 

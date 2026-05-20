@@ -244,6 +244,7 @@ js_library(
             "src/assets/**/*",
             "src/components/**/*",
             "src/pages/**/*",
+            "src/stories/**/*",
             "*.json",
             "*.config.*",
             "public/**/*",
@@ -543,7 +544,10 @@ js_library(
 
 js_library(
     name = "process_summary_src",
-    srcs = ["src/components/ProcessSummary.tsx"],
+    srcs = [
+        "src/components/CurrentUserContext.tsx",
+        "src/components/ProcessSummary.tsx",
+    ],
     deps = [
         ":node_modules",
         ":util_lib",

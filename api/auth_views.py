@@ -55,6 +55,7 @@ from .serializers import (
     PieceUpdateSerializer,
     RegisterSerializer,
     TaskSubmissionSerializer,
+    UserPreferencesSerializer,
 )
 from .utils import bootstrap_dev_user
 from .workflow import (
@@ -126,6 +127,39 @@ def auth_logout(request: Request) -> Response:
 @traced
 def auth_me(request: Request) -> Response:
     return Response(AuthUserSerializer(request.user).data)
+
+
+@extend_schema(
+    request=UserPreferencesSerializer,
+    responses={200: UserPreferencesSerializer},
+    description="Return or update the current user's saved preferences.",
+)
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+@traced
+def auth_preferences(request: Request) -> Response:
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    if request.method == "GET":
+        return Response(
+            {
+                "preferences": profile.preferences
+                if isinstance(profile.preferences, dict)
+                else {}
+            }
+        )
+
+    serializer = UserPreferencesSerializer(data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    if "preferences" in serializer.validated_data:
+        profile.preferences = serializer.validated_data["preferences"]
+        profile.save(update_fields=["preferences"])
+    return Response(
+        {
+            "preferences": profile.preferences
+            if isinstance(profile.preferences, dict)
+            else {}
+        }
+    )
 
 
 @extend_schema(
