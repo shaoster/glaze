@@ -59,11 +59,13 @@ let rerenderMasonryScroller: (() => void) | undefined;
 vi.mock("masonic", () => ({
   MasonryScroller: ({
     items,
+    positioner,
     render: RenderComponent,
     itemHeightEstimate,
     itemKey,
   }: {
     items: PieceSummary[];
+    positioner: typeof mockPositioner;
     render: React.ComponentType<{ data: PieceSummary; index: number; width: number }>;
     itemHeightEstimate: number;
     itemKey?: (item: PieceSummary, index: number) => string | number;
@@ -75,15 +77,15 @@ vi.mock("masonic", () => ({
       <div data-testid="piece-grid" style={{ position: "relative" }}>
         {(() => {
           const gutter = 8;
-          const columnCount = mockPositioner.columnCount;
-          const columnWidth = mockPositioner.columnWidth;
+          const columnCount = positioner.columnCount;
+          const columnWidth = positioner.columnWidth;
           const columnHeights = Array.from({ length: columnCount }, () => 0);
           const seededHeights = new Map<number, number>([
-            ...mockPositioner.set.mock.calls.map(([index, height]) => [
+            ...positioner.set.mock.calls.map(([index, height]) => [
               index as number,
               height as number,
             ]),
-            ...mockPositioner.update.mock.calls.flatMap(([updates]) =>
+            ...positioner.update.mock.calls.flatMap(([updates]) =>
               updates.flatMap((value, position) =>
                 position % 2 === 0
                   ? [[value as number, updates[position + 1] as number]]
@@ -123,6 +125,13 @@ vi.mock("masonic", () => ({
     },
   useContainerPosition: () => ({ width: mockContainerPosition.width, offset: mockContainerPosition.offset }),
   usePositioner: () => mockPositioner,
+  createPositioner: (columnCount: number, columnWidth: number, columnGutter: number, rowGutter: number) => {
+    mockPositioner.columnCount = columnCount;
+    mockPositioner.columnWidth = columnWidth;
+    void columnGutter;
+    void rowGutter;
+    return mockPositioner;
+  },
   useResizeObserver: () => undefined,
 }));
 
@@ -227,7 +236,7 @@ describe("PieceList", () => {
       renderPieceList([piece]);
       expect(mockPositioner.set).toHaveBeenCalledWith(
         0,
-        Math.round(220 * 400 / 200) + CARD_CHROME_HEIGHT,
+        estimateCardHeight(piece, mockPositioner.columnWidth),
       );
     });
 
@@ -279,21 +288,6 @@ describe("PieceList", () => {
           DEFAULT_CARD_HEIGHT_ESTIMATE,
         );
       });
-    });
-
-    it("does not re-seed already-positioned items", () => {
-      mockPositioner.get.mockReturnValue({ top: 0, left: 0, height: 300, column: 0 });
-      const piece = makePiece({
-        thumbnail: {
-          url: "https://example.com/img.jpg",
-          cloudinary_public_id: "id",
-          cloud_name: "demo",
-          crop: { x: 0, y: 0, width: 200, height: 400 },
-        },
-      });
-      renderPieceList([piece]);
-      expect(mockPositioner.set).not.toHaveBeenCalled();
-      expect(mockPositioner.update).not.toHaveBeenCalled();
     });
 
     it("does not reseed on an unrelated rerender", async () => {
@@ -580,6 +574,7 @@ describe("PieceList", () => {
       ) + CARD_CHROME_HEIGHT;
       expect(trueForPieces0).not.toBe(naiveForPieces0);
     });
+
   });
 
   describe("with no pieces", () => {

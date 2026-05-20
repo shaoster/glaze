@@ -450,7 +450,7 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 
 **Existing components:**
 
-- [`PieceList.tsx`](../../web/src/components/PieceList.tsx) — MUI table of `PieceSummary` objects (Thumbnail, Name, State, Created, Last Modified)
+- [`PieceList.tsx`](../../web/src/components/PieceList.tsx) — masonry orchestration layer for `PieceSummary` objects. It prevents the list from flashing an incorrect first frame by waiting for a real width, seeding crop-backed heights before paint, and letting un-cropped cards fall back to the default estimate until Masonic measures them.
 - [`NewPieceDialog.tsx`](../../web/src/components/NewPieceDialog.tsx) — dialog for creating a new piece; name, optional notes, thumbnail gallery
 - [`WorkflowState.tsx`](../../web/src/components/WorkflowState.tsx) — edits the current `PieceState`: notes, location, additional fields, images (upload or URL), caption editing, lightbox launch
 - [`GlobalEntryField.tsx`](../../web/src/components/GlobalEntryField.tsx) — chip + button wrapper that shows the currently selected global entry and opens the `GlobalEntryDialog` picker on click.
@@ -461,6 +461,15 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 - [`ProcessSummary.tsx`](../../web/src/components/ProcessSummary.tsx) — renders the read-only `process_summary` section declared at the top level of `workflow.yml`. Displays sections of fields, promoted values, computed numeric results (`product`, `difference`, `sum`, `ratio`), and static text with optional `when` (`state_exists` / `state_missing`) visibility. Rendered by `PieceDetail` and `PublicPieceShell`.
 - [`PieceShareControls.tsx`](../../web/src/components/PieceShareControls.tsx) — owner-only sharing controls shown on terminal pieces. Renders a toggle to make the piece publicly accessible and a copyable share link; hidden from non-owners and non-terminal pieces.
 - [`PublicPieceShell.tsx`](../../web/src/components/PublicPieceShell.tsx) — unauthenticated route that acts as the **Showcase View** for publicly shared pieces. Displays the piece's curated content (name, thumbnail, story, and selected fields) without exposing the full potter-facing timeline or private notes.
+
+**PieceList masonry flow:**
+
+- The list page is a masonry grid, not a static table. The component exists to protect the user from a bad first paint, not just to place cards in rows.
+- A `width=0` first commit would seed the cache with chrome-only heights and recreate the overlap bug, so the grid waits for a real container width before rendering.
+- Crop-backed cards are seeded synchronously before the first `MasonryScroller` render because the old post-mount correction pass is what produced the visible flicker.
+- Cards without crops keep the default `itemHeightEstimate` because we do not know their exact height until Masonic measures them.
+- `CloudinaryImage` sizing must stay aligned with the shell aspect ratio and the requested masonry width; otherwise the image load can trigger a second layout correction and bring the bug back.
+- If this flow changes, update the README and this section together so future agents understand the failure mode, not just the implementation steps.
 
 **Visual design system — state chips and state flow:**
 
