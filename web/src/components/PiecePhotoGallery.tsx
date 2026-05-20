@@ -494,6 +494,7 @@ export default function PiecePhotoGallery({
       {moveDialogImageIndex !== null && (
         <Dialog
           open
+          // Intentionally swallow backdrop/escape close while a save is in flight.
           onClose={() => !moveSaving && setMoveDialogImageIndex(null)}
           maxWidth="xs"
           fullWidth

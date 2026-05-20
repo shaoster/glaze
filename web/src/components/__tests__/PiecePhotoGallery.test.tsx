@@ -616,6 +616,30 @@ describe("PiecePhotoGallery", () => {
       expect(screen.queryByText("Wheel Thrown")).not.toBeInTheDocument();
     });
 
+    it("opens state picker showing current state when a past-state image is open", async () => {
+      render(
+        <PiecePhotoGallery
+          images={makeImages()}
+          pieceId="piece-1"
+          currentStateNotes="Current notes"
+          onPieceUpdated={vi.fn()}
+          updateCurrentStateFn={vi.fn()}
+          updatePastStateFn={vi.fn()}
+          pieceStates={DEFAULT_PIECE_STATES}
+          currentStateId="state-current"
+          isEditable={true}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
+      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 2" }));
+      await userEvent.click(screen.getByRole("button", { name: /move to state/i }));
+
+      // Image at index 1 has stateId "state-past"; dialog should only show "state-current"
+      expect(screen.getByText("Wheel Thrown")).toBeInTheDocument();
+      expect(screen.queryByText("Designed")).not.toBeInTheDocument();
+    });
+
     it("moves a current-state image to a past state via two sequential API calls", async () => {
       const pastStateAfterRemove = {
         id: "state-past",
@@ -721,7 +745,7 @@ describe("PiecePhotoGallery", () => {
       };
       const pieceAfterSourceRemove = makeUpdatedPiece({
         current_state: currentStateWithOriginalImage,
-        history: [currentStateWithOriginalImage, pastStateAfterRemove],
+        history: [pastStateAfterRemove],
       });
       const finalPiece = makeUpdatedPiece();
       const updatePastStateFn = vi.fn().mockResolvedValue(pieceAfterSourceRemove);
