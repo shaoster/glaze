@@ -495,6 +495,18 @@ export type UpdatePiecePayload = {
   showcase_fields?: string[];
 };
 
+export async function moveImage(
+  imageId: string,
+  fromStateId: string,
+  toStateId: string,
+): Promise<PieceDetail> {
+  const { data } = await client.patch<Wire<PieceDetail>>(
+    `images/${imageId}/piece_state/${fromStateId}/`,
+    { piece_state_id: toStateId },
+  );
+  return mapPieceDetail(data);
+}
+
 export async function updatePiece(
   pieceId: string,
   payload: UpdatePiecePayload,

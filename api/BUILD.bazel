@@ -216,6 +216,7 @@ pytest_test(
         "tests/test_pieces_list.py",
         "tests/test_sealed_state.py",
         "tests/test_editable_mode.py",
+        "tests/test_images.py",
         "tests/test_issue_337.py",
     ],
     args = [
@@ -229,6 +230,7 @@ pytest_test(
         "api/tests/test_piece_showcase_validation.py",
         "api/tests/test_piece_state_admin_relational.py",
         "api/tests/test_editable_mode.py",
+        "api/tests/test_images.py",
         "api/tests/test_issue_337.py",
     ],
     data = _TEST_DATA,

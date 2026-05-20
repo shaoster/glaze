@@ -10,6 +10,11 @@ _router.register(r"crop-runs", views.CropRunViewSet, basename="crop-run")
 urlpatterns = [
     path("", include(_router.urls)),
     path(
+        "images/<uuid:image_id>/piece_state/<uuid:piece_state_id>/",
+        views.piece_image_detail,
+        name="piece-image-detail",
+    ),
+    path(
         "images/<uuid:image_id>/crop-runs/",
         views.ImageCropRunsView.as_view(),
         name="image-crop-runs",
