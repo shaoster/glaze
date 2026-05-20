@@ -633,9 +633,10 @@ gz_deploy() {
     if [[ "${1:-}" != "--no-push" ]]; then
         gz_push || return $?
     fi
-    echo "Triggering helm upgrade on $host for image tag $sha..."
+    echo "Shipping chart and upgrading on $host for image tag $sha..."
+    scp -r "$GLAZE_ROOT/chart/glaze" "$host":~/glaze-chart-deploy/
     ssh "$host" "
-        KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm upgrade glaze ~/glaze-chart-deploy/glaze/ \
+        KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm upgrade --install glaze ~/glaze-chart-deploy/glaze/ \
             -f ~/glaze-values-override.yaml \
             --set image.tag=$sha \
             --timeout 5m \
