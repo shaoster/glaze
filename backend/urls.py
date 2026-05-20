@@ -31,7 +31,9 @@ def _index_html() -> str | None:
 def _spa(request: HttpRequest) -> HttpResponse | HttpResponseNotFound:
     index_html = _index_html()
     if index_html is not None:
-        return HttpResponse(index_html, content_type="text/html")
+        response = HttpResponse(index_html, content_type="text/html")
+        response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
     return HttpResponseNotFound("Frontend not built.")
 
 
@@ -94,10 +96,12 @@ def _piece_spa(request: HttpRequest, piece_id) -> HttpResponse | HttpResponseNot
     index_html = _index_html()
     if index_html is None:
         return HttpResponseNotFound("Frontend not built.")
-    return HttpResponse(
+    response = HttpResponse(
         _inject_piece_metadata(index_html, request, piece_id),
         content_type="text/html",
     )
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
 
 
 urlpatterns = [
