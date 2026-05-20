@@ -50,20 +50,6 @@ export default defineConfig(({ mode }) => {
           entryFileNames: "[name].js",
           chunkFileNames: "chunks/[name].js",
           assetFileNames: "assets/[name].[ext]",
-          manualChunks(id) {
-            if (
-              id.includes("node_modules/react") ||
-              id.includes("node_modules/react-dom")
-            ) {
-              return "vendor-react";
-            }
-            if (
-              id.includes("node_modules/@mui") ||
-              id.includes("node_modules/@emotion")
-            ) {
-              return "vendor-mui";
-            }
-          },
         },
       },
     },
