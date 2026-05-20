@@ -644,6 +644,23 @@ class TestPublicPieceMetadata:
         assert "<title>PotterDoc</title>" in html
         assert "og:title" not in html
 
+    def test_chunk_asset_paths_do_not_fall_back_to_the_spa_html(
+        self, client, tmp_path, monkeypatch
+    ):
+        import backend.urls
+
+        index_html = tmp_path / "index.html"
+        index_html.write_text(
+            "<html><head><title>PotterDoc</title></head><body></body></html>",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(backend.urls, "_INDEX_HTML", index_html)
+
+        response = client.get("/chunks/vendor-react.js")
+
+        assert response.status_code == 404
+        assert "<title>PotterDoc</title>" not in response.content.decode()
+
 
 # ---------------------------------------------------------------------------
 # GET /api/pieces/{id}/current_state/
