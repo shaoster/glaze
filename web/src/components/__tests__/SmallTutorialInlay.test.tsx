@@ -32,39 +32,87 @@ function makeCurrentUser() {
   };
 }
 
+function renderHarness({
+  openPreferencesDialog,
+  saveUserPreferencesMock,
+  placement,
+}: {
+  openPreferencesDialog: ReturnType<typeof vi.fn>;
+  saveUserPreferencesMock: ReturnType<typeof vi.fn>;
+  placement: (typeof SMALL_TUTORIAL_INLAY_PLACEMENTS)[keyof typeof SMALL_TUTORIAL_INLAY_PLACEMENTS];
+}) {
+  const anchor = document.createElement("h3");
+  document.body.appendChild(anchor);
+
+  function Harness() {
+    const [currentUser, setCurrentUser] = useState(makeCurrentUser());
+
+    return (
+      <PreferencesDialogProvider
+        openPreferencesDialog={openPreferencesDialog}
+        saveUserPreferences={async (preferences) => {
+          await saveUserPreferencesMock(preferences);
+          setCurrentUser((prev) => ({ ...prev, preferences }));
+          return preferences;
+        }}
+      >
+        <CurrentUserProvider currentUser={currentUser}>
+          <SmallTutorialInlay
+            attachedElement={anchor}
+            tutorialKey={TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP}
+            placement={placement}
+            onClick={() => openPreferencesDialog("process-summary")}
+          />
+        </CurrentUserProvider>
+      </PreferencesDialogProvider>
+    );
+  }
+
+  return { anchor, Harness };
+}
+
 describe("SmallTutorialInlay", () => {
+  it.each([
+    SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT,
+    SMALL_TUTORIAL_INLAY_PLACEMENTS.TOP,
+  ])(
+    "renders %s placement without elevating the layer",
+    async (placement) => {
+      const openPreferencesDialog = vi.fn();
+      const saveUserPreferencesMock = vi.fn(
+        async (preferences: UserPreferences) => preferences,
+      );
+      const { anchor, Harness } = renderHarness({
+        openPreferencesDialog,
+        saveUserPreferencesMock,
+        placement,
+      });
+
+      render(<Harness />);
+
+      const button = await screen.findByRole("button", {
+        name: "Customize this summary!",
+      });
+      const popper = button.closest("[data-popper-placement]");
+
+      expect(popper).toHaveAttribute("data-popper-placement", placement);
+      expect(window.getComputedStyle(popper ?? button).zIndex).toBe("auto");
+
+      anchor.remove();
+    },
+  );
+
   it("clicking the tip opens preferences and dismisses it", async () => {
     const user = userEvent.setup();
-    const anchor = document.createElement("h3");
-    document.body.appendChild(anchor);
     const openPreferencesDialog = vi.fn();
     const saveUserPreferencesMock = vi.fn(
       async (preferences: UserPreferences) => preferences,
     );
-
-    function Harness() {
-      const [currentUser, setCurrentUser] = useState(makeCurrentUser());
-
-      return (
-        <PreferencesDialogProvider
-          openPreferencesDialog={openPreferencesDialog}
-          saveUserPreferences={async (preferences) => {
-            await saveUserPreferencesMock(preferences);
-            setCurrentUser((prev) => ({ ...prev, preferences }));
-            return preferences;
-          }}
-        >
-          <CurrentUserProvider currentUser={currentUser}>
-            <SmallTutorialInlay
-              attachedElement={anchor}
-              tutorialKey={TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP}
-              placement={SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT}
-              onClick={() => openPreferencesDialog("process-summary")}
-            />
-          </CurrentUserProvider>
-        </PreferencesDialogProvider>
-      );
-    }
+    const { anchor, Harness } = renderHarness({
+      openPreferencesDialog,
+      saveUserPreferencesMock,
+      placement: SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT,
+    });
 
     render(<Harness />);
 
@@ -87,36 +135,15 @@ describe("SmallTutorialInlay", () => {
 
   it("dismissing the tip hides it without opening preferences", async () => {
     const user = userEvent.setup();
-    const anchor = document.createElement("h3");
-    document.body.appendChild(anchor);
     const openPreferencesDialog = vi.fn();
     const saveUserPreferencesMock = vi.fn(
       async (preferences: UserPreferences) => preferences,
     );
-
-    function Harness() {
-      const [currentUser, setCurrentUser] = useState(makeCurrentUser());
-
-      return (
-        <PreferencesDialogProvider
-          openPreferencesDialog={openPreferencesDialog}
-          saveUserPreferences={async (preferences) => {
-            await saveUserPreferencesMock(preferences);
-            setCurrentUser((prev) => ({ ...prev, preferences }));
-            return preferences;
-          }}
-        >
-          <CurrentUserProvider currentUser={currentUser}>
-            <SmallTutorialInlay
-              attachedElement={anchor}
-              tutorialKey={TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP}
-              placement={SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT}
-              onClick={() => openPreferencesDialog("process-summary")}
-            />
-          </CurrentUserProvider>
-        </PreferencesDialogProvider>
-      );
-    }
+    const { anchor, Harness } = renderHarness({
+      openPreferencesDialog,
+      saveUserPreferencesMock,
+      placement: SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT,
+    });
 
     render(<Harness />);
 

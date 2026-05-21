@@ -749,7 +749,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
               <SmallTutorialInlay
                 attachedElement={processSummaryTitleElement}
                 tutorialKey={TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP}
-                placement={SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT}
+                placement={SMALL_TUTORIAL_INLAY_PLACEMENTS.TOP}
                 onClick={() => openPreferencesDialog?.("process-summary")}
               />
             }
