@@ -539,7 +539,7 @@ function UnauthenticatedApp({
               }
             />
             <Route
-              path="/pieces/:id"
+              path="/pieces/:id/*"
               element={<PublicPieceShell />}
             />
             <Route
@@ -796,7 +796,7 @@ function AuthenticatedApp({
               <Route index element={<PieceListPage />} />
               <Route path="analyze/*" element={<AnalyzePage />} />
             </Route>
-            <Route path="/pieces/:id" element={<PieceDetailPage />} />
+            <Route path="/pieces/:id/*" element={<PieceDetailPage />} />
             <Route
               path="/tools/glaze-import"
               element={

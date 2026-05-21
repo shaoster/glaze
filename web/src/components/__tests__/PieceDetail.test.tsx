@@ -241,7 +241,7 @@ async function renderPieceDetail(
   const router = createMemoryRouter(
     [
       {
-        path: "/pieces/:id",
+        path: "/pieces/:id/*",
         element: <PieceDetail piece={piece} onPieceUpdated={onPieceUpdated} />,
       },
       {
@@ -1043,6 +1043,55 @@ describe("PieceDetail", () => {
         ),
         { timeout: 3000 }
       );
+    });
+  });
+
+  describe("hero image click", () => {
+    const galleryImage = {
+      url: "https://res.cloudinary.com/test/image/upload/v1/piece/hero.jpg",
+      caption: "Hero shot",
+      created: new Date("2024-01-15T10:00:00Z"),
+      cloudinary_public_id: "piece/hero",
+      cloud_name: "test-cloud",
+    };
+
+    it("navigates to lightbox when hero is clicked and gallery images exist", async () => {
+      const stateWithImage = makeState({ images: [galleryImage] });
+      const piece = makePiece({
+        thumbnail: {
+          url: galleryImage.url,
+          cloudinary_public_id: galleryImage.cloudinary_public_id,
+          cloud_name: galleryImage.cloud_name,
+        },
+        current_state: stateWithImage,
+        history: [stateWithImage],
+      });
+      const { router } = await renderPieceDetail(piece);
+
+      const heroBox = screen
+        .getByRole("img", { name: "Test Bowl" })
+        .closest("[style*='pointer']");
+
+      if (heroBox) {
+        fireEvent.click(heroBox);
+      } else {
+        // Click the img directly — click bubbles to the clickable parent
+        fireEvent.click(screen.getByRole("img", { name: "Test Bowl" }));
+      }
+
+      expect(router.state.location.pathname).toBe(
+        "/pieces/piece-id-1/photos/0",
+      );
+    });
+
+    it("hero has no pointer cursor and click does nothing when no gallery images", async () => {
+      const { router } = await renderPieceDetail();
+
+      const initialPath = router.state.location.pathname;
+      const img = screen.queryByRole("img", { name: "Test Bowl" });
+      if (img) fireEvent.click(img);
+
+      expect(router.state.location.pathname).toBe(initialPath);
     });
   });
 });

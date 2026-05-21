@@ -24,7 +24,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import HistoryIcon from "@mui/icons-material/History";
 import LockIcon from "@mui/icons-material/Lock";
-import { useBlocker } from "react-router-dom";
+import { useBlocker, useNavigate } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
 import { formatState, isTerminalState, validateHistorySequence } from "../util/workflow";
 import {
@@ -413,6 +413,17 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     ? extractErrorMessage(rawLocationError, "Failed to save location. Please try again.")
     : null;
 
+  const navigate = useNavigate();
+  const hasGalleryImages = galleryImages.length > 0;
+  const thumbnailIndex = piece.thumbnail?.cloudinary_public_id
+    ? galleryImages.findIndex(
+        (img) =>
+          img.cloudinary_public_id !== null &&
+          img.cloudinary_public_id === piece.thumbnail?.cloudinary_public_id,
+      )
+    : -1;
+  const heroLightboxIndex = thumbnailIndex >= 0 ? thumbnailIndex : 0;
+
   const galleryProps = {
     images: galleryImages,
     pieceId: piece.id,
@@ -603,6 +614,11 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
           {/* Right column (desktop) / top (mobile): hero image */}
           <Box sx={{ gridArea: "hero" }}>
             <Box
+              onClick={
+                hasGalleryImages
+                  ? () => navigate(`/pieces/${piece.id}/photos/${heroLightboxIndex}`)
+                  : undefined
+              }
               sx={(theme) => ({
                 position: "relative",
                 overflow: "hidden",
@@ -611,6 +627,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
                 aspectRatio: { md: "4 / 3" },
                 backgroundColor: alpha(theme.palette.background.paper, 0.46),
                 boxShadow: `0 24px 60px ${alpha(theme.palette.common.black, 0.22)}`,
+                cursor: hasGalleryImages ? "pointer" : "default",
               })}
             >
               {piece.thumbnail ? (
@@ -650,7 +667,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
                   p: { xs: 1.5, sm: 2 },
                 }}
               >
-                <PiecePhotoGallery {...galleryProps} />
+                <PiecePhotoGallery {...galleryProps} showModal={false} />
               </Box>
             </Box>
             {/* Photo gallery + upload trigger — below hero on desktop only */}
