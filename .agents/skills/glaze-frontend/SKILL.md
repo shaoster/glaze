@@ -126,6 +126,7 @@ concept in multiple places, extract a reusable component in `web/src/components/
 - `web/src/util/generated-types.ts` is auto-generated — **do not edit by hand**; gitignored
 - Generation: `web/scripts/generate-types.mjs` calls `openapi-typescript` with a `transform` for `format: date-time` → `Date`; run `npm run generate-types` with Django on port 8080
 - `web/src/util/types.ts` derives domain types from `generated-types.ts` via a small override helper for nested normalization only
+- **Important:** `types.ts` must never decide which fields are optional or present on frontend models. If a field is missing from a frontend fixture or test, the fix belongs in the backend serializer/schema, not in the domain wrapper.
 - If linting surfaces a missing field on a `PieceSummary`/`PieceDetail` fixture,
   keep the generated contract authoritative: update the backend serializer so
   the schema exposes the field, then regenerate types and update the fixture.
