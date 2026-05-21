@@ -18,6 +18,7 @@ data:
     readonly PSQL="${PG_BIN_DIR}/psql"
     readonly DROPBOX_API_HOST="api.dropboxapi.com"
     readonly DROPBOX_CONTENT_HOST="content.dropboxapi.com"
+    local_started=0
 
     log() {
       printf '%s %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
@@ -272,7 +273,7 @@ data:
       require_env DROPBOX_BACKUP_FOLDER
       require_env BACKUP_RETENTION_DAYS
 
-      local workdir pgdata socket_dir dump_path sha256 access_token backup_path cutoff_epoch local_started=0
+      local workdir pgdata socket_dir dump_path sha256 access_token backup_path cutoff_epoch
       workdir="$(mktemp -d)"
       pgdata="${workdir}/pgdata"
       socket_dir="${workdir}/socket"
@@ -289,7 +290,7 @@ data:
       trap cleanup EXIT
 
       log "dumping ${POSTGRES_DB} from ${POSTGRES_HOST}"
-      "$PG_DUMP" \
+      PGPASSWORD="$POSTGRES_PASSWORD" "$PG_DUMP" \
         -h "$POSTGRES_HOST" \
         -U "$POSTGRES_USER" \
         -d "$POSTGRES_DB" \
