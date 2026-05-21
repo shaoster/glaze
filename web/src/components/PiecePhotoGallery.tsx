@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
 import PhotoLibraryOutlinedIcon from "@mui/icons-material/PhotoLibraryOutlined";
 import {
@@ -50,6 +51,7 @@ type PiecePhotoGalleryProps = {
   updateCurrentStateFn?: typeof updateCurrentState;
   pieceStates?: PieceStateRef[];
   moveImageFn?: typeof moveImage;
+  showModal?: boolean;
 };
 
 function isEditableImage(
@@ -70,10 +72,26 @@ export default function PiecePhotoGallery({
   updateCurrentStateFn,
   pieceStates,
   moveImageFn,
+  showModal = true,
 }: PiecePhotoGalleryProps) {
   const theme = useTheme();
-  const [galleryOpen, setGalleryOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { id: pieceIdFromParams } = useParams<{ id: string }>();
+
+  const effectivePieceId = pieceId || pieceIdFromParams;
+  const piecePath = `/pieces/${effectivePieceId}`;
+  const galleryPath = `${piecePath}/photos`;
+
+  const atGallery = location.pathname === galleryPath;
+  const atPhotos =
+    location.pathname === galleryPath ||
+    location.pathname.startsWith(`${galleryPath}/`);
+  const photoIndexMatch = location.pathname.match(/\/photos\/(\d+)$/);
+  const urlPhotoIndex = photoIndexMatch ? parseInt(photoIndexMatch[1], 10) : null;
+  const atLightbox = urlPhotoIndex !== null && !isNaN(urlPhotoIndex);
+
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(urlPhotoIndex);
   const [captionDraft, setCaptionDraft] = useState("");
   const [captionEditing, setCaptionEditing] = useState(false);
   const [captionSaving, setCaptionSaving] = useState(false);
@@ -82,6 +100,10 @@ export default function PiecePhotoGallery({
   const [deleteSaving, setDeleteSaving] = useState(false);
   const [moveSaving, setMoveSaving] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (urlPhotoIndex !== null) setLightboxIndex(urlPhotoIndex);
+  }, [urlPhotoIndex]);
 
   useEffect(() => {
     if (lightboxIndex === null) return;
@@ -188,7 +210,7 @@ export default function PiecePhotoGallery({
         toStateId,
       );
       onPieceUpdated(updated);
-      setLightboxIndex(null);
+      navigate(galleryPath);
     } catch {
       setMoveError("Failed to move photo. Please try again.");
     } finally {
@@ -212,7 +234,7 @@ export default function PiecePhotoGallery({
         ),
       );
       if (lightboxIndex === deleteDialogIndex) {
-        setLightboxIndex(null);
+        navigate(galleryPath);
       }
       setDeleteDialogIndex(null);
     } finally {
@@ -376,12 +398,25 @@ export default function PiecePhotoGallery({
     </Box>
   ) : null;
 
+  if (showModal && atGallery) {
+    const fromLightbox =
+      (location.state as Record<string, unknown>)?.fromLightbox === true;
+    if (images.length === 0) return <Navigate to={piecePath} replace />;
+    if (images.length === 1) {
+      return fromLightbox ? (
+        <Navigate to={piecePath} replace />
+      ) : (
+        <Navigate to={`${galleryPath}/0`} replace />
+      );
+    }
+  }
+
   return (
     <>
       <Box
         component="button"
         type="button"
-        onClick={() => photoCount > 0 && setGalleryOpen(true)}
+        onClick={() => photoCount > 0 && navigate(galleryPath)}
         disabled={photoCount === 0}
         aria-label={triggerLabel}
         sx={{
@@ -404,33 +439,35 @@ export default function PiecePhotoGallery({
         <Typography variant="caption">{triggerLabel}</Typography>
       </Box>
 
-      <Dialog
-        open={galleryOpen}
-        onClose={() => setGalleryOpen(false)}
-        maxWidth="md"
-        fullWidth
-        aria-label="Piece photos"
-        PaperProps={{ sx: { height: "80vh", borderRadius: "8px" } }}
-      >
-        <DialogContent sx={{ p: 2 }}>
-          <PiecePhotoGalleryGrid
-            images={images}
-            canDeleteImages={canMutateCurrentStateImages}
-            currentThumbnailUrl={currentThumbnailUrl}
-            onOpenImage={setLightboxIndex}
-            onRequestDelete={setDeleteDialogIndex}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setGalleryOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+      {showModal && (
+        <Dialog
+          open={atPhotos}
+          onClose={() => navigate(piecePath)}
+          maxWidth="md"
+          fullWidth
+          aria-label="Piece photos"
+          PaperProps={{ sx: { height: "80vh", borderRadius: "8px" } }}
+        >
+          <DialogContent sx={{ p: 2 }}>
+            <PiecePhotoGalleryGrid
+              images={images}
+              canDeleteImages={canMutateCurrentStateImages}
+              currentThumbnailUrl={currentThumbnailUrl}
+              onOpenImage={(index) => navigate(`${galleryPath}/${index}`)}
+              onRequestDelete={setDeleteDialogIndex}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => navigate(piecePath)}>Close</Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
-      {lightboxIndex !== null && (
+      {showModal && atLightbox && lightboxIndex !== null && (
         <ImageLightbox
           images={images}
           initialIndex={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
+          onClose={() => navigate(galleryPath, { state: { fromLightbox: true } })}
           currentThumbnailUrl={currentThumbnailUrl}
           onSetAsThumbnail={canSetThumbnail ? handleSetThumbnail : undefined}
           footerActions={() => footer}

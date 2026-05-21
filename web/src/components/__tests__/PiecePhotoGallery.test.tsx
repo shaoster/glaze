@@ -1,12 +1,23 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import type { PieceDetail } from "../../util/types";
 import PiecePhotoGallery, {
   type EditablePiecePhoto,
   type PiecePhotoGalleryImage,
 } from "../PiecePhotoGallery";
+
+function renderGallery(
+  element: React.ReactElement<ComponentProps<typeof PiecePhotoGallery>>,
+) {
+  return render(
+    <MemoryRouter initialEntries={["/pieces/piece-1"]}>
+      {element}
+    </MemoryRouter>,
+  );
+}
 
 vi.mock("../CloudinaryImage", () => ({
   default: ({
@@ -155,7 +166,7 @@ function makeUpdatedPiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
 
 describe("PiecePhotoGallery", () => {
   it("opens a headerless gallery dialog from the photo count chip", async () => {
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeImages()}
       />,
@@ -169,7 +180,7 @@ describe("PiecePhotoGallery", () => {
   });
 
   it("shows the friendly state label in the lightbox footer", async () => {
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeImages()}
       />,
@@ -186,7 +197,7 @@ describe("PiecePhotoGallery", () => {
     const updateCurrentStateFn = vi.fn().mockResolvedValue(updatedPiece);
     const onPieceUpdated = vi.fn();
 
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeImages()}
         pieceId="piece-1"
@@ -226,7 +237,7 @@ describe("PiecePhotoGallery", () => {
   it("lets current-state gallery images be deleted through the confirmation dialog", async () => {
     const updateCurrentStateFn = vi.fn().mockResolvedValue(makeUpdatedPiece());
 
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeImages()}
         pieceId="piece-1"
@@ -253,7 +264,7 @@ describe("PiecePhotoGallery", () => {
   it("lets you click the caption text itself to start editing and save with Enter", async () => {
     const updateCurrentStateFn = vi.fn().mockResolvedValue(makeUpdatedPiece());
 
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeImages()}
         pieceId="piece-1"
@@ -295,7 +306,7 @@ describe("PiecePhotoGallery", () => {
   });
 
   it("cancels caption edits with Escape", async () => {
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeImages()}
         pieceId="piece-1"
@@ -334,7 +345,7 @@ describe("PiecePhotoGallery", () => {
     const updateCurrentStateFn = vi.fn();
     const onPieceUpdated = vi.fn();
 
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeImages()}
         pieceId=""
@@ -365,7 +376,7 @@ describe("PiecePhotoGallery", () => {
   });
 
   it("closes the gallery dialog from the Close button", async () => {
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeImages()}
       />,
@@ -380,7 +391,7 @@ describe("PiecePhotoGallery", () => {
   });
 
   it("closes the lightbox from the close button", async () => {
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeImages()}
       />,
@@ -401,7 +412,7 @@ describe("PiecePhotoGallery", () => {
   it("cancels image deletion without saving", async () => {
     const updateCurrentStateFn = vi.fn().mockResolvedValue(makeUpdatedPiece());
 
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeImages()}
         pieceId="piece-1"
@@ -427,7 +438,7 @@ describe("PiecePhotoGallery", () => {
     const updatePieceFn = vi.fn();
     const onPieceUpdated = vi.fn();
 
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeImages()}
         pieceId=""
@@ -457,7 +468,7 @@ describe("PiecePhotoGallery", () => {
     const updatePieceFn = vi.fn().mockResolvedValue(updatedPiece);
     const onPieceUpdated = vi.fn();
 
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeImages()}
         pieceId="piece-1"
@@ -486,7 +497,7 @@ describe("PiecePhotoGallery", () => {
   });
 
   it("starts editing an empty caption with a blank input", async () => {
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeSingleImage({ caption: "" })}
         pieceId="piece-1"
@@ -513,7 +524,7 @@ describe("PiecePhotoGallery", () => {
   it("closes the lightbox after deleting the last image currently open", async () => {
     const updateCurrentStateFn = vi.fn().mockResolvedValue(makeUpdatedPiece());
 
-    render(
+    renderGallery(
       <PiecePhotoGallery
         images={makeSingleImage()}
         pieceId="piece-1"
@@ -539,7 +550,7 @@ describe("PiecePhotoGallery", () => {
 
   describe("move image to state", () => {
     it("does not show the move control when pieceStates is not provided", async () => {
-      render(
+      renderGallery(
         <PiecePhotoGallery
           images={makeImages()}
           pieceId="piece-1"
@@ -557,7 +568,7 @@ describe("PiecePhotoGallery", () => {
     });
 
     it("does not show the move control when moveImageFn is not provided", async () => {
-      render(
+      renderGallery(
         <PiecePhotoGallery
           images={makeImages()}
           pieceId="piece-1"
@@ -575,7 +586,7 @@ describe("PiecePhotoGallery", () => {
     });
 
     it("shows an enabled move select when the move endpoint is wired", async () => {
-      render(
+      renderGallery(
         <PiecePhotoGallery
           images={makeImages()}
           pieceId="piece-1"
@@ -595,7 +606,7 @@ describe("PiecePhotoGallery", () => {
     });
 
     it("opens state picker showing only other states", async () => {
-      render(
+      renderGallery(
         <PiecePhotoGallery
           images={makeImages()}
           pieceId="piece-1"
@@ -616,7 +627,7 @@ describe("PiecePhotoGallery", () => {
     });
 
     it("opens state picker showing current state when a past-state image is open", async () => {
-      render(
+      renderGallery(
         <PiecePhotoGallery
           images={makeImages()}
           pieceId="piece-1"
@@ -641,7 +652,7 @@ describe("PiecePhotoGallery", () => {
       const moveImageFn = vi.fn().mockResolvedValue(finalPiece);
       const onPieceUpdated = vi.fn();
 
-      render(
+      renderGallery(
         <PiecePhotoGallery
           images={makeImages()}
           pieceId="piece-1"
@@ -672,7 +683,7 @@ describe("PiecePhotoGallery", () => {
       const moveImageFn = vi.fn().mockResolvedValue(finalPiece);
       const onPieceUpdated = vi.fn();
 
-      render(
+      renderGallery(
         <PiecePhotoGallery
           images={makeImages()}
           pieceId="piece-1"
@@ -701,7 +712,7 @@ describe("PiecePhotoGallery", () => {
     it("shows error message when move API call fails", async () => {
       const moveImageFn = vi.fn().mockRejectedValue(new Error("Network error"));
 
-      render(
+      renderGallery(
         <PiecePhotoGallery
           images={makeImages()}
           pieceId="piece-1"
@@ -726,7 +737,7 @@ describe("PiecePhotoGallery", () => {
     it("closes the lightbox after a successful move", async () => {
       const moveImageFn = vi.fn().mockResolvedValue(makeUpdatedPiece());
 
-      render(
+      renderGallery(
         <PiecePhotoGallery
           images={makeImages()}
           pieceId="piece-1"
@@ -751,7 +762,7 @@ describe("PiecePhotoGallery", () => {
 
   it("exits image deletion early when the pending image is no longer editable", async () => {
     const updateCurrentStateFn = vi.fn();
-    const { rerender } = render(
+    const { rerender } = renderGallery(
       <PiecePhotoGallery
         images={makeSingleImage()}
         pieceId="piece-1"
@@ -765,13 +776,15 @@ describe("PiecePhotoGallery", () => {
     await userEvent.click(screen.getByRole("button", { name: "Delete piece photo 1" }));
 
     rerender(
-      <PiecePhotoGallery
-        images={makeSingleImage({ editableCurrentStateIndex: null })}
-        pieceId="piece-1"
-        currentStateNotes="Current notes"
-        onPieceUpdated={vi.fn()}
-        updateCurrentStateFn={updateCurrentStateFn}
-      />,
+      <MemoryRouter initialEntries={["/pieces/piece-1"]}>
+        <PiecePhotoGallery
+          images={makeSingleImage({ editableCurrentStateIndex: null })}
+          pieceId="piece-1"
+          currentStateNotes="Current notes"
+          onPieceUpdated={vi.fn()}
+          updateCurrentStateFn={updateCurrentStateFn}
+        />
+      </MemoryRouter>,
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Remove" }));
