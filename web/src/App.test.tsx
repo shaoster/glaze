@@ -1,29 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // Capture the onSuccess callback so tests can trigger Google sign-in.
-let _googleOnSuccess: ((r: { credential: string }) => void) | undefined;
+let _googleOnSuccess: ((r: { code: string }) => void) | undefined;
 
 vi.mock("@react-oauth/google", () => ({
   GoogleOAuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  GoogleLogin: ({ onSuccess }: { onSuccess: (r: { credential: string }) => void }) => {
+  useGoogleLogin: ({ onSuccess }: { onSuccess: (r: { code: string }) => void }) => {
     _googleOnSuccess = onSuccess;
-    return <button>Google Login</button>;
+    return () => {
+      /* no-op: tests invoke _googleOnSuccess directly */
+    };
   },
 }));
+
 vi.mock("./util/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./util/api")>();
   return {
     ...actual,
     fetchCurrentUser: vi.fn().mockResolvedValue(null),
     loginWithGoogle: vi.fn(),
-    loginWithGoogleChecked: vi.fn(),
-    loginWithEmail: vi.fn(),
     logoutUser: vi.fn().mockResolvedValue(undefined),
-    registerWithEmail: vi.fn(),
-    requestWaitlist: vi.fn().mockResolvedValue(undefined),
-    acceptInvite: vi.fn(),
+    validateInviteCode: vi.fn(),
+    getStaffInviteCode: vi.fn(),
+    generateStaffInviteCode: vi.fn(),
     fetchPieces: vi.fn().mockResolvedValue({ count: 0, results: [] }),
     fetchPiece: vi.fn(),
     ensureCsrfCookie: vi.fn().mockResolvedValue(undefined),
@@ -93,27 +94,22 @@ vi.mock("./pages/GlazeImportToolPage", () => ({
 import {
   fetchCurrentUser,
   fetchPiece,
-  loginWithEmail,
-  loginWithGoogleChecked,
+  loginWithGoogle,
   logoutUser,
-  requestWaitlist,
-  acceptInvite,
-  NotInvitedError,
+  validateInviteCode,
 } from "./util/api";
 import App from "./App";
 
+const MOCK_OPENID_SUBJECT = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2";
+
 const MOCK_USER = {
   id: 1,
-  email: "potter@example.com",
-  first_name: "Pat",
-  last_name: "Potter",
   is_staff: false,
-  openid_subject: "",
-  profile_image_url: "",
+  openid_subject: MOCK_OPENID_SUBJECT,
   preferences: {
     process_summary_fields: [],
     tutorials: {
-      summary_customize_popover: "show",
+      summary_customize_popover: "show" as const,
     },
   },
 };
@@ -123,18 +119,21 @@ const MOCK_ADMIN_USER = {
   is_staff: true,
 };
 
+// The display name shown in the chip is the first 8 chars of openid_subject + "…"
+const MOCK_DISPLAY_NAME = `${MOCK_OPENID_SUBJECT.slice(0, 8)}…`;
+
 describe("App auth flow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    _googleOnSuccess = undefined;
     window.history.pushState({}, "", "/");
-    // Reset fetchCurrentUser to return null by default
     vi.mocked(fetchCurrentUser).mockResolvedValue(null);
+    sessionStorage.clear();
   });
 
-  it("shows landing/login form when not authenticated", async () => {
+  it("shows landing form when not authenticated", async () => {
     render(<App />);
 
-    // Wait for the auth landing form to appear
     await waitFor(() => {
       expect(
         screen.getByText("Track every pottery piece through your workflow."),
@@ -152,15 +151,7 @@ describe("App auth flow", () => {
       screen.getByRole("link", { name: "Privacy Policy" }),
     ).toHaveAttribute("href", "/privacy-policy");
 
-    // Verify we can find an input field (email input)
-    const inputs = screen.getAllByRole("textbox");
-    expect(inputs.length).toBeGreaterThan(0);
-    // Verify the submit button exists
-    const buttons = screen.getAllByRole("button");
-    const logInButton = buttons.find(
-      (btn) => btn.textContent === "Log In" && btn.closest("form"),
-    );
-    expect(logInButton).toBeDefined();
+    expect(screen.getByRole("button", { name: /sign in with google/i })).toBeInTheDocument();
   });
 
   it("opens the privacy policy from the unauthenticated footer", async () => {
@@ -208,42 +199,22 @@ describe("App auth flow", () => {
     });
   });
 
-  it("logs in and shows piece list view with current user badge", async () => {
-    // Mock loginWithEmail to return a user
-    vi.mocked(loginWithEmail).mockResolvedValue(MOCK_USER);
+  it("logs in with Google and shows piece list view with user chip", async () => {
+    vi.mocked(loginWithGoogle).mockResolvedValue(MOCK_USER);
 
-    const { container } = render(<App />);
+    render(<App />);
 
-    // Wait for the form to appear
     await waitFor(() => {
       expect(
         screen.getByText("Track every pottery piece through your workflow."),
       ).toBeInTheDocument();
     });
 
-    // Fill in credentials - get inputs from the form
-    const inputs = container.querySelectorAll(
-      'input[type="email"], input[type="password"]',
-    );
-    const emailInput = inputs[0] as HTMLInputElement;
-    const passwordInput = inputs[1] as HTMLInputElement;
+    expect(_googleOnSuccess).toBeDefined();
+    await _googleOnSuccess!({ code: "auth-code-123" });
 
-    if (emailInput && passwordInput) {
-      fireEvent.change(emailInput, { target: { value: "potter@example.com" } });
-      fireEvent.change(passwordInput, { target: { value: "password123" } });
-    }
-
-    // Submit the form - find the submit button (inside the form)
-    const submitButton = screen
-      .getAllByRole("button")
-      .find((btn) => btn.textContent === "Log In" && btn.closest("form"));
-    if (submitButton) {
-      await userEvent.click(submitButton);
-    }
-
-    // Wait for the authenticated view to fully appear
     await waitFor(() => {
-      expect(screen.getByText("Pat Potter")).toBeInTheDocument();
+      expect(screen.getByText(MOCK_DISPLAY_NAME)).toBeInTheDocument();
       expect(screen.getByText("Piece List Content")).toBeInTheDocument();
     });
 
@@ -260,39 +231,44 @@ describe("App auth flow", () => {
     );
   });
 
-  it("shows a spinner while login is submitting", async () => {
-    vi.mocked(loginWithEmail).mockImplementation(
-      () => new Promise(() => {}) as ReturnType<typeof loginWithEmail>,
+  it("passes pending invite code from sessionStorage to loginWithGoogle", async () => {
+    sessionStorage.setItem("pendingInviteCode", "test-invite-uuid");
+    vi.mocked(loginWithGoogle).mockResolvedValue(MOCK_USER);
+
+    render(<App />);
+
+    await waitFor(() =>
+      expect(screen.getByText(/track every pottery piece/i)).toBeInTheDocument(),
     );
 
-    const { container } = render(<App />);
+    expect(_googleOnSuccess).toBeDefined();
+    await _googleOnSuccess!({ code: "auth-code-456" });
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Track every pottery piece through your workflow."),
-      ).toBeInTheDocument();
-    });
-
-    const inputs = container.querySelectorAll(
-      'input[type="email"], input[type="password"]',
+    await waitFor(() =>
+      expect(loginWithGoogle).toHaveBeenCalledWith(
+        "auth-code-456",
+        window.location.origin,
+        "test-invite-uuid",
+      ),
     );
-    const emailInput = inputs[0] as HTMLInputElement;
-    const passwordInput = inputs[1] as HTMLInputElement;
+    expect(sessionStorage.getItem("pendingInviteCode")).toBeNull();
+  });
 
-    fireEvent.change(emailInput, { target: { value: "potter@example.com" } });
-    fireEvent.change(passwordInput, { target: { value: "password123" } });
+  it("shows error when Google sign-in fails", async () => {
+    vi.mocked(loginWithGoogle).mockRejectedValue(new Error("network error"));
 
-    const submitButton = screen
-      .getAllByRole("button")
-      .find((btn) => btn.textContent === "Log In" && btn.closest("form"));
-    expect(submitButton).toBeDefined();
+    render(<App />);
 
-    await userEvent.click(submitButton!);
+    await waitFor(() =>
+      expect(screen.getByText(/track every pottery piece/i)).toBeInTheDocument(),
+    );
 
-    expect(screen.getByText("Signing you in...")).toBeInTheDocument();
-    expect(
-      submitButton?.querySelector('[role="progressbar"]'),
-    ).toBeInTheDocument();
+    expect(_googleOnSuccess).toBeDefined();
+    await _googleOnSuccess!({ code: "bad-code" });
+
+    await waitFor(() =>
+      expect(screen.getByText(/google sign-in failed/i)).toBeInTheDocument(),
+    );
   });
 
   it("switches between landing tabs and keeps the URL in sync", async () => {
@@ -340,8 +316,7 @@ describe("App auth flow", () => {
       ).toBeInTheDocument();
     });
 
-    // Open the user menu and click log out
-    await userEvent.click(screen.getByText("Pat Potter"));
+    await userEvent.click(screen.getByText(MOCK_DISPLAY_NAME));
     await userEvent.click(screen.getByText("Log out"));
 
     await waitFor(() => {
@@ -365,7 +340,7 @@ describe("App auth flow", () => {
       ).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByText("Pat Potter"));
+    await userEvent.click(screen.getByText(MOCK_DISPLAY_NAME));
     await userEvent.click(screen.getByText("Glaze Import Tool"));
 
     await waitFor(() => {
@@ -385,7 +360,7 @@ describe("App auth flow", () => {
       ).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByText("Pat Potter"));
+    await userEvent.click(screen.getByText(MOCK_DISPLAY_NAME));
     const adminLink = screen.getByText("Admin Tool").closest("a");
     expect(adminLink).toHaveAttribute("href", "/admin/");
   });
@@ -401,7 +376,7 @@ describe("App auth flow", () => {
       ).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByText("Pat Potter"));
+    await userEvent.click(screen.getByText(MOCK_DISPLAY_NAME));
 
     expect(screen.queryByText("Glaze Import Tool")).not.toBeInTheDocument();
   });
@@ -417,7 +392,7 @@ describe("App auth flow", () => {
       ).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByText("Pat Potter"));
+    await userEvent.click(screen.getByText(MOCK_DISPLAY_NAME));
     await userEvent.click(screen.getByText("Preferences"));
 
     expect(screen.getByText("User Preferences Dialog")).toBeInTheDocument();
@@ -474,7 +449,7 @@ describe("App auth flow", () => {
       expect(screen.getByText("Piece Detail Content")).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByText("Pat Potter"));
+    await userEvent.click(screen.getByText(MOCK_DISPLAY_NAME));
     await userEvent.click(screen.getByText("Preferences"));
     await userEvent.click(screen.getByText("Tutorials"));
     await userEvent.click(screen.getByText("Cancel"));
@@ -487,7 +462,6 @@ describe("App auth flow", () => {
     window.history.pushState({}, "", "/analyze");
 
     render(<App />);
-
 
     await waitFor(() => {
       expect(screen.getByText("Glaze Combinations")).toBeInTheDocument();
@@ -504,176 +478,61 @@ describe("App auth flow", () => {
   });
 });
 
-// ── invite / waitlist / not_invited flows ─────────────────────────────────────
-
-describe("not_invited and waitlist flow", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    window.history.pushState({}, "", "/");
-    vi.mocked(fetchCurrentUser).mockResolvedValue(null);
-    vi.mocked(requestWaitlist).mockResolvedValue(undefined);
-  });
-
-  it("successful Google sign-in logs the user in", async () => {
-    vi.mocked(loginWithGoogleChecked).mockResolvedValue(MOCK_USER);
-    vi.stubEnv("GOOGLE_OAUTH_CLIENT_ID", "test-client-id");
-
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Google Login" })).toBeInTheDocument(),
-    );
-
-    expect(_googleOnSuccess).toBeDefined();
-    await _googleOnSuccess!({ credential: "header.eyJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20ifQ.sig" });
-
-    await waitFor(() => expect(screen.getByText("Pat Potter")).toBeInTheDocument());
-
-    vi.unstubAllEnvs();
-  });
-
-  it("shows generic error when Google sign-in fails (onError)", async () => {
-    vi.stubEnv("GOOGLE_OAUTH_CLIENT_ID", "test-client-id");
-
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Google Login" })).toBeInTheDocument(),
-    );
-
-    // The GoogleLogin mock exposes onError via the rendered button's sibling.
-    // Simulate the onError path by finding and triggering it through the mock.
-    // Our mock only exposes onSuccess — patch loginWithGoogleChecked to cover
-    // the generic-error branch via onSuccess throwing a non-NotInvitedError.
-    vi.mocked(loginWithGoogleChecked).mockRejectedValue(new Error("network error"));
-    await _googleOnSuccess!({ credential: "header.eyJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20ifQ.sig" });
-
-    await waitFor(() =>
-      expect(screen.getByText(/google sign-in failed/i)).toBeInTheDocument(),
-    );
-
-    vi.unstubAllEnvs();
-  });
-
-  it("shows inline error when Request Access clicked with no email", async () => {
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.getByText(/track every pottery piece/i)).toBeInTheDocument(),
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: "Request Access" }));
-
-    await waitFor(() =>
-      expect(screen.getByText(/enter your email below/i)).toBeInTheDocument(),
-    );
-    expect(requestWaitlist).not.toHaveBeenCalled();
-  });
-
-  it("submits waitlist immediately when Request Access clicked with email pre-filled", async () => {
-    const { container } = render(<App />);
-    await waitFor(() =>
-      expect(screen.getByText(/track every pottery piece/i)).toBeInTheDocument(),
-    );
-
-    const emailInput = container.querySelector('input[type="email"]') as HTMLInputElement;
-    fireEvent.change(emailInput, { target: { value: "hopeful@example.com" } });
-
-    await userEvent.click(screen.getByRole("button", { name: "Request Access" }));
-
-    await waitFor(() =>
-      expect(screen.getByText(/we'll let you know/i)).toBeInTheDocument(),
-    );
-    expect(requestWaitlist).toHaveBeenCalledWith("hopeful@example.com");
-  });
-
-  // P1 regression: unpadded base64url JWT payload must still yield the email.
-  it("shows Request Access with correct email after Google not_invited with unpadded JWT", async () => {
-    // {"email":"x@example.com"} is 25 bytes → base64 needs == padding → test the
-    // padding fix by stripping it before handing the credential to the handler.
-    const rawPayload = '{"email":"x@example.com"}';
-    const b64url = btoa(rawPayload).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-    const credential = `header.${b64url}.sig`;
-
-    vi.mocked(loginWithGoogleChecked).mockRejectedValue(
-      new NotInvitedError("This email is not invited."),
-    );
-
-    // GoogleLogin only renders when GOOGLE_OAUTH_CLIENT_ID is set.
-    vi.stubEnv("GOOGLE_OAUTH_CLIENT_ID", "test-client-id");
-
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Google Login" })).toBeInTheDocument(),
-    );
-
-    // _googleOnSuccess is captured when GoogleLogin renders.
-    expect(_googleOnSuccess).toBeDefined();
-    await _googleOnSuccess!({ credential });
-
-    await waitFor(() =>
-      expect(screen.getByText(/this email is not invited/i)).toBeInTheDocument(),
-    );
-    // The shared section shows "Request access" (lowercase a); the header row
-    // shows "Request Access" (capital A). Click the shared-section button which
-    // already has the email from the decoded JWT.
-    const requestButton = screen.getByRole("button", { name: "Request access" });
-    await userEvent.click(requestButton);
-
-    await waitFor(() =>
-      expect(screen.getByText(/we'll let you know/i)).toBeInTheDocument(),
-    );
-    expect(requestWaitlist).toHaveBeenCalledWith("x@example.com");
-
-    vi.unstubAllEnvs();
-  });
-});
-
 describe("invite page routing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(requestWaitlist).mockResolvedValue(undefined);
+    sessionStorage.clear();
   });
 
-  // P2 regression: /invite must render InvitePage even when authenticated.
   it("renders InvitePage at /invite when the user is already signed in", async () => {
     vi.mocked(fetchCurrentUser).mockResolvedValue(MOCK_USER);
-    vi.mocked(acceptInvite).mockResolvedValue({ email: "user@example.com" });
-    window.history.pushState({}, "", "/invite?token=valid-token");
+    vi.mocked(validateInviteCode).mockResolvedValue({ valid: true });
+    window.history.pushState({}, "", "/invite?code=test-uuid");
 
     render(<App />);
 
     await waitFor(() =>
-      expect(screen.getByText(/you've been invited/i)).toBeInTheDocument(),
+      expect(screen.getByText(/your invite code is valid/i)).toBeInTheDocument(),
     );
   });
 
   it("renders InvitePage at /invite when not signed in", async () => {
     vi.mocked(fetchCurrentUser).mockResolvedValue(null);
-    vi.mocked(acceptInvite).mockResolvedValue({ email: "new@example.com" });
-    window.history.pushState({}, "", "/invite?token=valid-token");
+    vi.mocked(validateInviteCode).mockResolvedValue({ valid: true });
+    window.history.pushState({}, "", "/invite?code=test-uuid");
 
     render(<App />);
 
     await waitFor(() =>
-      expect(screen.getByText(/you've been invited/i)).toBeInTheDocument(),
+      expect(screen.getByText(/your invite code is valid/i)).toBeInTheDocument(),
     );
   });
 
-  // P3 regression: "Continue to sign in" must prefill the email on the auth form.
-  it("prefills email on auth form after accepting an invite", async () => {
+  it("stores invite code in sessionStorage after validation", async () => {
     vi.mocked(fetchCurrentUser).mockResolvedValue(null);
-    vi.mocked(acceptInvite).mockResolvedValue({ email: "invited@example.com" });
-    window.history.pushState({}, "", "/invite?token=valid-token");
+    vi.mocked(validateInviteCode).mockResolvedValue({ valid: true });
+    window.history.pushState({}, "", "/invite?code=my-invite-uuid");
 
-    const { container } = render(<App />);
+    render(<App />);
 
     await waitFor(() =>
-      expect(screen.getByText(/you've been invited/i)).toBeInTheDocument(),
+      expect(screen.getByText(/your invite code is valid/i)).toBeInTheDocument(),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: /continue to sign in/i }));
+    expect(sessionStorage.getItem("pendingInviteCode")).toBe("my-invite-uuid");
+  });
 
-    await waitFor(() => {
-      const emailInput = container.querySelector('input[type="email"]') as HTMLInputElement;
-      expect(emailInput?.value).toBe("invited@example.com");
+  it("shows error for invalid invite code", async () => {
+    vi.mocked(fetchCurrentUser).mockResolvedValue(null);
+    vi.mocked(validateInviteCode).mockRejectedValue({
+      response: { data: { detail: "This code has been used." } },
     });
+    window.history.pushState({}, "", "/invite?code=used-code");
+
+    render(<App />);
+
+    await waitFor(() =>
+      expect(screen.getByText(/this code has been used/i)).toBeInTheDocument(),
+    );
   });
 });

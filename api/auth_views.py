@@ -1,22 +1,21 @@
 # ruff: noqa: F401
 import hashlib
-import json
-import os
-import re
+import logging
 from collections import defaultdict
 from typing import Any, Callable, cast
 
+import httpx
 from django.apps import apps
 from django.conf import settings
-from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth import get_user_model, login, logout
+from django.db import transaction
 from django.db.models import DateTimeField, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce, Greatest
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token as google_id_token
 from rest_framework import serializers as drf_serializers
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes, permission_classes
@@ -27,12 +26,11 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
-from .invitations import make_invite_token, send_invitation_email, verify_invite_token
 from .models import (
-    AllowedEmail,
     AsyncTask,
     FavoriteGlazeCombination,
     GlazeCombination,
+    InviteCode,
     Piece,
     PieceState,
     UserProfile,
@@ -45,7 +43,6 @@ from .serializers import (
     AuthUserSerializer,
     GlazeCombinationImageEntrySerializer,
     GoogleAuthSerializer,
-    LoginSerializer,
     PieceCreateSerializer,
     PieceDetailSerializer,
     PieceStateCreateSerializer,
@@ -53,7 +50,6 @@ from .serializers import (
     PieceStateUpdateSerializer,
     PieceSummarySerializer,
     PieceUpdateSerializer,
-    RegisterSerializer,
     TaskSubmissionSerializer,
     UserPreferencesSerializer,
 )
@@ -64,6 +60,8 @@ from .workflow import (
     is_private_global,
     is_public_global,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @extend_schema(
@@ -76,32 +74,6 @@ from .workflow import (
 @permission_classes([AllowAny])
 def csrf(request: Request) -> Response:
     return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-@extend_schema(
-    request=LoginSerializer,
-    responses={200: AuthUserSerializer},
-    description="Log in with email and password. Sets the session cookie on success.",
-)
-@api_view(["POST"])
-@permission_classes([AllowAny])
-@traced
-def auth_login(request: Request) -> Response:
-    serializer = LoginSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    email = serializer.validated_data["email"]
-    password = serializer.validated_data["password"]
-    user_model = get_user_model()
-    matched = user_model.objects.filter(email__iexact=email).first()
-    auth_username = matched.username if matched else email
-    user = authenticate(request=request, username=auth_username, password=password)
-    if user is None:
-        return Response(
-            {"detail": "Invalid email or password."}, status=status.HTTP_400_BAD_REQUEST
-        )
-    bootstrap_dev_user(user)
-    login(request, user)
-    return Response(AuthUserSerializer(user).data)
 
 
 @extend_schema(
@@ -183,12 +155,45 @@ def auth_preferences(request: Request) -> Response:
     )
 
 
+def _exchange_google_auth_code(code: str, redirect_uri: str) -> dict:
+    """Exchange an OAuth 2.0 authorization code for tokens at Google's token endpoint."""
+    resp = httpx.post(
+        "https://oauth2.googleapis.com/token",
+        data={
+            "code": code,
+            "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
+            "client_secret": settings.GOOGLE_OAUTH_CLIENT_SECRET,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+        },
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _verify_google_id_token(id_token: str) -> dict:
+    """Verify a Google id_token JWT and return the payload dict.
+
+    Uses google-auth's verify_token which fetches Google's public keys and
+    validates the RSA signature, iss, aud, and exp.
+    """
+    from google.auth.transport import requests as google_requests
+    from google.oauth2 import id_token as google_id_token
+
+    return google_id_token.verify_token(
+        id_token,
+        google_requests.Request(),
+        audience=settings.GOOGLE_OAUTH_CLIENT_ID,
+        certs_url="https://www.googleapis.com/oauth2/v3/certs",
+    )
+
+
 @extend_schema(
     request=GoogleAuthSerializer,
     responses={200: AuthUserSerializer},
     description=(
-        "Verify a Google Sign-In credential (JWT) and log in. "
-        "Creates a new account automatically if the email is on the allow-list. "
+        "Exchange a Google OAuth 2.0 authorization code and log in. "
+        "New users must supply a valid invite_code. "
         "Returns 503 if Google OAuth is not configured on this server."
     ),
 )
@@ -197,7 +202,8 @@ def auth_preferences(request: Request) -> Response:
 @traced
 def auth_google(request: Request) -> Response:
     client_id = settings.GOOGLE_OAUTH_CLIENT_ID
-    if not client_id:
+    client_secret = settings.GOOGLE_OAUTH_CLIENT_SECRET
+    if not client_id or not client_secret:
         return Response(
             {"detail": "Google sign-in is not configured on this server."},
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -205,215 +211,159 @@ def auth_google(request: Request) -> Response:
 
     serializer = GoogleAuthSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    credential = serializer.validated_data["credential"]
+    code = serializer.validated_data["code"]
+    redirect_uri = serializer.validated_data["redirect_uri"]
+    invite_code_value = serializer.validated_data.get("invite_code")
 
     try:
-        idinfo = google_id_token.verify_oauth2_token(
-            credential, google_requests.Request(), client_id
-        )
-    except ValueError as e:
-        import logging
-
-        logging.getLogger(__name__).error("Google token verification failed: %s", e)
+        token_response = _exchange_google_auth_code(code, redirect_uri)
+    except httpx.HTTPError as exc:
+        logger.error("Google token exchange failed: %s", exc)
         return Response(
-            {"detail": "Invalid Google credential."}, status=status.HTTP_400_BAD_REQUEST
+            {"detail": "Google sign-in failed. Please try again."},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
-    google_sub = idinfo["sub"]
-    email = idinfo.get("email", "")
-    first_name = idinfo.get("given_name", "")
-    last_name = idinfo.get("family_name", "")
-    picture = idinfo.get("picture", "")
+    id_token = token_response.get("id_token", "")
+    if not id_token:
+        return Response(
+            {"detail": "Google did not return an id_token."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        payload = _verify_google_id_token(id_token)
+    except ValueError as exc:
+        logger.error("Google id_token verification failed: %s", exc)
+        return Response(
+            {"detail": "Invalid Google credential."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    google_sub = payload["sub"]
+    hashed_sub = hashlib.sha256(google_sub.encode()).hexdigest()
 
     User = get_user_model()
 
-    not_invited = _check_not_invited(email)
-    if not_invited:
-        return not_invited
-
-    # Look up by Google subject first (handles email changes gracefully).
+    # Look up existing user by hashed subject.
     profile = (
-        UserProfile.objects.filter(openid_subject=google_sub)
+        UserProfile.objects.filter(openid_subject=hashed_sub)
         .select_related("user")
         .first()
     )
+
     if profile:
         user = profile.user
-        # Refresh display name and picture in case they changed.
-        changed = False
-        if picture and profile.profile_image_url != picture:
-            profile.profile_image_url = picture
-            changed = True
-        if changed:
-            profile.save()
     else:
-        # Fall back to matching by email so existing email/password accounts
-        # can sign in via Google without creating a duplicate.
-        existing_profile = (
-            UserProfile.objects.filter(user__email__iexact=email)
-            .select_related("user")
-            .first()
-        )
-        found_user = existing_profile.user if existing_profile else None
-        if found_user is None:
-            user = User.objects.create_user(
-                username=email,
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
+        # New user — invite code required.
+        # select_for_update must be inside transaction.atomic to hold the lock.
+        if not invite_code_value:
+            return Response(
+                {
+                    "detail": "A valid invite code is required to create an account.",
+                    "code": "invite_required",
+                },
+                status=status.HTTP_403_FORBIDDEN,
             )
-            # No usable password — Google-only account.
-            user.set_unusable_password()
-            user.save()
-        else:
-            user = found_user
 
-        profile, _ = UserProfile.objects.get_or_create(user=user)
-        profile.openid_subject = google_sub
-        profile.profile_image_url = picture
-        profile.save()
+        with transaction.atomic():
+            try:
+                invite_code = InviteCode.objects.select_for_update().get(
+                    code=invite_code_value
+                )
+            except InviteCode.DoesNotExist:
+                invite_code = None
 
+            if invite_code is None or not invite_code.is_valid:
+                return Response(
+                    {
+                        "detail": "A valid invite code is required to create an account.",
+                        "code": "invite_required",
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            user = User.objects.create_user(
+                username=hashed_sub,
+                email="",
+                first_name="",
+                last_name="",
+                password=None,
+            )
+            UserProfile.objects.create(user=user, openid_subject=hashed_sub)
+            invite_code.used_at = timezone.now()
+            invite_code.used_by = user
+            invite_code.save(update_fields=["used_at", "used_by"])
+
+    # Dev bootstrap: promote first user to staff/superuser and seed sample data.
     bootstrap_dev_user(user)
     login(request, user)
     return Response(AuthUserSerializer(user).data)
 
 
-@extend_schema(
-    request=RegisterSerializer,
-    responses={201: AuthUserSerializer},
-    description=(
-        "Register a new account. The email must be on the allow-list. "
-        "Note: the web UI sign-up flow is currently disabled; this endpoint "
-        "remains available for direct API use."
-    ),
-)
-@api_view(["POST"])
-@permission_classes([AllowAny])
-@traced
-def auth_register(request: Request) -> Response:
-    serializer = RegisterSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    user_model = get_user_model()
-    email = serializer.validated_data["email"]
-    not_invited = _check_not_invited(email)
-    if not_invited:
-        return not_invited
-    if user_model.objects.filter(email__iexact=email).exists():
-        return Response(
-            {"email": ["A user with this email already exists."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    user = serializer.save()
-    bootstrap_dev_user(user)
-    login(request, user)
-    return Response(AuthUserSerializer(user).data, status=status.HTTP_201_CREATED)
-
-
-# ── Allowlist gate ────────────────────────────────────────────────────────────
-
-
-def _check_not_invited(email: str) -> Response | None:
-    """Return a 403 Response if *email* is not approved, else None.
-
-    In dev (IS_PRODUCTION=False) the very first login (no User rows yet) is
-    allowed unconditionally and the email is auto-approved so the same account
-    can return. Every subsequent login — including a second Google account in
-    dev — must have an AllowedEmail row like in production.
-
-    Grandfathering of existing production users is handled once at migration
-    time (0012 seeds AllowedEmail from User), not at runtime.
-    """
-    if AllowedEmail.objects.filter(
-        email__iexact=email, status=AllowedEmail.Status.APPROVED
-    ).exists():
-        return None
-
-    if not settings.IS_PRODUCTION and not get_user_model().objects.exists():
-        # Fresh dev environment: bootstrap the first account and pre-approve it.
-        AllowedEmail.objects.get_or_create(
-            email=email.lower(),
-            defaults={"status": AllowedEmail.Status.APPROVED},
-        )
-        return None
-
-    return Response(
-        {
-            "detail": "This email is not invited to PotterDoc yet. Ask an admin to add it.",
-            "code": "not_invited",
-        },
-        status=status.HTTP_403_FORBIDDEN,
-    )
-
-
-# ── Invitation endpoints ──────────────────────────────────────────────────────
-
-
-@extend_schema(
-    request=None,
-    responses={204: None},
-    description="(Admin only) Add an email to the allow-list and send an invitation email.",
-)
-@api_view(["POST"])
-@permission_classes([IsAdminUser])
-@traced
-def admin_invite(request: Request) -> Response:
-    email = request.data.get("email", "").strip().lower()
-    if not email:
-        return Response(
-            {"detail": "email is required."}, status=status.HTTP_400_BAD_REQUEST
-        )
-    AllowedEmail.objects.update_or_create(
-        email=email,
-        defaults={"status": AllowedEmail.Status.APPROVED},
-    )
-    token = make_invite_token(email)
-    send_invitation_email(email, token)
-    return Response(status=status.HTTP_204_NO_CONTENT)
+# ── Invite validation (public) ────────────────────────────────────────────────
 
 
 @extend_schema(
     request=None,
     responses={200: None},
-    description="Validate an invitation token and return the associated email. Does not log in.",
+    description="Validate a UUID invite code. Returns {valid: true} if usable.",
 )
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @traced
-def accept_invite(request: Request) -> Response:
-    from django.core import signing
-
-    token = request.data.get("token", "")
+def validate_invite(request: Request) -> Response:
+    code_value = request.data.get("code", "")
+    if not code_value:
+        return Response(
+            {"detail": "code is required.", "code": "code_required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     try:
-        email = verify_invite_token(token)
-    except signing.SignatureExpired:
+        invite = InviteCode.objects.get(code=code_value)
+    except InviteCode.DoesNotExist:
         return Response(
-            {"detail": "Invitation link has expired.", "code": "token_expired"},
+            {"detail": "Invalid or expired invite code.", "code": "invalid_code"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    except signing.BadSignature:
+    if not invite.is_valid:
         return Response(
-            {"detail": "Invalid invitation link.", "code": "token_invalid"},
+            {
+                "detail": "This invite code has already been used or has expired.",
+                "code": "invalid_code",
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
-    return Response({"email": email})
+    return Response({"valid": True})
+
+
+# ── Staff invite management ───────────────────────────────────────────────────
+
+
+def _get_or_create_active_invite_code() -> InviteCode:
+    active = (
+        InviteCode.objects.filter(used_at__isnull=True, expires_at__gt=timezone.now())
+        .order_by("-created_at")
+        .first()
+    )
+    if active:
+        return active
+    return InviteCode.objects.create()
 
 
 @extend_schema(
     request=None,
-    responses={204: None},
-    description="Add an email to the waitlist. No-ops silently if the email already exists.",
+    responses={200: None},
+    description="(Staff only) Get the current active invite code, creating one if none exists.",
 )
-@api_view(["POST"])
-@permission_classes([AllowAny])
+@api_view(["GET", "POST"])
+@permission_classes([IsAdminUser])
 @traced
-def waitlist_request(request: Request) -> Response:
-    email = request.data.get("email", "").strip().lower()
-    if not email:
-        return Response(
-            {"detail": "email is required."}, status=status.HTTP_400_BAD_REQUEST
-        )
-    # Never demote an approved row; never create a second row.
-    existing = AllowedEmail.objects.filter(email__iexact=email).first()
-    if existing is None:
-        AllowedEmail.objects.create(email=email, status=AllowedEmail.Status.WAITLISTED)
-    return Response(status=status.HTTP_204_NO_CONTENT)
+def staff_invite_code(request: Request) -> Response:
+    if request.method == "POST":
+        invite = InviteCode.objects.create()
+    else:
+        invite = _get_or_create_active_invite_code()
+    return Response(
+        {"code": str(invite.code), "expires_at": invite.expires_at.isoformat()}
+    )

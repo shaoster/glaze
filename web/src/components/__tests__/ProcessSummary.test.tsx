@@ -195,12 +195,8 @@ describe("ProcessSummary", () => {
       <CurrentUserProvider
         currentUser={{
           id: 1,
-          email: "user@example.com",
-          first_name: "Jane",
-          last_name: "Doe",
           is_staff: false,
           openid_subject: "",
-          profile_image_url: "",
           preferences: {
             process_summary_fields: ["piece.name", "wheel_thrown.clay_weight_lbs"],
             tutorials: {
@@ -259,12 +255,8 @@ describe("ProcessSummary", () => {
         <CurrentUserProvider
           currentUser={{
             id: 1,
-            email: "user@example.com",
-            first_name: "Jane",
-            last_name: "Doe",
             is_staff: false,
             openid_subject: "",
-            profile_image_url: "",
             preferences: {
               process_summary_fields: ["piece.current_location"],
               tutorials: {

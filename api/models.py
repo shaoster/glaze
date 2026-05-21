@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
@@ -76,34 +76,33 @@ def _piece_state_ref_related_name(global_name: str) -> str:
     return related_name
 
 
-class AllowedEmail(models.Model):
-    class Status(models.TextChoices):
-        WAITLISTED = "waitlisted", "Waitlisted"
-        APPROVED = "approved", "Approved"
-
-    email = models.EmailField(unique=True)
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.APPROVED,
-        db_index=True,
+class InviteCode(models.Model):
+    code = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    used_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="redeemed_invite_codes",
     )
-    notes = models.TextField(blank=True)
-    created = models.DateTimeField(auto_now_add=True)
-    last_modified = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = [
-            models.Case(
-                models.When(status="waitlisted", then=0),
-                default=1,
-                output_field=models.IntegerField(),
-            ),
-            "email",
-        ]
+        ordering = ["-created_at"]
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(days=90)
+        super().save(*args, **kwargs)
+
+    @property
+    def is_valid(self) -> bool:
+        return self.used_at is None and self.expires_at > timezone.now()
 
     def __str__(self) -> str:
-        return f"{self.email} ({self.status})"
+        return str(self.code)
 
 
 @traced_class
@@ -692,7 +691,6 @@ class UserProfile(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
     )
     openid_subject = models.CharField(max_length=255, blank=True, default="")
-    profile_image_url = models.URLField(blank=True, default="")
     preferences = models.JSONField(blank=True, default=dict)
 
     def __str__(self) -> str:

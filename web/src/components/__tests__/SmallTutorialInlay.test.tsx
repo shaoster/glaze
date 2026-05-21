@@ -17,12 +17,8 @@ import { SMALL_TUTORIAL_INLAY_PLACEMENTS } from "../SmallTutorialInlayConfig";
 function makeCurrentUser() {
   return {
     id: 1,
-    email: "user@example.com",
-    first_name: "Jane",
-    last_name: "Doe",
     is_staff: false,
     openid_subject: "",
-    profile_image_url: "",
     preferences: {
       process_summary_fields: [],
       tutorials: {

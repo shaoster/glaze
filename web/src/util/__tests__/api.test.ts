@@ -298,12 +298,8 @@ describe("piece endpoints", () => {
 describe("auth endpoints", () => {
   const authUser = {
     id: 1,
-    email: "user@example.com",
-    first_name: "Jane",
-    last_name: "Doe",
     is_staff: false,
-    openid_subject: "",
-    profile_image_url: "",
+    openid_subject: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
     preferences: {
       process_summary_fields: [],
       tutorials: {
@@ -319,41 +315,6 @@ describe("auth endpoints", () => {
     await ensureCsrfCookie();
 
     expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
-  });
-
-  it("loginWithEmail fetches CSRF before posting credentials", async () => {
-    const { loginWithEmail } = await loadApiModule();
-    mockClient.get.mockResolvedValue({});
-    mockClient.post.mockResolvedValue({ data: authUser });
-
-    const user = await loginWithEmail("user@example.com", "secret");
-
-    expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
-    expect(mockClient.post).toHaveBeenCalledWith("auth/login/", {
-      email: "user@example.com",
-      password: "secret",
-    });
-    expect(user.email).toBe("user@example.com");
-  });
-
-  it("registerWithEmail fetches CSRF before posting the payload", async () => {
-    const { registerWithEmail } = await loadApiModule();
-    mockClient.get.mockResolvedValue({});
-    mockClient.post.mockResolvedValue({ data: authUser });
-
-    const user = await registerWithEmail({
-      email: "user@example.com",
-      password: "secret",
-      first_name: "Jane",
-    });
-
-    expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
-    expect(mockClient.post).toHaveBeenCalledWith("auth/register/", {
-      email: "user@example.com",
-      password: "secret",
-      first_name: "Jane",
-    });
-    expect(user).toEqual(authUser);
   });
 
   it("fetchCurrentUser returns the user on success", async () => {
@@ -395,18 +356,62 @@ describe("auth endpoints", () => {
     await expect(fetchCurrentUser()).rejects.toThrow("boom");
   });
 
-  it("loginWithGoogle fetches CSRF before posting the credential", async () => {
+  it("loginWithGoogle fetches CSRF before posting the auth code", async () => {
     const { loginWithGoogle } = await loadApiModule();
     mockClient.get.mockResolvedValue({});
     mockClient.post.mockResolvedValue({ data: authUser });
 
-    const user = await loginWithGoogle("google-token");
+    const user = await loginWithGoogle("auth-code-xyz", "https://example.com");
 
     expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
     expect(mockClient.post).toHaveBeenCalledWith("auth/google/", {
-      credential: "google-token",
+      code: "auth-code-xyz",
+      redirect_uri: "https://example.com",
+      invite_code: undefined,
     });
     expect(user).toEqual(authUser);
+  });
+
+  it("loginWithGoogle forwards invite_code when provided", async () => {
+    const { loginWithGoogle } = await loadApiModule();
+    mockClient.get.mockResolvedValue({});
+    mockClient.post.mockResolvedValue({ data: authUser });
+
+    await loginWithGoogle("auth-code-xyz", "https://example.com", "invite-uuid");
+
+    expect(mockClient.post).toHaveBeenCalledWith("auth/google/", {
+      code: "auth-code-xyz",
+      redirect_uri: "https://example.com",
+      invite_code: "invite-uuid",
+    });
+  });
+
+  it("validateInviteCode posts the code and returns valid: true", async () => {
+    const { validateInviteCode } = await loadApiModule();
+    mockClient.post.mockResolvedValue({ data: { valid: true } });
+
+    await expect(validateInviteCode("some-uuid")).resolves.toEqual({ valid: true });
+    expect(mockClient.post).toHaveBeenCalledWith("auth/validate-invite/", { code: "some-uuid" });
+  });
+
+  it("getStaffInviteCode calls GET on the staff invite endpoint", async () => {
+    const { getStaffInviteCode } = await loadApiModule();
+    const response = { code: "abc-uuid", expires_at: "2026-08-01T00:00:00Z" };
+    mockClient.get.mockResolvedValue({ data: response });
+
+    await expect(getStaffInviteCode()).resolves.toEqual(response);
+    expect(mockClient.get).toHaveBeenCalledWith("staff/invite-code/");
+  });
+
+  it("generateStaffInviteCode fetches CSRF then POSTs to generate a new code", async () => {
+    const { generateStaffInviteCode } = await loadApiModule();
+    const response = { code: "new-uuid", expires_at: "2026-08-01T00:00:00Z" };
+    mockClient.get.mockResolvedValue({});
+    mockClient.post.mockResolvedValue({ data: response });
+
+    await expect(generateStaffInviteCode()).resolves.toEqual(response);
+    expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
+    expect(mockClient.post).toHaveBeenCalledWith("staff/invite-code/", {});
   });
 
   it("logoutUser fetches CSRF before posting to logout", async () => {
@@ -883,46 +888,3 @@ describe("extractErrorMessage", () => {
   });
 });
 
-describe("loginWithGoogleChecked", () => {
-  it("throws NotInvitedError when api returns not_invited code", async () => {
-    const { loginWithGoogleChecked } = await loadApiModule();
-    const error = {
-      isAxiosError: true,
-      response: {
-        data: { code: "not_invited", detail: "Please request an invite." },
-      },
-    };
-    mockClient.post.mockRejectedValue(error);
-    mockIsAxiosError.mockReturnValue(true);
-
-    await expect(loginWithGoogleChecked("token")).rejects.toThrow("Please request an invite.");
-    await expect(loginWithGoogleChecked("token")).rejects.toBeInstanceOf(Error);
-  });
-
-  it("rethrows other errors", async () => {
-    const { loginWithGoogleChecked } = await loadApiModule();
-    const error = new Error("other error");
-    mockClient.post.mockRejectedValue(error);
-    mockIsAxiosError.mockReturnValue(false);
-
-    await expect(loginWithGoogleChecked("token")).rejects.toThrow("other error");
-  });
-});
-
-describe("extractApiError fallback", () => {
-  it("returns empty object for non-axios errors", async () => {
-    // We can't directly test the private function extractApiError easily
-    // but loginWithGoogleChecked uses it.
-    const { loginWithGoogleChecked } = await loadApiModule();
-    mockClient.post.mockRejectedValue(new Error("pure error"));
-    mockIsAxiosError.mockReturnValue(false);
-    
-    try {
-      await loginWithGoogleChecked("token");
-    } catch (e) {
-      // The error is rethrown as is because extractApiError returns {}
-      expect(e).toBeInstanceOf(Error);
-      expect((e as Error).message).toBe("pure error");
-    }
-  });
-});

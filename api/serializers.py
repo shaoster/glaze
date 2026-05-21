@@ -14,9 +14,8 @@ choices worth knowing about:
   exposes ``current_state`` as a nested ``{state}`` object (not a bare string) so
   the frontend type is consistent between list and detail views.
 - *Write validation* — ``PieceStateCreateSerializer.validate_state`` enforces the
-  workflow transition graph; ``RegisterSerializer`` enforces password length. This
-  is business logic that must live here rather than in the model (which has no
-  request context) or the view (which should stay thin).
+  workflow transition graph. This is business logic that must live here rather
+  than in the model (which has no request context) or the view (which should stay thin).
 - *Computed / synthesised fields* — ``PieceStateSerializer`` computes
   ``previous_state`` and ``next_state`` by querying sibling states; the model has
   no stored fields for these. ``PieceSummarySerializer`` surfaces ``last_modified``
@@ -42,7 +41,6 @@ choices worth knowing about:
 from typing import Any
 
 from django.apps import apps
-from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
@@ -55,7 +53,6 @@ from .models import (
     GlazeCombination,
     Piece,
     PieceState,
-    UserProfile,
     models,
 )
 from .serializer_registry import _GLOBAL_ENTRY_SERIALIZERS, global_entry_serializer
@@ -941,23 +938,14 @@ class UserPreferencesSerializer(serializers.Serializer):
 
 class AuthUserSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
-    email = serializers.EmailField(read_only=True)
-    first_name = serializers.CharField(read_only=True, allow_blank=True)
-    last_name = serializers.CharField(read_only=True, allow_blank=True)
     is_staff = serializers.BooleanField(read_only=True)
     openid_subject = serializers.SerializerMethodField()
-    profile_image_url = serializers.SerializerMethodField()
     preferences = serializers.SerializerMethodField()
 
     @extend_schema_field(serializers.CharField(allow_blank=True))
     def get_openid_subject(self, obj) -> str:
         profile = getattr(obj, "profile", None)
         return profile.openid_subject if profile else ""
-
-    @extend_schema_field(serializers.CharField(allow_blank=True))
-    def get_profile_image_url(self, obj) -> str:
-        profile = getattr(obj, "profile", None)
-        return profile.profile_image_url if profile else ""
 
     @extend_schema_field(SavedUserPreferencesSerializer())
     def get_preferences(self, obj) -> dict:
@@ -967,31 +955,9 @@ class AuthUserSerializer(serializers.Serializer):
 
 
 class GoogleAuthSerializer(serializers.Serializer):
-    credential = serializers.CharField()
-
-
-class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField()
-
-
-class RegisterSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField(min_length=8)
-    first_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
-    last_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
-
-    def create(self, validated_data: dict):
-        user_model = get_user_model()
-        user = user_model.objects.create_user(
-            username=validated_data["email"],
-            email=validated_data["email"],
-            password=validated_data["password"],
-            first_name=validated_data.get("first_name", ""),
-            last_name=validated_data.get("last_name", ""),
-        )
-        UserProfile.objects.create(user=user)
-        return user
+    code = serializers.CharField()
+    redirect_uri = serializers.CharField()
+    invite_code = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class AsyncTaskSerializer(serializers.ModelSerializer):

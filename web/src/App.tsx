@@ -1,9 +1,7 @@
-import type { FormEvent } from "react";
 import {
   lazy,
   Suspense,
   useCallback,
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -16,7 +14,6 @@ import {
   createBrowserRouter,
   createRoutesFromElements,
   useMatch,
-  useLocation,
   useNavigate,
 } from "react-router-dom";
 import {
@@ -27,13 +24,11 @@ import {
   CircularProgress,
   Container,
   CssBaseline,
-  Divider,
   ListItemIcon,
   Menu,
   MenuItem,
   Paper,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -44,14 +39,11 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { alpha, ThemeProvider, createTheme } from "@mui/material/styles";
 
-import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
 import {
   fetchCurrentUser,
-  loginWithEmail,
-  loginWithGoogleChecked,
+  loginWithGoogle,
   logoutUser,
-  NotInvitedError,
-  requestWaitlist,
   updateUserPreferences,
   type UserPreferences,
 } from "./util/api";
@@ -77,19 +69,8 @@ const CloudinaryCleanupPage = lazy(
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const InvitePage = lazy(() => import("./pages/InvitePage"));
+const StaffInvitePage = lazy(() => import("./pages/StaffInvitePage"));
 
-// Extend window type for Google OAuth
-declare global {
-  interface Window {
-    google?: {
-      accounts?: {
-        id?: {
-          cancel: () => void;
-        };
-      };
-    };
-  }
-}
 
 const DARK_THEME = createTheme({
   palette: {
@@ -195,68 +176,57 @@ const DARK_THEME = createTheme({
     },
   },
 });
+function GoogleSignInButton({
+  onAuthenticated,
+}: {
+  onAuthenticated: (user: import("./util/api").AuthUser) => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const signIn = useGoogleLogin({
+    flow: "auth-code",
+    scope: "openid",
+    onSuccess: async ({ code }) => {
+      setSubmitting(true);
+      setError(null);
+      try {
+        const inviteCode = sessionStorage.getItem("pendingInviteCode") ?? undefined;
+        const user = await loginWithGoogle(code, window.location.origin, inviteCode);
+        if (inviteCode) sessionStorage.removeItem("pendingInviteCode");
+        onAuthenticated(user);
+      } catch {
+        setError("Google sign-in failed. Please try again.");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    onError: () => setError("Google sign-in failed. Please try again."),
+  });
+
+  return (
+    <Stack spacing={1} alignItems="center" width="100%">
+      <Button
+        variant="outlined"
+        onClick={() => signIn()}
+        disabled={submitting}
+        startIcon={
+          submitting ? <CircularProgress size={16} color="inherit" /> : undefined
+        }
+        fullWidth
+      >
+        {submitting ? "Signing in…" : "Sign in with Google"}
+      </Button>
+      {error && <Alert severity="error" sx={{ width: "100%" }}>{error}</Alert>}
+    </Stack>
+  );
+}
+
 function AuthLanding({
   onAuthenticated,
 }: {
   onAuthenticated: (user: AuthUser) => void;
 }) {
-  const location = useLocation();
-  const GOOGLE_CLIENT_ID = import.meta.env.GOOGLE_OAUTH_CLIENT_ID as string | undefined;
-  const prefillEmail = (location.state as { prefillEmail?: string } | null)?.prefillEmail ?? "";
-  const [email, setEmail] = useState(prefillEmail);
-  const [password, setPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notInvitedEmail, setNotInvitedEmail] = useState<string | null>(null);
-  const [waitlistDone, setWaitlistDone] = useState(false);
-  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
-  const [waitlistEmailError, setWaitlistEmailError] = useState(false);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    setNotInvitedEmail(null);
-    try {
-      const user = await loginWithEmail(email.trim(), password);
-      onAuthenticated(user);
-    } catch {
-      setError("Login failed. Please check your credentials.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleWaitlist() {
-    const target = notInvitedEmail;
-    if (!target) return;
-    setWaitlistSubmitting(true);
-    try {
-      await requestWaitlist(target);
-      setWaitlistDone(true);
-    } finally {
-      setWaitlistSubmitting(false);
-    }
-  }
-
-  async function handleRequestAccess() {
-    const target = email.trim();
-    if (!target) {
-      setWaitlistEmailError(true);
-      return;
-    }
-    setWaitlistEmailError(false);
-    setNotInvitedEmail(target);
-    setWaitlistDone(false);
-    setWaitlistSubmitting(true);
-    try {
-      await requestWaitlist(target);
-      setWaitlistDone(true);
-    } finally {
-      setWaitlistSubmitting(false);
-    }
-  }
-
   return (
     <Container
       maxWidth="sm"
@@ -278,7 +248,7 @@ function AuthLanding({
           borderRadius: { xs: 3, sm: 4 },
         }}
       >
-        <Stack spacing={2}>
+        <Stack spacing={3}>
           <Stack direction="row" spacing={1.25} alignItems="center">
             <Box
               component="img"
@@ -303,139 +273,7 @@ function AuthLanding({
             Track every pottery piece through your workflow.
           </Typography>
 
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-            <Button
-              variant="outlined"
-              onClick={handleRequestAccess}
-              disabled={submitting || waitlistSubmitting || waitlistDone}
-              fullWidth
-            >
-              {waitlistSubmitting ? "Submitting…" : "Request Access"}
-            </Button>
-          </Stack>
-          {waitlistEmailError && (
-            <Typography variant="body2" color="error">
-              Enter your email below, then click Request Access.
-            </Typography>
-          )}
-
-          <Box component="form" onSubmit={handleSubmit}>
-            <Stack spacing={2}>
-              <TextField
-                label="Email"
-                type="email"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setWaitlistEmailError(false); }}
-                required
-                fullWidth
-                slotProps={{ htmlInput: { autoComplete: "email" } }}
-              />
-              <TextField
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                fullWidth
-                slotProps={{
-                  htmlInput: { autoComplete: "current-password" },
-                }}
-              />
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={submitting || !email.trim() || !password}
-                startIcon={
-                  submitting ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : undefined
-                }
-              >
-                Log In
-              </Button>
-              {submitting && (
-                <Typography variant="body2" color="text.secondary">
-                  Signing you in...
-                </Typography>
-              )}
-            </Stack>
-          </Box>
-
-          {GOOGLE_CLIENT_ID && (
-            <>
-              <Divider>or</Divider>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 1,
-                  justifyContent: "center",
-                  overflowX: "auto",
-                }}
-              >
-                <GoogleLogin
-                  theme="outline"
-                  onSuccess={async ({ credential }) => {
-                    if (!credential) return;
-                    setSubmitting(true);
-                    setError(null);
-                    setNotInvitedEmail(null);
-                    try {
-                      const user = await loginWithGoogleChecked(credential);
-                      onAuthenticated(user);
-                    } catch (err) {
-                      if (err instanceof NotInvitedError) {
-                        // Decode the email from the Google JWT so we can
-                        // pre-fill the waitlist form without an extra round-trip.
-                        try {
-                          const segment = credential.split(".")[1]
-                            .replace(/-/g, "+").replace(/_/g, "/");
-                          const padded = segment + "=".repeat((4 - segment.length % 4) % 4);
-                          const payload = JSON.parse(atob(padded));
-                          setNotInvitedEmail(payload.email ?? null);
-                        } catch {
-                          // JWT decode failed — show button without pre-fill.
-                        }
-                        setError(err.detail);
-                      } else {
-                        setError("Google sign-in failed. Please try again.");
-                      }
-                    } finally {
-                      setSubmitting(false);
-                    }
-                  }}
-                  onError={() =>
-                    setError("Google sign-in failed. Please try again.")
-                  }
-                />
-                {submitting && (
-                  <CircularProgress
-                    size={20}
-                    color="inherit"
-                    aria-label="Authenticating"
-                  />
-                )}
-              </Box>
-            </>
-          )}
-
-          {error && <Alert severity="error">{error}</Alert>}
-          {notInvitedEmail && !waitlistDone && (
-            <Button
-              variant="outlined"
-              size="small"
-              disabled={waitlistSubmitting}
-              onClick={handleWaitlist}
-            >
-              {waitlistSubmitting ? "Submitting…" : "Request access"}
-            </Button>
-          )}
-          {waitlistDone && (
-            <Alert severity="success">
-              Thanks — we'll let you know when an admin approves your request.
-            </Alert>
-          )}
+          <GoogleSignInButton onAuthenticated={onAuthenticated} />
 
           <Box component="footer" sx={{ pt: 1 }}>
             <Stack
@@ -457,21 +295,15 @@ function AuthLanding({
               <Typography variant="body2" color="text.secondary">
                 •
               </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                textAlign="center"
+              <Button
+                component={Link}
+                to="/privacy-policy"
+                variant="text"
+                size="small"
+                sx={{ minWidth: 0, px: 0.5 }}
               >
-                <Button
-                  component={Link}
-                  to="/privacy-policy"
-                  variant="text"
-                  size="small"
-                  sx={{ minWidth: 0, px: 0.5 }}
-                >
-                  Privacy Policy
-                </Button>
-              </Typography>
+                Privacy Policy
+              </Button>
             </Stack>
           </Box>
         </Stack>
@@ -582,9 +414,7 @@ function AppShell({
     preferencesRootMatch !== null || preferencesSectionMatch !== null;
 
   const displayName = useMemo(() => {
-    const fullName =
-      `${currentUser.first_name} ${currentUser.last_name}`.trim();
-    return fullName || currentUser.email;
+    return (currentUser.openid_subject?.slice(0, 8) ?? "…") + "…";
   }, [currentUser]);
   const saveUserPreferences = useCallback(
     async (preferences: UserPreferences) => {
@@ -702,6 +532,16 @@ function AppShell({
               </MenuItem>
               {currentUser.is_staff ? (
                 <>
+                  <MenuItem
+                    component={Link}
+                    to="/staff/invite"
+                    onClick={() => setMenuAnchor(null)}
+                  >
+                    <ListItemIcon>
+                      <AdminPanelSettingsIcon fontSize="small" />
+                    </ListItemIcon>
+                    Invite Code
+                  </MenuItem>
                   <MenuItem
                     component={Link}
                     to="/tools/glaze-import"
@@ -828,6 +668,20 @@ function AuthenticatedApp({
               }
             />
             <Route
+              path="/staff/invite"
+              element={
+                currentUser.is_staff ? (
+                  <ErrorBoundary>
+                    <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                      <StaffInvitePage />
+                    </Suspense>
+                  </ErrorBoundary>
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
+            <Route
               path="/preferences"
               element={<Box sx={{ minHeight: "100dvh" }} />}
             />
@@ -865,17 +719,6 @@ export default function App() {
     },
     [setCurrentUser],
   );
-
-  // Disable Google one-tap prompt
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (window.google?.accounts?.id) {
-        window.google.accounts.id.cancel();
-      }
-    }, 1000); // Wait for Google script to load
-
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleLogout = useCallback(async () => {
     await logoutUser();

@@ -55,7 +55,6 @@ from .serializers import (
     AuthUserSerializer,
     GlazeCombinationImageEntrySerializer,
     GoogleAuthSerializer,
-    LoginSerializer,
     PieceCreateSerializer,
     PieceDetailSerializer,
     PieceStateCreateSerializer,
@@ -63,7 +62,6 @@ from .serializers import (
     PieceStateUpdateSerializer,
     PieceSummarySerializer,
     PieceUpdateSerializer,
-    RegisterSerializer,
     TaskSubmissionSerializer,
 )
 from .utils import bootstrap_dev_user

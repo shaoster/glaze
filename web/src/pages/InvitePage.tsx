@@ -9,26 +9,25 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { acceptInvite } from "../util/api";
+import { validateInviteCode } from "../util/api";
 
 export default function InvitePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const token = searchParams.get("token") ?? "";
+  const code = searchParams.get("code") ?? "";
 
   const [state, setState] = useState<"loading" | "ready" | "error">(
-    token ? "loading" : "error"
+    code ? "loading" : "error"
   );
-  const [invitedEmail, setInvitedEmail] = useState("");
   const [errorMessage, setErrorMessage] = useState(
-    token ? "" : "No invitation token found in the URL."
+    code ? "" : "No invite code found in the URL."
   );
 
   useEffect(() => {
-    if (!token) return;
-    acceptInvite(token)
-      .then(({ email }) => {
-        setInvitedEmail(email);
+    if (!code) return;
+    validateInviteCode(code)
+      .then(() => {
+        sessionStorage.setItem("pendingInviteCode", code);
         setState("ready");
       })
       .catch((err: unknown) => {
@@ -38,7 +37,7 @@ export default function InvitePage() {
         setErrorMessage(msg);
         setState("error");
       });
-  }, [token]);
+  }, [code]);
 
   return (
     <Container
@@ -53,19 +52,19 @@ export default function InvitePage() {
     >
       <Paper sx={{ width: "100%", p: { xs: 2.5, sm: 4 }, borderRadius: { xs: 3, sm: 4 } }}>
         <Stack spacing={2} alignItems="center">
-          {state === "loading" && <CircularProgress aria-label="Validating invitation" />}
+          {state === "loading" && <CircularProgress aria-label="Validating invite code" />}
 
           {state === "ready" && (
             <>
               <Alert severity="success" sx={{ width: "100%" }}>
-                You've been invited! Sign in below to finish setup.
+                Your invite code is valid! Sign in with Google to create your account.
               </Alert>
-              <Typography variant="body1" textAlign="center">
-                Your invitation email: <strong>{invitedEmail}</strong>
+              <Typography variant="body2" color="text.secondary" textAlign="center">
+                No personal information is stored. Only a secure hash of your Google identity is saved.
               </Typography>
               <Button
                 variant="contained"
-                onClick={() => navigate("/", { state: { prefillEmail: invitedEmail } })}
+                onClick={() => navigate("/")}
                 fullWidth
               >
                 Continue to sign in

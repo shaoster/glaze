@@ -32,12 +32,8 @@ function renderDialog(activeSectionId: "process-summary" | "tutorials") {
       <CurrentUserProvider
         currentUser={{
           id: 1,
-          email: "user@example.com",
-          first_name: "Jane",
-          last_name: "Doe",
           is_staff: false,
           openid_subject: "",
-          profile_image_url: "",
           preferences: {
             process_summary_fields: ["piece.name"],
             tutorials: {
@@ -70,12 +66,8 @@ describe("UserPreferencesDialog", () => {
         <CurrentUserProvider
           currentUser={{
             id: 1,
-            email: "user@example.com",
-            first_name: "Jane",
-            last_name: "Doe",
             is_staff: false,
             openid_subject: "",
-            profile_image_url: "",
             preferences: {
               process_summary_fields: ["piece.name"],
               tutorials: {
@@ -132,12 +124,8 @@ describe("UserPreferencesDialog", () => {
         <CurrentUserProvider
           currentUser={{
             id: 1,
-            email: "user@example.com",
-            first_name: "Jane",
-            last_name: "Doe",
             is_staff: false,
             openid_subject: "",
-            profile_image_url: "",
             preferences: {
               process_summary_fields: ["piece.name"],
               tutorials: {
