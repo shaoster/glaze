@@ -10,7 +10,14 @@ fi
 
 _gz_detect_git_root() {
     local cwd="${PWD:-$_GLAZE_SCRIPT_DIR}"
-    git -C "$cwd" rev-parse --show-toplevel 2>/dev/null
+    local root
+    root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null) || return 1
+    # Bazel places a .git symlink inside execroot/_main pointing back to the
+    # real workspace, causing git to report execroot/_main as the toplevel when
+    # BASH_ENV sources this script from inside a bazel subprocess. Reject any
+    # path that lives inside a Bazel output directory so we don't corrupt GLAZE_ROOT.
+    [[ "$root" == *"/execroot/"* ]] && return 1
+    echo "$root"
 }
 
 _gz_detect_shared_root() {
