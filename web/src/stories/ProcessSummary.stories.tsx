@@ -48,6 +48,7 @@ const piece = {
   name: "Celadon Bowl",
   created: new Date("2025-01-01"),
   last_modified: new Date("2025-01-20"),
+  photo_count: 0,
   thumbnail: null,
   shared: false,
   is_editable: false,

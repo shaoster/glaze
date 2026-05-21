@@ -37,6 +37,7 @@ const mockPiece: PieceDetailType = {
   name: "Hand-thrown Vase",
   created: new Date("2026-05-01"),
   last_modified: new Date("2026-05-15"),
+  photo_count: 0,
   thumbnail: null,
   shared: false,
   is_editable: false,

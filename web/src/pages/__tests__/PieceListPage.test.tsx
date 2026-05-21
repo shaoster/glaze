@@ -108,6 +108,7 @@ const EXISTING_PIECE: PieceSummary = {
   name: "Existing Bowl",
   created: new Date("2024-01-01T00:00:00Z"),
   last_modified: new Date("2024-01-01T00:00:00Z"),
+  photo_count: 0,
   thumbnail: null,
   current_state: { state: "designed" } as PieceSummary["current_state"],
   current_location: null,

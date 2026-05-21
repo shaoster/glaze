@@ -74,6 +74,7 @@ const mockPiece: PieceDetail = {
   name: "Test Piece",
   created: new Date(),
   last_modified: new Date(),
+  photo_count: 0,
   thumbnail: null,
   shared: false,
   is_editable: false,
