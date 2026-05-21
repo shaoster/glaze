@@ -83,10 +83,25 @@ kubectl create secret generic glaze-secrets \
   --from-literal=EMAIL_HOST_PASSWORD=<value> \
   --from-literal=GRAFANA_CLOUD_OTLP_TOKEN=<value> \
   --from-literal=MODAL_AUTH_TOKEN=<value> \
-  --from-literal=GOOGLE_OAUTH_CLIENT_SECRET=<value>
+  --from-literal=GOOGLE_OAUTH_CLIENT_SECRET=<value> \
+  --from-literal=DROPBOX_APP_KEY=<value> \
+  --from-literal=DROPBOX_APP_SECRET=<value> \
+  --from-literal=DROPBOX_REFRESH_TOKEN=<value>
 ```
 
 The CD pipeline updates this secret automatically on each deploy via `kubectl apply`.
+
+### 4b. Enable automated database backups
+
+The Helm chart includes an hourly PostgreSQL backup CronJob. It uses the official
+`postgres:17` image to create the dump, restore it into a temporary local Postgres
+instance, verify that the restore contains nonzero `auth_user` and `api_piece`
+rows, and then upload the dump to Dropbox using a digest-based path. Backups are
+pruned to a 30-day retention window by default.
+
+Set up a Dropbox app with scoped access, app-folder access, `files.content.write`
+and `files.metadata.read`, then provide the app key, app secret, and refresh token
+through the `glaze-secrets` secret above.
 
 ### 5. Authenticate with GHCR
 

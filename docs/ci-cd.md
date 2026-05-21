@@ -59,6 +59,14 @@ Runs automatically after CI completes successfully on `main`, or manually via `w
 | **Deploy to droplet** | Renders `.env.production.template` with secrets and variables into `/tmp/.env`, SCPs it to the droplet, then runs `deploy.sh` to pull the new image, run the one-shot `deploy_init` bootstrap, and perform the rolling restart. Creates a GitHub Release tagged `release-<sha>` on success. Runs in the `glaze-droplet` environment with `concurrency: deploy-production` (never cancels in-progress deploys). |
 | **Deploy Services to Modal** | Deploys each deployable Python module under `services/` individually. Runs in parallel with the droplet deploy. |
 
+The Helm release that is deployed by this workflow also includes an hourly
+database backup CronJob. The job uses the official `postgres:17` image to create
+the dump, restores it into a temporary local Postgres instance to verify that the
+dump contains nonzero `auth_user` and `api_piece` rows, and uploads the verified
+dump to Dropbox using a digest-based path. Existing digest paths are treated as
+already-backed-up snapshots and are never overwritten. Old backups are pruned to
+the configured retention window, which defaults to 30 days.
+
 #### Required secrets / variables
 
 All are scoped to the `glaze-droplet` environment in **Settings -> Environments**.
@@ -73,6 +81,9 @@ All are scoped to the `glaze-droplet` environment in **Settings -> Environments*
 | `MODAL_TOKEN_ID` | Secret | Modal authentication token ID |
 | `MODAL_TOKEN_SECRET` | Secret | Modal authentication token secret |
 | `GRAFANA_CLOUD_OTLP_TOKEN` | Secret | Grafana Cloud OTLP ingest token |
+| `DROPBOX_APP_KEY` | Secret | Dropbox app key for the backup CronJob |
+| `DROPBOX_APP_SECRET` | Secret | Dropbox app secret for the backup CronJob |
+| `DROPBOX_REFRESH_TOKEN` | Secret | Dropbox OAuth refresh token for the backup CronJob |
 | `DEPLOY_HOST` | Variable | `user@hostname` for the droplet |
 | `ALLOWED_HOST` | Variable | Django `ALLOWED_HOSTS` entry (the droplet hostname) |
 | `APP_ORIGIN` | Variable | Full origin URL, e.g. `https://myapp.example.com` |

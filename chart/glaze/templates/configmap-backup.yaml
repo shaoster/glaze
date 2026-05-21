@@ -1,0 +1,339 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "glaze.fullname" . }}-backup-script
+  labels:
+    {{- include "glaze.labels" . | nindent 4 }}
+data:
+  backup.sh: |
+    #!/usr/bin/env bash
+    set -Eeuo pipefail
+
+    readonly PG_BIN_DIR="/usr/lib/postgresql/17/bin"
+    readonly PG_DUMP="${PG_BIN_DIR}/pg_dump"
+    readonly PG_RESTORE="${PG_BIN_DIR}/pg_restore"
+    readonly PG_CTL="${PG_BIN_DIR}/pg_ctl"
+    readonly INITDB="${PG_BIN_DIR}/initdb"
+    readonly CREATEDB="${PG_BIN_DIR}/createdb"
+    readonly PSQL="${PG_BIN_DIR}/psql"
+    readonly DROPBOX_API_HOST="api.dropboxapi.com"
+    readonly DROPBOX_CONTENT_HOST="content.dropboxapi.com"
+
+    log() {
+      printf '%s %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
+    }
+
+    fail() {
+      log "ERROR: $*"
+      exit 1
+    }
+
+    require_env() {
+      local name="$1"
+      [[ -n "${!name:-}" ]] || fail "${name} is required"
+    }
+
+    urlencode() {
+      perl -e 'use strict; use warnings; my $s = shift @ARGV; $s =~ s/([^A-Za-z0-9_.~-])/sprintf("%%%02X", ord($1))/eg; print $s' "$1"
+    }
+
+    dropbox_http_request() {
+      local host="$1"
+      local path="$2"
+      local method="$3"
+      local content_type="$4"
+      local body_file="${5:-/dev/null}"
+      local auth_header="${6:-}"
+      local extra_header="${7:-}"
+      local request_file response_file
+
+      request_file="$(mktemp)"
+      response_file="$(mktemp)"
+      {
+        printf '%s %s HTTP/1.0\r\n' "$method" "$path"
+        printf 'Host: %s\r\n' "$host"
+        printf 'Connection: close\r\n'
+        printf 'User-Agent: glaze-db-backup\r\n'
+        printf 'Content-Type: %s\r\n' "$content_type"
+        [[ -n "$auth_header" ]] && printf '%s\r\n' "$auth_header"
+        [[ -n "$extra_header" ]] && printf '%s\r\n' "$extra_header"
+        printf 'Content-Length: %s\r\n\r\n' "$(wc -c < "$body_file" | tr -d '[:space:]')"
+        cat "$body_file"
+      } > "$request_file"
+
+      openssl s_client -quiet -servername "$host" -connect "$host:443" < "$request_file" > "$response_file" 2>/dev/null || true
+
+      DROPBOX_HTTP_STATUS="$(awk 'NR==1 {print $2; exit}' "$response_file")"
+      DROPBOX_HTTP_BODY="$(perl -0ne 's/\r\n/\n/g; my ($headers, $body) = split(/\n\n/, $_, 2); print defined($body) ? $body : q();' "$response_file")"
+
+      rm -f "$request_file" "$response_file"
+    }
+
+    dropbox_access_token() {
+      local token_request basic_auth
+      token_request="$(mktemp)"
+      printf 'grant_type=refresh_token&refresh_token=%s' "$(urlencode "$DROPBOX_REFRESH_TOKEN")" > "$token_request"
+      basic_auth="$(printf '%s:%s' "$DROPBOX_APP_KEY" "$DROPBOX_APP_SECRET" | openssl base64 -A)"
+
+      dropbox_http_request \
+        "$DROPBOX_API_HOST" \
+        /oauth2/token \
+        POST \
+        application/x-www-form-urlencoded \
+        "$token_request" \
+        "Authorization: Basic ${basic_auth}"
+
+      rm -f "$token_request"
+
+      [[ "$DROPBOX_HTTP_STATUS" == "200" ]] || fail "Dropbox token refresh failed: ${DROPBOX_HTTP_STATUS:-no-status} $DROPBOX_HTTP_BODY"
+      printf '%s' "$DROPBOX_HTTP_BODY" | perl -MJSON::PP -e 'my $json = JSON::PP::decode_json(do { local $/; <STDIN> }); print $json->{access_token} // q();' | tr -d '\n'
+    }
+
+    dropbox_path_exists() {
+      local access_token="$1"
+      local path="$2"
+      local request_body
+      request_body="$(mktemp)"
+      printf '%s' "$(perl -MJSON::PP -e 'print JSON::PP::encode_json({ path => $ARGV[0] })' "$path")" > "$request_body"
+
+      dropbox_http_request \
+        "$DROPBOX_API_HOST" \
+        /2/files/get_metadata \
+        POST \
+        application/json \
+        "$request_body" \
+        "Authorization: Bearer ${access_token}"
+
+      rm -f "$request_body"
+
+      case "$DROPBOX_HTTP_STATUS" in
+        200)
+          return 0
+          ;;
+        409)
+          return 1
+          ;;
+        *)
+          fail "Dropbox metadata lookup failed for ${path}: ${DROPBOX_HTTP_STATUS:-no-status} $DROPBOX_HTTP_BODY"
+          ;;
+      esac
+    }
+
+    dropbox_upload_file() {
+      local access_token="$1"
+      local path="$2"
+      local file="$3"
+      local request_args
+      request_args="$(perl -MJSON::PP -e 'print JSON::PP::encode_json({ path => $ARGV[0], mode => { ".tag" => "add" }, autorename => JSON::PP::false, mute => JSON::PP::true })' "$path")"
+
+      dropbox_http_request \
+        "$DROPBOX_CONTENT_HOST" \
+        /2/files/upload \
+        POST \
+        application/octet-stream \
+        "$file" \
+        "Authorization: Bearer ${access_token}" \
+        "Dropbox-API-Arg: ${request_args}"
+
+      case "$DROPBOX_HTTP_STATUS" in
+        200)
+          return 0
+          ;;
+        409)
+          log "Dropbox already has ${path}; treating upload conflict as success"
+          return 0
+          ;;
+        *)
+          fail "Dropbox upload failed for ${path}: ${DROPBOX_HTTP_STATUS:-no-status} $DROPBOX_HTTP_BODY"
+          ;;
+      esac
+    }
+
+    dropbox_delete_path() {
+      local access_token="$1"
+      local path="$2"
+      local request_body
+      request_body="$(mktemp)"
+      printf '%s' "$(perl -MJSON::PP -e 'print JSON::PP::encode_json({ path => $ARGV[0] })' "$path")" > "$request_body"
+
+      dropbox_http_request \
+        "$DROPBOX_API_HOST" \
+        /2/files/delete_v2 \
+        POST \
+        application/json \
+        "$request_body" \
+        "Authorization: Bearer ${access_token}"
+
+      rm -f "$request_body"
+
+      case "$DROPBOX_HTTP_STATUS" in
+        200)
+          log "pruned ${path}"
+          ;;
+        409)
+          log "prune skipped for ${path}; file disappeared first"
+          ;;
+        *)
+          fail "Dropbox delete failed for ${path}: ${DROPBOX_HTTP_STATUS:-no-status} $DROPBOX_HTTP_BODY"
+          ;;
+      esac
+    }
+
+    dropbox_ensure_folder() {
+      local access_token="$1"
+      local path="$2"
+      local request_body
+      request_body="$(mktemp)"
+      printf '%s' "$(perl -MJSON::PP -e 'print JSON::PP::encode_json({ path => $ARGV[0], autorename => JSON::PP::false })' "$path")" > "$request_body"
+
+      dropbox_http_request \
+        "$DROPBOX_API_HOST" \
+        /2/files/create_folder_v2 \
+        POST \
+        application/json \
+        "$request_body" \
+        "Authorization: Bearer ${access_token}"
+
+      rm -f "$request_body"
+
+      case "$DROPBOX_HTTP_STATUS" in
+        200)
+          log "ensured Dropbox folder ${path}"
+          ;;
+        409)
+          log "Dropbox folder ${path} already exists"
+          ;;
+        *)
+          fail "Dropbox folder creation failed for ${path}: ${DROPBOX_HTTP_STATUS:-no-status} $DROPBOX_HTTP_BODY"
+          ;;
+      esac
+    }
+
+    prune_old_backups() {
+      local access_token="$1"
+      local cutoff_epoch="$2"
+      local request_body
+      request_body="$(mktemp)"
+      printf '%s' "$(perl -MJSON::PP -e 'print JSON::PP::encode_json({ path => $ARGV[0], recursive => JSON::PP::false, include_deleted => JSON::PP::false, include_mounted_folders => JSON::PP::false, limit => 1000 })' "$DROPBOX_BACKUP_FOLDER")" > "$request_body"
+
+      dropbox_http_request \
+        "$DROPBOX_API_HOST" \
+        /2/files/list_folder \
+        POST \
+        application/json \
+        "$request_body" \
+        "Authorization: Bearer ${access_token}"
+
+      rm -f "$request_body"
+
+      case "$DROPBOX_HTTP_STATUS" in
+        200)
+          ;;
+        409)
+          log "Dropbox folder ${DROPBOX_BACKUP_FOLDER} has no listable entries yet"
+          return 0
+          ;;
+        *)
+          fail "Dropbox list_folder failed for ${DROPBOX_BACKUP_FOLDER}: ${DROPBOX_HTTP_STATUS:-no-status} $DROPBOX_HTTP_BODY"
+          ;;
+      esac
+
+      local entries
+      entries="$(
+        printf '%s' "$DROPBOX_HTTP_BODY" | perl -MJSON::PP -e '
+          my $json = JSON::PP::decode_json(do { local $/; <STDIN> });
+          for my $entry (@{ $json->{entries} || [] }) {
+            next unless (($entry->{".tag"} || q()) eq q(file));
+            my $path = $entry->{path_display} // next;
+            my $modified = $entry->{server_modified} // next;
+            print $path, "\t", $modified, "\n";
+          }
+        '
+      )"
+
+      local path modified modified_epoch
+      while IFS=$'\t' read -r path modified; do
+        [[ -z "$path" ]] && continue
+        modified_epoch="$(date -u -d "$modified" +%s)"
+        if (( modified_epoch < cutoff_epoch )); then
+          dropbox_delete_path "$access_token" "$path"
+        fi
+      done <<< "$entries"
+    }
+
+    main() {
+      require_env POSTGRES_HOST
+      require_env POSTGRES_USER
+      require_env POSTGRES_PASSWORD
+      require_env POSTGRES_DB
+      require_env DROPBOX_APP_KEY
+      require_env DROPBOX_APP_SECRET
+      require_env DROPBOX_REFRESH_TOKEN
+      require_env DROPBOX_BACKUP_FOLDER
+      require_env BACKUP_RETENTION_DAYS
+
+      local workdir pgdata socket_dir dump_path sha256 access_token backup_path cutoff_epoch local_started=0
+      workdir="$(mktemp -d)"
+      pgdata="${workdir}/pgdata"
+      socket_dir="${workdir}/socket"
+      dump_path="${workdir}/glaze.dump"
+      mkdir -p "$pgdata" "$socket_dir"
+      chmod 700 "$pgdata" "$socket_dir"
+
+      cleanup() {
+        if [[ "${local_started}" == "1" ]]; then
+          "$PG_CTL" -D "$pgdata" -m fast -w stop >/dev/null 2>&1 || true
+        fi
+        rm -rf "$workdir"
+      }
+      trap cleanup EXIT
+
+      log "dumping ${POSTGRES_DB} from ${POSTGRES_HOST}"
+      "$PG_DUMP" \
+        -h "$POSTGRES_HOST" \
+        -U "$POSTGRES_USER" \
+        -d "$POSTGRES_DB" \
+        -Fc \
+        --no-owner \
+        --no-acl \
+        -f "$dump_path"
+
+      sha256="$(sha256sum "$dump_path" | awk '{print $1}')"
+      backup_path="${DROPBOX_BACKUP_FOLDER%/}/${sha256}.dump"
+      log "verified dump checksum ${sha256}"
+
+      log "starting local postgres for restore verification"
+      "$INITDB" -D "$pgdata" --username=postgres --auth-local=trust --auth-host=trust >/dev/null
+      "$PG_CTL" -D "$pgdata" -o "-k $socket_dir -p 55432 -c listen_addresses=''" -l "${workdir}/postgres.log" -w start >/dev/null
+      local_started=1
+
+      "$CREATEDB" -h "$socket_dir" -p 55432 -U postgres "$POSTGRES_DB" >/dev/null
+      "$PG_RESTORE" -h "$socket_dir" -p 55432 -U postgres -d "$POSTGRES_DB" --no-owner --no-privileges "$dump_path" >/dev/null
+
+      local piece_count user_count
+      piece_count="$("$PSQL" -h "$socket_dir" -p 55432 -U postgres -d "$POSTGRES_DB" -Atqc 'SELECT COUNT(*) FROM api_piece;')"
+      user_count="$("$PSQL" -h "$socket_dir" -p 55432 -U postgres -d "$POSTGRES_DB" -Atqc 'SELECT COUNT(*) FROM auth_user;')"
+
+      [[ "$piece_count" -gt 0 ]] || fail "restore verification found no pieces"
+      [[ "$user_count" -gt 0 ]] || fail "restore verification found no users"
+      log "restore verification passed with ${user_count} users and ${piece_count} pieces"
+
+      "$PG_CTL" -D "$pgdata" -m fast -w stop >/dev/null
+      local_started=0
+
+      access_token="$(dropbox_access_token)"
+      dropbox_ensure_folder "$access_token" "$DROPBOX_BACKUP_FOLDER"
+      if dropbox_path_exists "$access_token" "$backup_path"; then
+        log "already backed up at ${backup_path}"
+      else
+        log "uploading backup to ${backup_path}"
+        dropbox_upload_file "$access_token" "$backup_path" "$dump_path"
+      fi
+
+      cutoff_epoch="$(( $(date -u +%s) - (BACKUP_RETENTION_DAYS * 86400) ))"
+      prune_old_backups "$access_token" "$cutoff_epoch"
+
+      log "backup run complete"
+    }
+
+    main "$@"

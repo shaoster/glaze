@@ -14,7 +14,8 @@ fullnameOverride: ""
 #   kubectl create secret generic glaze-secrets --from-env-file=.env.production
 # Expected keys: POSTGRES_PASSWORD, SECRET_KEY, CLOUDINARY_API_KEY,
 # CLOUDINARY_API_SECRET, EMAIL_HOST_PASSWORD, GRAFANA_CLOUD_OTLP_TOKEN,
-# MODAL_AUTH_TOKEN, GOOGLE_OAUTH_CLIENT_SECRET
+# MODAL_AUTH_TOKEN, GOOGLE_OAUTH_CLIENT_SECRET, DROPBOX_APP_KEY,
+# DROPBOX_APP_SECRET, DROPBOX_REFRESH_TOKEN
 
 # Non-secret app config — all values overridden via -f values-override.yaml in CD.
 # Keys here are documentation of what must be set; defaults are intentionally empty.
@@ -46,6 +47,19 @@ postgres:
   resources:
     requests:
       memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "384Mi"
+
+backup:
+  enabled: true
+  schedule: "0 * * * *"
+  retentionDays: 30
+  dropboxFolder: "/glaze-db-backups"
+  image: postgres:17
+  resources:
+    requests:
+      memory: "192Mi"
       cpu: "100m"
     limits:
       memory: "384Mi"

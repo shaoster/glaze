@@ -1,0 +1,76 @@
+{{- if .Values.backup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "glaze.fullname" . }}-db-backup
+  labels:
+    {{- include "glaze.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            {{- include "glaze.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: db-backup
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            fsGroup: 999
+          containers:
+            - name: db-backup
+              image: {{ .Values.backup.image }}
+              command:
+                - bash
+                - /opt/glaze-backup/backup.sh
+              env:
+                - name: POSTGRES_HOST
+                  value: {{ include "glaze.fullname" . }}-postgres
+                - name: POSTGRES_USER
+                  value: {{ .Values.postgres.user }}
+                - name: POSTGRES_DB
+                  value: {{ .Values.postgres.database }}
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: glaze-secrets
+                      key: POSTGRES_PASSWORD
+                - name: DROPBOX_APP_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: glaze-secrets
+                      key: DROPBOX_APP_KEY
+                - name: DROPBOX_APP_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: glaze-secrets
+                      key: DROPBOX_APP_SECRET
+                - name: DROPBOX_REFRESH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: glaze-secrets
+                      key: DROPBOX_REFRESH_TOKEN
+                - name: DROPBOX_BACKUP_FOLDER
+                  value: {{ .Values.backup.dropboxFolder | quote }}
+                - name: BACKUP_RETENTION_DAYS
+                  value: {{ .Values.backup.retentionDays | quote }}
+              volumeMounts:
+                - name: backup-script
+                  mountPath: /opt/glaze-backup/backup.sh
+                  subPath: backup.sh
+                  readOnly: true
+              resources:
+                {{- toYaml .Values.backup.resources | nindent 16 }}
+          volumes:
+            - name: backup-script
+              configMap:
+                name: {{ include "glaze.fullname" . }}-backup-script
+                defaultMode: 0555
+{{- end }}
