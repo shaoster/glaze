@@ -24,7 +24,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import HistoryIcon from "@mui/icons-material/History";
 import LockIcon from "@mui/icons-material/Lock";
-import { useBlocker, useNavigate } from "react-router-dom";
+import { useBlocker, useLocation, useNavigate } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
 import { formatState, isTerminalState, validateHistorySequence } from "../util/workflow";
 import {
@@ -51,6 +51,7 @@ import SmallTutorialInlay from "./SmallTutorialInlay";
 import { SMALL_TUTORIAL_INLAY_PLACEMENTS } from "./SmallTutorialInlayConfig";
 import GlobalEntryField from "./GlobalEntryField";
 import PiecePhotoGallery, {
+  PiecePhotoGalleryButton,
   type PiecePhotoGalleryImage,
 } from "./PiecePhotoGallery";
 import { PieceDetailSaveStatusProvider } from "./PieceDetailSaveStatusContext";
@@ -414,6 +415,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     : null;
 
   const navigate = useNavigate();
+  const location = useLocation();
   const hasGalleryImages = galleryImages.length > 0;
   const thumbnailIndex = piece.thumbnail?.cloudinary_public_id
     ? galleryImages.findIndex(
@@ -616,7 +618,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             <Box
               onClick={
                 hasGalleryImages
-                  ? () => navigate(`/pieces/${piece.id}/photos/${heroLightboxIndex}`)
+                  ? () => navigate(`/pieces/${piece.id}/photos/${heroLightboxIndex}`, { state: location.state })
                   : undefined
               }
               sx={(theme) => ({
@@ -667,7 +669,10 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
                   p: { xs: 1.5, sm: 2 },
                 }}
               >
-                <PiecePhotoGallery {...galleryProps} showModal={false} />
+                <PiecePhotoGalleryButton
+                  images={galleryImages}
+                  pieceId={piece.id}
+                />
               </Box>
             </Box>
             {/* Photo gallery + upload trigger — below hero on desktop only */}
