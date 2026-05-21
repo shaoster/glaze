@@ -25,25 +25,24 @@ type Override<T, R> = {
 } & R;
 
 // CaptionedImage narrows JSONField-backed crop to the normalized crop shape.
-export type CaptionedImage = Omit<
+export type CaptionedImage = Override<
   components["schemas"]["CaptionedImage"],
-  "crop"
-> & {
-  crop?: ImageCrop | null;
-};
+  { crop?: ImageCrop | null }
+>;
 
 // Thumbnail stored on a Piece. Distinct from CaptionedImage — no caption field.
-export type Thumbnail = Omit<components["schemas"]["Thumbnail"], "crop"> & {
-  crop?: ImageCrop | null;
-};
+export type Thumbnail = Override<
+  components["schemas"]["Thumbnail"],
+  { crop?: ImageCrop | null }
+>;
 
 // Minimal state shape returned in list responses.
 // Intersection narrows state: string → state: State.
 // PieceState is a structural subtype, so it can substitute for StateSummary.
-export type StateSummary = Omit<components["schemas"]["StateSummary"], "created"> & {
-  state: State;
-  created: Date;
-};
+export type StateSummary = Override<
+  components["schemas"]["StateSummary"],
+  { state: State; created: Date }
+>;
 
 // Piece list entry. Replace the generated broad fields with domain-specific types.
 export type PieceSummary = Override<
@@ -51,11 +50,6 @@ export type PieceSummary = Override<
   {
     current_state: StateSummary;
     thumbnail: Thumbnail | null;
-    photo_count: number;
-    shared: boolean;
-    is_editable: boolean;
-    can_edit: boolean;
-    tags: TagEntry[];
     showcase_fields: string[];
   }
 >;
@@ -72,14 +66,11 @@ export type PieceState = Override<
   }
 >;
 
-// Piece detail. Build on the narrowed list shape so thumbnail/photo count stay aligned.
-export type PieceDetail = Override<
-  PieceSummary,
-  {
-    current_state: PieceState;
-    history: PieceState[];
-  }
->;
+// Piece detail. Build on the narrowed list shape so nested state stays aligned.
+export type PieceDetail = Override<PieceSummary, {
+  current_state: PieceState;
+  history: PieceState[];
+}>;
 
 
 // GlazeCombination entry and related types — derived from generated OpenAPI types.

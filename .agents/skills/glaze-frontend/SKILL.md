@@ -125,11 +125,11 @@ concept in multiple places, extract a reusable component in `web/src/components/
 
 - `web/src/util/generated-types.ts` is auto-generated — **do not edit by hand**; gitignored
 - Generation: `web/scripts/generate-types.mjs` calls `openapi-typescript` with a `transform` for `format: date-time` → `Date`; run `npm run generate-types` with Django on port 8080
-- `web/src/util/types.ts` derives domain types from `generated-types.ts` via a small override helper over the generated schema
+- `web/src/util/types.ts` derives domain types from `generated-types.ts` via a small override helper for nested normalization only
 - If linting surfaces a missing field on a `PieceSummary`/`PieceDetail` fixture,
-  keep the generated contract authoritative: update the fixture or the backend
-  schema, then regenerate types. Do not make the domain wrapper optional just to
-  make the checker happy.
+  keep the generated contract authoritative: update the backend serializer so
+  the schema exposes the field, then regenerate types and update the fixture.
+  Do not make the domain wrapper optional just to make the checker happy.
 - **When adding a new API field:** update Django serializer → run `npm run generate-types` → update `types.ts` if semantic narrowing needed → update mappers in `api.ts`
 - `api.ts` uses `Wire<T>` generic to type raw Axios responses (dates as strings); mappers convert `Wire<T>` → domain `T` — the only file with deserialization logic
 - OpenAPI schema at `http://localhost:8080/api/schema/`; Swagger UI at `/api/schema/swagger/`

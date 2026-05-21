@@ -78,9 +78,10 @@ rtk bazel build --config=lint //web/...
 ```
 
 When web lint or type-check fails because a fixture or test object is missing a
-field, treat that as a useful contract signal. Fix the serializer/generator or
-make the test fixture match the generated schema; do not weaken `types.ts` by
-making the field optional just to satisfy the checker.
+field, treat that as a useful contract signal. Fix the backend serializer so
+the generated schema exposes the field, then make the fixture match the
+generated type. Do not weaken `types.ts` by making the field optional just to
+satisfy the checker.
 
 ## Web Build Helper
 

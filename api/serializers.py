@@ -228,6 +228,13 @@ class GlazeCombinationImageEntrySerializer(serializers.Serializer):
     pieces = GlazeCombinationImagePieceSerializer(many=True)
 
 
+class ImageCropSerializer(serializers.Serializer):
+    x = serializers.FloatField()
+    y = serializers.FloatField()
+    width = serializers.FloatField()
+    height = serializers.FloatField()
+
+
 class CaptionedImageSerializer(serializers.Serializer):
     url = serializers.CharField()
     caption = serializers.CharField(allow_blank=True, default="")
@@ -236,7 +243,7 @@ class CaptionedImageSerializer(serializers.Serializer):
         allow_blank=True, required=False, default=None, allow_null=True
     )
     cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
-    crop = serializers.JSONField(required=False, allow_null=True, default=None)
+    crop = ImageCropSerializer(required=False, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
 
 
@@ -367,7 +374,7 @@ class ThumbnailSerializer(serializers.Serializer):
         allow_blank=True, allow_null=True, default=None
     )
     cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
-    crop = serializers.JSONField(required=False, allow_null=True, default=None)
+    crop = ImageCropSerializer(required=False, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
     width = serializers.IntegerField(
         required=False, allow_null=True, default=None, min_value=0
@@ -386,6 +393,9 @@ class PieceSummarySerializer(serializers.ModelSerializer):
     can_edit = serializers.SerializerMethodField()
     thumbnail = serializers.SerializerMethodField()
     photo_count = serializers.SerializerMethodField()
+    shared = serializers.BooleanField(read_only=True)
+    is_editable = serializers.BooleanField(read_only=True)
+    showcase_fields = serializers.JSONField(read_only=True)
     last_modified = serializers.DateTimeField(read_only=True)
 
     class Meta:
