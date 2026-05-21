@@ -14,9 +14,7 @@ from django.utils.html import format_html
 from import_export import fields, resources
 from import_export.admin import ExportMixin
 
-from .invitations import make_invite_token, send_invitation_email
 from .models import (
-    AllowedEmail,
     AsyncTask,
     CropRun,
     FiringTemperature,
@@ -25,6 +23,7 @@ from .models import (
     GlazeMethod,
     GlazeType,
     Image,
+    InviteCode,
     Piece,
     PieceState,
     PieceStateImage,
@@ -964,40 +963,10 @@ class ImageAdmin(admin.ModelAdmin):
     readonly_fields = ("id", "created", "last_modified")
 
 
-# ── AllowedEmail admin ─────────────────────────────────────────────────────────
+# ── InviteCode admin ───────────────────────────────────────────────────────────
 
 
-@admin.action(description="Send invitation email (approves waitlisted rows)")
-def send_invite_action(
-    modeladmin: "AllowedEmailAdmin", request: HttpRequest, queryset: Any
-) -> None:
-    # Intentionally sends to already-approved rows too — admins use this to
-    # re-send a lost link without having to change the row's status first.
-    count = 0
-    for row in queryset:
-        if row.status == AllowedEmail.Status.WAITLISTED:
-            row.status = AllowedEmail.Status.APPROVED
-            row.save(update_fields=["status", "last_modified"])
-        token = make_invite_token(row.email)
-        send_invitation_email(row.email, token)
-        count += 1
-    modeladmin.message_user(request, f"Sent {count} invitation(s).")
-
-
-@admin.action(description="Approve without emailing")
-def approve_without_email_action(
-    modeladmin: "AllowedEmailAdmin", request: HttpRequest, queryset: Any
-) -> None:
-    updated = queryset.filter(status=AllowedEmail.Status.WAITLISTED).update(
-        status=AllowedEmail.Status.APPROVED
-    )
-    modeladmin.message_user(request, f"Approved {updated} waitlisted email(s).")
-
-
-@admin.register(AllowedEmail)
-class AllowedEmailAdmin(admin.ModelAdmin):
-    list_display = ("email", "status", "created")
-    list_filter = ("status",)
-    search_fields = ("email", "notes")
-    readonly_fields = ("created", "last_modified")
-    actions = [send_invite_action, approve_without_email_action]
+@admin.register(InviteCode)
+class InviteCodeAdmin(admin.ModelAdmin):
+    list_display = ("code", "created_at", "expires_at", "used_at", "used_by")
+    readonly_fields = ("code", "created_at", "expires_at", "used_at", "used_by")

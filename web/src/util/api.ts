@@ -38,12 +38,8 @@ import {
 
 export type AuthUser = {
   id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
   is_staff: boolean;
   openid_subject: string;
-  profile_image_url: string;
   preferences: UserPreferences;
 };
 
@@ -261,29 +257,6 @@ export async function ensureCsrfCookie(): Promise<void> {
   await client.get("auth/csrf/");
 }
 
-export async function loginWithEmail(
-  email: string,
-  password: string,
-): Promise<AuthUser> {
-  await ensureCsrfCookie();
-  const { data } = await client.post<AuthUser>("auth/login/", {
-    email,
-    password,
-  });
-  return normalizeAuthUser(data);
-}
-
-export async function registerWithEmail(payload: {
-  email: string;
-  password: string;
-  first_name?: string;
-  last_name?: string;
-}): Promise<AuthUser> {
-  await ensureCsrfCookie();
-  const { data } = await client.post<AuthUser>("auth/register/", payload);
-  return normalizeAuthUser(data);
-}
-
 export async function fetchCurrentUser(): Promise<AuthUser | null> {
   try {
     const { data } = await client.get<AuthUser>("auth/me/");
@@ -299,15 +272,42 @@ export async function fetchCurrentUser(): Promise<AuthUser | null> {
   }
 }
 
-export async function loginWithGoogle(credential: string): Promise<AuthUser> {
+export async function loginWithGoogle(
+  code: string,
+  redirectUri: string,
+  inviteCode?: string,
+): Promise<AuthUser> {
   await ensureCsrfCookie();
-  const { data } = await client.post<AuthUser>("auth/google/", { credential });
+  const { data } = await client.post<AuthUser>("auth/google/", {
+    code,
+    redirect_uri: redirectUri,
+    invite_code: inviteCode ?? "",
+  });
   return normalizeAuthUser(data);
 }
 
 export async function logoutUser(): Promise<void> {
   await ensureCsrfCookie();
   await client.post("auth/logout/", {});
+}
+
+export async function validateInviteCode(code: string): Promise<{ valid: true }> {
+  await ensureCsrfCookie();
+  const { data } = await client.post<{ valid: true }>("auth/validate-invite/", { code });
+  return data;
+}
+
+export type StaffInviteCodeResponse = { code: string; expires_at: string };
+
+export async function getStaffInviteCode(): Promise<StaffInviteCodeResponse> {
+  const { data } = await client.get<StaffInviteCodeResponse>("staff/invite-code/");
+  return data;
+}
+
+export async function generateStaffInviteCode(): Promise<StaffInviteCodeResponse> {
+  await ensureCsrfCookie();
+  const { data } = await client.post<StaffInviteCodeResponse>("staff/invite-code/", {});
+  return data;
 }
 
 export type UserPreferencesResponse = {
@@ -334,61 +334,6 @@ export async function updateUserPreferences(
   return {
     preferences: normalizeUserPreferences(data.preferences),
   };
-}
-
-export type ApiError = { detail?: string; code?: string };
-
-function extractApiError(error: unknown): ApiError {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data as ApiError | undefined;
-    return { detail: data?.detail, code: data?.code };
-  }
-  return {};
-}
-
-export class NotInvitedError extends Error {
-  detail: string;
-  constructor(detail: string) {
-    super(detail);
-    this.detail = detail;
-    this.name = "NotInvitedError";
-  }
-}
-
-export async function loginWithGoogleChecked(credential: string): Promise<AuthUser> {
-  try {
-    return await loginWithGoogle(credential);
-  } catch (error) {
-    const { code, detail } = extractApiError(error);
-    if (code === "not_invited") throw new NotInvitedError(detail ?? "Not invited.");
-    throw error;
-  }
-}
-
-export async function registerWithEmailChecked(payload: {
-  email: string;
-  password: string;
-  first_name?: string;
-  last_name?: string;
-}): Promise<AuthUser> {
-  try {
-    return await registerWithEmail(payload);
-  } catch (error) {
-    const { code, detail } = extractApiError(error);
-    if (code === "not_invited") throw new NotInvitedError(detail ?? "Not invited.");
-    throw error;
-  }
-}
-
-export async function acceptInvite(token: string): Promise<{ email: string }> {
-  await ensureCsrfCookie();
-  const { data } = await client.post<{ email: string }>("auth/accept-invite/", { token });
-  return data;
-}
-
-export async function requestWaitlist(email: string): Promise<void> {
-  await ensureCsrfCookie();
-  await client.post("auth/waitlist/", { email });
 }
 
 export async function fetchPiece(id: string): Promise<PieceDetail> {

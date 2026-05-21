@@ -6,16 +6,13 @@ existing URL registrations and tests can import stable names from api.views.
 
 from .analysis_views import glaze_combination_images
 from .auth_views import (
-    accept_invite,
-    admin_invite,
     auth_google,
-    auth_login,
     auth_logout,
     auth_me,
     auth_preferences,
-    auth_register,
     csrf,
-    waitlist_request,
+    staff_invite_code,
+    validate_invite,
 )
 from .cloudinary_views import (
     admin_cloudinary_cleanup,
@@ -59,18 +56,13 @@ __all__ = [
     "_check_database",
     "_check_migrations",
     "_global_entries_impl",
-    "accept_invite",
     "admin_cloudinary_cleanup",
     "admin_cloudinary_cleanup_archive",
-    "admin_invite",
     "admin_manual_square_crop_import",
     "auth_google",
-    "auth_login",
     "auth_logout",
     "auth_me",
     "auth_preferences",
-    "auth_register",
-    "waitlist_request",
     "cloudinary_widget_config",
     "cloudinary_widget_sign",
     "csrf",
@@ -85,7 +77,9 @@ __all__ = [
     "piece_past_state",
     "piece_states",
     "pieces",
+    "staff_invite_code",
     "submit_task",
     "task_detail",
+    "validate_invite",
     "workflow_state_schema",
 ]

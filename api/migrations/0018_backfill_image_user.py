@@ -19,7 +19,9 @@ def populate_image_user(apps, schema_editor):
         )
         if len(owner_ids) != 1:
             continue
-        Image.objects.filter(pk=image_id, user__isnull=True).update(user_id=owner_ids[0])
+        Image.objects.filter(pk=image_id, user__isnull=True).update(
+            user_id=owner_ids[0]
+        )
 
 
 def reverse_populate_image_user(apps, schema_editor):
