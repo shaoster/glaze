@@ -21,6 +21,8 @@ import {
   SMALL_TUTORIAL_INLAY_PLACEMENTS,
   SMALL_TUTORIAL_INLAY_RIGHT_HORIZONTAL_OFFSET_PX,
   SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING,
+  SMALL_TUTORIAL_INLAY_TOP_POSITIONING,
+  SMALL_TUTORIAL_INLAY_TOP_VERTICAL_OFFSET_PX,
   type SmallTutorialInlayPlacement,
 } from "./SmallTutorialInlayConfig";
 
@@ -83,11 +85,13 @@ export default function SmallTutorialInlay({
             offset:
               placement === SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT
                 ? [0, SMALL_TUTORIAL_INLAY_RIGHT_HORIZONTAL_OFFSET_PX]
+                : placement === SMALL_TUTORIAL_INLAY_PLACEMENTS.TOP
+                  ? [0, SMALL_TUTORIAL_INLAY_TOP_VERTICAL_OFFSET_PX]
                 : [0, 0],
           },
         },
       ]}
-      sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}
+      sx={{ zIndex: "auto" }}
     >
       <Paper
         variant="outlined"
@@ -137,11 +141,26 @@ export default function SmallTutorialInlay({
           "&::before": {
             content: '""',
             position: "absolute",
-            left: -SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX,
-            top: "50%",
-            width: SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX * 2,
-            height: SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX * 2,
-            transform: "translateY(-50%) rotate(45deg)",
+            ...(placement === SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT
+              ? {
+                  left: -SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX,
+                  top: "50%",
+                  width:
+                    SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX *
+                    2,
+                  height:
+                    SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX *
+                    2,
+                  transform: "translateY(-50%) rotate(45deg)",
+                }
+              : {
+                  bottom: -SMALL_TUTORIAL_INLAY_TOP_POSITIONING.TAIL_PROTRUSION_PX,
+                  left: "50%",
+                  width: SMALL_TUTORIAL_INLAY_TOP_POSITIONING.TAIL_PROTRUSION_PX * 2,
+                  height:
+                    SMALL_TUTORIAL_INLAY_TOP_POSITIONING.TAIL_PROTRUSION_PX * 2,
+                  transform: "translateX(-50%) rotate(45deg)",
+                }),
             bgcolor: "rgba(201, 122, 77, 0.24)",
             backgroundImage:
               "linear-gradient(135deg, rgba(201,122,77,0.34) 0%, rgba(15,11,10,0.12) 100%)",
