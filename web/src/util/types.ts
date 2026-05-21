@@ -41,7 +41,7 @@ export type Thumbnail = Override<
 // PieceState is a structural subtype, so it can substitute for StateSummary.
 export type StateSummary = Override<
   components["schemas"]["StateSummary"],
-  { state: State; created: Date }
+  { state: State }
 >;
 
 // Piece list entry. Replace the generated broad fields with domain-specific types.
@@ -50,7 +50,6 @@ export type PieceSummary = Override<
   {
     current_state: StateSummary;
     thumbnail: Thumbnail | null;
-    showcase_fields: string[];
   }
 >;
 
@@ -59,10 +58,6 @@ export type PieceState = Override<
   components["schemas"]["PieceState"],
   {
     state: State;
-    images: CaptionedImage[];
-    custom_fields: Record<string, unknown>;
-    has_been_edited: boolean;
-    created: Date;
   }
 >;
 

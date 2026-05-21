@@ -253,6 +253,8 @@ class PieceStateSerializer(serializers.ModelSerializer):
     next_state = serializers.SerializerMethodField()
     images = serializers.SerializerMethodField()
     custom_fields = serializers.SerializerMethodField()
+    created = serializers.DateTimeField(read_only=True)
+    has_been_edited = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = PieceState
@@ -395,7 +397,10 @@ class PieceSummarySerializer(serializers.ModelSerializer):
     photo_count = serializers.SerializerMethodField()
     shared = serializers.BooleanField(read_only=True)
     is_editable = serializers.BooleanField(read_only=True)
-    showcase_fields = serializers.JSONField(read_only=True)
+    showcase_fields = serializers.ListField(
+        child=serializers.CharField(),
+        read_only=True,
+    )
     last_modified = serializers.DateTimeField(read_only=True)
 
     class Meta:

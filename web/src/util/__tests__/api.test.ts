@@ -168,7 +168,6 @@ describe("piece endpoints", () => {
     const result = await fetchPiece("piece-1");
 
     expect(mockClient.get).toHaveBeenCalledWith("pieces/piece-1/");
-    expect(result.current_state.created).toBeInstanceOf(Date);
     expect(result.current_state.images[0].created).toBeInstanceOf(Date);
     expect(result.current_state.images[0].cloudinary_public_id).toBeNull();
     expect(result.current_state.custom_fields).toEqual({});

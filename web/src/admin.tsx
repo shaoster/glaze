@@ -6,6 +6,10 @@ import WorkflowState from "./components/WorkflowState";
 import type { PieceDetail, PieceState, UISchema } from "./util/types";
 import type { UpdateStatePayload } from "./util/api";
 
+type MutablePieceState = {
+  -readonly [K in keyof PieceState]: PieceState[K];
+};
+
 const getDjangoTheme = (): "light" | "dark" => {
   const theme = document.documentElement.dataset.theme;
   if (theme === "dark") return "dark";
@@ -121,7 +125,7 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
   }
 
   const rawState = (initialPieceState || {}) as Record<string, unknown>;
-  const pieceState = { ...rawState } as unknown as PieceState;
+  const pieceState = { ...rawState } as MutablePieceState;
 
   if (!pieceState.images) pieceState.images = [];
   if (!pieceState.custom_fields) pieceState.custom_fields = {};

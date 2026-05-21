@@ -131,7 +131,6 @@ function normalizeCrop(value: unknown): ImageCrop | null {
 function mapStateSummary(raw: Wire<StateSummary>): StateSummary {
   return {
     state: raw.state as State,
-    created: new Date(raw.created ?? ""),
   };
 }
 
