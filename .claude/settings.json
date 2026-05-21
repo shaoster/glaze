@@ -39,7 +39,10 @@
       "Bash(ulimit -s unlimited)",
       "Bash(ulimit -s)",
       "Bash(sed -n '5,12p' /home/phil/code/glaze/.agent-worktrees/claude/issue-masonry-debug/.agents/skills/react-testing/SKILL.md)",
-      "Bash(sed -n '5,12p' /home/phil/code/glaze/.agent-worktrees/claude/issue-masonry-debug/.agents/skills/dev-testing/SKILL.md)"
+      "Bash(sed -n '5,12p' /home/phil/code/glaze/.agent-worktrees/claude/issue-masonry-debug/.agents/skills/dev-testing/SKILL.md)",
+      "Bash(bash -c 'source /home/phil/code/glaze/env-agent.sh; echo \"GLAZE_ROOT=$GLAZE_ROOT\"')",
+      "Bash(GLAZE_ROOT=/home/phil/code/glaze/.agent-worktrees/claude/issue-568-support-top-placement-for-small-tutorial-inlay bash -c 'source /home/phil/code/glaze/env-agent.sh; echo \"GLAZE_ROOT=$GLAZE_ROOT\"')",
+      "Bash(bash -c 'cd /home/phil/code/glaze/.agent-worktrees/claude/issue-568-support-top-placement-for-small-tutorial-inlay && source /home/phil/code/glaze/env-agent.sh; echo \"GLAZE_ROOT=$GLAZE_ROOT\"')"
     ],
     "additionalDirectories": [
       "/tmp"
