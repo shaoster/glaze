@@ -9,7 +9,7 @@ from typing import Callable
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.db.models import DateTimeField, OuterRef, Q, Subquery
+from django.db.models import DateTimeField, OuterRef, Prefetch, Q, Subquery
 from django.db.models.functions import Coalesce, Greatest
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
@@ -31,8 +31,10 @@ from .models import (
     AsyncTask,
     FavoriteGlazeCombination,
     GlazeCombination,
+    GlazeCombinationLayer,
     Piece,
     PieceState,
+    PieceStateImage,
     UserProfile,
 )
 from .serializer_registry import (
@@ -123,7 +125,14 @@ def glaze_combination_images(request: Request) -> Response:
             image_links__isnull=False,
         )
         .select_related("piece")
-        .prefetch_related("image_links__image")
+        .prefetch_related(
+            Prefetch(
+                "image_links",
+                queryset=PieceStateImage.objects.select_related("image").order_by(
+                    "order", "id"
+                ),
+            )
+        )
         .distinct()
         .order_by("-created")
     )
@@ -181,8 +190,15 @@ def glaze_combination_images(request: Request) -> Response:
     # Bulk-fetch GlazeCombination objects for serialization.
     combos_qs = (
         GlazeCombination.objects.filter(pk__in=sorted_combo_ids)
-        .select_related("test_tile_image")
-        .prefetch_related("layers__glaze_type", "firing_temperature")
+        .select_related("test_tile_image", "firing_temperature")
+        .prefetch_related(
+            Prefetch(
+                "layers",
+                queryset=GlazeCombinationLayer.objects.select_related(
+                    "glaze_type"
+                ).order_by("order"),
+            )
+        )
     )
     combo_by_id = {c.pk: c for c in combos_qs}
 
