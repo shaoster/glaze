@@ -471,6 +471,134 @@ gz_backup() {
     echo "Backup saved to $dump_path"
 }
 
+gz_restore() {
+    # Restore a pg_dump (-Fc) file into the local dev Postgres.
+    #
+    # If DATABASE_URL is already a postgres:// URL, restores directly into it.
+    # Otherwise, starts (or reuses) a persistent Docker container named
+    # glaze-dev-db on localhost:5433 and prints the DATABASE_URL to add to
+    # .env.local so the dev stack uses it.
+    #
+    # Usage: gz_restore <dump_file>
+    #   dump_file: path produced by gz_backup (custom format, -Fc)
+    local dump_path="${1:-}"
+    if [[ -z "$dump_path" ]]; then
+        echo "Usage: gz_restore <dump_file>" >&2
+        echo "  Tip: run 'gz_backup' first to get a dump file." >&2
+        return 1
+    fi
+    if [[ ! -f "$dump_path" ]]; then
+        echo "gz_restore: file not found: $dump_path" >&2
+        return 1
+    fi
+
+    command -v docker >/dev/null || {
+        echo "gz_restore: docker is required" >&2
+        return 1
+    }
+    docker info >/dev/null 2>&1 || {
+        echo "gz_restore: docker daemon is not reachable" >&2
+        return 1
+    }
+
+    local db_url="${DATABASE_URL:-}"
+    local using_container=false
+    local dev_db_url="postgres://postgres:postgres@localhost:5433/glaze"
+
+    if [[ "$db_url" == postgres://* || "$db_url" == postgresql://* ]]; then
+        echo "--- restoring into existing Postgres: $db_url ---"
+    else
+        using_container=true
+        echo "--- DATABASE_URL is not Postgres; using Docker container glaze-dev-db ---"
+
+        # Start container if not already running
+        if ! docker inspect glaze-dev-db >/dev/null 2>&1; then
+            echo "Starting glaze-dev-db (postgres:17 on localhost:5433)..."
+            docker run -d \
+                --name glaze-dev-db \
+                -e POSTGRES_PASSWORD=postgres \
+                -e POSTGRES_DB=glaze \
+                -p 5433:5432 \
+                postgres:17 >/dev/null
+        elif [[ "$(docker inspect -f '{{.State.Running}}' glaze-dev-db 2>/dev/null)" != "true" ]]; then
+            echo "Restarting stopped glaze-dev-db container..."
+            docker start glaze-dev-db >/dev/null
+        else
+            echo "Reusing existing glaze-dev-db container."
+        fi
+
+        echo "Waiting for Postgres to be ready..."
+        for _ in $(seq 1 30); do
+            if docker exec glaze-dev-db pg_isready -U postgres >/dev/null 2>&1; then
+                break
+            fi
+            sleep 1
+        done
+        docker exec glaze-dev-db pg_isready -U postgres >/dev/null 2>&1 || {
+            echo "gz_restore: glaze-dev-db never became ready" >&2
+            return 1
+        }
+
+        db_url="$dev_db_url"
+    fi
+
+    echo "--- restoring dump (this may take a moment) ---"
+
+    local piece_count user_count
+    if [[ "$using_container" == true ]]; then
+        # Use pg_restore inside the container to match the server's pg version,
+        # avoiding "unsupported version" errors when the local client is older.
+        docker exec glaze-dev-db psql -U postgres \
+            -c "DROP DATABASE IF EXISTS glaze;" \
+            -c "CREATE DATABASE glaze;" >/dev/null
+        docker exec -i glaze-dev-db pg_restore \
+            -U postgres -d glaze --no-owner --no-privileges \
+            < "$dump_path"
+        piece_count=$(docker exec glaze-dev-db psql -U postgres -d glaze \
+            -Atqc "SELECT COUNT(*) FROM api_piece;")
+        user_count=$(docker exec glaze-dev-db psql -U postgres -d glaze \
+            -Atqc "SELECT COUNT(*) FROM auth_user;")
+    else
+        # Parse connection details from the URL: postgres://user:pass@host:port/dbname
+        local userpass hostport dbname user pass host port
+        userpass="${db_url#postgres*://}"
+        dbname="${userpass##*/}"
+        hostport="${userpass%%/*}"
+        hostport="${hostport##*@}"
+        user="${userpass%%:*}"
+        pass="${userpass#*:}"; pass="${pass%%@*}"
+        host="${hostport%%:*}"
+        port="${hostport##*:}"; [[ "$port" == "$host" ]] && port=5432
+
+        PGPASSWORD="$pass" psql -h "$host" -p "$port" -U "$user" -d postgres \
+            -c "DROP DATABASE IF EXISTS $dbname;" \
+            -c "CREATE DATABASE $dbname;" 2>/dev/null || {
+            echo "(could not drop/recreate db — restoring with --clean instead)"
+        }
+        PGPASSWORD="$pass" pg_restore \
+            -h "$host" -p "$port" -U "$user" -d "$dbname" \
+            --no-owner --no-privileges --clean --if-exists \
+            < "$dump_path"
+        piece_count=$(PGPASSWORD="$pass" psql -h "$host" -p "$port" -U "$user" -d "$dbname" \
+            -Atqc "SELECT COUNT(*) FROM api_piece;")
+        user_count=$(PGPASSWORD="$pass" psql -h "$host" -p "$port" -U "$user" -d "$dbname" \
+            -Atqc "SELECT COUNT(*) FROM auth_user;")
+    fi
+
+    echo "Restored $piece_count pieces across $user_count users."
+
+    echo "--- running migrations (to apply any branch-local changes) ---"
+    DATABASE_URL="$db_url" gz_migrate
+
+    if [[ "$using_container" == true ]]; then
+        echo ""
+        echo "Add this to your .env.local to use the restored database:"
+        echo "  DATABASE_URL=$dev_db_url"
+        echo ""
+        echo "Then restart your dev server: gz_stop && gz_start"
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -956,6 +1084,7 @@ _GZ_SHORTCUTS=(
     "gz_prod_shell     — Django shell on production"
     "gz_prod_dbshell   — database shell on production"
     "gz_backup [file]  — back up prod Postgres and verify it in a disposable postgres:17 container"
+    "gz_restore <file> — restore a gz_backup dump into local dev Postgres (starts Docker container if needed)"
     "gz_test           — run affected tests via Bazel (smart detection on branches; --all to run everything)"
     "gz_test_common    — run workflow schema/integrity tests (pytest tests/)"
     "gz_test_backend   — run Django API tests (pytest api/)"

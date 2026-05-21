@@ -40,6 +40,66 @@ type PieceStateRef = {
   label: string;
 };
 
+type PiecePhotoGalleryButtonProps = {
+  images: PiecePhotoGalleryImage[];
+  pieceId?: string;
+};
+
+/** Pill button that navigates to the piece's photo gallery URL. */
+export function PiecePhotoGalleryButton({
+  images,
+  pieceId,
+}: PiecePhotoGalleryButtonProps) {
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { id: pieceIdFromParams } = useParams<{ id: string }>();
+
+  const effectivePieceId = pieceId || pieceIdFromParams;
+  const galleryPath = `/pieces/${effectivePieceId}/photos`;
+
+  // Strip the internal fromLightbox flag before forwarding state — keeps
+  // fromGallery/returnTo alive so PieceDetailPage's back button stays correct.
+  const outerState = Object.fromEntries(
+    Object.entries((location.state as Record<string, unknown> | null) ?? {}).filter(
+      ([k]) => k !== "fromLightbox",
+    ),
+  );
+
+  const photoCount = images.length;
+  const triggerLabel = `${photoCount} photo${photoCount === 1 ? "" : "s"}`;
+
+  return (
+    <Box
+      component="button"
+      type="button"
+      onClick={() =>
+        photoCount > 0 && navigate(galleryPath, { state: outerState })
+      }
+      disabled={photoCount === 0}
+      aria-label={triggerLabel}
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 0.75,
+        px: 1.25,
+        py: 0.75,
+        borderRadius: 999,
+        backgroundColor: alpha(theme.palette.background.default, 0.56),
+        color: "text.secondary",
+        backdropFilter: "blur(8px)",
+        border: "1px solid",
+        borderColor: "divider",
+        cursor: photoCount > 0 ? "pointer" : "default",
+        opacity: photoCount > 0 ? 1 : 0.7,
+      }}
+    >
+      <PhotoLibraryOutlinedIcon sx={{ fontSize: 16 }} />
+      <Typography variant="caption">{triggerLabel}</Typography>
+    </Box>
+  );
+}
+
 type PiecePhotoGalleryProps = {
   images: PiecePhotoGalleryImage[];
   pieceId?: string;
@@ -51,7 +111,6 @@ type PiecePhotoGalleryProps = {
   updateCurrentStateFn?: typeof updateCurrentState;
   pieceStates?: PieceStateRef[];
   moveImageFn?: typeof moveImage;
-  showModal?: boolean;
 };
 
 function isEditableImage(
@@ -59,7 +118,6 @@ function isEditableImage(
 ): image is PiecePhotoGalleryImage & { editableCurrentStateIndex: number } {
   return image.editableCurrentStateIndex !== null;
 }
-
 
 export default function PiecePhotoGallery({
   images,
@@ -72,9 +130,7 @@ export default function PiecePhotoGallery({
   updateCurrentStateFn,
   pieceStates,
   moveImageFn,
-  showModal = true,
 }: PiecePhotoGalleryProps) {
-  const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { id: pieceIdFromParams } = useParams<{ id: string }>();
@@ -83,20 +139,34 @@ export default function PiecePhotoGallery({
   const piecePath = `/pieces/${effectivePieceId}`;
   const galleryPath = `${piecePath}/photos`;
 
+  // Strip the internal fromLightbox flag before forwarding state — keeps
+  // fromGallery/returnTo alive so PieceDetailPage's back button stays correct.
+  const outerState = Object.fromEntries(
+    Object.entries((location.state as Record<string, unknown> | null) ?? {}).filter(
+      ([k]) => k !== "fromLightbox",
+    ),
+  );
+
   const atGallery = location.pathname === galleryPath;
   const atPhotos =
     location.pathname === galleryPath ||
     location.pathname.startsWith(`${galleryPath}/`);
   const photoIndexMatch = location.pathname.match(/\/photos\/(\d+)$/);
-  const urlPhotoIndex = photoIndexMatch ? parseInt(photoIndexMatch[1], 10) : null;
+  const urlPhotoIndex = photoIndexMatch
+    ? parseInt(photoIndexMatch[1], 10)
+    : null;
   const atLightbox = urlPhotoIndex !== null && !isNaN(urlPhotoIndex);
 
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(urlPhotoIndex);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(
+    urlPhotoIndex,
+  );
   const [captionDraft, setCaptionDraft] = useState("");
   const [captionEditing, setCaptionEditing] = useState(false);
   const [captionSaving, setCaptionSaving] = useState(false);
   const [captionSaveError, setCaptionSaveError] = useState<string | null>(null);
-  const [deleteDialogIndex, setDeleteDialogIndex] = useState<number | null>(null);
+  const [deleteDialogIndex, setDeleteDialogIndex] = useState<number | null>(
+    null,
+  );
   const [deleteSaving, setDeleteSaving] = useState(false);
   const [moveSaving, setMoveSaving] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
@@ -113,15 +183,15 @@ export default function PiecePhotoGallery({
     setCaptionDraft(images[lightboxIndex]?.caption ?? "");
   }, [images, lightboxIndex]);
 
-  const photoCount = images.length;
-
-  const activeImage =
-    lightboxIndex !== null ? images[lightboxIndex] : null;
+  const activeImage = lightboxIndex !== null ? images[lightboxIndex] : null;
   const editableCurrentStateIndex =
     activeImage?.editableCurrentStateIndex ?? null;
   const editableCurrentStateImages = images
     .filter(isEditableImage)
-    .sort((left, right) => left.editableCurrentStateIndex - right.editableCurrentStateIndex)
+    .sort(
+      (left, right) =>
+        left.editableCurrentStateIndex - right.editableCurrentStateIndex,
+    )
     .map(({ url, caption, cloudinary_public_id, cloud_name, crop }) => ({
       url,
       caption,
@@ -188,7 +258,10 @@ export default function PiecePhotoGallery({
       await persistCurrentStateImages(
         editableCurrentStateImages.map((image, index) => ({
           ...image,
-          caption: index === editableCurrentStateIndex ? captionDraft.trim() : image.caption,
+          caption:
+            index === editableCurrentStateIndex
+              ? captionDraft.trim()
+              : image.caption,
         })),
       );
       setCaptionEditing(false);
@@ -210,7 +283,7 @@ export default function PiecePhotoGallery({
         toStateId,
       );
       onPieceUpdated(updated);
-      navigate(galleryPath);
+      navigate(galleryPath, { state: outerState });
     } catch {
       setMoveError("Failed to move photo. Please try again.");
     } finally {
@@ -230,19 +303,18 @@ export default function PiecePhotoGallery({
     try {
       await persistCurrentStateImages(
         editableCurrentStateImages.filter(
-          (_editableImage, index) => index !== image.editableCurrentStateIndex,
+          (_editableImage, index) =>
+            index !== image.editableCurrentStateIndex,
         ),
       );
       if (lightboxIndex === deleteDialogIndex) {
-        navigate(galleryPath);
+        navigate(galleryPath, { state: { ...outerState, fromLightbox: true } });
       }
       setDeleteDialogIndex(null);
     } finally {
       setDeleteSaving(false);
     }
   }
-
-  const triggerLabel = `${photoCount} photo${photoCount === 1 ? "" : "s"}`;
 
   const canMutateCurrentStateImages =
     pieceId !== undefined &&
@@ -254,8 +326,7 @@ export default function PiecePhotoGallery({
     onPieceUpdated !== undefined &&
     updatePieceFn !== undefined;
   const canEditCaption =
-    editableCurrentStateIndex !== null &&
-    canMutateCurrentStateImages;
+    editableCurrentStateIndex !== null && canMutateCurrentStateImages;
 
   const footer = activeImage ? (
     <Box sx={{ display: "grid", gap: 0.75, justifyItems: "center" }}>
@@ -325,7 +396,10 @@ export default function PiecePhotoGallery({
                 size="small"
                 onClick={() => setCaptionEditing(true)}
                 aria-label="Edit caption"
-                sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "white" } }}
+                sx={{
+                  color: "rgba(255,255,255,0.6)",
+                  "&:hover": { color: "white" },
+                }}
               >
                 <EditIcon sx={{ fontSize: 14 }} />
               </IconButton>
@@ -398,7 +472,7 @@ export default function PiecePhotoGallery({
     </Box>
   ) : null;
 
-  if (showModal && atGallery) {
+  if (atGallery) {
     const fromLightbox =
       (location.state as Record<string, unknown>)?.fromLightbox === true;
     if (images.length === 0) return <Navigate to={piecePath} replace />;
@@ -413,61 +487,43 @@ export default function PiecePhotoGallery({
 
   return (
     <>
-      <Box
-        component="button"
-        type="button"
-        onClick={() => photoCount > 0 && navigate(galleryPath)}
-        disabled={photoCount === 0}
-        aria-label={triggerLabel}
-        sx={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 0.75,
-          px: 1.25,
-          py: 0.75,
-          borderRadius: 999,
-          backgroundColor: alpha(theme.palette.background.default, 0.56),
-          color: "text.secondary",
-          backdropFilter: "blur(8px)",
-          border: "1px solid",
-          borderColor: "divider",
-          cursor: photoCount > 0 ? "pointer" : "default",
-          opacity: photoCount > 0 ? 1 : 0.7,
-        }}
+      <PiecePhotoGalleryButton images={images} pieceId={pieceId} />
+
+      <Dialog
+        open={atPhotos}
+        onClose={() => navigate(piecePath, { state: outerState })}
+        maxWidth="md"
+        fullWidth
+        aria-label="Piece photos"
+        PaperProps={{ sx: { height: "80vh", borderRadius: "8px" } }}
       >
-        <PhotoLibraryOutlinedIcon sx={{ fontSize: 16 }} />
-        <Typography variant="caption">{triggerLabel}</Typography>
-      </Box>
+        <DialogContent sx={{ p: 2 }}>
+          <PiecePhotoGalleryGrid
+            images={images}
+            canDeleteImages={canMutateCurrentStateImages}
+            currentThumbnailUrl={currentThumbnailUrl}
+            onOpenImage={(index) =>
+              navigate(`${galleryPath}/${index}`, { state: outerState })
+            }
+            onRequestDelete={setDeleteDialogIndex}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => navigate(piecePath, { state: outerState })}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-      {showModal && (
-        <Dialog
-          open={atPhotos}
-          onClose={() => navigate(piecePath)}
-          maxWidth="md"
-          fullWidth
-          aria-label="Piece photos"
-          PaperProps={{ sx: { height: "80vh", borderRadius: "8px" } }}
-        >
-          <DialogContent sx={{ p: 2 }}>
-            <PiecePhotoGalleryGrid
-              images={images}
-              canDeleteImages={canMutateCurrentStateImages}
-              currentThumbnailUrl={currentThumbnailUrl}
-              onOpenImage={(index) => navigate(`${galleryPath}/${index}`)}
-              onRequestDelete={setDeleteDialogIndex}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => navigate(piecePath)}>Close</Button>
-          </DialogActions>
-        </Dialog>
-      )}
-
-      {showModal && atLightbox && lightboxIndex !== null && (
+      {atLightbox && lightboxIndex !== null && (
         <ImageLightbox
           images={images}
           initialIndex={lightboxIndex}
-          onClose={() => navigate(galleryPath, { state: { fromLightbox: true } })}
+          onClose={() =>
+            navigate(galleryPath, {
+              state: { ...outerState, fromLightbox: true },
+            })
+          }
           currentThumbnailUrl={currentThumbnailUrl}
           onSetAsThumbnail={canSetThumbnail ? handleSetThumbnail : undefined}
           footerActions={() => footer}
