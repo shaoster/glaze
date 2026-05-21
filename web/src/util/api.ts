@@ -131,7 +131,6 @@ function normalizeCrop(value: unknown): ImageCrop | null {
 function mapStateSummary(raw: Wire<StateSummary>): StateSummary {
   return {
     state: raw.state as State,
-    created: new Date(raw.created ?? ""),
   };
 }
 
@@ -166,6 +165,7 @@ function mapPieceSummary(raw: Wire<PieceSummary>): PieceSummary {
     created: new Date(raw.created ?? ""),
     last_modified: new Date(raw.last_modified ?? ""),
     thumbnail: raw.thumbnail as Thumbnail | null,
+    photo_count: raw.photo_count ?? 0,
     shared: raw.shared ?? false,
     is_editable: raw.is_editable ?? false,
     can_edit: raw.can_edit ?? true,
@@ -243,7 +243,7 @@ export const PIECE_SORT_OPTIONS: { value: PieceSortOrder; label: string }[] = [
 ];
 
 export const DEFAULT_PIECE_SORT: PieceSortOrder = "-last_modified";
-export const PIECES_PAGE_SIZE = 24;
+export const PIECES_PAGE_SIZE = 16;
 
 export async function fetchPieces(params?: {
   ordering?: PieceSortOrder;

@@ -15,66 +15,57 @@ export type ImageCrop = {
 //
 // Date fields are already Date in generated-types (via the date-time transform
 // in scripts/generate-types.mjs). The only remaining narrowing needed is
-// state: string → state: State, handled via intersection (string & State = State).
-// No Omit<> is required anywhere in this file.
+// state: string → state: State, handled by the domain override helper below.
+// Piece domain types stay close to the generated schemas and replace only the
+// fields we intentionally narrow.
 // ---------------------------------------------------------------------------
 
+type Override<T, R> = {
+  [K in keyof T as K extends keyof R ? never : K]: T[K];
+} & R;
+
 // CaptionedImage narrows JSONField-backed crop to the normalized crop shape.
-export type CaptionedImage = Omit<
+export type CaptionedImage = Override<
   components["schemas"]["CaptionedImage"],
-  "crop"
-> & {
-  crop?: ImageCrop | null;
-};
+  { crop?: ImageCrop | null }
+>;
 
 // Thumbnail stored on a Piece. Distinct from CaptionedImage — no caption field.
-export type Thumbnail = Omit<components["schemas"]["Thumbnail"], "crop"> & {
-  crop?: ImageCrop | null;
-};
+export type Thumbnail = Override<
+  components["schemas"]["Thumbnail"],
+  { crop?: ImageCrop | null }
+>;
 
 // Minimal state shape returned in list responses.
 // Intersection narrows state: string → state: State.
 // PieceState is a structural subtype, so it can substitute for StateSummary.
-export type StateSummary = Omit<components["schemas"]["StateSummary"], "created"> & {
-  state: State;
-  created: Date;
-};
+export type StateSummary = Override<
+  components["schemas"]["StateSummary"],
+  { state: State }
+>;
+
+// Piece list entry. Replace the generated broad fields with domain-specific types.
+export type PieceSummary = Override<
+  components["schemas"]["PieceSummary"],
+  {
+    current_state: StateSummary;
+    thumbnail: Thumbnail | null;
+  }
+>;
 
 // Full state record returned in detail responses.
-// Intersection narrows state: string → state: State.
-// Added created: Date to resolve possible undefined errors after merge.
-export type PieceState = Omit<
+export type PieceState = Override<
   components["schemas"]["PieceState"],
-  "images" | "created"
-> & {
-  id: string;
-  state: State;
-  images: CaptionedImage[];
-  custom_fields: Record<string, unknown>;
-  has_been_edited: boolean;
-  created: Date;
-};
+  {
+    state: State;
+  }
+>;
 
-// Piece list entry. Intersection narrows current_state to use our typed StateSummary.
-export type PieceSummary = Omit<
-  components["schemas"]["PieceSummary"],
-  "current_state" | "thumbnail" | "showcase_fields"
-> & {
-  current_state: StateSummary;
-  thumbnail: Thumbnail | null;
-  shared: boolean;
-  is_editable: boolean;
-  can_edit: boolean;
-  tags: TagEntry[];
-  showcase_fields: string[];
-};
-
-// Piece detail. Intersection narrows current_state to PieceState (subtype of StateSummary)
-// and adds the history array. No Omit needed — PieceState satisfies StateSummary structurally.
-export type PieceDetail = PieceSummary & {
+// Piece detail. Build on the narrowed list shape so nested state stays aligned.
+export type PieceDetail = Override<PieceSummary, {
   current_state: PieceState;
   history: PieceState[];
-};
+}>;
 
 
 // GlazeCombination entry and related types — derived from generated OpenAPI types.

@@ -228,6 +228,13 @@ class GlazeCombinationImageEntrySerializer(serializers.Serializer):
     pieces = GlazeCombinationImagePieceSerializer(many=True)
 
 
+class ImageCropSerializer(serializers.Serializer):
+    x = serializers.FloatField()
+    y = serializers.FloatField()
+    width = serializers.FloatField()
+    height = serializers.FloatField()
+
+
 class CaptionedImageSerializer(serializers.Serializer):
     url = serializers.CharField()
     caption = serializers.CharField(allow_blank=True, default="")
@@ -236,7 +243,7 @@ class CaptionedImageSerializer(serializers.Serializer):
         allow_blank=True, required=False, default=None, allow_null=True
     )
     cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
-    crop = serializers.JSONField(required=False, allow_null=True, default=None)
+    crop = ImageCropSerializer(required=False, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
 
 
@@ -246,6 +253,8 @@ class PieceStateSerializer(serializers.ModelSerializer):
     next_state = serializers.SerializerMethodField()
     images = serializers.SerializerMethodField()
     custom_fields = serializers.SerializerMethodField()
+    created = serializers.DateTimeField(read_only=True)
+    has_been_edited = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = PieceState
@@ -367,7 +376,7 @@ class ThumbnailSerializer(serializers.Serializer):
         allow_blank=True, allow_null=True, default=None
     )
     cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
-    crop = serializers.JSONField(required=False, allow_null=True, default=None)
+    crop = ImageCropSerializer(required=False, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
     width = serializers.IntegerField(
         required=False, allow_null=True, default=None, min_value=0
@@ -385,6 +394,13 @@ class PieceSummarySerializer(serializers.ModelSerializer):
     current_location = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
     thumbnail = serializers.SerializerMethodField()
+    photo_count = serializers.SerializerMethodField()
+    shared = serializers.BooleanField(read_only=True)
+    is_editable = serializers.BooleanField(read_only=True)
+    showcase_fields = serializers.ListField(
+        child=serializers.CharField(),
+        read_only=True,
+    )
     last_modified = serializers.DateTimeField(read_only=True)
 
     class Meta:
@@ -395,6 +411,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
             "created",
             "last_modified",
             "thumbnail",
+            "photo_count",
             "shared",
             "is_editable",
             "showcase_story",
@@ -435,6 +452,24 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         if thumbnail is None:
             return None
         return {**thumbnail, "crop": obj.thumbnail_crop}
+
+    @extend_schema_field(serializers.IntegerField(min_value=0))
+    def get_photo_count(self, obj: Piece) -> int:
+        photo_count = getattr(obj, "photo_count", None)
+        if photo_count is not None:
+            return int(photo_count)
+
+        states = getattr(obj, "_prefetched_objects_cache", {}).get("states")
+        if states is None:
+            states = obj.states.all()
+
+        total = 0
+        for state in states:
+            links = getattr(state, "_prefetched_objects_cache", {}).get("image_links")
+            if links is None:
+                links = state.image_links.all()
+            total += len(links)
+        return total
 
 
 @traced_class

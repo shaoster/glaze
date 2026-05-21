@@ -2,7 +2,16 @@ import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
-from api.models import ENTRY_STATE, Location, Piece, PieceState, Tag
+from api.models import (
+    ENTRY_STATE,
+    Location,
+    Image,
+    Piece,
+    PieceState,
+    PieceStateImage,
+    Tag,
+)
+from api.workflow import SUCCESSORS
 
 # ---------------------------------------------------------------------------
 # GET /api/pieces/
@@ -51,6 +60,39 @@ class TestPiecesList:
         assert len(data["results"]) == 1
         assert data["results"][0]["name"] == "Test Bowl"
         assert data["results"][0]["current_state"]["state"] == ENTRY_STATE
+        assert data["results"][0]["photo_count"] == 0
+
+    def test_photo_count_includes_images_across_piece_history(
+        self, client, piece, user
+    ):
+        current_state = piece.current_state
+        next_state = SUCCESSORS[ENTRY_STATE][0]
+        later_state = PieceState.objects.create(
+            piece=piece,
+            state=next_state,
+            order=2,
+        )
+        first_image = Image.objects.create(
+            user=user,
+            url="https://example.com/first.jpg",
+        )
+        second_image = Image.objects.create(
+            user=user,
+            url="https://example.com/second.jpg",
+        )
+        PieceStateImage.objects.create(
+            piece_state=current_state,
+            image=first_image,
+            order=0,
+        )
+        PieceStateImage.objects.create(
+            piece_state=later_state,
+            image=second_image,
+            order=0,
+        )
+
+        data = client.get("/api/pieces/").json()
+        assert data["results"][0]["photo_count"] == 2
 
     def test_summary_shape(self, client, piece):
         data = client.get("/api/pieces/").json()
@@ -62,6 +104,7 @@ class TestPiecesList:
             "current_location",
             "last_modified",
             "thumbnail",
+            "photo_count",
             "shared",
             "is_editable",
             "can_edit",

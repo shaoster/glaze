@@ -5,12 +5,21 @@ import os
 import re
 from collections import defaultdict
 from typing import Callable
+from uuid import UUID
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.db import transaction
-from django.db.models import DateTimeField, Max, OuterRef, Prefetch, Q, Subquery
+from django.db.models import (
+    Count,
+    DateTimeField,
+    Max,
+    OuterRef,
+    Prefetch,
+    Q,
+    Subquery,
+)
 from django.db.models.functions import Coalesce, Greatest
 from django.http import Http404, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
@@ -76,7 +85,7 @@ _PIECE_ORDERING_MAP = {
     "-created": "-created",
 }
 _DEFAULT_ORDERING = "-last_modified"
-_DEFAULT_PAGE_SIZE = 24
+_DEFAULT_PAGE_SIZE = 16
 
 
 class PieceImageMoveSerializer(drf_serializers.Serializer):
@@ -163,6 +172,17 @@ def _apply_piece_ordering(qs, ordering_param: str):
     return qs.order_by(db_ordering)
 
 
+def _piece_photo_counts(piece_ids: list[UUID]) -> dict[UUID, int]:
+    if not piece_ids:
+        return {}
+    rows = (
+        PieceStateImage.objects.filter(piece_state__piece_id__in=piece_ids)
+        .values("piece_state__piece_id")
+        .annotate(photo_count=Count("id"))
+    )
+    return {row["piece_state__piece_id"]: row["photo_count"] for row in rows}
+
+
 @extend_schema(
     methods=["GET"],
     operation_id="pieces_list",
@@ -228,7 +248,10 @@ def pieces(request: Request) -> Response:
             limit = _DEFAULT_PAGE_SIZE
             offset = 0
         count = qs.count()
-        page_qs = qs[offset : offset + limit]
+        page_qs = list(qs[offset : offset + limit])
+        photo_counts = _piece_photo_counts([piece.id for piece in page_qs])
+        for piece in page_qs:
+            piece.photo_count = photo_counts.get(piece.id, 0)
         return Response(
             {"count": count, "results": _serialize_piece_summary(page_qs, request)}
         )

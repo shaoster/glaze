@@ -78,6 +78,7 @@ function makePiece(overrides: Partial<PieceSummary>): PieceSummary {
     name: "Unnamed Piece",
     created: new Date("2026-05-10"),
     last_modified: new Date("2026-05-12"),
+    photo_count: 0,
     thumbnail: null,
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     current_state: { state: "designed", created: new Date("2026-05-10") } as any,

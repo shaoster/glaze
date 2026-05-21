@@ -562,7 +562,7 @@ def bootstrap_dev_user(user, count: int | None = None) -> None:
 def _seed_dev_pieces(user, count: int = 75) -> None:
     """Create *count* pieces in random workflow states for a bootstrapped dev user.
 
-    Defaults to 75 pieces to fill three full pages of 24.
+    Defaults to 75 pieces to fill several pages at the default list size.
     A seeded RNG makes the output reproducible across
     dev database resets.
     """

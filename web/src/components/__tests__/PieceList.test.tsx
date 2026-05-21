@@ -1,7 +1,7 @@
 import type React from "react";
 import { useState } from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceList from "../PieceList";
@@ -141,6 +141,7 @@ function makePiece(overrides: Partial<PieceSummary> = {}): PieceSummary {
     name: "Clay Bowl",
     created: new Date("2024-01-15T10:00:00Z"),
     last_modified: new Date("2024-02-20T12:00:00Z"),
+    photo_count: 0,
     thumbnail: {
       url: "https://example.com/bowl.jpg",
       cloudinary_public_id: null,
@@ -667,6 +668,14 @@ describe("PieceList", () => {
       ]);
       expect(screen.getByText("Gift")).toBeInTheDocument();
       expect(screen.getByText("Functional")).toBeInTheDocument();
+    });
+
+    it("renders a photo count badge on the thumbnail", () => {
+      renderPieceList([makePiece({ photo_count: 3 })]);
+
+      expect(
+        within(screen.getByTestId("piece-thumbnail-shell")).getByText("3 photos"),
+      ).toBeInTheDocument();
     });
 
     it("renders a piece card without tag chips when the piece has no tags", () => {

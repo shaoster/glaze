@@ -13,6 +13,7 @@ function makePiece(overrides: Partial<PieceSummary> = {}): PieceSummary {
     name: "Clay Bowl",
     created: new Date("2024-01-15T10:00:00Z"),
     last_modified: new Date("2024-02-20T12:00:00Z"),
+    photo_count: 0,
     thumbnail: {
       url: "https://example.com/bowl.jpg",
       cloudinary_public_id: null,
