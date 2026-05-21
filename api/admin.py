@@ -969,4 +969,4 @@ class ImageAdmin(admin.ModelAdmin):
 @admin.register(InviteCode)
 class InviteCodeAdmin(admin.ModelAdmin):
     list_display = ("code", "created_at", "expires_at", "used_at", "used_by")
-    readonly_fields = ("code", "created_at", "expires_at", "used_at", "used_by")
+    readonly_fields = ("code", "created_at", "used_at", "used_by")

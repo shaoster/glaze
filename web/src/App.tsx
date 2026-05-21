@@ -414,7 +414,7 @@ function AppShell({
     preferencesRootMatch !== null || preferencesSectionMatch !== null;
 
   const displayName = useMemo(() => {
-    return currentUser.openid_subject.slice(0, 8) + "…";
+    return (currentUser.openid_subject?.slice(0, 8) ?? "…") + "…";
   }, [currentUser]);
   const saveUserPreferences = useCallback(
     async (preferences: UserPreferences) => {

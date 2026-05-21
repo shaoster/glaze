@@ -1,11 +1,6 @@
 # ruff: noqa: F401
-import base64
 import hashlib
-import json
 import logging
-import os
-import re
-import time
 from collections import defaultdict
 from typing import Any, Callable, cast
 
@@ -177,28 +172,20 @@ def _exchange_google_auth_code(code: str, redirect_uri: str) -> dict:
 
 
 def _verify_google_id_token(id_token: str) -> dict:
-    """Decode and verify a Google id_token JWT. Returns the payload dict."""
-    parts = id_token.split(".")
-    if len(parts) != 3:
-        raise ValueError("Malformed id_token")
+    """Verify a Google id_token JWT and return the payload dict.
 
-    # Pad and decode the payload (middle segment)
-    payload_b64 = parts[1] + "=" * (-len(parts[1]) % 4)
-    try:
-        payload = json.loads(base64.urlsafe_b64decode(payload_b64))
-    except Exception as exc:
-        raise ValueError(f"Cannot decode id_token payload: {exc}") from exc
+    Uses google-auth's verify_token which fetches Google's public keys and
+    validates the RSA signature, iss, aud, and exp.
+    """
+    from google.auth.transport import requests as google_requests
+    from google.oauth2 import id_token as google_id_token
 
-    client_id = settings.GOOGLE_OAUTH_CLIENT_ID
-    iss = payload.get("iss", "")
-    if iss not in ("accounts.google.com", "https://accounts.google.com"):
-        raise ValueError(f"Unexpected iss: {iss}")
-    if payload.get("aud") != client_id:
-        raise ValueError("aud mismatch")
-    if payload.get("exp", 0) < time.time():
-        raise ValueError("id_token expired")
-
-    return payload
+    return google_id_token.verify_token(
+        id_token,
+        google_requests.Request(),
+        audience=settings.GOOGLE_OAUTH_CLIENT_ID,
+        certs_url="https://www.googleapis.com/oauth2/v3/certs",
+    )
 
 
 @extend_schema(
@@ -269,8 +256,8 @@ def auth_google(request: Request) -> Response:
         user = profile.user
     else:
         # New user — invite code required.
-        invite_code = _consume_invite_code(invite_code_value)
-        if invite_code is None:
+        # select_for_update must be inside transaction.atomic to hold the lock.
+        if not invite_code_value:
             return Response(
                 {
                     "detail": "A valid invite code is required to create an account.",
@@ -280,14 +267,29 @@ def auth_google(request: Request) -> Response:
             )
 
         with transaction.atomic():
+            try:
+                invite_code = InviteCode.objects.select_for_update().get(
+                    code=invite_code_value
+                )
+            except InviteCode.DoesNotExist:
+                invite_code = None
+
+            if invite_code is None or not invite_code.is_valid:
+                return Response(
+                    {
+                        "detail": "A valid invite code is required to create an account.",
+                        "code": "invite_required",
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
             user = User.objects.create_user(
                 username=hashed_sub,
                 email="",
                 first_name="",
                 last_name="",
+                password=None,
             )
-            user.set_unusable_password()
-            user.save()
             UserProfile.objects.create(user=user, openid_subject=hashed_sub)
             invite_code.used_at = timezone.now()
             invite_code.used_by = user
@@ -297,21 +299,6 @@ def auth_google(request: Request) -> Response:
     bootstrap_dev_user(user)
     login(request, user)
     return Response(AuthUserSerializer(user).data)
-
-
-def _consume_invite_code(code_value: str | None) -> InviteCode | None:
-    """Return the InviteCode if *code_value* is valid, else None.
-
-    Does NOT mark it used — the caller handles that inside a transaction.
-    Uses select_for_update to prevent concurrent redemptions.
-    """
-    if not code_value:
-        return None
-    try:
-        invite = InviteCode.objects.select_for_update().get(code=code_value)
-    except (InviteCode.DoesNotExist, Exception):
-        return None
-    return invite if invite.is_valid else None
 
 
 # ── Invite validation (public) ────────────────────────────────────────────────

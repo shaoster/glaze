@@ -281,7 +281,7 @@ export async function loginWithGoogle(
   const { data } = await client.post<AuthUser>("auth/google/", {
     code,
     redirect_uri: redirectUri,
-    invite_code: inviteCode ?? "",
+    invite_code: inviteCode,
   });
   return normalizeAuthUser(data);
 }

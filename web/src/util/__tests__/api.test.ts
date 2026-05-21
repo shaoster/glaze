@@ -366,7 +366,7 @@ describe("auth endpoints", () => {
     expect(mockClient.post).toHaveBeenCalledWith("auth/google/", {
       code: "auth-code-xyz",
       redirect_uri: "https://example.com",
-      invite_code: "",
+      invite_code: undefined,
     });
     expect(user).toEqual(authUser);
   });
