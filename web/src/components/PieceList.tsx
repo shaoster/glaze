@@ -145,6 +145,8 @@ const PieceCard = ({ piece, width, returnTo }: PieceCardProps) => {
   const [thumbnailAspectRatio, setThumbnailAspectRatio] = useState(
     () => layout.thumbnailAspectRatio,
   );
+  const photoCount = piece.photo_count ?? 0;
+  const photoCountLabel = `${photoCount} photo${photoCount === 1 ? "" : "s"}`;
 
   // Tags: show 2 visible + dashed overflow chip (non-expandable in card)
   const tags = piece.tags ?? [];
@@ -223,20 +225,55 @@ const PieceCard = ({ piece, width, returnTo }: PieceCardProps) => {
           }}
         />
 
-        {/* Top-right: stale dot */}
-        {isStale && (
+        {(isStale || photoCount > 0) && (
           <Box
             sx={{
               position: "absolute",
               top: 6,
               right: 6,
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              bgcolor: KILN_COLOR,
-              boxShadow: `0 0 6px ${KILN_COLOR}`,
+              display: "flex",
+              alignItems: "center",
+              gap: 0.75,
+              pointerEvents: "none",
+              zIndex: 1,
             }}
-          />
+          >
+            {isStale && (
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  bgcolor: KILN_COLOR,
+                  boxShadow: `0 0 6px ${KILN_COLOR}`,
+                  flexShrink: 0,
+                }}
+              />
+            )}
+            {photoCount > 0 && (
+              <Box
+                sx={{
+                  px: "8px",
+                  py: "3px",
+                  borderRadius: 999,
+                  bgcolor: alpha(theme.palette.background.paper, 0.82),
+                  color: "text.primary",
+                  backdropFilter: "blur(8px)",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  fontSize: "0.6875rem",
+                  fontWeight: 600,
+                  fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+                  letterSpacing: "0.02em",
+                  whiteSpace: "nowrap",
+                  lineHeight: 1,
+                  boxShadow: `0 1px 2px ${alpha("#000", 0.16)}`,
+                }}
+              >
+                {photoCountLabel}
+              </Box>
+            )}
+          </Box>
         )}
 
         {/* Bottom-left: state chip overlay */}

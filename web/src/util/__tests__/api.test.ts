@@ -60,6 +60,7 @@ const wirePieceSummary = {
   created: "2024-01-01T00:00:00Z",
   last_modified: "2024-01-02T00:00:00Z",
   thumbnail: "/thumbnails/vase.svg",
+  photo_count: 2,
   current_state: { state: "designed" },
   current_location: "Studio",
   tags: [{ id: "t1", name: "functional", color: "#aabbcc", is_public: true }],
@@ -118,6 +119,7 @@ describe("piece endpoints", () => {
     expect(result.results).toHaveLength(1);
     expect(result.results[0].created).toBeInstanceOf(Date);
     expect(result.results[0].last_modified).toBeInstanceOf(Date);
+    expect(result.results[0].photo_count).toBe(2);
     expect(result.results[0].current_state.state).toBe("designed");
     expect(result.results[0].tags[0]).toMatchObject({
       name: "functional",

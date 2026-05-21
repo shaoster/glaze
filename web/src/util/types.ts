@@ -62,6 +62,7 @@ export type PieceSummary = Omit<
 > & {
   current_state: StateSummary;
   thumbnail: Thumbnail | null;
+  photo_count?: number;
   shared: boolean;
   is_editable: boolean;
   can_edit: boolean;
