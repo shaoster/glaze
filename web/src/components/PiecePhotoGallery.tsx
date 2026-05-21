@@ -302,7 +302,7 @@ export default function PiecePhotoGallery({
         ),
       );
       if (lightboxIndex === deleteDialogIndex) {
-        navigate(galleryPath, { state: outerState });
+        navigate(galleryPath, { state: { ...outerState, fromLightbox: true } });
       }
       setDeleteDialogIndex(null);
     } finally {

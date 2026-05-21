@@ -71,8 +71,7 @@ export default function ImageLightbox({
   const isCurrentThumbnail =
     !!currentThumbnailUrl && image.url === currentThumbnailUrl;
 
-  async function handleSetAsThumbnail(e: React.MouseEvent) {
-    e.stopPropagation();
+  async function handleSetAsThumbnail() {
     if (!onSetAsThumbnail) return;
     setSettingThumbnail(true);
     try {
@@ -90,7 +89,7 @@ export default function ImageLightbox({
     >
       <Box
         data-testid="lightbox-backdrop"
-        onClick={onClose}
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         sx={{
           position: "fixed",
           inset: 0,
@@ -106,7 +105,6 @@ export default function ImageLightbox({
         <Box
           {...swipeHandlers}
           data-testid="lightbox-swipe-area"
-          onClick={(e) => e.stopPropagation()}
           sx={{ touchAction: "pan-y", cursor: images.length > 1 ? "grab" : undefined }}
         >
           <Box
@@ -134,38 +132,31 @@ export default function ImageLightbox({
           </Box>
         </Box>
 
-        {footerActions && (
-          <Box onClick={(e) => e.stopPropagation()}>{footerActions(index)}</Box>
-        )}
+        {footerActions && footerActions(index)}
         {onSetAsThumbnail && (
-          <Box onClick={(e) => e.stopPropagation()}>
-            <Button
-              size="small"
-              variant="outlined"
-              disabled={isCurrentThumbnail || settingThumbnail}
-              onClick={handleSetAsThumbnail}
-              startIcon={
-                settingThumbnail ? (
-                  <CircularProgress size={14} color="inherit" />
-                ) : undefined
-              }
-              sx={{ color: "white", borderColor: "rgba(255,255,255,0.5)" }}
-            >
-              {isCurrentThumbnail
-                ? "Current thumbnail"
-                : settingThumbnail
-                  ? "Setting…"
-                  : "Set as thumbnail"}
-            </Button>
-          </Box>
+          <Button
+            size="small"
+            variant="outlined"
+            disabled={isCurrentThumbnail || settingThumbnail}
+            onClick={handleSetAsThumbnail}
+            startIcon={
+              settingThumbnail ? (
+                <CircularProgress size={14} color="inherit" />
+              ) : undefined
+            }
+            sx={{ color: "white", borderColor: "rgba(255,255,255,0.5)" }}
+          >
+            {isCurrentThumbnail
+              ? "Current thumbnail"
+              : settingThumbnail
+                ? "Setting…"
+                : "Set as thumbnail"}
+          </Button>
         )}
 
         {/* Navigation — arrows on non-touch, dots always when multiple images */}
         {images.length > 1 && (
-          <Box
-            onClick={(e) => e.stopPropagation()}
-            sx={{ display: "flex", alignItems: "center", gap: 1 }}
-          >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <IconButton
               onClick={prev}
               disabled={index === 0}

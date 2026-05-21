@@ -543,42 +543,48 @@ gz_restore() {
     fi
 
     echo "--- restoring dump (this may take a moment) ---"
-    # Parse connection details from the URL: postgres://user:pass@host:port/dbname
-    local userpass hostport dbname user pass host port
-    userpass="${db_url#postgres*://}"
-    dbname="${userpass##*/}"
-    hostport="${userpass%%/*}"
-    hostport="${hostport##*@}"
-    user="${userpass%%:*}"
-    pass="${userpass#*:}"; pass="${pass%%@*}"
-    host="${hostport%%:*}"
-    port="${hostport##*:}"; [[ "$port" == "$host" ]] && port=5432
 
-    # Drop and recreate the database so the restore starts clean
-    PGPASSWORD="$pass" psql -h "$host" -p "$port" -U "$user" -d postgres \
-        -c "DROP DATABASE IF EXISTS $dbname;" \
-        -c "CREATE DATABASE $dbname;" 2>/dev/null || {
-        # Fallback: restore with --clean if we can't drop (e.g. active connections)
-        echo "(could not drop/recreate db — restoring with --clean instead)"
+    local piece_count user_count
+    if [[ "$using_container" == true ]]; then
+        # Use pg_restore inside the container to match the server's pg version,
+        # avoiding "unsupported version" errors when the local client is older.
+        docker exec glaze-dev-db psql -U postgres \
+            -c "DROP DATABASE IF EXISTS glaze;" \
+            -c "CREATE DATABASE glaze;" >/dev/null
+        docker exec -i glaze-dev-db pg_restore \
+            -U postgres -d glaze --no-owner --no-privileges \
+            < "$dump_path"
+        piece_count=$(docker exec glaze-dev-db psql -U postgres -d glaze \
+            -Atqc "SELECT COUNT(*) FROM api_piece;")
+        user_count=$(docker exec glaze-dev-db psql -U postgres -d glaze \
+            -Atqc "SELECT COUNT(*) FROM auth_user;")
+    else
+        # Parse connection details from the URL: postgres://user:pass@host:port/dbname
+        local userpass hostport dbname user pass host port
+        userpass="${db_url#postgres*://}"
+        dbname="${userpass##*/}"
+        hostport="${userpass%%/*}"
+        hostport="${hostport##*@}"
+        user="${userpass%%:*}"
+        pass="${userpass#*:}"; pass="${pass%%@*}"
+        host="${hostport%%:*}"
+        port="${hostport##*:}"; [[ "$port" == "$host" ]] && port=5432
+
+        PGPASSWORD="$pass" psql -h "$host" -p "$port" -U "$user" -d postgres \
+            -c "DROP DATABASE IF EXISTS $dbname;" \
+            -c "CREATE DATABASE $dbname;" 2>/dev/null || {
+            echo "(could not drop/recreate db — restoring with --clean instead)"
+        }
         PGPASSWORD="$pass" pg_restore \
             -h "$host" -p "$port" -U "$user" -d "$dbname" \
             --no-owner --no-privileges --clean --if-exists \
             < "$dump_path"
-        echo "--- running migrations ---"
-        gz_migrate
-        return 0
-    }
+        piece_count=$(PGPASSWORD="$pass" psql -h "$host" -p "$port" -U "$user" -d "$dbname" \
+            -Atqc "SELECT COUNT(*) FROM api_piece;")
+        user_count=$(PGPASSWORD="$pass" psql -h "$host" -p "$port" -U "$user" -d "$dbname" \
+            -Atqc "SELECT COUNT(*) FROM auth_user;")
+    fi
 
-    PGPASSWORD="$pass" pg_restore \
-        -h "$host" -p "$port" -U "$user" -d "$dbname" \
-        --no-owner --no-privileges \
-        < "$dump_path"
-
-    local piece_count user_count
-    piece_count=$(PGPASSWORD="$pass" psql -h "$host" -p "$port" -U "$user" -d "$dbname" \
-        -Atqc "SELECT COUNT(*) FROM api_piece;")
-    user_count=$(PGPASSWORD="$pass" psql -h "$host" -p "$port" -U "$user" -d "$dbname" \
-        -Atqc "SELECT COUNT(*) FROM auth_user;")
     echo "Restored $piece_count pieces across $user_count users."
 
     echo "--- running migrations (to apply any branch-local changes) ---"
