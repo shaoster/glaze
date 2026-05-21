@@ -446,8 +446,10 @@ describe("PieceDetail", () => {
         shared: true,
       }),
     );
-    expect(onPieceUpdated).toHaveBeenCalledWith(updated);
-    expect(screen.getByText("Public link created.")).toBeInTheDocument();
+    await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(updated));
+    await waitFor(() =>
+      expect(screen.getByText("Public link created.")).toBeInTheDocument(),
+    );
   });
 
   it("copies the public link for a shared terminal piece", async () => {
