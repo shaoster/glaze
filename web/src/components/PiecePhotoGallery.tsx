@@ -60,8 +60,11 @@ export function PiecePhotoGalleryButton({
 
   // Strip the internal fromLightbox flag before forwarding state — keeps
   // fromGallery/returnTo alive so PieceDetailPage's back button stays correct.
-  const { fromLightbox: _fromLightbox, ...outerState } =
-    (location.state as Record<string, unknown> | null) ?? {};
+  const outerState = Object.fromEntries(
+    Object.entries((location.state as Record<string, unknown> | null) ?? {}).filter(
+      ([k]) => k !== "fromLightbox",
+    ),
+  );
 
   const photoCount = images.length;
   const triggerLabel = `${photoCount} photo${photoCount === 1 ? "" : "s"}`;
@@ -138,8 +141,11 @@ export default function PiecePhotoGallery({
 
   // Strip the internal fromLightbox flag before forwarding state — keeps
   // fromGallery/returnTo alive so PieceDetailPage's back button stays correct.
-  const { fromLightbox: _fromLightbox, ...outerState } =
-    (location.state as Record<string, unknown> | null) ?? {};
+  const outerState = Object.fromEntries(
+    Object.entries((location.state as Record<string, unknown> | null) ?? {}).filter(
+      ([k]) => k !== "fromLightbox",
+    ),
+  );
 
   const atGallery = location.pathname === galleryPath;
   const atPhotos =

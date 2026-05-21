@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PiecePhotoGallery, {
   PiecePhotoGalleryButton,
+  type PiecePhotoGalleryImage,
 } from "../components/PiecePhotoGallery";
 import { fn } from "@storybook/test";
 
@@ -56,7 +57,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const mockImages = [
+const mockImages: PiecePhotoGalleryImage[] = [
   {
     url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
     caption: "Early stage",
@@ -66,7 +67,7 @@ const mockImages = [
     stateId: "state-thrown",
     editableCurrentStateIndex: null,
     image_id: "img-1",
-    created: "2024-01-01T00:00:00Z",
+    created: new Date("2024-01-01T00:00:00Z"),
     crop: null,
   },
   {
@@ -78,7 +79,7 @@ const mockImages = [
     stateId: "state-trimmed",
     editableCurrentStateIndex: null,
     image_id: "img-2",
-    created: "2024-01-02T00:00:00Z",
+    created: new Date("2024-01-02T00:00:00Z"),
     crop: null,
   },
   {
@@ -90,7 +91,7 @@ const mockImages = [
     stateId: "state-current",
     editableCurrentStateIndex: 0,
     image_id: "img-3",
-    created: "2024-01-03T00:00:00Z",
+    created: new Date("2024-01-03T00:00:00Z"),
     crop: null,
   },
 ];
