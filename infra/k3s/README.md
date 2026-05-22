@@ -179,8 +179,19 @@ helm upgrade --install glaze chart/glaze/ \
 
 Both the Django Admin and Headlamp (cluster dashboard) are restricted to access from within the Tailscale network (`100.64.0.0/10`).
 
+To make that restriction usable in practice, the droplet itself must be joined to
+your tailnet. Tailscale then assigns the node a stable tailnet IP and MagicDNS
+name, and the browser should use that tailnet-facing address instead of the
+public hostname for these private endpoints.
+
+Use [`./setup-k3s-tailscale.sh`](/home/phil/code/glaze/.agent-worktrees/claude/issue-tailscale-k3s-access/setup-k3s-tailscale.sh) to join the droplet to the tailnet and enable Tailscale SSH.
+
 ### Django Admin
 Django Admin is available at `https://glaze.example.com/admin/` (or the configured `adminUrl`). Access is restricted by a Traefik `IPAllowList` middleware. You must be connected to the Tailscale network to access it.
+
+If you keep the public hostname, you will also need DNS routing that sends that
+name to the droplet's tailnet address. Otherwise, use the droplet's Tailscale
+IP or `*.ts.net` MagicDNS name directly.
 
 ### Headlamp
 Headlamp is available at `https://headlamp.potterdoc.com/`. Previous basic authentication has been removed in favor of Tailscale-only access. You must be connected to the Tailscale network to view the dashboard.
