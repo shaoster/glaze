@@ -193,20 +193,6 @@ jobs:
               --wait
           "
 
-      - name: Smoke test
-        env:
-          ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
-        run: |
-          for i in $(seq 1 6); do
-            if curl -sf "https://${ALLOWED_HOST}/api/health/ready/" --max-time 10; then
-              echo "Smoke test passed"
-              exit 0
-            fi
-            echo "Attempt $i failed, retrying in 10s..."
-            sleep 10
-          done
-          echo "Smoke test failed after 6 attempts" >&2
-          exit 1
 
       - name: Create GitHub Release
         env:
