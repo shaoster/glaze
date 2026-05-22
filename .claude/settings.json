@@ -42,7 +42,15 @@
       "Bash(sed -n '5,12p' /home/phil/code/glaze/.agent-worktrees/claude/issue-masonry-debug/.agents/skills/dev-testing/SKILL.md)",
       "Bash(bash -c 'source /home/phil/code/glaze/env-agent.sh; echo \"GLAZE_ROOT=$GLAZE_ROOT\"')",
       "Bash(GLAZE_ROOT=/home/phil/code/glaze/.agent-worktrees/claude/issue-568-support-top-placement-for-small-tutorial-inlay bash -c 'source /home/phil/code/glaze/env-agent.sh; echo \"GLAZE_ROOT=$GLAZE_ROOT\"')",
-      "Bash(bash -c 'cd /home/phil/code/glaze/.agent-worktrees/claude/issue-568-support-top-placement-for-small-tutorial-inlay && source /home/phil/code/glaze/env-agent.sh; echo \"GLAZE_ROOT=$GLAZE_ROOT\"')"
+      "Bash(bash -c 'cd /home/phil/code/glaze/.agent-worktrees/claude/issue-568-support-top-placement-for-small-tutorial-inlay && source /home/phil/code/glaze/env-agent.sh; echo \"GLAZE_ROOT=$GLAZE_ROOT\"')",
+      "Bash(awk '{print $NF}')",
+      "Bash(gz_help)",
+      "Bash(declare -F)",
+      "WebFetch(domain:developers.google.com)",
+      "Bash(gz_restore /tmp/glaze-prod-postgres-NlHmgu.dump)",
+      "Bash(pg_restore --version)",
+      "Bash(node_modules/.bin/tsc -p tsconfig.app.json --noEmit)",
+      "Bash(awk -F: '$1+0 > 20')"
     ],
     "additionalDirectories": [
       "/tmp"
