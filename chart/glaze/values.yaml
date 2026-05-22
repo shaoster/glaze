@@ -35,6 +35,7 @@ appConfig:
   defaultFromEmail: ""
   remoteRembgUrl: ""
   otelEnabled: ""
+  adminUrl: "admin"
 
 postgres:
   image: postgres:17
