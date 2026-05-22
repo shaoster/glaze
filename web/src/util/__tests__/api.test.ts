@@ -59,7 +59,12 @@ const wirePieceSummary = {
   name: "My Vase",
   created: "2024-01-01T00:00:00Z",
   last_modified: "2024-01-02T00:00:00Z",
-  thumbnail: "/thumbnails/vase.svg",
+  thumbnail: {
+    url: "/thumbnails/vase.svg",
+    cloudinary_public_id: null,
+    cloud_name: null,
+    crop: null,
+  },
   photo_count: 2,
   current_state: { state: "designed" },
   current_location: "Studio",
@@ -120,6 +125,7 @@ describe("piece endpoints", () => {
     expect(result.results[0].created).toBeInstanceOf(Date);
     expect(result.results[0].last_modified).toBeInstanceOf(Date);
     expect(result.results[0].photo_count).toBe(2);
+    expect(result.results[0].thumbnail?.crop).toBeNull();
     expect(result.results[0].current_state.state).toBe("designed");
     expect(result.results[0].tags[0]).toMatchObject({
       name: "functional",
@@ -210,6 +216,33 @@ describe("piece endpoints", () => {
     });
     expect(result.current_state.images[1].crop).toBeNull();
     expect(result.current_state.images[2].crop).toBeNull();
+  });
+
+  it("fetchPieces normalizes thumbnail crops from schema metadata", async () => {
+    const { fetchPieces } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: {
+        count: 1,
+        results: [
+          {
+            ...wirePieceSummary,
+            thumbnail: {
+              ...wirePieceSummary.thumbnail,
+              crop: { x: -1, y: 0.25, width: 2, height: 0.5 },
+            },
+          },
+        ],
+      },
+    });
+
+    const result = await fetchPieces();
+
+    expect(result.results[0].thumbnail?.crop).toEqual({
+      x: 0,
+      y: 0.25,
+      width: 1,
+      height: 0.5,
+    });
   });
 
   it("createPiece posts the payload and maps the response", async () => {
@@ -892,4 +925,3 @@ describe("extractErrorMessage", () => {
     );
   });
 });
-

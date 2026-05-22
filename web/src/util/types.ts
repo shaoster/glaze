@@ -40,7 +40,7 @@ export type Thumbnail = Override<
 // Intersection narrows state: string → state: State.
 // PieceState is a structural subtype, so it can substitute for StateSummary.
 export type StateSummary = Override<
-  components["schemas"]["StateSummary"],
+  components["schemas"]["PieceSummary"]["current_state"],
   { state: State }
 >;
 
@@ -77,38 +77,18 @@ export type GlazeCombinationEntry =
 export type TagEntry = components["schemas"]["TagEntry"];
 // Structured image value stored by global model image fields.
 export type GlobalImage = components["schemas"]["GlobalImage"];
-// ---------------------------------------------------------------------------
-// Glaze Combination Gallery — analysis endpoint types
-// ---------------------------------------------------------------------------
+export type GlazeCombinationImagePiece = Override<
+  components["schemas"]["GlazeCombinationImagePiece"],
+  {
+    state: State;
+    images: CaptionedImage[];
+  }
+>;
 
-/** A single piece entry returned by GET /api/analysis/glaze-combination-images/. */
-export type GlazeCombinationImagePiece = {
-  id: string;
-  name: string;
-  /** Most recent qualifying state (glazed | glaze_fired | completed) that has images. */
-  state: State;
-  /** Images aggregated across all qualifying states for this piece. */
-  images: CaptionedImage[];
-};
-
-/** One entry in the glaze combination image gallery response. */
-export type GlazeCombinationImageEntry = {
-  glaze_combination: GlazeCombinationEntry;
-  pieces: GlazeCombinationImagePiece[];
-};
-
-export type AsyncTaskStatus = "pending" | "running" | "success" | "failure";
-
-export interface AsyncTask {
-  id: string;
-  status: AsyncTaskStatus;
-  task_type: string;
-  input_params: Record<string, unknown>;
-  result: unknown;
-  error: string | null;
-  created: string;
-  last_modified: string;
-}
+export type GlazeCombinationImageEntry = Override<
+  components["schemas"]["GlazeCombinationImageEntry"],
+  { pieces: GlazeCombinationImagePiece[] }
+>;
 
 export interface JSONSchemaProperty {
   type: string;

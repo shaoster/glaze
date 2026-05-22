@@ -41,7 +41,7 @@ choices worth knowing about:
 from typing import Any
 
 from django.apps import apps
-from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
 from backend.otel import traced_class
@@ -73,6 +73,56 @@ from .workflow import (
     get_global_ref_fields_for_state,
     get_state_ref_fields,
 )
+
+GLAZE_NORMALIZER_EXTENSION = "x-glaze-normalizer"
+GLAZE_RELATION_EXTENSION = "x-glaze-relation"
+
+
+def _schema_ref(component_name: str, **extensions: Any) -> dict[str, Any]:
+    return {
+        "allOf": [{"$ref": f"#/components/schemas/{component_name}"}],
+        **extensions,
+    }
+
+
+def _schema_array_ref(component_name: str, **extensions: Any) -> dict[str, Any]:
+    return {
+        "type": "array",
+        "items": {"$ref": f"#/components/schemas/{component_name}"},
+        **extensions,
+    }
+
+
+def _relation_schema(component_name: str, *, shape: str) -> dict[str, Any]:
+    return _schema_ref(
+        component_name,
+        **{GLAZE_RELATION_EXTENSION: {"component": component_name, "shape": shape}},
+    )
+
+
+def _relation_array_schema(component_name: str, *, shape: str) -> dict[str, Any]:
+    return _schema_array_ref(
+        component_name,
+        **{
+            GLAZE_RELATION_EXTENSION: {
+                "component": component_name,
+                "shape": shape,
+                "many": True,
+            }
+        },
+    )
+
+
+def _state_summary_relation_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {"state": {"type": "string"}},
+        "required": ["state"],
+        GLAZE_RELATION_EXTENSION: {
+            "component": "StateSummary",
+            "shape": "summary",
+        },
+    }
 
 
 def _serialize_tags(model: models.Model, junction_name: str) -> list[dict[str, str]]:
@@ -199,32 +249,7 @@ class GlazeCombinationEntrySerializer(serializers.ModelSerializer):
         ]
 
 
-class GlazeCombinationImagePieceSerializer(serializers.Serializer):
-    """A single piece entry in a GlazeCombinationImageEntrySerializer response.
-
-    Represents one piece that was glazed with the parent combination. ``state``
-    is the most recent qualifying state that contributed images (e.g.
-    ``'glaze_fired'``). ``images`` aggregates all images recorded across every
-    qualifying state for that piece.
-    """
-
-    id = serializers.CharField()
-    name = serializers.CharField()
-    state = serializers.CharField()
-    images = serializers.ListField(child=serializers.DictField())
-
-
-class GlazeCombinationImageEntrySerializer(serializers.Serializer):
-    """Response shape for GET /api/analysis/glaze-combination-images/.
-
-    Each entry groups a glaze combination with the pieces that used it and
-    have images in at least one qualifying state.
-    """
-
-    glaze_combination = GlazeCombinationEntrySerializer()
-    pieces = GlazeCombinationImagePieceSerializer(many=True)
-
-
+@extend_schema_serializer(extensions={GLAZE_NORMALIZER_EXTENSION: "imageCrop"})
 class ImageCropSerializer(serializers.Serializer):
     x = serializers.FloatField()
     y = serializers.FloatField()
@@ -242,6 +267,32 @@ class CaptionedImageSerializer(serializers.Serializer):
     cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
     crop = ImageCropSerializer(required=False, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+
+
+class GlazeCombinationImagePieceSerializer(serializers.Serializer):
+    """A single piece entry in a GlazeCombinationImageEntrySerializer response.
+
+    Represents one piece that was glazed with the parent combination. ``state``
+    is the most recent qualifying state that contributed images (e.g.
+    ``'glaze_fired'``). ``images`` aggregates all images recorded across every
+    qualifying state for that piece.
+    """
+
+    id = serializers.CharField()
+    name = serializers.CharField()
+    state = serializers.CharField()
+    images = CaptionedImageSerializer(many=True)
+
+
+class GlazeCombinationImageEntrySerializer(serializers.Serializer):
+    """Response shape for GET /api/analysis/glaze-combination-images/.
+
+    Each entry groups a glaze combination with the pieces that used it and
+    have images in at least one qualifying state.
+    """
+
+    glaze_combination = GlazeCombinationEntrySerializer()
+    pieces = GlazeCombinationImagePieceSerializer(many=True)
 
 
 @traced_class
@@ -426,7 +477,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
             .order_by(display_field)
         )
 
-    @extend_schema_field(StateSummarySerializer)
+    @extend_schema_field(_state_summary_relation_schema())
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
         assert cs is not None, f"Piece {obj.id} has no states"
@@ -477,13 +528,13 @@ class PieceDetailSerializer(PieceSummarySerializer):
     class Meta(PieceSummarySerializer.Meta):
         fields = PieceSummarySerializer.Meta.fields + ["history"]
 
-    @extend_schema_field(PieceStateSerializer)
+    @extend_schema_field(_relation_schema("PieceState", shape="detail"))
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
         assert cs is not None, f"Piece {obj.id} has no states"
         return PieceStateSerializer(cs, context=self.context).data
 
-    @extend_schema_field(PieceStateSerializer(many=True))
+    @extend_schema_field(_relation_array_schema("PieceState", shape="history"))
     def get_history(self, obj: Piece) -> list:
         return list(
             PieceStateSerializer(obj.states.all(), many=True, context=self.context).data
