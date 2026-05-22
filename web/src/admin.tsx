@@ -3,8 +3,8 @@ import { createRoot } from "react-dom/client";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import ScopedCssBaseline from "@mui/material/ScopedCssBaseline";
 import WorkflowState from "./components/WorkflowState";
-import type { PieceDetail, PieceState, UISchema } from "./util/types";
-import type { UpdateStatePayload } from "./util/api";
+import type { PieceDetail, PieceState } from "./util/types";
+import type { UISchema, UpdateStatePayload } from "./util/api";
 
 type MutablePieceState = {
   -readonly [K in keyof PieceState]: PieceState[K];

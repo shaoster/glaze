@@ -22,7 +22,7 @@ import {
 import type {
   PieceDetail as PieceDetailType,
   PieceState,
-  State,
+  StateEnum,
 } from "../util/types";
 import {
   formatPastState,
@@ -52,8 +52,8 @@ function InsertButton({
   piece,
   onPieceUpdated,
 }: {
-  predecessor: State;
-  presentStates: ReadonlySet<State>;
+  predecessor: StateEnum;
+  presentStates: ReadonlySet<StateEnum>;
   piece: PieceDetailType;
   onPieceUpdated: (updated: PieceDetailType) => void;
 }) {
@@ -63,7 +63,7 @@ function InsertButton({
   const insertable = insertableStatesBetween(predecessor, presentStates);
   if (insertable.length === 0) return null;
 
-  async function handleSelect(state: State) {
+  async function handleSelect(state: StateEnum) {
     setAnchorEl(null);
     setLoading(true);
     try {
@@ -94,7 +94,7 @@ function InsertButton({
             onClose={() => setAnchorEl(null)}
           >
             {insertable.map((s) => (
-              <MenuItem key={s} onClick={() => handleSelect(s as State)}>
+              <MenuItem key={s} onClick={() => handleSelect(s as StateEnum)}>
                 {formatState(s)}
               </MenuItem>
             ))}
@@ -232,7 +232,7 @@ export default function PieceHistory({
 
   if (pastHistory.length === 0 && !isEditable) return null;
 
-  const presentStates = new Set<State>(
+  const presentStates = new Set<StateEnum>(
     piece?.history.map((ps) => ps.state) ?? [],
   );
 
@@ -283,7 +283,7 @@ export default function PieceHistory({
             const isAfterRewind = rewindIndex !== -1 && i > rewindIndex;
 
             // Predecessor for insert-before affordance
-            const predecessor: State | null =
+            const predecessor: StateEnum | null =
               i === 0 ? null : pastHistory[i - 1]?.state ?? null;
 
             // Only show insert affordance in edit mode, with a valid predecessor,

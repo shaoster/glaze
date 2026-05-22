@@ -19,10 +19,11 @@ import {
   Typography,
   useMediaQuery,
 } from "@mui/material";
-import type { PieceDetail, PieceState, UISchema } from "../util/types";
+import type { PieceDetail, PieceState } from "../util/types";
 import {
   fetchWorkflowStateSchema,
   updateCurrentState,
+  type UISchema,
   type UpdateStatePayload,
 } from "../util/api";
 import { openCloudinaryUploadWidget } from "../util/cloudinaryUpload";

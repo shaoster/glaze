@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resolvePath } from "../../../scripts/generate-types.mjs";
+import {
+  renderSchemaAliasModule,
+  resolvePath,
+} from "../../../scripts/generate-types.mjs";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -20,4 +23,21 @@ describe("generate-types script helpers", () => {
     );
   });
 
+  it("renders exact top-level schema aliases without renaming", () => {
+    expect(
+      renderSchemaAliasModule({
+        components: {
+          schemas: {
+            PieceDetail: {},
+            StateEnum: {},
+          },
+        },
+      }),
+    ).toContain(
+      [
+        `export type PieceDetail = components["schemas"]["PieceDetail"];`,
+        `export type StateEnum = components["schemas"]["StateEnum"];`,
+      ].join("\n"),
+    );
+  });
 });

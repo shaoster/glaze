@@ -26,16 +26,54 @@ import type {
   PieceDetail,
   PieceSummary,
   PieceState,
-  State,
-  StateSummary,
+  StateEnum,
   TagEntry,
   Thumbnail,
-  UISchema,
 } from "./types";
 import {
   TUTORIAL_TOGGLE_VALUES,
   type TutorialToggleKey,
 } from "./tutorials";
+
+/**
+ * JSON Schema property shape returned by the workflow-schema endpoint.
+ *
+ * This is intentionally a small, handwritten protocol type rather than a
+ * generated OpenAPI contract. The backend builds these objects dynamically
+ * from `workflow.yml` and decorates them with UI-specific `x-*` fields, so
+ * the frontend needs a tolerant structural type for schema-driven rendering
+ * and field discovery. Trying to force this into the usual generated-types
+ * pipeline would add noise without improving the actual contract clarity.
+ */
+export interface JSONSchemaProperty {
+  type: string;
+  enum?: string[];
+  anyOf?: JSONSchemaProperty[];
+  "x-label"?: string;
+  "x-description"?: string;
+  "x-display-as"?: string;
+  "x-required"?: boolean;
+  "x-global-ref"?: string;
+  "x-state-ref"?: boolean;
+  "x-can-create"?: boolean;
+  "x-read-only"?: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * UI Schema envelope returned by `GET /api/workflow/schema/<state_id>/`.
+ *
+ * The endpoint is a runtime synthesis of workflow metadata, not a normal DRF
+ * serializer contract, so this remains a pragmatic frontend protocol type.
+ * It exists to support the dynamic workflow field machinery in
+ * `web/src/util/workflow.ts` and the editors that render from those schemas.
+ */
+export interface UISchema {
+  type: "object";
+  properties: Record<string, JSONSchemaProperty>;
+  required?: string[];
+  additionalProperties?: boolean;
+}
 
 export type AuthUser = {
   id: number;
@@ -141,9 +179,11 @@ function normalizeCrop(value: unknown): ImageCrop | null {
   };
 }
 
-function mapStateSummary(raw: Wire<StateSummary>): StateSummary {
+function mapStateSummary(
+  raw: Wire<PieceSummary["current_state"]>,
+): PieceSummary["current_state"] {
   return {
-    state: raw.state as State,
+    state: raw.state,
   };
 }
 
@@ -159,13 +199,13 @@ function mapTagEntry(raw: Wire<TagEntry>): TagEntry {
 function mapPieceState(raw: Wire<PieceState>): PieceState {
   return {
     id: raw.id,
-    state: raw.state as State,
+    state: raw.state,
     notes: raw.notes,
     created: new Date(raw.created ?? ""),
     last_modified: new Date(raw.last_modified ?? ""),
     images: raw.images.map(mapImage),
-    previous_state: raw.previous_state as State | null,
-    next_state: raw.next_state as State | null,
+    previous_state: raw.previous_state,
+    next_state: raw.next_state,
     custom_fields: raw.custom_fields ?? {},
     has_been_edited: raw.has_been_edited ?? false,
   };
@@ -400,7 +440,7 @@ export async function createPiece(
 }
 
 export type AddStatePayload = {
-  state: State;
+  state: StateEnum;
   notes?: string;
   images?: Wire<CaptionedImage>[];
   custom_fields?: Record<string, string | number | boolean | null>;
@@ -626,7 +666,7 @@ export async function fetchGlazeCombinationImages(): Promise<
     pieces: entry.pieces.map((p): GlazeCombinationImagePiece => ({
       id: p.id,
       name: p.name,
-      state: p.state as State,
+      state: p.state,
       images: p.images.map(mapImage),
     })),
   }));
