@@ -55,7 +55,7 @@ py_library(
         "widgets.py",
     ],
     data = [
-        ":api_commands",
+        ":api_runtime_commands",
         "//:workflow_files",
     ],
     visibility = ["//visibility:public"],
@@ -73,6 +73,19 @@ filegroup(
 )
 
 filegroup(
+    name = "api_runtime_commands",
+    srcs = glob(
+        ["management/**/*.py"],
+        exclude = ["management/commands/import_test_tile_images.py"],
+    ),
+)
+
+filegroup(
+    name = "api_dev_commands",
+    srcs = ["management/commands/import_test_tile_images.py"],
+)
+
+filegroup(
     name = "migrations",
     srcs = glob(["migrations/*.py"]),
     visibility = ["//visibility:public"],
@@ -87,10 +100,34 @@ filegroup(
 filegroup(
     name = "api_runtime_files",
     srcs = [
-        ":api_lib",
-        ":api_schema_lib",
-        ":api_workflow_lib",
-        ":api_commands",
+        "admin.py",
+        "analysis_views.py",
+        "apps.py",
+        "auth_views.py",
+        "cloudinary_cleanup.py",
+        "cloudinary_views.py",
+        "crop_run_views.py",
+        "global_entry_views.py",
+        "health_views.py",
+        "import_views.py",
+        "invitations.py",
+        "logging.py",
+        "manual_tile_imports.py",
+        "model_factories.py",
+        "models.py",
+        "piece_views.py",
+        "serializer_factories.py",
+        "serializer_registry.py",
+        "serializers.py",
+        "task_views.py",
+        "tasks.py",
+        "urls.py",
+        "utils.py",
+        "views.py",
+        "widgets.py",
+        "workflow.py",
+        "workflow_views.py",
+        ":api_runtime_commands",
         ":migrations",
         ":api_static",
         "__init__.py",
@@ -111,6 +148,7 @@ _TEST_DATA = [
     "//:workflow_files",
     "//:fixtures",
     "//:pytest_ini",
+    "//backend:backend_test_settings",
     ":migrations",
     ":api_static",
 ]
