@@ -22,13 +22,15 @@ def pytest_test(name, srcs, deps, cov_src = None, expected_coverage = [], **kwar
         cov_src = native.package_name()
 
     scope_args = ["--expected-coverage=" + p for p in expected_coverage]
+    tags = kwargs.get("tags", [])
+    integration_args = ["--coverage-integration-test"] if "integration" in tags else []
 
     py_test(
         name = name,
         srcs = srcs,
         deps = deps + ["@pypi//pytest", "@pypi//coverage"],
         args = select({
-            "//:is_coverage_build": args + ["--cov=" + cov_src] + scope_args,
+            "//:is_coverage_build": args + ["--cov=" + cov_src] + scope_args + integration_args,
             "//conditions:default": args,
         }),
         **kwargs

@@ -25,6 +25,9 @@ if (covFile && expectedCoverageRaw) {
     writeFileSync(covFile + ".scope", patterns.join("\n"));
   }
 }
+if (covFile && process.env.COVERAGE_INTEGRATION_TEST === "1") {
+  writeFileSync(covFile + ".integration", "1");
+}
 
 export default defineConfig({
   plugins: [yaml()],

@@ -350,9 +350,13 @@ export function readScopeFile(reportPath) {
   return raw.length > 0 ? raw : null;
 }
 
+export function readIntegrationMarker(reportPath) {
+  return existsSync(reportPath + ".integration");
+}
+
 export function ingestReport(db, reportPath, integrationRegex, caches) {
   const testName = displayReportName(reportPath);
-  const isIntegration = isIntegrationTest(testName, integrationRegex);
+  const isIntegration = readIntegrationMarker(reportPath) || isIntegrationTest(testName, integrationRegex);
   const scope = readScopeFile(reportPath);
   const testId = upsertTest(db, testName, reportPath, isIntegration, scope);
   const tx = db.transaction((records) => {

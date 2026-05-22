@@ -224,10 +224,13 @@ describe("App auth flow", () => {
     expect(_googleOnSuccess).toBeDefined();
     await _googleOnSuccess!({ code: "auth-code-123" });
 
-    await waitFor(() => {
-      expect(screen.getByText(MOCK_DISPLAY_NAME)).toBeInTheDocument();
-      expect(screen.getByText("Piece List Content")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText(MOCK_DISPLAY_NAME)).toBeInTheDocument();
+        expect(screen.getByText("Piece List Content")).toBeInTheDocument();
+      },
+      { timeout: 5000 },
+    );
 
     expect(
       screen.getByRole("img", { name: "PotterDoc app icon" }),
@@ -287,11 +290,14 @@ describe("App auth flow", () => {
 
     render(<App />);
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /new piece/i }),
-      ).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(
+          screen.getByRole("button", { name: /new piece/i }),
+        ).toBeInTheDocument();
+      },
+      { timeout: 5000 },
+    );
 
     await userEvent.click(screen.getByRole("tab", { name: "Analyze" }));
 

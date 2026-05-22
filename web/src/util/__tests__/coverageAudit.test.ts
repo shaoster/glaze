@@ -543,7 +543,7 @@ describe("scope violations", () => {
   it("skips integration tests even when scope is declared and violations exist", async () => {
     const root = makeTempRoot();
     try {
-      const testDir = join(root, "integration_e2e");
+      const testDir = join(root, "api_model_test");
       writeCoverageFile(
         testDir,
         "coverage.dat",
@@ -553,6 +553,7 @@ describe("scope violations", () => {
         ].join("\n"),
       );
       writeFileSync(join(testDir, "coverage.dat.scope"), "api/piece_views.py");
+      writeFileSync(join(testDir, "coverage.dat.integration"), "1");
 
       const db = await buildDatabase({
         command: "scope-violations",

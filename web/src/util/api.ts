@@ -272,6 +272,22 @@ export async function fetchAppInit(): Promise<AppInit> {
   };
 }
 
+export async function fetchCurrentUser(): Promise<AuthUser | null> {
+  try {
+    const { data } = await client.get<AppInit | AuthUser>("auth/me/");
+    const user = "user" in data ? data.user : data;
+    return user ? normalizeAuthUser(user) : null;
+  } catch (error) {
+    if (
+      axios.isAxiosError(error) &&
+      (error.response?.status === 401 || error.response?.status === 403)
+    ) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 export async function loginWithGoogle(
   code: string,
   redirectUri: string,

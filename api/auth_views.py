@@ -91,10 +91,16 @@ def auth_logout(request: Request) -> Response:
 
 @extend_schema(
     request=None,
-    responses={200: inline_serializer("AppInit", fields={
-        "googleOauthClientId": drf_serializers.CharField(),
-        "user": drf_serializers.JSONField(allow_null=True),
-    }), 503: None},
+    responses={
+        200: inline_serializer(
+            "AppInit",
+            fields={
+                "googleOauthClientId": drf_serializers.CharField(),
+                "user": drf_serializers.JSONField(allow_null=True),
+            },
+        ),
+        503: None,
+    },
     description="Bootstrap response: public config plus the current user if authenticated.",
 )
 @api_view(["GET"])
@@ -108,10 +114,12 @@ def auth_me(request: Request) -> Response:
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
     user = request.user if request.user.is_authenticated else None
-    return Response({
-        "googleOauthClientId": client_id,
-        "user": AuthUserSerializer(user).data if user else None,
-    })
+    return Response(
+        {
+            "googleOauthClientId": client_id,
+            "user": AuthUserSerializer(user).data if user else None,
+        }
+    )
 
 
 @extend_schema(
@@ -201,11 +209,14 @@ def _verify_google_id_token(id_token: str) -> dict:
     from google.auth.transport import requests as google_requests
     from google.oauth2 import id_token as google_id_token
 
-    return google_id_token.verify_token(
-        id_token,
-        google_requests.Request(),
-        audience=settings.GOOGLE_OAUTH_CLIENT_ID,
-        certs_url="https://www.googleapis.com/oauth2/v3/certs",
+    return cast(
+        dict[Any, Any],
+        google_id_token.verify_token(
+            id_token,
+            google_requests.Request(),
+            audience=settings.GOOGLE_OAUTH_CLIENT_ID,
+            certs_url="https://www.googleapis.com/oauth2/v3/certs",
+        ),
     )
 
 
