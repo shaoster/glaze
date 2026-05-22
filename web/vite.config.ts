@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig } from "vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import babel from "@rolldown/plugin-babel";
 import yaml from "@rollup/plugin-yaml";
@@ -17,8 +17,7 @@ const isVitest = !!process.env.VITEST;
 const root = isVitest ? __dirname : fs.realpathSync(__dirname);
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "");
+export default defineConfig(() => {
   return {
     root,
     define: {
@@ -26,7 +25,7 @@ export default defineConfig(({ mode }) => {
       // The frontend uses this to render the Google Sign-In button and obtain
       // a JWT, which the backend then verifies using this exact same ID.
       "import.meta.env.GOOGLE_OAUTH_CLIENT_ID": JSON.stringify(
-        env.GOOGLE_OAUTH_CLIENT_ID
+        process.env.GOOGLE_OAUTH_CLIENT_ID
       ),
     },
     resolve: {

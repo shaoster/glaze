@@ -40,7 +40,7 @@ genrule(
 
 vite_pkg.vite(
     name = "vite_run",
-    srcs = [":web_lib"] + glob([".env.*"], allow_empty = True),
+    srcs = [":web_lib"],
     args = ["build"],
     chdir = package_name(),
     out_dirs = ["dist"],
@@ -93,7 +93,7 @@ storybook_pkg.storybook_binary(
 vite_pkg.vite_binary(
     name = "dev_server",
     chdir = package_name(),
-    data = [":web_lib"] + glob([".env.*"], allow_empty = True),
+    data = [":web_lib"],
     visibility = ["//visibility:public"],
 )
 
