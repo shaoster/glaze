@@ -127,3 +127,12 @@ resources:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# SINGLE-NODE: These CIDRs are k3s flannel defaults for a single-node deployment.
+# If the cluster ever moves to multi-node/HA or a different CNI, revisit
+# middleware-health-internal.yaml and consider NetworkPolicy or mTLS instead.
+network:
+  # SINGLE-NODE: k3s flannel pod CIDR default. Revisit for multi-node/HA clusters.
+  podCidr: "10.42.0.0/16"
+  # SINGLE-NODE: k3s service CIDR default. Revisit for multi-node/HA clusters.
+  serviceCidr: "10.43.0.0/16"

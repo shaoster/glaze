@@ -1,0 +1,15 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "glaze.fullname" . }}-health-internal-only
+  labels:
+    {{- include "glaze.labels" . | nindent 4 }}
+spec:
+  # SINGLE-NODE: ipAllowList is sufficient for single-node k3s. For multi-node
+  # clusters, replace with a NetworkPolicy or mTLS approach.
+  ipAllowList:
+    sourceRange:
+      - {{ .Values.network.podCidr | quote }}
+      - {{ .Values.network.serviceCidr | quote }}
+{{- end }}
