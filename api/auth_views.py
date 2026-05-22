@@ -123,9 +123,10 @@ def auth_preferences(request: Request) -> Response:
 
     serializer = UserPreferencesSerializer(data=request.data, partial=True)
     serializer.is_valid(raise_exception=True)
+    update_fields: list[str] = []
     if "alias" in serializer.validated_data:
         profile.alias = serializer.validated_data["alias"]
-        profile.save(update_fields=["alias"])
+        update_fields.append("alias")
     if "preferences" in serializer.validated_data:
         existing_preferences = cast(
             dict[str, Any],
@@ -149,7 +150,9 @@ def auth_preferences(request: Request) -> Response:
                     **cast(dict[str, Any], incoming_tutorials),
                 }
         profile.preferences = merged_preferences
-        profile.save(update_fields=["preferences"])
+        update_fields.append("preferences")
+    if update_fields:
+        profile.save(update_fields=update_fields)
     return Response(
         {
             "alias": profile.alias,

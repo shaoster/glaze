@@ -201,13 +201,9 @@ describe("UserPreferencesDialog", () => {
       </PreferencesDialogProvider>,
     );
 
-    // Wait for the dialog content to mount, then use fireEvent to bypass
-    // aria-hidden constraints from MUI Dialog's Fade transition in jsdom.
-    const aliasInput = await waitFor(() => {
-      const input = document.querySelector<HTMLInputElement>("input");
-      if (!input) throw new Error("alias input not found");
-      return input;
-    });
+    // fireEvent bypasses aria-hidden; MUI Dialog's Fade transition keeps content
+    // aria-hidden in jsdom so userEvent won't reach it.
+    const aliasInput = await screen.findByRole("textbox", { hidden: true });
     fireEvent.change(aliasInput, { target: { value: "Studio Mug" } });
 
     const saveButton = await screen.findByRole("button", { name: /save/i, hidden: true });
