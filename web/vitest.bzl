@@ -39,6 +39,8 @@ def vitest_test(name, srcs, deps, config = "//web:vitest.config.ts", expected_co
     if expected_coverage:
         # Colon-separated; vitest.config.ts splits on ":" and writes the .scope sidecar.
         env["EXPECTED_COVERAGE"] = ":".join(expected_coverage)
+    if "integration" in kwargs.get("tags", []):
+        env["COVERAGE_INTEGRATION_TEST"] = "1"
 
     vitest_pkg.vitest_test(
         name = name,

@@ -56,6 +56,82 @@ def test_web_executable_path_prefers_bazel_bin(tmp_path: Path) -> None:
     assert launcher.web_executable_path(roots) == web_exec
 
 
+def test_detect_roots_uses_git_common_dir_for_shared_checkout(
+    monkeypatch, tmp_path: Path
+) -> None:
+    workspace = tmp_path / "repo" / ".agent-worktrees" / "codex" / "issue-610"
+    workspace.mkdir(parents=True)
+    common_git = tmp_path / "repo" / ".git"
+
+    monkeypatch.setenv("BUILD_WORKSPACE_DIRECTORY", str(workspace))
+
+    def fake_git_output(args: list[str], cwd: Path) -> str | None:
+        if args == ["rev-parse", "--show-toplevel"]:
+            return str(workspace)
+        if args == ["rev-parse", "--path-format=absolute", "--git-common-dir"]:
+            return str(common_git)
+        return None
+
+    monkeypatch.setattr(launcher, "_git_output", fake_git_output)
+
+    assert launcher.detect_roots() == launcher.Roots(
+        workspace=workspace,
+        shared=tmp_path / "repo",
+    )
+
+
+def test_preferred_root_for_falls_back_to_shared_worktree_file(tmp_path: Path) -> None:
+    workspace = tmp_path / "repo" / ".agent-worktrees" / "codex" / "issue-610"
+    shared = tmp_path / "repo"
+    workspace.mkdir(parents=True)
+    (shared / ".env.local").write_text("CLOUDINARY_CLOUD_NAME=demo\n", encoding="utf-8")
+
+    root = launcher.preferred_root_for(
+        launcher.Roots(workspace=workspace, shared=shared),
+        ".env.local",
+    )
+
+    assert root == shared
+
+
+def test_find_free_port_returns_first_available(monkeypatch) -> None:
+    monkeypatch.setattr(launcher, "port_is_free", lambda port: port == 8082)
+
+    assert launcher.find_free_port(8080) == 8082
+
+
+def test_find_free_port_raises_when_none_available(monkeypatch) -> None:
+    monkeypatch.setattr(launcher, "port_is_free", lambda _: False)
+
+    try:
+        launcher.find_free_port(65535)
+    except RuntimeError as error:
+        assert "no free port found" in str(error)
+    else:
+        raise AssertionError("find_free_port should fail when no port is free")
+
+
+def test_read_int_file_returns_none_for_invalid_content(tmp_path: Path) -> None:
+    path = tmp_path / "backend.pid"
+    path.write_text("not-a-pid\n", encoding="utf-8")
+
+    assert launcher.read_int_file(path) is None
+
+
+def test_process_group_is_running_treats_permission_error_as_alive(
+    monkeypatch,
+) -> None:
+    if launcher.os.name == "nt":
+        return
+
+    def fake_killpg(pgid: int, sig: int) -> None:
+        raise PermissionError
+
+    monkeypatch.setattr(launcher.os, "killpg", fake_killpg)
+
+    assert launcher.process_group_is_running(1234) is True
+
+
 def test_process_group_kwargs_uses_platform_specific_mode() -> None:
     kwargs = launcher.process_group_kwargs()
     if launcher.os.name == "nt":
