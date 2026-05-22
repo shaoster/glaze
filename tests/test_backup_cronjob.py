@@ -41,4 +41,5 @@ def test_backup_script_keeps_restore_state_alive_for_trap():
 
     assert script.count("local_started=0") == 2
     assert script.index("local_started=0") < script.index("main() {")
-    assert '[[ -n "${workdir:-}" ]] && rm -rf "$workdir"' in script
+    assert 'if [[ -n "${workdir:-}" ]]; then' in script
+    assert 'rm -rf "$workdir"' in script
