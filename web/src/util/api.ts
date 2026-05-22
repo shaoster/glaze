@@ -259,28 +259,17 @@ export async function ensureCsrfCookie(): Promise<void> {
   await client.get("auth/csrf/");
 }
 
-export interface PublicConfig {
+export interface AppInit {
   googleOauthClientId: string;
+  user: AuthUser | null;
 }
 
-export async function fetchPublicConfig(): Promise<PublicConfig> {
-  const { data } = await client.get<PublicConfig>("config/");
-  return data;
-}
-
-export async function fetchCurrentUser(): Promise<AuthUser | null> {
-  try {
-    const { data } = await client.get<AuthUser>("auth/me/");
-    return normalizeAuthUser(data);
-  } catch (error) {
-    if (
-      axios.isAxiosError(error) &&
-      (error.response?.status === 401 || error.response?.status === 403)
-    ) {
-      return null;
-    }
-    throw error;
-  }
+export async function fetchAppInit(): Promise<AppInit> {
+  const { data } = await client.get<{ googleOauthClientId: string; user: AuthUser | null }>("auth/me/");
+  return {
+    googleOauthClientId: data.googleOauthClientId,
+    user: data.user ? normalizeAuthUser(data.user) : null,
+  };
 }
 
 export async function loginWithGoogle(

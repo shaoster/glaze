@@ -41,8 +41,7 @@ import { alpha, ThemeProvider, createTheme } from "@mui/material/styles";
 
 import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
 import {
-  fetchCurrentUser,
-  fetchPublicConfig,
+  fetchAppInit,
   loginWithGoogle,
   logoutUser,
   updateUserPreferences,
@@ -737,56 +736,56 @@ function AuthenticatedApp({
 // Re-export Link for use in components that need it outside the router
 export { Link };
 
+function FullscreenCenter({ children }: { children: React.ReactNode }) {
+  return (
+    <Container
+      maxWidth="sm"
+      sx={{ minHeight: "100dvh", display: "grid", placeItems: "center" }}
+    >
+      {children}
+    </Container>
+  );
+}
+
 export default function App() {
-  const { data: config, loading: configLoading, error: configError } = useAsync(fetchPublicConfig);
   const {
-    data: currentUser,
-    loading: userLoading,
-    setData: setCurrentUser,
-  } = useAsync<AuthUser | null>(fetchCurrentUser);
-  const loading = configLoading || userLoading;
+    data: init,
+    loading,
+    error,
+    setData: setInit,
+  } = useAsync(fetchAppInit);
+
   const handleAuthenticated = useCallback(
-    (user: AuthUser) => {
-      setCurrentUser(user);
-    },
-    [setCurrentUser],
+    (user: AuthUser) => setInit((prev) => ({ ...prev!, user })),
+    [setInit],
   );
   const handleCurrentUserUpdated = useCallback(
-    (user: AuthUser) => {
-      setCurrentUser(user);
-    },
-    [setCurrentUser],
+    (user: AuthUser) => setInit((prev) => ({ ...prev!, user })),
+    [setInit],
   );
-
   const handleLogout = useCallback(async () => {
     await logoutUser();
-    setCurrentUser(null);
-  }, [setCurrentUser]);
+    setInit((prev) => ({ ...prev!, user: null }));
+  }, [setInit]);
 
   return (
-    <GoogleOAuthProvider clientId={config?.googleOauthClientId ?? ""}>
+    <GoogleOAuthProvider clientId={init?.googleOauthClientId ?? ""}>
       <ThemeProvider theme={DARK_THEME}>
         <CssBaseline />
         {loading ? (
-          <Container
-            maxWidth="sm"
-            sx={{ minHeight: "100dvh", display: "grid", placeItems: "center" }}
-          >
+          <FullscreenCenter>
             <CircularProgress />
-          </Container>
-        ) : configError ? (
-          <Container
-            maxWidth="sm"
-            sx={{ minHeight: "100dvh", display: "grid", placeItems: "center" }}
-          >
+          </FullscreenCenter>
+        ) : error ? (
+          <FullscreenCenter>
             <Alert severity="error">
               All identity providers are misconfigured. The developer has been
               notified. Please try again later.
             </Alert>
-          </Container>
-        ) : currentUser ? (
+          </FullscreenCenter>
+        ) : init?.user ? (
           <AuthenticatedApp
-            currentUser={currentUser}
+            currentUser={init.user}
             onLogout={handleLogout}
             onCurrentUserUpdated={handleCurrentUserUpdated}
           />

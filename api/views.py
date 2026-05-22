@@ -11,7 +11,6 @@ from .auth_views import (
     auth_me,
     auth_preferences,
     csrf,
-    public_config,
     staff_invite_code,
     validate_invite,
 )
@@ -78,7 +77,6 @@ __all__ = [
     "piece_past_state",
     "piece_states",
     "pieces",
-    "public_config",
     "staff_invite_code",
     "submit_task",
     "task_detail",
