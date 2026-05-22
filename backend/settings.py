@@ -291,6 +291,13 @@ LOGGING = {
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 
+if IS_PRODUCTION:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_SSL_REDIRECT = True
+
 # Remote ML Offloading (Modal)
 REMOTE_REMBG_URL = os.environ.get("REMOTE_REMBG_URL", "")
 MODAL_AUTH_TOKEN = os.environ.get("MODAL_AUTH_TOKEN", "")
