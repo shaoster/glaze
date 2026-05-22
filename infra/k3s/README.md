@@ -1,6 +1,8 @@
 # k3s Cluster Bootstrap
 
 This directory contains the configuration for the production k3s cluster running on the DigitalOcean droplet.
+The current production layout is single-node, so the firewall guidance below
+assumes the control plane, workloads, and ingress all live on one host.
 
 ## Cluster Specs
 
@@ -28,7 +30,11 @@ The config disables the bundled metrics-server and servicelb (DigitalOcean handl
 
 ### 2. Enable the host firewall
 
-UFW should allow only the public traffic that belongs on this droplet. Keep SSH open for administration, keep HTTP/HTTPS open for Traefik, and leave the k3s API and kubelet off the public internet.
+UFW should allow only the public traffic that belongs on this droplet. Keep SSH
+open for administration, keep HTTP/HTTPS open for Traefik, and leave the k3s
+API and kubelet off the public internet. This is intentionally scoped to the
+current single-node cluster; if we ever add more nodes, we will need to revisit
+the pod-network and inter-node rules.
 
 ```bash
 ufw default deny incoming
@@ -47,6 +53,11 @@ ss -tlnp | grep -E ':(22|80|443|6443|10250|30180)\b'
 ```
 
 The k3s API is configured to bind to `127.0.0.1`, so `6443` should only appear on localhost. `10250` and `30180` should not be reachable from outside the host.
+
+Because this is a single-node cluster, the host firewall can stay narrow today.
+If we move to multi-node later, re-check whether k3s needs explicit allowance
+for the pod network interfaces such as `cni0` or `flannel.1` before tightening
+the firewall further.
 
 ### 3. Apply Traefik configuration
 
