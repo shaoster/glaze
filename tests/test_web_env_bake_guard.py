@@ -3,6 +3,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WEB_DIR = REPO_ROOT / "web"
+CI_YML = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 
 
 def test_web_build_does_not_bake_env_files():
@@ -17,3 +18,11 @@ def test_web_build_does_not_bake_env_files():
     assert "/.env*" in gitignore_text
 
     assert not (WEB_DIR / ".env.example").exists()
+
+
+def test_ci_does_not_write_env_file_for_image_build():
+    # Ensure the CI image step exports GOOGLE_OAUTH_CLIENT_ID via env: rather
+    # than writing a .env file that could be accidentally baked into the image.
+    ci_text = CI_YML.read_text()
+    assert ".env.local" not in ci_text
+    assert "GOOGLE_OAUTH_CLIENT_ID" in ci_text

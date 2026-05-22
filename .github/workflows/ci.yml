@@ -188,14 +188,12 @@ jobs:
 
       # The frontend is a static bundle that cannot read server environment
       # variables at runtime. We must bake the public Google Client ID into
-      # the JS bundle during the image build step.
-      - name: Write Vite env file
-        run: |
-          if [ -n "${{ vars.GOOGLE_OAUTH_CLIENT_ID }}" ]; then
-            printf 'GOOGLE_OAUTH_CLIENT_ID=%s\n' '${{ vars.GOOGLE_OAUTH_CLIENT_ID }}' > web/.env.local
-          fi
-
+      # the JS bundle during the image build step. Export it into the shell
+      # environment so Vite reads it via process.env — no .env file is written,
+      # eliminating any risk of baking a local .env file into the image.
       - name: Build OCI image and load into docker
+        env:
+          GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
         run: bazel run --config=ci --stamp //:load
 
       - name: Lint and validate Helm chart
