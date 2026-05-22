@@ -73,6 +73,7 @@ dependencies = [
     "pydantic==2.13.4",
     "pydantic-core==2.46.4",
     "pygments==2.20.0",
+    "pyjwt>=2.13.0",
     "pytest==9.0.3",
     "pytest-cov==7.1.0",
     "pytest-django==4.10.0",
