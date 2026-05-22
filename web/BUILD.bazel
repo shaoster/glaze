@@ -40,7 +40,7 @@ genrule(
 
 js_library(
     name = "vite_config_lib",
-    srcs = ["vite.config.ts"],
+    srcs = ["vite.config.ts"] + glob([".env.*"], allow_empty = True),
     deps = [":node_modules"],
 )
 
@@ -1200,7 +1200,7 @@ vitest_test(
     name = "web_vite_config_test",
     srcs = ["src/vite.config.test.ts"],
     tags = ["ibazel_notify_changes"],
-    deps = [":vite_config_lib"] + glob([".env.*"], allow_empty = True),
+    deps = [":vite_config_lib"],
 )
 
 # ── Web test suite ────────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@ const resolvedConfig =
 const define = (resolvedConfig.define ?? {}) as Record<string, string>;
 
 describe("vite bundle injection contract", () => {
-  it("define keys match allowlist exactly — no more, no fewer", () => {
+  it("define keys match allowlist exactly — extra keys leak secrets, missing keys break prod", () => {
     const actual = new Set(Object.keys(define));
     const extra = [...actual].filter((k) => !BUNDLE_DEFINE_ALLOWLIST.has(k));
     const missing = [...BUNDLE_DEFINE_ALLOWLIST].filter((k) => !actual.has(k));
@@ -18,12 +18,12 @@ describe("vite bundle injection contract", () => {
     expect(missing, "required bundle vars missing from define block — prod will be broken").toEqual([]);
   });
 
-  it("every allowlisted key resolves to a non-empty value when its env var is set", () => {
+  it("every allowlisted key resolves to a non-empty value when loaded from .env.*", () => {
     for (const key of BUNDLE_DEFINE_ALLOWLIST) {
       const raw = define[key];
-      // Vite serializes values as JSON strings, e.g. '"myvalue"' — unwrap one layer.
+      // Vite serializes values as JSON strings e.g. '"myvalue"' — unwrap one layer.
       const value: unknown = JSON.parse(raw);
-      expect(value, `${key} is empty even though its env var was set`).toBeTruthy();
+      expect(value, `${key} resolved to empty — check that .env.local is present and populated`).toBeTruthy();
     }
   });
 });
