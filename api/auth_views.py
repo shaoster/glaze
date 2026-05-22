@@ -93,7 +93,7 @@ def auth_logout(request: Request) -> Response:
     request=None,
     responses={200: inline_serializer("AppInit", fields={
         "googleOauthClientId": drf_serializers.CharField(),
-        "user": AuthUserSerializer(allow_null=True),
+        "user": drf_serializers.JSONField(allow_null=True),
     }), 503: None},
     description="Bootstrap response: public config plus the current user if authenticated.",
 )

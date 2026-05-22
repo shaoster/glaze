@@ -132,7 +132,7 @@ describe("App auth flow", () => {
     sessionStorage.clear();
   });
 
-  it("shows error when /api/config/ returns a server error", async () => {
+  it("shows error when /api/auth/me/ returns a server error", async () => {
     vi.mocked(fetchAppInit).mockRejectedValue(new Error("503"));
     render(<App />);
     await waitFor(() => {

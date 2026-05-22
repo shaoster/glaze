@@ -265,7 +265,7 @@ export interface AppInit {
 }
 
 export async function fetchAppInit(): Promise<AppInit> {
-  const { data } = await client.get<{ googleOauthClientId: string; user: AuthUser | null }>("auth/me/");
+  const { data } = await client.get<AppInit>("auth/me/");
   return {
     googleOauthClientId: data.googleOauthClientId,
     user: data.user ? normalizeAuthUser(data.user) : null,
