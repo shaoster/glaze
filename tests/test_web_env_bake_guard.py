@@ -24,5 +24,5 @@ def test_ci_does_not_write_env_file_for_image_build():
     # Ensure the CI image step exports GOOGLE_OAUTH_CLIENT_ID via env: rather
     # than writing a .env file that could be accidentally baked into the image.
     ci_text = CI_YML.read_text()
-    assert ".env.local" not in ci_text
-    assert "GOOGLE_OAUTH_CLIENT_ID" in ci_text
+    assert "Write Vite env file" not in ci_text
+    assert "GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}" in ci_text

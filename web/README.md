@@ -25,6 +25,8 @@ Use `.env.local` for local-only values. It is gitignored, but there is no
 checked-in `web/.env.example` template anymore. Create the file manually if you
 want web-only overrides for local development.
 
+To enable Google Sign-In locally, export `GOOGLE_OAUTH_CLIENT_ID=<your-client-id>` in your shell before running `bazel run //web:dev_server` — Vite reads it directly from the environment.
+
 Cloudinary uploads are signed by Django; set `CLOUDINARY_*` in root `.env.local` so the API secret never appears in browser code.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
