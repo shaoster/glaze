@@ -187,7 +187,7 @@ public hostname for these private endpoints.
 Use [`./setup-k3s-tailscale.sh`](/home/phil/code/glaze/.agent-worktrees/claude/issue-tailscale-k3s-access/setup-k3s-tailscale.sh) to join the droplet to the tailnet and enable Tailscale SSH.
 
 ### Django Admin
-Django Admin is available at `https://glaze.example.com/admin/` (or the configured `adminUrl`). Access is restricted by a Traefik `IPAllowList` middleware. You must be connected to the Tailscale network to access it.
+Django Admin is available at `https://admin.potterdoc.com/admin/` (or the configured `adminUrl`). Access is restricted by a Traefik `IPAllowList` middleware. You must be connected to the Tailscale network to access it.
 
 If you keep the public hostname, you will also need DNS routing that sends that
 name to the droplet's tailnet address. Otherwise, use the droplet's Tailscale
