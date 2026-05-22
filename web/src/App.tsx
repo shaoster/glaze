@@ -68,6 +68,7 @@ const CloudinaryCleanupPage = lazy(
 );
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
+const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
 const InvitePage = lazy(() => import("./pages/InvitePage"));
 const StaffInvitePage = lazy(() => import("./pages/StaffInvitePage"));
 
@@ -304,6 +305,18 @@ function AuthLanding({
               >
                 Privacy Policy
               </Button>
+              <Typography variant="body2" color="text.secondary">
+                •
+              </Typography>
+              <Button
+                component={Link}
+                to="/terms-of-service"
+                variant="text"
+                size="small"
+                sx={{ minWidth: 0, px: 0.5 }}
+              >
+                Terms of Service
+              </Button>
             </Stack>
           </Box>
         </Stack>
@@ -366,6 +379,28 @@ function UnauthenticatedApp({
                     }
                   >
                     <PrivacyPolicyPage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/terms-of-service"
+              element={
+                <ErrorBoundary>
+                  <Suspense
+                    fallback={
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "center",
+                          py: 4,
+                        }}
+                      >
+                        <CircularProgress />
+                      </Box>
+                    }
+                  >
+                    <TermsOfServicePage />
                   </Suspense>
                 </ErrorBoundary>
               }
