@@ -37,6 +37,11 @@ appConfig:
   otelEnabled: ""
   adminUrl: "admin"
 
+adminIngress:
+  enabled: true
+  host: admin.potterdoc.com
+  tlsSecret: glaze-admin-tls
+
 postgres:
   image: postgres:17
   user: glaze
