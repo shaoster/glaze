@@ -91,14 +91,27 @@ def auth_logout(request: Request) -> Response:
 
 @extend_schema(
     request=None,
-    responses={200: AuthUserSerializer, 401: None},
-    description="Return the currently authenticated user. Returns 401 if not logged in.",
+    responses={200: inline_serializer("AppInit", fields={
+        "googleOauthClientId": drf_serializers.CharField(),
+        "user": drf_serializers.JSONField(allow_null=True),
+    }), 503: None},
+    description="Bootstrap response: public config plus the current user if authenticated.",
 )
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 @traced
 def auth_me(request: Request) -> Response:
-    return Response(AuthUserSerializer(request.user).data)
+    client_id = settings.GOOGLE_OAUTH_CLIENT_ID
+    if not client_id:
+        return Response(
+            {"detail": "Authentication provider is not configured."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    user = request.user if request.user.is_authenticated else None
+    return Response({
+        "googleOauthClientId": client_id,
+        "user": AuthUserSerializer(user).data if user else None,
+    })
 
 
 @extend_schema(

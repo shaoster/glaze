@@ -63,14 +63,15 @@ class TestAuthEndpointsMocked:
         response = auth_views.csrf(request)
         assert response.status_code == 204
 
-    def test_auth_me_includes_preferences(self, client, user):
+    def test_auth_me_includes_preferences(self, client, user, settings):
+        settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
         UserProfile.objects.create(
             user=user,
             preferences={"process_summary_fields": ["piece.name"]},
         )
         response = client.get("/api/auth/me/")
         assert response.status_code == 200
-        assert response.json()["preferences"] == {
+        assert response.json()["user"]["preferences"] == {
             "process_summary_fields": ["piece.name"],
         }
 
@@ -135,17 +136,19 @@ class TestAuthEndpointsMocked:
             "theme": "dark",
         }
 
-    def test_auth_me_includes_alias(self, client, user):
+    def test_auth_me_includes_alias(self, client, user, settings):
+        settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
         UserProfile.objects.create(user=user, alias="Pottery Phil")
         response = client.get("/api/auth/me/")
         assert response.status_code == 200
-        assert response.json()["alias"] == "Pottery Phil"
+        assert response.json()["user"]["alias"] == "Pottery Phil"
 
-    def test_auth_me_alias_defaults_to_empty_string(self, client, user):
+    def test_auth_me_alias_defaults_to_empty_string(self, client, user, settings):
+        settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
         UserProfile.objects.create(user=user)
         response = client.get("/api/auth/me/")
         assert response.status_code == 200
-        assert response.json()["alias"] == ""
+        assert response.json()["user"]["alias"] == ""
 
     def test_auth_preferences_patch_sets_alias(self, client, user):
         UserProfile.objects.create(user=user)
@@ -176,6 +179,43 @@ class TestAuthEndpointsMocked:
         response = client.get("/api/auth/preferences/")
         assert response.status_code == 200
         assert response.json()["alias"] == "My Alias"
+
+
+@pytest.mark.django_db
+class TestAuthMe:
+    def test_returns_config_and_null_user_when_unauthenticated(self, settings):
+        from api import auth_views
+
+        settings.GOOGLE_OAUTH_CLIENT_ID = "my-client-id"
+        factory = APIRequestFactory()
+        request = factory.get("/api/auth/me/")
+        response = auth_views.auth_me(request)
+        assert response.status_code == 200
+        assert response.data["googleOauthClientId"] == "my-client-id"
+        assert response.data["user"] is None
+
+    def test_returns_config_and_user_when_authenticated(self, settings):
+        from api import auth_views
+
+        settings.GOOGLE_OAUTH_CLIENT_ID = "my-client-id"
+        factory = APIRequestFactory()
+        request = factory.get("/api/auth/me/")
+        user = User(username="testhash")
+        user.save()
+        force_authenticate(request, user=user)
+        response = auth_views.auth_me(request)
+        assert response.status_code == 200
+        assert response.data["googleOauthClientId"] == "my-client-id"
+        assert response.data["user"] is not None
+
+    def test_returns_503_when_not_configured(self, settings):
+        from api import auth_views
+
+        settings.GOOGLE_OAUTH_CLIENT_ID = ""
+        factory = APIRequestFactory()
+        request = factory.get("/api/auth/me/")
+        response = auth_views.auth_me(request)
+        assert response.status_code == 503
 
 
 @pytest.mark.django_db

@@ -41,7 +41,7 @@ import { alpha, ThemeProvider, createTheme } from "@mui/material/styles";
 
 import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
 import {
-  fetchCurrentUser,
+  fetchAppInit,
   loginWithGoogle,
   logoutUser,
   updateUserPreferences,
@@ -736,46 +736,56 @@ function AuthenticatedApp({
 // Re-export Link for use in components that need it outside the router
 export { Link };
 
+function FullscreenCenter({ children }: { children: React.ReactNode }) {
+  return (
+    <Container
+      maxWidth="sm"
+      sx={{ minHeight: "100dvh", display: "grid", placeItems: "center" }}
+    >
+      {children}
+    </Container>
+  );
+}
+
 export default function App() {
-  // Read at render time so vi.stubEnv works in tests.
-  const GOOGLE_CLIENT_ID = import.meta.env.GOOGLE_OAUTH_CLIENT_ID as string | undefined;
   const {
-    data: currentUser,
+    data: init,
     loading,
-    setData: setCurrentUser,
-  } = useAsync<AuthUser | null>(fetchCurrentUser);
+    error,
+    setData: setInit,
+  } = useAsync(fetchAppInit);
+
   const handleAuthenticated = useCallback(
-    (user: AuthUser) => {
-      setCurrentUser(user);
-    },
-    [setCurrentUser],
+    (user: AuthUser) => setInit((prev) => ({ ...prev!, user })),
+    [setInit],
   );
   const handleCurrentUserUpdated = useCallback(
-    (user: AuthUser) => {
-      setCurrentUser(user);
-    },
-    [setCurrentUser],
+    (user: AuthUser) => setInit((prev) => ({ ...prev!, user })),
+    [setInit],
   );
-
   const handleLogout = useCallback(async () => {
     await logoutUser();
-    setCurrentUser(null);
-  }, [setCurrentUser]);
+    setInit((prev) => ({ ...prev!, user: null }));
+  }, [setInit]);
 
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID ?? ""}>
+    <GoogleOAuthProvider clientId={init?.googleOauthClientId ?? ""}>
       <ThemeProvider theme={DARK_THEME}>
         <CssBaseline />
         {loading ? (
-          <Container
-            maxWidth="sm"
-            sx={{ minHeight: "100dvh", display: "grid", placeItems: "center" }}
-          >
+          <FullscreenCenter>
             <CircularProgress />
-          </Container>
-        ) : currentUser ? (
+          </FullscreenCenter>
+        ) : error ? (
+          <FullscreenCenter>
+            <Alert severity="error">
+              All identity providers are misconfigured. The developer has been
+              notified. Please try again later.
+            </Alert>
+          </FullscreenCenter>
+        ) : init?.user ? (
           <AuthenticatedApp
-            currentUser={currentUser}
+            currentUser={init.user}
             onLogout={handleLogout}
             onCurrentUserUpdated={handleCurrentUserUpdated}
           />

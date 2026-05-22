@@ -20,14 +20,6 @@ const root = isVitest ? __dirname : fs.realpathSync(__dirname);
 export default defineConfig(() => {
   return {
     root,
-    define: {
-      // Inject the backend's Google OAuth Client ID into the frontend build.
-      // The frontend uses this to render the Google Sign-In button and obtain
-      // a JWT, which the backend then verifies using this exact same ID.
-      "import.meta.env.GOOGLE_OAUTH_CLIENT_ID": JSON.stringify(
-        process.env.GOOGLE_OAUTH_CLIENT_ID
-      ),
-    },
     resolve: {
       alias: {
         axios: path.resolve(root, "node_modules/axios"),
@@ -37,8 +29,6 @@ export default defineConfig(() => {
     build: {
       // root is the real (symlink-resolved) path; write output to the sandbox
       // CWD so Bazel's declared output tree artifact is populated correctly.
-      // root is the real (execroot) path during build; write output to the
-      // sandbox CWD so Bazel's declared output tree artifact is populated.
       outDir: path.resolve(process.cwd(), "dist"),
       rollupOptions: {
         input: {

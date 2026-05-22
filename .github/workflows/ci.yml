@@ -186,14 +186,7 @@ jobs:
           deps-key: ${{ needs.preflight.outputs.deps_key }}
           buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
 
-      # The frontend is a static bundle that cannot read server environment
-      # variables at runtime. We must bake the public Google Client ID into
-      # the JS bundle during the image build step. Export it into the shell
-      # environment so Vite reads it via process.env — no .env file is written,
-      # eliminating any risk of baking a local .env file into the image.
       - name: Build OCI image and load into docker
-        env:
-          GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
         run: bazel run --config=ci --stamp //:load
 
       - name: Lint and validate Helm chart

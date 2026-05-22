@@ -168,9 +168,10 @@ concept in multiple places, extract a reusable component in `web/src/components/
 
 ## Auth UI Flow (`App.tsx`)
 
-- On load: calls `fetchCurrentUser()` (`GET /api/auth/me/`)
+- On load: calls `fetchAppInit()` (`GET /api/auth/me/`) — returns `{ googleOauthClientId, user | null }`. 503 if OAuth is not configured on the backend.
+- Loading → fullscreen spinner; 503/error → fullscreen error message
 - Authenticated → routed app shell with current-user chip and logout
-- Unauthenticated → login form with email/password + optional Google Sign-In button (`GOOGLE_OAUTH_CLIENT_ID`)
+- Unauthenticated → `UnauthenticatedApp` with Google Sign-In button (client ID from `fetchAppInit`)
 - `SIGN_UP_ENABLED = false` — create accounts via Django admin
 
 ## Frontend Routing for Piece Detail

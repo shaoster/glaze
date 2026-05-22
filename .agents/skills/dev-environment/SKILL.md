@@ -139,7 +139,7 @@ Understanding where config lives:
 
 1. **GitHub Secrets / Variables**: Source of truth for environment-specific configuration. Includes sensitive secrets (passwords, API keys) and non-sensitive vars (service URLs, hostnames). Injected into `.env` at deploy time.
 2. **`docker-compose.yml`**: Defines internal topology (e.g., `DATABASE_URL: postgres://db:5432`). Use this for constants that only depend on the Docker network.
-3. **Build-time Injection (`ci.yml`)**: Static frontend assets (Vite) cannot read server environment variables at runtime. Public vars like `GOOGLE_OAUTH_CLIENT_ID` must be baked into the JS bundle during the image build in CI.
+3. **Backend runtime API**: Public frontend configuration (e.g. `GOOGLE_OAUTH_CLIENT_ID`) is served at runtime by the backend via `GET /api/auth/me/`. The frontend fetches this on load — no build-time injection or `.env` baking required.
 
 ## Off-Limits Paths
 
@@ -157,8 +157,7 @@ worktree so servers load Cloudinary and OAuth credentials:
 cp /home/phil/code/glaze/.env.local .env.local
 ```
 
-If the worktree also needs web-only overrides, copy `web/.env.local` separately
-afterward; do not symlink either file.
+Do not symlink `.env.local`.
 
 **Avoid copying `.env.local` from prod** — prod env files often contain keys set to
 empty strings (e.g. `EMAIL_PORT=`) that are valid in shell but cause Django startup
