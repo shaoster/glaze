@@ -33,6 +33,8 @@ else:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = not IS_PRODUCTION
 
+ADMIN_URL = os.environ.get("ADMIN_URL", "admin")
+
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 # ALLOWED_HOSTS: comma-separated hostnames (e.g. "potterdoc.com,www.potterdoc.com")
 _ALLOWED_HOSTS_ENV = os.environ.get("ALLOWED_HOSTS", os.environ.get("ALLOWED_HOST", ""))

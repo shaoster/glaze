@@ -113,11 +113,14 @@ class Command(BaseCommand):
             self.stdout.write(f"\rQueued {n} / {total} task(s)...", ending="")
             self.stdout.flush()
 
+        from django.conf import settings
+        from django.urls import reverse
+
         self.stdout.write("")
         self.stdout.write(
             self.style.SUCCESS(
                 f"Enqueued {total} detect_subject_crop task(s) "
                 f"({skipped} image(s) skipped). "
-                f"Monitor progress at /admin/api/asynctask/."
+                f"Monitor progress at {reverse('admin:api_asynctask_changelist')}."
             )
         )

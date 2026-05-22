@@ -105,7 +105,7 @@ def _piece_spa(request: HttpRequest, piece_id) -> HttpResponse | HttpResponseNot
 
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path(f"{settings.ADMIN_URL}/", admin.site.urls),
     path("api/", include("api.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
@@ -117,5 +117,5 @@ urlpatterns = [
     # Catch-all: serve the React SPA for client routes only. File-like URLs
     # (for example Vite chunk files) must fall through so static handling can
     # return the real asset or a 404 instead of HTML.
-    re_path(r"^(?!api/|admin/|static/|.*\..*$).*$", _spa),
+    re_path(rf"^(?!api/|{settings.ADMIN_URL}|static/|.*\..*$).*$", _spa),
 ]

@@ -141,3 +141,13 @@ helm upgrade --install glaze chart/glaze/ \
 
 - `/etc/rancher/k3s/k3s.yaml` — contains the cluster CA and admin credentials
 - Any `.env` files with secrets
+
+## Administrative Interface Security
+
+Both the Django Admin and Headlamp (cluster dashboard) are restricted to access from within the Tailscale network (`100.64.0.0/10`).
+
+### Django Admin
+Django Admin is available at `https://glaze.example.com/admin/` (or the configured `adminUrl`). Access is restricted by a Traefik `IPAllowList` middleware. You must be connected to the Tailscale network to access it.
+
+### Headlamp
+Headlamp is available at `https://headlamp.potterdoc.com/`. Previous basic authentication has been removed in favor of Tailscale-only access. You must be connected to the Tailscale network to view the dashboard.
