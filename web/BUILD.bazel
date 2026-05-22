@@ -113,7 +113,6 @@ ts_project(
             "src/**/*.test.ts",
             "src/**/*.test.tsx",
             "src/test-setup.ts",
-            "src/util/generated-normalizers.ts",  # genrule output, added via srcs below
             "src/util/generated-types.ts",  # genrule output, added via srcs below
         ],
     ) + [":generated_types_gen"],
@@ -134,7 +133,6 @@ ESLINT_INPUTS = glob(
     ],
     exclude = [
         "src/**/*.d.ts",
-        "src/util/generated-normalizers.ts",  # genrule output, not a source-tree input
         "src/util/generated-types.ts",  # genrule output, not a source-tree input
     ],
 )
@@ -200,14 +198,10 @@ js_library(
 js_run_binary(
     name = "generated_types_gen",
     srcs = ["//web:openapi_schema"],
-    outs = [
-        "src/util/generated-normalizers.ts",
-        "src/util/generated-types.ts",
-    ],
+    outs = ["src/util/generated-types.ts"],
     args = [
         "$(execpath //web:openapi_schema)",
         "$(execpath src/util/generated-types.ts)",
-        "$(execpath src/util/generated-normalizers.ts)",
     ],
     tool = "//web:generate_types_bin",
 )

@@ -14,7 +14,6 @@
  * this module.
  */
 import axios from "axios";
-import { normalizeSchemaField } from "./generated-normalizers";
 import type {
   CaptionedImage,
   CropRun,
@@ -105,11 +104,7 @@ function mapImage(raw: Wire<CaptionedImage>): CaptionedImage {
     created: new Date(raw.created ?? ""),
     cloudinary_public_id: raw.cloudinary_public_id ?? null,
     cloud_name: raw.cloud_name ?? null,
-    crop: normalizeSchemaField(
-      "CaptionedImage",
-      "crop",
-      raw.crop,
-    ) as ImageCrop | null,
+    crop: normalizeCrop(raw.crop),
   };
 }
 
@@ -117,7 +112,32 @@ function mapThumbnail(raw: Wire<Thumbnail> | null): Thumbnail | null {
   if (!raw) return null;
   return {
     ...raw,
-    crop: normalizeSchemaField("Thumbnail", "crop", raw.crop) as ImageCrop | null,
+    crop: normalizeCrop(raw.crop),
+  };
+}
+
+function mapCropRun(raw: Wire<CropRun>): CropRun {
+  return {
+    ...raw,
+    crop: normalizeCrop(raw.crop),
+    created: new Date(raw.created ?? ""),
+  };
+}
+
+function normalizeCrop(value: unknown): ImageCrop | null {
+  if (!value || typeof value !== "object") return null;
+  const crop = value as Partial<Record<keyof ImageCrop, unknown>>;
+  const x = Number(crop.x);
+  const y = Number(crop.y);
+  const width = Number(crop.width);
+  const height = Number(crop.height);
+  if (![x, y, width, height].every(Number.isFinite)) return null;
+  if (width <= 0 || height <= 0) return null;
+  return {
+    x: Math.min(Math.max(x, 0), 1),
+    y: Math.min(Math.max(y, 0), 1),
+    width: Math.min(Math.max(width, 0), 1),
+    height: Math.min(Math.max(height, 0), 1),
   };
 }
 
@@ -730,10 +750,10 @@ export async function getImageCropRuns(
   options?: { latest?: boolean },
 ): Promise<CropRun[]> {
   const params = options?.latest ? "?latest=1" : "";
-  const { data } = await client.get<CropRun[]>(
+  const { data } = await client.get<Wire<CropRun>[]>(
     `images/${imageId}/crop-runs/${params}`,
   );
-  return data;
+  return data.map(mapCropRun);
 }
 
 export async function createHumanCropRun(payload: {
@@ -741,8 +761,8 @@ export async function createHumanCropRun(payload: {
   crop: ImageCrop;
   notes?: string;
 }): Promise<CropRun> {
-  const { data } = await client.post<CropRun>("crop-runs/", payload);
-  return data;
+  const { data } = await client.post<Wire<CropRun>>("crop-runs/", payload);
+  return mapCropRun(data);
 }
 
 /**
