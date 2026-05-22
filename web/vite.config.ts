@@ -16,10 +16,12 @@ import fs from "node:fs";
 const isVitest = !!process.env.VITEST;
 const root = isVitest ? __dirname : fs.realpathSync(__dirname);
 
-// Public (non-secret) env vars that are intentionally baked into the JS bundle.
-// The vite.config.test.ts contract test enforces that the define block matches
-// this set exactly — anything extra is a potential secret leak, anything missing
-// is broken prod.
+// Public (non-secret) env vars intentionally baked into the JS bundle.
+// To add a new var: (1) add its import.meta.env.* key here, (2) add a
+// corresponding entry to the define block below, (3) populate it in .env.local
+// and add it to the CI repo variables + the "Write Vite env file" step in
+// ci.yml. The contract test enforces that the define block matches this set
+// exactly — extra keys are a potential secret leak, missing keys are broken prod.
 export const BUNDLE_DEFINE_ALLOWLIST = new Set([
   "import.meta.env.GOOGLE_OAUTH_CLIENT_ID",
 ]);
