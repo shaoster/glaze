@@ -53,7 +53,7 @@ export default defineConfig(() => {
       fs: {
         allow: [".."],
       },
-      // WSL2 inotify checks are unreliable; polling ensures HMR never misses edits.
+      // WSL2 inotify events are unreliable; polling ensures HMR never misses edits.
       watch: {
         usePolling: true,
         interval: 300,
@@ -62,8 +62,9 @@ export default defineConfig(() => {
         "/api": `http://localhost:${process.env.BACKEND_PORT ?? "8080"}`,
         "/admin": `http://localhost:${process.env.BACKEND_PORT ?? "8080"}`,
         "/static": `http://localhost:${process.env.BACKEND_PORT ?? "8080"}`,
+        // Rewrite any request for /favicon.ico to /favicon.svg
         "/favicon.ico": {
-          target: "http://localhost:5173",
+          target: "http://localhost:5173", // Your dev server address
           rewrite: (path) => path.replace("/favicon.ico", "/favicon.svg"),
         },
       },
