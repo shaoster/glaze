@@ -9,10 +9,10 @@
  * duplicated elsewhere in the app; derive them from the exports here.
  */
 import workflow from "../../../workflow.yml";
-import type { components } from "./generated-types";
-import type { UISchema } from "./types";
+import type { UISchema } from "./api";
+import type { StateEnum } from "./types";
 
-type State = components["schemas"]["StateEnum"];
+type State = StateEnum;
 
 type FieldType =
   | "string"

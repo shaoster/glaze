@@ -114,6 +114,7 @@ ts_project(
             "src/**/*.test.tsx",
             "src/test-setup.ts",
             "src/util/generated-types.ts",  # genrule output, added via srcs below
+            "src/util/types.ts",  # genrule output, added via srcs below
         ],
     ) + [":generated_types_gen"],
     tsconfig = ":tsconfig.app.json",
@@ -134,6 +135,7 @@ ESLINT_INPUTS = glob(
     exclude = [
         "src/**/*.d.ts",
         "src/util/generated-types.ts",  # genrule output, not a source-tree input
+        "src/util/types.ts",  # genrule output, not a source-tree input
     ],
 )
 
@@ -198,10 +200,14 @@ js_library(
 js_run_binary(
     name = "generated_types_gen",
     srcs = ["//web:openapi_schema"],
-    outs = ["src/util/generated-types.ts"],
+    outs = [
+        "src/util/generated-types.ts",
+        "src/util/types.ts",
+    ],
     args = [
         "$(execpath //web:openapi_schema)",
         "$(execpath src/util/generated-types.ts)",
+        "$(execpath src/util/types.ts)",
     ],
     tool = "//web:generate_types_bin",
 )
@@ -223,7 +229,6 @@ js_library(
         "src/util/format.ts",
         "src/util/normalizeWorkflowFields.ts",
         "src/util/optionalValues.ts",
-        "src/util/types.ts",
         "src/util/tutorials.ts",
         "src/util/useAsync.ts",
         "src/util/workflow.ts",

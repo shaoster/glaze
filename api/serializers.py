@@ -93,6 +93,10 @@ def _schema_array_ref(component_name: str, **extensions: Any) -> dict[str, Any]:
     }
 
 
+def _state_enum_schema(**extensions: Any) -> dict[str, Any]:
+    return _schema_ref("StateEnum", **extensions)
+
+
 def _relation_schema(component_name: str, *, shape: str) -> dict[str, Any]:
     return _schema_ref(
         component_name,
@@ -116,7 +120,7 @@ def _relation_array_schema(component_name: str, *, shape: str) -> dict[str, Any]
 def _state_summary_relation_schema() -> dict[str, Any]:
     return {
         "type": "object",
-        "properties": {"state": {"type": "string"}},
+        "properties": {"state": _state_enum_schema()},
         "required": ["state"],
         GLAZE_RELATION_EXTENSION: {
             "component": "StateSummary",
@@ -280,7 +284,7 @@ class GlazeCombinationImagePieceSerializer(serializers.Serializer):
 
     id = serializers.CharField()
     name = serializers.CharField()
-    state = serializers.CharField()
+    state = serializers.ChoiceField(choices=sorted(VALID_STATES))
     images = CaptionedImageSerializer(many=True)
 
 
@@ -297,6 +301,7 @@ class GlazeCombinationImageEntrySerializer(serializers.Serializer):
 
 @traced_class
 class PieceStateSerializer(serializers.ModelSerializer):
+    state = serializers.ChoiceField(choices=sorted(VALID_STATES))
     previous_state = serializers.SerializerMethodField()
     next_state = serializers.SerializerMethodField()
     images = serializers.SerializerMethodField()
@@ -349,7 +354,7 @@ class PieceStateSerializer(serializers.ModelSerializer):
                 result[field_name] = val
         return result
 
-    @extend_schema_field(serializers.CharField(allow_null=True))
+    @extend_schema_field(_state_enum_schema(nullable=True))
     def get_previous_state(self, obj: PieceState) -> str | None:
         prefetched_states = obj.piece._prefetched_states()
         if prefetched_states is not None:
@@ -371,7 +376,7 @@ class PieceStateSerializer(serializers.ModelSerializer):
             )
         return prev.state if prev else None
 
-    @extend_schema_field(serializers.CharField(allow_null=True))
+    @extend_schema_field(_state_enum_schema(nullable=True))
     def get_next_state(self, obj: PieceState) -> str | None:
         prefetched_states = obj.piece._prefetched_states()
         if prefetched_states is not None:
@@ -415,7 +420,7 @@ class PieceStateSerializer(serializers.ModelSerializer):
 class StateSummarySerializer(serializers.Serializer):
     """Minimal state representation embedded in PieceSummary list responses."""
 
-    state = serializers.CharField()
+    state = serializers.ChoiceField(choices=sorted(VALID_STATES))
 
 
 class ThumbnailSerializer(serializers.Serializer):
@@ -1043,8 +1048,8 @@ class CropRunSourceSerializer(serializers.Serializer):
 class CropRunSerializer(serializers.ModelSerializer):
     image_id = serializers.UUIDField(read_only=True)
     piece_state_image_id = serializers.IntegerField(read_only=True, allow_null=True)
-    source = serializers.SerializerMethodField()
-    crop = serializers.SerializerMethodField()
+    source: Any = serializers.SerializerMethodField()
+    crop: Any = serializers.SerializerMethodField()
 
     @extend_schema_field(CropRunSourceSerializer)
     def get_source(self, obj: CropRun) -> dict:
