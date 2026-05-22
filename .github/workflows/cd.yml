@@ -84,34 +84,24 @@ jobs:
         run: |
           # Push Infisical machine identity to cluster so ESO can authenticate.
           # ESO owns the full glaze-secrets sync from here; CD no longer manages app secrets.
-          # Credentials are passed as env vars on the remote side to avoid shell quoting issues.
+          # Pipe a manifest via stdin to avoid SSH AcceptEnv restrictions on the remote host.
+          CLIENT_ID_B64=$(echo -n "${INFISICAL_CLIENT_ID}" | base64 -w0)
+          CLIENT_SECRET_B64=$(echo -n "${INFISICAL_CLIENT_SECRET}" | base64 -w0)
+          printf 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: infisical-auth\ntype: Opaque\ndata:\n  clientId: %s\n  clientSecret: %s\n' \
+            "${CLIENT_ID_B64}" "${CLIENT_SECRET_B64}" | \
           ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" \
-            INFISICAL_CLIENT_ID="${INFISICAL_CLIENT_ID}" \
-            INFISICAL_CLIENT_SECRET="${INFISICAL_CLIENT_SECRET}" \
-            'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl create secret generic infisical-auth \
-              --from-literal=clientId="$INFISICAL_CLIENT_ID" \
-              --from-literal=clientSecret="$INFISICAL_CLIENT_SECRET" \
-              --dry-run=client -o yaml | \
-            KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -'
+            'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -'
 
       - name: Ship chart and render values override
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
           ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
           APP_ORIGIN: ${{ vars.APP_ORIGIN }}
-          INVITE_LINK_BASE_URL: ${{ vars.INVITE_LINK_BASE_URL }}
           GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
           CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_UPLOAD_FOLDER }}
           CLOUDINARY_UPLOAD_PRESET: ${{ vars.CLOUDINARY_UPLOAD_PRESET }}
           CLOUDINARY_PUBLIC_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_PUBLIC_UPLOAD_FOLDER }}
-          EMAIL_HOST: ${{ vars.EMAIL_HOST }}
-          EMAIL_PORT: ${{ vars.EMAIL_PORT }}
-          EMAIL_HOST_USER: ${{ vars.EMAIL_HOST_USER }}
-          EMAIL_USE_SSL: ${{ vars.EMAIL_USE_SSL }}
-          DEFAULT_FROM_EMAIL: ${{ vars.DEFAULT_FROM_EMAIL }}
-          REMOTE_REMBG_URL: ${{ vars.REMOTE_REMBG_URL }}
-          OTEL_ENABLED: ${{ vars.OTEL_ENABLED }}
           INFISICAL_PROJECT_SLUG: ${{ vars.INFISICAL_PROJECT_SLUG }}
         run: |
           cat > /tmp/values-override.yaml << EOF
@@ -122,19 +112,11 @@ jobs:
           appConfig:
             allowedHost: "${ALLOWED_HOST}"
             appOrigin: "${APP_ORIGIN}"
-            inviteLinkBaseUrl: "${INVITE_LINK_BASE_URL}"
             googleOauthClientId: "${GOOGLE_OAUTH_CLIENT_ID}"
             cloudinaryCloudName: "${CLOUDINARY_CLOUD_NAME}"
             cloudinaryUploadFolder: "${CLOUDINARY_UPLOAD_FOLDER}"
             cloudinaryUploadPreset: "${CLOUDINARY_UPLOAD_PRESET}"
             cloudinaryPublicUploadFolder: "${CLOUDINARY_PUBLIC_UPLOAD_FOLDER}"
-            emailHost: "${EMAIL_HOST}"
-            emailPort: "${EMAIL_PORT}"
-            emailHostUser: "${EMAIL_HOST_USER}"
-            emailUseSsl: "${EMAIL_USE_SSL}"
-            defaultFromEmail: "${DEFAULT_FROM_EMAIL}"
-            remoteRembgUrl: "${REMOTE_REMBG_URL}"
-            otelEnabled: "${OTEL_ENABLED}"
           ingress:
             hosts:
               - host: "${ALLOWED_HOST}"
