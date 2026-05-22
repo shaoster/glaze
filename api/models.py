@@ -691,6 +691,7 @@ class UserProfile(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
     )
     openid_subject = models.CharField(max_length=255, blank=True, default="")
+    alias = models.CharField(max_length=50, blank=True, default="")
     preferences = models.JSONField(blank=True, default=dict)
 
     def __str__(self) -> str:

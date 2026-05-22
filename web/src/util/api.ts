@@ -40,6 +40,7 @@ export type AuthUser = {
   id: number;
   is_staff: boolean;
   openid_subject: string;
+  alias: string;
   preferences: UserPreferences;
 };
 
@@ -211,6 +212,7 @@ function normalizeUserPreferences(
 function normalizeAuthUser(raw: AuthUser): AuthUser {
   return {
     ...raw,
+    alias: raw.alias ?? "",
     preferences: normalizeUserPreferences(raw.preferences),
   };
 }
@@ -311,27 +313,29 @@ export async function generateStaffInviteCode(): Promise<StaffInviteCodeResponse
 }
 
 export type UserPreferencesResponse = {
+  alias: string;
   preferences: UserPreferences;
 };
 
 export async function fetchUserPreferences(): Promise<UserPreferencesResponse> {
   const { data } = await client.get<UserPreferencesResponse>("auth/preferences/");
   return {
+    alias: data.alias ?? "",
     preferences: normalizeUserPreferences(data.preferences),
   };
 }
 
 export async function updateUserPreferences(
   preferences: UserPreferences,
+  alias?: string,
 ): Promise<UserPreferencesResponse> {
   await ensureCsrfCookie();
   const { data } = await client.patch<UserPreferencesResponse>(
     "auth/preferences/",
-    {
-      preferences,
-    },
+    { preferences, ...(alias !== undefined && { alias }) },
   );
   return {
+    alias: data.alias ?? "",
     preferences: normalizeUserPreferences(data.preferences),
   };
 }

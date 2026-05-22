@@ -25,7 +25,7 @@ export function useCurrentUser(): AuthUser | null {
   return useContext(CurrentUserContext);
 }
 
-type SaveUserPreferences = (preferences: UserPreferences) => Promise<UserPreferences>;
+type SaveUserPreferences = (preferences: UserPreferences, alias?: string) => Promise<UserPreferences>;
 
 const PreferencesActionsContext = createContext<{
   openPreferencesDialog: (sectionId?: PreferencesSectionId | null) => void;

@@ -934,18 +934,25 @@ class SavedUserPreferencesSerializer(serializers.Serializer):
 
 class UserPreferencesSerializer(serializers.Serializer):
     preferences = SavedUserPreferencesSerializer(required=False)
+    alias = serializers.CharField(required=False, allow_blank=True, max_length=50)
 
 
 class AuthUserSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     is_staff = serializers.BooleanField(read_only=True)
     openid_subject = serializers.SerializerMethodField()
+    alias = serializers.SerializerMethodField()
     preferences = serializers.SerializerMethodField()
 
     @extend_schema_field(serializers.CharField(allow_blank=True))
     def get_openid_subject(self, obj) -> str:
         profile = getattr(obj, "profile", None)
         return profile.openid_subject if profile else ""
+
+    @extend_schema_field(serializers.CharField(allow_blank=True))
+    def get_alias(self, obj) -> str:
+        profile = getattr(obj, "profile", None)
+        return profile.alias if profile else ""
 
     @extend_schema_field(SavedUserPreferencesSerializer())
     def get_preferences(self, obj) -> dict:
