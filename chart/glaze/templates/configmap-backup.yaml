@@ -285,7 +285,9 @@ data:
         if [[ "${local_started}" == "1" ]]; then
           "$PG_CTL" -D "$pgdata" -m fast -w stop >/dev/null 2>&1 || true
         fi
-        rm -rf "$workdir"
+        if [[ -n "${workdir:-}" ]]; then
+          rm -rf "$workdir"
+        fi
       }
       trap cleanup EXIT
 
