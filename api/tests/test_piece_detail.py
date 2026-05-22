@@ -23,6 +23,46 @@ from api.serializers import _replace_piece_tags
 # ---------------------------------------------------------------------------
 
 
+class TestOpenApiNormalizationMetadata:
+    def test_piece_relation_shapes_are_explicit_in_schema(self, client):
+        response = client.get("/api/schema/?format=json")
+
+        assert response.status_code == 200
+        schemas = response.json()["components"]["schemas"]
+
+        assert schemas["PieceSummary"]["properties"]["current_state"][
+            "x-glaze-relation"
+        ] == {
+            "component": "StateSummary",
+            "shape": "summary",
+        }
+        assert schemas["PieceDetail"]["properties"]["current_state"][
+            "x-glaze-relation"
+        ] == {
+            "component": "PieceState",
+            "shape": "detail",
+        }
+        assert schemas["PieceDetail"]["properties"]["history"]["x-glaze-relation"] == {
+            "component": "PieceState",
+            "shape": "history",
+            "many": True,
+        }
+
+    def test_image_crop_normalizer_is_explicit_in_schema(self, client):
+        response = client.get("/api/schema/?format=json")
+
+        assert response.status_code == 200
+        schemas = response.json()["components"]["schemas"]
+
+        assert schemas["ImageCrop"]["x-glaze-normalizer"] == "imageCrop"
+        assert schemas["CaptionedImage"]["properties"]["crop"]["allOf"][0]["$ref"] == (
+            "#/components/schemas/ImageCrop"
+        )
+        assert schemas["Thumbnail"]["properties"]["crop"]["allOf"][0]["$ref"] == (
+            "#/components/schemas/ImageCrop"
+        )
+
+
 @pytest.mark.django_db
 class TestPieceDetail:
     def test_get_uses_a_small_number_of_queries(self, client, piece, user):

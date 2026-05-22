@@ -14,12 +14,14 @@
  * this module.
  */
 import axios from "axios";
+import { normalizeSchemaField } from "./generated-normalizers";
 import type {
   CaptionedImage,
   CropRun,
   FiringTemperatureRef,
   GlazeCombinationEntry,
   GlazeCombinationImageEntry,
+  GlazeCombinationImagePiece,
   GlazeTypeRef,
   ImageCrop,
   PieceDetail,
@@ -103,27 +105,21 @@ function mapImage(raw: Wire<CaptionedImage>): CaptionedImage {
     created: new Date(raw.created ?? ""),
     cloudinary_public_id: raw.cloudinary_public_id ?? null,
     cloud_name: raw.cloud_name ?? null,
-    crop: normalizeCrop(raw.crop),
+    crop: normalizeSchemaField(
+      "CaptionedImage",
+      "crop",
+      raw.crop,
+    ) as ImageCrop | null,
   };
 }
 
-function normalizeCrop(value: unknown): ImageCrop | null {
-  if (!value || typeof value !== "object") return null;
-  const crop = value as Partial<Record<keyof ImageCrop, unknown>>;
-  const x = Number(crop.x);
-  const y = Number(crop.y);
-  const width = Number(crop.width);
-  const height = Number(crop.height);
-  if (![x, y, width, height].every(Number.isFinite)) return null;
-  if (width <= 0 || height <= 0) return null;
+function mapThumbnail(raw: Wire<Thumbnail> | null): Thumbnail | null {
+  if (!raw) return null;
   return {
-    x: Math.min(Math.max(x, 0), 1),
-    y: Math.min(Math.max(y, 0), 1),
-    width: Math.min(Math.max(width, 0), 1),
-    height: Math.min(Math.max(height, 0), 1),
+    ...raw,
+    crop: normalizeSchemaField("Thumbnail", "crop", raw.crop) as ImageCrop | null,
   };
 }
-
 
 function mapStateSummary(raw: Wire<StateSummary>): StateSummary {
   return {
@@ -161,7 +157,7 @@ function mapPieceSummary(raw: Wire<PieceSummary>): PieceSummary {
     name: raw.name,
     created: new Date(raw.created ?? ""),
     last_modified: new Date(raw.last_modified ?? ""),
-    thumbnail: raw.thumbnail as Thumbnail | null,
+    thumbnail: mapThumbnail(raw.thumbnail),
     photo_count: raw.photo_count ?? 0,
     shared: raw.shared ?? false,
     is_editable: raw.is_editable ?? false,
@@ -602,20 +598,12 @@ export async function createTagEntry(payload: {
 export async function fetchGlazeCombinationImages(): Promise<
   GlazeCombinationImageEntry[]
 > {
-  const { data } = await client.get<
-    Array<{
-      glaze_combination: GlazeCombinationEntry;
-      pieces: Array<{
-        id: string;
-        name: string;
-        state: string;
-        images: Wire<CaptionedImage>[];
-      }>;
-    }>
-  >("analysis/glaze-combination-images/");
+  const { data } = await client.get<Wire<GlazeCombinationImageEntry>[]>(
+    "analysis/glaze-combination-images/",
+  );
   return data.map((entry) => ({
     glaze_combination: entry.glaze_combination,
-    pieces: entry.pieces.map((p) => ({
+    pieces: entry.pieces.map((p): GlazeCombinationImagePiece => ({
       id: p.id,
       name: p.name,
       state: p.state as State,
