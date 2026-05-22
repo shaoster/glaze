@@ -50,7 +50,14 @@
       "Bash(gz_restore /tmp/glaze-prod-postgres-NlHmgu.dump)",
       "Bash(pg_restore --version)",
       "Bash(node_modules/.bin/tsc -p tsconfig.app.json --noEmit)",
-      "Bash(awk -F: '$1+0 > 20')"
+      "Bash(awk -F: '$1+0 > 20')",
+      "WebFetch(domain:news.ycombinator.com)",
+      "WebFetch(domain:infisical.com)",
+      "Bash(rtk helm *)",
+      "Bash(awk '/env:/{found=1} found && /name:/{env_name=$0} found && /secretKeyRef:/{secret=1} secret && /name:/{secret_name=$0} secret && /key:/{print env_name; print secret_name; print $0; secret=0; print \"---\"}' /home/phil/code/glaze/chart/glaze/templates/deployment-web.yaml)",
+      "Bash(sed 's/ *$//')",
+      "Bash(/bin/grep -h \"key:\" /home/phil/code/glaze/chart/glaze/templates/*.yaml)",
+      "Bash(echo \"exit: $?\")"
     ],
     "additionalDirectories": [
       "/tmp"
