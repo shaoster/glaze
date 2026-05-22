@@ -71,6 +71,18 @@ jobs:
             fi
           done
 
+      - name: Debug Tailscale OAuth key creation
+        env:
+          TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          TAILSCALE_OAUTH_CLIENT_SECRET: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+        run: |
+          echo "Testing OAuth client can create tagged auth key..."
+          curl -s -w "\nHTTP_STATUS:%{http_code}" \
+            -X POST 'https://api.tailscale.com/api/v2/tailnet/-/keys' \
+            -u "${TAILSCALE_OAUTH_CLIENT_ID}:${TAILSCALE_OAUTH_CLIENT_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{"capabilities":{"devices":{"create":{"reusable":false,"ephemeral":true,"preauthorized":true,"tags":["tag:ci"]}}}}'
+
       - name: Connect to Tailscale
         uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade  # v3
         with:
