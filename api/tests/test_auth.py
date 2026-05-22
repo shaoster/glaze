@@ -178,6 +178,27 @@ class TestAuthEndpointsMocked:
         assert response.json()["alias"] == "My Alias"
 
 
+class TestPublicConfig:
+    def test_returns_client_id_when_configured(self, settings):
+        from api import auth_views
+
+        settings.GOOGLE_OAUTH_CLIENT_ID = "my-client-id"
+        factory = APIRequestFactory()
+        request = factory.get("/api/config/")
+        response = auth_views.public_config(request)
+        assert response.status_code == 200
+        assert response.data == {"googleOauthClientId": "my-client-id"}
+
+    def test_returns_503_when_not_configured(self, settings):
+        from api import auth_views
+
+        settings.GOOGLE_OAUTH_CLIENT_ID = ""
+        factory = APIRequestFactory()
+        request = factory.get("/api/config/")
+        response = auth_views.public_config(request)
+        assert response.status_code == 503
+
+
 @pytest.mark.django_db
 class TestAuthGoogle:
     def _google_mocks(self, payload=None):

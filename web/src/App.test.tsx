@@ -19,6 +19,7 @@ vi.mock("./util/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./util/api")>();
   return {
     ...actual,
+    fetchPublicConfig: vi.fn().mockResolvedValue({ googleOauthClientId: "test-client-id" }),
     fetchCurrentUser: vi.fn().mockResolvedValue(null),
     loginWithGoogle: vi.fn(),
     logoutUser: vi.fn().mockResolvedValue(undefined),
@@ -93,6 +94,7 @@ vi.mock("./pages/GlazeImportToolPage", () => ({
 // Now import App and the mocked api
 import {
   fetchCurrentUser,
+  fetchPublicConfig,
   fetchPiece,
   loginWithGoogle,
   logoutUser,
@@ -128,8 +130,19 @@ describe("App auth flow", () => {
     vi.clearAllMocks();
     _googleOnSuccess = undefined;
     window.history.pushState({}, "", "/");
+    vi.mocked(fetchPublicConfig).mockResolvedValue({ googleOauthClientId: "test-client-id" });
     vi.mocked(fetchCurrentUser).mockResolvedValue(null);
     sessionStorage.clear();
+  });
+
+  it("shows error when /api/config/ returns a server error", async () => {
+    vi.mocked(fetchPublicConfig).mockRejectedValue(new Error("503"));
+    render(<App />);
+    await waitFor(() => {
+      expect(
+        screen.getByText(/All identity providers are misconfigured/),
+      ).toBeInTheDocument();
+    });
   });
 
   it("shows landing form when not authenticated", async () => {
