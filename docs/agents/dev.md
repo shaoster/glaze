@@ -19,8 +19,8 @@ modal deploy -m services
 
 Set `REMOTE_REMBG_URL` and `MODAL_AUTH_TOKEN` in your `.env` to enable offloading.
 This Modal deploy command is separate from the CI smoke test. The smoke test
-uses Docker Compose, waits for the one-shot `deploy_init` bootstrap to finish,
-and only then expects the `web` readiness probe to pass.
+builds the OCI image, applies secrets via `kubectl`, and runs `helm upgrade` on
+the k3s cluster, waiting for the `web` readiness probe to pass.
 If you need a production database snapshot for migration work, use `gz_backup`
 to stream a Postgres dump from the droplet and restore it into a disposable
 `postgres:17` container locally to verify the backup contains real data.
@@ -332,12 +332,12 @@ Expected result:
 - The ASGI production logs should not contain Django's warning:
   `StreamingHttpResponse must consume synchronous iterators in order to serve them asynchronously.`
 
-For production parity, repeat the same browser flow against a Docker/staging
-deployment and watch the Gunicorn/Uvicorn worker RSS:
+For production parity, repeat the same browser flow against the live deployment
+and watch the Gunicorn/Uvicorn worker RSS via k3s:
 
 ```bash
-docker compose exec web ps -o pid,rss,vsz,cmd
-docker compose logs web | grep -i 'StreamingHttpResponse\|synchronous iterators'
+kubectl exec -n default deploy/glaze -- ps -o pid,rss,vsz,cmd
+kubectl logs -n default deploy/glaze | grep -i 'StreamingHttpResponse\|synchronous iterators'
 ```
 
 For large downloads served by ASGI, use async generators and async clients such
@@ -370,7 +370,7 @@ Glaze uses a multi-layered configuration strategy:
 **The `ci.yml` workflow MUST NEVER have access to production secrets.** All CI jobs (tests, linting, OCI image build) must run against public placeholders or temporary test keys. Real production secrets (e.g. database passwords, live API keys) MUST be restricted to the `cd.yml` workflow.
 
 1. **GitHub Secrets / Variables**: The source of truth for environment-specific configuration. This includes both sensitive secrets (e.g. `POSTGRES_PASSWORD`) and non-sensitive settings (e.g. `ALLOWED_HOST`). These are injected into the host's `.env` file during deployment.
-2. **`docker-compose.yml`**: Defines internal service topology and constants (e.g. `DATABASE_URL: postgres://db:5432`). These are identical across all environments.
+2. **Helm chart / k3s**: Defines internal service topology and constants (e.g. `DATABASE_URL`). These are identical across all deployments and live in `chart/glaze/`.
 3. **Build-time Injection (`ci.yml`)**: Static assets (Vite) cannot read runtime environment variables from the server. Configuration like `GOOGLE_OAUTH_CLIENT_ID` must be baked into the Javascript bundle during the image build in CI.
 
 ---
