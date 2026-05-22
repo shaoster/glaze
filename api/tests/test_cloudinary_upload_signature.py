@@ -147,6 +147,13 @@ class TestCloudinaryWidgetSign:
         ).hexdigest()
         assert response.json() == {"signature": expected}
 
+        # Confirm the signature differs from what the tampered params would have produced.
+        tampered_string = "&".join(f"{k}={params[k]}" for k in sorted(params.keys()))
+        tampered_sig = hashlib.sha1(
+            f"{tampered_string}super-secret".encode("utf-8")
+        ).hexdigest()
+        assert response.json()["signature"] != tampered_sig
+
     def test_enforces_allowed_formats(self, client, monkeypatch):
         monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
 

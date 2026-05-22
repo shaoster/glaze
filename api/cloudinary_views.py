@@ -135,8 +135,11 @@ def cloudinary_widget_sign(request: Request) -> Response:
         )
 
     # Enforce image-only uploads regardless of what the client sends.
-    params_to_sign["resource_type"] = "image"
-    params_to_sign["allowed_formats"] = "jpg,jpeg,png,webp,heic,avif"
+    params_to_sign = {
+        **params_to_sign,
+        "resource_type": "image",
+        "allowed_formats": "jpg,jpeg,png,webp,heic,avif",
+    }
 
     # Cloudinary signature format: sorted key=value pairs joined by '&',
     # then append the API secret and SHA1-hash the result.
