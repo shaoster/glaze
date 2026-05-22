@@ -114,14 +114,18 @@ def auth_preferences(request: Request) -> Response:
     if request.method == "GET":
         return Response(
             {
+                "alias": profile.alias,
                 "preferences": profile.preferences
                 if isinstance(profile.preferences, dict)
-                else {}
+                else {},
             }
         )
 
     serializer = UserPreferencesSerializer(data=request.data, partial=True)
     serializer.is_valid(raise_exception=True)
+    if "alias" in serializer.validated_data:
+        profile.alias = serializer.validated_data["alias"]
+        profile.save(update_fields=["alias"])
     if "preferences" in serializer.validated_data:
         existing_preferences = cast(
             dict[str, Any],
@@ -148,9 +152,10 @@ def auth_preferences(request: Request) -> Response:
         profile.save(update_fields=["preferences"])
     return Response(
         {
+            "alias": profile.alias,
             "preferences": profile.preferences
             if isinstance(profile.preferences, dict)
-            else {}
+            else {},
         }
     )
 

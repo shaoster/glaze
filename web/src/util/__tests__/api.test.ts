@@ -300,6 +300,7 @@ describe("auth endpoints", () => {
     id: 1,
     is_staff: false,
     openid_subject: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    alias: "",
     preferences: {
       process_summary_fields: [],
       tutorials: {
@@ -429,11 +430,13 @@ describe("auth endpoints", () => {
     const { fetchUserPreferences } = await loadApiModule();
     mockClient.get.mockResolvedValue({
       data: {
+        alias: "",
         preferences: { process_summary_fields: ["piece.name", 123] },
       },
     });
 
     await expect(fetchUserPreferences()).resolves.toEqual({
+      alias: "",
       preferences: {
         process_summary_fields: ["piece.name"],
         tutorials: {
@@ -471,6 +474,7 @@ describe("auth endpoints", () => {
     mockClient.get.mockResolvedValue({});
     mockClient.patch.mockResolvedValue({
       data: {
+        alias: "",
         preferences: { process_summary_fields: ["piece.created"] },
       },
     });
@@ -483,6 +487,7 @@ describe("auth endpoints", () => {
         },
       }),
     ).resolves.toEqual({
+      alias: "",
       preferences: {
         process_summary_fields: ["piece.created"],
         tutorials: {

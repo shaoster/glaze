@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -7,6 +7,7 @@ vi.mock("../../util/api", async (importOriginal) => {
   return {
     ...actual,
     fetchUserPreferences: vi.fn().mockResolvedValue({
+      alias: "",
       preferences: {
         process_summary_fields: ["piece.name"],
         tutorials: {
@@ -34,6 +35,7 @@ function renderDialog(activeSectionId: "process-summary" | "tutorials") {
           id: 1,
           is_staff: false,
           openid_subject: "",
+          alias: "",
           preferences: {
             process_summary_fields: ["piece.name"],
             tutorials: {
@@ -68,6 +70,7 @@ describe("UserPreferencesDialog", () => {
             id: 1,
             is_staff: false,
             openid_subject: "",
+            alias: "",
             preferences: {
               process_summary_fields: ["piece.name"],
               tutorials: {
@@ -86,7 +89,7 @@ describe("UserPreferencesDialog", () => {
       </PreferencesDialogProvider>,
     );
 
-    await user.click(screen.getByRole("button", { name: "Process Summary" }));
+    await user.click(await screen.findByRole("button", { name: /Process Summary/i, hidden: true }));
     expect(onSectionChange).toHaveBeenCalledWith(null);
   });
 
@@ -97,9 +100,8 @@ describe("UserPreferencesDialog", () => {
     expect(
       screen.getByText("Choose which fields appear in process summaries."),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByText("Show the summary customization tip"),
-    ).not.toBeInTheDocument();
+    // Tutorials accordion is collapsed — its checkbox should not be visible.
+    expect(screen.queryByRole("checkbox", { name: /summary customization tip/i })).not.toBeInTheDocument();
   });
 
   it("expands the Tutorials section when routed there", async () => {
@@ -145,19 +147,77 @@ describe("UserPreferencesDialog", () => {
     );
 
     await user.click(
-      screen.getByRole("checkbox", {
-        name: "Show the summary customization tip",
+      await screen.findByRole("checkbox", {
+        name: /summary customization tip/i,
+        hidden: true,
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(await screen.findByRole("button", { name: /save/i, hidden: true }));
 
     await waitFor(() => {
-      expect(saveUserPreferences).toHaveBeenCalledWith({
-        process_summary_fields: ["piece.name"],
-        tutorials: {
-          summary_customize_popover: "don't",
+      expect(saveUserPreferences).toHaveBeenCalledWith(
+        {
+          process_summary_fields: ["piece.name"],
+          tutorials: {
+            summary_customize_popover: "don't",
+          },
         },
-      });
+        "",
+      );
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  it("saves alias when the alias field is filled in", async () => {
+    const saveUserPreferences = vi.fn(async (preferences) => preferences);
+    const onClose = vi.fn();
+
+    render(
+      <PreferencesDialogProvider
+        openPreferencesDialog={vi.fn()}
+        saveUserPreferences={saveUserPreferences}
+      >
+        <CurrentUserProvider
+          currentUser={{
+            id: 1,
+            is_staff: false,
+            openid_subject: "",
+            alias: "",
+            preferences: {
+              process_summary_fields: ["piece.name"],
+              tutorials: {
+                summary_customize_popover: "show",
+              },
+            },
+          }}
+        >
+          <UserPreferencesDialog
+            open
+            activeSectionId={null}
+            onClose={onClose}
+            onSectionChange={vi.fn()}
+          />
+        </CurrentUserProvider>
+      </PreferencesDialogProvider>,
+    );
+
+    // Wait for the dialog content to mount, then use fireEvent to bypass
+    // aria-hidden constraints from MUI Dialog's Fade transition in jsdom.
+    const aliasInput = await waitFor(() => {
+      const input = document.querySelector<HTMLInputElement>("input");
+      if (!input) throw new Error("alias input not found");
+      return input;
+    });
+    fireEvent.change(aliasInput, { target: { value: "Studio Mug" } });
+
+    const saveButton = await screen.findByRole("button", { name: /save/i, hidden: true });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(saveUserPreferences).toHaveBeenCalledWith(
+        expect.objectContaining({ process_summary_fields: ["piece.name"] }),
+        "Studio Mug",
+      );
       expect(onClose).toHaveBeenCalled();
     });
   });

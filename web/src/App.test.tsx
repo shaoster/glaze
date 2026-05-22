@@ -106,6 +106,7 @@ const MOCK_USER = {
   id: 1,
   is_staff: false,
   openid_subject: MOCK_OPENID_SUBJECT,
+  alias: "",
   preferences: {
     process_summary_fields: [],
     tutorials: {

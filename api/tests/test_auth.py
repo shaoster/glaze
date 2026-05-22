@@ -135,6 +135,48 @@ class TestAuthEndpointsMocked:
             "theme": "dark",
         }
 
+    def test_auth_me_includes_alias(self, client, user):
+        UserProfile.objects.create(user=user, alias="Pottery Phil")
+        response = client.get("/api/auth/me/")
+        assert response.status_code == 200
+        assert response.json()["alias"] == "Pottery Phil"
+
+    def test_auth_me_alias_defaults_to_empty_string(self, client, user):
+        UserProfile.objects.create(user=user)
+        response = client.get("/api/auth/me/")
+        assert response.status_code == 200
+        assert response.json()["alias"] == ""
+
+    def test_auth_preferences_patch_sets_alias(self, client, user):
+        UserProfile.objects.create(user=user)
+        response = client.patch(
+            "/api/auth/preferences/",
+            {"alias": "Studio Mug"},
+            format="json",
+        )
+        assert response.status_code == 200
+        assert response.json()["alias"] == "Studio Mug"
+        user.profile.refresh_from_db()
+        assert user.profile.alias == "Studio Mug"
+
+    def test_auth_preferences_patch_clears_alias(self, client, user):
+        UserProfile.objects.create(user=user, alias="Old Name")
+        response = client.patch(
+            "/api/auth/preferences/",
+            {"alias": ""},
+            format="json",
+        )
+        assert response.status_code == 200
+        assert response.json()["alias"] == ""
+        user.profile.refresh_from_db()
+        assert user.profile.alias == ""
+
+    def test_auth_preferences_get_includes_alias(self, client, user):
+        UserProfile.objects.create(user=user, alias="My Alias")
+        response = client.get("/api/auth/preferences/")
+        assert response.status_code == 200
+        assert response.json()["alias"] == "My Alias"
+
 
 @pytest.mark.django_db
 class TestAuthGoogle:

@@ -414,13 +414,15 @@ function AppShell({
     preferencesRootMatch !== null || preferencesSectionMatch !== null;
 
   const displayName = useMemo(() => {
+    if (currentUser.alias) return currentUser.alias;
     return (currentUser.openid_subject?.slice(0, 8) ?? "…") + "…";
   }, [currentUser]);
   const saveUserPreferences = useCallback(
-    async (preferences: UserPreferences) => {
-      const response = await updateUserPreferences(preferences);
+    async (preferences: UserPreferences, alias?: string) => {
+      const response = await updateUserPreferences(preferences, alias);
       onCurrentUserUpdated({
         ...currentUser,
+        alias: response.alias,
         preferences: response.preferences,
       });
       return response.preferences;

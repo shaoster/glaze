@@ -15,6 +15,7 @@ import {
   FormGroup,
   LinearProgress,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -53,14 +54,15 @@ export default function UserPreferencesDialog({
   });
   const options = useMemo(() => getProcessSummaryFieldOptions(), []);
   const saveState = useAsyncFn(
-    async (preferences: UserPreferences) => {
+    async (preferences: UserPreferences, alias: string) => {
       if (!saveUserPreferences) {
         return null;
       }
-      return saveUserPreferences(preferences);
+      return saveUserPreferences(preferences, alias);
     },
     [saveUserPreferences],
   );
+  const initialAlias = data?.alias ?? currentUser?.alias ?? "";
   const initialSelectedRefs =
     data?.preferences.process_summary_fields ??
     currentUser?.preferences.process_summary_fields ??
@@ -73,7 +75,7 @@ export default function UserPreferencesDialog({
       TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP
     ] ??
     "show";
-  const preferencesKey = `${initialSelectedRefs.join("|")}::${initialTutorialVisibility}`;
+  const preferencesKey = `${initialAlias}::${initialSelectedRefs.join("|")}::${initialTutorialVisibility}`;
 
   const sections = useMemo(() => {
     const grouped = new Map<string, typeof options>();
@@ -107,18 +109,22 @@ export default function UserPreferencesDialog({
           <PreferencesForm
             key={preferencesKey}
             sections={sections}
+            initialAlias={initialAlias}
             initialSelectedRefs={initialSelectedRefs}
             initialTutorialVisibility={initialTutorialVisibility}
             activeSectionId={activeSectionId}
             onSectionChange={onSectionChange}
-            onSave={async (selectedRefs, tutorialVisibility) => {
-              const response = await saveState.execute({
-                process_summary_fields: selectedRefs,
-                tutorials: {
-                  [TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP]:
-                    tutorialVisibility,
+            onSave={async (alias, selectedRefs, tutorialVisibility) => {
+              const response = await saveState.execute(
+                {
+                  process_summary_fields: selectedRefs,
+                  tutorials: {
+                    [TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP]:
+                      tutorialVisibility,
+                  },
                 },
-              });
+                alias,
+              );
               if (!response) {
                 return;
               }
@@ -139,6 +145,7 @@ export default function UserPreferencesDialog({
 
 function PreferencesForm({
   sections,
+  initialAlias,
   initialSelectedRefs,
   initialTutorialVisibility,
   activeSectionId,
@@ -148,17 +155,20 @@ function PreferencesForm({
   isSaving,
 }: {
   sections: { title: string; fields: { ref: string; label: string }[] }[];
+  initialAlias: string;
   initialSelectedRefs: string[];
   initialTutorialVisibility: TutorialVisibility;
   activeSectionId: PreferencesSectionId | null;
   onSectionChange: (sectionId: PreferencesSectionId | null) => void;
   onSave: (
+    alias: string,
     selectedRefs: string[],
     tutorialVisibility: TutorialVisibility,
   ) => Promise<void>;
   onCancel: () => void;
   isSaving: boolean;
 }) {
+  const [alias, setAlias] = useState(initialAlias);
   const [selectedRefs, setSelectedRefs] = useState(initialSelectedRefs);
   const [tutorialVisibility, setTutorialVisibility] =
     useState<TutorialVisibility>(initialTutorialVisibility);
@@ -172,6 +182,15 @@ function PreferencesForm({
   return (
     <>
       <Stack spacing={2}>
+        <TextField
+          label="Alias"
+          value={alias}
+          onChange={(e) => setAlias(e.target.value.slice(0, 50))}
+          helperText="How you'd like to identify yourself in the app. Not visible to others."
+          fullWidth
+          disabled={isSaving}
+          inputProps={{ maxLength: 50 }}
+        />
         <Accordion
           disableGutters
           expanded={activeSectionId === "process-summary"}
@@ -291,7 +310,7 @@ function PreferencesForm({
         </Button>
         <Button
           variant="contained"
-          onClick={() => void onSave(selectedRefs, tutorialVisibility)}
+          onClick={() => void onSave(alias, selectedRefs, tutorialVisibility)}
           disabled={isSaving}
         >
           Save
