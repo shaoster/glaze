@@ -18,6 +18,8 @@ def ping_task(task: AsyncTask):
 @pytest.mark.django_db(transaction=True)
 class TestAsyncTasks:
     def test_submit_ping_task(self, client, user):
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
         client.force_authenticate(user=user)
         url = reverse("tasks-submit")
         data = {"task_type": "ping", "input_params": {"test": "data"}}
@@ -38,7 +40,31 @@ class TestAsyncTasks:
         assert task.status == "success"
         assert task.result == {"message": "pong", "input": {"test": "data"}}
 
+    def test_submit_requires_staff_user(self, client, user):
+        client.force_authenticate(user=user)
+        url = reverse("tasks-submit")
+
+        response = client.post(
+            url,
+            {"task_type": "ping", "input_params": {"test": "data"}},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert AsyncTask.objects.count() == 0
+
+    def test_task_detail_requires_staff_user(self, client, user):
+        task = AsyncTask.objects.create(user=user, task_type="ping")
+        client.force_authenticate(user=user)
+        url = reverse("tasks-detail", kwargs={"task_id": task.id})
+
+        response = client.get(url)
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
     def test_task_permission_isolation(self, client, user, other_user):
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
         # Task owned by 'other_user'
         task = AsyncTask.objects.create(user=other_user, task_type="ping")
 
@@ -49,6 +75,8 @@ class TestAsyncTasks:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_submit_unknown_task_type(self, client, user):
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
         client.force_authenticate(user=user)
         url = reverse("tasks-submit")
         data = {"task_type": "non-existent"}
