@@ -2,5 +2,6 @@ disable:
   - metrics-server
   - servicelb
 kube-apiserver-arg:
+  - "bind-address=127.0.0.1"
   - "max-requests-inflight=50"
   - "max-mutating-requests-inflight=20"

@@ -1,6 +1,8 @@
 # k3s Cluster Bootstrap
 
 This directory contains the configuration for the production k3s cluster running on the DigitalOcean droplet.
+The current production layout is single-node, so the firewall guidance below
+assumes the control plane, workloads, and ingress all live on one host.
 
 ## Cluster Specs
 
@@ -26,7 +28,38 @@ systemctl restart k3s
 
 The config disables the bundled metrics-server and servicelb (DigitalOcean handles load balancing), and caps API server request concurrency to reduce memory pressure on 1 GB nodes.
 
-### 2. Apply Traefik configuration
+### 2. Enable the host firewall
+
+UFW should allow only the public traffic that belongs on this droplet. Keep SSH
+open for administration, keep HTTP/HTTPS open for Traefik, and leave the k3s
+API and kubelet off the public internet. This is intentionally scoped to the
+current single-node cluster; if we ever add more nodes, we will need to revisit
+the pod-network and inter-node rules.
+
+```bash
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw enable
+```
+
+Verify the allowlist after enabling UFW:
+
+```bash
+ufw status verbose
+ss -tlnp | grep -E ':(22|80|443|6443|10250|30180)\b'
+```
+
+The k3s API is configured to bind to `127.0.0.1`, so `6443` should only appear on localhost. `10250` and `30180` should not be reachable from outside the host.
+
+Because this is a single-node cluster, the host firewall can stay narrow today.
+If we move to multi-node later, re-check whether k3s needs explicit allowance
+for the pod network interfaces such as `cni0` or `flannel.1` before tightening
+the firewall further.
+
+### 3. Apply Traefik configuration
 
 k3s auto-applies HelmChart manifests placed in `/var/lib/rancher/k3s/server/manifests/`. The file is already placed there by the k3s installer, but our customized version should replace it:
 
@@ -36,7 +69,7 @@ scp infra/k3s/traefik.yaml root@<droplet>:/var/lib/rancher/k3s/server/manifests/
 
 k3s will detect the change and re-apply automatically.
 
-### 3. Install cert-manager
+### 4. Install cert-manager
 
 ```bash
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
@@ -70,7 +103,7 @@ spec:
 EOF
 ```
 
-### 4. Create the glaze-secrets Secret
+### 5. Create the glaze-secrets Secret
 
 This must be done manually before the first `helm install`. Never commit secrets to SCM.
 
@@ -91,7 +124,7 @@ kubectl create secret generic glaze-secrets \
 
 The CD pipeline updates this secret automatically on each deploy via `kubectl apply`.
 
-### 4b. Enable automated database backups
+### 6. Enable automated database backups
 
 The Helm chart includes an hourly PostgreSQL backup CronJob. It uses the official
 `postgres:17` image to create the dump, restore it into a temporary local Postgres
@@ -103,7 +136,7 @@ Set up a Dropbox app with scoped access, app-folder access, `files.content.write
 and `files.metadata.read`, then provide the app key, app secret, and refresh token
 through the `glaze-secrets` secret above.
 
-### 5. Authenticate with GHCR
+### 7. Authenticate with GHCR
 
 The cluster needs to pull images from `ghcr.io/shaoster/glaze`:
 
@@ -123,7 +156,7 @@ kubectl create secret docker-registry ghcr-pull-secret \
   --docker-password=<PAT>
 ```
 
-### 6. Deploy the application
+### 8. Deploy the application
 
 See the CD pipeline (`.github/workflows/cd.yml`) — it handles `helm upgrade --install` automatically on push to `main`.
 
