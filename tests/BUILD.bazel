@@ -9,6 +9,7 @@ pytest_test(
     data = [
         "//:workflow_files",
         "//:pytest_ini",
+        "//backend:backend_test_settings",
     ],
     deps = [
         "@pypi//pytest_env",

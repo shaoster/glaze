@@ -40,7 +40,7 @@ genrule(
 
 vite_pkg.vite(
     name = "vite_run",
-    srcs = [":web_lib"],
+    srcs = [":web_prod_lib"],
     args = ["build"],
     chdir = package_name(),
     out_dirs = ["dist"],
@@ -235,6 +235,62 @@ js_library(
 )
 
 # ── Web source library ────────────────────────────────────────────────────────
+
+WEB_APP_SRCS = glob(
+    [
+        "src/*.ts",
+        "src/*.tsx",
+        "src/assets/**/*",
+        "src/components/**/*",
+        "src/pages/**/*",
+        "*.json",
+        "public/**/*",
+    ],
+    exclude = [
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/**/__tests__/**",
+        "src/stories/**",
+        "src/test-setup.ts",
+        "src/util/**/*",
+        "public/test-images/**",
+    ],
+) + [
+    "index.html",
+    "vite.config.ts",
+]
+
+js_library(
+    name = "web_prod_lib",
+    srcs = WEB_APP_SRCS,
+    deps = [
+        ":generated_types",
+        ":node_modules/@cloudinary/react",
+        ":node_modules/@cloudinary/url-gen",
+        ":node_modules/@emotion/react",
+        ":node_modules/@emotion/styled",
+        ":node_modules/@mui/icons-material",
+        ":node_modules/@mui/material",
+        ":node_modules/@opencvjs/web",
+        ":node_modules/@react-oauth/google",
+        ":node_modules/@rolldown/plugin-babel",
+        ":node_modules/@rollup/plugin-yaml",
+        ":node_modules/@vitejs/plugin-react",
+        ":node_modules/axios",
+        ":node_modules/babel-plugin-react-compiler",
+        ":node_modules/masonic",
+        ":node_modules/qrcode.react",
+        ":node_modules/react",
+        ":node_modules/react-dom",
+        ":node_modules/react-router-dom",
+        ":node_modules/react-sketch-canvas",
+        ":node_modules/react-swipeable",
+        ":node_modules/tesseract.js",
+        ":node_modules/vite",
+        ":util_lib",
+        "//:workflow_js",
+    ],
+)
 
 js_library(
     name = "web_lib",

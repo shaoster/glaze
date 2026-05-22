@@ -9,7 +9,6 @@ py_library(
         "middleware.py",
         "otel.py",
         "settings.py",
-        "test_settings.py",
         "urls.py",
         "wsgi.py",
     ],
@@ -48,6 +47,12 @@ py_library(
 )
 
 filegroup(
+    name = "backend_test_settings",
+    srcs = ["test_settings.py"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
     name = "backend_runtime_files",
     srcs = [
         "__init__.py",
@@ -56,7 +61,6 @@ filegroup(
         "middleware.py",
         "otel.py",
         "settings.py",
-        "test_settings.py",
         "urls.py",
         "wsgi.py",
     ],
