@@ -738,7 +738,7 @@ function AuthenticatedApp({
 export { Link };
 
 export default function App() {
-  const { data: config, loading: configLoading } = useAsync(fetchPublicConfig);
+  const { data: config, loading: configLoading, error: configError } = useAsync(fetchPublicConfig);
   const {
     data: currentUser,
     loading: userLoading,
@@ -773,6 +773,16 @@ export default function App() {
             sx={{ minHeight: "100dvh", display: "grid", placeItems: "center" }}
           >
             <CircularProgress />
+          </Container>
+        ) : configError ? (
+          <Container
+            maxWidth="sm"
+            sx={{ minHeight: "100dvh", display: "grid", placeItems: "center" }}
+          >
+            <Alert severity="error">
+              The service&apos;s authentication provider is misconfigured. The
+              developer has been notified.
+            </Alert>
           </Container>
         ) : currentUser ? (
           <AuthenticatedApp
