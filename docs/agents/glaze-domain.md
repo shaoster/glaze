@@ -500,9 +500,10 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 
 **Auth UI flow (`App.tsx`):**
 
-- On load, calls `fetchCurrentUser()` (`GET /api/auth/me/`).
+- On load, calls `fetchAppInit()` (`GET /api/auth/me/`), which returns `{ googleOauthClientId, user | null }`. Returns 503 if OAuth is not configured on the backend.
+- Loading → fullscreen spinner. 503/network error → fullscreen error message.
 - Authenticated → routed app shell with current-user chip and logout action.
-- Unauthenticated → login form with email/password and optional Google Sign-In button (`GOOGLE_OAUTH_CLIENT_ID`).
+- Unauthenticated → `UnauthenticatedApp` with Google Sign-In button (client ID comes from `fetchAppInit`, not from the bundle).
 - `Sign Up` is intentionally disabled (`SIGN_UP_ENABLED = false`); create accounts via Django admin.
 
 **Frontend routing for piece detail access:**
@@ -521,7 +522,7 @@ All data-fetching components must render a loading spinner (`<CircularProgress /
 
 **Google OAuth frontend:**
 
-- Uses `@react-oauth/google` when `GOOGLE_OAUTH_CLIENT_ID` is configured.
+- Uses `@react-oauth/google`. The client ID is fetched at runtime from `GET /api/auth/me/` — it is never baked into the bundle.
 - JWT credential is sent to `POST /api/auth/google/` for backend verification.
 
 **Frontend testing — Glaze-specific guidance:**

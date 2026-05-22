@@ -371,7 +371,7 @@ Glaze uses a multi-layered configuration strategy:
 
 1. **GitHub Secrets / Variables**: The source of truth for environment-specific configuration. This includes both sensitive secrets (e.g. `POSTGRES_PASSWORD`) and non-sensitive settings (e.g. `ALLOWED_HOST`). These are injected into the host's `.env` file during deployment.
 2. **Helm chart / k3s**: Defines internal service topology and constants (e.g. `DATABASE_URL`). These are identical across all deployments and live in `chart/glaze/`.
-3. **Build-time Injection (`ci.yml`)**: Static assets (Vite) cannot read runtime environment variables from the server. Configuration like `GOOGLE_OAUTH_CLIENT_ID` must be baked into the Javascript bundle during the image build in CI.
+3. **Backend runtime API**: Public frontend configuration (e.g. `GOOGLE_OAUTH_CLIENT_ID`) is served at runtime by the backend via `GET /api/auth/me/`. The frontend fetches this on load — no build-time injection or `.env` baking required.
 
 ---
 
