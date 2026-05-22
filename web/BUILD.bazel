@@ -38,9 +38,15 @@ genrule(
 # These macros create the js_binary + entry_point wiring via directory_path
 # so the Node toolchain is resolved correctly and node is on PATH.
 
+js_library(
+    name = "vite_config_lib",
+    srcs = ["vite.config.ts"],
+    deps = [":node_modules"],
+)
+
 vite_pkg.vite(
     name = "vite_run",
-    srcs = [":web_lib"],
+    srcs = [":web_lib"] + glob([".env.*"], allow_empty = True),
     args = ["build"],
     chdir = package_name(),
     out_dirs = ["dist"],
@@ -93,7 +99,7 @@ storybook_pkg.storybook_binary(
 vite_pkg.vite_binary(
     name = "dev_server",
     chdir = package_name(),
-    data = [":web_lib"],
+    data = [":web_lib"] + glob([".env.*"], allow_empty = True),
     visibility = ["//visibility:public"],
 )
 
@@ -1190,6 +1196,13 @@ vitest_test(
     ],
 )
 
+vitest_test(
+    name = "web_vite_config_test",
+    srcs = ["src/vite.config.test.ts"],
+    tags = ["ibazel_notify_changes"],
+    deps = [":vite_config_lib"] + glob([".env.*"], allow_empty = True),
+)
+
 # ── Web test suite ────────────────────────────────────────────────────────────
 # Aggregate target: `bazel test //web:web_test` runs all web tests.
 # Individual targets above run only when their inputs change.
@@ -1225,6 +1238,7 @@ test_suite(
         ":web_state_transition_test",
         ":web_tag_manager_test",
         ":web_user_preferences_dialog_test",
+        ":web_vite_config_test",
         ":web_tag_test",
         ":web_generate_types_test",
         ":web_workflow_state_test",
