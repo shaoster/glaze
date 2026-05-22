@@ -1033,9 +1033,26 @@ class AsyncTaskSerializer(serializers.ModelSerializer):
         ]
 
 
+class CropRunSourceSerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=["automated", "human"])
+    backend = serializers.CharField(allow_null=True)
+    deployment = serializers.CharField(allow_null=True)
+    version = serializers.CharField(allow_null=True)
+
+
 class CropRunSerializer(serializers.ModelSerializer):
     image_id = serializers.UUIDField(read_only=True)
     piece_state_image_id = serializers.IntegerField(read_only=True, allow_null=True)
+    source = serializers.SerializerMethodField()
+    crop = serializers.SerializerMethodField()
+
+    @extend_schema_field(CropRunSourceSerializer)
+    def get_source(self, obj: CropRun) -> dict:
+        return obj.source
+
+    @extend_schema_field(ImageCropSerializer(allow_null=True))
+    def get_crop(self, obj: CropRun) -> dict | None:
+        return obj.crop
 
     class Meta:
         model = CropRun

@@ -112,18 +112,12 @@ export interface UISchema {
   additionalProperties?: boolean;
 }
 
-export type CropRunSource = {
-  type: "automated" | "human";
-  backend: string | null;
-  deployment: string | null;
-  version: string | null;
-};
+export type CropRunSource = components["schemas"]["CropRunSource"];
 
-export type CropRun = {
-  id: string;
-  piece_state_image_id: number | null;
-  source: CropRunSource;
-  crop: ImageCrop | null;
-  status: "success" | "no_subject" | "error";
-  created: Date;
-};
+export type CropRun = Override<
+  components["schemas"]["CropRun"],
+  {
+    source: CropRunSource;
+    crop: ImageCrop | null;
+  }
+>;

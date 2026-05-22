@@ -40,4 +40,3 @@ test.xml
 
 # Generated files.
 src/util/generated-types.ts
-src/util/generated-normalizers.ts
