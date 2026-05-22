@@ -259,6 +259,15 @@ export async function ensureCsrfCookie(): Promise<void> {
   await client.get("auth/csrf/");
 }
 
+export interface PublicConfig {
+  googleOauthClientId: string;
+}
+
+export async function fetchPublicConfig(): Promise<PublicConfig> {
+  const { data } = await client.get<PublicConfig>("config/");
+  return data;
+}
+
 export async function fetchCurrentUser(): Promise<AuthUser | null> {
   try {
     const { data } = await client.get<AuthUser>("auth/me/");

@@ -42,6 +42,7 @@ import { alpha, ThemeProvider, createTheme } from "@mui/material/styles";
 import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
 import {
   fetchCurrentUser,
+  fetchPublicConfig,
   loginWithGoogle,
   logoutUser,
   updateUserPreferences,
@@ -737,13 +738,13 @@ function AuthenticatedApp({
 export { Link };
 
 export default function App() {
-  // Read at render time so vi.stubEnv works in tests.
-  const GOOGLE_CLIENT_ID = import.meta.env.GOOGLE_OAUTH_CLIENT_ID as string | undefined;
+  const { data: config, loading: configLoading } = useAsync(fetchPublicConfig);
   const {
     data: currentUser,
-    loading,
+    loading: userLoading,
     setData: setCurrentUser,
   } = useAsync<AuthUser | null>(fetchCurrentUser);
+  const loading = configLoading || userLoading;
   const handleAuthenticated = useCallback(
     (user: AuthUser) => {
       setCurrentUser(user);
@@ -763,7 +764,7 @@ export default function App() {
   }, [setCurrentUser]);
 
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID ?? ""}>
+    <GoogleOAuthProvider clientId={config?.googleOauthClientId ?? ""}>
       <ThemeProvider theme={DARK_THEME}>
         <CssBaseline />
         {loading ? (

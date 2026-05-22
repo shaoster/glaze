@@ -78,6 +78,25 @@ def csrf(request: Request) -> Response:
 
 @extend_schema(
     request=None,
+    responses={200: inline_serializer("PublicConfig", fields={
+        "googleOauthClientId": drf_serializers.CharField(),
+    })},
+    description="Public runtime configuration for the frontend.",
+)
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_config(request: Request) -> Response:
+    client_id = settings.GOOGLE_OAUTH_CLIENT_ID
+    if not client_id:
+        return Response(
+            {"detail": "Authentication provider is not configured."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    return Response({"googleOauthClientId": client_id})
+
+
+@extend_schema(
+    request=None,
     responses={204: None},
     description="Log out the current session.",
 )

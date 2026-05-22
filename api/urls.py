@@ -39,6 +39,7 @@ urlpatterns = [
         views.admin_manual_square_crop_import,
         name="admin-manual-square-crop-import",
     ),
+    path("config/", views.public_config, name="public-config"),
     path("auth/csrf/", views.csrf, name="auth-csrf"),
     path("auth/logout/", views.auth_logout, name="auth-logout"),
     path("auth/me/", views.auth_me, name="auth-me"),
