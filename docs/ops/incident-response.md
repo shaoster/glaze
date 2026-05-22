@@ -12,7 +12,6 @@ Go directly to the relevant dashboard and invalidate the exposed credential befo
 
 | Compromised secret | Immediate action |
 |---|---|
-| `DEPLOY_SSH_KEY` (old) | Remove the public key from `~/.ssh/authorized_keys` on the droplet |
 | `INFISICAL_CLIENT_SECRET` | Revoke in Infisical → Access Control → Machine Identities → `glaze-eso` |
 | `TAILSCALE_OAUTH_CLIENT_SECRET` | Revoke in Tailscale admin → Settings → OAuth Clients |
 | `POSTGRES_PASSWORD` | `ALTER USER glaze WITH PASSWORD '<new>'` (see rotation runbook) |

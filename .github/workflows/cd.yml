@@ -72,7 +72,7 @@ jobs:
           done
 
       - name: Connect to Tailscale
-        uses: tailscale/github-action@v3
+        uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade  # v3
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
@@ -86,13 +86,15 @@ jobs:
         run: |
           # Push Infisical machine identity to cluster so ESO can authenticate.
           # ESO owns the full glaze-secrets sync from here; CD no longer manages app secrets.
-          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" "
-            KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl create secret generic infisical-auth \
-              --from-literal=clientId='${INFISICAL_CLIENT_ID}' \
-              --from-literal=clientSecret='${INFISICAL_CLIENT_SECRET}' \
+          # Credentials are passed as env vars on the remote side to avoid shell quoting issues.
+          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" \
+            INFISICAL_CLIENT_ID="${INFISICAL_CLIENT_ID}" \
+            INFISICAL_CLIENT_SECRET="${INFISICAL_CLIENT_SECRET}" \
+            'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl create secret generic infisical-auth \
+              --from-literal=clientId="$INFISICAL_CLIENT_ID" \
+              --from-literal=clientSecret="$INFISICAL_CLIENT_SECRET" \
               --dry-run=client -o yaml | \
-            KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -
-          "
+            KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -'
 
       - name: Ship chart and render values override
         env:
