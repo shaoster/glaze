@@ -197,11 +197,11 @@ jobs:
             printf 'GOOGLE_OAUTH_CLIENT_ID=%s\n' '${{ vars.GOOGLE_OAUTH_CLIENT_ID }}' > web/.env.local
           fi
 
-      - name: Build OCI image and load into docker
-        run: bazel run --config=ci --stamp //:load
-
       - name: Verify bundle injection contract
         run: bazel test --config=ci //web:web_vite_config_test
+
+      - name: Build OCI image and load into docker
+        run: bazel run --config=ci --stamp //:load
 
       - name: Lint and validate Helm chart
         run: |
