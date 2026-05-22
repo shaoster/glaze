@@ -16,12 +16,12 @@ import fs from "node:fs";
 const isVitest = !!process.env.VITEST;
 const root = isVitest ? __dirname : fs.realpathSync(__dirname);
 
-// Public (non-secret) env vars intentionally baked into the JS bundle.
-// To add a new var: (1) add its import.meta.env.* key here, (2) add a
-// corresponding entry to the define block below, (3) populate it in .env.local
-// and add it to the CI repo variables + the "Write Vite env file" step in
-// ci.yml. The contract test enforces that the define block matches this set
-// exactly — extra keys are a potential secret leak, missing keys are broken prod.
+// The single source of truth for env vars baked into the JS bundle.
+// Add a var here and it is automatically injected via the define block below.
+// Also populate it in .env.local and add it to CI repo variables +
+// the "Write Vite env file" step in ci.yml.
+// The contract test enforces this set matches the define block exactly —
+// extra keys are a potential secret leak, missing keys are broken prod.
 export const BUNDLE_DEFINE_ALLOWLIST = new Set([
   "import.meta.env.GOOGLE_OAUTH_CLIENT_ID",
 ]);
@@ -31,16 +31,15 @@ export default defineConfig(({ mode }) => {
   // loadEnv reads .env.* from __dirname (the web/ directory).  In Bazel,
   // process.cwd() is the execroot — not web/ — so __dirname is correct here.
   const env = loadEnv(mode, __dirname, "");
+  const define = Object.fromEntries(
+    [...BUNDLE_DEFINE_ALLOWLIST].map((key) => {
+      const varName = key.replace(/^import\.meta\.env\./, "");
+      return [key, JSON.stringify(env[varName])];
+    })
+  );
   return {
     root,
-    define: {
-      // Inject the backend's Google OAuth Client ID into the frontend build.
-      // The frontend uses this to render the Google Sign-In button and obtain
-      // a JWT, which the backend then verifies using this exact same ID.
-      "import.meta.env.GOOGLE_OAUTH_CLIENT_ID": JSON.stringify(
-        env.GOOGLE_OAUTH_CLIENT_ID
-      ),
-    },
+    define,
     resolve: {
       alias: {
         axios: path.resolve(root, "node_modules/axios"),
