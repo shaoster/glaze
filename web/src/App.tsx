@@ -188,6 +188,7 @@ function GoogleSignInButton({
   const signIn = useGoogleLogin({
     flow: "auth-code",
     scope: "openid",
+    overrideScope: true,
     onSuccess: async ({ code }) => {
       setSubmitting(true);
       setError(null);
