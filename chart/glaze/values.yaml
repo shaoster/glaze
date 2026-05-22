@@ -9,13 +9,17 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
-# Sensitive variables must be in a Secret named 'glaze-secrets'.
-# Create it manually on the cluster before first deploy:
-#   kubectl create secret generic glaze-secrets --from-env-file=.env.production
-# Expected keys: POSTGRES_PASSWORD, SECRET_KEY, CLOUDINARY_API_KEY,
-# CLOUDINARY_API_SECRET, EMAIL_HOST_PASSWORD, GRAFANA_CLOUD_OTLP_TOKEN,
-# MODAL_AUTH_TOKEN, GOOGLE_OAUTH_CLIENT_SECRET, DROPBOX_APP_KEY,
-# DROPBOX_APP_SECRET, DROPBOX_REFRESH_TOKEN
+# Sensitive variables are managed by External Secrets Operator (ESO) syncing from
+# Infisical Cloud. The 'glaze-secrets' k8s Secret is owned by the ExternalSecret
+# resource and populated automatically. See docs/ops/infisical-setup.md.
+#
+# Bootstrap prerequisite: a k8s Secret named 'infisical-auth' must exist with
+# keys 'clientId' and 'clientSecret' (Infisical machine identity credentials).
+# This is created by the CD workflow on each deploy.
+
+infisical:
+  # Infisical project slug — set in values-override.yaml during CD.
+  projectSlug: ""
 
 # Non-secret app config — all values overridden via -f values-override.yaml in CD.
 # Keys here are documentation of what must be set; defaults are intentionally empty.

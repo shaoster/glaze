@@ -33,38 +33,25 @@ jobs:
 
       - name: Verify deploy inputs
         env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          DEPLOY_HOST_TAILSCALE: ${{ vars.DEPLOY_HOST_TAILSCALE }}
+          TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          TAILSCALE_OAUTH_CLIENT_SECRET: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          INFISICAL_PROJECT_SLUG: ${{ vars.INFISICAL_PROJECT_SLUG }}
           ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
           APP_ORIGIN: ${{ vars.APP_ORIGIN }}
           GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
           CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
-          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
-          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
           CLOUDINARY_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_UPLOAD_FOLDER }}
           CLOUDINARY_UPLOAD_PRESET: ${{ vars.CLOUDINARY_UPLOAD_PRESET }}
           CLOUDINARY_PUBLIC_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_PUBLIC_UPLOAD_FOLDER }}
-          EMAIL_HOST: ${{ vars.EMAIL_HOST }}
-          EMAIL_PORT: ${{ vars.EMAIL_PORT }}
-          EMAIL_HOST_USER: ${{ vars.EMAIL_HOST_USER }}
-          EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
-          EMAIL_USE_SSL: ${{ vars.EMAIL_USE_SSL }}
-          DEFAULT_FROM_EMAIL: ${{ vars.DEFAULT_FROM_EMAIL }}
-          INVITE_LINK_BASE_URL: ${{ vars.INVITE_LINK_BASE_URL }}
-          REMOTE_REMBG_URL: ${{ vars.REMOTE_REMBG_URL }}
-          OTEL_ENABLED: ${{ vars.OTEL_ENABLED }}
-          GRAFANA_CLOUD_OTLP_TOKEN: ${{ secrets.GRAFANA_CLOUD_OTLP_TOKEN }}
-          MODAL_AUTH_TOKEN: ${{ secrets.MODAL_AUTH_TOKEN }}
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
-          DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
-          DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
         run: |
-          critical="DEPLOY_HOST SECRET_KEY POSTGRES_PASSWORD ALLOWED_HOST APP_ORIGIN CLOUDINARY_CLOUD_NAME CLOUDINARY_API_KEY CLOUDINARY_API_SECRET CLOUDINARY_UPLOAD_FOLDER CLOUDINARY_UPLOAD_PRESET CLOUDINARY_PUBLIC_UPLOAD_FOLDER DROPBOX_APP_KEY DROPBOX_APP_SECRET DROPBOX_REFRESH_TOKEN"
-          features="EMAIL_HOST EMAIL_PORT EMAIL_HOST_USER EMAIL_HOST_PASSWORD EMAIL_USE_SSL DEFAULT_FROM_EMAIL INVITE_LINK_BASE_URL REMOTE_REMBG_URL OTEL_ENABLED GRAFANA_CLOUD_OTLP_TOKEN MODAL_AUTH_TOKEN MODAL_TOKEN_ID MODAL_TOKEN_SECRET"
-          
+          critical="DEPLOY_HOST_TAILSCALE TAILSCALE_OAUTH_CLIENT_ID TAILSCALE_OAUTH_CLIENT_SECRET INFISICAL_CLIENT_ID INFISICAL_CLIENT_SECRET INFISICAL_PROJECT_SLUG ALLOWED_HOST APP_ORIGIN CLOUDINARY_CLOUD_NAME CLOUDINARY_UPLOAD_FOLDER CLOUDINARY_UPLOAD_PRESET CLOUDINARY_PUBLIC_UPLOAD_FOLDER"
+          features="EMAIL_HOST EMAIL_PORT EMAIL_HOST_USER EMAIL_USE_SSL DEFAULT_FROM_EMAIL INVITE_LINK_BASE_URL REMOTE_REMBG_URL OTEL_ENABLED MODAL_TOKEN_ID MODAL_TOKEN_SECRET"
+
           missing_critical=0
           for name in $critical; do
             if [ -z "${!name:-}" ]; then
@@ -84,55 +71,34 @@ jobs:
             fi
           done
 
-      - name: Set up SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H $(echo "${{ vars.DEPLOY_HOST }}" | cut -d@ -f2) >> ~/.ssh/known_hosts
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade  # v3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
 
-      - name: Sync secrets to cluster
+      - name: Bootstrap ESO credentials
         env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
-          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
-          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
-          EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
-          GRAFANA_CLOUD_OTLP_TOKEN: ${{ secrets.GRAFANA_CLOUD_OTLP_TOKEN }}
-          MODAL_AUTH_TOKEN: ${{ secrets.MODAL_AUTH_TOKEN }}
-          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
-          DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
-          DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
         run: |
-          # Write secrets to a tmpfs-backed file, apply to cluster, then delete.
-          cat > /tmp/glaze-secrets.env << EOF
-          POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-          SECRET_KEY=${SECRET_KEY}
-          CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
-          CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
-          GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
-          EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
-          GRAFANA_CLOUD_OTLP_TOKEN=${GRAFANA_CLOUD_OTLP_TOKEN}
-          MODAL_AUTH_TOKEN=${MODAL_AUTH_TOKEN}
-          DROPBOX_APP_KEY=${DROPBOX_APP_KEY}
-          DROPBOX_APP_SECRET=${DROPBOX_APP_SECRET}
-          DROPBOX_REFRESH_TOKEN=${DROPBOX_REFRESH_TOKEN}
-          EOF
-          scp /tmp/glaze-secrets.env "${DEPLOY_HOST}":~/glaze-secrets.env
-          rm /tmp/glaze-secrets.env
-          ssh "${DEPLOY_HOST}" "
-            KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl create secret generic glaze-secrets \
-              --from-env-file=\$HOME/glaze-secrets.env \
+          # Push Infisical machine identity to cluster so ESO can authenticate.
+          # ESO owns the full glaze-secrets sync from here; CD no longer manages app secrets.
+          # Credentials are passed as env vars on the remote side to avoid shell quoting issues.
+          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" \
+            INFISICAL_CLIENT_ID="${INFISICAL_CLIENT_ID}" \
+            INFISICAL_CLIENT_SECRET="${INFISICAL_CLIENT_SECRET}" \
+            'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl create secret generic infisical-auth \
+              --from-literal=clientId="$INFISICAL_CLIENT_ID" \
+              --from-literal=clientSecret="$INFISICAL_CLIENT_SECRET" \
               --dry-run=client -o yaml | \
-            KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -
-            rm \$HOME/glaze-secrets.env
-          "
+            KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -'
 
       - name: Ship chart and render values override
         env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
           ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
           APP_ORIGIN: ${{ vars.APP_ORIGIN }}
           INVITE_LINK_BASE_URL: ${{ vars.INVITE_LINK_BASE_URL }}
@@ -148,10 +114,13 @@ jobs:
           DEFAULT_FROM_EMAIL: ${{ vars.DEFAULT_FROM_EMAIL }}
           REMOTE_REMBG_URL: ${{ vars.REMOTE_REMBG_URL }}
           OTEL_ENABLED: ${{ vars.OTEL_ENABLED }}
+          INFISICAL_PROJECT_SLUG: ${{ vars.INFISICAL_PROJECT_SLUG }}
         run: |
           cat > /tmp/values-override.yaml << EOF
           image:
             tag: "${{ env.DEPLOY_SHA }}"
+          infisical:
+            projectSlug: "${INFISICAL_PROJECT_SLUG}"
           appConfig:
             allowedHost: "${ALLOWED_HOST}"
             appOrigin: "${APP_ORIGIN}"
@@ -179,14 +148,14 @@ jobs:
                 hosts:
                   - "${ALLOWED_HOST}"
           EOF
-          scp -r chart/glaze "${DEPLOY_HOST}":~/glaze-chart-deploy/
-          scp /tmp/values-override.yaml "${DEPLOY_HOST}":~/glaze-values-override.yaml
+          scp -o StrictHostKeyChecking=no -r chart/glaze "${DEPLOY_HOST}":~/glaze-chart-deploy/
+          scp -o StrictHostKeyChecking=no /tmp/values-override.yaml "${DEPLOY_HOST}":~/glaze-values-override.yaml
 
       - name: Deploy via Helm
         env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
         run: |
-          ssh "${DEPLOY_HOST}" "
+          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" "
             KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm upgrade --install glaze ~/glaze-chart-deploy/glaze/ \
               -f ~/glaze-values-override.yaml \
               --timeout 5m \

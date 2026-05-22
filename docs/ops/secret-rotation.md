@@ -1,0 +1,127 @@
+# Secret Rotation Runbook
+
+Run this annually, after any suspected exposure, or after any collaborator offboarding.
+
+## How Rotation Works
+
+Infisical is the single source of truth. ESO polls Infisical every hour and syncs changes to the `glaze-secrets` k8s Secret automatically. The rotation flow for most secrets is:
+
+1. Generate a new credential in the relevant dashboard
+2. Update the value in Infisical (`glaze-production` project → `prod` environment)
+3. ESO propagates the change to the cluster within 1 hour
+4. Restart affected pods to pick up the new value
+
+For an **immediate** sync (e.g., suspected breach), see [Incident Response](incident-response.md).
+
+---
+
+## Secrets Inventory
+
+### App secrets (managed via Infisical → ESO)
+
+| Secret | Dashboard | Notes |
+|---|---|---|
+| `POSTGRES_PASSWORD` | n/a — script below | Requires `ALTER USER` + pod restart |
+| `SECRET_KEY` | n/a — script below | Invalidates all active user sessions |
+| `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | [Cloudinary Console](https://console.cloudinary.com) → Settings → Security | Rotate together |
+| `EMAIL_HOST_PASSWORD` | [Resend Dashboard](https://resend.com/api-keys) | Generate new key, revoke old |
+| `GRAFANA_CLOUD_OTLP_TOKEN` | Grafana Cloud → API Keys | |
+| `MODAL_AUTH_TOKEN` | Modal Dashboard → Settings → Auth Tokens | |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials | Select the OAuth 2.0 client, regenerate secret |
+| `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET` / `DROPBOX_REFRESH_TOKEN` | [Dropbox App Console](https://www.dropbox.com/developers/apps) | See Dropbox section below |
+
+### Infrastructure secrets (managed via GitHub Secrets)
+
+| Secret | Where to rotate | Notes |
+|---|---|---|
+| `INFISICAL_CLIENT_SECRET` | Infisical → Access Control → Machine Identities → `glaze-eso` | See section below |
+| `TAILSCALE_OAUTH_CLIENT_SECRET` | Tailscale Admin → Settings → OAuth Clients | See section below |
+| `BAZEL_REMOTE_API_KEY` | BuildBuddy dashboard | CI only — update `BAZEL_REMOTE_API_KEY` GitHub secret |
+| `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` | Modal Dashboard | Modal deploy job only |
+
+---
+
+## Step-by-Step Rotation
+
+### Django `SECRET_KEY`
+
+```bash
+python3 -c "
+import secrets, string
+alphabet = string.ascii_letters + string.digits + '!@#\$%^&*(-_=+)'
+print(''.join(secrets.choice(alphabet) for _ in range(50)))
+"
+```
+
+Update in Infisical. After ESO syncs, restart web and worker pods:
+```bash
+KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout restart deployment/glaze-web deployment/glaze-worker
+```
+
+> Note: all active user sessions are invalidated on restart.
+
+### `POSTGRES_PASSWORD`
+
+1. Generate a new password (use the script above or a password manager)
+2. Update the database:
+   ```bash
+   KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl exec -it \
+     $(kubectl get pod -l app=glaze-postgres -o jsonpath='{.items[0].metadata.name}') -- \
+     psql -U glaze -c "ALTER USER glaze WITH PASSWORD '<new-password>';"
+   ```
+3. Update in Infisical
+4. After ESO syncs, restart web, worker, and otelcol pods:
+   ```bash
+   KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout restart \
+     deployment/glaze-web deployment/glaze-worker deployment/glaze-otelcol
+   ```
+
+### Dropbox tokens
+
+Dropbox uses an offline refresh token. If `DROPBOX_REFRESH_TOKEN` needs to be rotated:
+
+1. Go to the Dropbox App Console → your app → OAuth 2 → Generate access token
+2. Use the Dropbox OAuth flow to obtain a new refresh token (see the existing backup script for the OAuth scope requirements)
+3. Update `DROPBOX_APP_KEY`, `DROPBOX_APP_SECRET`, and `DROPBOX_REFRESH_TOKEN` in Infisical
+
+### `INFISICAL_CLIENT_SECRET` (ESO machine identity)
+
+This is a bootstrap credential stored in GitHub Secrets, not in Infisical itself.
+
+1. In Infisical: Access Control → Machine Identities → `glaze-eso` → Client Credentials → Create new
+2. Update `INFISICAL_CLIENT_SECRET` in GitHub Secrets:
+   ```bash
+   gh secret set INFISICAL_CLIENT_SECRET --env glaze-droplet --body "<new-secret>"
+   ```
+3. The next CD deploy will push the new credential to the cluster via the "Bootstrap ESO credentials" step
+4. Revoke the old client credential in Infisical
+
+### `TAILSCALE_OAUTH_CLIENT_SECRET`
+
+1. In Tailscale admin: Settings → OAuth Clients → create a new client (same scopes: Devices write, tag:ci pre-approved)
+2. Update in GitHub Secrets:
+   ```bash
+   gh secret set TAILSCALE_OAUTH_CLIENT_ID --env glaze-droplet --body "<new-client-id>"
+   gh secret set TAILSCALE_OAUTH_CLIENT_SECRET --env glaze-droplet --body "<new-client-secret>"
+   ```
+3. Revoke the old OAuth client in Tailscale admin
+
+---
+
+## Post-Rotation Checklist
+
+- [ ] All Infisical secrets updated
+- [ ] `INFISICAL_CLIENT_SECRET` rotated and updated in GitHub
+- [ ] `TAILSCALE_OAUTH_CLIENT_SECRET` rotated and updated in GitHub
+- [ ] `BAZEL_REMOTE_API_KEY` rotated and updated in GitHub
+- [ ] `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` rotated if applicable
+- [ ] Old credentials revoked in their respective dashboards
+- [ ] Smoke test passing after pod restarts
+- [ ] Calendar reminder set for next annual rotation
+- [ ] This checklist copied/linked as a comment on the rotation tracking issue
+
+---
+
+## Immediate Rotation (Suspected Breach)
+
+If you suspect a secret has been compromised, do not wait for the 1-hour ESO sync cycle. See [Incident Response](incident-response.md).
