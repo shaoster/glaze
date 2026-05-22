@@ -161,11 +161,11 @@ Keep local-only settings in `.env.local` files; they are gitignored by default:
 - `web/.env.local` (web-only overrides)
 
 `source env.sh` automatically loads both (in that order) so you can inject Cloudinary/API config without committing secrets.
-Use the checked-in templates:
+Use the checked-in root template, and create `web/.env.local` manually if you
+need web-only overrides:
 
 ```bash
 cp .env.example .env.local
-cp web/.env.example web/.env.local
 ```
 
 Each variable in `.env.example` has an inline comment explaining what it enables and what degrades gracefully when it is absent. Keep those comments current whenever a variable is added, removed, or renamed — the file is the primary reference for onboarding and for debugging "why isn't this feature working in dev."

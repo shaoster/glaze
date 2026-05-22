@@ -21,12 +21,9 @@ Stories live in `src/stories/`. The preview wraps every story with the app's MUI
 
 ## Local env config (git-safe)
 
-Use `.env.local` for local-only values. It is gitignored.
-Start from the committed template:
-
-```bash
-cp .env.example .env.local
-```
+Use `.env.local` for local-only values. It is gitignored, but there is no
+checked-in `web/.env.example` template anymore. Create the file manually if you
+want web-only overrides for local development.
 
 Cloudinary uploads are signed by Django; set `CLOUDINARY_*` in root `.env.local` so the API secret never appears in browser code.
 
@@ -173,7 +170,7 @@ PotterDoc supports Google Sign-In using OAuth 2.0 with OpenID Connect. To enable
    export GOOGLE_OAUTH_CLIENT_ID=<your-google-client-id>
    ```
 
-   **Note on Build-time Variables:** The `GOOGLE_OAUTH_CLIENT_ID` is used by the Django backend to verify Google JWT tokens at runtime. However, because the frontend is a static bundle running in the browser, it must have this value "baked in" during the build step. In production, this is handled by the `ci.yml` workflow during the OCI image build. Local development handled this via Vite's `loadEnv` and `define` configuration.
+   **Note on Build-time Variables:** The `GOOGLE_OAUTH_CLIENT_ID` is used by the Django backend to verify Google JWT tokens at runtime. However, because the frontend is a static bundle running in the browser, it must have this value "baked in" during the build step. In production, this is handled by the `ci.yml` workflow during the OCI image build. Local development reads the value directly from the shell environment during the Vite build, so set it before running Bazel instead of putting it in a `web/.env*` file.
 
 3. **User flow:**
    - Existing email/password users can sign in with Google (account linking)
