@@ -1,6 +1,6 @@
 # Secret Rotation Runbook
 
-Run this annually, after any suspected exposure, or after any collaborator offboarding.
+Run this annually, after any suspected exposure, or after any collaborator offboarding. `TAILSCALE_AUTH_KEY` has a 90-day expiry and must be rotated on that cadence.
 
 ## How Rotation Works
 
@@ -35,7 +35,7 @@ For an **immediate** sync (e.g., suspected breach), see [Incident Response](inci
 | Secret | Where to rotate | Notes |
 |---|---|---|
 | `INFISICAL_CLIENT_SECRET` | Infisical → Access Control → Machine Identities → `glaze-eso` | See section below |
-| `TAILSCALE_OAUTH_CLIENT_SECRET` | Tailscale Admin → Settings → OAuth Clients | See section below |
+| `TAILSCALE_AUTH_KEY` | Tailscale Admin → Settings → Keys | 90-day expiry — see section below |
 | `BAZEL_REMOTE_API_KEY` | BuildBuddy dashboard | CI only — update `BAZEL_REMOTE_API_KEY` GitHub secret |
 | `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` | Modal Dashboard | Modal deploy job only |
 
@@ -96,15 +96,23 @@ This is a bootstrap credential stored in GitHub Secrets, not in Infisical itself
 3. The next CD deploy will push the new credential to the cluster via the "Bootstrap ESO credentials" step
 4. Revoke the old client credential in Infisical
 
-### `TAILSCALE_OAUTH_CLIENT_SECRET`
+### `TAILSCALE_AUTH_KEY` (90-day rotation)
 
-1. In Tailscale admin: Settings → OAuth Clients → create a new client (same scopes: Devices write, tag:ci pre-approved)
-2. Update in GitHub Secrets:
+1. In Tailscale admin: **Settings → Keys → Generate auth key**
+   - Reusable: **yes**
+   - Ephemeral: **yes**
+   - Pre-authorized: **yes**
+   - Tags: **tag:ci**
+   - Expiry: **90 days**
+2. Update in GitHub Secrets (paste interactively — do not put the key in shell history):
    ```bash
-   gh secret set TAILSCALE_OAUTH_CLIENT_ID --env glaze-droplet --body "<new-client-id>"
-   gh secret set TAILSCALE_OAUTH_CLIENT_SECRET --env glaze-droplet --body "<new-client-secret>"
+   gh secret set TAILSCALE_AUTH_KEY --repo shaoster/glaze
    ```
-3. Revoke the old OAuth client in Tailscale admin
+3. Trigger a manual CD run to verify the new key works:
+   ```bash
+   gh workflow run cd.yml --repo shaoster/glaze --ref main
+   ```
+4. Once the deploy succeeds, revoke the old key: **Settings → Keys → ⋯ → Delete**
 
 ---
 
@@ -112,7 +120,7 @@ This is a bootstrap credential stored in GitHub Secrets, not in Infisical itself
 
 - [ ] All Infisical secrets updated
 - [ ] `INFISICAL_CLIENT_SECRET` rotated and updated in GitHub
-- [ ] `TAILSCALE_OAUTH_CLIENT_SECRET` rotated and updated in GitHub
+- [ ] `TAILSCALE_AUTH_KEY` rotated and updated in GitHub (every 90 days)
 - [ ] `BAZEL_REMOTE_API_KEY` rotated and updated in GitHub
 - [ ] `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` rotated if applicable
 - [ ] Old credentials revoked in their respective dashboards
