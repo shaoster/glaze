@@ -47,10 +47,27 @@ export default function PrivacyPolicyPage() {
           </Typography>
 
           <Typography variant="body1">
-            PotterDoc is provided on an &quot;as is&quot; and &quot;as
-            available&quot; basis. By using the app, you acknowledge that no
-            software service is perfectly secure or error-free, and you accept
-            the ordinary risks that come with storing information online.
+            We make a deliberate effort to store no direct personally
+            identifiable information (PII). The only piece of information we
+            intentionally store is a single pseudonymized identifier: a hashed
+            version of your OpenID from your identity provider. This lets you
+            log in and that&apos;s it. We don&apos;t see your email, name, or
+            avatar — we deliberately request only your OpenID, which we hash
+            before storing, and nothing else. Don&apos;t believe us? That&apos;s
+            fine. Look at our code and host it yourself.
+          </Typography>
+
+          <Typography variant="body1">
+            We don&apos;t know who you are, we don&apos;t want to know who you
+            are, and you shouldn&apos;t tell us who you are. Don&apos;t write
+            notes saying &quot;my email is blahblahblah@example.com&quot;.
+            Don&apos;t set piece showcase text to &quot;DM me at
+            @potteryraptorlolz&quot;. We will do what is reasonable as part-time
+            maintainers to protect your data from leakage, but given our
+            extremely limited resources it&apos;s more important that we make
+            sure your data doesn&apos;t evaporate than to encrypt everything
+            with keys in a keyring we get locked out of when a phone dies or a
+            computer breaks during an apartment move.
           </Typography>
 
           <Typography variant="body1">
@@ -66,6 +83,39 @@ export default function PrivacyPolicyPage() {
             as reasonably necessary to operate, maintain, secure, debug,
             support, and improve PotterDoc. We do not sell your data or sell
             third-party access to your data.
+          </Typography>
+
+          <Typography variant="body1">
+            Images and data you upload may be used to improve the product. For
+            example, we may use your pottery photo to help train a machine
+            learning algorithm to better auto-crop pottery images or
+            automatically identify which workflow state a piece should be added
+            to, or we may use the data entered for various states to help us
+            automatically figure out which clay body was used.
+          </Typography>
+
+          <Typography variant="body1">
+            Images are externally hosted and will be deleted from the external
+            host asynchronously (roughly weekly, depending on usage volume). The
+            moment you delete your account or remove an image from a piece, the
+            link from your account to the image is immediately severed. Note: we
+            do not automatically remove EXIF data from your uploaded images at
+            this time, since we have a hypothesis that the camera model or local
+            time zone might be useful features for training our image processors.
+          </Typography>
+
+          <Typography variant="body1">
+            When you delete your account, all your user data is deleted and
+            cannot be easily recovered. If you delete your account in error,
+            email us at{" "}
+            <Box component="a" href="mailto:admin@potterdoc.com" sx={{ color: "inherit" }}>
+              admin@potterdoc.com
+            </Box>{" "}
+            and we&apos;ll do our best to pull data from a backup if you make
+            the request fast enough. That process will be mostly ad hoc and
+            best effort, since we don&apos;t store anything about you and
+            don&apos;t have an automated way to validate your identity once your
+            account is gone.
           </Typography>
 
           <Typography variant="body1">
