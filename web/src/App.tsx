@@ -780,8 +780,8 @@ export default function App() {
             sx={{ minHeight: "100dvh", display: "grid", placeItems: "center" }}
           >
             <Alert severity="error">
-              The service&apos;s authentication provider is misconfigured. The
-              developer has been notified.
+              All identity providers are misconfigured. The developer has been
+              notified. Please try again later.
             </Alert>
           </Container>
         ) : currentUser ? (
