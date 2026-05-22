@@ -67,7 +67,7 @@ from .workflow import (
     summary="Submit an asynchronous background task",
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAdminUser])
 @traced
 def submit_task(request: Request) -> Response:
     from .tasks import get_task_interface
@@ -92,7 +92,7 @@ def submit_task(request: Request) -> Response:
     summary="Get status and result of an asynchronous task",
 )
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAdminUser])
 @traced
 def task_detail(request: Request, task_id: str) -> Response:
     # Scope to current user to prevent leaking task state between accounts.
