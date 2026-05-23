@@ -1,8 +1,10 @@
 import hashlib
 from unittest.mock import MagicMock, patch
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from django.contrib.auth.models import User
+from django.test import Client
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
@@ -216,6 +218,48 @@ class TestAuthMe:
         request = factory.get("/api/auth/me/")
         response = auth_views.auth_me(request)
         assert response.status_code == 503
+
+    def test_refreshes_session_cookie_for_shared_admin_domain(
+        self, user, settings
+    ):
+        settings.GOOGLE_OAUTH_CLIENT_ID = "my-client-id"
+        settings.SESSION_COOKIE_DOMAIN = ".potterdoc.com"
+
+        browser = Client()
+        browser.force_login(user)
+
+        response = browser.get("/api/auth/me/")
+
+        assert response.status_code == 200
+        assert (
+            response.cookies[settings.SESSION_COOKIE_NAME]["domain"]
+            == ".potterdoc.com"
+        )
+
+    def test_admin_login_redirects_to_apex_bootstrap(self, settings):
+        settings.ADMIN_INGRESS_HOST = "admin.potterdoc.com"
+        settings.ALLOWED_HOSTS = [
+            "localhost",
+            "127.0.0.1",
+            "potterdoc.com",
+            "admin.potterdoc.com",
+        ]
+
+        browser = Client()
+
+        response = browser.get(
+            "/admin/login/?next=/admin/",
+            HTTP_HOST="admin.potterdoc.com",
+            secure=True,
+        )
+
+        assert response.status_code == 302
+        target = urlparse(response["Location"])
+        assert target.scheme == "https"
+        assert target.netloc == "potterdoc.com"
+        assert parse_qs(target.query)["next"] == [
+            "https://admin.potterdoc.com/admin/"
+        ]
 
 
 @pytest.mark.django_db

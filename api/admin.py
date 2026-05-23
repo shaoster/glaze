@@ -1,16 +1,19 @@
 import json
 import os
 import re
+from urllib.parse import urlencode
 from typing import Any, ClassVar
 
 import cloudinary
 from adminsortable2.admin import SortableAdminBase, SortableInlineAdminMixin
 from cloudinary import CloudinaryImage
+from django.conf import settings
 from django import forms
 from django.contrib import admin
 from django.forms import widgets
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponseRedirect
 from django.utils.html import format_html
+from django.utils.http import url_has_allowed_host_and_scheme
 from import_export import fields, resources
 from import_export.admin import ExportMixin
 
@@ -88,6 +91,34 @@ class GlazeAdminSite(admin.AdminSite):
             )
 
         return app_list
+
+    def login(self, request, extra_context=None):
+        """Bounce anonymous admin traffic to the apex login flow.
+
+        The apex origin is where the user can authenticate or refresh an older
+        host-scoped session into the shared parent-domain cookie. Once that has
+        happened, the browser can come back to the admin host with a valid
+        shared session.
+        """
+        request_host = request.get_host().split(":", 1)[0]
+        if not request.user.is_authenticated and request_host == settings.ADMIN_INGRESS_HOST:
+            apex_host = request_host.removeprefix("admin.")
+            if apex_host and apex_host != request_host:
+                next_path = request.GET.get("next") or request.get_full_path()
+                if not url_has_allowed_host_and_scheme(
+                    next_path,
+                    allowed_hosts={request_host},
+                    require_https=request.is_secure(),
+                ):
+                    next_path = "/"
+                absolute_next = request.build_absolute_uri(next_path)
+                apex_url = (
+                    f"{request.scheme}://{apex_host}/?"
+                    f"{urlencode({'next': absolute_next})}"
+                )
+                return HttpResponseRedirect(apex_url)
+
+        return super().login(request, extra_context=extra_context)
 
 
 # Swap the default admin site's class so all existing @admin.register and

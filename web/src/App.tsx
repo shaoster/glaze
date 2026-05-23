@@ -1,6 +1,7 @@
 import {
   lazy,
   Suspense,
+  useEffect,
   useCallback,
   useMemo,
   useState,
@@ -47,6 +48,7 @@ import {
   updateUserPreferences,
   type UserPreferences,
 } from "./util/api";
+import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
 import { useAsync } from "./util/useAsync";
 import ErrorBoundary from "./components/ErrorBoundary";
 import PublicPieceShell from "./components/PublicPieceShell";
@@ -179,8 +181,10 @@ const DARK_THEME = createTheme({
 });
 function GoogleSignInButton({
   onAuthenticated,
+  redirectTo,
 }: {
   onAuthenticated: (user: import("./util/api").AuthUser) => void;
+  redirectTo: string | null;
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -196,7 +200,11 @@ function GoogleSignInButton({
         const inviteCode = sessionStorage.getItem("pendingInviteCode") ?? undefined;
         const user = await loginWithGoogle(code, window.location.origin, inviteCode);
         if (inviteCode) sessionStorage.removeItem("pendingInviteCode");
-        onAuthenticated(user);
+        if (redirectTo) {
+          window.location.replace(redirectTo);
+        } else {
+          onAuthenticated(user);
+        }
       } catch {
         setError("Google sign-in failed. Please try again.");
       } finally {
@@ -226,8 +234,10 @@ function GoogleSignInButton({
 
 function AuthLanding({
   onAuthenticated,
+  redirectTo,
 }: {
   onAuthenticated: (user: AuthUser) => void;
+  redirectTo: string | null;
 }) {
   return (
     <Container
@@ -275,7 +285,10 @@ function AuthLanding({
             Track every pottery piece through your workflow.
           </Typography>
 
-          <GoogleSignInButton onAuthenticated={onAuthenticated} />
+          <GoogleSignInButton
+            onAuthenticated={onAuthenticated}
+            redirectTo={redirectTo}
+          />
 
           <Box component="footer" sx={{ pt: 1 }}>
             <Stack
@@ -550,8 +563,10 @@ function AppShell({
 
 function UnauthenticatedApp({
   onAuthenticated,
+  redirectTo,
 }: {
   onAuthenticated: (user: AuthUser) => void;
+  redirectTo: string | null;
 }) {
   const router = useMemo(
     () =>
@@ -560,7 +575,12 @@ function UnauthenticatedApp({
           <>
             <Route
               path="/"
-              element={<AuthLanding onAuthenticated={onAuthenticated} />}
+              element={
+                <AuthLanding
+                  onAuthenticated={onAuthenticated}
+                  redirectTo={redirectTo}
+                />
+              }
             />
             <Route
               path="/about"
@@ -646,7 +666,7 @@ function UnauthenticatedApp({
           </>,
         ),
       ),
-    [onAuthenticated],
+    [onAuthenticated, redirectTo],
   );
 
   return <RouterProvider router={router} />;
@@ -756,6 +776,15 @@ function FullscreenCenter({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const postLoginRedirect = useMemo(
+    () =>
+      getPostLoginRedirectTarget(
+        window.location.hostname,
+        window.location.protocol,
+        new URLSearchParams(window.location.search).get("next"),
+      ),
+    [],
+  );
   const {
     data: init,
     loading,
@@ -776,6 +805,12 @@ export default function App() {
     setInit((prev) => ({ ...prev!, user: null }));
   }, [setInit]);
 
+  useEffect(() => {
+    if (postLoginRedirect && init?.user) {
+      window.location.replace(postLoginRedirect);
+    }
+  }, [init?.user, postLoginRedirect]);
+
   return (
     <GoogleOAuthProvider clientId={init?.googleOauthClientId ?? ""}>
       <ThemeProvider theme={DARK_THEME}>
@@ -791,6 +826,10 @@ export default function App() {
               notified. Please try again later.
             </Alert>
           </FullscreenCenter>
+        ) : postLoginRedirect && init?.user ? (
+          <FullscreenCenter>
+            <CircularProgress />
+          </FullscreenCenter>
         ) : init?.user ? (
           <AuthenticatedApp
             currentUser={init.user}
@@ -799,7 +838,10 @@ export default function App() {
             onCurrentUserUpdated={handleCurrentUserUpdated}
           />
         ) : (
-          <UnauthenticatedApp onAuthenticated={handleAuthenticated} />
+          <UnauthenticatedApp
+            onAuthenticated={handleAuthenticated}
+            redirectTo={postLoginRedirect}
+          />
         )}
       </ThemeProvider>
     </GoogleOAuthProvider>

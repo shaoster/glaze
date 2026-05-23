@@ -41,6 +41,13 @@ spec:
                 name: {{ $fullName }}-web
                 port:
                   number: 80
+          - path: /static/
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-web
+                port:
+                  number: 80
           - path: /api/admin/
             pathType: Prefix
             backend:

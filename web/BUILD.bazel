@@ -229,6 +229,7 @@ js_library(
         "src/util/format.ts",
         "src/util/normalizeWorkflowFields.ts",
         "src/util/optionalValues.ts",
+        "src/util/postLoginRedirect.ts",
         "src/util/tutorials.ts",
         "src/util/useAsync.ts",
         "src/util/workflow.ts",
@@ -318,6 +319,7 @@ js_library(
             "src/util/**/*",
         ],
     ) + [
+        "src/util/postLoginRedirect.ts",
         "index.html",
     ],
     visibility = ["//visibility:public"],

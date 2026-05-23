@@ -214,7 +214,21 @@ allowlist — the masquerade behavior may change.
 ### Django Admin
 Available at `https://admin.potterdoc.com/admin/` and `https://potterdoc.com/admin/`.
 Both are guarded by the `tailscale-only` Traefik middleware. Connect to Tailscale
-before accessing either URL.
+before accessing either URL. The authenticated session is shared across the
+`potterdoc.com` and `admin.potterdoc.com` subdomains via a parent-domain Django
+cookie, so logging in once on the main site should also authenticate the admin
+subdomain after the browser refreshes `/api/auth/me/`.
+If the browser reaches the admin host before that shared cookie exists, the
+admin login view sends it back to the apex landing page to bootstrap the shared
+session there and then redirects back to the requested admin URL.
+This bootstrap flow assumes `potterdoc.com` stays the canonical apex origin and
+`admin.potterdoc.com` stays the sibling admin hostname; if that split changes,
+revisit the redirect helper and cookie-domain assumptions together.
+
+The admin subdomain also proxies `/static/` to the web service so Django's
+admin CSS and JS can load from WhiteNoise. If either subdomain starts showing
+missing admin assets again, check the `tailscale-only` ingress and the `/static/`
+path rules together.
 
 ### Headlamp
 Available at `https://headlamp.potterdoc.com/`. Connect to Tailscale before
