@@ -44,10 +44,3 @@ spec:
       timeoutSeconds: 5
     readinessProbe:
       timeoutSeconds: 5
-    servers:
-    - zones:
-      - zone: .
-      port: 53
-      plugins:
-      - name: forward
-        parameters: ". 67.207.67.2 67.207.67.3"
