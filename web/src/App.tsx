@@ -735,7 +735,7 @@ function AuthenticatedApp({
           </Route>,
         ),
       ),
-    [currentUser, onLogout, onCurrentUserUpdated],
+    [adminBaseUrl, currentUser, onLogout, onCurrentUserUpdated],
   );
 
   return <RouterProvider router={router} />;
