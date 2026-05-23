@@ -5,7 +5,7 @@ metadata:
   name: headlamp
   namespace: kube-system
 spec:
-  repo: https://headlamp-k8s.github.io/headlamp/
+  repo: https://kubernetes-sigs.github.io/headlamp/
   chart: headlamp
   targetNamespace: kube-system
   valuesContent: |-
@@ -21,7 +21,7 @@ metadata:
 spec:
   ipAllowList:
     sourceRange:
-      - 100.64.0.0/10
+      - 10.42.0.1/32
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

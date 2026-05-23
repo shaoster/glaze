@@ -8,5 +8,5 @@ metadata:
 spec:
   ipAllowList:
     sourceRange:
-      - 100.64.0.0/10
+      - 10.42.0.1/32
 {{- end }}

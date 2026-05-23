@@ -177,21 +177,44 @@ helm upgrade --install glaze chart/glaze/ \
 
 ## Administrative Interface Security
 
-Both the Django Admin and Headlamp (cluster dashboard) are restricted to access from within the Tailscale network (`100.64.0.0/10`).
+The Django Admin (at both `potterdoc.com/admin/` and `admin.potterdoc.com/admin/`)
+and Headlamp (`headlamp.potterdoc.com`) are restricted by a Traefik `IPAllowList`
+middleware. You must be connected to Tailscale and use a DNS record that resolves
+to the droplet's Tailscale IP (`100.121.152.21`) to access them.
 
-To make that restriction usable in practice, the droplet itself must be joined to
-your tailnet. Tailscale then assigns the node a stable tailnet IP and MagicDNS
-name, and the browser should use that tailnet-facing address instead of the
-public hostname for these private endpoints.
+### How the IP allowlist works
 
-Use [`./setup-k3s-tailscale.sh`](/home/phil/code/glaze/.agent-worktrees/claude/issue-tailscale-k3s-access/setup-k3s-tailscale.sh) to join the droplet to the tailnet and enable Tailscale SSH.
+Traefik runs with `hostPort` on this single-node cluster. Incoming connections are
+DNAT'd by the CNI hostport plugin, and Flannel masquerades external source IPs to
+the pod-network bridge gateway (`10.42.0.1`) before the packet reaches Traefik.
+As a result, the `IPAllowList` middleware uses `10.42.0.1/32` rather than the
+Tailscale CGNAT range (`100.64.0.0/10`).
+
+This means the allowlist is enforced at the **DNS / routing layer**: admin
+hostnames resolve to the Tailscale IP (`100.121.152.21`) in Cloudflare as
+DNS-only (grey-cloud, reserved IP) records. Traffic that reaches the server via
+those records has traversed the Tailscale tunnel; traffic from the public IP
+(`159.223.154.68`) never matches those hostnames and is routed to public-facing
+ingresses only.
+
+If the cluster ever moves to multi-node or a different CNI, revisit this
+allowlist — the masquerade behavior may change.
+
+### DNS records (Cloudflare)
+
+| Hostname | Points to | Proxy |
+|---|---|---|
+| `admin.potterdoc.com` | `100.121.152.21` (Tailscale IP) | DNS only |
+| `headlamp.potterdoc.com` | `100.121.152.21` (Tailscale IP) | DNS only |
+| `potterdoc.com` | `159.223.154.68` (public IP) | Proxied |
+| `www.potterdoc.com` | `159.223.154.68` (public IP) | Proxied |
 
 ### Django Admin
-Django Admin is available at `https://admin.potterdoc.com/admin/` (or the configured `adminUrl`). Access is restricted by a Traefik `IPAllowList` middleware. You must be connected to the Tailscale network to access it.
-
-If you keep the public hostname, you will also need DNS routing that sends that
-name to the droplet's tailnet address. Otherwise, use the droplet's Tailscale
-IP or `*.ts.net` MagicDNS name directly.
+Available at `https://admin.potterdoc.com/admin/` and `https://potterdoc.com/admin/`.
+Both are guarded by the `tailscale-only` Traefik middleware. Connect to Tailscale
+before accessing either URL.
 
 ### Headlamp
-Headlamp is available at `https://headlamp.potterdoc.com/`. Previous basic authentication has been removed in favor of Tailscale-only access. You must be connected to the Tailscale network to view the dashboard.
+Available at `https://headlamp.potterdoc.com/`. Connect to Tailscale before
+accessing. The Cloudflare DNS record must remain DNS-only (grey cloud) — Cloudflare
+cannot proxy to a reserved/Tailscale IP.
