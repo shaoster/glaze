@@ -20,7 +20,7 @@ class Command(BaseCommand):
         verbosity = options.get("verbosity", 1)
 
         self.stdout.write("=== deploy_init: migrate ===")
-        call_command("migrate", "--no-input", verbosity=verbosity)
+        call_command("migrate", interactive=False, verbosity=verbosity)
 
         self.stdout.write("=== deploy_init: load_public_library ===")
         call_command("load_public_library", skip_if_missing=True, verbosity=verbosity)

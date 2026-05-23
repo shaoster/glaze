@@ -16,6 +16,7 @@ from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
+from api.models import PublicLibraryVersion
 from api.utils import normalize_image_payload
 
 _CLOUDINARY_HOSTNAME = "res.cloudinary.com"
@@ -88,10 +89,8 @@ class Command(BaseCommand):
         raw_bytes = fixture_path.read_bytes()
         fixture_hash = hashlib.sha256(raw_bytes).hexdigest()
 
-        from api.models import PublicLibraryVersion
-
-        version = PublicLibraryVersion.objects.first()
-        if version is not None and version.fixture_hash == fixture_hash:
+        version, _ = PublicLibraryVersion.objects.get_or_create(pk=1)
+        if version.fixture_hash == fixture_hash:
             self.stdout.write(
                 self.style.SUCCESS(
                     f"Public library fixture unchanged (sha256={fixture_hash[:12]}…) — skipping import."
@@ -156,12 +155,7 @@ class Command(BaseCommand):
             else:
                 updated_count += 1
 
-        if version is not None:
-            PublicLibraryVersion.objects.update_or_create(
-                pk=version.pk, defaults={"fixture_hash": fixture_hash}
-            )
-        else:
-            PublicLibraryVersion.objects.create(fixture_hash=fixture_hash)
+        PublicLibraryVersion.objects.filter(pk=1).update(fixture_hash=fixture_hash)
 
         self.stdout.write(
             self.style.SUCCESS(

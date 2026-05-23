@@ -723,5 +723,6 @@ class PublicLibraryVersion(models.Model):
     imported_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        # Singleton: there is always exactly one row.
+        # Singleton: there is always exactly one row (pk=1).
         verbose_name = "public library version"
+        verbose_name_plural = "public library version"
