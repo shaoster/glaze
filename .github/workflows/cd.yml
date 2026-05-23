@@ -226,10 +226,10 @@ jobs:
 
             patch_probe_timeout() {
               local ns=\$1 deploy=\$2 container=\$3 timeout=\$4
-              # &>/dev/null suppresses all output — both "not found" and API errors.
+              # &>/dev/null suppresses all output — both not-found and API errors.
               # API errors would surface from kubectl patch below if get succeeds;
-              # in practice this step runs after the API is confirmed reachable by
-              # "Wait for cluster dependencies".
+              # in practice the Wait-for-cluster-dependencies step already confirmed
+              # API reachability before this runs.
               if ! kubectl get deployment \$deploy -n \$ns &>/dev/null; then
                 echo \"Skipped \$ns/\$deploy (not found)\"
                 return 0
