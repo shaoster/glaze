@@ -97,6 +97,11 @@ jobs:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
         run: |
           for f in infra/k3s/*.yaml; do
+            # config.yaml is a k3s server config, not a Kubernetes manifest.
+            # It belongs at /etc/rancher/k3s/config.yaml and must never be
+            # placed in the manifests directory (k3s would try to apply it as
+            # a Kubernetes resource and spam "Object 'Kind' is missing" errors).
+            [ "$(basename "$f")" = "config.yaml" ] && continue
             scp -o StrictHostKeyChecking=no "$f" \
               "${DEPLOY_HOST}":/var/lib/rancher/k3s/server/manifests/"$(basename "$f")"
           done
@@ -152,8 +157,15 @@ jobs:
             # has enough headroom to call admission webhooks without timing out.
             kubectl scale deployment glaze-otelcol --replicas=0 2>/dev/null || true
 
-            # Retry up to 3 times — webhook timeouts on a memory-constrained node
-            # are transient; a brief pause lets the API server recover from swap.
+            # Wait for the ESO webhook to be ready. If it restarted recently
+            # (cert rotation or pod eviction), it may still be starting up and
+            # temporarily set failurePolicy=Fail on ClusterSecretStore, causing
+            # helm to fail hard on a webhook timeout instead of ignoring it.
+            kubectl rollout status deployment/external-secrets-webhook \
+              -n external-secrets --timeout=120s
+
+            # Retry up to 3 times — I/O pressure during rollout can still cause
+            # transient webhook timeouts even when the pod is ready.
             for attempt in 1 2 3; do
               if helm upgrade --install glaze ~/glaze-chart-deploy/glaze/ \
                 -f ~/glaze-values-override.yaml \
