@@ -83,6 +83,25 @@ jobs:
           authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
           tags: tag:ci
 
+      - name: Resolve image tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Chart-only pushes (chart/** or infra/** without a CI run) have no
+          # Docker image built for github.sha. Reuse the most recently deployed
+          # image tag from the latest GitHub release instead.
+          if [ "${{ github.event_name }}" = "push" ] && [ -z "${{ github.event.workflow_run.head_sha }}" ]; then
+            IMAGE_TAG=$(gh release list --repo ${{ github.repository }} --limit 1 --json tagName --jq '.[0].tagName' | sed 's/release-//')
+            if [ -z "$IMAGE_TAG" ]; then
+              echo "ERROR: Could not resolve image tag from latest release." >&2
+              exit 1
+            fi
+            echo "Chart-only deploy: reusing image tag $IMAGE_TAG (not ${{ github.sha }})"
+          else
+            IMAGE_TAG="${{ env.DEPLOY_SHA }}"
+          fi
+          echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
+
       - name: Bootstrap ESO credentials
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
@@ -180,7 +199,7 @@ jobs:
         run: |
           cat > /tmp/values-override.yaml << EOF
           image:
-            tag: "${{ env.DEPLOY_SHA }}"
+            tag: "${IMAGE_TAG}"
           infisical:
             projectSlug: "${INFISICAL_PROJECT_SLUG}"
           appConfig:
