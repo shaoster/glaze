@@ -186,9 +186,10 @@ to the droplet's Tailscale IP (`100.121.152.21`) to access them.
 
 Traefik runs with `hostPort` on this single-node cluster. Incoming connections are
 DNAT'd by the CNI hostport plugin, and Flannel masquerades external source IPs to
-the pod-network bridge gateway (`10.42.0.1`) before the packet reaches Traefik.
-As a result, the `IPAllowList` middleware uses `10.42.0.1/32` rather than the
-Tailscale CGNAT range (`100.64.0.0/10`).
+the pod-network bridge gateway (`10.42.0.1`) before the packet reaches Traefik
+for ordinary cluster traffic. Tailscale-routed admin traffic preserves the
+Tailscale CGNAT source range, so the `IPAllowList` middleware allows
+`100.64.0.0/10`.
 
 This means the allowlist is enforced at the **DNS / routing layer**: admin
 hostnames resolve to the Tailscale IP (`100.121.152.21`) in Cloudflare as

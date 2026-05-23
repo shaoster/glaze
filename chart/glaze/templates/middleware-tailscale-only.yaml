@@ -8,5 +8,5 @@ metadata:
 spec:
   ipAllowList:
     sourceRange:
-      - 10.42.0.1/32
+      - {{ .Values.network.tailscaleCidr | quote }}
 {{- end }}
