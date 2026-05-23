@@ -298,6 +298,10 @@ jobs:
 
 
       - name: Create GitHub Release
+        # Chart-only push deploys reuse an existing image tag; DEPLOY_SHA is the
+        # chart commit with no corresponding Docker image. Skip release creation
+        # so the latest release always points to a real, pullable image SHA.
+        if: github.event_name != 'push'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
