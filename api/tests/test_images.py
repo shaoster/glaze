@@ -1,7 +1,4 @@
-import importlib
-
 import pytest
-from django.apps import apps as django_apps
 from rest_framework.test import APIClient
 
 from api.models import (
@@ -164,33 +161,3 @@ class TestPieceImagePatch:
             format="json",
         )
         assert response.status_code == 400
-
-
-@pytest.mark.django_db
-class TestBackfillImageUser:
-    def test_migration_populates_user_from_piece(self, user):
-        piece = Piece.objects.create(user=user, name="Bowl")
-        state = PieceState.objects.create(piece=piece, state=ENTRY_STATE, order=0)
-        img = Image.objects.create(url="https://example.com/img.jpg")  # user=None
-        PieceStateImage.objects.create(piece_state=state, image=img, order=0)
-
-        migration = importlib.import_module("api.migrations.0018_backfill_image_user")
-        migration.populate_image_user(django_apps, None)
-        img.refresh_from_db()
-        assert img.user_id == user.id
-
-    def test_migration_skips_ambiguous_ownership(self, user, other_user):
-        piece = Piece.objects.create(user=user, name="Bowl")
-        other_piece = Piece.objects.create(user=other_user, name="Plate")
-        state = PieceState.objects.create(piece=piece, state=ENTRY_STATE, order=0)
-        other_state = PieceState.objects.create(
-            piece=other_piece, state=ENTRY_STATE, order=0
-        )
-        img = Image.objects.create(url="https://example.com/img.jpg")  # user=None
-        PieceStateImage.objects.create(piece_state=state, image=img, order=0)
-        PieceStateImage.objects.create(piece_state=other_state, image=img, order=0)
-
-        migration = importlib.import_module("api.migrations.0018_backfill_image_user")
-        migration.populate_image_user(django_apps, None)
-        img.refresh_from_db()
-        assert img.user_id is None

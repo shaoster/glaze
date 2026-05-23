@@ -6,6 +6,7 @@ objects by model + name; existing records are updated in place and missing
 records are inserted.  The command is safe to run multiple times (idempotent).
 """
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -15,6 +16,7 @@ from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
+from api.models import PublicLibraryVersion
 from api.utils import normalize_image_payload
 
 _CLOUDINARY_HOSTNAME = "res.cloudinary.com"
@@ -84,8 +86,20 @@ class Command(BaseCommand):
                 return
             raise CommandError(f"Fixture file not found: {fixture_path}")
 
+        raw_bytes = fixture_path.read_bytes()
+        fixture_hash = hashlib.sha256(raw_bytes).hexdigest()
+
+        version, _ = PublicLibraryVersion.objects.get_or_create(pk=1)
+        if version.fixture_hash == fixture_hash:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Public library fixture unchanged (sha256={fixture_hash[:12]}…) — skipping import."
+                )
+            )
+            return
+
         try:
-            records = json.loads(fixture_path.read_text())
+            records = json.loads(raw_bytes.decode())
         except json.JSONDecodeError as exc:
             raise CommandError(f"Invalid JSON in fixture file: {exc}") from exc
 
@@ -140,6 +154,8 @@ class Command(BaseCommand):
                 created_count += 1
             else:
                 updated_count += 1
+
+        PublicLibraryVersion.objects.filter(pk=1).update(fixture_hash=fixture_hash)
 
         self.stdout.write(
             self.style.SUCCESS(
