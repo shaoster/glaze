@@ -19,6 +19,7 @@
 #    pod ("Nameserver limits were exceeded, some nameservers have been omitted").
 #    Fix: pin coredns's upstream forwarders to the two unique DO nameservers
 #    explicitly, bypassing the node resolv.conf entirely for upstream resolution.
+#    (implemented in coredns-custom.yaml)
 ---
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
