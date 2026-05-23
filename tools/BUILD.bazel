@@ -7,7 +7,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 # cluster_setup also sources patch_system_probes, so it needs both.
 _SHELL_SCRIPTS = {
     "patch_system_probes": [],
-    "cluster_setup": ["patch_system_probes.sh"],
+    "ensure_cluster": ["patch_system_probes.sh"],
     "helm_deploy": [],
     "render_values": [],
     "setup_k3s_tailscale": [],

@@ -28,9 +28,9 @@ jobs:
           authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
           tags: tag:ci
 
-      - name: Converge cluster infrastructure
+      - name: Ensure cluster
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
           INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
           INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-        run: tools/cluster_setup.sh "${DEPLOY_HOST}"
+        run: tools/ensure_cluster.sh "${DEPLOY_HOST}"

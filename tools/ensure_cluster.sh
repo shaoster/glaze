@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Converges cluster infrastructure to the state declared in infra/.
-# Run via the cluster-setup workflow (infra/** push or manual dispatch).
-# Idempotent: safe to re-run at any time.
+# Ensures cluster infrastructure is converged to the state declared in infra/.
+# Idempotent: fast no-op when already converged, full bootstrap on a fresh cluster.
+# Called unconditionally before every deploy — no manual operator step required.
 #
-# Usage: cluster_setup.sh <deploy_host>
+# Usage: ensure_cluster.sh <deploy_host>
 set -euo pipefail
 
-DEPLOY_HOST="${1:?Usage: cluster_setup.sh <deploy_host>}"
+DEPLOY_HOST="${1:?Usage: ensure_cluster.sh <deploy_host>}"
 SSH="ssh -o StrictHostKeyChecking=no"
 SCP="scp -o StrictHostKeyChecking=no"
 

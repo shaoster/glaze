@@ -62,6 +62,13 @@ jobs:
           fi
           echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
 
+      - name: Ensure cluster
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+        run: tools/ensure_cluster.sh "${DEPLOY_HOST}"
+
       - name: Render Helm values override
         env:
           INFISICAL_PROJECT_SLUG: ${{ vars.INFISICAL_PROJECT_SLUG }}
@@ -78,10 +85,6 @@ jobs:
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
         run: |
-          # glaze-secrets must exist before the Helm pre-upgrade hook runs.
-          # It is synced by ESO from Infisical. Prerequisite: cluster-setup.yml
-          # must have been run at least once so ESO is installed and has
-          # Infisical credentials. This step only polls — it does not install ESO.
           ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" '
             set -e
             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
