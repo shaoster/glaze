@@ -183,6 +183,11 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Pin to the exact SHA on main so the image build uses the same
+          # commit that lint/coverage validated. Omit on PRs — the default
+          # merge-commit ref is fine there and avoids replication-race failures.
+          ref: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.sha || '' }}
 
       - uses: ./.github/actions/setup-bazel-ci
         with:
