@@ -81,26 +81,6 @@ jobs:
           CLOUDINARY_PUBLIC_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_PUBLIC_UPLOAD_FOLDER }}
         run: tools/render_values.sh > /tmp/values-override.yaml
 
-      - name: Wait for glaze-secrets
-        env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
-        run: |
-          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" '
-            set -e
-            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-            echo "Waiting for glaze-secrets to be synced from Infisical..."
-            for i in $(seq 1 36); do
-              kubectl get secret glaze-secrets -n default &>/dev/null && break
-              [ $i -eq 36 ] && echo "ERROR: glaze-secrets not synced after 3m" && exit 1
-              eso_status=$(kubectl get externalsecret glaze-secrets -n default \
-                -o jsonpath="{.status.conditions[0].message}" 2>/dev/null \
-                || echo "ExternalSecret not yet applied")
-              echo "  [$i/36] $eso_status"
-              sleep 5
-            done
-            echo "glaze-secrets is ready."
-          '
-
       - name: Deploy via Helm
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}

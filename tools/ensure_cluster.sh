@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
-# Ensures cluster infrastructure is converged to the state declared in infra/.
-# Idempotent: fast no-op when already converged, full bootstrap on a fresh cluster.
-# Called unconditionally before every deploy — no manual operator step required.
+# Ensures the cluster is fully ready to accept a Helm deploy.
+#
+# CONTRACT: when this script exits 0, the following are all true:
+#   1. k3s is running with the config declared in infra/k3s/config.yaml
+#   2. All k3s auto-deploy manifests (ESO HelmChart, HelmChartConfig overrides,
+#      cert-manager, headlamp, etc.) are present on the node
+#   3. External Secrets Operator is installed and its deployment is rollout-ready
+#   4. The Infisical machine identity is present as the infisical-auth Secret
+#   5. glaze-secrets exists in the default namespace (ESO has synced from Infisical)
+#
+# Idempotent: each step is a no-op when already converged. Safe to run on every
+# deploy — fast on a healthy cluster, self-healing on a degraded one.
 #
 # Usage: ensure_cluster.sh <deploy_host>
 set -euo pipefail
@@ -65,4 +74,25 @@ $SSH "${DEPLOY_HOST}" '
   echo "ESO is ready."
 '
 
-echo "==> Cluster setup complete."
+# ── Wait for glaze-secrets (contract item 5) ─────────────────────────────────
+# The Helm pre-upgrade hook (deploy-init job) needs glaze-secrets to exist
+# before it runs. ESO creates it after applying the ExternalSecret resource,
+# which happens as part of the Helm release — so this must be polled here,
+# after ESO is confirmed ready, not inside helm_deploy.sh.
+echo "==> Waiting for glaze-secrets to be synced from Infisical..."
+$SSH "${DEPLOY_HOST}" '
+  set -e
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+  for i in $(seq 1 36); do
+    kubectl get secret glaze-secrets -n default &>/dev/null && break
+    [ $i -eq 36 ] && echo "ERROR: glaze-secrets not synced after 3m" && exit 1
+    eso_status=$(kubectl get externalsecret glaze-secrets -n default \
+      -o jsonpath="{.status.conditions[0].message}" 2>/dev/null \
+      || echo "ExternalSecret not yet applied")
+    echo "  [$i/36] $eso_status"
+    sleep 5
+  done
+  echo "glaze-secrets is ready."
+'
+
+echo "==> Cluster ready."
