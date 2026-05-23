@@ -92,6 +92,15 @@ jobs:
           ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" \
             'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -'
 
+      - name: Sync k3s manifests
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
+        run: |
+          for f in infra/k3s/*.yaml; do
+            scp -o StrictHostKeyChecking=no "$f" \
+              "${DEPLOY_HOST}":/var/lib/rancher/k3s/server/manifests/"$(basename "$f")"
+          done
+
       - name: Ship chart and render values override
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
