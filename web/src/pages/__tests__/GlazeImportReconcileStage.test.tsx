@@ -39,6 +39,7 @@ describe("GlazeImportReconcileStage", () => {
 
     render(
       <GlazeImportReconcileStage
+        adminBaseUrl={null}
         duplicateResults={[
           {
             client_id: "record-1",

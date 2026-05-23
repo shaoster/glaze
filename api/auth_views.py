@@ -115,11 +115,10 @@ def auth_me(request: Request) -> Response:
         )
     user = request.user if request.user.is_authenticated else None
     admin_host = settings.ADMIN_INGRESS_HOST
-    is_staff = user is not None and user.is_staff
     return Response(
         {
             "googleOauthClientId": client_id,
-            "adminBaseUrl": f"https://{admin_host}" if (is_staff and admin_host) else None,
+            "adminBaseUrl": f"https://{admin_host}" if (request.user.is_staff and admin_host) else None,
             "user": AuthUserSerializer(user).data if user else None,
         }
     )

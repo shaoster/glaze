@@ -686,7 +686,7 @@ function AuthenticatedApp({
               path="/tools/glaze-import"
               element={
                 currentUser.is_staff ? (
-                  <GlazeImportToolPage />
+                  <GlazeImportToolPage adminBaseUrl={adminBaseUrl} />
                 ) : (
                   <Navigate to="/" replace />
                 )

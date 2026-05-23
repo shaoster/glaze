@@ -23,12 +23,10 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import MergeIcon from "@mui/icons-material/MergeType";
 import {
   extractErrorMessage,
-  fetchAppInit,
   importManualSquareCropRecords,
   type CloudinaryWidgetConfig,
   type ManualSquareCropImportResponse,
 } from "../util/api";
-import { useAsync } from "../util/useAsync";
 import { openCloudinaryUploadWidget } from "../util/cloudinaryUpload";
 import GlazeImportCropStage from "./glazeImportTool/GlazeImportCropStage";
 import GlazeImportImportStage from "./glazeImportTool/GlazeImportImportStage";
@@ -74,9 +72,7 @@ function buildCloudinaryJpgUrl(
 ) {
   return `https://res.cloudinary.com/${config.cloud_name}/image/upload/f_jpg/${publicId}.jpg`;
 }
-export default function GlazeImportToolPage() {
-  const { data: appInit } = useAsync(fetchAppInit);
-  const adminBaseUrl = appInit?.adminBaseUrl ?? null;
+export default function GlazeImportToolPage({ adminBaseUrl }: { adminBaseUrl: string | null }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const recordsRef = useRef<UploadedRecord[]>([]);
 

@@ -8,6 +8,7 @@ describe("GlazeImportImportStage", () => {
   it("blocks import before all records are reviewed", () => {
     render(
       <GlazeImportImportStage
+        adminBaseUrl={null}
         allReviewed={false}
         importRunning={false}
         importError={null}
@@ -28,6 +29,7 @@ describe("GlazeImportImportStage", () => {
 
     render(
       <GlazeImportImportStage
+        adminBaseUrl={null}
         allReviewed
         importRunning={false}
         importError={null}
