@@ -6,6 +6,7 @@ objects by model + name; existing records are updated in place and missing
 records are inserted.  The command is safe to run multiple times (idempotent).
 """
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -84,8 +85,22 @@ class Command(BaseCommand):
                 return
             raise CommandError(f"Fixture file not found: {fixture_path}")
 
+        raw_bytes = fixture_path.read_bytes()
+        fixture_hash = hashlib.sha256(raw_bytes).hexdigest()
+
+        from api.models import PublicLibraryVersion
+
+        version = PublicLibraryVersion.objects.first()
+        if version is not None and version.fixture_hash == fixture_hash:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Public library fixture unchanged (sha256={fixture_hash[:12]}…) — skipping import."
+                )
+            )
+            return
+
         try:
-            records = json.loads(fixture_path.read_text())
+            records = json.loads(raw_bytes.decode())
         except json.JSONDecodeError as exc:
             raise CommandError(f"Invalid JSON in fixture file: {exc}") from exc
 
@@ -140,6 +155,13 @@ class Command(BaseCommand):
                 created_count += 1
             else:
                 updated_count += 1
+
+        if version is not None:
+            PublicLibraryVersion.objects.update_or_create(
+                pk=version.pk, defaults={"fixture_hash": fixture_hash}
+            )
+        else:
+            PublicLibraryVersion.objects.create(fixture_hash=fixture_hash)
 
         self.stdout.write(
             self.style.SUCCESS(

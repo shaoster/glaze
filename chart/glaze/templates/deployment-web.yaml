@@ -33,6 +33,7 @@ spec:
                   value: {{ .Values.appConfig.allowedHost | default "localhost" | quote }}
             initialDelaySeconds: 60
             periodSeconds: 30
+            timeoutSeconds: 3
           readinessProbe:
             httpGet:
               path: /api/health/ready/
@@ -40,8 +41,9 @@ spec:
               httpHeaders:
                 - name: Host
                   value: {{ .Values.appConfig.allowedHost | default "localhost" | quote }}
-            initialDelaySeconds: 15
+            initialDelaySeconds: 35
             periodSeconds: 10
+            timeoutSeconds: 3
           envFrom:
             - configMapRef:
                 name: {{ include "glaze.fullname" . }}-env

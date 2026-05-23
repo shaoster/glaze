@@ -21,12 +21,9 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
-            - bash
-            - -lc
-            - >
-              python manage.py migrate --no-input &&
-              python manage.py load_public_library --skip-if-missing &&
-              python manage.py clear_stuck_tasks --hours 1
+            - python
+            - manage.py
+            - deploy_init
           env:
             - name: POSTGRES_PASSWORD
               valueFrom:

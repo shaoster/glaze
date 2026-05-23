@@ -710,3 +710,18 @@ if TYPE_CHECKING:
     GlazeMethod: Any
     Location: Any
     Tag: Any
+
+
+class PublicLibraryVersion(models.Model):
+    """Tracks the hash of the last successfully imported public library fixture.
+
+    Used by load_public_library to skip the import when the fixture hasn't changed,
+    avoiding 249 no-op UPDATE statements on every deploy.
+    """
+
+    fixture_hash = models.CharField(max_length=64)
+    imported_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        # Singleton: there is always exactly one row.
+        verbose_name = "public library version"
