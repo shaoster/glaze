@@ -72,7 +72,7 @@ function buildCloudinaryJpgUrl(
 ) {
   return `https://res.cloudinary.com/${config.cloud_name}/image/upload/f_jpg/${publicId}.jpg`;
 }
-export default function GlazeImportToolPage() {
+export default function GlazeImportToolPage({ adminBaseUrl }: { adminBaseUrl: string | null }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const recordsRef = useRef<UploadedRecord[]>([]);
 
@@ -623,6 +623,7 @@ export default function GlazeImportToolPage() {
 
       {activeTab === TAB_IMPORT ? (
         <GlazeImportImportStage
+          adminBaseUrl={adminBaseUrl}
           allReviewed={allReviewed}
           importRunning={importRunning}
           importError={importError}
@@ -638,6 +639,7 @@ export default function GlazeImportToolPage() {
 
       {activeTab === TAB_RECONCILE ? (
         <GlazeImportReconcileStage
+          adminBaseUrl={adminBaseUrl}
           duplicateResults={duplicateResults}
           records={records}
           reconciledIds={reconciledIds}

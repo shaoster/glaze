@@ -4,6 +4,7 @@ import GlazeImportProgressList from "./GlazeImportProgressList";
 import type { UploadProgressEntry } from "./glazeImportToolTypes";
 
 interface GlazeImportImportStageProps {
+  adminBaseUrl: string | null;
   allReviewed: boolean;
   importRunning: boolean;
   importError: string | null;
@@ -23,6 +24,7 @@ const IMPORT_STATUS_LABELS: Record<UploadProgressEntry["status"], string> = {
 };
 
 export default function GlazeImportImportStage({
+  adminBaseUrl,
   allReviewed,
   importRunning,
   importError,
@@ -94,8 +96,8 @@ export default function GlazeImportImportStage({
             }}
           >
             {importResult.results.map((result) => {
-              const adminPath = result.object_id
-                ? `/admin/api/${result.kind.replace("_", "")}/${result.object_id}/change/`
+              const adminPath = result.object_id && adminBaseUrl
+                ? `${adminBaseUrl}/admin/api/${result.kind.replace("_", "")}/${result.object_id}/change/`
                 : null;
               return (
                 <ListItemButton

@@ -326,116 +326,14 @@ function AuthLanding({
   );
 }
 
-function UnauthenticatedApp({
-  onAuthenticated,
-}: {
-  onAuthenticated: (user: AuthUser) => void;
-}) {
-  const router = useMemo(
-    () =>
-      createBrowserRouter(
-        createRoutesFromElements(
-          <>
-            <Route
-              path="/"
-              element={<AuthLanding onAuthenticated={onAuthenticated} />}
-            />
-            <Route
-              path="/about"
-              element={
-                <ErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          py: 4,
-                        }}
-                      >
-                        <CircularProgress />
-                      </Box>
-                    }
-                  >
-                    <AboutPage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/privacy-policy"
-              element={
-                <ErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          py: 4,
-                        }}
-                      >
-                        <CircularProgress />
-                      </Box>
-                    }
-                  >
-                    <PrivacyPolicyPage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/terms-of-service"
-              element={
-                <ErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          py: 4,
-                        }}
-                      >
-                        <CircularProgress />
-                      </Box>
-                    }
-                  >
-                    <TermsOfServicePage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/pieces/:id/*"
-              element={<PublicPieceShell />}
-            />
-            <Route
-              path="/invite"
-              element={
-                <ErrorBoundary>
-                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
-                    <InvitePage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </>,
-        ),
-      ),
-    [onAuthenticated],
-  );
-
-  return <RouterProvider router={router} />;
-}
-
 function AppShell({
   currentUser,
+  adminBaseUrl,
   onLogout,
   onCurrentUserUpdated,
 }: {
   currentUser: AuthUser;
+  adminBaseUrl: string | null;
   onLogout: () => void;
   onCurrentUserUpdated: (user: AuthUser) => void;
 }) {
@@ -600,16 +498,18 @@ function AppShell({
                     </ListItemIcon>
                     Cloudinary Cleanup
                   </MenuItem>
-                  <MenuItem
-                    component="a"
-                    href="/admin/"
-                    onClick={() => setMenuAnchor(null)}
-                  >
-                    <ListItemIcon>
-                      <AdminPanelSettingsIcon fontSize="small" />
-                    </ListItemIcon>
-                    Admin Tool
-                  </MenuItem>
+                  {adminBaseUrl && (
+                    <MenuItem
+                      component="a"
+                      href={`${adminBaseUrl}/admin/`}
+                      onClick={() => setMenuAnchor(null)}
+                    >
+                      <ListItemIcon>
+                        <AdminPanelSettingsIcon fontSize="small" />
+                      </ListItemIcon>
+                      Admin Tool
+                    </MenuItem>
+                  )}
                 </>
               ) : null}
               <MenuItem
@@ -648,12 +548,118 @@ function AppShell({
   );
 }
 
+function UnauthenticatedApp({
+  onAuthenticated,
+}: {
+  onAuthenticated: (user: AuthUser) => void;
+}) {
+  const router = useMemo(
+    () =>
+      createBrowserRouter(
+        createRoutesFromElements(
+          <>
+            <Route
+              path="/"
+              element={<AuthLanding onAuthenticated={onAuthenticated} />}
+            />
+            <Route
+              path="/about"
+              element={
+                <ErrorBoundary>
+                  <Suspense
+                    fallback={
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "center",
+                          py: 4,
+                        }}
+                      >
+                        <CircularProgress />
+                      </Box>
+                    }
+                  >
+                    <AboutPage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/privacy-policy"
+              element={
+                <ErrorBoundary>
+                  <Suspense
+                    fallback={
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "center",
+                          py: 4,
+                        }}
+                      >
+                        <CircularProgress />
+                      </Box>
+                    }
+                  >
+                    <PrivacyPolicyPage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/terms-of-service"
+              element={
+                <ErrorBoundary>
+                  <Suspense
+                    fallback={
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "center",
+                          py: 4,
+                        }}
+                      >
+                        <CircularProgress />
+                      </Box>
+                    }
+                  >
+                    <TermsOfServicePage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/pieces/:id/*"
+              element={<PublicPieceShell />}
+            />
+            <Route
+              path="/invite"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <InvitePage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </>,
+        ),
+      ),
+    [onAuthenticated],
+  );
+
+  return <RouterProvider router={router} />;
+}
+
 function AuthenticatedApp({
   currentUser,
+  adminBaseUrl,
   onLogout,
   onCurrentUserUpdated,
 }: {
   currentUser: AuthUser;
+  adminBaseUrl: string | null;
   onLogout: () => void;
   onCurrentUserUpdated: (user: AuthUser) => void;
 }) {
@@ -665,6 +671,7 @@ function AuthenticatedApp({
             element={
               <AppShell
                 currentUser={currentUser}
+                adminBaseUrl={adminBaseUrl}
                 onLogout={onLogout}
                 onCurrentUserUpdated={onCurrentUserUpdated}
               />
@@ -679,7 +686,7 @@ function AuthenticatedApp({
               path="/tools/glaze-import"
               element={
                 currentUser.is_staff ? (
-                  <GlazeImportToolPage />
+                  <GlazeImportToolPage adminBaseUrl={adminBaseUrl} />
                 ) : (
                   <Navigate to="/" replace />
                 )
@@ -728,7 +735,7 @@ function AuthenticatedApp({
           </Route>,
         ),
       ),
-    [currentUser, onLogout, onCurrentUserUpdated],
+    [adminBaseUrl, currentUser, onLogout, onCurrentUserUpdated],
   );
 
   return <RouterProvider router={router} />;
@@ -787,6 +794,7 @@ export default function App() {
         ) : init?.user ? (
           <AuthenticatedApp
             currentUser={init.user}
+            adminBaseUrl={init.adminBaseUrl}
             onLogout={handleLogout}
             onCurrentUserUpdated={handleCurrentUserUpdated}
           />

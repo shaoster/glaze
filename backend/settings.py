@@ -34,6 +34,7 @@ else:
 DEBUG = not IS_PRODUCTION
 
 ADMIN_URL = os.environ.get("ADMIN_URL", "admin")
+ADMIN_INGRESS_HOST = os.environ.get("ADMIN_INGRESS_HOST", "")
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 # ALLOWED_HOSTS: comma-separated hostnames (e.g. "potterdoc.com,www.potterdoc.com")

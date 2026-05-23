@@ -317,6 +317,7 @@ export async function ensureCsrfCookie(): Promise<void> {
 
 export interface AppInit {
   googleOauthClientId: string;
+  adminBaseUrl: string | null;
   user: AuthUser | null;
 }
 
@@ -324,6 +325,7 @@ export async function fetchAppInit(): Promise<AppInit> {
   const { data } = await client.get<AppInit>("auth/me/");
   return {
     googleOauthClientId: data.googleOauthClientId,
+    adminBaseUrl: data.adminBaseUrl ?? null,
     user: data.user ? normalizeAuthUser(data.user) : null,
   };
 }

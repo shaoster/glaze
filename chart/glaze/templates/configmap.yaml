@@ -60,6 +60,9 @@ data:
   INVITE_LINK_BASE_URL: {{ .Values.appConfig.inviteLinkBaseUrl | quote }}
   GOOGLE_OAUTH_CLIENT_ID: {{ .Values.appConfig.googleOauthClientId | quote }}
   ADMIN_URL: {{ .Values.appConfig.adminUrl | quote }}
+  {{- if .Values.adminIngress.enabled }}
+  ADMIN_INGRESS_HOST: {{ .Values.adminIngress.host | quote }}
+  {{- end }}
   CLOUDINARY_CLOUD_NAME: {{ .Values.appConfig.cloudinaryCloudName | quote }}
   CLOUDINARY_UPLOAD_FOLDER: {{ .Values.appConfig.cloudinaryUploadFolder | quote }}
   CLOUDINARY_UPLOAD_PRESET: {{ .Values.appConfig.cloudinaryUploadPreset | quote }}
