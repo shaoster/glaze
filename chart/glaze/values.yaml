@@ -141,7 +141,8 @@ affinity: {}
 # If the cluster ever moves to multi-node/HA or a different CNI, revisit
 # middleware-health-internal.yaml and consider NetworkPolicy or mTLS instead.
 network:
-  # SINGLE-NODE: k3s flannel pod CIDR default. Revisit for multi-node/HA clusters.
+  # SINGLE-NODE: k3s flannel pod CIDR default. Used by the health middleware
+  # allowlist and retained here for topology documentation.
   podCidr: "10.42.0.0/16"
   # SINGLE-NODE: k3s service CIDR default. Revisit for multi-node/HA clusters.
   serviceCidr: "10.43.0.0/16"

@@ -7,7 +7,8 @@
 
 disable:
   # metrics-server: CPU/memory overhead not needed on single-node cluster.
-  # servicelb: replaced by Traefik NodePort; servicelb adds unnecessary DaemonSet.
+  # servicelb: Traefik now binds directly on hostNetwork, so the built-in
+  # LoadBalancer controller is unnecessary.
   - metrics-server
   - servicelb
 kube-apiserver-arg:
