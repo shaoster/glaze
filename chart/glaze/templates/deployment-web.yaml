@@ -24,6 +24,16 @@ spec:
             - name: http
               containerPort: 8000
               protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /api/health/ready/
+              port: 8000
+              httpHeaders:
+                - name: Host
+                  value: {{ .Values.appConfig.allowedHost | default "localhost" | quote }}
+            failureThreshold: 20
+            periodSeconds: 5
+            timeoutSeconds: 5
           livenessProbe:
             httpGet:
               path: /api/health/ready/
@@ -31,7 +41,6 @@ spec:
               httpHeaders:
                 - name: Host
                   value: {{ .Values.appConfig.allowedHost | default "localhost" | quote }}
-            initialDelaySeconds: 60
             periodSeconds: 30
             timeoutSeconds: 3
           readinessProbe:
@@ -41,7 +50,6 @@ spec:
               httpHeaders:
                 - name: Host
                   value: {{ .Values.appConfig.allowedHost | default "localhost" | quote }}
-            initialDelaySeconds: 35
             periodSeconds: 10
             timeoutSeconds: 3
           envFrom:
