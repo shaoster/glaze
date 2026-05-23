@@ -98,7 +98,7 @@ import {
   logoutUser,
   validateInviteCode,
 } from "./util/api";
-import App from "./App";
+import App, { getPostLoginRedirectTarget } from "./App";
 
 const MOCK_OPENID_SUBJECT = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2";
 
@@ -163,6 +163,24 @@ describe("App auth flow", () => {
     ).toHaveAttribute("href", "/privacy-policy");
 
     expect(screen.getByRole("button", { name: /sign in with google/i })).toBeInTheDocument();
+  });
+
+  it("derives a safe admin redirect target from the apex next parameter", () => {
+    expect(
+      getPostLoginRedirectTarget(
+        "potterdoc.com",
+        "https:",
+        "https://admin.potterdoc.com/admin/",
+      ),
+    ).toBe("https://admin.potterdoc.com/admin/");
+
+    expect(
+      getPostLoginRedirectTarget(
+        "potterdoc.com",
+        "https:",
+        "https://example.com/admin/",
+      ),
+    ).toBeNull();
   });
 
   it("opens the privacy policy from the unauthenticated footer", async () => {

@@ -1,5 +1,6 @@
 import hashlib
 from unittest.mock import MagicMock, patch
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from django.contrib.auth.models import User
@@ -234,6 +235,31 @@ class TestAuthMe:
             response.cookies[settings.SESSION_COOKIE_NAME]["domain"]
             == ".potterdoc.com"
         )
+
+    def test_admin_login_redirects_to_apex_bootstrap(self, settings):
+        settings.ADMIN_INGRESS_HOST = "admin.potterdoc.com"
+        settings.ALLOWED_HOSTS = [
+            "localhost",
+            "127.0.0.1",
+            "potterdoc.com",
+            "admin.potterdoc.com",
+        ]
+
+        browser = Client()
+
+        response = browser.get(
+            "/admin/login/?next=/admin/",
+            HTTP_HOST="admin.potterdoc.com",
+            secure=True,
+        )
+
+        assert response.status_code == 302
+        target = urlparse(response["Location"])
+        assert target.scheme == "https"
+        assert target.netloc == "potterdoc.com"
+        assert parse_qs(target.query)["next"] == [
+            "https://admin.potterdoc.com/admin/"
+        ]
 
 
 @pytest.mark.django_db
