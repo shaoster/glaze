@@ -161,6 +161,3 @@ class TestPieceImagePatch:
             format="json",
         )
         assert response.status_code == 400
-
-
-@pytest.mark.django_db
