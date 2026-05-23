@@ -126,8 +126,8 @@ jobs:
 
             # Guard against the ExternalSecret CRD being absent. This can happen
             # if ESO was reinstalled (helm uninstall deletes templated CRDs).
-            # Apply only CRDs from the chart to avoid conflicting with the
-            # Helm-managed deployment resources.
+            # Use --show-only to apply only the CRD templates, not the full chart,
+            # to avoid creating spurious deployments outside the Helm release.
             if ! kubectl get crd externalsecrets.external-secrets.io &>/dev/null; then
               echo 'ExternalSecret CRD missing — applying from chart...'
               helm repo add external-secrets https://charts.external-secrets.io 2>/dev/null || true
@@ -135,17 +135,18 @@ jobs:
               helm template eso-crds external-secrets/external-secrets \
                 --version 2.5.0 \
                 --set installCRDs=true \
-                --set webhook.create=false \
-                --set certController.create=false \
-                | kubectl apply --server-side \
-                    --field-manager=eso-crd-bootstrap \
-                    --force-conflicts \
-                    -f - 2>&1 | grep customresourcedefinition || true
+                --show-only templates/crds/externalsecret.yaml \
+                --show-only templates/crds/clustersecretstore.yaml \
+                --show-only templates/crds/secretstore.yaml \
+                --show-only templates/crds/clusterexternalsecret.yaml \
+                | kubectl apply --server-side -f -
             fi
 
             # Wait for glaze-secrets to be synced from Infisical before the app
-            # deploys. If the secret is absent, pods will fail to start and the
-            # helm --wait will time out unnecessarily.
+            # deploys. Without this, the pre-upgrade helm hook (deploy-init job)
+            # runs before ExternalSecret is applied and deadlocks: it needs
+            # glaze-secrets, which ESO can only create after helm applies
+            # ExternalSecret as a regular resource post-hook.
             echo 'Waiting for glaze-secrets to be synced...'
             for i in \$(seq 1 36); do
               kubectl get secret glaze-secrets -n default &>/dev/null && break
