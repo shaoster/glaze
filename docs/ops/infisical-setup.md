@@ -28,7 +28,8 @@ Navigate to the project's **prod** environment and add each key:
 | `CLOUDINARY_API_SECRET` | Cloudinary dashboard |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Google Cloud Console |
 | `EMAIL_HOST_PASSWORD` | Resend dashboard |
-| `GRAFANA_CLOUD_OTLP_TOKEN` | Grafana Cloud dashboard |
+| `GRAFANA_CLOUD_INSTANCE_ID` | Grafana Cloud stack → OpenTelemetry / OTLP setup (stack user / instance ID used by the collector) |
+| `GRAFANA_CLOUD_OTLP_TOKEN` | Grafana Cloud stack → OpenTelemetry / OTLP setup (raw stack-scoped access-policy token used by the collector) |
 | `MODAL_AUTH_TOKEN` | Modal dashboard |
 | `DROPBOX_APP_KEY` | Dropbox developer console |
 | `DROPBOX_APP_SECRET` | Dropbox developer console |

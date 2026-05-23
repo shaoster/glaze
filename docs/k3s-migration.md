@@ -46,6 +46,7 @@ Before migrating, we must ensure a verified backup of the production database ex
    kubectl create secret generic glaze-secrets \
      --from-literal=POSTGRES_PASSWORD=your_password \
      --from-literal=SECRET_KEY=your_secret_key \
+     --from-literal=GRAFANA_CLOUD_INSTANCE_ID=your_stack_id \
      --from-literal=GRAFANA_CLOUD_OTLP_TOKEN=your_token
    ```
 2. **Apply ClusterIssuer for TLS**:

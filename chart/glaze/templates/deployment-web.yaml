@@ -85,12 +85,6 @@ spec:
                   name: glaze-secrets
                   key: EMAIL_HOST_PASSWORD
                   optional: true
-            - name: GRAFANA_CLOUD_OTLP_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: glaze-secrets
-                  key: GRAFANA_CLOUD_OTLP_TOKEN
-                  optional: true
             - name: MODAL_AUTH_TOKEN
               valueFrom:
                 secretKeyRef:

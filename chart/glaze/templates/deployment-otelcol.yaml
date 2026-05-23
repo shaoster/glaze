@@ -29,6 +29,11 @@ spec:
                 secretKeyRef:
                   name: glaze-secrets
                   key: POSTGRES_PASSWORD
+            - name: GRAFANA_CLOUD_INSTANCE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: GRAFANA_CLOUD_INSTANCE_ID
             - name: GRAFANA_CLOUD_OTLP_TOKEN
               valueFrom:
                 secretKeyRef:
