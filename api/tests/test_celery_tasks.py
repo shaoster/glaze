@@ -55,7 +55,9 @@ class TestCeleryTaskInterface:
         interface = CeleryTaskInterface()
         assert interface.health_check() is True
         mock_redis_from_url.assert_called_once_with(
-            "redis://localhost:6379/0", socket_timeout=1
+            "redis://localhost:6379/0",
+            socket_connect_timeout=2,
+            socket_timeout=2,
         )
 
     @patch("redis.Redis.from_url")
