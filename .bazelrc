@@ -45,6 +45,7 @@ build:ci --bes_backend=grpcs://remote.buildbuddy.io
 common:ci --remote_cache=grpcs://remote.buildbuddy.io
 common:ci --remote_cache_compression
 common:ci --remote_timeout=10m
+common:ci --remote_local_fallback
 common:ci --nolegacy_important_outputs
 
 # Memory optimization for CI (minimize retention of analysis graph)
