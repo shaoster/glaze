@@ -118,7 +118,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" \
             'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -'
 
-      - name: Sync k3s server config
+      - name: Sync k3s server config and restart if changed
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
         run: |
@@ -226,14 +226,20 @@ jobs:
 
             patch_probe_timeout() {
               local ns=\$1 deploy=\$2 container=\$3 timeout=\$4
+              # Suppress only "not found" (exit 1 from kubectl when the deployment
+              # doesn't exist yet). Other errors (API unreachable, bad kubeconfig)
+              # still surface via stderr so they don't silently skip a real failure.
+              if ! kubectl get deployment \$deploy -n \$ns &>/dev/null; then
+                echo \"Skipped \$ns/\$deploy (not found)\"
+                return 0
+              fi
               kubectl patch deployment \$deploy -n \$ns --type=strategic-merge-patch -p \"{
                 \\\"spec\\\":{\\\"template\\\":{\\\"spec\\\":{\\\"containers\\\":[{
                   \\\"name\\\":\\\"\$container\\\",
                   \\\"livenessProbe\\\":{\\\"timeoutSeconds\\\":\$timeout},
                   \\\"readinessProbe\\\":{\\\"timeoutSeconds\\\":\$timeout}
-                }]}}}}\" 2>/dev/null \
-                && echo \\\"Patched \$ns/\$deploy (timeoutSeconds=\$timeout)\\\" \
-                || echo \\\"Skipped \$ns/\$deploy (not found)\\\"
+                }]}}}}\"
+              echo \\\"Patched \$ns/\$deploy (timeoutSeconds=\$timeout)\\\"
             }
 
             patch_probe_timeout kube-system headlamp headlamp 5
