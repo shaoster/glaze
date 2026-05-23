@@ -25,13 +25,23 @@ ADMIN_INGRESS_HOST = os.environ.get("ADMIN_INGRESS_HOST", "")
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 _ALLOWED_HOSTS_ENV = os.environ.get("ALLOWED_HOSTS", os.environ.get("ALLOWED_HOST", ""))
+
+
+def _add_allowed_host(host: str, *, allow_www: bool) -> None:
+    host = host.strip()
+    if not host:
+        return
+    ALLOWED_HOSTS.append(host)
+    if allow_www and "." in host and not host.startswith("www."):
+        ALLOWED_HOSTS.append(f"www.{host}")
+
+
 if _ALLOWED_HOSTS_ENV:
     for host in _ALLOWED_HOSTS_ENV.split(","):
-        host = host.strip()
-        if host:
-            ALLOWED_HOSTS.append(host)
-            if "." in host and not host.startswith("www."):
-                ALLOWED_HOSTS.append(f"www.{host}")
+        _add_allowed_host(host, allow_www=True)
+
+if ADMIN_INGRESS_HOST:
+    _add_allowed_host(ADMIN_INGRESS_HOST, allow_www=False)
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGIN_REGEXES = [
