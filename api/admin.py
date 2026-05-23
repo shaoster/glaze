@@ -112,7 +112,10 @@ class GlazeAdminSite(admin.AdminSite):
                 ):
                     next_path = "/"
                 absolute_next = request.build_absolute_uri(next_path)
-                apex_url = f"{request.scheme}://{apex_host}/?{urlencode({'next': absolute_next})}"
+                apex_url = (
+                    f"{request.scheme}://{apex_host}/?"
+                    f"{urlencode({'next': absolute_next})}"
+                )
                 return HttpResponseRedirect(apex_url)
 
         return super().login(request, extra_context=extra_context)
