@@ -153,19 +153,8 @@ jobs:
             set -e
             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-            # Free memory before deploy: scale otelcol to 0 so the API server
-            # has enough headroom to call admission webhooks without timing out.
-            kubectl scale deployment glaze-otelcol --replicas=0 2>/dev/null || true
-
-            # Wait for the ESO webhook to be ready. If it restarted recently
-            # (cert rotation or pod eviction), it may still be starting up and
-            # temporarily set failurePolicy=Fail on ClusterSecretStore, causing
-            # helm to fail hard on a webhook timeout instead of ignoring it.
-            kubectl rollout status deployment/external-secrets-webhook \
-              -n external-secrets --timeout=120s
-
-            # Retry up to 3 times — I/O pressure during rollout can still cause
-            # transient webhook timeouts even when the pod is ready.
+            # Retry up to 3 times — transient I/O pressure during rollout can
+            # occasionally cause API server timeouts.
             for attempt in 1 2 3; do
               if helm upgrade --install glaze ~/glaze-chart-deploy/glaze/ \
                 -f ~/glaze-values-override.yaml \
@@ -177,12 +166,9 @@ jobs:
                 echo \"Helm attempt \$attempt failed, retrying in 30s...\"
                 sleep 30
               else
-                kubectl scale deployment glaze-otelcol --replicas=1 2>/dev/null || true
                 exit 1
               fi
             done
-
-            kubectl scale deployment glaze-otelcol --replicas=1 2>/dev/null || true
           "
 
 
