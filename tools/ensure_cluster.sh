@@ -2,12 +2,13 @@
 # Ensures the cluster is fully ready to accept a Helm deploy.
 #
 # CONTRACT: when this script exits 0, the following are all true:
-#   1. k3s is running with the config declared in infra/k3s/config.yaml
-#   2. All k3s auto-deploy manifests (ESO HelmChart, HelmChartConfig overrides,
+#   1. /etc/k3s-resolv.conf exists with the two unique DO nameservers
+#   2. k3s is running with the config declared in infra/k3s/config.yaml
+#   3. All k3s auto-deploy manifests (ESO HelmChart, HelmChartConfig overrides,
 #      cert-manager, headlamp, etc.) are present on the node
-#   3. External Secrets Operator is installed and its deployment is rollout-ready
-#   4. The Infisical machine identity is present as the infisical-auth Secret
-#   5. glaze-secrets exists in the default namespace (ESO has synced from Infisical)
+#   4. External Secrets Operator is installed and its deployment is rollout-ready
+#   5. The Infisical machine identity is present as the infisical-auth Secret
+#   6. glaze-secrets exists in the default namespace (ESO has synced from Infisical)
 #
 # Idempotent: each step is a no-op when already converged. Safe to run on every
 # deploy — fast on a healthy cluster, self-healing on a degraded one.
@@ -18,6 +19,15 @@ set -euo pipefail
 DEPLOY_HOST="${1:?Usage: ensure_cluster.sh <deploy_host>}"
 SSH="ssh -o StrictHostKeyChecking=no"
 SCP="scp -o StrictHostKeyChecking=no"
+
+# ── static kubelet resolv.conf ───────────────────────────────────────────────
+# Write /etc/k3s-resolv.conf with only the two unique DO nameservers.
+# See infra/k3s/config.yaml for why neither dynamic path is safe to use.
+echo "==> Writing /etc/k3s-resolv.conf..."
+$SSH "${DEPLOY_HOST}" 'cat > /etc/k3s-resolv.conf <<EOF
+nameserver 67.207.67.2
+nameserver 67.207.67.3
+EOF'
 
 # ── k3s server config ────────────────────────────────────────────────────────
 echo "==> Syncing k3s server config..."
