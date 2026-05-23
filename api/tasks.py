@@ -131,20 +131,28 @@ class InMemoryTaskInterface:
 class CeleryTaskInterface:
     """Submits tasks to a Celery broker."""
 
-    def health_check(self) -> bool:
+    def __init__(self) -> None:
         from django.conf import settings
         from redis import Redis
 
-        # If we have a broker URL, try a ping.
-        if not settings.CELERY_BROKER_URL:
-            return False
+        self._redis: Redis | None = (
+            Redis.from_url(
+                settings.CELERY_BROKER_URL,
+                socket_connect_timeout=2,
+                socket_timeout=2,
+            )
+            if settings.CELERY_BROKER_URL
+            else None
+        )
 
+    def health_check(self) -> bool:
+        if self._redis is None:
+            return False
         try:
             # Assumes Redis broker; Celery doesn't provide a cheap generic
             # "broker_is_up" without a full connection/handshake.
             # NOTE: Update this if the broker ever changes away from Redis.
-            r = Redis.from_url(settings.CELERY_BROKER_URL, socket_timeout=1)
-            return bool(r.ping())
+            return bool(self._redis.ping())
         except Exception:
             return False
 
