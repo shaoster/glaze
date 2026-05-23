@@ -25,7 +25,6 @@ import {
   extractErrorMessage,
   fetchAppInit,
   importManualSquareCropRecords,
-  fetchAppInit,
   type CloudinaryWidgetConfig,
   type ManualSquareCropImportResponse,
 } from "../util/api";
