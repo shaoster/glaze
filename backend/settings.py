@@ -41,6 +41,17 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 _ALLOWED_HOSTS_ENV = os.environ.get("ALLOWED_HOSTS", os.environ.get("ALLOWED_HOST", ""))
 
 
+def _shared_cookie_domain(host: str) -> str | None:
+    host = host.strip()
+    if not host:
+        return None
+    if host.startswith("www."):
+        host = host.removeprefix("www.")
+    if "." not in host or host == "localhost":
+        return None
+    return f".{host}"
+
+
 def _add_allowed_host(host: str, *, allow_www: bool) -> None:
     host = host.strip()
     if not host:
@@ -71,6 +82,12 @@ _APP_ORIGIN = os.environ.get("APP_ORIGIN", "")
 if _APP_ORIGIN:
     CORS_ALLOWED_ORIGINS.append(_APP_ORIGIN)
     CSRF_TRUSTED_ORIGINS.append(_APP_ORIGIN)
+
+_COOKIE_DOMAIN = _shared_cookie_domain(
+    _ALLOWED_HOSTS_ENV.split(",")[0]
+    if _ALLOWED_HOSTS_ENV
+    else os.environ.get("ALLOWED_HOST", "")
+)
 
 
 # Application definition
@@ -311,6 +328,9 @@ if IS_PRODUCTION:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_SSL_REDIRECT = True
     SECURE_REDIRECT_EXEMPT = [r"^api/health/"]
+    if _COOKIE_DOMAIN:
+        SESSION_COOKIE_DOMAIN = _COOKIE_DOMAIN
+        CSRF_COOKIE_DOMAIN = _COOKIE_DOMAIN
 
 # Remote ML Offloading (Modal)
 REMOTE_REMBG_URL = os.environ.get("REMOTE_REMBG_URL", "")
