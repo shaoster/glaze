@@ -106,6 +106,56 @@ jobs:
               "${DEPLOY_HOST}":/var/lib/rancher/k3s/server/manifests/"$(basename "$f")"
           done
 
+      - name: Wait for cluster dependencies
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
+        run: |
+          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" "
+            set -e
+            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+
+            # Wait for the ESO HelmChart install job to finish if it is running.
+            # The k3s manifest sync above may have triggered a fresh install or
+            # upgrade; we must not proceed until the controller is actually up.
+            kubectl wait --for=condition=complete \
+              job/helm-install-external-secrets -n kube-system \
+              --timeout=180s 2>/dev/null || true
+
+            kubectl rollout status deployment/external-secrets \
+              -n external-secrets --timeout=120s
+
+            # Guard against the ExternalSecret CRD being absent. This can happen
+            # if ESO was reinstalled (helm uninstall deletes templated CRDs).
+            # Apply only CRDs from the chart to avoid conflicting with the
+            # Helm-managed deployment resources.
+            if ! kubectl get crd externalsecrets.external-secrets.io &>/dev/null; then
+              echo 'ExternalSecret CRD missing — applying from chart...'
+              helm repo add external-secrets https://charts.external-secrets.io 2>/dev/null || true
+              helm repo update external-secrets
+              helm template eso-crds external-secrets/external-secrets \
+                --version 2.5.0 \
+                --set installCRDs=true \
+                --set webhook.create=false \
+                --set certController.create=false \
+                | kubectl apply --server-side \
+                    --field-manager=eso-crd-bootstrap \
+                    --force-conflicts \
+                    -f - 2>&1 | grep customresourcedefinition || true
+            fi
+
+            # Wait for glaze-secrets to be synced from Infisical before the app
+            # deploys. If the secret is absent, pods will fail to start and the
+            # helm --wait will time out unnecessarily.
+            echo 'Waiting for glaze-secrets to be synced...'
+            for i in \$(seq 1 36); do
+              kubectl get secret glaze-secrets -n default &>/dev/null && break
+              [ \$i -eq 36 ] && echo 'ERROR: glaze-secrets not synced after 3m' && exit 1
+              echo \"  [\$i/36] not yet available, retrying in 5s...\"
+              sleep 5
+            done
+            echo 'glaze-secrets is ready.'
+          "
+
       - name: Ship chart and render values override
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
