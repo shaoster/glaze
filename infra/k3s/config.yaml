@@ -1,11 +1,23 @@
+# WHY: This cluster runs on a single-core DigitalOcean droplet (~2 GB RAM).
+# All settings below deviate from k3s defaults to prevent resource exhaustion
+# and control-plane thrashing on a constrained node.
+#
+# Without these limits, concurrent reconcile workers saturate the single CPU,
+# causing API server timeouts, probe failures, and cascading pod restarts.
+
 disable:
+  # metrics-server: CPU/memory overhead not needed on single-node cluster.
+  # servicelb: replaced by Traefik NodePort; servicelb adds unnecessary DaemonSet.
   - metrics-server
   - servicelb
 kube-apiserver-arg:
+  # Bind only to loopback — no external API server exposure needed on single-node.
   - "bind-address=127.0.0.1"
+  # Default inflight limits (400/200) overwhelm a single core under load.
   - "max-requests-inflight=50"
   - "max-mutating-requests-inflight=20"
 kube-controller-manager-arg:
+  # Default concurrent syncs spin up too many goroutines on one core.
   - "concurrent-deployment-syncs=2"
   - "concurrent-replicaset-syncs=2"
   - "concurrent-statefulset-syncs=2"

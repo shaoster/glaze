@@ -318,9 +318,8 @@ workflow.yml               Source of truth for piece states and valid transition
 env.sh                     Development shell helpers
 docker-compose.yml         Production stack: web + Postgres
 docker-entrypoint.sh       Container startup: exec Gunicorn
-deploy.sh                  SSH deploy helper (called by gz_deploy)
-.env.production.example    Template for droplet secrets (copy to .env)
-render.yaml                Render Blueprint for managed PaaS deployment
+tools/ensure_cluster.sh    Cluster infrastructure convergence (k3s, ESO, probe timeouts)
+tools/helm_deploy.sh       Helm upgrade with retry and failure diagnostics
 ```
 
 The workflow state machine and all valid transitions are defined in [`workflow.yml`](workflow.yml). Both the backend and web derive state names and transition rules from this file — nothing is hardcoded elsewhere.

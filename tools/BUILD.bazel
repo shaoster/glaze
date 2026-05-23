@@ -1,5 +1,22 @@
 load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_library")
 load("//:python.bzl", "pytest_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+# ── Shell script syntax checks ────────────────────────────────────────────────
+# Each entry: script_name -> extra data deps beyond the script itself.
+# cluster_setup also sources patch_system_probes, so it needs both.
+_SHELL_SCRIPTS = {
+    "ensure_cluster": [],
+    "ensure_k3s_tailscale": [],
+    "helm_deploy": [],
+    "render_values": [],
+}
+
+[sh_test(
+    name = "test_{}_syntax".format(name),
+    srcs = ["tests/test_{}_syntax.sh".format(name)],
+    data = ["{}.sh".format(name)] + extra,
+) for name, extra in _SHELL_SCRIPTS.items()]
 
 # ── Pytest runner ─────────────────────────────────────────────────────────────
 # Shared entry point for all py_test targets. Each test BUILD file lists this
