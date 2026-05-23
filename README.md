@@ -318,7 +318,7 @@ workflow.yml               Source of truth for piece states and valid transition
 env.sh                     Development shell helpers
 docker-compose.yml         Production stack: web + Postgres
 docker-entrypoint.sh       Container startup: exec Gunicorn
-tools/cluster_setup.sh     Cluster infrastructure convergence (k3s, ESO, probes)
+tools/ensure_cluster.sh    Cluster infrastructure convergence (k3s, ESO, probe timeouts)
 tools/helm_deploy.sh       Helm upgrade with retry and failure diagnostics
 ```
 

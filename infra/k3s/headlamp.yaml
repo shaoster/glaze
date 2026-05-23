@@ -12,6 +12,10 @@ spec:
     replicaCount: 1
     config:
       inCluster: true
+    livenessProbe:
+      timeoutSeconds: 5
+    readinessProbe:
+      timeoutSeconds: 5
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

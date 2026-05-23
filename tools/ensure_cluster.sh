@@ -65,9 +65,4 @@ $SSH "${DEPLOY_HOST}" '
   echo "ESO is ready."
 '
 
-# ── System component probe patches ──────────────────────────────────────────
-echo "==> Patching system component probe timeouts..."
-$SCP "$(dirname "$0")/patch_system_probes.sh" "${DEPLOY_HOST}":/tmp/patch_system_probes.sh
-$SSH "${DEPLOY_HOST}" 'bash /tmp/patch_system_probes.sh'
-
 echo "==> Cluster setup complete."

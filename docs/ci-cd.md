@@ -72,17 +72,17 @@ All other app secrets (Django `SECRET_KEY`, Postgres password, Cloudinary API ke
 ### `cluster-setup.yml` — Cluster Infrastructure Convergence
 
 Triggers:
-- On `push` to `main` for `infra/**`, `tools/cluster_setup.sh`, or `tools/patch_system_probes.sh`
+- On `push` to `main` for `infra/**` or `tools/ensure_cluster.sh`
 - Manually via `workflow_dispatch`
 
-Runs `tools/cluster_setup.sh` to converge the cluster infrastructure:
+Also runs unconditionally as the first step of `cd.yml` (`Ensure cluster`) — so every deploy self-heals a degraded cluster without manual intervention.
+
+Runs `tools/ensure_cluster.sh`:
 1. Sync `/etc/rancher/k3s/config.yaml` and restart k3s if changed
 2. Sync k3s auto-deploy manifests to `/var/lib/rancher/k3s/server/manifests/`
+   (includes `probe-timeouts.yaml` — declarative `HelmChartConfig` for system component probe timeouts)
 3. Bootstrap Infisical machine identity as a Kubernetes Secret for ESO
 4. Wait for ESO to be ready
-5. Patch system component probe timeouts (headlamp, cert-manager-webhook, coredns)
-
-This is intentionally separate from `cd.yml` — cluster infra changes rarely and the setup steps are not needed on every app deploy.
 
 ---
 
@@ -158,7 +158,7 @@ Re-run CD via `workflow_dispatch` with the previous commit SHA. Helm will roll b
 ### One-time cluster bootstrap
 
 If setting up a fresh droplet:
-1. Run `tools/setup_k3s_tailscale.sh [user@host] [tailscale-auth-key]` to join the tailnet
+1. Run `tools/ensure_k3s_tailscale.sh [user@host] [tailscale-auth-key]` to join the tailnet
 2. Install k3s on the host manually (see `infra/k3s/`)
 3. Run `cluster-setup.yml` via `workflow_dispatch` to converge infra
 4. Run `cd.yml` via `workflow_dispatch` to deploy the app

@@ -5,8 +5,7 @@ on:
     branches: [main]
     paths:
       - "infra/**"
-      - "tools/cluster_setup.sh"
-      - "tools/patch_system_probes.sh"
+      - "tools/ensure_cluster.sh"
   workflow_dispatch:
 
 jobs:
