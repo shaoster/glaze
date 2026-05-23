@@ -145,10 +145,32 @@ jobs:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
         run: |
           ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" "
-            KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm upgrade --install glaze ~/glaze-chart-deploy/glaze/ \
-              -f ~/glaze-values-override.yaml \
-              --timeout 5m \
-              --wait
+            set -e
+            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+
+            # Free memory before deploy: scale otelcol to 0 so the API server
+            # has enough headroom to call admission webhooks without timing out.
+            kubectl scale deployment glaze-otelcol --replicas=0 2>/dev/null || true
+
+            # Retry up to 3 times — webhook timeouts on a memory-constrained node
+            # are transient; a brief pause lets the API server recover from swap.
+            for attempt in 1 2 3; do
+              if helm upgrade --install glaze ~/glaze-chart-deploy/glaze/ \
+                -f ~/glaze-values-override.yaml \
+                --timeout 5m \
+                --wait; then
+                break
+              fi
+              if [ \$attempt -lt 3 ]; then
+                echo \"Helm attempt \$attempt failed, retrying in 30s...\"
+                sleep 30
+              else
+                kubectl scale deployment glaze-otelcol --replicas=1 2>/dev/null || true
+                exit 1
+              fi
+            done
+
+            kubectl scale deployment glaze-otelcol --replicas=1 2>/dev/null || true
           "
 
 

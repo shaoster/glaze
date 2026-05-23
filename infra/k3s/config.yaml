@@ -5,3 +5,9 @@ kube-apiserver-arg:
   - "bind-address=127.0.0.1"
   - "max-requests-inflight=50"
   - "max-mutating-requests-inflight=20"
+kube-controller-manager-arg:
+  - "concurrent-deployment-syncs=2"
+  - "concurrent-replicaset-syncs=2"
+  - "concurrent-statefulset-syncs=2"
+  - "concurrent-service-syncs=1"
+  - "concurrent-job-syncs=2"
