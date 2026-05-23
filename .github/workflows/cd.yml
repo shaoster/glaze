@@ -79,8 +79,9 @@ jobs:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
         run: |
           # glaze-secrets must exist before the Helm pre-upgrade hook runs.
-          # It is synced by ESO from Infisical; cluster-setup ensures ESO is
-          # installed and has credentials. This step only polls for readiness.
+          # It is synced by ESO from Infisical. Prerequisite: cluster-setup.yml
+          # must have been run at least once so ESO is installed and has
+          # Infisical credentials. This step only polls — it does not install ESO.
           ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" '
             set -e
             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
@@ -100,9 +101,7 @@ jobs:
       - name: Deploy via Helm
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
-        run: |
-          chmod +x tools/helm_deploy.sh
-          tools/helm_deploy.sh "${DEPLOY_HOST}" chart/glaze /tmp/values-override.yaml
+        run: tools/helm_deploy.sh "${DEPLOY_HOST}" chart/glaze /tmp/values-override.yaml
 
       - name: Create GitHub Release
         # Chart-only push deploys reuse an existing image tag; DEPLOY_SHA is the

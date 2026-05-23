@@ -33,6 +33,4 @@ jobs:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
           INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
           INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-        run: |
-          chmod +x tools/cluster_setup.sh tools/patch_system_probes.sh
-          tools/cluster_setup.sh "${DEPLOY_HOST}"
+        run: tools/cluster_setup.sh "${DEPLOY_HOST}"

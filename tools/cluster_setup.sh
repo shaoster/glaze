@@ -67,7 +67,7 @@ $SSH "${DEPLOY_HOST}" '
 
 # ── System component probe patches ──────────────────────────────────────────
 echo "==> Patching system component probe timeouts..."
-$SCP tools/patch_system_probes.sh "${DEPLOY_HOST}":/tmp/patch_system_probes.sh
+$SCP "$(dirname "$0")/patch_system_probes.sh" "${DEPLOY_HOST}":/tmp/patch_system_probes.sh
 $SSH "${DEPLOY_HOST}" 'bash /tmp/patch_system_probes.sh'
 
 echo "==> Cluster setup complete."
