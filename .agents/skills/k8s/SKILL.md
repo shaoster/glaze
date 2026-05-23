@@ -49,6 +49,14 @@ export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 If the user has already established the host earlier in the conversation, use
 that value — don't ask again.
 
+## Tailnet-only ingresses
+
+Admin and Headlamp hostnames are intentionally reachable only over Tailscale.
+Their Traefik `IPAllowList` uses the Tailscale CGNAT range (`100.64.0.0/10`)
+rather than the pod-network bridge IP. If the CNI or Tailscale routing topology
+changes, recheck that the live source range still matches the allowlist before
+deploying any ingress change.
+
 ## Hitting the health endpoint from within the cluster
 
 `/api/health/ready/` is restricted to the k3s internal network by the
