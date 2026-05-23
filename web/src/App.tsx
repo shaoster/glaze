@@ -326,110 +326,6 @@ function AuthLanding({
   );
 }
 
-function UnauthenticatedApp({
-  onAuthenticated,
-}: {
-  onAuthenticated: (user: AuthUser) => void;
-}) {
-  const router = useMemo(
-    () =>
-      createBrowserRouter(
-        createRoutesFromElements(
-          <>
-            <Route
-              path="/"
-              element={<AuthLanding onAuthenticated={onAuthenticated} />}
-            />
-            <Route
-              path="/about"
-              element={
-                <ErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          py: 4,
-                        }}
-                      >
-                        <CircularProgress />
-                      </Box>
-                    }
-                  >
-                    <AboutPage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/privacy-policy"
-              element={
-                <ErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          py: 4,
-                        }}
-                      >
-                        <CircularProgress />
-                      </Box>
-                    }
-                  >
-                    <PrivacyPolicyPage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/terms-of-service"
-              element={
-                <ErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          py: 4,
-                        }}
-                      >
-                        <CircularProgress />
-                      </Box>
-                    }
-                  >
-                    <TermsOfServicePage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/pieces/:id/*"
-              element={<PublicPieceShell />}
-            />
-            <Route
-              path="/invite"
-              element={
-                <ErrorBoundary>
-                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
-                    <InvitePage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </>,
-        ),
-      ),
-    [onAuthenticated],
-  );
-
-  return <RouterProvider router={router} />;
-}
-
 function AppShell({
   currentUser,
   adminBaseUrl,
@@ -650,6 +546,110 @@ function AppShell({
       </PreferencesDialogProvider>
     </CurrentUserProvider>
   );
+}
+
+function UnauthenticatedApp({
+  onAuthenticated,
+}: {
+  onAuthenticated: (user: AuthUser) => void;
+}) {
+  const router = useMemo(
+    () =>
+      createBrowserRouter(
+        createRoutesFromElements(
+          <>
+            <Route
+              path="/"
+              element={<AuthLanding onAuthenticated={onAuthenticated} />}
+            />
+            <Route
+              path="/about"
+              element={
+                <ErrorBoundary>
+                  <Suspense
+                    fallback={
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "center",
+                          py: 4,
+                        }}
+                      >
+                        <CircularProgress />
+                      </Box>
+                    }
+                  >
+                    <AboutPage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/privacy-policy"
+              element={
+                <ErrorBoundary>
+                  <Suspense
+                    fallback={
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "center",
+                          py: 4,
+                        }}
+                      >
+                        <CircularProgress />
+                      </Box>
+                    }
+                  >
+                    <PrivacyPolicyPage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/terms-of-service"
+              element={
+                <ErrorBoundary>
+                  <Suspense
+                    fallback={
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "center",
+                          py: 4,
+                        }}
+                      >
+                        <CircularProgress />
+                      </Box>
+                    }
+                  >
+                    <TermsOfServicePage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/pieces/:id/*"
+              element={<PublicPieceShell />}
+            />
+            <Route
+              path="/invite"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <InvitePage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </>,
+        ),
+      ),
+    [onAuthenticated],
+  );
+
+  return <RouterProvider router={router} />;
 }
 
 function AuthenticatedApp({
