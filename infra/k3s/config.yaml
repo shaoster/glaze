@@ -7,8 +7,8 @@
 
 disable:
   # metrics-server: CPU/memory overhead not needed on single-node cluster.
-  # servicelb: Traefik now binds directly on hostNetwork, so the built-in
-  # LoadBalancer controller is unnecessary.
+  # servicelb: Traefik stays on hostPort for the public front door, while a
+  # separate Tailscale LoadBalancer Service handles the tailnet-only hostnames.
   - metrics-server
   - servicelb
 kube-apiserver-arg:

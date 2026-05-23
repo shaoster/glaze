@@ -181,42 +181,70 @@ helm upgrade --install glaze chart/glaze/ \
 The Django Admin (at both `potterdoc.com/admin/` and `admin.potterdoc.com/admin/`)
 and Headlamp (`headlamp.potterdoc.com`) are restricted by a Traefik `IPAllowList`
 middleware. You must be connected to Tailscale and use a DNS record that resolves
-to the droplet's Tailscale IP (`100.121.152.21`) to access them.
+to the Tailscale-assigned service IP to access them.
 
-### How the IP allowlist works
+### Tailnet Front Door
 
-Traefik runs with `hostNetwork` on this single-node cluster, so it receives the
-client source IP directly on the node rather than through the pod network. That
-lets the `IPAllowList` middleware reliably distinguish Tailscale traffic from
-everything else and keep admin/headlamp restricted to `100.64.0.0/10`.
+The admin subdomain and Headlamp are fronted by a dedicated Tailscale
+`LoadBalancer` Service, [`infra/k3s/traefik-tailscale.yaml`](traefik-tailscale.yaml).
+That service exposes Traefik's HTTPS port through the Tailscale operator and
+gives us a tailnet-routable `100.x` address to use for the DNS-only A records.
 
-This means the allowlist is enforced at the **DNS / routing layer**: admin
-hostnames resolve to the Tailscale IP (`100.121.152.21`) in Cloudflare as
-DNS-only (grey-cloud, reserved IP) records. Traffic that reaches the server via
-those records has traversed the Tailscale tunnel; traffic from the public IP
-(`159.223.154.68`) never matches those hostnames and is routed to public-facing
-ingresses only.
+This keeps the public `potterdoc.com` front door on the existing host-port
+ingress path while the admin/headlamp hostnames get a separate tailnet-facing
+front door. Traefik still terminates TLS with the cert-manager certificates and
+continues to apply the `tailscale-only` middleware on the admin routes.
 
-If the cluster ever moves to multi-node or a different CNI, revisit the Traefik
-host-network deployment and the CIDRs above together with the source-IP trust
-path.
+ExternalDNS watches that same Service and keeps the `admin.potterdoc.com` and
+`headlamp.potterdoc.com` A records pointed at the operator-assigned IP. We do
+not maintain those A records by hand anymore.
+
+### How to wire it up
+
+1. Create Tailscale OAuth client credentials with the `Services`, `Devices Core`
+   and `Auth Keys` write scopes.
+2. Install the Tailscale Kubernetes operator in the cluster.
+3. Apply [`infra/k3s/traefik-tailscale.yaml`](traefik-tailscale.yaml).
+4. Apply [`infra/k3s/external-dns.yaml`](external-dns.yaml).
+5. Wait for `kubectl get svc -n kube-system traefik-tailscale -o wide` to show
+   a `100.x` `EXTERNAL-IP`.
+6. If you source the Cloudflare token from Infisical, store it there under
+   `CLOUDFLARE_API_TOKEN`, then sync it into a Kubernetes Secret named
+   `cloudflare-api-token` in the `external-dns` namespace with the key
+   `api-token`. The same token also feeds cert-manager's DNS-01 solver through
+   the `cloudflare-api-token` secret in the `cert-manager` namespace.
+7. If you source the OAuth client from Infisical, store it there under
+   `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_CLIENT_SECRET`, then map
+   those values into a Kubernetes Secret named `tailscale-operator-oauth`
+   with the keys `client_id` and `client_secret` when you sync it into the
+   `tailscale` namespace.
+8. If your tailnet policy uses restrictive grants, add access for the users or
+   groups that should reach the service tag exposed by the operator (the
+   default tag is `tag:k8s` unless you override it on the Service).
+
+If you want to browse the operator-managed `*.ts.net` names directly, enable
+MagicDNS on the tailnet as well. The DNS-only A records do not require it, but
+MagicDNS makes the tailnet-assigned service name easier to look up and debug.
 
 ### DNS records (Cloudflare)
 
 | Hostname | Points to | Proxy |
 |---|---|---|
-| `admin.potterdoc.com` | `100.121.152.21` (Tailscale IP) | DNS only |
-| `headlamp.potterdoc.com` | `100.121.152.21` (Tailscale IP) | DNS only |
+| `admin.potterdoc.com` | Managed by ExternalDNS from `traefik-tailscale` | DNS only |
+| `headlamp.potterdoc.com` | Managed by ExternalDNS from `traefik-tailscale` | DNS only |
 | `potterdoc.com` | `159.223.154.68` (public IP) | Proxied |
 | `www.potterdoc.com` | `159.223.154.68` (public IP) | Proxied |
 
 ### Django Admin
 Available at `https://admin.potterdoc.com/admin/` and `https://potterdoc.com/admin/`.
-Both are guarded by the `tailscale-only` Traefik middleware. Connect to Tailscale
-before accessing either URL. The authenticated session is shared across the
-`potterdoc.com` and `admin.potterdoc.com` subdomains via a parent-domain Django
-cookie, so logging in once on the main site should also authenticate the admin
-subdomain after the browser refreshes `/api/auth/me/`.
+The subdomain is the tailnet-facing path and should be reached through the
+Tailscale service IP. ExternalDNS keeps that A record synced automatically.
+The apex admin path remains the public fallback and is still guarded by the
+Traefik middleware.
+The authenticated session is shared across the `potterdoc.com` and
+`admin.potterdoc.com` subdomains via a parent-domain Django cookie, so logging
+in once on the main site should also authenticate the admin subdomain after the
+browser refreshes `/api/auth/me/`.
 If the browser reaches the admin host before that shared cookie exists, the
 admin login view sends it back to the apex landing page to bootstrap the shared
 session there and then redirects back to the requested admin URL.

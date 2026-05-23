@@ -21,17 +21,6 @@ spec:
       podAnnotations:
         prometheus.io/port: "8082"
         prometheus.io/scrape: "true"
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
-      affinity:
-        # Traefik runs once per cluster node; keep a single replica away from
-        # any node that already has the ingress pod scheduled.
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchLabels:
-                  app.kubernetes.io/name: traefik
-              topologyKey: kubernetes.io/hostname
     providers:
       kubernetesIngress:
         publishedService:
@@ -47,4 +36,10 @@ spec:
       operator: "Exists"
       effect: "NoSchedule"
     service:
+      externalTrafficPolicy: "Local"
       ipFamilyPolicy: "PreferDualStack"
+    ports:
+      web:
+        hostPort: 80
+      websecure:
+        hostPort: 443
