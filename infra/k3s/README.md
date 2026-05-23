@@ -218,3 +218,16 @@ before accessing either URL.
 Available at `https://headlamp.potterdoc.com/`. Connect to Tailscale before
 accessing. The Cloudflare DNS record must remain DNS-only (grey cloud) — Cloudflare
 cannot proxy to a reserved/Tailscale IP.
+
+Headlamp requires a token to authenticate to the Kubernetes API. The token is
+stored as a long-lived ServiceAccount token in `kube-system/headlamp-token` and
+is tracked in `headlamp.yaml`. Retrieve it with:
+
+```bash
+ssh root@<droplet> "KUBECONFIG=/etc/rancher/k3s/k3s.yaml \
+  kubectl get secret headlamp-token -n kube-system \
+  -o jsonpath='{.data.token}' | base64 -d"
+```
+
+Paste it into the Headlamp login screen. Browsers store it in local storage so
+you only need to do this once per browser.
