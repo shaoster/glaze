@@ -300,6 +300,7 @@ if IS_PRODUCTION:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_SSL_REDIRECT = True
+    SECURE_REDIRECT_EXEMPT = [r"^api/health/"]
 
 # Remote ML Offloading (Modal)
 REMOTE_REMBG_URL = os.environ.get("REMOTE_REMBG_URL", "")

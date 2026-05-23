@@ -20,6 +20,9 @@ on:
       - "LICENSE.*"
       - "setup-*.sh"
       - "nginx/**"
+      - "chart/**"
+      - "infra/**"
+      - ".agents/**"
   pull_request:
     paths-ignore:
       - "**/*.md"
@@ -34,6 +37,9 @@ on:
       - "LICENSE.*"
       - "setup-*.sh"
       - "nginx/**"
+      - "chart/**"
+      - "infra/**"
+      - ".agents/**"
 
 jobs:
   preflight:
