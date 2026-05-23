@@ -220,33 +220,34 @@ jobs:
           # this single-core node. Patch them to 5s. kubectl patch is idempotent —
           # re-applying the same value is a no-op. The container name is required
           # as the strategic-merge key so only the named container is targeted.
-          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" "
+          # Single-quoted heredoc: no local shell expansion or escaping needed.
+          # Variables ($1, $deploy, etc.) and JSON quotes expand on the remote host.
+          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" << 'ENDSSH'
             set -e
             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
             patch_probe_timeout() {
-              local ns=\$1 deploy=\$2 container=\$3 timeout=\$4
+              local ns=$1 deploy=$2 container=$3 timeout=$4
               # &>/dev/null suppresses all output — both not-found and API errors.
-              # API errors would surface from kubectl patch below if get succeeds;
-              # in practice the Wait-for-cluster-dependencies step already confirmed
-              # API reachability before this runs.
-              if ! kubectl get deployment \$deploy -n \$ns &>/dev/null; then
-                echo \"Skipped \$ns/\$deploy (not found)\"
+              # API errors surface from kubectl patch below if the get succeeds;
+              # the Wait-for-cluster-dependencies step already confirmed reachability.
+              if ! kubectl get deployment $deploy -n $ns &>/dev/null; then
+                echo "Skipped $ns/$deploy (not found)"
                 return 0
               fi
-              kubectl patch deployment \$deploy -n \$ns --type=strategic-merge-patch -p \"{
-                \\\"spec\\\":{\\\"template\\\":{\\\"spec\\\":{\\\"containers\\\":[{
-                  \\\"name\\\":\\\"\$container\\\",
-                  \\\"livenessProbe\\\":{\\\"timeoutSeconds\\\":\$timeout},
-                  \\\"readinessProbe\\\":{\\\"timeoutSeconds\\\":\$timeout}
-                }]}}}}\"
-              echo \\\"Patched \$ns/\$deploy (timeoutSeconds=\$timeout)\\\"
+              kubectl patch deployment $deploy -n $ns --type=strategic-merge-patch -p "{
+                \"spec\":{\"template\":{\"spec\":{\"containers\":[{
+                  \"name\":\"$container\",
+                  \"livenessProbe\":{\"timeoutSeconds\":$timeout},
+                  \"readinessProbe\":{\"timeoutSeconds\":$timeout}
+                }]}}}}"
+              echo "Patched $ns/$deploy (timeoutSeconds=$timeout)"
             }
 
             patch_probe_timeout kube-system headlamp headlamp 5
             patch_probe_timeout cert-manager cert-manager-webhook cert-manager-webhook 5
             patch_probe_timeout kube-system coredns coredns 5
-          "
+          ENDSSH
 
       - name: Ship chart and render values override
         env:
