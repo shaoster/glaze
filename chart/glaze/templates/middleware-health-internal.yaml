@@ -12,4 +12,5 @@ spec:
     sourceRange:
       - {{ .Values.network.podCidr | quote }}
       - {{ .Values.network.serviceCidr | quote }}
+      - {{ .Values.network.tailscaleCidr | quote }}
 {{- end }}

@@ -145,3 +145,5 @@ network:
   podCidr: "10.42.0.0/16"
   # SINGLE-NODE: k3s service CIDR default. Revisit for multi-node/HA clusters.
   serviceCidr: "10.43.0.0/16"
+  # Tailscale CGNAT range — allows CD runner and other Tailscale nodes to reach /api/health/ready/.
+  tailscaleCidr: "100.64.0.0/10"
