@@ -25,7 +25,8 @@ For an **immediate** sync (e.g., suspected breach), see [Incident Response](inci
 | `SECRET_KEY` | n/a — script below | Invalidates all active user sessions |
 | `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | [Cloudinary Console](https://console.cloudinary.com) → Settings → Security | Rotate together |
 | `EMAIL_HOST_PASSWORD` | [Resend Dashboard](https://resend.com/api-keys) | Generate new key, revoke old |
-| `GRAFANA_CLOUD_OTLP_TOKEN` | Grafana Cloud stack → Details → OpenTelemetry / OTLP setup | Use the stack-scoped Cloud Access Policy token for OTLP, not a generic Grafana API key |
+| `GRAFANA_CLOUD_INSTANCE_ID` | Grafana Cloud stack → Details → OpenTelemetry / OTLP setup | Stack-scoped username used by the collector for Basic auth; rarely changes |
+| `GRAFANA_CLOUD_OTLP_TOKEN` | Grafana Cloud stack → Details → OpenTelemetry / OTLP setup | Raw stack-scoped Cloud Access Policy token for OTLP; only the collector consumes it |
 | `MODAL_AUTH_TOKEN` | Modal Dashboard → Settings → Auth Tokens | |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials | Select the OAuth 2.0 client, regenerate secret |
 | `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET` / `DROPBOX_REFRESH_TOKEN` | [Dropbox App Console](https://www.dropbox.com/developers/apps) | See Dropbox section below |
@@ -79,19 +80,18 @@ KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout restart deployment/glaze-we
 ### `GRAFANA_CLOUD_OTLP_TOKEN`
 
 1. Open your Grafana Cloud stack, then go to **Details** → **OpenTelemetry** or **Send Traces / OTLP**
-2. Use the stack-scoped OTLP setup flow to create or view a **Cloud Access Policy token** for that stack
-   - This is the token Grafana expects for OTLP ingest
+2. Use the stack-scoped OTLP setup flow to create or view the stack's **Cloud Access Policy token**
+   - This is the raw token Grafana expects for OTLP ingest
    - Do not use a generic org-wide API key
-3. Copy the values the setup flow provides
-   - For the current collector config, the secret in Infisical must contain the Basic-auth payload Grafana expects, not just the raw token
-   - In practice, that means the `base64(instance_id:token)` value used by the OTLP setup flow
-4. Update `GRAFANA_CLOUD_OTLP_TOKEN` in Infisical (`glaze-production` → `prod`)
+3. Copy the `instance_id` / user value shown in the same OTLP setup flow if you need to update it
+4. Update `GRAFANA_CLOUD_INSTANCE_ID` and `GRAFANA_CLOUD_OTLP_TOKEN` in Infisical (`glaze-production` → `prod`)
+   - The collector now builds the Basic auth header itself on startup
 5. Force an immediate ESO sync:
    ```bash
    KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl annotate externalsecret glaze-secrets \
      -n default force-sync=$(date +%s) --overwrite
    ```
-6. Restart otelcol to pick up the new token:
+6. Restart otelcol to pick up the new values:
    ```bash
    KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout restart deployment/glaze-otelcol
    ```

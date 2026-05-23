@@ -114,6 +114,7 @@ kubectl create secret generic glaze-secrets \
   --from-literal=CLOUDINARY_API_KEY=<value> \
   --from-literal=CLOUDINARY_API_SECRET=<value> \
   --from-literal=EMAIL_HOST_PASSWORD=<value> \
+  --from-literal=GRAFANA_CLOUD_INSTANCE_ID=<value> \
   --from-literal=GRAFANA_CLOUD_OTLP_TOKEN=<value> \
   --from-literal=MODAL_AUTH_TOKEN=<value> \
   --from-literal=GOOGLE_OAUTH_CLIENT_SECRET=<value> \

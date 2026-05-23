@@ -79,7 +79,6 @@ All are scoped to the `glaze-droplet` environment in **Settings -> Environments*
 | `CLOUDINARY_API_SECRET` | Secret | Cloudinary API secret |
 | `MODAL_TOKEN_ID` | Secret | Modal authentication token ID |
 | `MODAL_TOKEN_SECRET` | Secret | Modal authentication token secret |
-| `GRAFANA_CLOUD_OTLP_TOKEN` | Secret | Grafana Cloud OTLP ingest token |
 | `DROPBOX_APP_KEY` | Secret | Dropbox app key for the backup CronJob |
 | `DROPBOX_APP_SECRET` | Secret | Dropbox app secret for the backup CronJob |
 | `DROPBOX_REFRESH_TOKEN` | Secret | Dropbox OAuth refresh token for the backup CronJob |
@@ -93,6 +92,8 @@ All are scoped to the `glaze-droplet` environment in **Settings -> Environments*
 | `CLOUDINARY_PUBLIC_UPLOAD_FOLDER` | Variable | Cloudinary folder for public library images |
 | `REMOTE_REMBG_URL` | Variable | URL of the Modal segment microservice |
 | `OTEL_ENABLED` | Variable | Set to `true` to enable OpenTelemetry on startup |
+
+Grafana Cloud OTLP auth is handled through Infisical + ESO, so the CD workflow does not need the raw token or stack ID in GitHub secrets.
 
 ---
 
