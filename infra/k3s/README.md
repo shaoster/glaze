@@ -221,6 +221,9 @@ subdomain after the browser refreshes `/api/auth/me/`.
 If the browser reaches the admin host before that shared cookie exists, the
 admin login view sends it back to the apex landing page to bootstrap the shared
 session there and then redirects back to the requested admin URL.
+This bootstrap flow assumes `potterdoc.com` stays the canonical apex origin and
+`admin.potterdoc.com` stays the sibling admin hostname; if that split changes,
+revisit the redirect helper and cookie-domain assumptions together.
 
 The admin subdomain also proxies `/static/` to the web service so Django's
 admin CSS and JS can load from WhiteNoise. If either subdomain starts showing
