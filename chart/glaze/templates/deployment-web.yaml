@@ -33,7 +33,7 @@ spec:
                   value: {{ .Values.appConfig.allowedHost | default "localhost" | quote }}
             failureThreshold: 20
             periodSeconds: 5
-            timeoutSeconds: 5
+            timeoutSeconds: 10
           livenessProbe:
             httpGet:
               path: /api/health/ready/
