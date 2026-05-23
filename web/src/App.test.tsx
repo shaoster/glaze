@@ -98,7 +98,8 @@ import {
   logoutUser,
   validateInviteCode,
 } from "./util/api";
-import App, { getPostLoginRedirectTarget } from "./App";
+import App from "./App";
+import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
 
 const MOCK_OPENID_SUBJECT = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2";
 

@@ -48,6 +48,7 @@ import {
   updateUserPreferences,
   type UserPreferences,
 } from "./util/api";
+import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
 import { useAsync } from "./util/useAsync";
 import ErrorBoundary from "./components/ErrorBoundary";
 import PublicPieceShell from "./components/PublicPieceShell";
@@ -665,7 +666,7 @@ function UnauthenticatedApp({
           </>,
         ),
       ),
-    [onAuthenticated],
+    [onAuthenticated, redirectTo],
   );
 
   return <RouterProvider router={router} />;
@@ -758,36 +759,6 @@ function AuthenticatedApp({
   );
 
   return <RouterProvider router={router} />;
-}
-
-export function getPostLoginRedirectTarget(
-  currentHostname: string,
-  currentProtocol: string,
-  next: string | null,
-): string | null {
-  const apexHost = currentHostname.replace(/^www\./, "");
-  if (
-    !next ||
-    !apexHost ||
-    apexHost === "localhost" ||
-    apexHost.startsWith("admin.")
-  ) {
-    return null;
-  }
-
-  try {
-    const target = new URL(next, `${currentProtocol}//${currentHostname}`);
-    if (
-      target.protocol === currentProtocol &&
-      target.hostname === `admin.${apexHost}`
-    ) {
-      return target.toString();
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
 }
 
 // Re-export Link for use in components that need it outside the router
