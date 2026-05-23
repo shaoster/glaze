@@ -1,5 +1,38 @@
 load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_library")
 load("//:python.bzl", "pytest_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+# ── Shell script syntax checks ────────────────────────────────────────────────
+
+sh_test(
+    name = "test_patch_system_probes_syntax",
+    srcs = ["tests/test_patch_system_probes.sh"],
+    data = ["patch_system_probes.sh"],
+)
+
+sh_test(
+    name = "test_cluster_setup_syntax",
+    srcs = ["tests/test_cluster_setup_syntax.sh"],
+    data = ["cluster_setup.sh", "patch_system_probes.sh"],
+)
+
+sh_test(
+    name = "test_helm_deploy_syntax",
+    srcs = ["tests/test_helm_deploy_syntax.sh"],
+    data = ["helm_deploy.sh"],
+)
+
+sh_test(
+    name = "test_render_values_syntax",
+    srcs = ["tests/test_render_values_syntax.sh"],
+    data = ["render_values.sh"],
+)
+
+sh_test(
+    name = "test_setup_k3s_tailscale_syntax",
+    srcs = ["tests/test_setup_k3s_tailscale_syntax.sh"],
+    data = ["setup_k3s_tailscale.sh"],
+)
 
 # ── Pytest runner ─────────────────────────────────────────────────────────────
 # Shared entry point for all py_test targets. Each test BUILD file lists this

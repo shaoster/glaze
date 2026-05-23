@@ -11,7 +11,6 @@ on:
     branches: [main]
     paths:
       - "chart/**"
-      - "infra/**"
   workflow_dispatch:
     inputs:
       sha:
@@ -38,45 +37,6 @@ jobs:
         with:
           ref: ${{ env.DEPLOY_SHA }}
 
-      - name: Verify deploy inputs
-        env:
-          DEPLOY_HOST_TAILSCALE: ${{ vars.DEPLOY_HOST_TAILSCALE }}
-          TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
-          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
-          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-          INFISICAL_PROJECT_SLUG: ${{ vars.INFISICAL_PROJECT_SLUG }}
-          ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
-          APP_ORIGIN: ${{ vars.APP_ORIGIN }}
-          GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
-          CLOUDINARY_CLOUD_NAME: ${{ vars.CLOUDINARY_CLOUD_NAME }}
-          CLOUDINARY_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_UPLOAD_FOLDER }}
-          CLOUDINARY_UPLOAD_PRESET: ${{ vars.CLOUDINARY_UPLOAD_PRESET }}
-          CLOUDINARY_PUBLIC_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_PUBLIC_UPLOAD_FOLDER }}
-          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
-          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-        run: |
-          critical="DEPLOY_HOST_TAILSCALE TAILSCALE_AUTH_KEY INFISICAL_CLIENT_ID INFISICAL_CLIENT_SECRET INFISICAL_PROJECT_SLUG ALLOWED_HOST APP_ORIGIN CLOUDINARY_CLOUD_NAME CLOUDINARY_UPLOAD_FOLDER CLOUDINARY_UPLOAD_PRESET CLOUDINARY_PUBLIC_UPLOAD_FOLDER"
-          features="MODAL_TOKEN_ID MODAL_TOKEN_SECRET"
-
-          missing_critical=0
-          for name in $critical; do
-            if [ -z "${!name:-}" ]; then
-              echo "CRITICAL: $name is required for deploy." >&2
-              missing_critical=1
-            fi
-          done
-
-          if [ "$missing_critical" -ne 0 ]; then
-            exit 1
-          fi
-
-          echo "All critical variables present. Checking optional feature variables..."
-          for name in $features; do
-            if [ -z "${!name:-}" ]; then
-              echo "WARNING: $name is missing. Some features may be disabled or use defaults."
-            fi
-          done
-
       - name: Connect to Tailscale
         uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade  # v3
         with:
@@ -87,171 +47,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Chart-only pushes (chart/** or infra/** without a CI run) have no
-          # Docker image built for github.sha. Reuse the most recently deployed
-          # image tag from the latest GitHub release instead.
+          # Chart-only pushes (chart/** without a CI run) have no Docker image
+          # built for github.sha. Reuse the most recently deployed image tag
+          # from the latest GitHub release instead.
           if [ "${{ github.event_name }}" = "push" ] && [ -z "${{ github.event.workflow_run.head_sha }}" ]; then
             IMAGE_TAG=$(gh release list --repo ${{ github.repository }} --limit 1 --json tagName --jq '.[0].tagName' | sed 's/release-//')
             if [ -z "$IMAGE_TAG" ]; then
               echo "ERROR: Could not resolve image tag from latest release." >&2
               exit 1
             fi
-            echo "Chart-only deploy: reusing image tag $IMAGE_TAG (not ${{ github.sha }})"
+            echo "Chart-only deploy: reusing image tag $IMAGE_TAG"
           else
             IMAGE_TAG="${{ env.DEPLOY_SHA }}"
           fi
           echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
 
-      - name: Bootstrap ESO credentials
+      - name: Render Helm values override
         env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
-          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
-          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-        run: |
-          # Push Infisical machine identity to cluster so ESO can authenticate.
-          # ESO owns the full glaze-secrets sync from here; CD no longer manages app secrets.
-          # Pipe a manifest via stdin to avoid SSH AcceptEnv restrictions on the remote host.
-          CLIENT_ID_B64=$(echo -n "${INFISICAL_CLIENT_ID}" | base64 -w0)
-          CLIENT_SECRET_B64=$(echo -n "${INFISICAL_CLIENT_SECRET}" | base64 -w0)
-          printf 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: infisical-auth\ntype: Opaque\ndata:\n  clientId: %s\n  clientSecret: %s\n' \
-            "${CLIENT_ID_B64}" "${CLIENT_SECRET_B64}" | \
-          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" \
-            'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -'
-
-      - name: Sync k3s server config and restart if changed
-        env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
-        run: |
-          # config.yaml is the k3s server config (not a k8s manifest). Sync it to
-          # /etc/rancher/k3s/config.yaml and restart k3s only if it changed, since
-          # a restart briefly takes down the cluster API.
-          scp -o StrictHostKeyChecking=no infra/k3s/config.yaml \
-            "${DEPLOY_HOST}":/tmp/k3s-config-new.yaml
-          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" '
-            if ! cmp -s /tmp/k3s-config-new.yaml /etc/rancher/k3s/config.yaml; then
-              echo "k3s config changed — applying and restarting k3s..."
-              cp /tmp/k3s-config-new.yaml /etc/rancher/k3s/config.yaml
-              systemctl restart k3s
-              echo "Waiting for k3s API to come back..."
-              for i in $(seq 1 30); do
-                KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get nodes &>/dev/null && break
-                [ $i -eq 30 ] && echo "ERROR: k3s did not recover after restart" && exit 1
-                sleep 5
-              done
-              echo "k3s restarted and ready."
-            else
-              echo "k3s config unchanged — skipping restart."
-            fi
-          '
-
-      - name: Sync k3s manifests
-        env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
-        run: |
-          for f in infra/k3s/*.yaml; do
-            # config.yaml is a k3s server config, not a Kubernetes manifest.
-            # It belongs at /etc/rancher/k3s/config.yaml and must never be
-            # placed in the manifests directory (k3s would try to apply it as
-            # a Kubernetes resource and spam "Object 'Kind' is missing" errors).
-            [ "$(basename "$f")" = "config.yaml" ] && continue
-            scp -o StrictHostKeyChecking=no "$f" \
-              "${DEPLOY_HOST}":/var/lib/rancher/k3s/server/manifests/"$(basename "$f")"
-          done
-
-      - name: Wait for cluster dependencies
-        env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
-        run: |
-          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" "
-            set -e
-            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-
-            # Wait for the ESO HelmChart install job to finish if it is running.
-            # The k3s manifest sync above may have triggered a fresh install or
-            # upgrade; we must not proceed until the controller is actually up.
-            kubectl wait --for=condition=complete \
-              job/helm-install-external-secrets -n kube-system \
-              --timeout=180s 2>/dev/null || true
-
-            kubectl rollout status deployment/external-secrets \
-              -n external-secrets --timeout=120s
-
-            # Guard against the ExternalSecret CRD being absent. This can happen
-            # if ESO was reinstalled (helm uninstall deletes templated CRDs).
-            # Use --show-only to apply only the CRD templates, not the full chart,
-            # to avoid creating spurious deployments outside the Helm release.
-            if ! kubectl get crd externalsecrets.external-secrets.io &>/dev/null; then
-              echo 'ExternalSecret CRD missing — applying from chart...'
-              helm repo add external-secrets https://charts.external-secrets.io 2>/dev/null || true
-              helm repo update external-secrets
-              helm template eso-crds external-secrets/external-secrets \
-                --version 2.5.0 \
-                --set installCRDs=true \
-                --show-only templates/crds/externalsecret.yaml \
-                --show-only templates/crds/clustersecretstore.yaml \
-                --show-only templates/crds/secretstore.yaml \
-                --show-only templates/crds/clusterexternalsecret.yaml \
-                | kubectl apply --server-side -f -
-            fi
-
-            # Wait for glaze-secrets to be synced from Infisical before the app
-            # deploys. Without this, the pre-upgrade helm hook (deploy-init job)
-            # runs before ExternalSecret is applied and deadlocks: it needs
-            # glaze-secrets, which ESO can only create after helm applies
-            # ExternalSecret as a regular resource post-hook.
-            echo 'Waiting for glaze-secrets to be synced from Infisical...'
-            for i in \$(seq 1 36); do
-              kubectl get secret glaze-secrets -n default &>/dev/null && break
-              [ \$i -eq 36 ] && echo 'ERROR: glaze-secrets not synced after 3m' && exit 1
-              eso_status=\$(kubectl get externalsecret glaze-secrets -n default \
-                -o jsonpath='{.status.conditions[0].message}' 2>/dev/null || echo 'ExternalSecret not yet applied')
-              echo \"  [\$i/36] \$eso_status\"
-              sleep 5
-            done
-            echo 'glaze-secrets is ready.'
-          "
-
-      - name: Patch system component probe timeouts
-        env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
-        run: |
-          # System components (headlamp, cert-manager-webhook, coredns) ship with
-          # timeoutSeconds: 1 probes, which spuriously fail under CPU pressure on
-          # this single-core node. Patch them to 5s. kubectl patch is idempotent —
-          # re-applying the same value is a no-op. The container name is required
-          # as the strategic-merge key so only the named container is targeted.
-          # Single-quoted heredoc: no local shell expansion or escaping needed.
-          # Variables ($1, $deploy, etc.) and JSON quotes expand on the remote host.
-          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" << 'ENDSSH'
-            set -e
-            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-
-            patch_probe_timeout() {
-              local ns=$1 deploy=$2 container=$3 timeout=$4
-              # &>/dev/null suppresses all output — both not-found and API errors.
-              # API errors surface from kubectl patch below if the get succeeds;
-              # the Wait-for-cluster-dependencies step already confirmed reachability.
-              if ! kubectl get deployment $deploy -n $ns &>/dev/null; then
-                echo "Skipped $ns/$deploy (not found)"
-                return 0
-              fi
-              kubectl patch deployment $deploy -n $ns --type=strategic-merge-patch -p "{
-                \"spec\":{\"template\":{\"spec\":{\"containers\":[{
-                  \"name\":\"$container\",
-                  \"livenessProbe\":{\"timeoutSeconds\":$timeout},
-                  \"readinessProbe\":{\"timeoutSeconds\":$timeout}
-                }]}}}}"
-              echo "Patched $ns/$deploy (timeoutSeconds=$timeout)"
-            }
-
-            patch_probe_timeout kube-system headlamp headlamp 5
-            patch_probe_timeout cert-manager cert-manager-webhook cert-manager-webhook 5
-            patch_probe_timeout kube-system coredns coredns 5
-          ENDSSH
-
-      - name: Ship chart and render values override
-        env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
+          INFISICAL_PROJECT_SLUG: ${{ vars.INFISICAL_PROJECT_SLUG }}
           ALLOWED_HOST: ${{ vars.ALLOWED_HOST }}
           APP_ORIGIN: ${{ vars.APP_ORIGIN }}
           GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
@@ -259,107 +72,37 @@ jobs:
           CLOUDINARY_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_UPLOAD_FOLDER }}
           CLOUDINARY_UPLOAD_PRESET: ${{ vars.CLOUDINARY_UPLOAD_PRESET }}
           CLOUDINARY_PUBLIC_UPLOAD_FOLDER: ${{ vars.CLOUDINARY_PUBLIC_UPLOAD_FOLDER }}
-          INFISICAL_PROJECT_SLUG: ${{ vars.INFISICAL_PROJECT_SLUG }}
+        run: tools/render_values.sh > /tmp/values-override.yaml
+
+      - name: Wait for glaze-secrets
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
         run: |
-          cat > /tmp/values-override.yaml << EOF
-          image:
-            tag: "${IMAGE_TAG}"
-          infisical:
-            projectSlug: "${INFISICAL_PROJECT_SLUG}"
-          appConfig:
-            allowedHost: "${ALLOWED_HOST}"
-            appOrigin: "${APP_ORIGIN}"
-            googleOauthClientId: "${GOOGLE_OAUTH_CLIENT_ID}"
-            cloudinaryCloudName: "${CLOUDINARY_CLOUD_NAME}"
-            cloudinaryUploadFolder: "${CLOUDINARY_UPLOAD_FOLDER}"
-            cloudinaryUploadPreset: "${CLOUDINARY_UPLOAD_PRESET}"
-            cloudinaryPublicUploadFolder: "${CLOUDINARY_PUBLIC_UPLOAD_FOLDER}"
-          ingress:
-            hosts:
-              - host: "${ALLOWED_HOST}"
-                paths:
-                  - path: /
-                    pathType: ImplementationSpecific
-            tls:
-              - secretName: glaze-tls
-                hosts:
-                  - "${ALLOWED_HOST}"
-          EOF
-          scp -o StrictHostKeyChecking=no -r chart/glaze "${DEPLOY_HOST}":~/glaze-chart-deploy/
-          scp -o StrictHostKeyChecking=no /tmp/values-override.yaml "${DEPLOY_HOST}":~/glaze-values-override.yaml
+          # glaze-secrets must exist before the Helm pre-upgrade hook runs.
+          # It is synced by ESO from Infisical; cluster-setup ensures ESO is
+          # installed and has credentials. This step only polls for readiness.
+          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" '
+            set -e
+            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+            echo "Waiting for glaze-secrets to be synced from Infisical..."
+            for i in $(seq 1 36); do
+              kubectl get secret glaze-secrets -n default &>/dev/null && break
+              [ $i -eq 36 ] && echo "ERROR: glaze-secrets not synced after 3m" && exit 1
+              eso_status=$(kubectl get externalsecret glaze-secrets -n default \
+                -o jsonpath="{.status.conditions[0].message}" 2>/dev/null \
+                || echo "ExternalSecret not yet applied")
+              echo "  [$i/36] $eso_status"
+              sleep 5
+            done
+            echo "glaze-secrets is ready."
+          '
 
       - name: Deploy via Helm
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
         run: |
-          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" "
-            set -e
-            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-
-            # If a previous deploy was cancelled mid-flight, Helm leaves the
-            # release in pending-upgrade and refuses all subsequent operations.
-            # Roll back to the last successful revision to clear the lock.
-            helm_status=\$(helm status glaze -n default -o json 2>/dev/null \
-              | python3 -c 'import sys,json; print(json.load(sys.stdin)["info"]["status"])' \
-              2>/dev/null || echo "")
-            if [[ "\$helm_status" == *pending* ]]; then
-              echo "Helm release is stuck in '\$helm_status' — rolling back to clear lock..."
-              helm rollback glaze -n default --wait --timeout 2m
-            fi
-
-            helm_upgrade() {
-              helm upgrade --install glaze ~/glaze-chart-deploy/glaze/ \
-                -f ~/glaze-values-override.yaml \
-                --timeout 5m \
-                --wait &
-              HELM_PID=\$!
-
-              while kill -0 \$HELM_PID 2>/dev/null; do
-                sleep 15
-                echo '--- pod status ---'
-                kubectl get pods -n default --no-headers \
-                  | grep -v ' Running \| Completed \| Succeeded ' || echo '  (all pods nominal)'
-                echo '--- recent events ---'
-                kubectl get events -n default --sort-by=.lastTimestamp \
-                  | grep -v Normal | tail -5 || true
-              done
-
-              wait \$HELM_PID
-            }
-
-            show_failure_context() {
-              echo '=== DEPLOY FAILED: pod detail ==='
-              kubectl get pods -n default
-              echo '=== unhealthy pod logs (last 30 lines each) ==='
-              kubectl get pods -n default --no-headers \
-                | grep -v ' Running \| Completed \| Succeeded ' \
-                | awk '{print \$1}' \
-                | while read pod; do
-                    echo "--- \$pod ---"
-                    kubectl logs \$pod -n default --tail=30 2>/dev/null \
-                      || kubectl describe pod \$pod -n default | tail -20
-                  done
-              echo '=== warning events ==='
-              kubectl get events -n default --sort-by=.lastTimestamp \
-                | grep -v Normal | tail -20
-            }
-
-            # Retry up to 3 times — transient I/O pressure during rollout can
-            # occasionally cause API server timeouts.
-            for attempt in 1 2 3; do
-              if helm_upgrade; then
-                break
-              fi
-              show_failure_context
-              if [ \$attempt -lt 3 ]; then
-                echo \"Helm attempt \$attempt failed, retrying in 30s...\"
-                sleep 30
-              else
-                exit 1
-              fi
-            done
-          "
-
+          chmod +x tools/helm_deploy.sh
+          tools/helm_deploy.sh "${DEPLOY_HOST}" chart/glaze /tmp/values-override.yaml
 
       - name: Create GitHub Release
         # Chart-only push deploys reuse an existing image tag; DEPLOY_SHA is the
