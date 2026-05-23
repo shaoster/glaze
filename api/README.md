@@ -40,6 +40,19 @@ Per-user data isolation rules:
 - Detail/update endpoints fetch objects from a user-filtered queryset. If another user's ID is requested, the API returns `404` (not `403`) to avoid leaking object existence.
 - Global reference entries are user-scoped; names are unique per user (for example, two users can both have a `Location` named "Kiln A" without colliding).
 
+## Testing
+
+The API Bazel test targets in [`api/BUILD.bazel`](./BUILD.bazel) set
+`DJANGO_SETTINGS_MODULE=backend.test_settings` through the shared `_TEST_ENV`
+for the default test harness. That keeps the suite on the self-contained test
+settings module instead of importing `backend.settings` for every run.
+
+This buys us two things: smaller test dependencies, and better Bazel cache
+behavior because the default suite no longer inherits production-only settings
+branches that can change unrelated test outcomes. In practice, that means the
+API tests start faster, stay easier to reason about, and only depend on the
+settings surface the tests actually need.
+
 ## Django management
 
 | Command                   | Description                     |
