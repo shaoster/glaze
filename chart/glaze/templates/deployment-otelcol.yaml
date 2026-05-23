@@ -42,6 +42,8 @@ spec:
           ports:
             - containerPort: 4317
               name: otlp-grpc
+          resources:
+            {{- toYaml .Values.otelcol.resources | nindent 12 }}
           volumeMounts:
             - name: config
               mountPath: /etc/otel/config.yml
