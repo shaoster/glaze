@@ -204,6 +204,17 @@ jobs:
             set -e
             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
+            # If a previous deploy was cancelled mid-flight, Helm leaves the
+            # release in pending-upgrade and refuses all subsequent operations.
+            # Roll back to the last successful revision to clear the lock.
+            helm_status=\$(helm status glaze -n default -o json 2>/dev/null \
+              | python3 -c "import sys,json; print(json.load(sys.stdin)['info']['status'])" \
+              2>/dev/null || echo "")
+            if [[ "\$helm_status" == *pending* ]]; then
+              echo "Helm release is stuck in '\$helm_status' — rolling back to clear lock..."
+              helm rollback glaze -n default --wait --timeout 2m
+            fi
+
             # Retry up to 3 times — transient I/O pressure during rollout can
             # occasionally cause API server timeouts.
             for attempt in 1 2 3; do
