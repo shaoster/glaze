@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from django.contrib.auth.models import User
+from django.test import Client
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
@@ -216,6 +217,23 @@ class TestAuthMe:
         request = factory.get("/api/auth/me/")
         response = auth_views.auth_me(request)
         assert response.status_code == 503
+
+    def test_refreshes_session_cookie_for_shared_admin_domain(
+        self, user, settings
+    ):
+        settings.GOOGLE_OAUTH_CLIENT_ID = "my-client-id"
+        settings.SESSION_COOKIE_DOMAIN = ".potterdoc.com"
+
+        browser = Client()
+        browser.force_login(user)
+
+        response = browser.get("/api/auth/me/")
+
+        assert response.status_code == 200
+        assert (
+            response.cookies[settings.SESSION_COOKIE_NAME]["domain"]
+            == ".potterdoc.com"
+        )
 
 
 @pytest.mark.django_db

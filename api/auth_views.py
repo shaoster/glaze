@@ -114,11 +114,19 @@ def auth_me(request: Request) -> Response:
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
     user = request.user if request.user.is_authenticated else None
+    if user is not None and getattr(settings, "SESSION_COOKIE_DOMAIN", None):
+        # Re-issue the authenticated session with the shared parent-domain
+        # cookie so the admin subdomain can receive the same login state.
+        request.session.modified = True
     admin_host = settings.ADMIN_INGRESS_HOST
     return Response(
         {
             "googleOauthClientId": client_id,
-            "adminBaseUrl": f"https://{admin_host}" if (request.user.is_staff and admin_host) else None,
+            "adminBaseUrl": (
+                f"https://{admin_host}"
+                if (request.user.is_staff and admin_host)
+                else None
+            ),
             "user": AuthUserSerializer(user).data if user else None,
         }
     )
