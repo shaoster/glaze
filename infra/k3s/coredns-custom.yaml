@@ -1,0 +1,20 @@
+# WHY: k3s's coredns manifest reads /run/systemd/resolve/resolv.conf (the uplink
+# resolver) instead of the systemd-resolved stub at 127.0.0.53, to avoid
+# Tailscale injecting extra nameservers that exceed the 3-nameserver pod limit.
+# However, the DigitalOcean uplink resolv.conf has a duplicate 67.207.67.3 entry,
+# which triggers a DNSConfigForming warning on every pod:
+#   "Nameserver limits were exceeded, some nameservers have been omitted"
+#
+# The k3s coredns Deployment mounts a ConfigMap named "coredns-custom" (optional)
+# at /etc/coredns/custom/, and the Corefile already contains:
+#   import /etc/coredns/custom/*.override
+# This file overrides the forward directive with the two unique DO nameservers,
+# bypassing the node resolv.conf entirely for upstream resolution.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+data:
+  forward.override: |
+    forward . 67.207.67.2 67.207.67.3
