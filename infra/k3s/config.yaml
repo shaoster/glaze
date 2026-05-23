@@ -11,3 +11,9 @@ kube-controller-manager-arg:
   - "concurrent-statefulset-syncs=2"
   - "concurrent-service-syncs=1"
   - "concurrent-job-syncs=2"
+# Use the uplink resolv.conf (direct DigitalOcean nameservers) instead of the
+# systemd-resolved stub. The stub resolver path (/etc/resolv.conf → 127.0.0.53)
+# causes kubelet to see Tailscale's extra nameservers and exceed the 3-nameserver
+# pod limit, producing continuous DNSConfigForming warnings in every pod.
+kubelet-arg:
+  - "resolv-conf=/run/systemd/resolve/resolv.conf"
