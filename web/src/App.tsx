@@ -432,10 +432,12 @@ function UnauthenticatedApp({
 
 function AppShell({
   currentUser,
+  adminBaseUrl,
   onLogout,
   onCurrentUserUpdated,
 }: {
   currentUser: AuthUser;
+  adminBaseUrl: string | null;
   onLogout: () => void;
   onCurrentUserUpdated: (user: AuthUser) => void;
 }) {
@@ -600,16 +602,18 @@ function AppShell({
                     </ListItemIcon>
                     Cloudinary Cleanup
                   </MenuItem>
-                  <MenuItem
-                    component="a"
-                    href="/admin/"
-                    onClick={() => setMenuAnchor(null)}
-                  >
-                    <ListItemIcon>
-                      <AdminPanelSettingsIcon fontSize="small" />
-                    </ListItemIcon>
-                    Admin Tool
-                  </MenuItem>
+                  {adminBaseUrl && (
+                    <MenuItem
+                      component="a"
+                      href={`${adminBaseUrl}/admin/`}
+                      onClick={() => setMenuAnchor(null)}
+                    >
+                      <ListItemIcon>
+                        <AdminPanelSettingsIcon fontSize="small" />
+                      </ListItemIcon>
+                      Admin Tool
+                    </MenuItem>
+                  )}
                 </>
               ) : null}
               <MenuItem
@@ -650,10 +654,12 @@ function AppShell({
 
 function AuthenticatedApp({
   currentUser,
+  adminBaseUrl,
   onLogout,
   onCurrentUserUpdated,
 }: {
   currentUser: AuthUser;
+  adminBaseUrl: string | null;
   onLogout: () => void;
   onCurrentUserUpdated: (user: AuthUser) => void;
 }) {
@@ -665,6 +671,7 @@ function AuthenticatedApp({
             element={
               <AppShell
                 currentUser={currentUser}
+                adminBaseUrl={adminBaseUrl}
                 onLogout={onLogout}
                 onCurrentUserUpdated={onCurrentUserUpdated}
               />
@@ -787,6 +794,7 @@ export default function App() {
         ) : init?.user ? (
           <AuthenticatedApp
             currentUser={init.user}
+            adminBaseUrl={init.adminBaseUrl}
             onLogout={handleLogout}
             onCurrentUserUpdated={handleCurrentUserUpdated}
           />

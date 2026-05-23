@@ -13,6 +13,7 @@ import type { ManualSquareCropImportResponse } from "../../util/api";
 import type { UploadedRecord } from "./glazeImportToolTypes";
 
 interface GlazeImportReconcileStageProps {
+  adminBaseUrl: string | null;
   duplicateResults: ManualSquareCropImportResponse["results"];
   records: UploadedRecord[];
   reconciledIds: Set<string>;
@@ -20,6 +21,7 @@ interface GlazeImportReconcileStageProps {
 }
 
 export default function GlazeImportReconcileStage({
+  adminBaseUrl,
   duplicateResults,
   records,
   reconciledIds,
@@ -39,8 +41,8 @@ export default function GlazeImportReconcileStage({
       <Stack spacing={2}>
         {duplicateResults.map((result) => {
           const sourceRecord = records.find((record) => record.id === result.client_id);
-          const adminPath = result.object_id
-            ? `/admin/api/${result.kind.replace("_", "")}/${result.object_id}/change/`
+          const adminPath = result.object_id && adminBaseUrl
+            ? `${adminBaseUrl}/admin/api/${result.kind.replace("_", "")}/${result.object_id}/change/`
             : null;
           const isResolved = reconciledIds.has(result.client_id);
           return (

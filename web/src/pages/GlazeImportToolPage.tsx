@@ -23,10 +23,13 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import MergeIcon from "@mui/icons-material/MergeType";
 import {
   extractErrorMessage,
+  fetchAppInit,
   importManualSquareCropRecords,
+  fetchAppInit,
   type CloudinaryWidgetConfig,
   type ManualSquareCropImportResponse,
 } from "../util/api";
+import { useAsync } from "../util/useAsync";
 import { openCloudinaryUploadWidget } from "../util/cloudinaryUpload";
 import GlazeImportCropStage from "./glazeImportTool/GlazeImportCropStage";
 import GlazeImportImportStage from "./glazeImportTool/GlazeImportImportStage";
@@ -73,6 +76,8 @@ function buildCloudinaryJpgUrl(
   return `https://res.cloudinary.com/${config.cloud_name}/image/upload/f_jpg/${publicId}.jpg`;
 }
 export default function GlazeImportToolPage() {
+  const { data: appInit } = useAsync(fetchAppInit);
+  const adminBaseUrl = appInit?.adminBaseUrl ?? null;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const recordsRef = useRef<UploadedRecord[]>([]);
 
@@ -623,6 +628,7 @@ export default function GlazeImportToolPage() {
 
       {activeTab === TAB_IMPORT ? (
         <GlazeImportImportStage
+          adminBaseUrl={adminBaseUrl}
           allReviewed={allReviewed}
           importRunning={importRunning}
           importError={importError}
@@ -638,6 +644,7 @@ export default function GlazeImportToolPage() {
 
       {activeTab === TAB_RECONCILE ? (
         <GlazeImportReconcileStage
+          adminBaseUrl={adminBaseUrl}
           duplicateResults={duplicateResults}
           records={records}
           reconciledIds={reconciledIds}
