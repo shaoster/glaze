@@ -40,6 +40,10 @@ Per-user data isolation rules:
 - Detail/update endpoints fetch objects from a user-filtered queryset. If another user's ID is requested, the API returns `404` (not `403`) to avoid leaking object existence.
 - Global reference entries are user-scoped; names are unique per user (for example, two users can both have a `Location` named "Kiln A" without colliding).
 
+## Testing
+
+API tests default to `backend.test_settings`.
+
 ## Django management
 
 | Command                   | Description                     |

@@ -383,6 +383,7 @@ Name uniqueness for public globals is enforced with two conditional DB constrain
 - Every new API endpoint or serializer change → add or update a test under `api/tests/`.
 - Every new or modified `api/workflow.py` helper → add or update a test in `api/tests/test_workflow_helpers.py`, patching `_STATE_MAP` / `_GLOBALS_MAP` via `monkeypatch`.
 - **New global domain models**: adding a new entry to `workflow.yml` and running `makemigrations` is sufficient — `_register_globals()` auto-generates and registers the model at import time. The generated class is automatically enrolled in the parameterised test suites in `api/tests/test_globals.py`. No manual model or test additions are needed for registry invariants — focus new tests on model-specific constraints and API behavior instead. Set `factory: false` only if the global needs a hand-written model class with bespoke logic.
+- API tests default to `backend.test_settings`.
 
 ---
 
