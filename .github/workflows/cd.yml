@@ -5,6 +5,13 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  # Chart-only pushes skip CI entirely (chart/** is in CI paths-ignore).
+  # Trigger CD directly so helm changes don't require a manual dispatch.
+  push:
+    branches: [main]
+    paths:
+      - "chart/**"
+      - "infra/**"
   workflow_dispatch:
     inputs:
       sha:
@@ -19,7 +26,7 @@ jobs:
   deploy:
     name: Deploy to droplet
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     environment: glaze-droplet
     concurrency:
       group: deploy-production
@@ -283,7 +290,7 @@ jobs:
   deploy-modal:
     name: Deploy Services to Modal
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     steps:
       - uses: actions/checkout@v5
         with:
