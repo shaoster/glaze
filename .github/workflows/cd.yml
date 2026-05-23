@@ -118,6 +118,32 @@ jobs:
           ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" \
             'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -'
 
+      - name: Sync k3s server config
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
+        run: |
+          # config.yaml is the k3s server config (not a k8s manifest). Sync it to
+          # /etc/rancher/k3s/config.yaml and restart k3s only if it changed, since
+          # a restart briefly takes down the cluster API.
+          scp -o StrictHostKeyChecking=no infra/k3s/config.yaml \
+            "${DEPLOY_HOST}":/tmp/k3s-config-new.yaml
+          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" '
+            if ! cmp -s /tmp/k3s-config-new.yaml /etc/rancher/k3s/config.yaml; then
+              echo "k3s config changed — applying and restarting k3s..."
+              cp /tmp/k3s-config-new.yaml /etc/rancher/k3s/config.yaml
+              systemctl restart k3s
+              echo "Waiting for k3s API to come back..."
+              for i in $(seq 1 30); do
+                KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get nodes &>/dev/null && break
+                [ $i -eq 30 ] && echo "ERROR: k3s did not recover after restart" && exit 1
+                sleep 5
+              done
+              echo "k3s restarted and ready."
+            else
+              echo "k3s config unchanged — skipping restart."
+            fi
+          '
+
       - name: Sync k3s manifests
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
@@ -183,6 +209,36 @@ jobs:
               sleep 5
             done
             echo 'glaze-secrets is ready.'
+          "
+
+      - name: Patch system component probe timeouts
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
+        run: |
+          # System components (headlamp, cert-manager-webhook, coredns) ship with
+          # timeoutSeconds: 1 probes, which spuriously fail under CPU pressure on
+          # this single-core node. Patch them to 5s. kubectl patch is idempotent —
+          # re-applying the same value is a no-op. The container name is required
+          # as the strategic-merge key so only the named container is targeted.
+          ssh -o StrictHostKeyChecking=no "${DEPLOY_HOST}" "
+            set -e
+            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+
+            patch_probe_timeout() {
+              local ns=\$1 deploy=\$2 container=\$3 timeout=\$4
+              kubectl patch deployment \$deploy -n \$ns --type=strategic-merge-patch -p \"{
+                \\\"spec\\\":{\\\"template\\\":{\\\"spec\\\":{\\\"containers\\\":[{
+                  \\\"name\\\":\\\"\$container\\\",
+                  \\\"livenessProbe\\\":{\\\"timeoutSeconds\\\":\$timeout},
+                  \\\"readinessProbe\\\":{\\\"timeoutSeconds\\\":\$timeout}
+                }]}}}}\" 2>/dev/null \
+                && echo \\\"Patched \$ns/\$deploy (timeoutSeconds=\$timeout)\\\" \
+                || echo \\\"Skipped \$ns/\$deploy (not found)\\\"
+            }
+
+            patch_probe_timeout kube-system headlamp headlamp 5
+            patch_probe_timeout cert-manager cert-manager-webhook cert-manager-webhook 5
+            patch_probe_timeout kube-system coredns coredns 5
           "
 
       - name: Ship chart and render values override
