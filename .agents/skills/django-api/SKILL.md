@@ -1,7 +1,7 @@
 ---
 model: opus
 created: 2026-05-08
-modified: 2026-05-08
+modified: 2026-05-23
 reviewed: 2026-05-08
 name: django-api
 description: |
@@ -51,6 +51,14 @@ IS_PRODUCTION = bool(os.environ.get('PRODUCTION', ''))
 - Pure helper functions → unit test with `monkeypatch` to decouple from real data files or configuration
 - Prefer the API client (`client.post(...)`) for request/response tests over direct ORM
 - Add new tests to the existing file covering the same module — do not create new cross-cutting test files
+- In Glaze, API Bazel test targets default to `backend.test_settings` via the shared
+  `_TEST_ENV` in `api/BUILD.bazel`. That keeps the default test harness on the
+  self-contained settings module instead of importing production settings for
+  every run, which improves cache stability and keeps production-only branches
+  out of unrelated tests.
+- If a specific integration target truly needs production settings behavior, set
+  `DJANGO_SETTINGS_MODULE=backend.settings` explicitly at the target boundary
+  rather than importing `backend.settings` from the default test settings file.
 
 Run tests:
 ```bash
