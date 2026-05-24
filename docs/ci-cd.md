@@ -37,7 +37,7 @@ Triggers:
 
 | Job | What it does |
 |---|---|
-| **Deploy to droplet** | Resolves image tag, runs `tools/ensure_cluster.sh` (converges infra and waits for `glaze-secrets`), renders Helm values override, then runs `tools/helm_deploy.sh` to upgrade the Helm release. Creates a GitHub Release tagged `release-<sha>` on success (skipped for chart-only pushes). |
+| **Deploy to droplet** | Resolves image tag, runs `tools/ensure_cluster.sh` (converges infra, waits for `glaze-secrets`, and waits for the tailnet front door to report ready), renders Helm values override, then runs `tools/helm_deploy.sh` to upgrade the Helm release. Creates a GitHub Release tagged `release-<sha>` on success (skipped for chart-only pushes). |
 | **Deploy Services to Modal** | Deploys each module under `services/` via `modal deploy`. Runs in parallel with the droplet deploy. |
 
 Chart-only pushes (`chart/**` with no corresponding CI run) have no Docker image built for the commit SHA. CD resolves the correct image tag by reading the latest GitHub Release.
@@ -83,6 +83,7 @@ Runs `tools/ensure_cluster.sh`:
    (includes `probe-timeouts.yaml` — declarative `HelmChartConfig` for system component probe timeouts)
 3. Bootstrap Infisical machine identity as a Kubernetes Secret for ESO
 4. Wait for ESO to be ready
+5. Wait for the Tailscale front door (`traefik-tailscale`) to report `TailscaleProxyReady=True` and an assigned `100.x` IP
 
 ---
 
@@ -108,18 +109,18 @@ PR opened
 PR merged to main (code change)
   └─ CI: preflight checks artifact -> skip lint/coverage if already validated
        └─ image job always runs -> pushes ghcr.io/shaoster/glaze:<sha>
-            └─ CD: resolve tag -> render values -> wait for glaze-secrets
+            └─ CD: resolve tag -> render values -> wait for glaze-secrets + tailnet front door
                  -> helm_deploy.sh -> GitHub Release
                  └─ (parallel) deploy-modal job
 
 PR merged to main (chart/** change only)
   └─ CD: chart-only push trigger fires directly (no CI)
        -> resolve tag from latest GitHub Release
-       -> ensure_cluster.sh -> render values -> helm_deploy.sh
+       -> ensure_cluster.sh (including tailnet front door readiness) -> render values -> helm_deploy.sh
 
 Push to infra/**
   └─ cluster-setup: ensure_cluster.sh
-       (k3s config -> manifests -> ESO bootstrap -> ClusterSecretStore infisical -> wait for ESO -> glaze-secrets)
+       (k3s config -> manifests -> ESO bootstrap -> ClusterSecretStore infisical -> wait for ESO -> glaze-secrets -> traefik-tailscale ready)
 ```
 
 ---
