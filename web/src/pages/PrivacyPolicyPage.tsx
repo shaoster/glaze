@@ -83,10 +83,14 @@ export default function PrivacyPolicyPage() {
             volunteer contributors. Administrators can see your data as part of
             operating and maintaining the service. A rogue or careless
             administrator could accidentally or deliberately expose or delete
-            it. We take hourly backups to Dropbox and will revoke access as
-            quickly as we become aware of any misuse, but we cannot guarantee
-            we will catch it in time. If you are concerned about this, the
-            source code is public and you are welcome to self-host.
+            it. We take hourly backups to Dropbox. These backups are
+            intentionally not encrypted: encrypting them would mean a rogue
+            administrator could destroy the key and make recovery impossible,
+            which is a worse outcome than the backups being readable. We will
+            revoke access as quickly as we become aware of any misuse, but we
+            cannot guarantee we will catch it in time. If you are concerned
+            about this, the source code is public and you are welcome to
+            self-host.
           </Typography>
 
           <Typography variant="body1">
