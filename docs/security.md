@@ -99,7 +99,7 @@ Database backups are taken via a k8s CronJob that runs `pg_dump` and uploads the
 
 ## Image Storage
 
-Pottery piece images are stored in **Cloudinary**. Upload credentials are scoped to a configured upload folder; public uploads use an unsigned upload preset scoped to a separate public folder. Cloudinary provides its own access controls and CDN-level delivery.
+Pottery piece images are stored in **Cloudinary**. All uploads are signed and scoped to the authenticated user's account. The public upload preset (unsigned, separate folder) is restricted to Django admin accounts only — regular users cannot trigger unsigned uploads. Cloudinary provides its own access controls and CDN-level delivery.
 
 ---
 
