@@ -20,6 +20,7 @@ spec:
         - name: worker
           image: "{{ .Values.worker.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "-m", "celery", "-A", "backend", "worker", "-l", "INFO", "--pool=solo"]
           securityContext:
             runAsUser: 1001
             runAsGroup: 1001
