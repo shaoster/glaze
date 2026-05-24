@@ -104,6 +104,7 @@ jobs:
     name: Deploy Services to Modal
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    environment: glaze-droplet
     steps:
       - uses: actions/checkout@v5
         with:
