@@ -38,21 +38,26 @@ if [ ! -f "$ENV_LOCAL" ]; then
 fi
 
 echo "==> Fetching service credentials from ${PROD_HOST}..."
-FETCHED=$($SSH "${PROD_HOST}" "
+FETCHED=$($SSH -o ConnectTimeout=10 "${PROD_HOST}" "
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   kubectl get secret glaze-secrets -n default -o json
-" | python3 -c "
+" 2>/dev/null | python3 -c "
 import sys, json, base64
 data = json.load(sys.stdin)['data']
 keys = '''${KEYS}'''.split()
 for k in keys:
     if k in data:
         print(f'{k}={base64.b64decode(data[k]).decode()}')
-")
+" 2>/dev/null || true)
 
 if [ -z "$FETCHED" ]; then
-  echo "ERROR: no secrets returned — are you on the tailnet?" >&2
-  exit 1
+  echo ""
+  echo "Not added as an admin-client in tailnet. If you would like production access"
+  echo "to potterdoc.com, install and run tailscale on your host and send a note to"
+  echo "admin@potterdoc.com"
+  echo ""
+  echo "==> .env.local initialized from .env.example (no cluster credentials filled in)."
+  exit 0
 fi
 
 # Replace the managed block (or append it if first run).
