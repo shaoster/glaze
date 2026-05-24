@@ -36,6 +36,23 @@ spec:
         remoteRef:
           key: TAILSCALE_OAUTH_CLIENT_SECRET
 ---
+# Set resource requests on all Tailscale proxy pods (ts-traefik-tailscale etc.)
+# so they get Burstable QoS and a lower OOM kill priority than BestEffort pods.
+# Actual idle RSS for ts-traefik-tailscale is ~46 MiB.
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyClass
+metadata:
+  name: default
+  namespace: tailscale
+spec:
+  statefulSet:
+    pod:
+      tailscaleContainer:
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+---
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
 metadata:
