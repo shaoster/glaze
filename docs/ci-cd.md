@@ -75,7 +75,12 @@ Triggers:
 - On `push` to `main` for `infra/**` or `tools/ensure_cluster.sh`
 - Manually via `workflow_dispatch`
 
-Also runs unconditionally as the first step of `cd.yml` (`Ensure cluster`) — so every deploy self-heals a degraded cluster without manual intervention.
+Also runs as the first step of `cd.yml` (`Ensure cluster`) before every Helm deploy. The two workflows serve different purposes and use separate concurrency groups (`cluster-setup` vs `deploy-production`) so they never block each other:
+
+- `cluster-setup.yml` is the mechanism for converging infrastructure changes (k3s manifests, firewall, Tailscale operator config) without requiring an app build or deploy.
+- `cd.yml` runs `ensure_cluster.sh` as a **safety gate** — it cannot assume the cluster is already converged, especially when an infra change arrives in the same commit as an app change. The overlap is intentional and harmless: `ensure_cluster.sh` is idempotent, so the second run is a no-op on a healthy cluster.
+
+If both fire at once (e.g. an `infra/` change on main), `cluster-setup` converges first; the CD `ensure_cluster` step then completes immediately.
 
 Runs `tools/ensure_cluster.sh`:
 1. Converge the host firewall so public internet reaches only HTTP/HTTPS app
@@ -86,7 +91,7 @@ Runs `tools/ensure_cluster.sh`:
    (includes `probe-timeouts.yaml` — declarative `HelmChartConfig` for system component probe timeouts)
 4. Bootstrap Infisical machine identity as a Kubernetes Secret for ESO
 5. Wait for ESO to be ready
-6. Wait for the Tailscale front door (`traefik-tailscale`) to report `TailscaleProxyReady=True` and an assigned `100.x` IP
+6. Wait for the Tailscale front door (`traefik-tailscale`) to report `TailscaleProxyReady=True` and either a `100.x` IP or a MagicDNS hostname — whichever the operator assigns first
 
 The firewall is managed by a host `systemd` oneshot service named
 `glaze-host-firewall.service`, which loads `/etc/glaze-host-firewall.nft`.
