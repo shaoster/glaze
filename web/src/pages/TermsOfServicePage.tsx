@@ -61,6 +61,20 @@ export default function TermsOfServicePage() {
           </Typography>
 
           <Typography variant="body1">
+            As the service grows, we may add paid or volunteer administrators.
+            A rogue or careless administrator could accidentally or deliberately
+            delete or expose your data, and the owner of the site cannot be
+            held liable for that. We take hourly backups to Dropbox. If a
+            malicious administrator deletes all the backups and disables the
+            backup job before other administrators notice, we may have
+            substantial data loss &mdash; though if we catch it quickly enough
+            we can revoke their access and attempt a restore using
+            Dropbox&apos;s own file-retention history. It is also possible,
+            though unlikely, that a rogue administrator could steal or sell
+            your data. We have no capacity to compensate you for that loss.
+          </Typography>
+
+          <Typography variant="body1">
             You may not use PotterDoc for any unlawful purpose or in any way
             that violates these terms. We reserve the right to suspend or
             terminate access for any user who violates these terms or whose

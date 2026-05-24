@@ -79,6 +79,17 @@ export default function PrivacyPolicyPage() {
           </Typography>
 
           <Typography variant="body1">
+            As the service grows, we may grant administrative access to paid or
+            volunteer contributors. Administrators can see your data as part of
+            operating and maintaining the service. A rogue or careless
+            administrator could accidentally or deliberately expose or delete
+            it. We take hourly backups to Dropbox and will revoke access as
+            quickly as we become aware of any misuse, but we cannot guarantee
+            we will catch it in time. If you are concerned about this, the
+            source code is public and you are welcome to self-host.
+          </Typography>
+
+          <Typography variant="body1">
             We reserve the right to access, review, and use user-submitted data
             as reasonably necessary to operate, maintain, secure, debug,
             support, and improve PotterDoc. We do not sell your data or sell
