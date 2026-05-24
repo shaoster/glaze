@@ -9,4 +9,6 @@ spec:
   ipAllowList:
     sourceRange:
       - {{ .Values.network.tailscaleCidr | quote }}
+    ipStrategy:
+      depth: 1
 {{- end }}
