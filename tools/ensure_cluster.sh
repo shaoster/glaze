@@ -219,8 +219,8 @@ $SSH "${DEPLOY_HOST}" '
     hostname=$(kubectl get svc traefik-tailscale -n kube-system \
       -o jsonpath="{.status.loadBalancer.ingress[0].hostname}" \
       2>/dev/null || true)
-    if [ "$ready" = "True" ] && [ -n "$ip" ]; then
-      echo "traefik-tailscale is ready: $ip ${hostname:-<no-hostname>}"
+    if [ "$ready" = "True" ] && [ -n "${ip}${hostname}" ]; then
+      echo "traefik-tailscale is ready: ${ip:-<no-ip>} ${hostname:-<no-hostname>}"
       break
     fi
     [ $i -eq 36 ] && echo "ERROR: traefik-tailscale not ready after 3m" && exit 1
