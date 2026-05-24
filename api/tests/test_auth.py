@@ -123,6 +123,10 @@ class TestAuthEndpointsMocked:
                 "legacy_tutorial": True,
             },
         }
+        assert all(
+            isinstance(value, bool)
+            for value in profile.preferences["tutorials"].values()
+        )
 
         me_response = client.get("/api/auth/me/")
         assert me_response.status_code == 200
@@ -134,6 +138,10 @@ class TestAuthEndpointsMocked:
                 "legacy_tutorial": True,
             },
         }
+        assert all(
+            isinstance(value, bool)
+            for value in me_response.json()["user"]["preferences"]["tutorials"].values()
+        )
 
         preferences_response = client.get("/api/auth/preferences/")
         assert preferences_response.status_code == 200
@@ -145,6 +153,10 @@ class TestAuthEndpointsMocked:
                 "legacy_tutorial": True,
             },
         }
+        assert all(
+            isinstance(value, bool)
+            for value in preferences_response.json()["preferences"]["tutorials"].values()
+        )
 
     def test_auth_preferences_round_trip(self, client, user):
         UserProfile.objects.create(user=user)

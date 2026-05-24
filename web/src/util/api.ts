@@ -240,16 +240,14 @@ function mapPieceDetail(raw: Wire<PieceDetail>): PieceDetail {
 
 function normalizeUserTutorialPreferences(
   tutorials:
-    | Partial<Record<TutorialToggleKey, boolean | "show" | "don't">>
+    | Partial<Record<TutorialToggleKey, boolean>>
     | null
     | undefined,
 ): UserTutorialPreferences {
   return Object.fromEntries(
     TUTORIAL_TOGGLE_VALUES.map((key) => [
       key,
-      tutorials?.[key] === false || tutorials?.[key] === "don't"
-        ? false
-        : true,
+      tutorials?.[key] ?? true,
     ]),
   ) as UserTutorialPreferences;
 }
