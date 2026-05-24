@@ -61,6 +61,24 @@ export default function TermsOfServicePage() {
           </Typography>
 
           <Typography variant="body1">
+            As the service grows, we may add paid or volunteer administrators.
+            A rogue or careless administrator could accidentally or deliberately
+            delete or expose your data, and the owner of the site cannot be
+            held liable for that. We take hourly backups to Dropbox.
+            These backups are intentionally not encrypted: encrypting them
+            would mean a rogue administrator could destroy the key and make
+            recovery impossible, which is a worse outcome than the backups
+            being readable. If a malicious administrator deletes all the
+            backups and disables the backup job before other administrators
+            notice, we may have substantial data loss &mdash; though if we
+            catch it quickly enough we can revoke their access and attempt a
+            restore using Dropbox&apos;s own file-retention history. It is
+            also possible, though unlikely, that a rogue administrator could
+            steal or sell your data. We have no capacity to compensate you
+            for that loss.
+          </Typography>
+
+          <Typography variant="body1">
             You may not use PotterDoc for any unlawful purpose or in any way
             that violates these terms. We reserve the right to suspend or
             terminate access for any user who violates these terms or whose
@@ -69,9 +87,19 @@ export default function TermsOfServicePage() {
           </Typography>
 
           <Typography variant="body1">
-            We reserve the right to modify these terms at any time. Continued
-            use of the app after changes are posted constitutes acceptance of
-            the revised terms.
+            We may revise these terms or our privacy policy in the future.
+            When we do, we will announce the changes clearly and give users
+            a reasonable opportunity to review them before they take effect.
+            For minor changes &mdash; wording clarifications, new disclosures
+            that don&apos;t reduce your rights &mdash; a notice in the app is
+            sufficient. For material changes that meaningfully affect how your
+            data is used or what you are agreeing to, we will provide an
+            explicit opt-out mechanism before the new terms apply to you. In
+            extreme cases, the only honest opt-out we can offer is a tool to
+            export and download all of your data so you can take it elsewhere
+            &mdash; another pottery tracking app, a self-hosted instance, or
+            a spreadsheet. We commit to providing that export rather than
+            holding your data hostage to terms you do not accept.
           </Typography>
 
           <Box sx={{ pt: 1 }}>

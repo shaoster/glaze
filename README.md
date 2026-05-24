@@ -20,6 +20,21 @@ A pottery workflow tracking application. Log pieces and record state transitions
 
 ## For new developers
 
+### Contributing to potterdoc.com
+
+If you're looking to help maintain potterdoc.com rather than self-host your own instance:
+
+1. Send a note to [admin@potterdoc.com](mailto:admin@potterdoc.com) and request Tailscale access.
+2. Once you've been added to the tailnet and have [installed Tailscale](https://tailscale.com/download) on your dev machine, run the following to initialize your local environment with production service credentials:
+
+```bash
+tools/init_env.sh
+```
+
+This creates `.env.local` from `.env.example` and fills in the Cloudinary and Google OAuth credentials from the cluster. Your machine must be connected to Tailscale — SSH to the cluster is tailnet-only and Tailscale handles authentication automatically (no extra SSH keys needed).
+
+---
+
 This guide assumes you already know the tools listed below and are familiar with [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) and [abstraction](https://en.wikipedia.org/wiki/Abstraction_(computer_science)) as design principles; if any term is unfamiliar, click the linked docs to catch up quickly.
 
 - **[Django](https://www.djangoproject.com/)** is the Python web framework that owns the backend (`backend/`, `api/`). [Separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) keeps unrelated responsibilities apart so each layer stays simpler to reason about—for example, [`api/models.py`](api/models.py) defines the data schema, [`api/serializers.py`](api/serializers.py) translates between ORM objects and JSON payloads, and [`api/views.py`](api/views.py) wires those serializers into `/api/...` endpoints that enforce workflow rules from [`workflow.yml`](workflow.yml). That split keeps the REST API (powered by Django REST Framework, DRF) resilient even when one layer needs to change, while returning consistent data/validation to all clients.
@@ -167,6 +182,8 @@ need web-only overrides:
 ```bash
 cp .env.example .env.local
 ```
+
+If you have Tailscale access to the production cluster, `tools/init_env.sh` does this and also fills in the service credentials in one step (see [Contributing to potterdoc.com](#contributing-to-potterdoccom) above).
 
 Each variable in `.env.example` has an inline comment explaining what it enables and what degrades gracefully when it is absent. Keep those comments current whenever a variable is added, removed, or renamed — the file is the primary reference for onboarding and for debugging "why isn't this feature working in dev."
 

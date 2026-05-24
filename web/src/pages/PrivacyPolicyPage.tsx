@@ -79,6 +79,21 @@ export default function PrivacyPolicyPage() {
           </Typography>
 
           <Typography variant="body1">
+            As the service grows, we may grant administrative access to paid or
+            volunteer contributors. Administrators can see your data as part of
+            operating and maintaining the service. A rogue or careless
+            administrator could accidentally or deliberately expose or delete
+            it. We take hourly backups to Dropbox. These backups are
+            intentionally not encrypted: encrypting them would mean a rogue
+            administrator could destroy the key and make recovery impossible,
+            which is a worse outcome than the backups being readable. We will
+            revoke access as quickly as we become aware of any misuse, but we
+            cannot guarantee we will catch it in time. If you are concerned
+            about this, the source code is public and you are welcome to
+            self-host.
+          </Typography>
+
+          <Typography variant="body1">
             We reserve the right to access, review, and use user-submitted data
             as reasonably necessary to operate, maintain, secure, debug,
             support, and improve PotterDoc. We do not sell your data or sell
@@ -123,6 +138,17 @@ export default function PrivacyPolicyPage() {
             information in PotterDoc whenever possible. If you need to use
             Google sign-in and want additional separation, consider using a
             throwaway Google account.
+          </Typography>
+
+          <Typography variant="body1">
+            We may update this privacy policy in the future. We will announce
+            any changes clearly and give you a reasonable window to review
+            them. For changes that materially affect how your data is handled,
+            we will provide an explicit opt-out before the new policy applies
+            to you. In extreme cases, the opt-out may take the form of a data
+            export tool so you can take your pottery records elsewhere &mdash;
+            a self-hosted instance, another service, or a local file. We will
+            not hold your data hostage to a policy you do not accept.
           </Typography>
 
           <Box sx={{ pt: 1 }}>

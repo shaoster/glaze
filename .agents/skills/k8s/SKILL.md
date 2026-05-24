@@ -29,13 +29,14 @@ Workflow for any cluster change:
 
 ## Connecting to the cluster
 
-Before running any cluster commands, ask the user:
+The production SSH target is `$GLAZE_PROD_HOST` from `.env.local`. The default
+value is `root@glaze-prod` — a Tailscale MagicDNS hostname. SSH is restricted
+to the tailnet; you must be connected to Tailscale and tagged as an
+`admin-client`. Tailscale SSH handles auth with no extra keys.
 
-> What is the SSH target for the production cluster? (e.g. the value of
-> `$GLAZE_PROD_HOST` from `.env.local`, or a hostname/IP directly)
-
-Store the answer as `PROD_HOST` for the rest of the session. All `kubectl` and
-`helm` commands run over SSH with `KUBECONFIG=/etc/rancher/k3s/k3s.yaml`:
+Ask the user for the value if not already established in the conversation, then
+store it as `PROD_HOST` for the rest of the session. All `kubectl` and `helm`
+commands run over SSH with `KUBECONFIG=/etc/rancher/k3s/k3s.yaml`:
 
 ```bash
 # Single command
