@@ -32,11 +32,34 @@ $SSH "${DEPLOY_HOST}" << 'ENDSSH'
     helm rollback glaze -n default --wait --timeout 2m
   fi
 
-  helm_upgrade() {
+  # Deployments to roll sequentially, in order. Each is paused before the
+  # helm upgrade so Kubernetes accepts the new spec without immediately
+  # starting pods, then resumed one at a time to avoid concurrent memory
+  # spikes on the single-core node.
+  SEQUENTIAL_DEPLOYMENTS="glaze-web glaze-worker"
+
+  rollout_sequential() {
+    echo "==> Pausing deployments before upgrade..."
+    for dep in $SEQUENTIAL_DEPLOYMENTS; do
+      kubectl rollout pause deployment/$dep -n default 2>/dev/null || true
+    done
+
+    echo "==> Applying Helm chart (no wait — rollouts are paused)..."
     helm upgrade --install glaze ~/glaze-chart-deploy/glaze/ \
       -f ~/glaze-values-override.yaml \
-      --timeout 5m \
-      --wait &
+      --timeout 5m
+
+    echo "==> Rolling deployments sequentially..."
+    for dep in $SEQUENTIAL_DEPLOYMENTS; do
+      echo "--- resuming $dep ---"
+      kubectl rollout resume deployment/$dep -n default
+      kubectl rollout status deployment/$dep -n default --timeout=5m
+      echo "--- $dep ready ---"
+    done
+  }
+
+  helm_upgrade() {
+    rollout_sequential &
     HELM_PID=$!
 
     while kill -0 $HELM_PID 2>/dev/null; do
