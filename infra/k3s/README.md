@@ -95,7 +95,7 @@ kubectl get svc -n kube-system traefik -o wide
 kubectl get svc -n kube-system traefik-tailscale -o wide
 ```
 
-The `traefik` service is the public front door; `traefik-tailscale` is the tailnet-only front door. ExternalDNS keeps `admin.potterdoc.com` and `headlamp.potterdoc.com` pointed at the `traefik-tailscale` service IP.
+The `traefik` service is the public front door; `traefik-tailscale` is the tailnet-only front door. ExternalDNS keeps `admin.potterdoc.com` and `headlamp.potterdoc.com` pointed at the `traefik-tailscale` service IP. The bootstrap script waits for `traefik-tailscale` to report `TailscaleProxyReady=True` and publish a `100.x` address before CD proceeds, so the tailnet path is ready before the app deploy continues.
 The packet path for both tailnet-only hosts is: browser on an authorized Tailscale client -> tailnet DNS record -> Tailscale operator-managed Traefik `LoadBalancer` service -> Traefik ingress -> Django admin or Headlamp.
 Requests that are not coming from tailnet-authorized clients never reach Traefik on those hostnames because the Tailscale service IP is not routable outside the tailnet.
 

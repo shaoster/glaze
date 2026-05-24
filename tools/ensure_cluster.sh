@@ -9,6 +9,7 @@
 #   4. External Secrets Operator is installed and its deployment is rollout-ready
 #   5. The Infisical machine identity is present as the infisical-auth Secret
 #   6. glaze-secrets exists in the default namespace (ESO has synced from Infisical)
+#   7. traefik-tailscale is ready and has an assigned Tailscale IP
 #
 # Idempotent: each step is a no-op when already converged. Safe to run on every
 # deploy — fast on a healthy cluster, self-healing on a degraded one.
@@ -130,6 +131,31 @@ $SSH "${DEPLOY_HOST}" '
     sleep 5
   done
   echo "glaze-secrets is ready."
+'
+
+# ── Wait for the tailnet front door to be ready ─────────────────────────────
+echo "==> Waiting for traefik-tailscale to be ready..."
+$SSH "${DEPLOY_HOST}" '
+  set -e
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+  for i in $(seq 1 36); do
+    ready=$(kubectl get svc traefik-tailscale -n kube-system \
+      -o jsonpath="{.status.conditions[?(@.type==\"TailscaleProxyReady\")].status}" \
+      2>/dev/null || true)
+    ip=$(kubectl get svc traefik-tailscale -n kube-system \
+      -o jsonpath="{.status.loadBalancer.ingress[0].ip}" \
+      2>/dev/null || true)
+    hostname=$(kubectl get svc traefik-tailscale -n kube-system \
+      -o jsonpath="{.status.loadBalancer.ingress[0].hostname}" \
+      2>/dev/null || true)
+    if [ "$ready" = "True" ] && [ -n "$ip" ]; then
+      echo "traefik-tailscale is ready: $ip ${hostname:-<no-hostname>}"
+      break
+    fi
+    [ $i -eq 36 ] && echo "ERROR: traefik-tailscale not ready after 3m" && exit 1
+    echo "  [$i/36] ready=${ready:-<missing>} ip=${ip:-<missing>} hostname=${hostname:-<missing>}"
+    sleep 5
+  done
 '
 
 echo "==> Cluster ready."
