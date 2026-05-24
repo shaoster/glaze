@@ -14,7 +14,7 @@ metadata:
     {{- end }}
     {{- end }}
     {{- end }}
-    traefik.ingress.kubernetes.io/router.middlewares: default-{{ $fullName }}-security-headers@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: default-{{ $fullName }}-security-headers@kubernetescrd, default-{{ $fullName }}-tailscale-only@kubernetescrd
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
