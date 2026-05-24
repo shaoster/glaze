@@ -1,0 +1,56 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-dns
+---
+apiVersion: external-secrets.io/v1
+kind: ClusterExternalSecret
+metadata:
+  name: external-dns-cloudflare-token
+spec:
+  namespaceSelectors:
+    - matchLabels:
+        kubernetes.io/metadata.name: external-dns
+  refreshTime: 1h
+  externalSecretSpec:
+    refreshInterval: 1h
+    secretStoreRef:
+      name: infisical
+      kind: ClusterSecretStore
+    target:
+      name: cloudflare-api-token
+      creationPolicy: Owner
+    data:
+      - secretKey: api-token
+        remoteRef:
+          key: CLOUDFLARE_API_TOKEN
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: external-dns
+  namespace: external-dns
+spec:
+  repo: https://kubernetes-sigs.github.io/external-dns/
+  chart: external-dns
+  version: "1.20.0"
+  targetNamespace: external-dns
+  createNamespace: true
+  valuesContent: |-
+    provider:
+      name: cloudflare
+    sources:
+      - service
+    policy: upsert-only
+    registry: txt
+    txtOwnerId: glaze
+    interval: 1m
+    domainFilters:
+      - potterdoc.com
+    env:
+      - name: CF_API_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: cloudflare-api-token
+            key: api-token

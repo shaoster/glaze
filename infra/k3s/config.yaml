@@ -7,9 +7,9 @@
 
 disable:
   # metrics-server: CPU/memory overhead not needed on single-node cluster.
-  # servicelb: replaced by Traefik NodePort; servicelb adds unnecessary DaemonSet.
+  # servicelb: the cluster now uses Tailscale for tailnet-only ingress and
+  # Traefik's own LoadBalancer service for the public front door.
   - metrics-server
-  - servicelb
 kube-apiserver-arg:
   # Bind only to loopback — no external API server exposure needed on single-node.
   - "bind-address=127.0.0.1"

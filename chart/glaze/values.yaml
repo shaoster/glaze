@@ -45,6 +45,8 @@ adminIngress:
   enabled: true
   host: admin.potterdoc.com
   tlsSecret: glaze-admin-tls
+  public:
+    enabled: false
 
 postgres:
   image: postgres:17

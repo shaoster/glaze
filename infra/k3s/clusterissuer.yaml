@@ -20,3 +20,4 @@ spec:
         selector:
           dnsNames:
             - admin.potterdoc.com
+            - headlamp.potterdoc.com
