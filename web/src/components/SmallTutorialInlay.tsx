@@ -61,35 +61,39 @@ export default function SmallTutorialInlay({
     height: SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX * 2,
     borderBottom: "1px solid",
   };
-  const tailStyles =
-    placement === SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT
-      ? {
-          ...tailBaseStyles,
-          top: "50%",
-          transform: "translateY(-50%) rotate(45deg)",
-          left: -SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX,
-          borderLeft: "1px solid",
-          boxShadow: "-2px 2px 8px rgba(0, 0, 0, 0.12)",
-        }
-      : placement === SMALL_TUTORIAL_INLAY_PLACEMENTS.LEFT
-        ? {
-            ...tailBaseStyles,
-            top: "50%",
-            transform: "translateY(-50%) rotate(45deg)",
-            right: -SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX,
-            borderRight: "1px solid",
-            boxShadow: "2px 2px 8px rgba(0, 0, 0, 0.12)",
-          }
-        : {
-            bottom: -SMALL_TUTORIAL_INLAY_TOP_POSITIONING.TAIL_PROTRUSION_PX,
-            left: "50%",
-            width: SMALL_TUTORIAL_INLAY_TOP_POSITIONING.TAIL_PROTRUSION_PX * 2,
-            height: SMALL_TUTORIAL_INLAY_TOP_POSITIONING.TAIL_PROTRUSION_PX * 2,
-            transform: "translateX(-50%) rotate(45deg)",
-            borderLeft: "1px solid",
-            borderBottom: "1px solid",
-            boxShadow: "-2px 2px 8px rgba(0, 0, 0, 0.12)",
-          };
+  const tailSideStyles = {
+    ...tailBaseStyles,
+    top: "50%",
+    transform: "translateY(-50%) rotate(45deg)",
+  };
+  const tailStylesByPlacement: Record<
+    SmallTutorialInlayPlacement,
+    Record<string, unknown>
+  > = {
+    [SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT]: {
+      ...tailSideStyles,
+      left: -SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX,
+      borderLeft: "1px solid",
+      boxShadow: "-2px 2px 8px rgba(0, 0, 0, 0.12)",
+    },
+    [SMALL_TUTORIAL_INLAY_PLACEMENTS.LEFT]: {
+      ...tailSideStyles,
+      right: -SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX,
+      borderRight: "1px solid",
+      boxShadow: "2px 2px 8px rgba(0, 0, 0, 0.12)",
+    },
+    [SMALL_TUTORIAL_INLAY_PLACEMENTS.TOP]: {
+      bottom: -SMALL_TUTORIAL_INLAY_TOP_POSITIONING.TAIL_PROTRUSION_PX,
+      left: "50%",
+      width: SMALL_TUTORIAL_INLAY_TOP_POSITIONING.TAIL_PROTRUSION_PX * 2,
+      height: SMALL_TUTORIAL_INLAY_TOP_POSITIONING.TAIL_PROTRUSION_PX * 2,
+      transform: "translateX(-50%) rotate(45deg)",
+      borderLeft: "1px solid",
+      borderBottom: "1px solid",
+      boxShadow: "-2px 2px 8px rgba(0, 0, 0, 0.12)",
+    },
+  };
+  const tailStyles = tailStylesByPlacement[placement];
 
   const dismissTutorial = useCallback(async () => {
     if (!currentUser || !saveUserPreferences) {
