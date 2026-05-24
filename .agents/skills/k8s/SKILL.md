@@ -49,13 +49,60 @@ export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 If the user has already established the host earlier in the conversation, use
 that value — don't ask again.
 
-## Tailnet-only ingresses
+## TLS termination
 
-Admin and Headlamp hostnames are intentionally reachable only over Tailscale.
-Their Traefik `IPAllowList` uses the Tailscale CGNAT range (`100.64.0.0/10`)
-rather than the pod-network bridge IP. If the CNI or Tailscale routing topology
-changes, recheck that the live source range still matches the allowlist before
-deploying any ingress change.
+There are two distinct TLS termination paths in this cluster. The ACME solver
+used for each is the critical difference — do not mix them up when adding new
+hostnames.
+
+### Path 1 — Public traffic (`potterdoc.com`)
+
+```
+Internet → public Traefik LoadBalancer (159.223.154.68:443)
+         → Traefik terminates TLS (cert: glaze-tls)
+         → Django web pod
+```
+
+- cert-manager issues the cert via **HTTP-01** challenge through the public
+  Traefik `LoadBalancer` service. The ACME server hits
+  `http://potterdoc.com/.well-known/acme-challenge/...` on port 80.
+- Cloudflare proxies the apex (`potterdoc.com`) — the public IP is
+  `159.223.154.68`.
+- `ClusterIssuer`: `letsencrypt-prod` with `http01.ingress.class: traefik`.
+
+### Path 2 — Tailnet-only traffic (`admin.potterdoc.com`, `headlamp.potterdoc.com`)
+
+```
+Tailscale client → tailnet DNS → Tailscale operator LoadBalancer service
+                → traefik-tailscale (100.83.6.71:443)
+                → Traefik terminates TLS (cert: glaze-admin-tls / headlamp-tls)
+                → Django admin / Headlamp
+```
+
+- These hostnames resolve to a **Tailscale CGNAT IP** (`100.x.x.x`) that is
+  unreachable without Tailscale membership — non-tailnet clients fail before
+  Traefik sees the request.
+- cert-manager issues certs via **DNS-01** challenge (Cloudflare). HTTP-01
+  cannot be used because the ACME server cannot reach a tailnet-only IP.
+- `ClusterIssuer`: `letsencrypt-prod` with `dns01.cloudflare` solver, scoped
+  to `admin.potterdoc.com` and `headlamp.potterdoc.com` via `selector.dnsNames`.
+- ExternalDNS keeps the Cloudflare DNS records pointed at the operator-assigned
+  Tailscale service IP. Records must be **DNS-only** (grey cloud in Cloudflare)
+  — Cloudflare cannot proxy to a reserved Tailscale IP.
+- The Tailscale operator authenticates with Infisical-sourced OAuth credentials
+  (`TAILSCALE_OAUTH_CLIENT_ID`, `TAILSCALE_OAUTH_CLIENT_SECRET`).
+
+### Adding a new hostname — which solver to use
+
+| Hostname reachable from public internet? | Use |
+|---|---|
+| Yes | HTTP-01 via public Traefik ingress |
+| No (tailnet-only) | DNS-01 via Cloudflare; add to `selector.dnsNames` in `clusterissuer.yaml` |
+
+If adding a new tailnet-only hostname, also add it to the
+`external-dns.alpha.kubernetes.io/hostname` annotation on the
+`traefik-tailscale` service in `infra/k3s/traefik.yaml` so ExternalDNS
+creates the Cloudflare record automatically.
 
 ## Hitting the health endpoint from within the cluster
 

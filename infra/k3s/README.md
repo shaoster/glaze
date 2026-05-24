@@ -206,38 +206,77 @@ helm upgrade --install glaze chart/glaze/ \
 - `/etc/rancher/k3s/k3s.yaml` — contains the cluster CA and admin credentials
 - Any `.env` files with secrets
 
+## TLS Termination
+
+There are two distinct TLS termination paths, differentiated by the ACME challenge solver cert-manager uses for each.
+
+### Path 1 — Public traffic (`potterdoc.com`)
+
+```
+Internet → public Traefik LoadBalancer (159.223.154.68:443)
+         → Traefik terminates TLS  [cert: glaze-tls]
+         → Django web pod
+```
+
+cert-manager issues and renews the certificate via **HTTP-01** challenge. The ACME server reaches `http://potterdoc.com/.well-known/acme-challenge/...` through the public Traefik `LoadBalancer` on port 80.
+
+### Path 2 — Tailnet-only traffic (`admin.potterdoc.com`, `headlamp.potterdoc.com`)
+
+```
+Tailscale client → tailnet DNS → Tailscale operator LoadBalancer (100.83.6.71:443)
+                → Traefik terminates TLS  [cert: glaze-admin-tls / headlamp-tls]
+                → Django admin / Headlamp
+```
+
+cert-manager issues and renews certificates via **DNS-01** challenge (Cloudflare). HTTP-01 cannot be used because the ACME server cannot reach a Tailscale CGNAT IP from the public internet. The `ClusterIssuer` in `clusterissuer.yaml` maps these specific hostnames to the DNS-01 solver via `selector.dnsNames`.
+
+Non-tailnet clients resolve these hostnames to the Tailscale IP and fail to connect — the request never reaches Traefik.
+
+ExternalDNS keeps the Cloudflare DNS records pointed at the current Tailscale service IP. These records must remain **DNS-only** (grey cloud in Cloudflare) — Cloudflare cannot proxy to a reserved Tailscale IP.
+
+### Adding a new hostname
+
+| Reachable from public internet? | ACME solver | Front door |
+|---|---|---|
+| Yes | HTTP-01 (automatic via Traefik ingress) | `traefik` public LoadBalancer |
+| No (tailnet-only) | DNS-01 via Cloudflare | `traefik-tailscale` Tailscale operator service |
+
+For a new tailnet-only hostname:
+1. Add it to `selector.dnsNames` in `clusterissuer.yaml` so cert-manager uses DNS-01.
+2. Add it to the `external-dns.alpha.kubernetes.io/hostname` annotation on the `traefik-tailscale` service in `traefik.yaml` so ExternalDNS creates the Cloudflare record automatically.
+
 ## Administrative Interface Security
 
 The Django Admin (`admin.potterdoc.com/admin/`) and Headlamp (`headlamp.potterdoc.com`) are only reachable through the tailnet-facing Traefik service that the Tailscale operator manages. The public site continues to use the normal public Traefik service.
 
 ### Packet paths
 
-#### Tailnet client -> `admin.potterdoc.com/admin/`
+#### Tailnet client → `admin.potterdoc.com/admin/`
 1. A Tailscale-authorized admin client resolves `admin.potterdoc.com` to the operator-managed Tailscale service IP.
 2. The packet enters the Tailscale tunnel and lands on the `traefik-tailscale` service.
 3. The Tailscale operator forwards the request to Traefik.
 4. Traefik matches the `admin.potterdoc.com` ingress and routes the request to Django admin.
 5. cert-manager uses Cloudflare DNS-01 for `admin.potterdoc.com`, so TLS issuance and renewal do not depend on a public HTTP challenge reaching the droplet.
 
-#### Non-tailnet client -> `admin.potterdoc.com/admin/`
+#### Non-tailnet client → `admin.potterdoc.com/admin/`
 1. The client resolves `admin.potterdoc.com` to the same operator-managed Tailscale service IP.
 2. Without Tailscale membership, the client cannot reach that IP.
 3. The request fails before Traefik sees it.
 
-#### Tailnet client -> `headlamp.potterdoc.com/`
+#### Tailnet client → `headlamp.potterdoc.com/`
 1. A Tailscale-authorized admin client resolves `headlamp.potterdoc.com` to the operator-managed Tailscale service IP.
 2. The packet enters the Tailscale tunnel and lands on `traefik-tailscale`.
 3. The Tailscale operator forwards the request to Traefik.
 4. Traefik routes the request to Headlamp.
 5. cert-manager uses Cloudflare DNS-01 for `headlamp.potterdoc.com`, so TLS issuance and renewal do not depend on a public HTTP challenge reaching the droplet.
 
-#### Non-tailnet client -> `headlamp.potterdoc.com/`
+#### Non-tailnet client → `headlamp.potterdoc.com/`
 1. The client resolves `headlamp.potterdoc.com` to the same operator-managed Tailscale service IP.
 2. Without Tailscale membership, the client cannot reach that IP.
 3. The request fails before Traefik sees it.
 
-#### Any client -> `potterdoc.com` or `www.potterdoc.com`
-1. The client resolves the public apex or `www` records to the droplet's public IP.
+#### Any client → `potterdoc.com`
+1. The client resolves the public apex record to the droplet's public IP.
 2. The request enters the public Traefik `LoadBalancer` service.
 3. Traefik routes to the public app ingress as usual.
 
