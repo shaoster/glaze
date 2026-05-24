@@ -48,14 +48,21 @@ export default function SmallTutorialInlay({
   const shouldShow =
     Boolean(attachedElement && currentUser && saveUserPreferences) &&
     tutorialVisibility;
-  const popperOffset =
-    placement === SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT
-      ? [0, SMALL_TUTORIAL_INLAY_RIGHT_HORIZONTAL_OFFSET_PX]
-      : placement === SMALL_TUTORIAL_INLAY_PLACEMENTS.LEFT
-        ? [0, SMALL_TUTORIAL_INLAY_LEFT_HORIZONTAL_OFFSET_PX]
-        : placement === SMALL_TUTORIAL_INLAY_PLACEMENTS.TOP
-          ? [0, SMALL_TUTORIAL_INLAY_TOP_VERTICAL_OFFSET_PX]
-          : [0, 0];
+  const popperOffsetByPlacement = {
+    [SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT]: [
+      0,
+      SMALL_TUTORIAL_INLAY_RIGHT_HORIZONTAL_OFFSET_PX,
+    ],
+    [SMALL_TUTORIAL_INLAY_PLACEMENTS.LEFT]: [
+      0,
+      SMALL_TUTORIAL_INLAY_LEFT_HORIZONTAL_OFFSET_PX,
+    ],
+    [SMALL_TUTORIAL_INLAY_PLACEMENTS.TOP]: [
+      0,
+      SMALL_TUTORIAL_INLAY_TOP_VERTICAL_OFFSET_PX,
+    ],
+  } satisfies Record<SmallTutorialInlayPlacement, [number, number]>;
+  const popperOffset = popperOffsetByPlacement[placement];
   const tailBaseStyles = {
     width: SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX * 2,
     height: SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX * 2,
