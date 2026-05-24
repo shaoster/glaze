@@ -280,6 +280,7 @@ $SSH "${DEPLOY_HOST}" '
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   if kubectl get deployment coredns -n kube-system &>/dev/null; then
     timeout=$(kubectl get deployment coredns -n kube-system -o jsonpath="{.spec.template.spec.containers[0].livenessProbe.timeoutSeconds}" 2>/dev/null || echo "1")
+    timeout=${timeout:-1}
     if [ "$timeout" -ne 5 ]; then
       echo "Patching coredns deployment probe timeouts to 5s..."
       kubectl patch deployment coredns -n kube-system --type="json" -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/livenessProbe/timeoutSeconds\", \"value\": 5}, {\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/readinessProbe/timeoutSeconds\", \"value\": 5}]"
@@ -294,6 +295,7 @@ $SSH "${DEPLOY_HOST}" '
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   if kubectl get deployment cert-manager-webhook -n cert-manager &>/dev/null; then
     timeout=$(kubectl get deployment cert-manager-webhook -n cert-manager -o jsonpath="{.spec.template.spec.containers[0].livenessProbe.timeoutSeconds}" 2>/dev/null || echo "1")
+    timeout=${timeout:-1}
     if [ "$timeout" -ne 5 ]; then
       echo "Patching cert-manager-webhook deployment probe timeouts to 5s..."
       kubectl patch deployment cert-manager-webhook -n cert-manager --type="json" -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/livenessProbe/timeoutSeconds\", \"value\": 5}, {\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/readinessProbe/timeoutSeconds\", \"value\": 5}]"
