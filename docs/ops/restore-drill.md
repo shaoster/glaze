@@ -65,8 +65,8 @@ Record the results in [restore-drill-log.md](restore-drill-log.md).
 - **RPO (Recovery Point Objective)**: ≤ 1 hour. Backups run hourly; at most one hour of
   changes may be lost.
 - **RTO (Recovery Time Objective)**: Operator-driven. Based on recorded drills, the
-  restore + verification step takes approximately N minutes (see drill log). Re-pointing
-  the application (pod restart) adds ~1 minute on top of that.
+  restore + verification step takes approximately 1 minute (see drill log). Active user
+  sessions survive the restore without interruption — no pod restart required.
 
 ## Cleanup
 
