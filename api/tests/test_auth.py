@@ -391,7 +391,7 @@ class TestAuthExport:
         response = auth_views.auth_export(request)
         assert response.status_code == 403
 
-    def test_export_returns_zip_with_pieces_json(self, client, user, piece):
+    def test_export_returns_zip_with_pieces_json(self, user, piece):
         from api import auth_views
 
         factory = APIRequestFactory()
@@ -405,7 +405,9 @@ class TestAuthExport:
 
         archive_bytes = asyncio.run(_collect_async_bytes(response.streaming_content))
         with ZipFile(BytesIO(archive_bytes)) as archive:
-            assert "pieces.json" in archive.namelist()
+            names = archive.namelist()
+            assert "pieces.json" in names
+            assert "profile.json" in names
             pieces = json.loads(archive.read("pieces.json"))
             assert isinstance(pieces, list)
             assert any(str(piece.id) == p["id"] for p in pieces)

@@ -450,11 +450,11 @@ def _collect_export_data(user: Any, request: Request) -> tuple[str, str, list[Im
     ).data
     pieces_json = json.dumps(list(pieces_data), default=str)
 
-    profile, _ = UserProfile.objects.get_or_create(user=user)
+    profile = UserProfile.objects.filter(user=user).first()
     profile_json = json.dumps(
         {
-            "alias": profile.alias,
-            "preferences": profile.preferences if isinstance(profile.preferences, dict) else {},
+            "alias": profile.alias if profile else None,
+            "preferences": profile.preferences if profile and isinstance(profile.preferences, dict) else {},
         },
         default=str,
     )
