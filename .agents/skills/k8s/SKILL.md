@@ -253,7 +253,7 @@ This cluster runs on a single-core node. Rules of thumb:
 - `failureThreshold: 3` with `periodSeconds: 10` gives 30s grace before kill —
   sufficient for transient deploy-time contention
 
-*Note on HelmChartConfig limitations:* K3s `HelmChartConfig` files only apply to resources managed by the k3s Helm controller. They are ineffective for static deployments (like CoreDNS) or standalone Helm charts (like cert-manager). For these resources, [tools/ensure_cluster.sh](file:///tools/ensure_cluster.sh) applies idempotent `kubectl patch` modifications to dynamically raise probe timeouts to 5s.
+*Note on HelmChartConfig limitations:* K3s `HelmChartConfig` files only apply to resources managed by the k3s Helm controller. They are ineffective for static deployments (like CoreDNS). For CoreDNS, [tools/ensure_cluster.sh](file:///tools/ensure_cluster.sh) applies idempotent `kubectl patch` modifications to dynamically raise probe timeouts to 5s. cert-manager is managed as a declarative k3s `HelmChart` manifest, meaning its timeouts are configured natively inside its resource values.
 
 ## DNS Nameserver Deduplication Workaround
 
