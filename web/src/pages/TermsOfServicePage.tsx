@@ -87,9 +87,19 @@ export default function TermsOfServicePage() {
           </Typography>
 
           <Typography variant="body1">
-            We reserve the right to modify these terms at any time. Continued
-            use of the app after changes are posted constitutes acceptance of
-            the revised terms.
+            We may revise these terms or our privacy policy in the future.
+            When we do, we will announce the changes clearly and give users
+            a reasonable opportunity to review them before they take effect.
+            For minor changes &mdash; wording clarifications, new disclosures
+            that don&apos;t reduce your rights &mdash; a notice in the app is
+            sufficient. For material changes that meaningfully affect how your
+            data is used or what you are agreeing to, we will provide an
+            explicit opt-out mechanism before the new terms apply to you. In
+            extreme cases, the only honest opt-out we can offer is a tool to
+            export and download all of your data so you can take it elsewhere
+            &mdash; another pottery tracking app, a self-hosted instance, or
+            a spreadsheet. We commit to providing that export rather than
+            holding your data hostage to terms you do not accept.
           </Typography>
 
           <Box sx={{ pt: 1 }}>

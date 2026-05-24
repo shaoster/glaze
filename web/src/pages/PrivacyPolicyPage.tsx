@@ -140,6 +140,17 @@ export default function PrivacyPolicyPage() {
             throwaway Google account.
           </Typography>
 
+          <Typography variant="body1">
+            We may update this privacy policy in the future. We will announce
+            any changes clearly and give you a reasonable window to review
+            them. For changes that materially affect how your data is handled,
+            we will provide an explicit opt-out before the new policy applies
+            to you. In extreme cases, the opt-out may take the form of a data
+            export tool so you can take your pottery records elsewhere &mdash;
+            a self-hosted instance, another service, or a local file. We will
+            not hold your data hostage to a policy you do not accept.
+          </Typography>
+
           <Box sx={{ pt: 1 }}>
             <Button component={Link} to="/" variant="outlined">
               Back to Login
