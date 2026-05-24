@@ -182,6 +182,27 @@ class TestAuthEndpointsMocked:
         assert response.status_code == 200
         assert response.json()["alias"] == "My Alias"
 
+    def test_auth_preferences_patch_combined_alias_and_tutorials(self, client, user):
+        UserProfile.objects.create(user=user)
+        response = client.patch(
+            "/api/auth/preferences/",
+            {
+                "alias": "Studio Mug",
+                "preferences": {
+                    "process_summary_fields": ["piece.name"],
+                    "tutorials": {"summary_customize_popover": "don't"},
+                },
+            },
+            format="json",
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["alias"] == "Studio Mug"
+        assert data["preferences"]["process_summary_fields"] == ["piece.name"]
+        assert data["preferences"]["tutorials"]["summary_customize_popover"] == "don't"
+        user.profile.refresh_from_db()
+        assert user.profile.alias == "Studio Mug"
+
 
 @pytest.mark.django_db
 class TestAuthMe:
@@ -219,9 +240,7 @@ class TestAuthMe:
         response = auth_views.auth_me(request)
         assert response.status_code == 503
 
-    def test_refreshes_session_cookie_for_shared_admin_domain(
-        self, user, settings
-    ):
+    def test_refreshes_session_cookie_for_shared_admin_domain(self, user, settings):
         settings.GOOGLE_OAUTH_CLIENT_ID = "my-client-id"
         settings.SESSION_COOKIE_DOMAIN = ".potterdoc.com"
 
@@ -232,8 +251,7 @@ class TestAuthMe:
 
         assert response.status_code == 200
         assert (
-            response.cookies[settings.SESSION_COOKIE_NAME]["domain"]
-            == ".potterdoc.com"
+            response.cookies[settings.SESSION_COOKIE_NAME]["domain"] == ".potterdoc.com"
         )
 
     def test_admin_login_redirects_to_apex_bootstrap(self, settings):
@@ -257,9 +275,7 @@ class TestAuthMe:
         target = urlparse(response["Location"])
         assert target.scheme == "https"
         assert target.netloc == "potterdoc.com"
-        assert parse_qs(target.query)["next"] == [
-            "https://admin.potterdoc.com/admin/"
-        ]
+        assert parse_qs(target.query)["next"] == ["https://admin.potterdoc.com/admin/"]
 
 
 @pytest.mark.django_db
