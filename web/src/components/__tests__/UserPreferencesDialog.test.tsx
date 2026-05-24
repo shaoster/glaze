@@ -22,9 +22,10 @@ import UserPreferencesDialog from "../UserPreferencesDialog";
 import {
   CurrentUserProvider,
   PreferencesDialogProvider,
+  type PreferencesSectionId,
 } from "../CurrentUserContext";
 
-function renderDialog(activeSectionId: "process-summary" | "tutorials") {
+function renderDialog(activeSectionId: PreferencesSectionId | null) {
   return render(
     <PreferencesDialogProvider
       openPreferencesDialog={vi.fn()}
@@ -102,15 +103,16 @@ describe("UserPreferencesDialog", () => {
     ).toBeInTheDocument();
     // Tutorials accordion is collapsed — its checkbox should not be visible.
     expect(screen.queryByRole("checkbox", { name: /summary customization tip/i })).not.toBeInTheDocument();
+    // Identity accordion is collapsed — its alias textbox should not be visible.
+    expect(screen.queryByRole("textbox", { name: /alias/i })).not.toBeInTheDocument();
   });
 
   it("expands the Tutorials section when routed there", async () => {
     renderDialog("tutorials");
 
     expect(await screen.findByText("Show the summary customization tip")).toBeInTheDocument();
-    expect(
-      screen.queryByText("Select the fields that should appear in your process summaries. Images are excluded."),
-    ).not.toBeInTheDocument();
+    // Identity accordion is collapsed — its alias textbox should not be visible.
+    expect(screen.queryByRole("textbox", { name: /alias/i })).not.toBeInTheDocument();
   });
 
   it("saves the full preferences document when toggling tutorials", async () => {
@@ -168,6 +170,19 @@ describe("UserPreferencesDialog", () => {
     });
   });
 
+  it("expands the Identity section when routed there", async () => {
+    renderDialog("identity");
+
+    expect(await screen.findByText("Identity")).toBeInTheDocument();
+    expect(
+      screen.getByText("Manage your display name and alias."),
+    ).toBeInTheDocument();
+    // Alias field should be visible.
+    expect(screen.getByRole("textbox", { name: /alias/i })).toBeInTheDocument();
+    // Tutorials accordion is collapsed — its checkbox should not be visible.
+    expect(screen.queryByRole("checkbox", { name: /summary customization tip/i })).not.toBeInTheDocument();
+  });
+
   it("saves alias when the alias field is filled in", async () => {
     const saveUserPreferences = vi.fn(async (preferences) => preferences);
     const onClose = vi.fn();
@@ -193,7 +208,7 @@ describe("UserPreferencesDialog", () => {
         >
           <UserPreferencesDialog
             open
-            activeSectionId={null}
+            activeSectionId="identity"
             onClose={onClose}
             onSectionChange={vi.fn()}
           />
