@@ -78,12 +78,22 @@ Triggers:
 Also runs unconditionally as the first step of `cd.yml` (`Ensure cluster`) — so every deploy self-heals a degraded cluster without manual intervention.
 
 Runs `tools/ensure_cluster.sh`:
-1. Sync `/etc/rancher/k3s/config.yaml` and restart k3s if changed
-2. Sync k3s auto-deploy manifests to `/var/lib/rancher/k3s/server/manifests/`
+1. Converge the host firewall so public internet reaches only HTTP/HTTPS app
+   ingress; SSH, Kubernetes API, kubelet, and cluster administration stay
+   behind Tailscale
+2. Sync `/etc/rancher/k3s/config.yaml` and restart k3s if changed
+3. Sync k3s auto-deploy manifests to `/var/lib/rancher/k3s/server/manifests/`
    (includes `probe-timeouts.yaml` — declarative `HelmChartConfig` for system component probe timeouts)
-3. Bootstrap Infisical machine identity as a Kubernetes Secret for ESO
-4. Wait for ESO to be ready
-5. Wait for the Tailscale front door (`traefik-tailscale`) to report `TailscaleProxyReady=True` and an assigned `100.x` IP
+4. Bootstrap Infisical machine identity as a Kubernetes Secret for ESO
+5. Wait for ESO to be ready
+6. Wait for the Tailscale front door (`traefik-tailscale`) to report `TailscaleProxyReady=True` and an assigned `100.x` IP
+
+The firewall is managed by a host `systemd` oneshot service named
+`glaze-host-firewall.service`, which loads `/etc/glaze-host-firewall.nft`.
+The nftables INPUT policy allows loopback, established traffic, `tailscale0`,
+k3s internal interfaces (`cni0`, `flannel.1`), public `80/tcp` and `443/tcp`,
+and drops all other host INPUT traffic, including public `22/tcp`, `6443/tcp`,
+`10250/tcp`, Tailscale direct `41641/udp`, and incidental NodePorts.
 
 ---
 
