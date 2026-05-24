@@ -10,6 +10,7 @@
 #   5. The Infisical machine identity is present as the infisical-auth Secret
 #   6. glaze-secrets exists in the default namespace (ESO has synced from Infisical)
 #   7. traefik-tailscale is ready and has an assigned Tailscale IP
+#   8. host firewall drops public control-plane and incidental NodePort traffic
 #
 # Idempotent: each step is a no-op when already converged. Safe to run on every
 # deploy — fast on a healthy cluster, self-healing on a degraded one.
@@ -21,6 +22,76 @@ DEPLOY_HOST="${1:?Usage: ensure_cluster.sh <deploy_host>}"
 SSH="ssh -o StrictHostKeyChecking=no"
 SCP="scp -o StrictHostKeyChecking=no"
 INFISICAL_PROJECT_SLUG="${INFISICAL_PROJECT_SLUG:?INFISICAL_PROJECT_SLUG must be set}"
+
+# ── host firewall ────────────────────────────────────────────────────────────
+# Keep the host's public surface intentionally small. The app edge remains
+# reachable on 80/443; SSH and cluster administration use Tailscale.
+echo "==> Converging host firewall..."
+$SSH "${DEPLOY_HOST}" 'bash -s' <<'ENDSSH'
+set -euo pipefail
+
+if ! command -v nft >/dev/null 2>&1; then
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update
+  apt-get install -y nftables
+fi
+
+cat > /etc/glaze-host-firewall.nft <<'EOF'
+table inet glaze_host_firewall {
+  chain input {
+    type filter hook input priority -100; policy accept;
+
+    iif "lo" accept
+    ct state established,related accept
+
+    # Private administration and Kubernetes-internal traffic.
+    iif "tailscale0" accept
+    iifname { "cni0", "flannel.1" } accept
+
+    # Public app ingress.
+    tcp dport { 80, 443 } accept
+
+    # Everything else on the host INPUT path includes public kube API, kubelet,
+    # and incidental NodePorts. Kubernetes pod/service forwarding is untouched.
+    counter drop
+  }
+}
+EOF
+
+cat > /usr/local/sbin/glaze-host-firewall-apply <<'EOF'
+#!/usr/bin/env sh
+set -eu
+
+if /usr/sbin/nft list table inet glaze_host_firewall >/dev/null 2>&1; then
+  /usr/sbin/nft delete table inet glaze_host_firewall
+fi
+
+exec /usr/sbin/nft -f /etc/glaze-host-firewall.nft
+EOF
+chmod 0755 /usr/local/sbin/glaze-host-firewall-apply
+
+cat > /etc/systemd/system/glaze-host-firewall.service <<'EOF'
+[Unit]
+Description=Glaze host firewall
+Documentation=https://github.com/shaoster/glaze
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/glaze-host-firewall-apply
+ExecReload=/usr/local/sbin/glaze-host-firewall-apply
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable glaze-host-firewall.service
+systemctl restart glaze-host-firewall.service
+nft list table inet glaze_host_firewall >/dev/null
+ENDSSH
 
 # ── static kubelet resolv.conf ───────────────────────────────────────────────
 # Write /etc/k3s-resolv.conf with only the two unique DO nameservers.
