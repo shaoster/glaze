@@ -103,7 +103,12 @@ Requests that are not coming from tailnet-authorized clients never reach Traefik
 
 `cert-manager` is managed declaratively by the cluster setup pipeline via [cert-manager.yaml](file:///infra/k3s/cert-manager.yaml). It is automatically installed into the `cert-manager` namespace with custom 5-second probe timeouts to ensure stability on the resource-constrained droplet.
 
-To apply manually or verify it has been applied:
+To apply manually:
+```bash
+scp infra/k3s/cert-manager.yaml root@<droplet>:/var/lib/rancher/k3s/server/manifests/cert-manager.yaml
+```
+
+To verify it has been applied:
 ```bash
 # Reconciled automatically from infra/k3s/cert-manager.yaml
 kubectl rollout status deployment/cert-manager-webhook -n cert-manager --timeout=120s
