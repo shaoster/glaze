@@ -56,28 +56,28 @@ export default function SmallTutorialInlay({
         : placement === SMALL_TUTORIAL_INLAY_PLACEMENTS.TOP
           ? [0, SMALL_TUTORIAL_INLAY_TOP_VERTICAL_OFFSET_PX]
           : [0, 0];
+  const tailBaseStyles = {
+    width: SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX * 2,
+    height: SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX * 2,
+    borderBottom: "1px solid",
+  };
   const tailStyles =
     placement === SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT
       ? {
-          left: -SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX,
+          ...tailBaseStyles,
           top: "50%",
-          width: SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX * 2,
-          height: SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX * 2,
           transform: "translateY(-50%) rotate(45deg)",
+          left: -SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX,
           borderLeft: "1px solid",
-          borderBottom: "1px solid",
           boxShadow: "-2px 2px 8px rgba(0, 0, 0, 0.12)",
         }
       : placement === SMALL_TUTORIAL_INLAY_PLACEMENTS.LEFT
         ? {
-            right: -SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX,
+            ...tailBaseStyles,
             top: "50%",
-            width: SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX * 2,
-            height:
-              SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX * 2,
             transform: "translateY(-50%) rotate(45deg)",
+            right: -SMALL_TUTORIAL_INLAY_RIGHT_POSITIONING.TAIL_PROTRUSION_PX,
             borderRight: "1px solid",
-            borderBottom: "1px solid",
             boxShadow: "2px 2px 8px rgba(0, 0, 0, 0.12)",
           }
         : {
