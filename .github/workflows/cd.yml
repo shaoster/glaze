@@ -47,16 +47,29 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Chart-only pushes (chart/** without a CI run) have no Docker image
-          # built for github.sha. Reuse the most recently deployed image tag
-          # from the latest GitHub release instead.
-          if [ "${{ github.event_name }}" = "push" ] && [ -z "${{ github.event.workflow_run.head_sha }}" ]; then
-            IMAGE_TAG=$(gh release list --repo ${{ github.repository }} --limit 1 --json tagName --jq '.[0].tagName' | sed 's/release-//')
+          # For manual dispatches or chart-only pushes, the current SHA might not
+          # have a corresponding Docker image (e.g. doc-only change or manual
+          # trigger on a commit that hasn't finished CI). Fall back to the
+          # latest available image tag from GHCR or the latest release.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ([ "${{ github.event_name }}" = "push" ] && [ -z "${{ github.event.workflow_run.head_sha }}" ]); then
+            echo "Attempting to resolve latest image tag from GHCR..."
+            
+            # Query GHCR for the latest version's tags. We check both user and org endpoints.
+            # We filter out 'latest' to get the actual build tag (usually the SHA).
+            IMAGE_TAG=$( (gh api /users/${{ github.repository_owner }}/packages/container/glaze/versions 2>/dev/null || \
+                          gh api /orgs/${{ github.repository_owner }}/packages/container/glaze/versions 2>/dev/null) | \
+                        jq -r '.[0].metadata.container.tags | .[] | select(. != "latest")' | head -n 1 || echo "")
+            
             if [ -z "$IMAGE_TAG" ]; then
-              echo "ERROR: Could not resolve image tag from latest release." >&2
+              echo "GHCR lookup failed or package not found. Falling back to latest GitHub release..."
+              IMAGE_TAG=$(gh release list --repo ${{ github.repository }} --limit 1 --json tagName --jq '.[0].tagName' | sed 's/release-//')
+            fi
+
+            if [ -z "$IMAGE_TAG" ]; then
+              echo "ERROR: Could not resolve image tag from GHCR or latest release." >&2
               exit 1
             fi
-            echo "Chart-only deploy: reusing image tag $IMAGE_TAG"
+            echo "Resolved image tag: $IMAGE_TAG"
           else
             IMAGE_TAG="${{ env.DEPLOY_SHA }}"
           fi
@@ -88,17 +101,18 @@ jobs:
         run: tools/helm_deploy.sh "${DEPLOY_HOST}" chart/glaze /tmp/values-override.yaml
 
       - name: Create GitHub Release
-        # Chart-only push deploys reuse an existing image tag; DEPLOY_SHA is the
-        # chart commit with no corresponding Docker image. Skip release creation
-        # so the latest release always points to a real, pullable image SHA.
-        if: github.event_name != 'push'
+        # Only create a release if we are deploying a real, pullable image SHA
+        # that matches the current commit. Chart-only pushes or manual dispatches
+        # that fall back to an older image should not create a new "release-SHA"
+        # tag that doesn't actually contain a new image.
+        if: github.event_name != 'push' && env.IMAGE_TAG == env.DEPLOY_SHA
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release view "release-${{ env.DEPLOY_SHA }}" >/dev/null 2>&1 || \
           gh release create "release-${{ env.DEPLOY_SHA }}" \
             --title "Build ${{ env.DEPLOY_SHA }}" \
-            --notes "Docker image: \`ghcr.io/shaoster/glaze:${{ env.DEPLOY_SHA }}\`"
+            --notes "Docker image: \`ghcr.io/shaoster/glaze:${{ env.IMAGE_TAG }}\`"
 
   deploy-modal:
     name: Deploy Services to Modal
