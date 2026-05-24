@@ -46,10 +46,21 @@ spec:
             tailscale.com/proxy-class: "default"
           spec:
             loadBalancerClass: "tailscale"
+            allocateLoadBalancerNodePorts: false
     ports:
       websecure:
         expose:
+          default: true
+          tailscale: false
+      websecure-tailscale:
+        port: 9443
+        exposedPort: 443
+        expose:
+          default: false
           tailscale: true
+        http:
+          tls:
+            enabled: true
     resources:
       requests:
         cpu: "50m"

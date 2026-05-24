@@ -9,12 +9,13 @@ metadata:
   annotations:
     {{- with .Values.ingress.annotations }}
     {{- range $key, $value := . }}
-    {{- if ne $key "traefik.ingress.kubernetes.io/router.middlewares" }}
+    {{- if and (ne $key "traefik.ingress.kubernetes.io/router.middlewares") (ne $key "traefik.ingress.kubernetes.io/router.entrypoints") }}
     {{ $key }}: {{ $value | quote }}
     {{- end }}
     {{- end }}
     {{- end }}
-    traefik.ingress.kubernetes.io/router.middlewares: default-{{ $fullName }}-security-headers@kubernetescrd, default-{{ $fullName }}-tailscale-only@kubernetescrd
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure-tailscale"
+    traefik.ingress.kubernetes.io/router.middlewares: default-{{ $fullName }}-security-headers@kubernetescrd
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
