@@ -265,7 +265,31 @@ source env.sh && gz_format
 # equivalent to: ruff format . && ruff check --fix .
 ```
 
-## Vibe coding / Contributing
+## Contributing
+
+There are three distinct ways to contribute, and they involve different levels of access and commitment:
+
+### Maintaining potterdoc.com
+
+If you want to help run the live service — monitoring, deployments, responding to issues — you need Tailscale access to the production cluster. Send a note to [admin@potterdoc.com](mailto:admin@potterdoc.com) and request access. Once you've been added to the tailnet and have [installed Tailscale](https://tailscale.com/download) on your machine, run:
+
+```bash
+tools/init_env.sh
+```
+
+This initializes your local `.env.local` with production service credentials pulled directly from the cluster. From there you have everything you need to run the app locally against real credentials, deploy to the cluster, and participate in on-call rotation. This is the path if you care about the pottery community using potterdoc.com specifically and want shared ownership of that instance.
+
+### Contributing to the open source project
+
+If you want to contribute code, documentation, or agent workflows to the Glaze codebase — bug fixes, new features, workflow improvements — you do not need Tailscale access or production credentials. Clone the repo, follow the setup steps below, and open a PR. The local SQLite dev environment is sufficient for most development work. Cloudinary and Google OAuth degrade gracefully when absent (see `.env.example` comments). This is the path if you want to improve the software itself regardless of who hosts it.
+
+### Self-hosting
+
+If you want to run your own instance of PotterDoc for yourself or your studio, you also do not need access to potterdoc.com infrastructure. The codebase is public and the Helm chart deploys to any k3s cluster. See [`docs/ci-cd.md`](docs/ci-cd.md) for deployment details. This is the path if you want full control over your own data and infrastructure.
+
+---
+
+### Vibe coding / agent workflows
 
 Glaze uses agent workflows for planning, implementation, offline analysis, and documentation. Use the skill that matches the task:
 
