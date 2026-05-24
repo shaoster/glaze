@@ -509,16 +509,16 @@ gz_restore() {
         local KC="KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
 
         echo ""
-        echo "╔══════════════════════════════════════════════════════════════════╗"
-        echo "║  WARNING: PRODUCTION DATABASE OVERWRITE                         ║"
-        echo "╠══════════════════════════════════════════════════════════════════╣"
-        echo "║  This will DROP AND RECREATE the production Postgres database.  ║"
-        echo "║  All current production data will be replaced by the dump.      ║"
-        echo "║  This action is IRREVERSIBLE. There is no undo.                 ║"
-        echo "║                                                                  ║"
-        printf  "║  Dump: %-57s║\n" "$(basename "$dump_path")"
-        printf  "║  Host: %-57s║\n" "$host"
-        echo "╚══════════════════════════════════════════════════════════════════╝"
+        echo "╔═════════════════════════════════════════════════════════════════════════════════╗"
+        echo "║  WARNING: PRODUCTION DATABASE OVERWRITE                                         ║"
+        echo "╠═════════════════════════════════════════════════════════════════════════════════╣"
+        echo "║  This will DROP AND RECREATE the production Postgres database.                  ║"
+        echo "║  All current production data will be replaced by the dump.                      ║"
+        echo "║  This action is IRREVERSIBLE. There is no undo.                                 ║"
+        echo "║                                                                                 ║"
+        printf  "║  Dump: %-73s║\n" "$(basename "$dump_path")"
+        printf  "║  Host: %-73s║\n" "$host"
+        echo "╚═════════════════════════════════════════════════════════════════════════════════╝"
         echo ""
 
         local confirm_str
@@ -538,7 +538,12 @@ gz_restore() {
         start_ts="$(date +%s)"
 
         echo "--- restoring dump into production postgres ---"
+        local spinner_pid
+        (while true; do for c in '|' '/' '-' '\'; do printf '\r  %s restoring...' "$c" >&2; sleep 0.2; done; done) &
+        spinner_pid=$!
         ssh "$host" "$KC kubectl exec -i glaze-postgres-0 -- bash -c 'PGPASSWORD=\"\$POSTGRES_PASSWORD\" pg_restore -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" --no-owner --no-privileges --clean --if-exists'" < "$dump_path"
+        kill "$spinner_pid" 2>/dev/null; wait "$spinner_pid" 2>/dev/null
+        printf '\r                       \r' >&2
 
         echo "--- verifying restore ---"
         local verify_out user_count piece_count orphan_pieces orphan_states
