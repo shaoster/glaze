@@ -1143,13 +1143,16 @@ gz_reload() {
 }
 
 gz_gentypes() {
-    # Regenerate generated-types.ts via Bazel, then symlink it into the source
-    # tree so the IDE and Vite dev server pick it up without a full build.
+    # Regenerate generated-types.ts and types.ts via Bazel, then symlink both
+    # into the source tree so the IDE and Vite dev server pick them up without
+    # a full build.
     ${GLAZE_AGENT:+rtk }bazel build //web:generated_types || return $?
-    local src="$GLAZE_ROOT/bazel-bin/web/src/util/generated-types.ts"
-    local dest="$GLAZE_ROOT/web/src/util/generated-types.ts"
-    ln -sfn "$src" "$dest"
-    echo "Generated: $dest → $src"
+    local bin="$GLAZE_ROOT/bazel-bin/web/src/util"
+    local util="$GLAZE_ROOT/web/src/util"
+    ln -sfn "$bin/generated-types.ts" "$util/generated-types.ts"
+    echo "Generated: $util/generated-types.ts → $bin/generated-types.ts"
+    ln -sfn "$bin/types.ts" "$util/types.ts"
+    echo "Generated: $util/types.ts → $bin/types.ts"
 }
 
 _GZ_SHORTCUTS=(

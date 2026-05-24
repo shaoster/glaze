@@ -10,7 +10,9 @@
 #   5. The Infisical machine identity is present as the infisical-auth Secret
 #   6. glaze-secrets exists in the default namespace (ESO has synced from Infisical)
 #   7. traefik-tailscale is ready and has an assigned Tailscale IP
-#   8. host firewall drops public control-plane and incidental NodePort traffic
+#   8. host firewall drops public control-plane traffic (SSH, kube API, kubelet)
+#   9. traefik-tailscale service has no NodePort (websecure-tailscale is only
+#      reachable via the Tailscale VIP, not via the public node IP)
 #
 # Idempotent: each step is a no-op when already converged. Safe to run on every
 # deploy — fast on a healthy cluster, self-healing on a degraded one.
@@ -51,8 +53,12 @@ table inet glaze_host_firewall {
     # Public app ingress.
     tcp dport { 80, 443 } accept
 
-    # Everything else on the host INPUT path includes public kube API, kubelet,
-    # and incidental NodePorts. Kubernetes pod/service forwarding is untouched.
+    # Everything else on the host INPUT path: public kube API, kubelet, etc.
+    # NOTE: NodePort traffic is NOT blocked here — kube-proxy DNAT in
+    # PREROUTING rewrites the destination before INPUT is evaluated, so
+    # NodePort packets traverse FORWARD, not INPUT. NodePort exposure is
+    # prevented by allocateLoadBalancerNodePorts: false + the convergence
+    # step in ensure_cluster.sh, not by this firewall rule.
     counter drop
   }
 }
@@ -125,11 +131,63 @@ $SSH "${DEPLOY_HOST}" '
 
 # ── k3s auto-deploy manifests ────────────────────────────────────────────────
 echo "==> Syncing k3s manifests..."
+manifest_apply_args=""
 for f in infra/k3s/*.yaml; do
   # config.yaml is a k3s server config, not a Kubernetes manifest.
   [ "$(basename "$f")" = "config.yaml" ] && continue
-  $SCP "$f" "${DEPLOY_HOST}":/var/lib/rancher/k3s/server/manifests/"$(basename "$f")"
+  dest="/var/lib/rancher/k3s/server/manifests/$(basename "$f")"
+  $SCP "$f" "${DEPLOY_HOST}:${dest}"
+  manifest_apply_args="${manifest_apply_args} -f ${dest}"
 done
+# kubectl apply in addition to SCP so HelmChart resources converge immediately
+# regardless of whether the k3s file watcher fires.
+# shellcheck disable=SC2086
+$SSH "${DEPLOY_HOST}" "KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply ${manifest_apply_args}"
+
+# ── Wait for Traefik Helm install ─────────────────────────────────────────────
+echo "==> Waiting for Traefik Helm install..."
+$SSH "${DEPLOY_HOST}" '
+  set -e
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+  kubectl wait job/helm-install-traefik -n kube-system \
+    --for=condition=complete --timeout=180s 2>/dev/null || true
+  kubectl rollout status deployment/traefik \
+    -n kube-system --timeout=120s
+  echo "Traefik is ready."
+'
+
+# ── Converge traefik-tailscale NodePort ───────────────────────────────────────
+# allocateLoadBalancerNodePorts: false in the Helm values prevents fresh
+# allocation, but Kubernetes preserves previously-allocated NodePorts across
+# Helm upgrades even with that flag set. Remove it explicitly so the port is
+# never reachable on the public node IP.
+echo "==> Ensuring traefik-tailscale has no NodePort..."
+$SSH "${DEPLOY_HOST}" '
+  set -e
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+  # Build a JSON patch removing nodePort from every port that has one,
+  # identified by name so the patch stays correct if ports are added/reordered.
+  patch=$(
+    kubectl get svc traefik-tailscale -n kube-system -o json | python3 -c "
+import json, sys
+svc = json.load(sys.stdin)
+ops = []
+for i, p in enumerate(svc[\"spec\"][\"ports\"]):
+    if \"nodePort\" in p:
+        ops.append({\"op\": \"remove\", \"path\": f\"/spec/ports/{i}/nodePort\"})
+ops.append({\"op\": \"add\", \"path\": \"/spec/allocateLoadBalancerNodePorts\", \"value\": False})
+print(json.dumps(ops))
+" 2>/dev/null || true)
+  # ops list contains at least the allocateLoadBalancerNodePorts add, so it is
+  # always non-empty; only apply if any nodePort entries were found.
+  if echo "$patch" | python3 -c "import json,sys; ops=json.load(sys.stdin); exit(0 if any(o[\"op\"]==\"remove\" for o in ops) else 1)" 2>/dev/null; then
+    echo "Removing stale NodePorts from traefik-tailscale..."
+    kubectl patch svc traefik-tailscale -n kube-system --type=json -p "$patch"
+    echo "NodePorts removed."
+  else
+    echo "No NodePorts present — nothing to do."
+  fi
+'
 
 # ── ESO credentials ──────────────────────────────────────────────────────────
 # Infisical machine identity for External Secrets Operator.
