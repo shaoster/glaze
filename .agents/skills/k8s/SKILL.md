@@ -34,6 +34,8 @@ value is `root@glaze-prod` — a Tailscale MagicDNS hostname. SSH is restricted
 to the tailnet; you must be connected to Tailscale and tagged as an
 `admin-client`. Tailscale SSH handles auth with no extra keys.
 
+*Note: While local development and manual commands use `$GLAZE_PROD_HOST` from `.env.local`, the CI/CD pipeline in [cd.yml](file:///.github/workflows/cd.yml) resolves the host from the GitHub Action variable `${{ vars.DEPLOY_HOST_TAILSCALE }}`.*
+
 Ask the user for the value if not already established in the conversation, then
 store it as `PROD_HOST` for the rest of the session. All `kubectl` and `helm`
 commands run over SSH with `KUBECONFIG=/etc/rancher/k3s/k3s.yaml`:
@@ -50,7 +52,7 @@ export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 If the user has already established the host earlier in the conversation, use
 that value — don't ask again.
 
-## TLS termination
+## TLS termination & Tailnet Ingress Routing
 
 There are two distinct TLS termination paths in this cluster. The ACME solver
 used for each is the critical difference — do not mix them up when adding new
@@ -74,24 +76,26 @@ Internet → public Traefik LoadBalancer (159.223.154.68:443)
 ### Path 2 — Tailnet-only traffic (`admin.potterdoc.com`, `headlamp.potterdoc.com`)
 
 ```
-Tailscale client → tailnet DNS → Tailscale operator LoadBalancer service
-                → traefik-tailscale (100.83.6.71:443)
-                → Traefik terminates TLS (cert: glaze-admin-tls / headlamp-tls)
-                → Django admin / Headlamp
+Tailscale client → Tailscale IP (100.x.x.x) 
+                 → Tailscale Operator Proxy Pod
+                 → traefik-tailscale Service (port 9443 / websecure-tailscale)
+                 → Traefik terminates TLS (cert: glaze-admin-tls / headlamp-tls)
+                 → Django admin / Headlamp
 ```
 
-- These hostnames resolve to a **Tailscale CGNAT IP** (`100.x.x.x`) that is
-  unreachable without Tailscale membership — non-tailnet clients fail before
-  Traefik sees the request.
-- cert-manager issues certs via **DNS-01** challenge (Cloudflare). HTTP-01
-  cannot be used because the ACME server cannot reach a tailnet-only IP.
-- `ClusterIssuer`: `letsencrypt-prod` with `dns01.cloudflare` solver, scoped
-  to `admin.potterdoc.com` and `headlamp.potterdoc.com` via `selector.dnsNames`.
-- ExternalDNS keeps the Cloudflare DNS records pointed at the operator-assigned
-  Tailscale service IP. Records must be **DNS-only** (grey cloud in Cloudflare)
-  — Cloudflare cannot proxy to a reserved Tailscale IP.
-- The Tailscale operator authenticates with Infisical-sourced OAuth credentials
-  (`TAILSCALE_OAUTH_CLIENT_ID`, `TAILSCALE_OAUTH_CLIENT_SECRET`).
+#### Tailscale Operator -> ExternalDNS -> Cloudflare Integration
+The integration dynamically configures DNS and ingress for tailnet-only subdomains:
+1. **Traefik Configuration:** In [traefik.yaml](file:///infra/k3s/traefik.yaml), an additional `tailscale` service (`traefik-tailscale`) is defined with `loadBalancerClass: "tailscale"` and annotated with:
+   `external-dns.alpha.kubernetes.io/hostname: "admin.potterdoc.com,headlamp.potterdoc.com"`
+2. **Tailscale Proxy Provisioning:** The Tailscale Kubernetes Operator running in the cluster detects this LoadBalancer service, registers a new device in the Tailnet, spawns a Tailscale proxy pod to handle CGNAT routing, and updates the `traefik-tailscale` Service LoadBalancer status with the proxy's `100.x.x.x` CGNAT address.
+3. **Cloudflare DNS Records:** ExternalDNS running in the cluster watches the services, extracts the assigned Tailscale IP (`100.x.x.x`) from the service status, and automatically updates Cloudflare DNS records for `admin.potterdoc.com` and `headlamp.potterdoc.com`. These records must be **DNS-only** (grey cloud in Cloudflare) because Cloudflare cannot proxy to private CGNAT IPs.
+4. **Secrets Replication:** cert-manager needs `CLOUDFLARE_API_TOKEN` to complete DNS-01 challenges. A `ClusterExternalSecret` named `glaze-cloudflare-token` (managed by the `glaze` Helm chart) replicates this credential from Infisical into the `cert-manager` namespace.
+
+#### Inbound Ingress Routing
+- Requests to `admin.potterdoc.com` and `headlamp.potterdoc.com` resolve to the Tailscale proxy's CGNAT IP, failing immediately for non-tailnet clients.
+- For authorized tailnet clients, the traffic lands on the operator-managed Tailscale proxy pod, which forwards it to Traefik on port `9443` (the `websecure-tailscale` entrypoint).
+- Traefik terminates TLS. The certs are issued by cert-manager's `ClusterIssuer` using the `dns01.cloudflare` solver (as cert-manager cannot reach a tailnet-only IP via HTTP-01).
+- Traefik routes the requests using host headers to either the `glaze-web` service (for `admin.potterdoc.com/admin/`) or `headlamp` service (for `headlamp.potterdoc.com`).
 
 ### Adding a new hostname — which solver to use
 
@@ -195,27 +199,23 @@ node.
 This is expected transient behavior during rolling deploys. If it persists after
 the pod has been running for >60s, check DB connectivity and migration state.
 
-## Applying experimental chart changes
+## Applying experimental chart changes & Sequential Rollouts
 
+The production cluster runs on a single-core, resource-constrained VM. To avoid control-plane thrashing and out-of-memory crashes, **do not run manual `helm upgrade` commands.**
+
+Instead, use [tools/helm_deploy.sh](file:///tools/helm_deploy.sh). This script automates a **sequential rollout strategy**:
+1. **Pause Deployments:** It runs `kubectl rollout pause` on the `glaze-web` and `glaze-worker` deployments. This lets Kubernetes accept the new configuration spec without immediately spawning new pods.
+2. **Apply Chart:** It runs `helm upgrade --install` to update the manifests.
+3. **Sequential Resume:** It resumes the deployments one by one (`kubectl rollout resume`), waiting for each to fully converge (`kubectl rollout status`) before starting the next. This prevents concurrent CPU/memory spikes during rolling restarts.
+
+To run a manual deployment from the workspace:
 ```bash
 # $PROD_HOST established at session start (see "Connecting to the cluster")
-
-# Copy local chart to node
-scp -o StrictHostKeyChecking=no -r chart/glaze "${PROD_HOST}":~/glaze-chart-deploy/
-
-# Run upgrade (reuses existing values-override.yaml on the node)
-ssh -o StrictHostKeyChecking=no "${PROD_HOST}" "
-  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-  helm upgrade glaze ~/glaze-chart-deploy/glaze/ \
-    -f ~/glaze-values-override.yaml \
-    --timeout 5m \
-    --wait
-"
+# Usage: helm_deploy.sh <deploy_host> <chart_dir> <values_override_file>
+tools/helm_deploy.sh "${PROD_HOST}" chart/glaze /tmp/values-override.yaml
 ```
 
-**Important:** the CD pipeline also scp's the chart from git and runs
-`helm upgrade`. Any experimental change you apply manually will be **reverted**
-by the next CD run unless it is also committed to git.
+**Important:** The CD pipeline also copies the chart from Git and runs this script. Any manual changes applied to the cluster will be **reverted** on the next CD run unless committed to Git.
 
 ## Helm release management
 
@@ -248,7 +248,25 @@ After merging and waiting for the CD job:
 This cluster runs on a single-core node. Rules of thumb:
 
 - **Never use `exec` probes for stateful services** — use `tcpSocket` or `httpGet`
-- **Always set `timeoutSeconds: 3`** — never rely on the 1s default
+- **Always set `timeoutSeconds: 3`** (or more) — never rely on the 1s default
 - `initialDelaySeconds` should be ≥ the service's typical cold-start time
 - `failureThreshold: 3` with `periodSeconds: 10` gives 30s grace before kill —
   sufficient for transient deploy-time contention
+
+*Note on HelmChartConfig limitations:* K3s `HelmChartConfig` files only apply to resources managed by the k3s Helm controller. They are ineffective for static deployments (like CoreDNS) or standalone Helm charts (like cert-manager). For these resources, [tools/ensure_cluster.sh](file:///tools/ensure_cluster.sh) applies idempotent `kubectl patch` modifications to dynamically raise probe timeouts to 5s.
+
+## DNS Nameserver Deduplication Workaround
+
+DigitalOcean DHCP and Tailscale configurations can push a node's nameserver list past the 3-entry resolver limit, or introduce duplicate resolver entries. This causes pods to emit continuous warnings:
+`Nameserver limits were exceeded, some nameservers have been omitted (DNSConfigForming)`
+
+To prevent this:
+1. **Static Resolv.conf:** [tools/ensure_cluster.sh](file:///tools/ensure_cluster.sh) creates a static `/etc/k3s-resolv.conf` on the host node containing only the two unique DigitalOcean nameservers (`67.207.67.2` and `67.207.67.3`). Kubelet is configured in `/etc/rancher/k3s/config.yaml` (`resolv-conf=/etc/k3s-resolv.conf`) to read this file instead of dynamic paths.
+2. **CoreDNS Override:** A custom CoreDNS override ConfigMap (`coredns-custom`) is applied under `kube-system`, mapping `forward.override` to the two DO DNS hosts to bypass node-level resolver resolution for pod DNS lookup.
+
+## Host Firewall (nftables)
+
+To keep the droplet's public surface small, the host firewall is managed programmatically via `nftables`:
+- **Service:** `glaze-host-firewall.service` (systemd unit configured on the node).
+- **Rules:** The firewall drops public control-plane traffic (SSH, Kubernetes API server, kubelet API). It accepts incoming packets on loopback (`lo`), Tailscale interface (`tailscale0`), pod networks (`cni0` / `flannel.1`), and public web ports (80 / 443).
+- **NodePorts:** NodePort access is blocked by disabling NodePort allocations in the Helm config (`allocateLoadBalancerNodePorts: false`) and dynamically stripping existing ports from the `traefik-tailscale` service in [tools/ensure_cluster.sh](file:///tools/ensure_cluster.sh).

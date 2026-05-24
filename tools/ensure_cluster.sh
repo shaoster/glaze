@@ -127,6 +127,14 @@ $SSH "${DEPLOY_HOST}" '
   fi
 '
 
+# ── Clean up stale manifests/configs ─────────────────────────────────────────
+echo "==> Cleaning up stale probe-timeouts manifest and configs..."
+$SSH "${DEPLOY_HOST}" '
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+  rm -f /var/lib/rancher/k3s/server/manifests/probe-timeouts.yaml
+  kubectl delete helmchartconfig cert-manager coredns -n kube-system --ignore-not-found
+'
+
 # ── k3s auto-deploy manifests ────────────────────────────────────────────────
 echo "==> Syncing k3s manifests..."
 manifest_apply_args=""
@@ -264,6 +272,35 @@ $SSH "${DEPLOY_HOST}" '
     echo "  [$i/36] ready=${ready:-<missing>} ip=${ip:-<missing>} hostname=${hostname:-<missing>}"
     sleep 5
   done
+'
+
+# ── Tune component probe timeouts ────────────────────────────────────────────
+echo "==> Tuning CoreDNS probe timeouts..."
+$SSH "${DEPLOY_HOST}" '
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+  if kubectl get deployment coredns -n kube-system &>/dev/null; then
+    timeout=$(kubectl get deployment coredns -n kube-system -o jsonpath="{.spec.template.spec.containers[0].livenessProbe.timeoutSeconds}" 2>/dev/null || echo "1")
+    if [ "$timeout" -ne 5 ]; then
+      echo "Patching coredns deployment probe timeouts to 5s..."
+      kubectl patch deployment coredns -n kube-system --type="json" -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/livenessProbe/timeoutSeconds\", \"value\": 5}, {\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/readinessProbe/timeoutSeconds\", \"value\": 5}]"
+    else
+      echo "coredns probe timeouts are already 5s."
+    fi
+  fi
+'
+
+echo "==> Tuning cert-manager-webhook probe timeouts..."
+$SSH "${DEPLOY_HOST}" '
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+  if kubectl get deployment cert-manager-webhook -n cert-manager &>/dev/null; then
+    timeout=$(kubectl get deployment cert-manager-webhook -n cert-manager -o jsonpath="{.spec.template.spec.containers[0].livenessProbe.timeoutSeconds}" 2>/dev/null || echo "1")
+    if [ "$timeout" -ne 5 ]; then
+      echo "Patching cert-manager-webhook deployment probe timeouts to 5s..."
+      kubectl patch deployment cert-manager-webhook -n cert-manager --type="json" -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/livenessProbe/timeoutSeconds\", \"value\": 5}, {\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/readinessProbe/timeoutSeconds\", \"value\": 5}]"
+    else
+      echo "cert-manager-webhook probe timeouts are already 5s."
+    fi
+  fi
 '
 
 echo "==> Cluster ready."
