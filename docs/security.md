@@ -125,6 +125,6 @@ PotterDoc does not currently:
 - Process payments
 - Store health, financial, or legal records
 - Operate under HIPAA, PCI-DSS, or SOC 2 frameworks
-- Offer a public API or third-party integrations beyond Google OAuth
+- Offer a supported public API — an OpenAPI-compatible API exists and is documented, but it carries no SLA, is tailored for the web UI, and requires CSRF token handling that makes programmatic consumption cumbersome. The API surface is nonetheless held to the same security mitigations described above.
 
 These are not future commitments — they are statements about the current scope that inform the proportional security controls above.
