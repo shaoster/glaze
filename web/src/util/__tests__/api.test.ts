@@ -337,7 +337,8 @@ describe("auth endpoints", () => {
     preferences: {
       process_summary_fields: [],
       tutorials: {
-        summary_customize_popover: "show",
+        summary_customize_popover: true,
+        change_alias_prompt: true,
       },
     },
   };
@@ -473,7 +474,8 @@ describe("auth endpoints", () => {
       preferences: {
         process_summary_fields: ["piece.name"],
         tutorials: {
-          summary_customize_popover: "show",
+          summary_customize_popover: true,
+          change_alias_prompt: true,
         },
       },
     });
@@ -496,7 +498,8 @@ describe("auth endpoints", () => {
       preferences: {
         process_summary_fields: ["piece.name"],
         tutorials: {
-          summary_customize_popover: "show",
+          summary_customize_popover: true,
+          change_alias_prompt: true,
         },
       },
     });
@@ -508,23 +511,31 @@ describe("auth endpoints", () => {
     mockClient.patch.mockResolvedValue({
       data: {
         alias: "",
-        preferences: { process_summary_fields: ["piece.created"] },
+        preferences: {
+          process_summary_fields: ["piece.created"],
+          tutorials: {
+            summary_customize_popover: true,
+            change_alias_prompt: true,
+          },
+        },
       },
     });
 
     await expect(
       updateUserPreferences({
         process_summary_fields: ["piece.created"],
-        tutorials: {
-          summary_customize_popover: "show",
-        },
+      tutorials: {
+        summary_customize_popover: true,
+        change_alias_prompt: true,
+      },
       }),
     ).resolves.toEqual({
       alias: "",
       preferences: {
         process_summary_fields: ["piece.created"],
         tutorials: {
-          summary_customize_popover: "show",
+          summary_customize_popover: true,
+          change_alias_prompt: true,
         },
       },
     });
@@ -533,7 +544,8 @@ describe("auth endpoints", () => {
       preferences: {
         process_summary_fields: ["piece.created"],
         tutorials: {
-          summary_customize_popover: "show",
+          summary_customize_popover: true,
+          change_alias_prompt: true,
         },
       },
     });

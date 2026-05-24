@@ -197,12 +197,13 @@ describe("ProcessSummary", () => {
           id: 1,
           is_staff: false,
           openid_subject: "",
-          preferences: {
-            process_summary_fields: ["piece.name", "wheel_thrown.clay_weight_lbs"],
-            tutorials: {
-              summary_customize_popover: "show",
+            preferences: {
+              process_summary_fields: ["piece.name", "wheel_thrown.clay_weight_lbs"],
+              tutorials: {
+                summary_customize_popover: true,
+                change_alias_prompt: true,
+              },
             },
-          },
         }}
         >
         <ProcessSummary
@@ -243,7 +244,8 @@ describe("ProcessSummary", () => {
     const saveUserPreferences = vi.fn().mockResolvedValue({
       process_summary_fields: ["piece.current_location"],
       tutorials: {
-        summary_customize_popover: "don't",
+        summary_customize_popover: false,
+        change_alias_prompt: true,
       },
     });
 
@@ -260,7 +262,8 @@ describe("ProcessSummary", () => {
             preferences: {
               process_summary_fields: ["piece.current_location"],
               tutorials: {
-                summary_customize_popover: "show",
+                summary_customize_popover: true,
+                change_alias_prompt: true,
               },
             },
           }}
