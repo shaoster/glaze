@@ -7,7 +7,8 @@
 #      cert-manager, headlamp, etc.) are present on the node
 #   3. External Secrets Operator is installed and its deployment is rollout-ready
 #   4. The Infisical machine identity is present as the infisical-auth Secret
-#   5. glaze-secrets exists in the default namespace (ESO has synced from Infisical)
+#   5. The shared ClusterSecretStore infisical exists
+#   6. glaze-secrets exists in the default namespace (ESO has synced from Infisical)
 #
 # Idempotent: each step is a no-op when already converged. Safe to run on every
 # deploy — fast on a healthy cluster, self-healing on a degraded one.
@@ -18,6 +19,7 @@ set -euo pipefail
 DEPLOY_HOST="${1:?Usage: ensure_cluster.sh <deploy_host>}"
 SSH="ssh -o StrictHostKeyChecking=no"
 SCP="scp -o StrictHostKeyChecking=no"
+INFISICAL_PROJECT_SLUG="${INFISICAL_PROJECT_SLUG:?INFISICAL_PROJECT_SLUG must be set}"
 
 # ── k3s server config ────────────────────────────────────────────────────────
 echo "==> Syncing k3s server config..."
@@ -74,7 +76,33 @@ $SSH "${DEPLOY_HOST}" '
   echo "ESO is ready."
 '
 
-# ── Wait for glaze-secrets (contract item 5) ─────────────────────────────────
+# ── Infisical ClusterSecretStore ─────────────────────────────────────────────
+echo "==> Applying shared Infisical ClusterSecretStore..."
+$SSH "${DEPLOY_HOST}" 'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -' <<EOF
+apiVersion: external-secrets.io/v1
+kind: ClusterSecretStore
+metadata:
+  name: infisical
+spec:
+  provider:
+    infisical:
+      auth:
+        universalAuthCredentials:
+          clientId:
+            name: infisical-auth
+            namespace: default
+            key: clientId
+          clientSecret:
+            name: infisical-auth
+            namespace: default
+            key: clientSecret
+      secretsScope:
+        projectSlug: "${INFISICAL_PROJECT_SLUG}"
+        environmentSlug: "prod"
+        recursive: false
+EOF
+
+# ── Wait for glaze-secrets (contract item 6) ─────────────────────────────────
 # The Helm pre-upgrade hook (deploy-init job) needs glaze-secrets to exist
 # before it runs. ESO creates it after applying the ExternalSecret resource,
 # which happens as part of the Helm release — so this must be polled here,

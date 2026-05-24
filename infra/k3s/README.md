@@ -72,7 +72,9 @@ k3s will detect the change and re-apply automatically.
 
 ### 4. Install the Tailscale operator and ExternalDNS
 
-The tailnet-facing admin/headlamp front door is managed by a Tailscale operator-backed LoadBalancer service. Install the operator first, then ExternalDNS so Cloudflare records can follow the operator-assigned Tailscale IP automatically.
+The tailnet-facing admin/headlamp front door is managed by a Tailscale operator-backed LoadBalancer service. The shared Infisical `ClusterSecretStore` is bootstrapped from `infra/k3s/secretstore.yaml`, so the operator and ExternalDNS can consume Infisical secrets before the app chart is installed.
+
+Install the operator first, then ExternalDNS so Cloudflare records can follow the operator-assigned Tailscale IP automatically.
 
 The operator expects OAuth client credentials from Infisical under the keys `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_CLIENT_SECRET`. ExternalDNS reuses the existing Infisical Cloudflare token at `CLOUDFLARE_API_TOKEN`.
 
@@ -81,6 +83,7 @@ In the Tailscale tailnet policy, create `tag:k8s-operator` and `tag:k8s`, then m
 Apply the manifests that live alongside this README:
 
 ```bash
+scp infra/k3s/secretstore.yaml root@<droplet>:/var/lib/rancher/k3s/server/manifests/secretstore.yaml
 scp infra/k3s/tailscale-operator.yaml root@<droplet>:/var/lib/rancher/k3s/server/manifests/tailscale-operator.yaml
 scp infra/k3s/external-dns.yaml root@<droplet>:/var/lib/rancher/k3s/server/manifests/external-dns.yaml
 ```
@@ -93,6 +96,8 @@ kubectl get svc -n kube-system traefik-tailscale -o wide
 ```
 
 The `traefik` service is the public front door; `traefik-tailscale` is the tailnet-only front door. ExternalDNS keeps `admin.potterdoc.com` and `headlamp.potterdoc.com` pointed at the `traefik-tailscale` service IP.
+The packet path for both tailnet-only hosts is: browser on an authorized Tailscale client -> tailnet DNS record -> Tailscale operator-managed Traefik `LoadBalancer` service -> Traefik ingress -> Django admin or Headlamp.
+Requests that are not coming from tailnet-authorized clients never reach Traefik on those hostnames because the Tailscale service IP is not routable outside the tailnet.
 
 ### 5. Install cert-manager
 
