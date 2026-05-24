@@ -149,15 +149,11 @@ echo "==> Waiting for Traefik Helm install..."
 $SSH "${DEPLOY_HOST}" '
   set -e
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-  for i in $(seq 1 36); do
-    status=$(kubectl get job helm-install-traefik -n kube-system \
-      -o jsonpath="{.status.conditions[0].type}" 2>/dev/null || echo "missing")
-    [ "$status" = "Complete" ] && echo "Traefik Helm install complete." && break
-    [ "$status" = "Failed" ] && echo "ERROR: Traefik Helm install failed." && exit 1
-    [ $i -eq 36 ] && echo "ERROR: Traefik Helm install timed out after 3m" && exit 1
-    echo "  [$i/36] status=${status}"
-    sleep 5
-  done
+  kubectl wait job/helm-install-traefik -n kube-system \
+    --for=condition=complete --timeout=180s 2>/dev/null || true
+  kubectl rollout status deployment/traefik \
+    -n kube-system --timeout=120s
+  echo "Traefik is ready."
 '
 
 # ── Converge traefik-tailscale NodePort ───────────────────────────────────────
@@ -169,15 +165,27 @@ echo "==> Ensuring traefik-tailscale has no NodePort..."
 $SSH "${DEPLOY_HOST}" '
   set -e
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-  np=$(kubectl get svc traefik-tailscale -n kube-system \
-    -o jsonpath="{.spec.ports[0].nodePort}" 2>/dev/null || true)
-  if [ -n "$np" ]; then
-    echo "Removing stale NodePort ${np} from traefik-tailscale..."
-    kubectl patch svc traefik-tailscale -n kube-system --type=json -p \
-      "[{\"op\":\"remove\",\"path\":\"/spec/ports/0/nodePort\"},{\"op\":\"add\",\"path\":\"/spec/allocateLoadBalancerNodePorts\",\"value\":false}]"
-    echo "NodePort removed."
+  # Build a JSON patch removing nodePort from every port that has one,
+  # identified by name so the patch stays correct if ports are added/reordered.
+  patch=$(
+    kubectl get svc traefik-tailscale -n kube-system -o json | python3 -c "
+import json, sys
+svc = json.load(sys.stdin)
+ops = []
+for i, p in enumerate(svc[\"spec\"][\"ports\"]):
+    if \"nodePort\" in p:
+        ops.append({\"op\": \"remove\", \"path\": f\"/spec/ports/{i}/nodePort\"})
+ops.append({\"op\": \"add\", \"path\": \"/spec/allocateLoadBalancerNodePorts\", \"value\": False})
+print(json.dumps(ops))
+" 2>/dev/null || true)
+  # ops list contains at least the allocateLoadBalancerNodePorts add, so it is
+  # always non-empty; only apply if any nodePort entries were found.
+  if echo "$patch" | python3 -c "import json,sys; ops=json.load(sys.stdin); exit(0 if any(o[\"op\"]==\"remove\" for o in ops) else 1)" 2>/dev/null; then
+    echo "Removing stale NodePorts from traefik-tailscale..."
+    kubectl patch svc traefik-tailscale -n kube-system --type=json -p "$patch"
+    echo "NodePorts removed."
   else
-    echo "No NodePort present — nothing to do."
+    echo "No NodePorts present — nothing to do."
   fi
 '
 
