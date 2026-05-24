@@ -1,6 +1,11 @@
+import asyncio
 import hashlib
+import json
+from collections.abc import AsyncIterable
+from io import BytesIO
 from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlparse
+from zipfile import ZipFile
 
 import pytest
 from django.contrib.auth.models import User
@@ -8,7 +13,7 @@ from django.test import Client
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from api.models import InviteCode, UserProfile
+from api.models import InviteCode, Piece, UserProfile
 
 FAKE_SUB = "google-subject-12345"
 FAKE_HASHED_SUB = hashlib.sha256(FAKE_SUB.encode()).hexdigest()
@@ -219,9 +224,7 @@ class TestAuthMe:
         response = auth_views.auth_me(request)
         assert response.status_code == 503
 
-    def test_refreshes_session_cookie_for_shared_admin_domain(
-        self, user, settings
-    ):
+    def test_refreshes_session_cookie_for_shared_admin_domain(self, user, settings):
         settings.GOOGLE_OAUTH_CLIENT_ID = "my-client-id"
         settings.SESSION_COOKIE_DOMAIN = ".potterdoc.com"
 
@@ -232,8 +235,7 @@ class TestAuthMe:
 
         assert response.status_code == 200
         assert (
-            response.cookies[settings.SESSION_COOKIE_NAME]["domain"]
-            == ".potterdoc.com"
+            response.cookies[settings.SESSION_COOKIE_NAME]["domain"] == ".potterdoc.com"
         )
 
     def test_admin_login_redirects_to_apex_bootstrap(self, settings):
@@ -257,9 +259,7 @@ class TestAuthMe:
         target = urlparse(response["Location"])
         assert target.scheme == "https"
         assert target.netloc == "potterdoc.com"
-        assert parse_qs(target.query)["next"] == [
-            "https://admin.potterdoc.com/admin/"
-        ]
+        assert parse_qs(target.query)["next"] == ["https://admin.potterdoc.com/admin/"]
 
 
 @pytest.mark.django_db
@@ -375,3 +375,129 @@ class TestAuthGoogle:
         request = factory.post("/api/auth/google/", {}, format="json")
         response = auth_views.auth_google(request)
         assert response.status_code == 503
+
+
+async def _collect_async_bytes(chunks: AsyncIterable[bytes]) -> bytes:
+    return b"".join([chunk async for chunk in chunks])
+
+
+@pytest.mark.django_db
+class TestAuthExport:
+    def test_export_requires_authentication(self):
+        from api import auth_views
+
+        factory = APIRequestFactory()
+        request = factory.get("/api/auth/export/")
+        response = auth_views.auth_export(request)
+        assert response.status_code == 403
+
+    def test_export_returns_zip_with_pieces_json(self, user, piece):
+        from api import auth_views
+
+        factory = APIRequestFactory()
+        request = factory.get("/api/auth/export/")
+        force_authenticate(request, user=user)
+        response = auth_views.auth_export(request)
+
+        assert response.status_code == 200
+        assert response["Content-Type"] == "application/zip"
+        assert "potterdoc-export.zip" in response["Content-Disposition"]
+
+        archive_bytes = asyncio.run(_collect_async_bytes(response.streaming_content))
+        with ZipFile(BytesIO(archive_bytes)) as archive:
+            names = archive.namelist()
+            assert "pieces.json" in names
+            assert "profile.json" in names
+            pieces = json.loads(archive.read("pieces.json"))
+            assert isinstance(pieces, list)
+            assert any(str(piece.id) == p["id"] for p in pieces)
+
+    def test_export_user_isolation(self, user, other_user):
+        from api import auth_views
+        from api.models import PieceState
+        from api.workflow import ENTRY_STATE
+
+        my_piece = Piece.objects.create(user=user, name="My Bowl")
+        PieceState.objects.create(user=user, piece=my_piece, state=ENTRY_STATE, order=1)
+
+        other_piece = Piece.objects.create(user=other_user, name="Other piece")
+        PieceState.objects.create(
+            user=other_user, piece=other_piece, state=ENTRY_STATE, order=1
+        )
+
+        factory = APIRequestFactory()
+        request = factory.get("/api/auth/export/")
+        force_authenticate(request, user=user)
+        response = auth_views.auth_export(request)
+
+        archive_bytes = asyncio.run(_collect_async_bytes(response.streaming_content))
+        with ZipFile(BytesIO(archive_bytes)) as archive:
+            pieces = json.loads(archive.read("pieces.json"))
+            piece_ids = {p["id"] for p in pieces}
+            assert str(my_piece.id) in piece_ids
+            assert str(other_piece.id) not in piece_ids
+
+
+@pytest.mark.django_db
+class TestAuthDeleteAccount:
+    def test_delete_account_requires_authentication(self):
+        from api import auth_views
+
+        factory = APIRequestFactory()
+        request = factory.delete("/api/auth/account/")
+        response = auth_views.auth_delete_account(request)
+        assert response.status_code == 403
+
+    def test_delete_account_removes_user_and_returns_204(self, user, monkeypatch):
+        from api import auth_views
+
+        monkeypatch.setattr(auth_views, "logout", lambda req: None)
+
+        factory = APIRequestFactory()
+        request = factory.delete("/api/auth/account/")
+        force_authenticate(request, user=user)
+        user_id = user.id
+
+        response = auth_views.auth_delete_account(request)
+
+        assert response.status_code == 204
+        assert not User.objects.filter(id=user_id).exists()
+
+    def test_delete_account_invalidates_session_before_deletion(
+        self, user, monkeypatch
+    ):
+        from api import auth_views
+
+        deletion_order: list[str] = []
+
+        def fake_logout(req):
+            assert User.objects.filter(id=user.id).exists(), (
+                "logout must be called before user is deleted"
+            )
+            deletion_order.append("logout")
+
+        monkeypatch.setattr(auth_views, "logout", fake_logout)
+
+        factory = APIRequestFactory()
+        request = factory.delete("/api/auth/account/")
+        force_authenticate(request, user=user)
+        auth_views.auth_delete_account(request)
+
+        assert deletion_order == ["logout"]
+        assert not User.objects.filter(id=user.id).exists()
+
+    def test_delete_account_only_affects_own_account(
+        self, user, other_user, monkeypatch
+    ):
+        from api import auth_views
+
+        monkeypatch.setattr(auth_views, "logout", lambda req: None)
+
+        factory = APIRequestFactory()
+        request = factory.delete("/api/auth/account/")
+        force_authenticate(request, user=user)
+        other_user_id = other_user.id
+
+        auth_views.auth_delete_account(request)
+
+        assert User.objects.filter(id=other_user_id).exists()

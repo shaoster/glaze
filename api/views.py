@@ -6,6 +6,8 @@ existing URL registrations and tests can import stable names from api.views.
 
 from .analysis_views import glaze_combination_images
 from .auth_views import (
+    auth_delete_account,
+    auth_export,
     auth_google,
     auth_logout,
     auth_me,
@@ -59,6 +61,8 @@ __all__ = [
     "admin_cloudinary_cleanup",
     "admin_cloudinary_cleanup_archive",
     "admin_manual_square_crop_import",
+    "auth_delete_account",
+    "auth_export",
     "auth_google",
     "auth_logout",
     "auth_me",

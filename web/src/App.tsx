@@ -25,6 +25,12 @@ import {
   CircularProgress,
   Container,
   CssBaseline,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  TextField,
   ListItemIcon,
   Menu,
   MenuItem,
@@ -32,6 +38,8 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import DownloadIcon from "@mui/icons-material/Download";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
 import CropFreeIcon from "@mui/icons-material/CropFree";
@@ -42,6 +50,8 @@ import { alpha, ThemeProvider, createTheme } from "@mui/material/styles";
 
 import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
 import {
+  deleteAccount,
+  downloadUserData,
   fetchAppInit,
   loginWithGoogle,
   logoutUser,
@@ -351,6 +361,9 @@ function AppShell({
   onCurrentUserUpdated: (user: AuthUser) => void;
 }) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteInProgress, setDeleteInProgress] = useState(false);
   const navigate = useNavigate();
   const preferencesRootMatch = useMatch("/preferences");
   const preferencesSectionMatch = useMatch("/preferences/:sectionId");
@@ -479,9 +492,9 @@ function AppShell({
                 </ListItemIcon>
                 Preferences
               </MenuItem>
-              {currentUser.is_staff ? (
-                <>
+              {currentUser.is_staff ? [
                   <MenuItem
+                    key="invite"
                     component={Link}
                     to="/staff/invite"
                     onClick={() => setMenuAnchor(null)}
@@ -490,8 +503,9 @@ function AppShell({
                       <AdminPanelSettingsIcon fontSize="small" />
                     </ListItemIcon>
                     Invite Code
-                  </MenuItem>
+                  </MenuItem>,
                   <MenuItem
+                    key="glaze-import"
                     component={Link}
                     to="/tools/glaze-import"
                     onClick={() => setMenuAnchor(null)}
@@ -500,8 +514,9 @@ function AppShell({
                       <CropFreeIcon fontSize="small" />
                     </ListItemIcon>
                     Glaze Import Tool
-                  </MenuItem>
+                  </MenuItem>,
                   <MenuItem
+                    key="cloudinary-cleanup"
                     component={Link}
                     to="/tools/cloudinary-cleanup"
                     onClick={() => setMenuAnchor(null)}
@@ -510,9 +525,10 @@ function AppShell({
                       <CleaningServicesIcon fontSize="small" />
                     </ListItemIcon>
                     Cloudinary Cleanup
-                  </MenuItem>
-                  {adminBaseUrl && (
+                  </MenuItem>,
+                  adminBaseUrl ? (
                     <MenuItem
+                      key="admin-tool"
                       component="a"
                       href={`${adminBaseUrl}/admin/`}
                       onClick={() => setMenuAnchor(null)}
@@ -522,9 +538,31 @@ function AppShell({
                       </ListItemIcon>
                       Admin Tool
                     </MenuItem>
-                  )}
-                </>
-              ) : null}
+                  ) : null,
+                ] : null}
+              <MenuItem
+                onClick={() => {
+                  setMenuAnchor(null);
+                  downloadUserData();
+                }}
+              >
+                <ListItemIcon>
+                  <DownloadIcon fontSize="small" />
+                </ListItemIcon>
+                Download my data
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setMenuAnchor(null);
+                  setDeleteDialogOpen(true);
+                }}
+                sx={{ color: "error.main" }}
+              >
+                <ListItemIcon>
+                  <DeleteForeverIcon fontSize="small" color="error" />
+                </ListItemIcon>
+                Delete account
+              </MenuItem>
               <MenuItem
                 onClick={() => {
                   setMenuAnchor(null);
@@ -537,6 +575,62 @@ function AppShell({
                 Log out
               </MenuItem>
             </Menu>
+            <Dialog
+              open={deleteDialogOpen}
+              onClose={() => {
+                if (deleteInProgress) return;
+                setDeleteDialogOpen(false);
+                setDeleteConfirmText("");
+              }}
+            >
+              <DialogTitle>Delete account?</DialogTitle>
+              <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <DialogContentText>
+                  This permanently deletes your account and all your pieces.
+                  This cannot be undone. Download your data first if you want a
+                  copy.
+                </DialogContentText>
+                <DialogContentText>
+                  Type <strong>delete my account</strong> to confirm.
+                </DialogContentText>
+                <TextField
+                  autoFocus
+                  size="small"
+                  placeholder="delete my account"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  disabled={deleteInProgress}
+                />
+              </DialogContent>
+              <DialogActions>
+                <Button
+                  onClick={() => {
+                    setDeleteDialogOpen(false);
+                    setDeleteConfirmText("");
+                  }}
+                  disabled={deleteInProgress}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  color="error"
+                  disabled={deleteConfirmText !== "delete my account" || deleteInProgress}
+                  onClick={async () => {
+                    setDeleteInProgress(true);
+                    try {
+                      await deleteAccount();
+                      window.location.replace("/");
+                    } catch {
+                      setDeleteInProgress(false);
+                      setDeleteDialogOpen(false);
+                      setDeleteConfirmText("");
+                    }
+                  }}
+                >
+                  {deleteInProgress ? "Deleting…" : "Delete my account"}
+                </Button>
+              </DialogActions>
+            </Dialog>
           </Box>
           <ErrorBoundary>
             <Suspense

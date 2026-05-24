@@ -365,6 +365,17 @@ export async function logoutUser(): Promise<void> {
   await client.post("auth/logout/", {});
 }
 
+export function downloadUserData(): void {
+  // Navigate the browser to the export URL so the ZIP is streamed directly
+  // to disk via Content-Disposition: attachment, with no client-side buffering.
+  window.location.assign("/api/auth/export/");
+}
+
+export async function deleteAccount(): Promise<void> {
+  await ensureCsrfCookie();
+  await client.delete("auth/account/");
+}
+
 export async function validateInviteCode(code: string): Promise<{ valid: true }> {
   await ensureCsrfCookie();
   const { data } = await client.post<{ valid: true }>("auth/validate-invite/", { code });

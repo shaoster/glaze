@@ -363,7 +363,7 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
         ),
         component_global: models.ForeignKey(
             f"api.{component_model_name}",
-            on_delete=models.PROTECT,
+            on_delete=models.CASCADE,
         ),
         "__str__": (lambda cg: lambda self: str(getattr(self, cg)))(component_global),
     }
@@ -742,7 +742,7 @@ def make_piece_state_global_ref_model(global_name: str) -> type:
         "field_name": models.CharField(max_length=100),
         global_name: models.ForeignKey(
             f"api.{model_name}",
-            on_delete=models.PROTECT,
+            on_delete=models.CASCADE,
             related_name="piece_state_refs",
         ),
         "__str__": (
@@ -783,7 +783,7 @@ def make_taggable_model(global_name: str) -> type:
         ),
         "tag": models.ForeignKey(
             "api.Tag",
-            on_delete=models.PROTECT,
+            on_delete=models.CASCADE,
             related_name=f"{global_name}_links",
         ),
         "order": models.PositiveSmallIntegerField(),
