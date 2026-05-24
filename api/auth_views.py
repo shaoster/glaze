@@ -1,8 +1,13 @@
 # ruff: noqa: F401
 import hashlib
+import json
 import logging
+import posixpath
 from collections import defaultdict
+from collections.abc import AsyncIterator
 from typing import Any, Callable, cast
+from urllib.parse import urlparse
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import httpx
 from django.apps import apps
@@ -26,10 +31,12 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
+from .cloudinary_cleanup import _StreamingZipBuffer
 from .models import (
     AsyncTask,
     FavoriteGlazeCombination,
     GlazeCombination,
+    Image,
     InviteCode,
     Piece,
     PieceState,
@@ -409,3 +416,117 @@ def staff_invite_code(request: Request) -> Response:
     return Response(
         {"code": str(invite.code), "expires_at": invite.expires_at.isoformat()}
     )
+
+
+# ── Data export ───────────────────────────────────────────────────────────────
+
+
+def _collect_export_data(user: Any, request: Request) -> tuple[str, list[Any]]:
+    pieces = (
+        Piece.objects.filter(user=user)
+        .select_related("thumbnail", "current_location")
+        .prefetch_related(
+            "states",
+            "states__image_links",
+            "states__image_links__image",
+            "tag_links",
+            "tag_links__tag",
+        )
+    )
+    pieces_data = PieceDetailSerializer(
+        pieces, many=True, context={"request": request}
+    ).data
+    pieces_json = json.dumps(list(pieces_data), default=str)
+
+    images = list(
+        Image.objects.filter(cloudinary_public_id__isnull=False)
+        .filter(
+            Q(thumbnail_for_pieces__user=user)
+            | Q(piece_state_links__piece_state__user=user)
+        )
+        .distinct()
+    )
+    return pieces_json, images
+
+
+def _export_image_name(image: Any) -> str:
+    sanitized = image.cloudinary_public_id.replace("/", "__")
+    _, ext = posixpath.splitext(urlparse(image.url).path)
+    return f"images/{sanitized}{ext}"
+
+
+async def _stream_export_archive(
+    pieces_json: str, images: list[Any]
+) -> AsyncIterator[bytes]:
+    buffer = _StreamingZipBuffer()
+    async with httpx.AsyncClient(timeout=60) as client:
+        with ZipFile(cast(Any, buffer), "w", ZIP_DEFLATED) as archive:
+            archive.writestr("pieces.json", pieces_json)
+            for c in buffer.flush_chunks():
+                yield c
+
+            for image in images:
+                member_name = _export_image_name(image)
+                try:
+                    async with client.stream("GET", image.url) as response:
+                        response.raise_for_status()
+                        with archive.open(member_name, "w") as member:
+                            async for data in response.aiter_bytes(1024 * 1024):
+                                member.write(data)
+                                for c in buffer.flush_chunks():
+                                    yield c
+                except httpx.HTTPError:
+                    pass
+                for c in buffer.flush_chunks():
+                    yield c
+
+    for c in buffer.flush_chunks():
+        yield c
+
+
+@extend_schema(
+    request=None,
+    responses={200: None},
+    description=(
+        "Download a ZIP archive of all the current user's data: "
+        "pieces.json (full piece history as JSON) and images/ "
+        "(Cloudinary-backed images). Download this before deleting your account."
+    ),
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@traced
+def auth_export(request: Request) -> StreamingHttpResponse:
+    pieces_json, images = _collect_export_data(request.user, request)
+    response = StreamingHttpResponse(
+        _stream_export_archive(pieces_json, images),
+        content_type="application/zip",
+    )
+    response["Content-Disposition"] = 'attachment; filename="potterdoc-export.zip"'
+    return response
+
+
+# ── Account deletion ──────────────────────────────────────────────────────────
+
+
+@extend_schema(
+    request=None,
+    responses={204: None},
+    description=(
+        "Permanently delete the current user's account and all associated data. "
+        "This action cannot be undone. Download your data first via GET /api/auth/export/. "
+        "The session is invalidated before deletion. Cloudinary-hosted images are "
+        "removed from this database but Cloudinary assets are cleaned up separately "
+        "by the admin cleanup tool."
+    ),
+)
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+@traced
+def auth_delete_account(request: Request) -> Response:
+    user = request.user
+    # Invalidate the session before deleting the user to avoid dangling session
+    # references to a now-deleted User row.
+    logout(request)
+    user.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
