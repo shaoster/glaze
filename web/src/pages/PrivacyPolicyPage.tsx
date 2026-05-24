@@ -118,10 +118,8 @@ export default function PrivacyPolicyPage() {
             <Box component="a" href="mailto:admin@potterdoc.com" sx={{ color: "inherit" }}>
               admin@potterdoc.com
             </Box>{" "}
-            and we will prioritize it. Note: we do not automatically remove EXIF
-            data from your uploaded images at this time, since we have a
-            hypothesis that the camera model or local time zone might be useful
-            features for training our image processors.
+            and we will prioritize it. EXIF data is automatically stripped from
+            your uploaded images before they are stored.
           </Typography>
 
           <Typography variant="body1">
