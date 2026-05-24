@@ -97,3 +97,15 @@ pytest_test(
     expected_coverage = ["tools/gz_start_launcher.py"],
     visibility = ["//visibility:public"],
 )
+
+# ── Kubernetes manifest validation ───────────────────────────────────────────
+
+sh_test(
+    name = "kubeconform_test",
+    srcs = ["kubeconform.sh"],
+    data = [
+        "//:k3s_manifests",
+        "@kubeconform_linux//:bin",
+    ],
+    tags = ["lint"],
+)
