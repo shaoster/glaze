@@ -538,28 +538,14 @@ gz_restore() {
         start_ts="$(date +%s)"
 
         echo "--- restoring dump into production postgres ---"
-        ssh "$host" "$KC kubectl exec -i glaze-postgres-0 -- bash -c \
-            'PGPASSWORD=\"\$POSTGRES_PASSWORD\" pg_restore \
-             -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" \
-             --no-owner --no-privileges --clean --if-exists'" \
-            < "$dump_path"
+        ssh "$host" "$KC kubectl exec -i glaze-postgres-0 -- bash -c 'PGPASSWORD=\"\$POSTGRES_PASSWORD\" pg_restore -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" --no-owner --no-privileges --clean --if-exists'" < "$dump_path"
 
         echo "--- verifying restore ---"
         local user_count piece_count orphan_pieces orphan_states
-        user_count="$(ssh "$host" "$KC kubectl exec glaze-postgres-0 -- bash -c \
-            'PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" \
-             -Atqc \"SELECT COUNT(*) FROM auth_user;\"")"
-        piece_count="$(ssh "$host" "$KC kubectl exec glaze-postgres-0 -- bash -c \
-            'PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" \
-             -Atqc \"SELECT COUNT(*) FROM api_piece;\"")"
-        orphan_pieces="$(ssh "$host" "$KC kubectl exec glaze-postgres-0 -- bash -c \
-            'PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" \
-             -Atqc \"SELECT COUNT(*) FROM api_piece p \
-                     WHERE NOT EXISTS (SELECT 1 FROM api_piecestate s WHERE s.piece_id = p.id);\"")"
-        orphan_states="$(ssh "$host" "$KC kubectl exec glaze-postgres-0 -- bash -c \
-            'PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" \
-             -Atqc \"SELECT COUNT(*) FROM api_piecestate s \
-                     WHERE NOT EXISTS (SELECT 1 FROM api_piece p WHERE p.id = s.piece_id);\"")"
+        user_count="$(ssh "$host" "$KC kubectl exec glaze-postgres-0 -- bash -c 'PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -Atqc \"SELECT COUNT(*) FROM auth_user;\"")"
+        piece_count="$(ssh "$host" "$KC kubectl exec glaze-postgres-0 -- bash -c 'PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -Atqc \"SELECT COUNT(*) FROM api_piece;\"")"
+        orphan_pieces="$(ssh "$host" "$KC kubectl exec glaze-postgres-0 -- bash -c 'PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -Atqc \"SELECT COUNT(*) FROM api_piece p WHERE NOT EXISTS (SELECT 1 FROM api_piecestate s WHERE s.piece_id = p.id);\"")"
+        orphan_states="$(ssh "$host" "$KC kubectl exec glaze-postgres-0 -- bash -c 'PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -Atqc \"SELECT COUNT(*) FROM api_piecestate s WHERE NOT EXISTS (SELECT 1 FROM api_piece p WHERE p.id = s.piece_id);\"")"
 
         local elapsed=$(( $(date +%s) - start_ts ))
         echo ""
