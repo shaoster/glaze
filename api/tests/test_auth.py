@@ -187,6 +187,27 @@ class TestAuthEndpointsMocked:
         assert response.status_code == 200
         assert response.json()["alias"] == "My Alias"
 
+    def test_auth_preferences_patch_combined_alias_and_tutorials(self, client, user):
+        UserProfile.objects.create(user=user)
+        response = client.patch(
+            "/api/auth/preferences/",
+            {
+                "alias": "Studio Mug",
+                "preferences": {
+                    "process_summary_fields": ["piece.name"],
+                    "tutorials": {"summary_customize_popover": "don't"},
+                },
+            },
+            format="json",
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["alias"] == "Studio Mug"
+        assert data["preferences"]["process_summary_fields"] == ["piece.name"]
+        assert data["preferences"]["tutorials"]["summary_customize_popover"] == "don't"
+        user.profile.refresh_from_db()
+        assert user.profile.alias == "Studio Mug"
+
 
 @pytest.mark.django_db
 class TestAuthMe:

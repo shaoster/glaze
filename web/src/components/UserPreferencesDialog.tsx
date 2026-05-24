@@ -3,6 +3,7 @@ import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
+  Alert,
   Box,
   Button,
   Checkbox,
@@ -104,6 +105,12 @@ export default function UserPreferencesDialog({
             <Typography color="error">
               Failed to load your preferences.
             </Typography>
+          ) : null}
+
+          {saveState.error !== null ? (
+            <Alert severity="error">
+              Couldn't save your preferences. Please try again.
+            </Alert>
           ) : null}
 
           <PreferencesForm

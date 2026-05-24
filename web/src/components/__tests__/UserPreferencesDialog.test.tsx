@@ -232,4 +232,51 @@ describe("UserPreferencesDialog", () => {
       expect(onClose).toHaveBeenCalled();
     });
   });
+
+  it("shows an error message and does not close when saving fails", async () => {
+    const saveUserPreferences = vi.fn().mockRejectedValue(new Error("Server error"));
+    const onClose = vi.fn();
+
+    render(
+      <PreferencesDialogProvider
+        openPreferencesDialog={vi.fn()}
+        saveUserPreferences={saveUserPreferences}
+      >
+        <CurrentUserProvider
+          currentUser={{
+            id: 1,
+            is_staff: false,
+            openid_subject: "",
+            alias: "",
+            preferences: {
+              // Match the fetchUserPreferences mock return value so that the
+              // preferencesKey doesn't change on fetch, avoiding a PreferencesForm
+              // remount that would detach the save button before it can be clicked.
+              process_summary_fields: ["piece.name"],
+              tutorials: {
+                summary_customize_popover: "show",
+              },
+            },
+          }}
+        >
+          <UserPreferencesDialog
+            open
+            activeSectionId={null}
+            onClose={onClose}
+            onSectionChange={vi.fn()}
+          />
+        </CurrentUserProvider>
+      </PreferencesDialogProvider>,
+    );
+
+    // fireEvent bypasses aria-hidden; MUI Dialog's Fade transition keeps content
+    // aria-hidden in jsdom so userEvent won't reach it.
+    const saveButton = await screen.findByRole("button", { name: /save/i, hidden: true });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/couldn't save your preferences/i)).toBeInTheDocument();
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
 });
