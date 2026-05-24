@@ -249,6 +249,12 @@ For a new tailnet-only hostname:
 
 The Django Admin (`admin.potterdoc.com/admin/`) and Headlamp (`headlamp.potterdoc.com`) are only reachable through the tailnet-facing Traefik service that the Tailscale operator manages. The public site continues to use the normal public Traefik service.
 
+Production sends an HSTS header with `includeSubDomains` and `preload`.
+Treat every current and future `potterdoc.com` subdomain as HTTPS-only. This is
+safe for tailnet-only admin surfaces because cert-manager issues their
+certificates with Cloudflare DNS-01; TLS renewal does not require public HTTP
+reachability.
+
 ### Packet paths
 
 #### Tailnet client → `admin.potterdoc.com/admin/`
