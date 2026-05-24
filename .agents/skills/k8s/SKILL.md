@@ -30,9 +30,9 @@ Workflow for any cluster change:
 ## Connecting to the cluster
 
 The production SSH target is `$GLAZE_PROD_HOST` from `.env.local`. The default
-value is `root@glaze-prod` — a Tailscale MagicDNS hostname. If your machine is
-on the tailnet and tagged as an `admin-client`, Tailscale SSH handles auth with
-no extra keys. Override with `root@<ip>` to connect outside the tailnet.
+value is `root@glaze-prod` — a Tailscale MagicDNS hostname. SSH is restricted
+to the tailnet; you must be connected to Tailscale and tagged as an
+`admin-client`. Tailscale SSH handles auth with no extra keys.
 
 Ask the user for the value if not already established in the conversation, then
 store it as `PROD_HOST` for the rest of the session. All `kubectl` and `helm`
