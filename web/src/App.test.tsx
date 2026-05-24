@@ -101,7 +101,6 @@ import {
   fetchPiece,
   loginWithGoogle,
   logoutUser,
-  updateUserPreferences,
   validateInviteCode,
 } from "./util/api";
 import App from "./App";
