@@ -11,8 +11,8 @@ vi.mock("../../util/api", async (importOriginal) => {
       preferences: {
         process_summary_fields: ["piece.name"],
         tutorials: {
-          summary_customize_popover: "show",
-          change_alias_prompt: "show",
+          summary_customize_popover: true,
+          change_alias_prompt: true,
         },
       },
     }),
@@ -41,8 +41,8 @@ function renderDialog(activeSectionId: PreferencesSectionId | null) {
           preferences: {
             process_summary_fields: ["piece.name"],
             tutorials: {
-              summary_customize_popover: "show",
-              change_alias_prompt: "show",
+              summary_customize_popover: true,
+              change_alias_prompt: true,
             },
           },
         }}
@@ -77,8 +77,8 @@ describe("UserPreferencesDialog", () => {
             preferences: {
               process_summary_fields: ["piece.name"],
               tutorials: {
-                summary_customize_popover: "show",
-                change_alias_prompt: "show",
+                summary_customize_popover: true,
+                change_alias_prompt: true,
               },
             },
           }}
@@ -136,8 +136,8 @@ describe("UserPreferencesDialog", () => {
             preferences: {
               process_summary_fields: ["piece.name"],
               tutorials: {
-                summary_customize_popover: "show",
-                change_alias_prompt: "show",
+                summary_customize_popover: true,
+                change_alias_prompt: true,
               },
             },
           }}
@@ -165,8 +165,8 @@ describe("UserPreferencesDialog", () => {
         {
           process_summary_fields: ["piece.name"],
           tutorials: {
-            summary_customize_popover: "don't",
-            change_alias_prompt: "show",
+            summary_customize_popover: false,
+            change_alias_prompt: true,
           },
         },
         "",
@@ -206,8 +206,8 @@ describe("UserPreferencesDialog", () => {
             preferences: {
               process_summary_fields: ["piece.name"],
               tutorials: {
-                summary_customize_popover: "show",
-                change_alias_prompt: "show",
+                summary_customize_popover: true,
+                change_alias_prompt: true,
               },
             },
           }}
@@ -260,8 +260,8 @@ describe("UserPreferencesDialog", () => {
               // remount that would detach the save button before it can be clicked.
               process_summary_fields: ["piece.name"],
               tutorials: {
-                summary_customize_popover: "show",
-                change_alias_prompt: "show",
+                summary_customize_popover: true,
+                change_alias_prompt: true,
               },
             },
           }}

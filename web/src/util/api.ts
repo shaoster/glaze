@@ -83,7 +83,7 @@ export type AuthUser = {
   preferences: UserPreferences;
 };
 
-export type TutorialVisibility = "show" | "don't";
+export type TutorialVisibility = boolean;
 
 export type UserTutorialPreferences = {
   [key in TutorialToggleKey]: TutorialVisibility;
@@ -240,14 +240,16 @@ function mapPieceDetail(raw: Wire<PieceDetail>): PieceDetail {
 
 function normalizeUserTutorialPreferences(
   tutorials:
-    | Partial<Record<TutorialToggleKey, TutorialVisibility>>
+    | Partial<Record<TutorialToggleKey, boolean | "show" | "don't">>
     | null
     | undefined,
 ): UserTutorialPreferences {
   return Object.fromEntries(
     TUTORIAL_TOGGLE_VALUES.map((key) => [
       key,
-      tutorials?.[key] === "don't" ? "don't" : "show",
+      tutorials?.[key] === false || tutorials?.[key] === "don't"
+        ? false
+        : true,
     ]),
   ) as UserTutorialPreferences;
 }

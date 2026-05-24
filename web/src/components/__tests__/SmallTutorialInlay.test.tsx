@@ -22,8 +22,8 @@ function makeCurrentUser() {
     preferences: {
       process_summary_fields: [],
       tutorials: {
-        summary_customize_popover: "show" as const,
-        change_alias_prompt: "show" as const,
+        summary_customize_popover: true as const,
+        change_alias_prompt: true as const,
       },
     },
   };
@@ -122,8 +122,8 @@ describe("SmallTutorialInlay", () => {
       expect(saveUserPreferencesMock).toHaveBeenCalledWith({
         process_summary_fields: [],
         tutorials: {
-          summary_customize_popover: "don't",
-          change_alias_prompt: "show",
+          summary_customize_popover: false,
+          change_alias_prompt: true,
         },
       });
       expect(screen.queryByText("Customize this summary!")).not.toBeInTheDocument();
@@ -158,8 +158,8 @@ describe("SmallTutorialInlay", () => {
       expect(saveUserPreferencesMock).toHaveBeenCalledWith({
         process_summary_fields: [],
         tutorials: {
-          summary_customize_popover: "don't",
-          change_alias_prompt: "show",
+          summary_customize_popover: false,
+          change_alias_prompt: true,
         },
       });
       expect(screen.queryByText("Customize this summary!")).not.toBeInTheDocument();

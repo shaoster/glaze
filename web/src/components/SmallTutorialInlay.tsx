@@ -44,10 +44,10 @@ export default function SmallTutorialInlay({
   const saveUserPreferences = useSaveUserPreferences();
   const copy = TUTORIAL_TOGGLE_METADATA[tutorialKey];
   const tutorialVisibility =
-    currentUser?.preferences.tutorials[tutorialKey] ?? "show";
+    currentUser?.preferences.tutorials[tutorialKey] ?? true;
   const shouldShow =
     Boolean(attachedElement && currentUser && saveUserPreferences) &&
-    tutorialVisibility === "show";
+    tutorialVisibility;
   const popperOffset =
     placement === SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT
       ? [0, SMALL_TUTORIAL_INLAY_RIGHT_HORIZONTAL_OFFSET_PX]
@@ -99,7 +99,7 @@ export default function SmallTutorialInlay({
       ...currentUser.preferences,
       tutorials: {
         ...currentUser.preferences.tutorials,
-        [tutorialKey]: "don't",
+        [tutorialKey]: false,
       },
     });
   }, [currentUser, saveUserPreferences, tutorialKey]);

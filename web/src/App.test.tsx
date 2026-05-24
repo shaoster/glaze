@@ -116,8 +116,8 @@ const MOCK_USER = {
   preferences: {
     process_summary_fields: [],
     tutorials: {
-      summary_customize_popover: "show" as const,
-      change_alias_prompt: "show" as const,
+      summary_customize_popover: true as const,
+      change_alias_prompt: true as const,
     },
   },
 };

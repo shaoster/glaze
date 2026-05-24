@@ -110,8 +110,8 @@ class TestAuthEndpointsMocked:
             preferences={
                 "process_summary_fields": ["piece.name"],
                 "tutorials": {
-                    "summary_customize_popover": "show",
-                    "other_tutorial": "show",
+                    "summary_customize_popover": True,
+                    "other_tutorial": True,
                 },
                 "theme": "dark",
             },
@@ -122,7 +122,7 @@ class TestAuthEndpointsMocked:
             {
                 "preferences": {
                     "tutorials": {
-                        "summary_customize_popover": "don't",
+                        "summary_customize_popover": False,
                     }
                 }
             },
@@ -133,8 +133,8 @@ class TestAuthEndpointsMocked:
         assert response.json()["preferences"] == {
             "process_summary_fields": ["piece.name"],
             "tutorials": {
-                "summary_customize_popover": "don't",
-                "other_tutorial": "show",
+                "summary_customize_popover": False,
+                "other_tutorial": True,
             },
             "theme": "dark",
         }
@@ -143,8 +143,8 @@ class TestAuthEndpointsMocked:
         assert user.profile.preferences == {
             "process_summary_fields": ["piece.name"],
             "tutorials": {
-                "summary_customize_popover": "don't",
-                "other_tutorial": "show",
+                "summary_customize_popover": False,
+                "other_tutorial": True,
             },
             "theme": "dark",
         }
@@ -154,7 +154,7 @@ class TestAuthEndpointsMocked:
             user=user,
             preferences={
                 "tutorials": {
-                    "summary_customize_popover": "show",
+                    "summary_customize_popover": True,
                 },
             },
         )
@@ -164,7 +164,7 @@ class TestAuthEndpointsMocked:
             {
                 "preferences": {
                     "tutorials": {
-                        "change_alias_prompt": "don't",
+                        "change_alias_prompt": False,
                     }
                 }
             },
@@ -174,16 +174,16 @@ class TestAuthEndpointsMocked:
         assert response.status_code == 200
         assert response.json()["preferences"] == {
             "tutorials": {
-                "summary_customize_popover": "show",
-                "change_alias_prompt": "don't",
+                "summary_customize_popover": True,
+                "change_alias_prompt": False,
             },
         }
 
         user.profile.refresh_from_db()
         assert user.profile.preferences == {
             "tutorials": {
-                "summary_customize_popover": "show",
-                "change_alias_prompt": "don't",
+                "summary_customize_popover": True,
+                "change_alias_prompt": False,
             },
         }
 
@@ -239,7 +239,7 @@ class TestAuthEndpointsMocked:
                 "alias": "Studio Mug",
                 "preferences": {
                     "process_summary_fields": ["piece.name"],
-                    "tutorials": {"summary_customize_popover": "don't"},
+                    "tutorials": {"summary_customize_popover": False},
                 },
             },
             format="json",
@@ -248,7 +248,7 @@ class TestAuthEndpointsMocked:
         data = response.json()
         assert data["alias"] == "Studio Mug"
         assert data["preferences"]["process_summary_fields"] == ["piece.name"]
-        assert data["preferences"]["tutorials"]["summary_customize_popover"] == "don't"
+        assert data["preferences"]["tutorials"]["summary_customize_popover"] is False
         user.profile.refresh_from_db()
         assert user.profile.alias == "Studio Mug"
 

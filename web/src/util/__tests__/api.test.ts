@@ -337,8 +337,8 @@ describe("auth endpoints", () => {
     preferences: {
       process_summary_fields: [],
       tutorials: {
-        summary_customize_popover: "show",
-        change_alias_prompt: "show",
+        summary_customize_popover: true,
+        change_alias_prompt: true,
       },
     },
   };
@@ -474,8 +474,8 @@ describe("auth endpoints", () => {
       preferences: {
         process_summary_fields: ["piece.name"],
         tutorials: {
-          summary_customize_popover: "show",
-          change_alias_prompt: "show",
+          summary_customize_popover: true,
+          change_alias_prompt: true,
         },
       },
     });
@@ -498,8 +498,8 @@ describe("auth endpoints", () => {
       preferences: {
         process_summary_fields: ["piece.name"],
         tutorials: {
-          summary_customize_popover: "show",
-          change_alias_prompt: "show",
+          summary_customize_popover: true,
+          change_alias_prompt: true,
         },
       },
     });
@@ -514,8 +514,8 @@ describe("auth endpoints", () => {
         preferences: {
           process_summary_fields: ["piece.created"],
           tutorials: {
-            summary_customize_popover: "show",
-            change_alias_prompt: "show",
+            summary_customize_popover: true,
+            change_alias_prompt: true,
           },
         },
       },
@@ -525,8 +525,8 @@ describe("auth endpoints", () => {
       updateUserPreferences({
         process_summary_fields: ["piece.created"],
       tutorials: {
-        summary_customize_popover: "show",
-        change_alias_prompt: "show",
+        summary_customize_popover: true,
+        change_alias_prompt: true,
       },
       }),
     ).resolves.toEqual({
@@ -534,8 +534,8 @@ describe("auth endpoints", () => {
       preferences: {
         process_summary_fields: ["piece.created"],
         tutorials: {
-          summary_customize_popover: "show",
-          change_alias_prompt: "show",
+          summary_customize_popover: true,
+          change_alias_prompt: true,
         },
       },
     });
@@ -544,8 +544,8 @@ describe("auth endpoints", () => {
       preferences: {
         process_summary_fields: ["piece.created"],
         tutorials: {
-          summary_customize_popover: "show",
-          change_alias_prompt: "show",
+          summary_customize_popover: true,
+          change_alias_prompt: true,
         },
       },
     });
