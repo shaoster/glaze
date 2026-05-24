@@ -320,6 +320,7 @@ LOGGING = {
 # Security settings
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
+CSRF_COOKIE_NAME = "potterdoc_csrftoken"
 
 if IS_PRODUCTION:
     SESSION_COOKIE_SECURE = True
@@ -331,7 +332,6 @@ if IS_PRODUCTION:
     SECURE_REDIRECT_EXEMPT = [r"^api/health/"]
     if _COOKIE_DOMAIN:
         SESSION_COOKIE_DOMAIN = _COOKIE_DOMAIN
-        CSRF_COOKIE_DOMAIN = _COOKIE_DOMAIN
 
 # Remote ML Offloading (Modal)
 REMOTE_REMBG_URL = os.environ.get("REMOTE_REMBG_URL", "")

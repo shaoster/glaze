@@ -70,6 +70,12 @@ class TestAuthEndpointsMocked:
         response = auth_views.csrf(request)
         assert response.status_code == 204
 
+    def test_auth_me_sets_csrf_cookie(self, client, settings):
+        settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
+        response = client.get("/api/auth/me/")
+        assert response.status_code == 200
+        assert "potterdoc_csrftoken" in response.cookies
+
     def test_auth_me_includes_preferences(self, client, user, settings):
         settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
         UserProfile.objects.create(

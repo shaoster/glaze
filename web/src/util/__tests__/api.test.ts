@@ -100,7 +100,7 @@ describe("client setup", () => {
     expect(mockCreate).toHaveBeenCalledWith({ baseURL: "/api/" });
     expect(mockClient.defaults).toMatchObject({
       withCredentials: true,
-      xsrfCookieName: "csrftoken",
+      xsrfCookieName: "potterdoc_csrftoken",
       xsrfHeaderName: "X-CSRFToken",
     });
   });

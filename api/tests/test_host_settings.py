@@ -40,9 +40,7 @@ def test_backend_settings_includes_admin_ingress_host(monkeypatch):
         ("backend.test_settings", {}),
     ],
 )
-def test_backend_settings_share_parent_domain_cookies(
-    monkeypatch, module_name, env
-):
+def test_backend_settings_share_parent_domain_cookies(monkeypatch, module_name, env):
     monkeypatch.setenv("ALLOWED_HOST", "potterdoc.com")
     monkeypatch.setenv("ADMIN_INGRESS_HOST", "admin.potterdoc.com")
     monkeypatch.delenv("ALLOWED_HOSTS", raising=False)
@@ -52,7 +50,8 @@ def test_backend_settings_share_parent_domain_cookies(
     settings = _reload_settings_module(module_name)
 
     assert settings.SESSION_COOKIE_DOMAIN == ".potterdoc.com"
-    assert settings.CSRF_COOKIE_DOMAIN == ".potterdoc.com"
+    assert getattr(settings, "CSRF_COOKIE_DOMAIN", None) is None
+    assert settings.CSRF_COOKIE_NAME == "potterdoc_csrftoken"
 
 
 def test_backend_production_settings_enable_hsts_preload(monkeypatch):

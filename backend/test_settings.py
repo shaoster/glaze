@@ -9,7 +9,6 @@ from pathlib import Path
 
 import dj_database_url
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Default test runs should be deterministic and not depend on production env vars.
@@ -73,7 +72,6 @@ _COOKIE_DOMAIN = _shared_cookie_domain(
 )
 if _COOKIE_DOMAIN:
     SESSION_COOKIE_DOMAIN = _COOKIE_DOMAIN
-    CSRF_COOKIE_DOMAIN = _COOKIE_DOMAIN
 
 
 INSTALLED_APPS = [
@@ -302,3 +300,4 @@ LOGGING = {
 
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
+CSRF_COOKIE_NAME = "potterdoc_csrftoken"
