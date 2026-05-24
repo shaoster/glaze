@@ -67,6 +67,7 @@ jobs:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST_TAILSCALE }}
           INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
           INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          INFISICAL_PROJECT_SLUG: ${{ vars.INFISICAL_PROJECT_SLUG }}
         run: tools/ensure_cluster.sh "${DEPLOY_HOST}"
 
       - name: Render Helm values override
