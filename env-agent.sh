@@ -472,24 +472,112 @@ gz_backup() {
 }
 
 gz_restore() {
-    # Restore a pg_dump (-Fc) file into the local dev Postgres.
+    # Restore a pg_dump (-Fc) file into Postgres.
     #
-    # If DATABASE_URL is already a postgres:// URL, restores directly into it.
-    # Otherwise, starts (or reuses) a persistent Docker container named
-    # glaze-dev-db on localhost:5433 and prints the DATABASE_URL to add to
-    # .env.local so the dev stack uses it.
+    # Without --prod: restores into the local dev Postgres. If DATABASE_URL is
+    # already a postgres:// URL, restores directly into it. Otherwise, starts
+    # (or reuses) a persistent Docker container named glaze-dev-db on
+    # localhost:5433 and prints the DATABASE_URL to add to .env.local.
     #
-    # Usage: gz_restore <dump_file>
+    # With --prod: restores into the PRODUCTION Postgres database via
+    # SSH + kubectl exec. Requires typing a confirmation string.
+    # THIS IS DESTRUCTIVE AND IRREVERSIBLE.
+    #
+    # Usage: gz_restore [--prod] <dump_file>
     #   dump_file: path produced by gz_backup (custom format, -Fc)
-    local dump_path="${1:-}"
+    local prod=false
+    local dump_path=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --prod) prod=true; shift ;;
+            *)      dump_path="$1"; shift ;;
+        esac
+    done
+
     if [[ -z "$dump_path" ]]; then
-        echo "Usage: gz_restore <dump_file>" >&2
+        echo "Usage: gz_restore [--prod] <dump_file>" >&2
         echo "  Tip: run 'gz_backup' first to get a dump file." >&2
         return 1
     fi
     if [[ ! -f "$dump_path" ]]; then
         echo "gz_restore: file not found: $dump_path" >&2
         return 1
+    fi
+
+    if [[ "$prod" == true ]]; then
+        local host="${GLAZE_PROD_HOST:?Set GLAZE_PROD_HOST=user@host in .env.local}"
+        local KC="KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
+
+        echo ""
+        echo "╔══════════════════════════════════════════════════════════════════╗"
+        echo "║  WARNING: PRODUCTION DATABASE OVERWRITE                         ║"
+        echo "╠══════════════════════════════════════════════════════════════════╣"
+        echo "║  This will DROP AND RECREATE the production Postgres database.  ║"
+        echo "║  All current production data will be replaced by the dump.      ║"
+        echo "║  This action is IRREVERSIBLE. There is no undo.                 ║"
+        echo "║                                                                  ║"
+        printf  "║  Dump: %-57s║\n" "$(basename "$dump_path")"
+        printf  "║  Host: %-57s║\n" "$host"
+        echo "╚══════════════════════════════════════════════════════════════════╝"
+        echo ""
+
+        local confirm_str
+        confirm_str="$(openssl rand -hex 3)"
+        echo "Type the following string to confirm, or anything else to abort:"
+        echo ""
+        echo "    $confirm_str"
+        echo ""
+        local input
+        read -r input
+        if [[ "$input" != "$confirm_str" ]]; then
+            echo "Aborted — confirmation did not match." >&2
+            return 1
+        fi
+
+        local start_ts
+        start_ts="$(date +%s)"
+
+        echo "--- restoring dump into production postgres ---"
+        ssh "$host" "$KC kubectl exec -i glaze-postgres-0 -- bash -c \
+            'PGPASSWORD=\"\$POSTGRES_PASSWORD\" pg_restore \
+             -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" \
+             --no-owner --no-privileges --clean --if-exists'" \
+            < "$dump_path"
+
+        echo "--- verifying restore ---"
+        local user_count piece_count orphan_pieces orphan_states
+        user_count="$(ssh "$host" "$KC kubectl exec glaze-postgres-0 -- bash -c \
+            'PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" \
+             -Atqc \"SELECT COUNT(*) FROM auth_user;\"")"
+        piece_count="$(ssh "$host" "$KC kubectl exec glaze-postgres-0 -- bash -c \
+            'PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" \
+             -Atqc \"SELECT COUNT(*) FROM api_piece;\"")"
+        orphan_pieces="$(ssh "$host" "$KC kubectl exec glaze-postgres-0 -- bash -c \
+            'PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" \
+             -Atqc \"SELECT COUNT(*) FROM api_piece p \
+                     WHERE NOT EXISTS (SELECT 1 FROM api_piecestate s WHERE s.piece_id = p.id);\"")"
+        orphan_states="$(ssh "$host" "$KC kubectl exec glaze-postgres-0 -- bash -c \
+            'PGPASSWORD=\"\$POSTGRES_PASSWORD\" psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" \
+             -Atqc \"SELECT COUNT(*) FROM api_piecestate s \
+                     WHERE NOT EXISTS (SELECT 1 FROM api_piece p WHERE p.id = s.piece_id);\"")"
+
+        local elapsed=$(( $(date +%s) - start_ts ))
+        echo ""
+        echo "Restore complete in ${elapsed}s."
+        echo "  users:          $user_count"
+        echo "  pieces:         $piece_count"
+        echo "  orphan pieces:  $orphan_pieces  (expected 0)"
+        echo "  orphan states:  $orphan_states  (expected 0)"
+        echo ""
+
+        [[ "$user_count"     -gt 0 ]] || { echo "FAIL: no users found after restore" >&2; return 1; }
+        [[ "$piece_count"    -gt 0 ]] || { echo "FAIL: no pieces found after restore" >&2; return 1; }
+        [[ "$orphan_pieces"  -eq 0 ]] || { echo "FAIL: $orphan_pieces pieces have no state history" >&2; return 1; }
+        [[ "$orphan_states"  -eq 0 ]] || { echo "FAIL: $orphan_states orphaned piece states found" >&2; return 1; }
+
+        echo "All verification checks passed."
+        echo "Record this drill in docs/ops/restore-drill-log.md."
+        return 0
     fi
 
     command -v docker >/dev/null || {
@@ -1084,7 +1172,8 @@ _GZ_SHORTCUTS=(
     "gz_prod_shell     — Django shell on production"
     "gz_prod_dbshell   — database shell on production"
     "gz_backup [file]  — back up prod Postgres and verify it in a disposable postgres:17 container"
-    "gz_restore <file> — restore a gz_backup dump into local dev Postgres (starts Docker container if needed)"
+    "gz_restore <file>        — restore a gz_backup dump into local dev Postgres (starts Docker container if needed)"
+    "gz_restore --prod <file> — restore into PRODUCTION Postgres (requires confirmation; irreversible)"
     "gz_test           — run affected tests via Bazel (smart detection on branches; --all to run everything)"
     "gz_test_common    — run workflow schema/integrity tests (pytest tests/)"
     "gz_test_backend   — run Django API tests (pytest api/)"
