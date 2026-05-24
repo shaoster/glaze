@@ -338,6 +338,7 @@ describe("auth endpoints", () => {
       process_summary_fields: [],
       tutorials: {
         summary_customize_popover: "show",
+        change_alias_prompt: "show",
       },
     },
   };
@@ -474,6 +475,7 @@ describe("auth endpoints", () => {
         process_summary_fields: ["piece.name"],
         tutorials: {
           summary_customize_popover: "show",
+          change_alias_prompt: "show",
         },
       },
     });
@@ -497,6 +499,7 @@ describe("auth endpoints", () => {
         process_summary_fields: ["piece.name"],
         tutorials: {
           summary_customize_popover: "show",
+          change_alias_prompt: "show",
         },
       },
     });
@@ -508,16 +511,23 @@ describe("auth endpoints", () => {
     mockClient.patch.mockResolvedValue({
       data: {
         alias: "",
-        preferences: { process_summary_fields: ["piece.created"] },
+        preferences: {
+          process_summary_fields: ["piece.created"],
+          tutorials: {
+            summary_customize_popover: "show",
+            change_alias_prompt: "show",
+          },
+        },
       },
     });
 
     await expect(
       updateUserPreferences({
         process_summary_fields: ["piece.created"],
-        tutorials: {
-          summary_customize_popover: "show",
-        },
+      tutorials: {
+        summary_customize_popover: "show",
+        change_alias_prompt: "show",
+      },
       }),
     ).resolves.toEqual({
       alias: "",
@@ -525,6 +535,7 @@ describe("auth endpoints", () => {
         process_summary_fields: ["piece.created"],
         tutorials: {
           summary_customize_popover: "show",
+          change_alias_prompt: "show",
         },
       },
     });
@@ -534,6 +545,7 @@ describe("auth endpoints", () => {
         process_summary_fields: ["piece.created"],
         tutorials: {
           summary_customize_popover: "show",
+          change_alias_prompt: "show",
         },
       },
     });

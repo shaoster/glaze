@@ -12,6 +12,7 @@ vi.mock("../../util/api", async (importOriginal) => {
         process_summary_fields: ["piece.name"],
         tutorials: {
           summary_customize_popover: "show",
+          change_alias_prompt: "show",
         },
       },
     }),
@@ -41,6 +42,7 @@ function renderDialog(activeSectionId: PreferencesSectionId | null) {
             process_summary_fields: ["piece.name"],
             tutorials: {
               summary_customize_popover: "show",
+              change_alias_prompt: "show",
             },
           },
         }}
@@ -76,6 +78,7 @@ describe("UserPreferencesDialog", () => {
               process_summary_fields: ["piece.name"],
               tutorials: {
                 summary_customize_popover: "show",
+                change_alias_prompt: "show",
               },
             },
           }}
@@ -134,6 +137,7 @@ describe("UserPreferencesDialog", () => {
               process_summary_fields: ["piece.name"],
               tutorials: {
                 summary_customize_popover: "show",
+                change_alias_prompt: "show",
               },
             },
           }}
@@ -162,6 +166,7 @@ describe("UserPreferencesDialog", () => {
           process_summary_fields: ["piece.name"],
           tutorials: {
             summary_customize_popover: "don't",
+            change_alias_prompt: "show",
           },
         },
         "",
@@ -202,6 +207,7 @@ describe("UserPreferencesDialog", () => {
               process_summary_fields: ["piece.name"],
               tutorials: {
                 summary_customize_popover: "show",
+                change_alias_prompt: "show",
               },
             },
           }}
@@ -255,6 +261,7 @@ describe("UserPreferencesDialog", () => {
               process_summary_fields: ["piece.name"],
               tutorials: {
                 summary_customize_popover: "show",
+                change_alias_prompt: "show",
               },
             },
           }}

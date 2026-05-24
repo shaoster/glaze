@@ -37,6 +37,10 @@ vi.mock("./util/api", async (importOriginal) => {
     hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
     uploadImageToCloudinary: vi.fn(),
     fetchGlazeCombinationImages: vi.fn().mockResolvedValue([]),
+    updateUserPreferences: vi.fn(async (preferences) => ({
+      alias: "",
+      preferences,
+    })),
   };
 });
 
@@ -97,6 +101,7 @@ import {
   fetchPiece,
   loginWithGoogle,
   logoutUser,
+  updateUserPreferences,
   validateInviteCode,
 } from "./util/api";
 import App from "./App";
@@ -113,6 +118,7 @@ const MOCK_USER = {
     process_summary_fields: [],
     tutorials: {
       summary_customize_popover: "show" as const,
+      change_alias_prompt: "show" as const,
     },
   },
 };
@@ -434,6 +440,32 @@ describe("App auth flow", () => {
 
     expect(screen.getByText("User Preferences Dialog")).toBeInTheDocument();
     expect(window.location.pathname).toBe("/preferences");
+  });
+
+  it("shows the alias tutorial inlay and opens identity preferences from it", async () => {
+    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: MOCK_USER });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /new piece/i }),
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Change your alias!" }),
+    ).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Change your alias!" }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("User Preferences Dialog")).toBeInTheDocument();
+      expect(screen.getByText("Active Section: identity")).toBeInTheDocument();
+      expect(window.location.pathname).toBe("/preferences/identity");
+    });
   });
 
   it("opens the identity preferences route directly", async () => {

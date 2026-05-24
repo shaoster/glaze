@@ -978,6 +978,10 @@ class TutorialPreferencesSerializer(serializers.Serializer):
         choices=[("show", "show"), ("don't", "don't")],
         required=False,
     )
+    change_alias_prompt = serializers.ChoiceField(
+        choices=[("show", "show"), ("don't", "don't")],
+        required=False,
+    )
 
 
 class SavedUserPreferencesSerializer(serializers.Serializer):

@@ -149,6 +149,44 @@ class TestAuthEndpointsMocked:
             "theme": "dark",
         }
 
+    def test_auth_preferences_patch_accepts_alias_prompt(self, client, user):
+        UserProfile.objects.create(
+            user=user,
+            preferences={
+                "tutorials": {
+                    "summary_customize_popover": "show",
+                },
+            },
+        )
+
+        response = client.patch(
+            "/api/auth/preferences/",
+            {
+                "preferences": {
+                    "tutorials": {
+                        "change_alias_prompt": "don't",
+                    }
+                }
+            },
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert response.json()["preferences"] == {
+            "tutorials": {
+                "summary_customize_popover": "show",
+                "change_alias_prompt": "don't",
+            },
+        }
+
+        user.profile.refresh_from_db()
+        assert user.profile.preferences == {
+            "tutorials": {
+                "summary_customize_popover": "show",
+                "change_alias_prompt": "don't",
+            },
+        }
+
     def test_auth_me_includes_alias(self, client, user, settings):
         settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
         UserProfile.objects.create(user=user, alias="Pottery Phil")

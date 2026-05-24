@@ -76,7 +76,11 @@ export default function UserPreferencesDialog({
       TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP
     ] ??
     "show";
-  const preferencesKey = `${initialAlias}::${initialSelectedRefs.join("|")}::${initialTutorialVisibility}`;
+  const initialAliasPromptVisibility =
+    data?.preferences.tutorials[TUTORIAL_TOGGLE_KEYS.CHANGE_ALIAS_PROMPT] ??
+    currentUser?.preferences.tutorials[TUTORIAL_TOGGLE_KEYS.CHANGE_ALIAS_PROMPT] ??
+    "show";
+  const preferencesKey = `${initialAlias}::${initialSelectedRefs.join("|")}::${initialTutorialVisibility}::${initialAliasPromptVisibility}`;
 
   const sections = useMemo(() => {
     const grouped = new Map<string, typeof options>();
@@ -128,6 +132,8 @@ export default function UserPreferencesDialog({
                   tutorials: {
                     [TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP]:
                       tutorialVisibility,
+                    [TUTORIAL_TOGGLE_KEYS.CHANGE_ALIAS_PROMPT]:
+                      initialAliasPromptVisibility,
                   },
                 },
                 alias,

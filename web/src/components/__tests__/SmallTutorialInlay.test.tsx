@@ -23,6 +23,7 @@ function makeCurrentUser() {
       process_summary_fields: [],
       tutorials: {
         summary_customize_popover: "show" as const,
+        change_alias_prompt: "show" as const,
       },
     },
   };
@@ -69,6 +70,7 @@ function renderHarness({
 
 describe("SmallTutorialInlay", () => {
   it.each([
+    SMALL_TUTORIAL_INLAY_PLACEMENTS.LEFT,
     SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT,
     SMALL_TUTORIAL_INLAY_PLACEMENTS.TOP,
   ])(
@@ -121,6 +123,7 @@ describe("SmallTutorialInlay", () => {
         process_summary_fields: [],
         tutorials: {
           summary_customize_popover: "don't",
+          change_alias_prompt: "show",
         },
       });
       expect(screen.queryByText("Customize this summary!")).not.toBeInTheDocument();
@@ -156,6 +159,7 @@ describe("SmallTutorialInlay", () => {
         process_summary_fields: [],
         tutorials: {
           summary_customize_popover: "don't",
+          change_alias_prompt: "show",
         },
       });
       expect(screen.queryByText("Customize this summary!")).not.toBeInTheDocument();

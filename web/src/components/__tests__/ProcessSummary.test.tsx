@@ -197,12 +197,13 @@ describe("ProcessSummary", () => {
           id: 1,
           is_staff: false,
           openid_subject: "",
-          preferences: {
-            process_summary_fields: ["piece.name", "wheel_thrown.clay_weight_lbs"],
-            tutorials: {
-              summary_customize_popover: "show",
+            preferences: {
+              process_summary_fields: ["piece.name", "wheel_thrown.clay_weight_lbs"],
+              tutorials: {
+                summary_customize_popover: "show",
+                change_alias_prompt: "show",
+              },
             },
-          },
         }}
         >
         <ProcessSummary
@@ -244,6 +245,7 @@ describe("ProcessSummary", () => {
       process_summary_fields: ["piece.current_location"],
       tutorials: {
         summary_customize_popover: "don't",
+        change_alias_prompt: "show",
       },
     });
 
@@ -261,6 +263,7 @@ describe("ProcessSummary", () => {
               process_summary_fields: ["piece.current_location"],
               tutorials: {
                 summary_customize_popover: "show",
+                change_alias_prompt: "show",
               },
             },
           }}
