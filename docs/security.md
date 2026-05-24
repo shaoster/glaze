@@ -31,7 +31,7 @@ Access is gated by invite code. New users cannot register without a valid, unuse
 | User identity | SHA-256 hash of Google `sub` | Not reversible without the original `sub` |
 | User content | Pottery piece records, workflow states, images | Owned by the authenticated user; isolated by FK |
 | Public library | Shared pieces with `user=NULL` | Admin-managed only; not user-writable |
-| Credentials | Django `SECRET_KEY`, `POSTGRES_PASSWORD`, Cloudinary keys, email relay key, Dropbox tokens | Stored as environment variables in k8s Secrets |
+| Credentials | Django `SECRET_KEY`, `POSTGRES_PASSWORD`, Cloudinary keys, email relay key, Dropbox tokens | Source of truth: Infisical Cloud; synced into k8s Secrets via External Secrets Operator |
 | Backups | Plain pg_dump output | See Backup section |
 
 No Social Security numbers, payment card numbers, physical addresses, or government IDs are collected or processed.
@@ -62,15 +62,25 @@ This boundary means that even if the application's public endpoints were comprom
 
 ## Secrets Management
 
-Secrets are stored as **Kubernetes Secrets** injected as environment variables into pods at runtime. They are not baked into container images or committed to source control.
+**Source of truth: [Infisical Cloud](https://infisical.com)** (`glaze-production` project, `prod` environment).
 
-The production `.env` file on the droplet (used only during initial cluster bootstrap) is not tracked in version control. `.env.production.example` documents the required variables without values.
+The secrets lifecycle is:
 
-There is no KMS or envelope encryption layer currently in use. The threat model for secret storage is:
+1. Secrets are authored and rotated in Infisical Cloud's web UI or CLI.
+2. A read-only machine identity (`glaze-eso`) grants the **External Secrets Operator** (ESO) access to Infisical via Universal Auth.
+3. ESO syncs secrets into the `glaze-secrets` Kubernetes Secret on a 1-hour refresh cycle (`infra/k3s/secretstore.yaml`, `chart/glaze/templates/externalsecret.yaml`).
+4. Pods consume the k8s Secret as environment variables at runtime.
 
-- **Cluster compromise**: An attacker who gains `kubectl` access can read Secrets. This is mitigated by the tailnet boundary above.
+The k8s Secret is a **derived operational artifact**, not the source of truth. Deleting or corrupting it does not lose data — ESO recreates it from Infisical on the next sync.
+
+Secrets are not baked into container images or committed to source control. The only credential that bootstraps this chain is the Infisical client secret stored in the GitHub Actions `glaze-droplet` environment, used during CD deploys.
+
+The threat model for secret storage:
+
+- **Cluster compromise**: An attacker with `kubectl` access can read the k8s Secret, but not the Infisical vault itself. Access to Infisical requires the ESO machine identity credential, which is not exposed inside the cluster.
+- **Infisical Cloud compromise**: Infisical is a third-party SaaS. Their security posture is documented in their Cure53 penetration test report (request via `security@infisical.com`). The credential scope is read-only for the ESO identity.
 - **Image compromise**: Secrets are not in images, so a leaked image does not expose credentials.
-- **Source control compromise**: No secrets in git.
+- **Source control compromise**: No secrets in git; `.env.production.example` documents required variable names without values.
 
 ---
 
