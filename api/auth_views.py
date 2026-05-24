@@ -421,7 +421,7 @@ def staff_invite_code(request: Request) -> Response:
 # ── Data export ───────────────────────────────────────────────────────────────
 
 
-def _collect_export_data(user: Any, request: Request) -> tuple[str, list[Any]]:
+def _collect_export_data(user: Any, request: Request) -> tuple[str, list[Image]]:
     pieces = (
         Piece.objects.filter(user=user)
         .select_related("thumbnail", "current_location")
@@ -449,14 +449,17 @@ def _collect_export_data(user: Any, request: Request) -> tuple[str, list[Any]]:
     return pieces_json, images
 
 
-def _export_image_name(image: Any) -> str:
-    sanitized = image.cloudinary_public_id.replace("/", "__")
+def _export_image_name(image: Image) -> str:
+    # cloudinary_public_id is guaranteed non-null: _collect_export_data filters
+    # with cloudinary_public_id__isnull=False before passing images here.
+    public_id = cast(str, image.cloudinary_public_id)
+    sanitized = public_id.replace("/", "__")
     _, ext = posixpath.splitext(urlparse(image.url).path)
     return f"images/{sanitized}{ext}"
 
 
 async def _stream_export_archive(
-    pieces_json: str, images: list[Any]
+    pieces_json: str, images: list[Image]
 ) -> AsyncIterator[bytes]:
     buffer = _StreamingZipBuffer()
     async with httpx.AsyncClient(timeout=60) as client:
@@ -475,8 +478,12 @@ async def _stream_export_archive(
                                 member.write(data)
                                 for c in buffer.flush_chunks():
                                     yield c
-                except httpx.HTTPError:
-                    pass
+                except httpx.HTTPError as exc:
+                    logger.warning(
+                        "Export: failed to fetch image %s: %s",
+                        image.cloudinary_public_id,
+                        exc,
+                    )
                 for c in buffer.flush_chunks():
                     yield c
 
@@ -503,6 +510,8 @@ def auth_export(request: Request) -> StreamingHttpResponse:
         content_type="application/zip",
     )
     response["Content-Disposition"] = 'attachment; filename="potterdoc-export.zip"'
+    response["Cache-Control"] = "no-store"
+    response["X-Accel-Buffering"] = "no"
     return response
 
 

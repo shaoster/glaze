@@ -32,6 +32,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import DownloadIcon from "@mui/icons-material/Download";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
 import CropFreeIcon from "@mui/icons-material/CropFree";
@@ -42,6 +43,7 @@ import { alpha, ThemeProvider, createTheme } from "@mui/material/styles";
 
 import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
 import {
+  downloadUserData,
   fetchAppInit,
   loginWithGoogle,
   logoutUser,
@@ -525,6 +527,17 @@ function AppShell({
                   )}
                 </>
               ) : null}
+              <MenuItem
+                onClick={() => {
+                  setMenuAnchor(null);
+                  downloadUserData();
+                }}
+              >
+                <ListItemIcon>
+                  <DownloadIcon fontSize="small" />
+                </ListItemIcon>
+                Download my data
+              </MenuItem>
               <MenuItem
                 onClick={() => {
                   setMenuAnchor(null);

@@ -410,18 +410,17 @@ class TestAuthExport:
             assert isinstance(pieces, list)
             assert any(str(piece.id) == p["id"] for p in pieces)
 
-    def test_export_user_isolation(self, user, other_user, piece):
+    def test_export_user_isolation(self, user, other_user):
         from api import auth_views
-
-        # Create a piece for other_user
         from api.models import PieceState
         from api.workflow import ENTRY_STATE
 
+        my_piece = Piece.objects.create(user=user, name="My Bowl")
+        PieceState.objects.create(user=user, piece=my_piece, state=ENTRY_STATE, order=1)
+
         other_piece = Piece.objects.create(user=other_user, name="Other piece")
         PieceState.objects.create(
-            user=other_user,
-            piece=other_piece,
-            state=ENTRY_STATE,
+            user=other_user, piece=other_piece, state=ENTRY_STATE, order=1
         )
 
         factory = APIRequestFactory()
@@ -433,7 +432,7 @@ class TestAuthExport:
         with ZipFile(BytesIO(archive_bytes)) as archive:
             pieces = json.loads(archive.read("pieces.json"))
             piece_ids = {p["id"] for p in pieces}
-            assert str(piece.id) in piece_ids
+            assert str(my_piece.id) in piece_ids
             assert str(other_piece.id) not in piece_ids
 
 
