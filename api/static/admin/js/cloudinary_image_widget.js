@@ -22,8 +22,8 @@
   function getCsrfToken() {
     return (document.cookie.split(';')
       .map(function (c) { return c.trim(); })
-      .filter(function (c) { return c.startsWith('csrftoken='); })
-      .map(function (c) { return c.substring('csrftoken='.length); })[0] || '');
+      .filter(function (c) { return c.startsWith('potterdoc_csrftoken='); })
+      .map(function (c) { return c.substring('potterdoc_csrftoken='.length); })[0] || '');
   }
 
   /**

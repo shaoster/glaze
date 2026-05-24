@@ -96,7 +96,7 @@ export type UserPreferences = {
 
 const client = axios.create({ baseURL: "/api/" });
 client.defaults.withCredentials = true;
-client.defaults.xsrfCookieName = "csrftoken";
+client.defaults.xsrfCookieName = "potterdoc_csrftoken";
 client.defaults.xsrfHeaderName = "X-CSRFToken";
 const expoBaseUrl = (
   globalThis as { process?: { env?: Record<string, string | undefined> } }

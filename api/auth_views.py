@@ -110,6 +110,7 @@ def auth_logout(request: Request) -> Response:
     },
     description="Bootstrap response: public config plus the current user if authenticated.",
 )
+@ensure_csrf_cookie
 @api_view(["GET"])
 @permission_classes([AllowAny])
 @traced
@@ -454,7 +455,9 @@ def _collect_export_data(user: Any, request: Request) -> tuple[str, str, list[Im
     profile_json = json.dumps(
         {
             "alias": profile.alias if profile else None,
-            "preferences": profile.preferences if profile and isinstance(profile.preferences, dict) else {},
+            "preferences": profile.preferences
+            if profile and isinstance(profile.preferences, dict)
+            else {},
         },
         default=str,
     )

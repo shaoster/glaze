@@ -37,4 +37,4 @@ def test_host_firewall_documents_sensitive_ports():
 
     assert "public kube API" in script
     assert "kubelet" in script
-    assert "incidental NodePorts" in script
+    assert "NodePort exposure" in script
