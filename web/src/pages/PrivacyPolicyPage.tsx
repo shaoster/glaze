@@ -110,13 +110,18 @@ export default function PrivacyPolicyPage() {
           </Typography>
 
           <Typography variant="body1">
-            Images are externally hosted and will be deleted from the external
-            host asynchronously (roughly weekly, depending on usage volume). The
-            moment you delete your account or remove an image from a piece, the
-            link from your account to the image is immediately severed. Note: we
-            do not automatically remove EXIF data from your uploaded images at
-            this time, since we have a hypothesis that the camera model or local
-            time zone might be useful features for training our image processors.
+            Images are externally hosted. The moment you delete your account or
+            remove an image from a piece, the link from your account to the
+            image is immediately severed. Removal of the image from the external
+            host is best-effort and may not happen immediately. If you need a
+            specific image deleted promptly, email us at{" "}
+            <Box component="a" href="mailto:admin@potterdoc.com" sx={{ color: "inherit" }}>
+              admin@potterdoc.com
+            </Box>{" "}
+            and we will prioritize it. Note: we do not automatically remove EXIF
+            data from your uploaded images at this time, since we have a
+            hypothesis that the camera model or local time zone might be useful
+            features for training our image processors.
           </Typography>
 
           <Typography variant="body1">
