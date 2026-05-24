@@ -182,15 +182,39 @@ function PreferencesForm({
   return (
     <>
       <Stack spacing={2}>
-        <TextField
-          label="Alias"
-          value={alias}
-          onChange={(e) => setAlias(e.target.value.slice(0, 50))}
-          helperText="How you'd like to identify yourself in the app. Not visible to others."
-          fullWidth
-          disabled={isSaving}
-          inputProps={{ maxLength: 50 }}
-        />
+        <Accordion
+          disableGutters
+          expanded={activeSectionId === "identity"}
+          onChange={(_, expanded) => {
+            if (expanded) {
+              onSectionChange("identity");
+            } else if (activeSectionId === "identity") {
+              onSectionChange(null);
+            }
+          }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Stack spacing={0.25}>
+              <Typography variant="subtitle1" component="span">
+                Identity
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Manage your display name and alias.
+              </Typography>
+            </Stack>
+          </AccordionSummary>
+          <AccordionDetails>
+            <TextField
+              label="Alias"
+              value={alias}
+              onChange={(e) => setAlias(e.target.value.slice(0, 50))}
+              helperText="How you'd like to identify yourself in the app. Not visible to others."
+              fullWidth
+              disabled={isSaving}
+              inputProps={{ maxLength: 50 }}
+            />
+          </AccordionDetails>
+        </Accordion>
         <Accordion
           disableGutters
           expanded={activeSectionId === "process-summary"}

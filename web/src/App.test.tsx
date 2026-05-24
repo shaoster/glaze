@@ -65,9 +65,9 @@ vi.mock("./components/UserPreferencesDialog", () => ({
     onSectionChange,
   }: {
     open: boolean;
-    activeSectionId: "process-summary" | "tutorials" | null;
+    activeSectionId: "process-summary" | "tutorials" | "identity" | null;
     onClose: () => void;
-    onSectionChange: (sectionId: "process-summary" | "tutorials" | null) => void;
+    onSectionChange: (sectionId: "process-summary" | "tutorials" | "identity" | null) => void;
   }) =>
     open ? (
       <div>
@@ -77,6 +77,7 @@ vi.mock("./components/UserPreferencesDialog", () => ({
           Process Summary
         </button>
         <button onClick={() => onSectionChange("tutorials")}>Tutorials</button>
+        <button onClick={() => onSectionChange("identity")}>Identity</button>
         <button onClick={onClose}>Cancel</button>
       </div>
     ) : null,
@@ -432,7 +433,20 @@ describe("App auth flow", () => {
     await userEvent.click(screen.getByText("Preferences"));
 
     expect(screen.getByText("User Preferences Dialog")).toBeInTheDocument();
-    expect(window.location.pathname).toBe("/preferences/process-summary");
+    expect(window.location.pathname).toBe("/preferences");
+  });
+
+  it("opens the identity preferences route directly", async () => {
+    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: MOCK_USER });
+    window.history.pushState({}, "", "/preferences/identity");
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("User Preferences Dialog")).toBeInTheDocument();
+    });
+
+    expect(window.location.pathname).toBe("/preferences/identity");
   });
 
   it("opens the tutorials preferences route directly", async () => {

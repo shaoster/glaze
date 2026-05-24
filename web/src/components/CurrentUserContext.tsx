@@ -3,7 +3,7 @@ import { createContext, useContext } from "react";
 import type { ReactNode } from "react";
 import type { AuthUser, UserPreferences } from "../util/api";
 
-export type PreferencesSectionId = "process-summary" | "tutorials";
+export type PreferencesSectionId = "process-summary" | "tutorials" | "identity";
 
 const CurrentUserContext = createContext<AuthUser | null>(null);
 

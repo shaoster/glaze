@@ -390,7 +390,7 @@ function AppShell({
     [currentUser, onCurrentUserUpdated],
   );
   const openPreferencesDialog = useCallback(
-    (sectionId: PreferencesSectionId | null = "process-summary") => {
+    (sectionId: PreferencesSectionId | null = null) => {
       navigate(sectionId ? `/preferences/${sectionId}` : "/preferences");
     },
     [navigate],
@@ -484,7 +484,7 @@ function AppShell({
               <MenuItem
                 onClick={() => {
                   setMenuAnchor(null);
-                  openPreferencesDialog("process-summary");
+                  openPreferencesDialog(null);
                 }}
               >
                 <ListItemIcon>
