@@ -36,9 +36,21 @@ spec:
       operator: "Exists"
       effect: "NoSchedule"
     service:
+      type: "LoadBalancer"
       ipFamilyPolicy: "PreferDualStack"
+      additionalServices:
+        tailscale:
+          type: "LoadBalancer"
+          annotations:
+            external-dns.alpha.kubernetes.io/hostname: "admin.potterdoc.com,headlamp.potterdoc.com"
+          spec:
+            loadBalancerClass: "tailscale"
     ports:
-      web:
-        hostPort: 80
       websecure:
-        hostPort: 443
+        expose:
+          tailscale: true
+    updateStrategy:
+      type: "RollingUpdate"
+      rollingUpdate:
+        maxUnavailable: 0
+        maxSurge: 1

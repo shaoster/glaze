@@ -10,6 +10,7 @@ assumes the control plane, workloads, and ingress all live on one host.
 - **k3s version**: v1.35.4+k3s1
 - **Ingress**: Traefik v3 (bundled with k3s, customized via `traefik.yaml`)
 - **TLS**: cert-manager v1.20.2 with Let's Encrypt
+- **Tailnet ingress**: Tailscale Kubernetes Operator + ExternalDNS
 
 ## Bootstrap Steps
 
@@ -26,7 +27,7 @@ scp infra/k3s/config.yaml root@<droplet>:/etc/rancher/k3s/config.yaml
 systemctl restart k3s
 ```
 
-The config disables the bundled metrics-server and servicelb (DigitalOcean handles load balancing), and caps API server request concurrency to reduce memory pressure on 1 GB nodes.
+The config disables the bundled metrics-server and caps API server request concurrency to reduce memory pressure on 1 GB nodes. Traefik now uses the k3s LoadBalancer path for the public site, while the tailnet-only admin/headlamp front door is handled separately by the Tailscale operator.
 
 ### 2. Enable the host firewall
 
@@ -69,7 +70,36 @@ scp infra/k3s/traefik.yaml root@<droplet>:/var/lib/rancher/k3s/server/manifests/
 
 k3s will detect the change and re-apply automatically.
 
-### 4. Install cert-manager
+### 4. Install the Tailscale operator and ExternalDNS
+
+The tailnet-facing admin/headlamp front door is managed by a Tailscale operator-backed LoadBalancer service. The shared Infisical `ClusterSecretStore` is bootstrapped from `infra/k3s/secretstore.yaml`, so the operator and ExternalDNS can consume Infisical secrets before the app chart is installed.
+
+Install the operator first, then ExternalDNS so Cloudflare records can follow the operator-assigned Tailscale IP automatically.
+
+The operator expects OAuth client credentials from Infisical under the keys `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_CLIENT_SECRET`. ExternalDNS reuses the existing Infisical Cloudflare token at `CLOUDFLARE_API_TOKEN`.
+
+In the Tailscale tailnet policy, create `tag:k8s-operator` and `tag:k8s`, then make `tag:k8s-operator` the owner of `tag:k8s`. If we ever expose other Tailscale-managed services with a different tag, add that tag there too.
+
+Apply the manifests that live alongside this README:
+
+```bash
+scp infra/k3s/secretstore.yaml root@<droplet>:/var/lib/rancher/k3s/server/manifests/secretstore.yaml
+scp infra/k3s/tailscale-operator.yaml root@<droplet>:/var/lib/rancher/k3s/server/manifests/tailscale-operator.yaml
+scp infra/k3s/external-dns.yaml root@<droplet>:/var/lib/rancher/k3s/server/manifests/external-dns.yaml
+```
+
+Then verify the operator-assigned service IPs:
+
+```bash
+kubectl get svc -n kube-system traefik -o wide
+kubectl get svc -n kube-system traefik-tailscale -o wide
+```
+
+The `traefik` service is the public front door; `traefik-tailscale` is the tailnet-only front door. ExternalDNS keeps `admin.potterdoc.com` and `headlamp.potterdoc.com` pointed at the `traefik-tailscale` service IP.
+The packet path for both tailnet-only hosts is: browser on an authorized Tailscale client -> tailnet DNS record -> Tailscale operator-managed Traefik `LoadBalancer` service -> Traefik ingress -> Django admin or Headlamp.
+Requests that are not coming from tailnet-authorized clients never reach Traefik on those hostnames because the Tailscale service IP is not routable outside the tailnet.
+
+### 5. Install cert-manager
 
 ```bash
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
@@ -103,7 +133,7 @@ spec:
 EOF
 ```
 
-### 5. Create the glaze-secrets Secret
+### 6. Create the glaze-secrets Secret
 
 This must be done manually before the first `helm install`. Never commit secrets to SCM.
 
@@ -125,7 +155,7 @@ kubectl create secret generic glaze-secrets \
 
 The CD pipeline updates this secret automatically on each deploy via `kubectl apply`.
 
-### 6. Enable automated database backups
+### 7. Enable automated database backups
 
 The Helm chart includes an hourly PostgreSQL backup CronJob. It uses the official
 `postgres:17` image to create the dump, restore it into a temporary local Postgres
@@ -137,7 +167,7 @@ Set up a Dropbox app with scoped access, app-folder access, `files.content.write
 and `files.metadata.read`, then provide the app key, app secret, and refresh token
 through the `glaze-secrets` secret above.
 
-### 7. Authenticate with GHCR
+### 8. Authenticate with GHCR
 
 The cluster needs to pull images from `ghcr.io/shaoster/glaze`:
 
@@ -157,7 +187,7 @@ kubectl create secret docker-registry ghcr-pull-secret \
   --docker-password=<PAT>
 ```
 
-### 8. Deploy the application
+### 9. Deploy the application
 
 See the CD pipeline (`.github/workflows/cd.yml`) — it handles `helm upgrade --install` automatically on push to `main`.
 
@@ -178,62 +208,63 @@ helm upgrade --install glaze chart/glaze/ \
 
 ## Administrative Interface Security
 
-The Django Admin (at both `potterdoc.com/admin/` and `admin.potterdoc.com/admin/`)
-and Headlamp (`headlamp.potterdoc.com`) are restricted by a Traefik `IPAllowList`
-middleware. You must be connected to Tailscale and use a DNS record that resolves
-to the droplet's Tailscale IP (`100.121.152.21`) to access them.
+The Django Admin (`admin.potterdoc.com/admin/`) and Headlamp (`headlamp.potterdoc.com`) are only reachable through the tailnet-facing Traefik service that the Tailscale operator manages. The public site continues to use the normal public Traefik service.
 
-### How the IP allowlist works
+### Packet paths
 
-Traefik runs with `hostPort` on this single-node cluster. Incoming connections are
-DNAT'd by the CNI hostport plugin, and Flannel masquerades external source IPs to
-the pod-network bridge gateway (`10.42.0.1`) before the packet reaches Traefik
-for ordinary cluster traffic. Tailscale-routed admin traffic preserves the
-Tailscale CGNAT source range, so the `IPAllowList` middleware allows
-`100.64.0.0/10`.
+#### Tailnet client -> `admin.potterdoc.com/admin/`
+1. A Tailscale-authorized admin client resolves `admin.potterdoc.com` to the operator-managed Tailscale service IP.
+2. The packet enters the Tailscale tunnel and lands on the `traefik-tailscale` service.
+3. The Tailscale operator forwards the request to Traefik.
+4. Traefik matches the `admin.potterdoc.com` ingress and routes the request to Django admin.
+5. cert-manager uses Cloudflare DNS-01 for `admin.potterdoc.com`, so TLS issuance and renewal do not depend on a public HTTP challenge reaching the droplet.
 
-This means the allowlist is enforced at the **DNS / routing layer**: admin
-hostnames resolve to the Tailscale IP (`100.121.152.21`) in Cloudflare as
-DNS-only (grey-cloud, reserved IP) records. Traffic that reaches the server via
-those records has traversed the Tailscale tunnel; traffic from the public IP
-(`159.223.154.68`) never matches those hostnames and is routed to public-facing
-ingresses only.
+#### Non-tailnet client -> `admin.potterdoc.com/admin/`
+1. The client resolves `admin.potterdoc.com` to the same operator-managed Tailscale service IP.
+2. Without Tailscale membership, the client cannot reach that IP.
+3. The request fails before Traefik sees it.
 
-If the cluster ever moves to multi-node or a different CNI, revisit this
-allowlist — the masquerade behavior may change.
+#### Tailnet client -> `headlamp.potterdoc.com/`
+1. A Tailscale-authorized admin client resolves `headlamp.potterdoc.com` to the operator-managed Tailscale service IP.
+2. The packet enters the Tailscale tunnel and lands on `traefik-tailscale`.
+3. The Tailscale operator forwards the request to Traefik.
+4. Traefik routes the request to Headlamp.
+5. cert-manager uses Cloudflare DNS-01 for `headlamp.potterdoc.com`, so TLS issuance and renewal do not depend on a public HTTP challenge reaching the droplet.
+
+#### Non-tailnet client -> `headlamp.potterdoc.com/`
+1. The client resolves `headlamp.potterdoc.com` to the same operator-managed Tailscale service IP.
+2. Without Tailscale membership, the client cannot reach that IP.
+3. The request fails before Traefik sees it.
+
+#### Any client -> `potterdoc.com` or `www.potterdoc.com`
+1. The client resolves the public apex or `www` records to the droplet's public IP.
+2. The request enters the public Traefik `LoadBalancer` service.
+3. Traefik routes to the public app ingress as usual.
 
 ### DNS records (Cloudflare)
 
 | Hostname | Points to | Proxy |
 |---|---|---|
-| `admin.potterdoc.com` | `100.121.152.21` (Tailscale IP) | DNS only |
-| `headlamp.potterdoc.com` | `100.121.152.21` (Tailscale IP) | DNS only |
+| `admin.potterdoc.com` | Operator-assigned Tailscale service IP | DNS only |
+| `headlamp.potterdoc.com` | Operator-assigned Tailscale service IP | DNS only |
 | `potterdoc.com` | `159.223.154.68` (public IP) | Proxied |
 | `www.potterdoc.com` | `159.223.154.68` (public IP) | Proxied |
 
 ### Django Admin
-Available at `https://admin.potterdoc.com/admin/` and `https://potterdoc.com/admin/`.
-Both are guarded by the `tailscale-only` Traefik middleware. Connect to Tailscale
-before accessing either URL. The authenticated session is shared across the
-`potterdoc.com` and `admin.potterdoc.com` subdomains via a parent-domain Django
-cookie, so logging in once on the main site should also authenticate the admin
-subdomain after the browser refreshes `/api/auth/me/`.
-If the browser reaches the admin host before that shared cookie exists, the
-admin login view sends it back to the apex landing page to bootstrap the shared
-session there and then redirects back to the requested admin URL.
-This bootstrap flow assumes `potterdoc.com` stays the canonical apex origin and
-`admin.potterdoc.com` stays the sibling admin hostname; if that split changes,
-revisit the redirect helper and cookie-domain assumptions together.
+Available at `https://admin.potterdoc.com/admin/`. Connect to Tailscale before
+accessing it. The public apex no longer exposes a separate admin ingress, so the
+admin host is the canonical browser entrypoint.
 
 The admin subdomain also proxies `/static/` to the web service so Django's
-admin CSS and JS can load from WhiteNoise. If either subdomain starts showing
-missing admin assets again, check the `tailscale-only` ingress and the `/static/`
-path rules together.
+admin CSS and JS can load from WhiteNoise. If the admin page starts showing
+missing admin assets again, check the `admin.potterdoc.com` ingress and the
+`/static/` path rules together.
 
 ### Headlamp
 Available at `https://headlamp.potterdoc.com/`. Connect to Tailscale before
-accessing. The Cloudflare DNS record must remain DNS-only (grey cloud) — Cloudflare
-cannot proxy to a reserved/Tailscale IP.
+accessing. The Cloudflare DNS record is managed automatically by ExternalDNS
+and must remain DNS-only (grey cloud) — Cloudflare cannot proxy to a reserved
+Tailscale IP.
 
 Headlamp requires a token to authenticate to the Kubernetes API. The token is
 stored as a long-lived ServiceAccount token in `kube-system/headlamp-token` and

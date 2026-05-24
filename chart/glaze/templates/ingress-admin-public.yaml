@@ -1,4 +1,4 @@
-{{- if .Values.ingress.enabled -}}
+{{- if and .Values.ingress.enabled .Values.adminIngress.public.enabled -}}
 {{- $fullName := include "glaze.fullname" . -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -14,7 +14,7 @@ metadata:
     {{- end }}
     {{- end }}
     {{- end }}
-    traefik.ingress.kubernetes.io/router.middlewares: default-{{ $fullName }}-security-headers@kubernetescrd, default-{{ $fullName }}-tailscale-only@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: default-{{ $fullName }}-security-headers@kubernetescrd
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}

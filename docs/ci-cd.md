@@ -119,7 +119,7 @@ PR merged to main (chart/** change only)
 
 Push to infra/**
   └─ cluster-setup: ensure_cluster.sh
-       (k3s config -> manifests -> ESO bootstrap -> wait for ESO -> glaze-secrets)
+       (k3s config -> manifests -> ESO bootstrap -> ClusterSecretStore infisical -> wait for ESO -> glaze-secrets)
 ```
 
 ---
@@ -128,9 +128,15 @@ Push to infra/**
 
 ```
 Internet :80/:443
-    └─ ingress-nginx (k3s, NodePort)
-         └─ glaze-web:8000 (Deployment, 1 replica)
-              └─ postgres:5432 (StatefulSet, 1 replica)
+    ├─ public potterdoc.com / www.potterdoc.com
+    │    └─ Traefik public LoadBalancer
+    │         └─ glaze-web:8000 (Deployment, 1 replica)
+    │              └─ postgres:5432 (StatefulSet, 1 replica)
+    └─ tailnet admin/headlamp
+         └─ Tailscale operator LoadBalancer
+              └─ Traefik tailnet service
+                   ├─ admin.potterdoc.com/admin/
+                   └─ headlamp.potterdoc.com/
 ```
 
 App secrets are synced from Infisical into `glaze-secrets` (Kubernetes Secret) by External Secrets Operator.
