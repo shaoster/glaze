@@ -23,8 +23,6 @@ set -euo pipefail
 DEPLOY_HOST="${1:?Usage: ensure_cluster.sh <deploy_host>}"
 SSH="ssh -o StrictHostKeyChecking=no"
 SCP="scp -o StrictHostKeyChecking=no"
-INFISICAL_PROJECT_SLUG="${INFISICAL_PROJECT_SLUG:?INFISICAL_PROJECT_SLUG must be set}"
-
 # ── host firewall ────────────────────────────────────────────────────────────
 # Keep the host's public surface intentionally small. The app edge remains
 # reachable on 80/443; SSH and cluster administration use Tailscale.
@@ -215,31 +213,12 @@ $SSH "${DEPLOY_HOST}" '
   echo "ESO is ready."
 '
 
-# ── Infisical ClusterSecretStore ─────────────────────────────────────────────
-echo "==> Applying shared Infisical ClusterSecretStore..."
-$SSH "${DEPLOY_HOST}" 'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f -' <<EOF
-apiVersion: external-secrets.io/v1
-kind: ClusterSecretStore
-metadata:
-  name: infisical
-spec:
-  provider:
-    infisical:
-      auth:
-        universalAuthCredentials:
-          clientId:
-            name: infisical-auth
-            namespace: default
-            key: clientId
-          clientSecret:
-            name: infisical-auth
-            namespace: default
-            key: clientSecret
-      secretsScope:
-        projectSlug: "${INFISICAL_PROJECT_SLUG}"
-        environmentSlug: "prod"
-        recursive: false
-EOF
+echo "==> Bootstrapping shared Infisical ClusterSecretStore..."
+$SSH "${DEPLOY_HOST}" '
+  set -e
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+  kubectl apply -f /var/lib/rancher/k3s/server/manifests/secretstore.yaml
+'
 
 # ── Wait for glaze-secrets (contract item 6) ─────────────────────────────────
 # The Helm pre-upgrade hook (deploy-init job) needs glaze-secrets to exist
