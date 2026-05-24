@@ -1,13 +1,16 @@
 import asyncio
+import importlib
 import hashlib
 import json
 from collections.abc import AsyncIterable
 from io import BytesIO
 from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlparse
+from types import SimpleNamespace
 from zipfile import ZipFile
 
 import pytest
+from django.apps import apps as django_apps
 from django.contrib.auth.models import User
 from django.test import Client
 from django.utils import timezone
@@ -86,6 +89,61 @@ class TestAuthEndpointsMocked:
         assert response.status_code == 200
         assert response.json()["user"]["preferences"] == {
             "process_summary_fields": ["piece.name"],
+        }
+
+    def test_tutorial_preferences_backfill_normalizes_wire_responses(
+        self, client, user, settings
+    ):
+        settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
+        profile = UserProfile.objects.create(
+            user=user,
+            preferences={
+                "process_summary_fields": ["piece.name"],
+                "tutorials": {
+                    "summary_customize_popover": "show",
+                    "change_alias_prompt": "don't",
+                    "legacy_tutorial": "show",
+                },
+            },
+        )
+
+        migration = importlib.import_module(
+            "api.migrations.0027_backfill_tutorial_preferences"
+        )
+        migration.backfill_tutorial_preferences(
+            django_apps,
+            SimpleNamespace(connection=SimpleNamespace(alias=profile._state.db)),
+        )
+        profile.refresh_from_db()
+        assert profile.preferences == {
+            "process_summary_fields": ["piece.name"],
+            "tutorials": {
+                "summary_customize_popover": True,
+                "change_alias_prompt": False,
+                "legacy_tutorial": True,
+            },
+        }
+
+        me_response = client.get("/api/auth/me/")
+        assert me_response.status_code == 200
+        assert me_response.json()["user"]["preferences"] == {
+            "process_summary_fields": ["piece.name"],
+            "tutorials": {
+                "summary_customize_popover": True,
+                "change_alias_prompt": False,
+                "legacy_tutorial": True,
+            },
+        }
+
+        preferences_response = client.get("/api/auth/preferences/")
+        assert preferences_response.status_code == 200
+        assert preferences_response.json()["preferences"] == {
+            "process_summary_fields": ["piece.name"],
+            "tutorials": {
+                "summary_customize_popover": True,
+                "change_alias_prompt": False,
+                "legacy_tutorial": True,
+            },
         }
 
     def test_auth_preferences_round_trip(self, client, user):
