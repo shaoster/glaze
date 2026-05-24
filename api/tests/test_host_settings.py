@@ -55,6 +55,19 @@ def test_backend_settings_share_parent_domain_cookies(
     assert settings.CSRF_COOKIE_DOMAIN == ".potterdoc.com"
 
 
+def test_backend_production_settings_enable_hsts_preload(monkeypatch):
+    monkeypatch.setenv("PRODUCTION", "1")
+    monkeypatch.setenv("SECRET_KEY", "test-secret")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///db.sqlite3")
+
+    settings = _reload_settings_module("backend.settings")
+
+    assert settings.SECURE_HSTS_SECONDS >= 31536000
+    assert settings.SECURE_HSTS_INCLUDE_SUBDOMAINS is True
+    assert settings.SECURE_HSTS_PRELOAD is True
+    assert settings.SECURE_SSL_REDIRECT is True
+
+
 def test_backend_test_settings_includes_admin_ingress_host(monkeypatch):
     monkeypatch.setenv("ALLOWED_HOST", "potterdoc.com")
     monkeypatch.setenv("ADMIN_INGRESS_HOST", "admin.potterdoc.com")
