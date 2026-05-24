@@ -371,6 +371,11 @@ export function downloadUserData(): void {
   window.location.assign("/api/auth/export/");
 }
 
+export async function deleteAccount(): Promise<void> {
+  await ensureCsrfCookie();
+  await client.delete("auth/account/");
+}
+
 export async function validateInviteCode(code: string): Promise<{ valid: true }> {
   await ensureCsrfCookie();
   const { data } = await client.post<{ valid: true }>("auth/validate-invite/", { code });

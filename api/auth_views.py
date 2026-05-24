@@ -304,26 +304,12 @@ def auth_google(request: Request) -> Response:
     if profile:
         user = profile.user
     else:
-        # New user — invite code required.
-        # select_for_update must be inside transaction.atomic to hold the lock.
-        if not invite_code_value:
-            return Response(
-                {
-                    "detail": "A valid invite code is required to create an account.",
-                    "code": "invite_required",
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        # New user — invite code required (bypassed in local dev).
+        dev_mode = getattr(settings, "DEV_BOOTSTRAP_ENABLED", False)
 
-        with transaction.atomic():
-            try:
-                invite_code = InviteCode.objects.select_for_update().get(
-                    code=invite_code_value
-                )
-            except InviteCode.DoesNotExist:
-                invite_code = None
-
-            if invite_code is None or not invite_code.is_valid:
+        if not dev_mode:
+            # select_for_update must be inside transaction.atomic to hold the lock.
+            if not invite_code_value:
                 return Response(
                     {
                         "detail": "A valid invite code is required to create an account.",
@@ -332,6 +318,35 @@ def auth_google(request: Request) -> Response:
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
+            with transaction.atomic():
+                try:
+                    invite_code = InviteCode.objects.select_for_update().get(
+                        code=invite_code_value
+                    )
+                except InviteCode.DoesNotExist:
+                    invite_code = None
+
+                if invite_code is None or not invite_code.is_valid:
+                    return Response(
+                        {
+                            "detail": "A valid invite code is required to create an account.",
+                            "code": "invite_required",
+                        },
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+
+                user = User.objects.create_user(
+                    username=hashed_sub,
+                    email="",
+                    first_name="",
+                    last_name="",
+                    password=None,
+                )
+                UserProfile.objects.create(user=user, openid_subject=hashed_sub)
+                invite_code.used_at = timezone.now()
+                invite_code.used_by = user
+                invite_code.save(update_fields=["used_at", "used_by"])
+        else:
             user = User.objects.create_user(
                 username=hashed_sub,
                 email="",
@@ -340,9 +355,6 @@ def auth_google(request: Request) -> Response:
                 password=None,
             )
             UserProfile.objects.create(user=user, openid_subject=hashed_sub)
-            invite_code.used_at = timezone.now()
-            invite_code.used_by = user
-            invite_code.save(update_fields=["used_at", "used_by"])
 
     # Dev bootstrap: promote first user to staff/superuser and seed sample data.
     bootstrap_dev_user(user)
@@ -421,7 +433,7 @@ def staff_invite_code(request: Request) -> Response:
 # ── Data export ───────────────────────────────────────────────────────────────
 
 
-def _collect_export_data(user: Any, request: Request) -> tuple[str, list[Image]]:
+def _collect_export_data(user: Any, request: Request) -> tuple[str, str, list[Image]]:
     pieces = (
         Piece.objects.filter(user=user)
         .select_related("thumbnail", "current_location")
@@ -438,6 +450,15 @@ def _collect_export_data(user: Any, request: Request) -> tuple[str, list[Image]]
     ).data
     pieces_json = json.dumps(list(pieces_data), default=str)
 
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    profile_json = json.dumps(
+        {
+            "alias": profile.alias,
+            "preferences": profile.preferences if isinstance(profile.preferences, dict) else {},
+        },
+        default=str,
+    )
+
     images = list(
         Image.objects.filter(cloudinary_public_id__isnull=False)
         .filter(
@@ -446,7 +467,7 @@ def _collect_export_data(user: Any, request: Request) -> tuple[str, list[Image]]
         )
         .distinct()
     )
-    return pieces_json, images
+    return pieces_json, profile_json, images
 
 
 def _export_image_name(image: Image) -> str:
@@ -459,12 +480,13 @@ def _export_image_name(image: Image) -> str:
 
 
 async def _stream_export_archive(
-    pieces_json: str, images: list[Image]
+    pieces_json: str, profile_json: str, images: list[Image]
 ) -> AsyncIterator[bytes]:
     buffer = _StreamingZipBuffer()
     async with httpx.AsyncClient(timeout=60) as client:
         with ZipFile(cast(Any, buffer), "w", ZIP_DEFLATED) as archive:
             archive.writestr("pieces.json", pieces_json)
+            archive.writestr("profile.json", profile_json)
             for c in buffer.flush_chunks():
                 yield c
 
@@ -496,17 +518,17 @@ async def _stream_export_archive(
     responses={200: None},
     description=(
         "Download a ZIP archive of all the current user's data: "
-        "pieces.json (full piece history as JSON) and images/ "
-        "(Cloudinary-backed images). Download this before deleting your account."
+        "pieces.json (full piece history as JSON), profile.json (alias and preferences), "
+        "and images/ (Cloudinary-backed images). Download this before deleting your account."
     ),
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 @traced
 def auth_export(request: Request) -> StreamingHttpResponse:
-    pieces_json, images = _collect_export_data(request.user, request)
+    pieces_json, profile_json, images = _collect_export_data(request.user, request)
     response = StreamingHttpResponse(
-        _stream_export_archive(pieces_json, images),
+        _stream_export_archive(pieces_json, profile_json, images),
         content_type="application/zip",
     )
     response["Content-Disposition"] = 'attachment; filename="potterdoc-export.zip"'
@@ -537,5 +559,6 @@ def auth_delete_account(request: Request) -> Response:
     # Invalidate the session before deleting the user to avoid dangling session
     # references to a now-deleted User row.
     logout(request)
-    user.delete()
+    with transaction.atomic():
+        user.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
