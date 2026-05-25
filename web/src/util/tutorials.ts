@@ -1,4 +1,3 @@
-import type { UserPreferences } from "./api";
 
 /**
  * Metadata for tutorial toggles driven by user_preferences.yml.

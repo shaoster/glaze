@@ -59,20 +59,20 @@ export default function UserPreferencesDialog({
   );
 
   const initialValues = useMemo(() => {
-    const values: Record<string, any> = {};
+    const values: Record<string, unknown> = {};
     for (const section of PREFERENCES_SCHEMA.sections) {
       for (const [fieldId, field] of Object.entries(section.fields)) {
         if (field.storage === "UserProfile") {
           values[fieldId] =
-            data?.[fieldId] ??
-            currentUser?.[fieldId] ??
+            (data as Record<string, unknown> | undefined)?.[fieldId] ??
+            (currentUser as Record<string, unknown> | null)?.[fieldId] ??
             (field.type === "string" ? "" : false);
         } else {
           // storage: UserProfile.preferences
           values[fieldId] =
-            data?.preferences?.[fieldId] ??
-            currentUser?.preferences?.[fieldId] ??
-            (field.type === "field-multiselect" ? [] : true);
+            (data?.preferences as Record<string, unknown> | undefined)?.[fieldId] ??
+            (currentUser?.preferences as Record<string, unknown> | undefined)?.[fieldId] ??
+            (field.type === "field-list" ? [] : true);
         }
       }
     }
@@ -111,13 +111,13 @@ export default function UserPreferencesDialog({
             activeSectionId={activeSectionId}
             onSectionChange={onSectionChange}
             onSave={async (values) => {
-              const profileUpdates: Record<string, any> = {};
-              const preferenceUpdates: Record<string, any> = {};
+              const profileUpdates: Record<string, string> = {};
+              const preferenceUpdates: Record<string, unknown> = {};
 
               for (const [fieldId, value] of Object.entries(values)) {
                 const field = getFieldDefinition(fieldId);
                 if (field?.storage === "UserProfile") {
-                  profileUpdates[fieldId] = value;
+                  profileUpdates[fieldId] = value as string;
                 } else {
                   preferenceUpdates[fieldId] = value;
                 }
@@ -154,17 +154,17 @@ function PreferencesForm({
   onCancel,
   isSaving,
 }: {
-  initialValues: Record<string, any>;
+  initialValues: Record<string, unknown>;
   activeSectionId: PreferencesSectionId | null;
   onSectionChange: (sectionId: PreferencesSectionId | null) => void;
-  onSave: (values: Record<string, any>) => Promise<void>;
+  onSave: (values: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
   isSaving: boolean;
 }) {
   const [values, setValues] = useState(initialValues);
   const options = useMemo(() => getProcessSummaryFieldOptions(), []);
 
-  const handleChange = (fieldId: string, value: any) => {
+  const handleChange = (fieldId: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [fieldId]: value }));
   };
 
@@ -177,7 +177,7 @@ function PreferencesForm({
             disableGutters
             expanded={activeSectionId === section.id}
             onChange={(_, expanded) => {
-              onSectionChange(expanded ? (section.id as any) : null);
+              onSectionChange(expanded ? (section.id as PreferencesSectionId) : null);
             }}
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>

@@ -15,8 +15,8 @@ import type { ProcessSummaryFieldOption } from "../util/workflow";
 export interface DynamicPreferenceFieldProps {
   fieldId: string;
   field: PreferenceField;
-  value: any;
-  onChange: (value: any) => void;
+  value: unknown;
+  onChange: (value: unknown) => void;
   isSaving: boolean;
   options: ProcessSummaryFieldOption[];
 }
@@ -28,11 +28,24 @@ export function DynamicPreferenceField({
   isSaving,
   options,
 }: DynamicPreferenceFieldProps) {
+  const groupedOptions = useMemo(() => {
+    if (field.type !== "field-list") {
+      return [];
+    }
+    const grouped = new Map<string, ProcessSummaryFieldOption[]>();
+    for (const option of options) {
+      const groupFields = grouped.get(option.group) ?? [];
+      groupFields.push(option);
+      grouped.set(option.group, groupFields);
+    }
+    return Array.from(grouped, ([title, fields]) => ({ title, fields }));
+  }, [field.type, options]);
+
   if (field.type === "string") {
     return (
       <TextField
         label={field.label}
-        value={value ?? ""}
+        value={(value as string) ?? ""}
         onChange={(e) => onChange(e.target.value.slice(0, field.max_length))}
         helperText={field.hint}
         fullWidth
@@ -43,16 +56,6 @@ export function DynamicPreferenceField({
   }
 
   if (field.type === "field-list") {
-    const groupedOptions = useMemo(() => {
-      const grouped = new Map<string, ProcessSummaryFieldOption[]>();
-      for (const option of options) {
-        const groupFields = grouped.get(option.group) ?? [];
-        groupFields.push(option);
-        grouped.set(option.group, groupFields);
-      }
-      return Array.from(grouped, ([title, fields]) => ({ title, fields }));
-    }, [options]);
-
     return (
       <Stack spacing={2}>
         {groupedOptions.map((section) => (
@@ -107,8 +110,8 @@ export function DynamicPreferenceField({
       <FormControlLabel
         control={
           <Checkbox
-            checked={value ?? true}
-            onChange={() => onChange(!(value ?? true))}
+            checked={(value as boolean) ?? true}
+            onChange={() => onChange(!((value as boolean) ?? true))}
           />
         }
         label={

@@ -32,7 +32,6 @@ import type {
 } from "./types";
 import {
   TUTORIAL_TOGGLE_VALUES,
-  type TutorialToggleKey,
 } from "./tutorials";
 
 /**
@@ -87,7 +86,7 @@ export type TutorialVisibility = boolean;
 
 export type UserPreferences = {
   process_summary_fields: string[];
-} & Record<string, any>;
+} & Record<string, unknown>;
 
 const client = axios.create({ baseURL: "/api/" });
 client.defaults.withCredentials = true;

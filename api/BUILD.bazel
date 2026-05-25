@@ -117,6 +117,7 @@ filegroup(
         "model_factories.py",
         "models.py",
         "piece_views.py",
+        "preferences.py",
         "serializer_factories.py",
         "serializer_registry.py",
         "serializers.py",
