@@ -75,8 +75,12 @@ export default function UserPreferencesDialog({
     currentUser?.preferences.tutorials[
       TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP
     ] ??
-    "show";
-  const preferencesKey = `${initialAlias}::${initialSelectedRefs.join("|")}::${initialTutorialVisibility}`;
+    true;
+  const initialAliasPromptVisibility =
+    data?.preferences.tutorials[TUTORIAL_TOGGLE_KEYS.CHANGE_ALIAS_PROMPT] ??
+    currentUser?.preferences.tutorials[TUTORIAL_TOGGLE_KEYS.CHANGE_ALIAS_PROMPT] ??
+    true;
+  const preferencesKey = `${initialAlias}::${initialSelectedRefs.join("|")}::${initialTutorialVisibility}::${initialAliasPromptVisibility}`;
 
   const sections = useMemo(() => {
     const grouped = new Map<string, typeof options>();
@@ -128,6 +132,8 @@ export default function UserPreferencesDialog({
                   tutorials: {
                     [TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP]:
                       tutorialVisibility,
+                    [TUTORIAL_TOGGLE_KEYS.CHANGE_ALIAS_PROMPT]:
+                      initialAliasPromptVisibility,
                   },
                 },
                 alias,
@@ -312,12 +318,8 @@ function PreferencesForm({
               <FormControlLabel
                 control={
                   <Checkbox
-                    checked={tutorialVisibility === "show"}
-                    onChange={() =>
-                      setTutorialVisibility((prev) =>
-                        prev === "show" ? "don't" : "show",
-                      )
-                    }
+                    checked={tutorialVisibility}
+                    onChange={() => setTutorialVisibility((prev) => !prev)}
                   />
                 }
                 label={

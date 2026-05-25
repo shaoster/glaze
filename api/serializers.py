@@ -974,10 +974,8 @@ def _replace_piece_tags(piece: Piece, user, tag_ids: list[str]) -> None:
 
 
 class TutorialPreferencesSerializer(serializers.Serializer):
-    summary_customize_popover = serializers.ChoiceField(
-        choices=[("show", "show"), ("don't", "don't")],
-        required=False,
-    )
+    summary_customize_popover = serializers.BooleanField(required=False)
+    change_alias_prompt = serializers.BooleanField(required=False)
 
 
 class SavedUserPreferencesSerializer(serializers.Serializer):
