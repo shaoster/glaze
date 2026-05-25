@@ -1,0 +1,24 @@
+load("@rules_helm//helm:defs.bzl", "helm_chart", "helm_lint_test")
+
+# ── Glaze application Helm chart ─────────────────────────────────────────────
+#
+# helm_chart() packages chart/glaze/ into a versioned .tgz. The package is not
+# pushed anywhere by Bazel today — CD uses tools/helm_deploy.sh directly.
+# The target exists primarily so helm_lint_test() has a chart to lint.
+
+helm_chart(
+    name = "chart",
+    chart = "Chart.yaml",
+    crds = [],
+    values = "values.yaml",
+    templates = glob(["templates/**"]),
+    visibility = ["//visibility:public"],
+)
+
+# Runs `helm lint` against the chart. Tagged "lint" so it fires under both
+# `rtk bazel test //...` and `bazel build --config=lint //...`.
+helm_lint_test(
+    name = "helm_lint_test",
+    chart = ":chart",
+    tags = ["lint"],
+)

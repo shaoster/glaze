@@ -269,9 +269,7 @@ oci_push(
     name = "push_worker",
     image = ":celery_worker_image",
     repository = "ghcr.io/shaoster/glaze-worker",
-)
-
-# Load the freshly-built image into the local docker daemon so CI (and devs)
+)# Load the freshly-built image into the local docker daemon so CI (and devs)
 # can `docker compose up` against it without a registry round-trip.
 # `bazel run //:load` tags it as ghcr.io/shaoster/glaze:latest, matching the
 # image reference in docker-compose.yml.
@@ -279,4 +277,12 @@ oci_load(
     name = "load",
     image = ":image",
     repo_tags = ["ghcr.io/shaoster/glaze:latest"],
+)
+
+# ── Kubernetes manifest validation ───────────────────────────────────────────
+
+filegroup(
+    name = "k3s_manifests",
+    srcs = glob(["infra/k3s/*.yaml"]),
+    visibility = ["//visibility:public"],
 )

@@ -817,8 +817,11 @@ gz_test() {
 # CI-aligned: run ruff, eslint, tsc, and mypy via Bazel (same as CI).
 gz_lint() {
     echo "Running: ${GLAZE_AGENT:+rtk }bazel build --config=lint //..."
-    (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel build --config=ci --config=lint //... "$@")
+    (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel build --config=ci --config=lint //... "$@") || return 1
+    echo "Running: ${GLAZE_AGENT:+rtk }bazel test --config=lint --test_tag_filters=lint //..."
+    (cd "$GLAZE_ROOT" && ${GLAZE_AGENT:+rtk }bazel test --config=ci --config=lint --test_tag_filters=lint //... "$@")
 }
+
 
 # Auto-fix: reformat Python files and apply ruff auto-fixes in one step.
 gz_format() {
