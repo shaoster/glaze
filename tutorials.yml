@@ -1,0 +1,29 @@
+version: "1.0"
+tutorials:
+  summary_customize_popover:
+    preference:
+      label: "Show the summary customization tip"
+      hint: "Controls the summary guidance shown on piece details."
+    inlay:
+      label: "Customize this summary!"
+      dismiss_label: "Dismiss summary customization tip"
+    attachment:
+      selector: "#process-summary-title"
+      placement: "top"
+      action:
+        type: "open-preferences"
+        section: "process-summary"
+
+  change_alias_prompt:
+    preference:
+      label: "Show the \"Change your alias!\" tip"
+      hint: "Controls the alias guidance shown on the piece list."
+    inlay:
+      label: "Change your alias!"
+      dismiss_label: "Dismiss alias tip"
+    attachment:
+      selector: "#user-chip"
+      placement: "left"
+      action:
+        type: "open-preferences"
+        section: "identity"

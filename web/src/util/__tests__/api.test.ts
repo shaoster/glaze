@@ -471,8 +471,6 @@ describe("auth endpoints", () => {
       alias: "",
       preferences: {
         process_summary_fields: ["piece.name"],
-        summary_customize_popover: true,
-          change_alias_prompt: true,
       },
     });
     expect(mockClient.get).toHaveBeenCalledWith("auth/preferences/");
@@ -493,8 +491,6 @@ describe("auth endpoints", () => {
       ...authUser,
       preferences: {
         process_summary_fields: ["piece.name"],
-        summary_customize_popover: true,
-          change_alias_prompt: true,
       },
     });
   });

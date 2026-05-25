@@ -24,6 +24,8 @@ py_binary(
 exports_files([
     "ruff.toml",
     "mypy.ini",
+    "tutorials.yml",
+    "tutorials.schema.yml",
 ])
 
 config_setting(
@@ -62,6 +64,21 @@ filegroup(
 js_library(
     name = "user_preferences_js",
     srcs = ["user_preferences.yml"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "tutorials_files",
+    srcs = [
+        "tutorials.schema.yml",
+        "tutorials.yml",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+js_library(
+    name = "tutorials_js",
+    srcs = ["tutorials.yml"],
     visibility = ["//visibility:public"],
 )
 
@@ -152,6 +169,8 @@ pkg_tar(
         "workflow.schema.yml",
         "user_preferences.yml",
         "user_preferences.schema.yml",
+        "tutorials.yml",
+        "tutorials.schema.yml",
         "docker-entrypoint.sh",
         "//api:api_runtime_files",
         "//backend:backend_runtime_files",

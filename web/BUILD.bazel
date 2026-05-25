@@ -231,12 +231,12 @@ js_library(
         "src/util/optionalValues.ts",
         "src/util/postLoginRedirect.ts",
         "src/util/preferences.ts",
-        "src/util/tutorials.ts",
         "src/util/useAsync.ts",
         "src/util/workflow.ts",
     ],
     deps = [
         ":generated_types",
+        "//:tutorials_js",
         "//:user_preferences_js",
         "//:workflow_js",
     ],

@@ -60,16 +60,14 @@ import {
 } from "./util/api";
 import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
 import { useAsync } from "./util/useAsync";
-import { TUTORIAL_TOGGLE_KEYS } from "./util/tutorials";
 import ErrorBoundary from "./components/ErrorBoundary";
 import PublicPieceShell from "./components/PublicPieceShell";
 import UserPreferencesDialog from "./components/UserPreferencesDialog";
+import TutorialManager from "./components/TutorialManager";
 import {
   CurrentUserProvider,
   PreferencesDialogProvider,
 } from "./components/CurrentUserContext";
-import SmallTutorialInlay from "./components/SmallTutorialInlay";
-import { SMALL_TUTORIAL_INLAY_PLACEMENTS } from "./components/SmallTutorialInlayConfig";
 import type { AuthUser } from "./util/api";
 import type { PreferencesSectionId } from "./components/CurrentUserContext";
 
@@ -367,9 +365,6 @@ function AppShell({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteInProgress, setDeleteInProgress] = useState(false);
-  const [userChipElement, setUserChipElement] = useState<HTMLElement | null>(
-    null,
-  );
   const navigate = useNavigate();
   const preferencesRootMatch = useMatch("/preferences");
   const preferencesSectionMatch = useMatch("/preferences/:sectionId");
@@ -401,9 +396,6 @@ function AppShell({
     },
     [navigate],
   );
-  const handleUserChipRef = useCallback((element: HTMLElement | null) => {
-    setUserChipElement(element);
-  }, []);
   const switchPreferencesSection = useCallback(
     (sectionId: PreferencesSectionId | null) => {
       navigate(sectionId ? `/preferences/${sectionId}` : "/preferences", {
@@ -473,14 +465,8 @@ function AppShell({
                 PotterDoc
               </Typography>
             </Box>
-            <SmallTutorialInlay
-              attachedElement={userChipElement}
-              tutorialKey={TUTORIAL_TOGGLE_KEYS.CHANGE_ALIAS_PROMPT}
-              placement={SMALL_TUTORIAL_INLAY_PLACEMENTS.LEFT}
-              onClick={() => openPreferencesDialog("identity")}
-            />
             <Chip
-              ref={handleUserChipRef}
+              id="user-chip"
               label={displayName}
               color="primary"
               variant="outlined"
@@ -663,6 +649,7 @@ function AppShell({
               <Outlet />
             </Suspense>
           </ErrorBoundary>
+          <TutorialManager />
           <UserPreferencesDialog
             open={preferencesOpen}
             activeSectionId={preferencesSectionId}
