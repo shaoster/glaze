@@ -142,6 +142,11 @@ def auth_me(request: Request) -> Response:
 from .preferences import UserPreferencesSerializer, get_preferences_config
 
 
+# Whitelist of UserProfile fields that can be updated via the declarative system.
+# [SECURITY]: Strictly control which model fields are exposed to storage: UserProfile.
+ALLOWED_USER_PROFILE_FIELDS = {"alias"}
+
+
 @extend_schema(
     request=UserPreferencesSerializer,
     responses={200: UserPreferencesSerializer},
@@ -172,15 +177,15 @@ def auth_preferences(request: Request) -> Response:
             if (
                 field_def["storage"] == "UserProfile"
                 and field_id in serializer.validated_data
+                and field_id in ALLOWED_USER_PROFILE_FIELDS
             ):
                 setattr(profile, field_id, serializer.validated_data[field_id])
                 if field_id not in update_fields:
                     update_fields.append(field_id)
 
     if "preferences" in serializer.validated_data:
-        existing_preferences = cast(
-            dict[str, Any],
-            profile.preferences if isinstance(profile.preferences, dict) else {},
+        existing_preferences = (
+            profile.preferences if isinstance(profile.preferences, dict) else {}
         )
         incoming_preferences = cast(
             dict[str, Any], serializer.validated_data["preferences"]

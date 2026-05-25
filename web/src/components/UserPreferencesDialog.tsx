@@ -4,19 +4,13 @@ import {
   AccordionDetails,
   AccordionSummary,
   Alert,
-  Box,
   Button,
-  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
-  FormControlLabel,
-  FormGroup,
   LinearProgress,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -25,7 +19,6 @@ import { fetchUserPreferences, type UserPreferences } from "../util/api";
 import {
   getFieldDefinition,
   PREFERENCES_SCHEMA,
-  type PreferenceField,
 } from "../util/preferences";
 import { useAsync, useAsyncFn } from "../util/useAsync";
 import { getProcessSummaryFieldOptions } from "../util/workflow";
@@ -34,6 +27,7 @@ import {
   useSaveUserPreferences,
   type PreferencesSectionId,
 } from "./CurrentUserContext";
+import { DynamicPreferenceField } from "./DynamicPreferenceField";
 
 type UserPreferencesDialogProps = {
   open: boolean;
@@ -85,7 +79,8 @@ export default function UserPreferencesDialog({
     return values;
   }, [data, currentUser]);
 
-  const preferencesKey = JSON.stringify(initialValues);
+  // Use a stable key that forces remount only when foundational data changes
+  const preferencesKey = useMemo(() => JSON.stringify(initialValues), [initialValues]);
 
   return (
     <Dialog
@@ -200,7 +195,7 @@ function PreferencesForm({
             <AccordionDetails>
               <Stack spacing={2}>
                 {Object.entries(section.fields).map(([fieldId, field]) => (
-                  <DynamicField
+                  <DynamicPreferenceField
                     key={fieldId}
                     fieldId={fieldId}
                     field={field}
@@ -229,119 +224,4 @@ function PreferencesForm({
       </DialogActions>
     </>
   );
-}
-
-function DynamicField({
-  fieldId,
-  field,
-  value,
-  onChange,
-  isSaving,
-  options,
-}: {
-  fieldId: string;
-  field: PreferenceField;
-  value: any;
-  onChange: (value: any) => void;
-  isSaving: boolean;
-  options: { title: string; fields: { ref: string; label: string }[] }[];
-}) {
-  if (field.type === "string") {
-    return (
-      <TextField
-        label={field.label}
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value.slice(0, field.max_length))}
-        helperText={field.hint}
-        fullWidth
-        disabled={isSaving}
-        inputProps={{ maxLength: field.max_length }}
-      />
-    );
-  }
-
-  if (field.type === "field-multiselect") {
-    const groupedOptions = useMemo(() => {
-      const grouped = new Map<string, typeof options>();
-      for (const option of options) {
-        const groupFields = grouped.get(option.group) ?? [];
-        groupFields.push(option);
-        grouped.set(option.group, groupFields);
-      }
-      return Array.from(grouped, ([title, fields]) => ({ title, fields }));
-    }, [options]);
-
-    return (
-      <Stack spacing={2}>
-        {groupedOptions.map((section) => (
-          <Box key={section.title}>
-            <Typography
-              variant="subtitle2"
-              sx={{
-                mb: 1,
-                color: "text.secondary",
-                fontWeight: 700,
-              }}
-            >
-              {section.title}
-            </Typography>
-            <FormGroup>
-              {section.fields.map((f) => (
-                <FormControlLabel
-                  key={f.ref}
-                  control={
-                    <Checkbox
-                      checked={(value as string[] ?? []).includes(f.ref)}
-                      onChange={() => {
-                        const prev = (value as string[]) ?? [];
-                        onChange(
-                          prev.includes(f.ref)
-                            ? prev.filter((v) => v !== f.ref)
-                            : [...prev, f.ref],
-                        );
-                      }}
-                    />
-                  }
-                  label={
-                    <Stack spacing={0.25}>
-                      <Typography variant="body2">{f.label}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {f.ref}
-                      </Typography>
-                    </Stack>
-                  }
-                />
-              ))}
-            </FormGroup>
-            <Divider sx={{ mt: 1.5 }} />
-          </Box>
-        ))}
-      </Stack>
-    );
-  }
-
-  if (field.type === "visibility-toggle") {
-    return (
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={value ?? true}
-            onChange={() => onChange(!(value ?? true))}
-          />
-        }
-        label={
-          <Stack spacing={0.25}>
-            <Typography variant="body2">{field.label}</Typography>
-            {field.hint && (
-              <Typography variant="caption" color="text.secondary">
-                {field.hint}
-              </Typography>
-            )}
-          </Stack>
-        }
-      />
-    );
-  }
-
-  return null;
 }

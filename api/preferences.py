@@ -22,6 +22,27 @@ def get_preferences_config() -> dict[str, Any]:
     return _config
 
 
+def _get_serializer_field(field_def: dict[str, Any]) -> serializers.Field:
+    """Map a YAML field definition to a DRF serializer field."""
+    field_type = field_def["type"]
+    if field_type == "string":
+        return serializers.CharField(
+            required=False,
+            allow_blank=True,
+            max_length=field_def.get("max_length", 255),
+        )
+    if field_type == "field-multiselect":
+        return serializers.ListField(
+            child=serializers.CharField(),
+            required=False,
+        )
+    if field_type == "visibility-toggle":
+        return serializers.BooleanField(required=False)
+
+    # Fallback for unknown types
+    return serializers.ReadOnlyField(required=False)
+
+
 def _make_saved_user_preferences_serializer() -> type[serializers.Serializer]:
     """Generate the serializer for the nested 'preferences' JSON blob."""
     fields: dict[str, Any] = {}
@@ -29,13 +50,7 @@ def _make_saved_user_preferences_serializer() -> type[serializers.Serializer]:
     for section in _config["sections"]:
         for field_id, field_def in section["fields"].items():
             if field_def["storage"] == "UserProfile.preferences":
-                if field_def["type"] == "visibility-toggle":
-                    fields[field_id] = serializers.BooleanField(required=False)
-                elif field_def["type"] == "field-multiselect":
-                    fields[field_id] = serializers.ListField(
-                        child=serializers.CharField(),
-                        required=False,
-                    )
+                fields[field_id] = _get_serializer_field(field_def)
 
     return type("SavedUserPreferencesSerializer", (serializers.Serializer,), fields)
 
@@ -52,12 +67,7 @@ def _make_user_preferences_serializer() -> type[serializers.Serializer]:
     for section in _config["sections"]:
         for field_id, field_def in section["fields"].items():
             if field_def["storage"] == "UserProfile":
-                if field_def["type"] == "string":
-                    fields[field_id] = serializers.CharField(
-                        required=False,
-                        allow_blank=True,
-                        max_length=field_def.get("max_length", 255),
-                    )
+                fields[field_id] = _get_serializer_field(field_def)
 
     return type("UserPreferencesSerializer", (serializers.Serializer,), fields)
 
