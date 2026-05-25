@@ -36,6 +36,23 @@ Currently, two official plugins are available:
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
+## Declarative UI
+
+Glaze uses a "data-driven" approach where structural YAML files drive UI generation.
+
+### User Preferences
+
+The `UserPreferencesDialog.tsx` is driven by `user_preferences.yml`.
+- It dynamically renders form fields based on the sections and field definitions in the YAML.
+- Uses `util/preferences.ts` as the bridge to the YAML configuration.
+
+### Tutorials
+
+Tutorial tips are managed by `TutorialManager.tsx` and driven by `tutorials.yml`.
+- **Zero-JSX Attachment**: Instead of placing `<SmallTutorialInlay />` manually in components, define an `attachment.selector` (CSS selector) in `tutorials.yml`.
+- The `TutorialManager` scans the DOM for these selectors and portals the inlays to the detected elements.
+- Dismissal state is automatically synced with the backend user preferences.
+
 ## React Compiler
 
 The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.

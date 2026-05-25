@@ -13,6 +13,8 @@ A pottery workflow tracking application. Log pieces and record state transitions
 - [Backend API (`api/`)](api/README.md) - Django, DRF, public libraries, auth flows, and data isolation.
 - [Frontend Client (`web/`)](web/README.md) - React components, Vite configuration, and frontend conventions.
 - [Common Tests (`tests/`)](tests/README.md) - Structural tests for the workflow state machine.
+- [Declarative Preferences (`user_preferences.yml`)](user_preferences.yml) - Central definition for user settings.
+- [Declarative Tutorials (`tutorials.yml`)](tutorials.yml) - Central definition for tutorial tips and attachment rules.
 - [Tools (`tools/`)](tools/README.md) - Standalone utilities, Modal crop offloading, and Glaze import tool.
 - [Pages (`pages/`)](pages/README.md) - Static published pages.
 - [CI / CD Infrastructure (`docs/`)](docs/ci-cd.md) - GitHub Actions workflows, deployment pipelines, and environment variables.

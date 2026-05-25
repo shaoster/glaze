@@ -20,12 +20,18 @@ allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 transitions, globals, and per-state field definitions. Never hardcode state names or
 transition rules — always derive them from this file.
 
+Other declarative configurations follow a similar pattern:
+- **`user_preferences.yml`**: Defines user-level settings and flags.
+- **`tutorials.yml`**: Defines tutorial tips and their attachment rules.
+
 **Schema validation:** `workflow.schema.yml` is a JSON Schema (Draft 2020-12) document
 constraining `workflow.yml`. Required top-level fields: `version` (semver) and `states`
 (array, ≥ 2 items). `globals` is optional. Per-state required: `id` (snake_case) and
 `visible` (boolean). `additionalProperties: false` at both top level and per-state.
+`user_preferences.schema.yml` and `tutorials.schema.yml` provide similar structural
+constraints for their respective files.
 
-**Tests:** `tests/test_workflow.py` validates the file structurally and semantically:
+**Tests:** `tests/test_workflow.py` validates `workflow.yml` structurally and semantically. `api/tests/test_preferences.py` performs similar validation for preferences and tutorials.
 - `TestSchemaValidation` — jsonschema validation + malformed-input rejection
 - `TestReferentialIntegrity` — successor IDs reference real states, terminal states
   have no successors, non-terminal states have ≥ 1 successor, unique IDs, no self-refs
