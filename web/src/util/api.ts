@@ -30,9 +30,7 @@ import type {
   TagEntry,
   Thumbnail,
 } from "./types";
-import {
-  TUTORIAL_TOGGLE_VALUES,
-} from "./tutorials";
+
 
 /**
  * JSON Schema property shape returned by the workflow-schema endpoint.
@@ -235,20 +233,14 @@ function mapPieceDetail(raw: Wire<PieceDetail>): PieceDetail {
 function normalizeUserPreferences(
   preferences: Partial<UserPreferences> | null | undefined,
 ): UserPreferences {
-  const normalized: UserPreferences = {
+  return {
+    ...(preferences || {}),
     process_summary_fields: Array.isArray(preferences?.process_summary_fields)
       ? preferences.process_summary_fields.filter(
           (value): value is string => typeof value === "string",
         )
       : [],
-  };
-
-  // Normalize tutorial flags (default to true if missing)
-  for (const key of TUTORIAL_TOGGLE_VALUES) {
-    normalized[key] = preferences?.[key] ?? true;
-  }
-
-  return normalized;
+  } as UserPreferences;
 }
 
 function normalizeAuthUser(raw: AuthUser): AuthUser {

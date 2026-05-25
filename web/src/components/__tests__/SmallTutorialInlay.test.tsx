@@ -9,9 +9,6 @@ import {
   PreferencesDialogProvider,
 } from "../CurrentUserContext";
 import type { UserPreferences } from "../../util/api";
-import {
-  TUTORIAL_TOGGLE_KEYS,
-} from "../../util/tutorials";
 import { SMALL_TUTORIAL_INLAY_PLACEMENTS } from "../SmallTutorialInlayConfig";
 
 function makeCurrentUser() {
@@ -22,7 +19,7 @@ function makeCurrentUser() {
     preferences: {
       process_summary_fields: [],
       summary_customize_popover: true as const,
-        change_alias_prompt: true as const,
+      change_alias_prompt: true as const,
     },
   };
 }
@@ -54,7 +51,9 @@ function renderHarness({
         <CurrentUserProvider currentUser={currentUser}>
           <SmallTutorialInlay
             attachedElement={anchor}
-            tutorialKey={TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP}
+            tutorialKey="summary_customize_popover"
+            label="Customize this summary!"
+            dismissLabel="Dismiss summary customization tip"
             placement={placement}
             onClick={() => openPreferencesDialog("process-summary")}
           />
@@ -120,7 +119,7 @@ describe("SmallTutorialInlay", () => {
       expect(saveUserPreferencesMock).toHaveBeenCalledWith({
         process_summary_fields: [],
         summary_customize_popover: false,
-          change_alias_prompt: true,
+        change_alias_prompt: true,
       });
       expect(screen.queryByText("Customize this summary!")).not.toBeInTheDocument();
     });
@@ -154,7 +153,7 @@ describe("SmallTutorialInlay", () => {
       expect(saveUserPreferencesMock).toHaveBeenCalledWith({
         process_summary_fields: [],
         summary_customize_popover: false,
-          change_alias_prompt: true,
+        change_alias_prompt: true,
       });
       expect(screen.queryByText("Customize this summary!")).not.toBeInTheDocument();
     });

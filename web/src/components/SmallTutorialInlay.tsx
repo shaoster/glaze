@@ -10,10 +10,6 @@ import {
 
 import { useAsyncFn } from "../util/useAsync";
 import {
-  TUTORIAL_TOGGLE_METADATA,
-  type TutorialToggleKey,
-} from "../util/tutorials";
-import {
   useCurrentUser,
   useSaveUserPreferences,
 } from "./CurrentUserContext";
@@ -30,7 +26,9 @@ import {
 export interface SmallTutorialInlayProps {
   attachedElement: HTMLElement | null;
   onClick: () => void | Promise<void>;
-  tutorialKey: TutorialToggleKey;
+  tutorialKey: string;
+  label: string;
+  dismissLabel: string;
   placement: SmallTutorialInlayPlacement;
 }
 
@@ -38,11 +36,12 @@ export default function SmallTutorialInlay({
   attachedElement,
   onClick,
   tutorialKey,
+  label,
+  dismissLabel,
   placement,
 }: SmallTutorialInlayProps) {
   const currentUser = useCurrentUser();
   const saveUserPreferences = useSaveUserPreferences();
-  const copy = TUTORIAL_TOGGLE_METADATA[tutorialKey];
   const tutorialVisibility = currentUser?.preferences[tutorialKey] ?? true;
   const shouldShow =
     Boolean(attachedElement && currentUser && saveUserPreferences) &&
@@ -140,7 +139,7 @@ export default function SmallTutorialInlay({
         variant="outlined"
         role="button"
         tabIndex={0}
-        aria-label={copy.label}
+        aria-label={label}
         onClick={() => void openState.execute()}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -203,11 +202,11 @@ export default function SmallTutorialInlay({
           }}
         />
         <Typography variant="caption" sx={{ color: "text.secondary" }}>
-          {copy.label}
+          {label}
         </Typography>
         <IconButton
           size="small"
-          aria-label={copy.dismissLabel}
+          aria-label={dismissLabel}
           onClick={(event) => {
             event.stopPropagation();
             void dismissState.execute();

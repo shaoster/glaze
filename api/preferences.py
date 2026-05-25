@@ -12,11 +12,11 @@ from rest_framework import serializers
 from .workflow import get_all_field_refs
 
 # ---------------------------------------------------------------------------
-# Load preferences at module import time and cache — do not re-read per request.
+# Load configurations at module import time and cache — do not re-read per request.
 # ---------------------------------------------------------------------------
-_config = yaml.safe_load(
-    (Path(__file__).resolve().parent.parent / "user_preferences.yml").read_text()
-)
+_root = Path(__file__).resolve().parent.parent
+_config = yaml.safe_load((_root / "user_preferences.yml").read_text())
+_tutorials_config = yaml.safe_load((_root / "tutorials.yml").read_text())
 
 
 def validate_workflow_fields(values: list[str]) -> None:
@@ -30,6 +30,11 @@ def validate_workflow_fields(values: list[str]) -> None:
 def get_preferences_config() -> dict[str, Any]:
     """Return the raw preferences configuration from user_preferences.yml."""
     return _config
+
+
+def get_tutorials_config() -> dict[str, Any]:
+    """Return the raw tutorials configuration from tutorials.yml."""
+    return _tutorials_config
 
 
 def _get_serializer_field(field_def: dict[str, Any]) -> serializers.Field:
@@ -65,6 +70,14 @@ def _make_saved_user_preferences_serializer() -> type[serializers.Serializer]:
         for field_id, field_def in section["fields"].items():
             if field_def["storage"] == "UserProfile.preferences":
                 fields[field_id] = _get_serializer_field(field_def)
+
+    # Inject tutorial show/hide preferences.
+    # Note: These are always stored in UserProfile.preferences and default to True.
+    for tutorial_id in _tutorials_config.get("tutorials", {}):
+        fields[tutorial_id] = serializers.BooleanField(
+            required=False,
+            default=True,
+        )
 
     return type("SavedUserPreferencesSerializer", (serializers.Serializer,), fields)
 

@@ -1,0 +1,71 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Glaze Tutorials
+type: object
+required: [version, tutorials]
+additionalProperties: false
+
+properties:
+  version:
+    type: string
+    description: Semantic version of this tutorials definition.
+    pattern: '^\d+\.\d+(\.\d+)?$'
+
+  tutorials:
+    type: object
+    description: Map of tutorial_id to tutorial definition.
+    propertyNames:
+      pattern: '^[a-z][a-z0-9_]*$'
+    additionalProperties:
+      $ref: "#/$defs/tutorial"
+
+$defs:
+  tutorial:
+    type: object
+    required: [preference, inlay, attachment]
+    additionalProperties: false
+    properties:
+      preference:
+        type: object
+        required: [label, hint]
+        additionalProperties: false
+        properties:
+          label:
+            type: string
+            description: Label shown in the User Preferences UI checkbox.
+          hint:
+            type: string
+            description: Hint text shown in the User Preferences UI.
+      inlay:
+        type: object
+        required: [label, dismiss_label]
+        additionalProperties: false
+        properties:
+          label:
+            type: string
+            description: Text shown inside the tutorial bubble.
+          dismiss_label:
+            type: string
+            description: Accessibility label for the dismiss button.
+      attachment:
+        type: object
+        required: [selector, placement, action]
+        additionalProperties: false
+        properties:
+          selector:
+            type: string
+            description: CSS selector for the target element to attach the tutorial to.
+          placement:
+            type: string
+            enum: [top, left, right]
+            description: Where to place the tutorial relative to the target element.
+          action:
+            type: object
+            required: [type]
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                enum: [open-preferences]
+              section:
+                type: string
+                description: The preference section ID to open when the tutorial is clicked.

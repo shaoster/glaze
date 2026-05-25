@@ -2,6 +2,7 @@
  * Web interface to the user_preferences.yml configuration.
  */
 import preferencesSchema from "../../../user_preferences.yml";
+import tutorialsConfig from "../../../tutorials.yml";
 
 export interface PreferenceField {
   type: "string" | "field-list" | "boolean";
@@ -24,8 +25,35 @@ export interface PreferencesSchema {
   sections: PreferenceSection[];
 }
 
-export const PREFERENCES_SCHEMA =
-  preferencesSchema as unknown as PreferencesSchema;
+const baseSchema = preferencesSchema as unknown as PreferencesSchema;
+const tutorials = (
+  tutorialsConfig as unknown as {
+    tutorials: Record<string, { preference: { label: string; hint?: string } }>;
+  }
+).tutorials;
+
+const tutorialFields: Record<string, PreferenceField> = {};
+for (const [key, tutorial] of Object.entries(tutorials)) {
+  tutorialFields[key] = {
+    type: "boolean",
+    label: tutorial.preference.label,
+    hint: tutorial.preference.hint,
+    storage: "UserProfile.preferences",
+  };
+}
+
+export const PREFERENCES_SCHEMA: PreferencesSchema = {
+  ...baseSchema,
+  sections: [
+    ...baseSchema.sections,
+    {
+      id: "tutorials",
+      title: "Tutorials",
+      description: "Control which helpful tips and guides are shown.",
+      fields: tutorialFields,
+    },
+  ],
+};
 
 export function getFieldDefinition(
   fieldId: string,
