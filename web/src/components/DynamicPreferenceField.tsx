@@ -42,7 +42,7 @@ export function DynamicPreferenceField({
     );
   }
 
-  if (field.type === "field-multiselect") {
+  if (field.type === "field-list") {
     const groupedOptions = useMemo(() => {
       const grouped = new Map<string, ProcessSummaryFieldOption[]>();
       for (const option of options) {
@@ -102,7 +102,7 @@ export function DynamicPreferenceField({
     );
   }
 
-  if (field.type === "visibility-toggle") {
+  if (field.type === "boolean") {
     return (
       <FormControlLabel
         control={

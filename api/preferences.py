@@ -9,12 +9,22 @@ from typing import Any
 import yaml
 from rest_framework import serializers
 
+from .workflow import get_all_field_refs
+
 # ---------------------------------------------------------------------------
 # Load preferences at module import time and cache — do not re-read per request.
 # ---------------------------------------------------------------------------
 _config = yaml.safe_load(
     (Path(__file__).resolve().parent.parent / "user_preferences.yml").read_text()
 )
+
+
+def validate_workflow_fields(values: list[str]) -> None:
+    """Ensure all provided field refs exist in the current workflow definition."""
+    valid_refs = get_all_field_refs()
+    for val in values:
+        if val not in valid_refs:
+            raise serializers.ValidationError(f"Invalid workflow field reference: {val}")
 
 
 def get_preferences_config() -> dict[str, Any]:
@@ -31,12 +41,16 @@ def _get_serializer_field(field_def: dict[str, Any]) -> serializers.Field:
             allow_blank=True,
             max_length=field_def.get("max_length", 255),
         )
-    if field_type == "field-multiselect":
+    if field_type == "field-list":
+        validators = []
+        if field_def.get("provider") == "workflow_summary_fields":
+            validators.append(validate_workflow_fields)
         return serializers.ListField(
             child=serializers.CharField(),
             required=False,
+            validators=validators,
         )
-    if field_type == "visibility-toggle":
+    if field_type == "boolean":
         return serializers.BooleanField(required=False)
 
     # Fallback for unknown types

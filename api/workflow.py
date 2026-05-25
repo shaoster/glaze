@@ -661,3 +661,21 @@ def clear_workflow_caches():
     build_custom_fields_schema.cache_clear()
     _get_validator.cache_clear()
     _validate_custom_fields_cached.cache_clear()
+
+
+def get_all_field_refs() -> set[str]:
+    """Return all valid field reference strings (e.g., 'piece.name', 'designed.notes')."""
+    refs = {
+        "piece.name",
+        "piece.created",
+        "piece.last_modified",
+        "piece.current_location",
+        "piece.showcase_story",
+    }
+    for state_id, state in _STATE_MAP.items():
+        refs.add(f"{state_id}.notes")
+        refs.add(f"{state_id}.created")
+        refs.add(f"{state_id}.last_modified")
+        for field_name in state.get("fields", {}).keys():
+            refs.add(f"{state_id}.{field_name}")
+    return refs

@@ -40,7 +40,7 @@ def test_user_preferences_serializer_validation():
     data = {
         "alias": "New Name",
         "preferences": {
-            "process_summary_fields": ["field1"],
+            "process_summary_fields": ["piece.name"],
             "summary_customize_popover": False,
         },
     }
@@ -49,4 +49,20 @@ def test_user_preferences_serializer_validation():
     assert serializer.validated_data["alias"] == "New Name"
     assert (
         serializer.validated_data["preferences"]["summary_customize_popover"] is False
+    )
+
+
+def test_user_preferences_workflow_field_validation():
+    """Verify that invalid workflow field references are rejected."""
+    data = {
+        "preferences": {
+            "process_summary_fields": ["invalid.field"],
+        },
+    }
+    serializer = UserPreferencesSerializer(data=data)
+    assert not serializer.is_valid()
+    assert "preferences" in serializer.errors
+    assert "process_summary_fields" in serializer.errors["preferences"]
+    assert "Invalid workflow field reference: invalid.field" in str(
+        serializer.errors["preferences"]["process_summary_fields"]
     )

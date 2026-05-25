@@ -49,7 +49,7 @@ $defs:
     properties:
       type:
         type: string
-        enum: [string, field-multiselect, visibility-toggle]
+        enum: [string, field-list, boolean]
       label:
         type: string
       hint:
@@ -71,6 +71,6 @@ $defs:
           required: [max_length]
       - if:
           properties:
-            type: { const: field-multiselect }
+            type: { const: field-list }
         then:
           required: [provider]

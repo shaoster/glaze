@@ -4,7 +4,7 @@
 import preferencesSchema from "../../../user_preferences.yml";
 
 export interface PreferenceField {
-  type: "string" | "field-multiselect" | "visibility-toggle";
+  type: "string" | "field-list" | "boolean";
   label: string;
   hint?: string;
   storage: "UserProfile" | "UserProfile.preferences";
