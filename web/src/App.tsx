@@ -491,7 +491,7 @@ function AppShell({
               sx={{
                 cursor: "pointer",
                 flexShrink: 0,
-                minWidth: "16ch",
+                maxWidth: "16ch",
               }}
             />
             <Menu
