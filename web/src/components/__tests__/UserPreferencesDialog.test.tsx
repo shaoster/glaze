@@ -113,9 +113,16 @@ describe("UserPreferencesDialog", () => {
   it("expands the Tutorials section when routed there", async () => {
     renderDialog("tutorials");
 
-    expect(await screen.findByText("Show the summary customization tip")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Show the summary customization tip"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Show the "Change your alias!" tip'),
+    ).toBeInTheDocument();
     // Identity accordion is collapsed — its alias textbox should not be visible.
-    expect(screen.queryByRole("textbox", { name: /alias/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: /alias/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("saves the full preferences document when toggling tutorials", async () => {
@@ -167,6 +174,65 @@ describe("UserPreferencesDialog", () => {
           tutorials: {
             summary_customize_popover: false,
             change_alias_prompt: true,
+          },
+        },
+        "",
+      );
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  it("saves the full preferences document when toggling the alias tutorial", async () => {
+    const user = userEvent.setup();
+    const saveUserPreferences = vi.fn(async (preferences) => preferences);
+    const onClose = vi.fn();
+
+    render(
+      <PreferencesDialogProvider
+        openPreferencesDialog={vi.fn()}
+        saveUserPreferences={saveUserPreferences}
+      >
+        <CurrentUserProvider
+          currentUser={{
+            id: 1,
+            is_staff: false,
+            openid_subject: "",
+            preferences: {
+              process_summary_fields: ["piece.name"],
+              tutorials: {
+                summary_customize_popover: true,
+                change_alias_prompt: true,
+              },
+            },
+          }}
+        >
+          <UserPreferencesDialog
+            open
+            activeSectionId="tutorials"
+            onClose={onClose}
+            onSectionChange={vi.fn()}
+          />
+        </CurrentUserProvider>
+      </PreferencesDialogProvider>,
+    );
+
+    await user.click(
+      await screen.findByRole("checkbox", {
+        name: /"Change your alias!" tip/i,
+        hidden: true,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /save/i, hidden: true }),
+    );
+
+    await waitFor(() => {
+      expect(saveUserPreferences).toHaveBeenCalledWith(
+        {
+          process_summary_fields: ["piece.name"],
+          tutorials: {
+            summary_customize_popover: true,
+            change_alias_prompt: false,
           },
         },
         "",
