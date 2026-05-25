@@ -990,7 +990,7 @@ _gz_worktrees_purge() {
                 if [[ $skip -eq 0 ]]; then
                     echo "  Removing..."
                     # Stop servers if running
-                    (cd "$wt_path" && source env.sh && gz_stop >/dev/null 2>&1)
+                    (_GLAZE_PIDS="$wt_path/.dev-pids"; gz_stop >/dev/null 2>&1)
                     git -C "$GLAZE_SHARED_ROOT" worktree remove --force "$wt_path"
                 fi
             fi
