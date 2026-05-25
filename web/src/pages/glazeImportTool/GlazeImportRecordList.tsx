@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
-import { Button, Chip, List, ListItemButton, ListItemText, Stack } from "@mui/material";
+import {
+  Button,
+  Chip,
+  List,
+  ListItemButton,
+  ListItemText,
+  Stack,
+} from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import type { UploadedRecord } from "./glazeImportToolTypes";
 
@@ -42,9 +49,17 @@ export default function GlazeImportRecordList({
           <ListItemText
             primary={record.parsedFields.name || record.filename}
             secondary={getSecondaryText?.(record)}
-            slotProps={{ primary: { noWrap: true }, secondary: { noWrap: true } }}
+            slotProps={{
+              primary: { noWrap: true },
+              secondary: { noWrap: true },
+            }}
           />
-          <Stack direction="row" spacing={0.5} flexShrink={0} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={0.5}
+            flexShrink={0}
+            alignItems="center"
+          >
             {!hideCropChip ? (
               <Chip
                 label={record.cropped ? "cropped" : "uncropped"}
@@ -54,7 +69,9 @@ export default function GlazeImportRecordList({
             ) : null}
             {record.ocrStatus !== "idle" ? (
               <Chip
-                label={record.ocrStatus === "done" ? "ocr ready" : record.ocrStatus}
+                label={
+                  record.ocrStatus === "done" ? "ocr ready" : record.ocrStatus
+                }
                 color={
                   record.ocrStatus === "done"
                     ? "success"

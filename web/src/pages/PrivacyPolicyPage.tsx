@@ -115,7 +115,11 @@ export default function PrivacyPolicyPage() {
             image is immediately severed. Removal of the image from the external
             host is best-effort and may not happen immediately. If you need a
             specific image deleted promptly, email us at{" "}
-            <Box component="a" href="mailto:admin@potterdoc.com" sx={{ color: "inherit" }}>
+            <Box
+              component="a"
+              href="mailto:admin@potterdoc.com"
+              sx={{ color: "inherit" }}
+            >
               admin@potterdoc.com
             </Box>{" "}
             and we will prioritize it. EXIF data is automatically stripped from
@@ -126,14 +130,18 @@ export default function PrivacyPolicyPage() {
             When you delete your account, all your user data is deleted and
             cannot be easily recovered. If you delete your account in error,
             email us at{" "}
-            <Box component="a" href="mailto:admin@potterdoc.com" sx={{ color: "inherit" }}>
+            <Box
+              component="a"
+              href="mailto:admin@potterdoc.com"
+              sx={{ color: "inherit" }}
+            >
               admin@potterdoc.com
             </Box>{" "}
             and we&apos;ll do our best to pull data from a backup if you make
-            the request fast enough. That process will be mostly ad hoc and
-            best effort, since we don&apos;t store anything about you and
-            don&apos;t have an automated way to validate your identity once your
-            account is gone.
+            the request fast enough. That process will be mostly ad hoc and best
+            effort, since we don&apos;t store anything about you and don&apos;t
+            have an automated way to validate your identity once your account is
+            gone.
           </Typography>
 
           <Typography variant="body1">
@@ -145,13 +153,13 @@ export default function PrivacyPolicyPage() {
 
           <Typography variant="body1">
             We may update this privacy policy in the future. We will announce
-            any changes clearly and give you a reasonable window to review
-            them. For changes that materially affect how your data is handled,
-            we will provide an explicit opt-out before the new policy applies
-            to you. In extreme cases, the opt-out may take the form of a data
-            export tool so you can take your pottery records elsewhere &mdash;
-            a self-hosted instance, another service, or a local file. We will
-            not hold your data hostage to a policy you do not accept.
+            any changes clearly and give you a reasonable window to review them.
+            For changes that materially affect how your data is handled, we will
+            provide an explicit opt-out before the new policy applies to you. In
+            extreme cases, the opt-out may take the form of a data export tool
+            so you can take your pottery records elsewhere &mdash; a self-hosted
+            instance, another service, or a local file. We will not hold your
+            data hostage to a policy you do not accept.
           </Typography>
 
           <Box sx={{ pt: 1 }}>

@@ -23,8 +23,7 @@ def backfill_tutorial_preferences(apps, schema_editor) -> None:
             continue
 
         normalized_tutorials = {
-            key: _normalize_tutorial_value(value)
-            for key, value in tutorials.items()
+            key: _normalize_tutorial_value(value) for key, value in tutorials.items()
         }
         if normalized_tutorials == tutorials:
             continue

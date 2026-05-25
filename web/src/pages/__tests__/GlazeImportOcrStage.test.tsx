@@ -15,9 +15,7 @@ vi.mock("../glazeImportTool/glazeImportToolProcessing", () => ({
   runOcrOnRecord: vi.fn(),
 }));
 
-function makeRecord(
-  overrides: Partial<UploadedRecord> = {},
-): UploadedRecord {
+function makeRecord(overrides: Partial<UploadedRecord> = {}): UploadedRecord {
   return {
     id: "rec-1",
     file: null,
@@ -65,8 +63,11 @@ describe("GlazeImportOcrStage", () => {
         },
       }),
     ]);
-    const [selectedRecordId, setSelectedRecordId] = useState<string | null>("rec-1");
-    const selected = records.find((record) => record.id === selectedRecordId) ?? null;
+    const [selectedRecordId, setSelectedRecordId] = useState<string | null>(
+      "rec-1",
+    );
+    const selected =
+      records.find((record) => record.id === selectedRecordId) ?? null;
 
     return (
       <>
@@ -132,7 +133,9 @@ describe("GlazeImportOcrStage", () => {
     });
     expect(screen.getByTestId("ocr-probe")).toHaveTextContent("0.90|0.55|");
 
-    await userEvent.click(screen.getByRole("button", { name: "Auto-detect Region" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Auto-detect Region" }),
+    );
     await waitFor(() =>
       expect(screen.getByTestId("ocr-probe")).toHaveTextContent("30,40,150,70"),
     );
@@ -145,11 +148,15 @@ describe("GlazeImportOcrStage", () => {
     fireEvent.pointerUp(window);
     expect(screen.getByTestId("ocr-probe")).toHaveTextContent("50,60,130,50");
 
-    await userEvent.click(screen.getAllByRole("button", { name: "Run OCR" })[0]);
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Run OCR" })[0],
+    );
     await waitFor(() =>
       expect(screen.getByText("Parsed as: Iron Red!Clear")).toBeInTheDocument(),
     );
-    await userEvent.click(screen.getAllByRole("button", { name: "Re-run OCR" })[0]);
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Re-run OCR" })[0],
+    );
 
     expect(runOcrOnRecord).toHaveBeenCalledTimes(2);
     expect(screen.getByText("Ash Blue • confidence 91%")).toBeInTheDocument();

@@ -1,12 +1,12 @@
 import asyncio
-import importlib
 import hashlib
+import importlib
 import json
 from collections.abc import AsyncIterable
 from io import BytesIO
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlparse
-from types import SimpleNamespace
 from zipfile import ZipFile
 
 import pytest
@@ -155,7 +155,9 @@ class TestAuthEndpointsMocked:
         }
         assert all(
             isinstance(value, bool)
-            for value in preferences_response.json()["preferences"]["tutorials"].values()
+            for value in preferences_response.json()["preferences"][
+                "tutorials"
+            ].values()
         )
 
     def test_auth_preferences_round_trip(self, client, user):

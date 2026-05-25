@@ -70,32 +70,29 @@ describe("SmallTutorialInlay", () => {
     SMALL_TUTORIAL_INLAY_PLACEMENTS.LEFT,
     SMALL_TUTORIAL_INLAY_PLACEMENTS.RIGHT,
     SMALL_TUTORIAL_INLAY_PLACEMENTS.TOP,
-  ])(
-    "renders %s placement without elevating the layer",
-    async (placement) => {
-      const openPreferencesDialog = vi.fn();
-      const saveUserPreferencesMock = vi.fn(
-        async (preferences: UserPreferences) => preferences,
-      );
-      const { anchor, Harness } = renderHarness({
-        openPreferencesDialog,
-        saveUserPreferencesMock,
-        placement,
-      });
+  ])("renders %s placement without elevating the layer", async (placement) => {
+    const openPreferencesDialog = vi.fn();
+    const saveUserPreferencesMock = vi.fn(
+      async (preferences: UserPreferences) => preferences,
+    );
+    const { anchor, Harness } = renderHarness({
+      openPreferencesDialog,
+      saveUserPreferencesMock,
+      placement,
+    });
 
-      render(<Harness />);
+    render(<Harness />);
 
-      const button = await screen.findByRole("button", {
-        name: "Customize this summary!",
-      });
-      const popper = button.closest("[data-popper-placement]");
+    const button = await screen.findByRole("button", {
+      name: "Customize this summary!",
+    });
+    const popper = button.closest("[data-popper-placement]");
 
-      expect(popper).toHaveAttribute("data-popper-placement", placement);
-      expect(window.getComputedStyle(popper ?? button).zIndex).toBe("auto");
+    expect(popper).toHaveAttribute("data-popper-placement", placement);
+    expect(window.getComputedStyle(popper ?? button).zIndex).toBe("auto");
 
-      anchor.remove();
-    },
-  );
+    anchor.remove();
+  });
 
   it("clicking the tip opens preferences and dismisses it", async () => {
     const user = userEvent.setup();
@@ -112,7 +109,9 @@ describe("SmallTutorialInlay", () => {
     render(<Harness />);
 
     await screen.findByRole("button", { name: "Customize this summary!" });
-    await user.click(screen.getByRole("button", { name: "Customize this summary!" }));
+    await user.click(
+      screen.getByRole("button", { name: "Customize this summary!" }),
+    );
 
     await waitFor(() => {
       expect(openPreferencesDialog).toHaveBeenCalledWith("process-summary");
@@ -121,7 +120,9 @@ describe("SmallTutorialInlay", () => {
         summary_customize_popover: false,
         change_alias_prompt: true,
       });
-      expect(screen.queryByText("Customize this summary!")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Customize this summary!"),
+      ).not.toBeInTheDocument();
     });
 
     anchor.remove();
@@ -155,7 +156,9 @@ describe("SmallTutorialInlay", () => {
         summary_customize_popover: false,
         change_alias_prompt: true,
       });
-      expect(screen.queryByText("Customize this summary!")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Customize this summary!"),
+      ).not.toBeInTheDocument();
     });
 
     anchor.remove();

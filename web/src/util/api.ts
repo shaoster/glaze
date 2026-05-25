@@ -31,7 +31,6 @@ import type {
   Thumbnail,
 } from "./types";
 
-
 /**
  * JSON Schema property shape returned by the workflow-schema endpoint.
  *
@@ -354,22 +353,30 @@ export async function deleteAccount(): Promise<void> {
   await client.delete("auth/account/");
 }
 
-export async function validateInviteCode(code: string): Promise<{ valid: true }> {
+export async function validateInviteCode(
+  code: string,
+): Promise<{ valid: true }> {
   await ensureCsrfCookie();
-  const { data } = await client.post<{ valid: true }>("auth/validate-invite/", { code });
+  const { data } = await client.post<{ valid: true }>("auth/validate-invite/", {
+    code,
+  });
   return data;
 }
 
 export type StaffInviteCodeResponse = { code: string; expires_at: string };
 
 export async function getStaffInviteCode(): Promise<StaffInviteCodeResponse> {
-  const { data } = await client.get<StaffInviteCodeResponse>("staff/invite-code/");
+  const { data } =
+    await client.get<StaffInviteCodeResponse>("staff/invite-code/");
   return data;
 }
 
 export async function generateStaffInviteCode(): Promise<StaffInviteCodeResponse> {
   await ensureCsrfCookie();
-  const { data } = await client.post<StaffInviteCodeResponse>("staff/invite-code/", {});
+  const { data } = await client.post<StaffInviteCodeResponse>(
+    "staff/invite-code/",
+    {},
+  );
   return data;
 }
 
@@ -379,7 +386,8 @@ export type UserPreferencesResponse = {
 };
 
 export async function fetchUserPreferences(): Promise<UserPreferencesResponse> {
-  const { data } = await client.get<UserPreferencesResponse>("auth/preferences/");
+  const { data } =
+    await client.get<UserPreferencesResponse>("auth/preferences/");
   return {
     alias: data.alias ?? "",
     preferences: normalizeUserPreferences(data.preferences),
@@ -409,9 +417,7 @@ export async function fetchPiece(id: string): Promise<PieceDetail> {
 export async function fetchWorkflowStateSchema(
   stateId: string,
 ): Promise<UISchema> {
-  const { data } = await client.get<UISchema>(
-    `workflow/schema/${stateId}/`,
-  );
+  const { data } = await client.get<UISchema>(`workflow/schema/${stateId}/`);
   return data;
 }
 
@@ -654,12 +660,14 @@ export async function fetchGlazeCombinationImages(): Promise<
   );
   return data.map((entry) => ({
     glaze_combination: entry.glaze_combination,
-    pieces: entry.pieces.map((p): GlazeCombinationImagePiece => ({
-      id: p.id,
-      name: p.name,
-      state: p.state,
-      images: p.images.map(mapImage),
-    })),
+    pieces: entry.pieces.map(
+      (p): GlazeCombinationImagePiece => ({
+        id: p.id,
+        name: p.name,
+        state: p.state,
+        images: p.images.map(mapImage),
+      }),
+    ),
   }));
 }
 

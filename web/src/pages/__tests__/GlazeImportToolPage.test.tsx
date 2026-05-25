@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -432,7 +438,9 @@ describe("GlazeImportToolPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Import records are invalid.")).toBeInTheDocument();
+      expect(
+        screen.getByText("Import records are invalid."),
+      ).toBeInTheDocument();
     });
   });
 
@@ -494,7 +502,9 @@ describe("GlazeImportToolPage", () => {
     const recordItem = await within(recordList).findByText("ash-blue.png");
     fireEvent.click(recordItem);
 
-    const runOcrButtons = await screen.findAllByRole("button", { name: "Run OCR" });
+    const runOcrButtons = await screen.findAllByRole("button", {
+      name: "Run OCR",
+    });
     fireEvent.click(runOcrButtons[0]);
 
     await waitFor(() =>
@@ -514,7 +524,8 @@ describe("GlazeImportToolPage", () => {
 
     // Select the record in Review stage
     const reviewRecordList = screen.getByRole("list");
-    const reviewRecordItem = await within(reviewRecordList).findByText("Ash Blue");
+    const reviewRecordItem =
+      await within(reviewRecordList).findByText("Ash Blue");
     fireEvent.click(reviewRecordItem);
 
     fireEvent.click(
@@ -528,7 +539,6 @@ describe("GlazeImportToolPage", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Run Bulk Import" }),
     );
-
 
     await waitFor(() =>
       expect(screen.getByText("1 duplicates skipped")).toBeInTheDocument(),

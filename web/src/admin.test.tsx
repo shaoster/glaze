@@ -42,7 +42,9 @@ describe("admin.tsx - mountWorkflowStateWidget", () => {
     });
 
     expect(WorkflowState).toHaveBeenCalled();
-    expect(document.querySelector('[data-testid="mock-workflow-state"]')).toBeInTheDocument();
+    expect(
+      document.querySelector('[data-testid="mock-workflow-state"]'),
+    ).toBeInTheDocument();
   });
 
   it("handles stringified initialPieceState", async () => {
@@ -62,7 +64,7 @@ describe("admin.tsx - mountWorkflowStateWidget", () => {
           id: "piece-state-1",
           notes: "Original notes",
         }),
-      })
+      }),
     );
   });
 
@@ -90,7 +92,7 @@ describe("admin.tsx - mountWorkflowStateWidget", () => {
             clay_body: { id: "cb-1", name: "Speckled Buff" },
           },
         }),
-      })
+      }),
     );
   });
 
@@ -114,7 +116,9 @@ describe("admin.tsx - mountWorkflowStateWidget", () => {
     });
 
     // Verify portal root is gone
-    expect(document.getElementById("portal-root-test-container")).not.toBeInTheDocument();
+    expect(
+      document.getElementById("portal-root-test-container"),
+    ).not.toBeInTheDocument();
   });
 
   it("captures changes via onChange and serializes them to the hidden input", async () => {
@@ -131,14 +135,14 @@ describe("admin.tsx - mountWorkflowStateWidget", () => {
         pieceId: "piece-1",
         onChange: (payload) => {
           hiddenInput.value = JSON.stringify(payload);
-        }
+        },
       });
     });
 
     // Extract the onChange passed to WorkflowState
     const lastCallProps = vi.mocked(WorkflowState).mock.lastCall![0];
     const mockPayload = { notes: "Updated", custom_fields: { foo: "bar" } };
-    
+
     // Simulate a change
     await act(async () => {
       lastCallProps.onChange!(mockPayload as any);

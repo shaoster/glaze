@@ -1,5 +1,20 @@
-import { useEffect, useRef, useState, type Dispatch, type PointerEvent as ReactPointerEvent, type SetStateAction } from "react";
-import { Alert, Box, Button, Chip, CircularProgress, Stack, Typography } from "@mui/material";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type PointerEvent as ReactPointerEvent,
+  type SetStateAction,
+} from "react";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Stack,
+  Typography,
+} from "@mui/material";
 import GlazeImportRecordList from "./GlazeImportRecordList";
 import type { UploadedRecord } from "./glazeImportToolTypes";
 import type { CropSquare } from "../ocrDetection";
@@ -44,7 +59,9 @@ export default function GlazeImportCropStage({
   onContinueToOcr,
 }: GlazeImportCropStageProps) {
   const cropStageRef = useRef<HTMLDivElement | null>(null);
-  const [cropDragState, setCropDragState] = useState<CropDragState | null>(null);
+  const [cropDragState, setCropDragState] = useState<CropDragState | null>(
+    null,
+  );
   const selectedRecord =
     records.find((record) => record.id === selectedRecordId) ?? null;
   const selectedCrop = selectedRecord?.crop
@@ -111,7 +128,11 @@ export default function GlazeImportCropStage({
           sourceY - fixedY,
           -start.rotation,
         );
-        const size = Math.max(Math.abs(localDx), Math.abs(localDy), MIN_CROP_SIZE);
+        const size = Math.max(
+          Math.abs(localDx),
+          Math.abs(localDy),
+          MIN_CROP_SIZE,
+        );
         const [newRotFx, newRotFy] = rotatePt(
           (fixedSignX * size) / 2,
           (fixedSignY * size) / 2,
@@ -158,7 +179,10 @@ export default function GlazeImportCropStage({
     setRecords((current) =>
       current.map((record) => {
         if (record.id !== selectedRecord.id) return record;
-        const crop = clampCrop(record.dimensions, defaultCrop(record.dimensions));
+        const crop = clampCrop(
+          record.dimensions,
+          defaultCrop(record.dimensions),
+        );
         return {
           ...record,
           crop,
@@ -271,8 +295,7 @@ export default function GlazeImportCropStage({
                       backgroundImage:
                         "linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.04) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.04) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.04) 75%)",
                       backgroundSize: "24px 24px",
-                      backgroundPosition:
-                        "0 0, 0 12px, 12px -12px, -12px 0px",
+                      backgroundPosition: "0 0, 0 12px, 12px -12px, -12px 0px",
                     }}
                   >
                     <Box
@@ -283,7 +306,8 @@ export default function GlazeImportCropStage({
                         position: "absolute",
                         left: selectedPadding * selectedStageScale,
                         top: selectedPadding * selectedStageScale,
-                        width: selectedRecord.dimensions.width * selectedStageScale,
+                        width:
+                          selectedRecord.dimensions.width * selectedStageScale,
                         height:
                           selectedRecord.dimensions.height * selectedStageScale,
                         userSelect: "none",
@@ -293,11 +317,17 @@ export default function GlazeImportCropStage({
                     {selectedCrop ? (
                       <Box
                         data-testid="crop-selection"
-                        onPointerDown={(event) => handleStartCropDrag("move", event)}
+                        onPointerDown={(event) =>
+                          handleStartCropDrag("move", event)
+                        }
                         sx={{
                           position: "absolute",
-                          left: (selectedCrop.x + selectedPadding) * selectedStageScale,
-                          top: (selectedCrop.y + selectedPadding) * selectedStageScale,
+                          left:
+                            (selectedCrop.x + selectedPadding) *
+                            selectedStageScale,
+                          top:
+                            (selectedCrop.y + selectedPadding) *
+                            selectedStageScale,
                           width: selectedCrop.size * selectedStageScale,
                           height: selectedCrop.size * selectedStageScale,
                           transform: `rotate(${selectedCrop.rotation}deg)`,
@@ -369,10 +399,18 @@ export default function GlazeImportCropStage({
                                 ? { right: -8, top: -8, cursor: "nesw-resize" }
                                 : {}),
                               ...(handle === "sw"
-                                ? { left: -8, bottom: -8, cursor: "nesw-resize" }
+                                ? {
+                                    left: -8,
+                                    bottom: -8,
+                                    cursor: "nesw-resize",
+                                  }
                                 : {}),
                               ...(handle === "se"
-                                ? { right: -8, bottom: -8, cursor: "nwse-resize" }
+                                ? {
+                                    right: -8,
+                                    bottom: -8,
+                                    cursor: "nwse-resize",
+                                  }
                                 : {}),
                             }}
                           />
@@ -412,7 +450,10 @@ export default function GlazeImportCropStage({
                 sx={{ width: "100%", height: "100%", objectFit: "contain" }}
               />
             ) : (
-              <Typography color="text.secondary" sx={{ p: 2, textAlign: "center" }}>
+              <Typography
+                color="text.secondary"
+                sx={{ p: 2, textAlign: "center" }}
+              >
                 Create a crop to preview the transparency-safe square result.
               </Typography>
             )}

@@ -61,7 +61,6 @@ type WorkflowStateProps = {
   onChange?: (payload: UpdateStatePayload) => void;
 };
 
-
 // ── ImageUploader ─────────────────────────────────────────────────────────────
 
 type ImageUploaderProps = {
@@ -143,7 +142,9 @@ function ImageUploader({
             disabled={buttonDisabled}
             hidden={hidden}
             startIcon={
-              saving ? <CircularProgress size={14} color="inherit" /> : undefined
+              saving ? (
+                <CircularProgress size={14} color="inherit" />
+              ) : undefined
             }
             sx={{ display: hidden ? "none" : undefined, position: "relative" }}
           >
@@ -269,17 +270,12 @@ export default function WorkflowState({
     const saveFn = saveStateFn ?? ((p) => updateCurrentState(pieceId, p));
     const result = await saveFn(currentPayload);
     const savedState = saveStateFn
-      ? result.history.find((ps) => ps.id === initialPieceState.id) ?? result.current_state
+      ? (result.history.find((ps) => ps.id === initialPieceState.id) ??
+        result.current_state)
       : result.current_state;
     dispatch({ type: "replace_base_state", pieceState: savedState });
     onSaved(result);
-  }, [
-    pieceId,
-    initialPieceState.id,
-    onSaved,
-    saveStateFn,
-    currentPayload,
-  ]);
+  }, [pieceId, initialPieceState.id, onSaved, saveStateFn, currentPayload]);
 
   const autosaveKey = useMemo(
     () =>
@@ -290,7 +286,6 @@ export default function WorkflowState({
       }),
     [images, normalizedCustomFields, notes],
   );
-
 
   const autosave = useAutosave({
     dirty: !readOnly && isDirty && !disableAutosave,
@@ -316,7 +311,8 @@ export default function WorkflowState({
           const saveFn = saveStateFn ?? ((p) => updateCurrentState(pieceId, p));
           const result = await saveFn(payload);
           const savedState = saveStateFn
-            ? result.history.find((ps) => ps.id === initialPieceState.id) ?? result.current_state
+            ? (result.history.find((ps) => ps.id === initialPieceState.id) ??
+              result.current_state)
             : result.current_state;
           latestImagesRef.current = savedState.images;
           dispatch({
@@ -327,16 +323,21 @@ export default function WorkflowState({
         });
       imageSaveQueueRef.current = queuedSave;
       queuedSave
-        .catch(() =>
-          setImageError("Failed to save image. Please try again."),
-        )
+        .catch(() => setImageError("Failed to save image. Please try again."))
         .finally(() => {
           if (imageSaveQueueRef.current === queuedSave) {
             setSavingImage(false);
           }
         });
     },
-    [initialPieceState.id, normalizedCustomFields, notes, onSaved, pieceId, saveStateFn],
+    [
+      initialPieceState.id,
+      normalizedCustomFields,
+      notes,
+      onSaved,
+      pieceId,
+      saveStateFn,
+    ],
   );
 
   useEffect(() => {
@@ -465,7 +466,9 @@ export default function WorkflowState({
           label="Notes"
           multiline
           value={notes}
-          onChange={(e) => dispatch({ type: "set_notes", notes: e.target.value })}
+          onChange={(e) =>
+            dispatch({ type: "set_notes", notes: e.target.value })
+          }
           slotProps={{ htmlInput: { maxLength: 2000 } }}
           fullWidth
           disabled={readOnly}
@@ -487,139 +490,147 @@ export default function WorkflowState({
           }}
         >
           {customFieldDefs.map((field) => {
-              const value = customFieldInputs[field.name] ?? "";
-              const helperText = field.description;
-              const label = field.label;
-              if (field.isStateRef || field.isCalculated) {
-                const isPercent = field.displayAs === "percent";
-                const valueNum = Number(value);
-                const displayValue =
-                  isPercent && !Number.isNaN(valueNum)
-                    ? (valueNum * 100).toFixed(field.decimals ?? 0)
-                    : value;
+            const value = customFieldInputs[field.name] ?? "";
+            const helperText = field.description;
+            const label = field.label;
+            if (field.isStateRef || field.isCalculated) {
+              const isPercent = field.displayAs === "percent";
+              const valueNum = Number(value);
+              const displayValue =
+                isPercent && !Number.isNaN(valueNum)
+                  ? (valueNum * 100).toFixed(field.decimals ?? 0)
+                  : value;
 
-                const hasUnit = isPercent || !!(field.unit && value);
-                const unit = isPercent ? "%" : field.unit;
-                const formattedValue = hasUnit ? `${displayValue} ${unit}` : value;
-                return (
-                  <TextField
-                    key={field.name}
-                    label={label}
-                    type={
-                      !hasUnit &&
-                      (field.type === "number" || field.type === "integer")
-                        ? "number"
-                        : "text"
-                    }
-                    value={formattedValue}
-                    disabled
-                    helperText={helperText}
-                    fullWidth
-                  />
-                );
-              }
-              if (field.isGlobalRef && field.globalName) {
-                return (
-                  <GlobalEntryField
-                    key={field.name}
-                    globalName={field.globalName}
-                    label={label}
-                    value={value}
-                    onSelect={(entry) => {
-                      if (readOnly) return;
-                      handleFieldChange(field.name, entryNameOrEmpty(entry));
-                      dispatch({
-                        type: "set_global_ref_pks",
-                        globalRefPks: entry
-                          ? { ...globalRefPks, [field.name]: entry.id }
-                          : Object.fromEntries(
-                              Object.entries(globalRefPks).filter(
-                                ([key]) => key !== field.name,
-                              ),
-                            ),
-                      });
-                    }}
-                    canCreate={Boolean(field.canCreate)}
-                    disabled={readOnly}
-                    helperText={helperText}
-                    required={field.required}
-                  />
-                );
-              }
-              if (field.enum?.length) {
-                return (
-                  <TextField
-                    key={field.name}
-                    label={label}
-                    select
-                    value={value}
-                    onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                    helperText={helperText}
-                    required={field.required}
-                    disabled={readOnly}
-                    fullWidth
-                  >
-                    {field.enum.map((option) => (
-                      <MenuItem key={option} value={option}>
-                        {option}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                );
-              }
-              if (field.type === "number" || field.type === "integer") {
-                return (
-                  <TextField
-                    key={field.name}
-                    label={label}
-                    type="number"
-                    value={value}
-                    onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                    slotProps={{
-                      htmlInput: {
-                        inputMode:
-                          field.type === "integer" ? "numeric" : "decimal",
-                        step: field.type === "integer" ? 1 : "any",
-                      },
-                    }}
-                    helperText={helperText}
-                    required={field.required}
-                    disabled={readOnly}
-                    fullWidth
-                  />
-                );
-              }
-              if (field.type === "boolean") {
-                return (
-                  <TextField
-                    key={field.name}
-                    label={label}
-                    select
-                    value={value}
-                    onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                    helperText={helperText}
-                    required={field.required}
-                    disabled={readOnly}
-                    fullWidth
-                  >
-                    <MenuItem value="true">True</MenuItem>
-                    <MenuItem value="false">False</MenuItem>
-                  </TextField>
-                );
-              }
+              const hasUnit = isPercent || !!(field.unit && value);
+              const unit = isPercent ? "%" : field.unit;
+              const formattedValue = hasUnit
+                ? `${displayValue} ${unit}`
+                : value;
               return (
                 <TextField
                   key={field.name}
                   label={label}
+                  type={
+                    !hasUnit &&
+                    (field.type === "number" || field.type === "integer")
+                      ? "number"
+                      : "text"
+                  }
+                  value={formattedValue}
+                  disabled
+                  helperText={helperText}
+                  fullWidth
+                />
+              );
+            }
+            if (field.isGlobalRef && field.globalName) {
+              return (
+                <GlobalEntryField
+                  key={field.name}
+                  globalName={field.globalName}
+                  label={label}
                   value={value}
-                  onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                  onSelect={(entry) => {
+                    if (readOnly) return;
+                    handleFieldChange(field.name, entryNameOrEmpty(entry));
+                    dispatch({
+                      type: "set_global_ref_pks",
+                      globalRefPks: entry
+                        ? { ...globalRefPks, [field.name]: entry.id }
+                        : Object.fromEntries(
+                            Object.entries(globalRefPks).filter(
+                              ([key]) => key !== field.name,
+                            ),
+                          ),
+                    });
+                  }}
+                  canCreate={Boolean(field.canCreate)}
+                  disabled={readOnly}
+                  helperText={helperText}
+                  required={field.required}
+                />
+              );
+            }
+            if (field.enum?.length) {
+              return (
+                <TextField
+                  key={field.name}
+                  label={label}
+                  select
+                  value={value}
+                  onChange={(e) =>
+                    handleFieldChange(field.name, e.target.value)
+                  }
+                  helperText={helperText}
+                  required={field.required}
+                  disabled={readOnly}
+                  fullWidth
+                >
+                  {field.enum.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              );
+            }
+            if (field.type === "number" || field.type === "integer") {
+              return (
+                <TextField
+                  key={field.name}
+                  label={label}
+                  type="number"
+                  value={value}
+                  onChange={(e) =>
+                    handleFieldChange(field.name, e.target.value)
+                  }
+                  slotProps={{
+                    htmlInput: {
+                      inputMode:
+                        field.type === "integer" ? "numeric" : "decimal",
+                      step: field.type === "integer" ? 1 : "any",
+                    },
+                  }}
                   helperText={helperText}
                   required={field.required}
                   disabled={readOnly}
                   fullWidth
                 />
               );
-            })}
+            }
+            if (field.type === "boolean") {
+              return (
+                <TextField
+                  key={field.name}
+                  label={label}
+                  select
+                  value={value}
+                  onChange={(e) =>
+                    handleFieldChange(field.name, e.target.value)
+                  }
+                  helperText={helperText}
+                  required={field.required}
+                  disabled={readOnly}
+                  fullWidth
+                >
+                  <MenuItem value="true">True</MenuItem>
+                  <MenuItem value="false">False</MenuItem>
+                </TextField>
+              );
+            }
+            return (
+              <TextField
+                key={field.name}
+                label={label}
+                value={value}
+                onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                helperText={helperText}
+                required={field.required}
+                disabled={readOnly}
+                fullWidth
+              />
+            );
+          })}
         </Box>
       )}
 

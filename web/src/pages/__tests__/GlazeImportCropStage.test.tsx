@@ -82,7 +82,11 @@ describe("GlazeImportCropStage", () => {
     );
 
     expect(screen.getByText("Oribe")).toBeInTheDocument();
-    expect(screen.getByText("Create a crop to preview the transparency-safe square result.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Create a crop to preview the transparency-safe square result.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("handles the back button and updates crop geometry through a handle drag", async () => {
@@ -104,7 +108,9 @@ describe("GlazeImportCropStage", () => {
     render(<CropStageHarness />);
 
     expect(screen.getByTestId("selected-id")).toHaveTextContent("record-1");
-    await userEvent.click(screen.getByRole("button", { name: "← Back to Records" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "← Back to Records" }),
+    );
     expect(screen.getByTestId("selected-id")).toHaveTextContent("none");
 
     await userEvent.click(screen.getByText("Oribe"));

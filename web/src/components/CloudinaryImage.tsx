@@ -14,7 +14,12 @@
  *   preview   — 64×64 fill, used for the upload preview before saving
  */
 import { Cloudinary } from "@cloudinary/url-gen";
-import { crop as cropAction, fill, fit, scale } from "@cloudinary/url-gen/actions/resize";
+import {
+  crop as cropAction,
+  fill,
+  fit,
+  scale,
+} from "@cloudinary/url-gen/actions/resize";
 import { format, quality } from "@cloudinary/url-gen/actions/delivery";
 import { auto as autoFormat, jpg } from "@cloudinary/url-gen/qualifiers/format";
 import { auto as autoQuality } from "@cloudinary/url-gen/qualifiers/quality";
@@ -41,7 +46,8 @@ function getViewportSnapshot(): ViewportSnapshot {
   return {
     width: globalThis.window?.innerWidth ?? DEFAULT_VIEWPORT_WIDTH,
     height: globalThis.window?.innerHeight ?? DEFAULT_VIEWPORT_HEIGHT,
-    pixelRatio: globalThis.window?.devicePixelRatio ?? DEFAULT_DEVICE_PIXEL_RATIO,
+    pixelRatio:
+      globalThis.window?.devicePixelRatio ?? DEFAULT_DEVICE_PIXEL_RATIO,
   };
 }
 
@@ -154,22 +160,22 @@ export default function CloudinaryImage({
             width: "100%",
             height: "100%",
           }
-      : context === "gallery"
-        ? {
-            position: "relative",
-            display: "block",
-            width: "100%",
-            height: "100%",
-          }
-      : {
-          position: "relative",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: THUMBNAIL_SIZE,
-          height: THUMBNAIL_SIZE,
-          flexShrink: 0,
-        };
+        : context === "gallery"
+          ? {
+              position: "relative",
+              display: "block",
+              width: "100%",
+              height: "100%",
+            }
+          : {
+              position: "relative",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: THUMBNAIL_SIZE,
+              height: THUMBNAIL_SIZE,
+              flexShrink: 0,
+            };
   const spinnerStyle: React.CSSProperties = {
     position: "absolute",
     inset: 0,
@@ -215,7 +221,7 @@ export default function CloudinaryImage({
       const targetWidth = Math.round(
         context === "gallery" ? (requestedWidth ?? 320) : THUMBNAIL_SIZE,
       );
-      
+
       if (crop) {
         // We already cropped perfectly to the subject. Scale the width to match the column,
         // and let Cloudinary naturally infer the exact height based on the crop's intrinsic ratio.

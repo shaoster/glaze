@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/shaoster/glaze/graph/badge.svg)](https://codecov.io/gh/shaoster/glaze)
 
 PotterDoc is the external product name for this app.
- The repository, internal code identifiers, and some contributor documentation still use `glaze` as the internal project name during the transition.
+The repository, internal code identifiers, and some contributor documentation still use `glaze` as the internal project name during the transition.
 
 A pottery workflow tracking application. Log pieces and record state transitions as work moves through throwing, bisque firing, glazing, and finishing.
 
@@ -24,14 +24,14 @@ A pottery workflow tracking application. Log pieces and record state transitions
 
 > If you're here to contribute to the codebase or help maintain potterdoc.com, see the [Contributing](#contributing) section first — it explains the three different ways to get involved and which setup path applies to you.
 
-This guide assumes you already know the tools listed below and are familiar with [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) and [abstraction](https://en.wikipedia.org/wiki/Abstraction_(computer_science)) as design principles; if any term is unfamiliar, click the linked docs to catch up quickly.
+This guide assumes you already know the tools listed below and are familiar with [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) and [abstraction](<https://en.wikipedia.org/wiki/Abstraction_(computer_science)>) as design principles; if any term is unfamiliar, click the linked docs to catch up quickly.
 
 - **[Django](https://www.djangoproject.com/)** is the Python web framework that owns the backend (`backend/`, `api/`). [Separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) keeps unrelated responsibilities apart so each layer stays simpler to reason about—for example, [`api/models.py`](api/models.py) defines the data schema, [`api/serializers.py`](api/serializers.py) translates between ORM objects and JSON payloads, and [`api/views.py`](api/views.py) wires those serializers into `/api/...` endpoints that enforce workflow rules from [`workflow.yml`](workflow.yml). That split keeps the REST API (powered by Django REST Framework, DRF) resilient even when one layer needs to change, while returning consistent data/validation to all clients.
 - **[React](https://react.dev/)** (web/src/) renders the SPA (Single Page Application) and consumes shared types/API helpers from [`web/src/util/types.ts`](web/src/util/types.ts) and [`web/src/util/api.ts`](web/src/util/api.ts). React follows a component-based paradigm where functions or classes receive props (inputs) and return HTML that the browser can render.
 - **[Vite](https://vitejs.dev/)** (web tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our web workbench, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
 - **[Material UI](https://mui.com/)** supplies the component library used everywhere in the UI for forms, dialogs, buttons, and layout.
 - **[Axios](https://axios-http.com/)** is the HTTP client library we use in the web to talk to REST APIs; it keeps things simple by handling the details of sending and receiving JSON so the UI code does not have to repeat that work. Benefits of Axios over raw `fetch` include centralized configuration of base URLs and headers, automatic JSON parsing/serialization, and built-in hooks for handling errors, cancellations, and retries. In this project that means [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx) can rely on helpers like `updateCurrentState`/`updatePiece` instead of duplicating URLs or JSON logic, and we have a single place for surfaces errors before they hit the UI.
-- A **[client library](https://en.wikipedia.org/wiki/Library_(computing))** is a reusable set of functions that wraps low-level protocols (like HTTP) so developers can interact with remote services using clean function calls, in their programming language of choice, instead of handling bytes, headers, or parsing manually.
+- A **[client library](<https://en.wikipedia.org/wiki/Library_(computing)>)** is a reusable set of functions that wraps low-level protocols (like HTTP) so developers can interact with remote services using clean function calls, in their programming language of choice, instead of handling bytes, headers, or parsing manually.
 
 ## Motivation
 
@@ -46,12 +46,12 @@ While the UI is similar at a surface level to other craft journaling application
 
 Before cloning, ensure the following are installed on your system:
 
-| Tool | Required | Install |
-|---|---|---|
-| OS | Ubuntu 22.04+ or Debian 12+ (WSL2 on Windows works; macOS untested) | — |
+| Tool                                               | Required                                                                          | Install                                                                                         |
+| -------------------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| OS                                                 | Ubuntu 22.04+ or Debian 12+ (WSL2 on Windows works; macOS untested)               | —                                                                                               |
 | [Bazelisk](https://github.com/bazelbuild/bazelisk) | Yes — aliased as `bazel`; downloads Bazel 8.5.1 automatically via `.bazelversion` | [Bazelisk releases](https://github.com/bazelbuild/bazelisk/releases) or `brew install bazelisk` |
-| `curl` | Yes — used by the lazy shell bootstrap to install RTK when needed | `apt install curl` |
-| `git` | Yes | `apt install git` |
+| `curl`                                             | Yes — used by the lazy shell bootstrap to install RTK when needed                 | `apt install curl`                                                                              |
+| `git`                                              | Yes                                                                               | `apt install git`                                                                               |
 
 Python (3.12) and Node (22) are managed hermetically by Bazel — no manual installs needed once Bazelisk is present.
 
@@ -92,17 +92,20 @@ source env.sh
 Use the package managers you already know to edit dependency manifests, then hand the result back to the repo’s Bazel-aware workflow.
 
 **Python**
+
 - Use the repo-local `uv` wrapper from the repo root to edit Python dependencies. `source env.sh` prepends the wrapper directory to `PATH`, and the wrapper dispatches to the Bazel-managed toolchain.
 - Typical commands: `uv add`, `uv remove`, `uv lock`, `uv sync`.
 - After changing Python packages, run `gz_sync` so the materialized environment and Bazel view stay aligned.
 
 **Web**
+
 - Use the repo-local `npm` wrapper inside [`web/`](web/) to edit JavaScript dependencies. `source env.sh` prepends the wrapper directory to `PATH`, and the wrapper dispatches to the Bazel-managed toolchain.
 - After `npm install`, regenerate `web/pnpm-lock.yaml` from `web/package-lock.json` with `pnpm import`.
 - The reconciliation step should use the repo-local `pnpm` wrapper so the `pnpm` side stays aligned with CI and Bazel.
 - After changing web packages, run `gz_sync` so the current shell and repo locks stay in sync.
 
 **When to use which helper**
+
 - Run `gz_sync` after native `uv` or `npm` dependency changes.
 - Run `gz_reload` when shell bootstrap files or env files changed and you only need the current terminal to pick up the new `PATH` immediately.
 
@@ -122,7 +125,7 @@ Glaze uses a high-level orchestration workflow inspired by the [Get Shit Done (G
 - **Flexible Verification**: Verification can happen **synchronously** (as part of the `/do` cycle where the agent runs tests before pushing) or **asynchronously** in bulk using the `/audit` (performance/flakiness), `/cover` (coverage), and `/deps` (Bazel dependency graph audit) skills.
 
 When you run `/do #292`, the agent will create a branch like `issue/292-vibe-coding-flow` and a repo-local worktree like `.agent-worktrees/codex/issue-292-vibe-coding-flow` before it analyzes or edits anything.
- The agent should immediately print a copy-friendly line:
+The agent should immediately print a copy-friendly line:
 
 ```text
 Worktree: /home/phil/code/glaze/.agent-worktrees/codex/issue-292-vibe-coding-flow
@@ -178,19 +181,19 @@ Each variable in `.env.example` has an inline comment explaining what it enables
 
 ### Setup
 
-| Command    | Description                                                                                                                                                                                                             |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gz_sync` | Reconcile native package-manager edits with the Bazel-aware workflow and refresh the current shell. Use this after `uv` or `npm` dependency changes. |
+| Command     | Description                                                                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gz_sync`   | Reconcile native package-manager edits with the Bazel-aware workflow and refresh the current shell. Use this after `uv` or `npm` dependency changes.     |
 | `gz_reload` | Re-source `env.sh` in the current shell after changing shell bootstrap, env files, or freshly materialized tools that should appear on `PATH` right now. |
 
 ### Servers
 
-| Command                  | Description                                                                                         |
-| ------------------------ | --------------------------------------------------------------------------------------------------- |
-| `gz_start`               | Start backend and web via the Bazel-run launcher. Rotates old logs before starting.              |
-| `gz_stop`                | Stop both servers.                                                                                  |
-| `gz_status`              | Show whether backend and web are running.                                                           |
-| `gz_logs [backend\|web]` | Tail logs. Omit argument to tail both.                                                              |
+| Command                  | Description                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| `gz_start`               | Start backend and web via the Bazel-run launcher. Rotates old logs before starting. |
+| `gz_stop`                | Stop both servers.                                                                  |
+| `gz_status`              | Show whether backend and web are running.                                           |
+| `gz_logs [backend\|web]` | Tail logs. Omit argument to tail both.                                              |
 
 Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`.
 
@@ -211,9 +214,9 @@ RSS; large `StreamingHttpResponse` bodies should use async iterators.
 
 ### Testing
 
-| Command           | Description                                                                                  |
-| ----------------- | -------------------------------------------------------------------------------------------- |
-| `gz_test`         | Run all tests via Bazel (`bazel test --test_output=errors //...`) — CI-aligned, incremental. |
+| Command   | Description                                                                                  |
+| --------- | -------------------------------------------------------------------------------------------- |
+| `gz_test` | Run all tests via Bazel (`bazel test --test_output=errors //...`) — CI-aligned, incremental. |
 
 ### Linting and type-checking
 

@@ -4,11 +4,11 @@ import { http, HttpResponse } from "msw";
 
 /**
  * AnalysisIndex is the top-level dashboard for the Analyze tab.
- * 
+ *
  * Rationale:
  * - Implemented in Issue #371 to organize different analysis modules.
  * - Provides immediate visual feedback (summaries) for data-rich modules like Glaze Combinations.
- * 
+ *
  * Edge cases:
  * - Data Loading: Shows loading spinners in summary components.
  * - Placeholder Modules: Clearly marks future functionality that isn't implemented yet.
@@ -33,7 +33,12 @@ const mockCombinationImages = [
         id: "p1",
         name: "Bowl 1",
         state: "completed",
-        images: [{ url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=100", caption: "Test" }],
+        images: [
+          {
+            url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=100",
+            caption: "Test",
+          },
+        ],
       },
     ],
   },
@@ -44,7 +49,12 @@ const mockCombinationImages = [
         id: "p2",
         name: "Vase 1",
         state: "completed",
-        images: [{ url: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=100", caption: "Test" }],
+        images: [
+          {
+            url: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=100",
+            caption: "Test",
+          },
+        ],
       },
     ],
   },

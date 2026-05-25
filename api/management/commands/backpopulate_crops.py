@@ -113,7 +113,6 @@ class Command(BaseCommand):
             self.stdout.write(f"\rQueued {n} / {total} task(s)...", ending="")
             self.stdout.flush()
 
-        from django.conf import settings
         from django.urls import reverse
 
         self.stdout.write("")

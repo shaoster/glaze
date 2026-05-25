@@ -90,7 +90,9 @@ describe("GlazeImportUploadStage", () => {
 
     expect(screen.getByText("Upload Progress")).toBeInTheDocument();
     expect(screen.getByText("Reading metadata…")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Continue To Crop" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Continue To Crop" }),
+    );
     expect(onContinueToCrop).toHaveBeenCalled();
   });
 });

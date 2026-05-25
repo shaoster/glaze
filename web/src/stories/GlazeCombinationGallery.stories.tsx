@@ -4,11 +4,11 @@ import { http, HttpResponse } from "msw";
 
 /**
  * GlazeCombinationGallery displays a filterable grid of glaze combinations and their resulting pieces.
- * 
+ *
  * Rationale:
  * - Implemented in Issue #371 as a dedicated view for analyzing glaze interactions.
  * - Supports filtering by specific glaze, material, or firing program.
- * 
+ *
  * Edge cases:
  * - Large Results: Uses Masonry grid for performant rendering of hundreds of combinations.
  * - Empty States: Displays a helpful message when no combinations match the filters.
@@ -35,7 +35,9 @@ const mockCombos = [
       {
         id: "p1",
         name: "Bowl 1",
-        thumbnail: { url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=200" },
+        thumbnail: {
+          url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=200",
+        },
       },
     ],
   },
@@ -50,7 +52,9 @@ const mockCombos = [
       {
         id: "p2",
         name: "Vase 1",
-        thumbnail: { url: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=200" },
+        thumbnail: {
+          url: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=200",
+        },
       },
     ],
   },

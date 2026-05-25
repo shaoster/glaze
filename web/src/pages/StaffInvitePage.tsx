@@ -17,7 +17,9 @@ import {
 } from "../util/api";
 
 export default function StaffInvitePage() {
-  const [inviteCode, setInviteCode] = useState<StaffInviteCodeResponse | null>(null);
+  const [inviteCode, setInviteCode] = useState<StaffInviteCodeResponse | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
@@ -84,13 +86,21 @@ export default function StaffInvitePage() {
               >
                 <QRCodeSVG value={inviteUrl} size={220} />
               </Box>
-              <Typography variant="body2" color="text.secondary" textAlign="center">
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                textAlign="center"
+              >
                 Expires: {expiryLabel}
               </Typography>
               <Typography
                 variant="caption"
                 color="text.secondary"
-                sx={{ fontFamily: "monospace", wordBreak: "break-all", textAlign: "center" }}
+                sx={{
+                  fontFamily: "monospace",
+                  wordBreak: "break-all",
+                  textAlign: "center",
+                }}
               >
                 {inviteCode?.code}
               </Typography>

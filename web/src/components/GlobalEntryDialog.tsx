@@ -155,9 +155,10 @@ export default function GlobalEntryDialog({
     () => getGlobalPickerFilters(globalName),
     [globalName],
   );
-  const composeFrom = useMemo(() => getGlobalComposeFrom(globalName), [
-    globalName,
-  ]);
+  const composeFrom = useMemo(
+    () => getGlobalComposeFrom(globalName),
+    [globalName],
+  );
   const composeEntry = useMemo(
     () => (composeFrom ? Object.entries(composeFrom)[0] : null),
     [composeFrom],
@@ -519,7 +520,14 @@ export default function GlobalEntryDialog({
             <Stack spacing={1}>
               {visible.map((entry) => {
                 const thumbnailImage = thumbnailField
-                  ? (entry[thumbnailField] as { url: string; cloudinary_public_id?: string | null; cloud_name?: string | null } | null | undefined)
+                  ? (entry[thumbnailField] as
+                      | {
+                          url: string;
+                          cloudinary_public_id?: string | null;
+                          cloud_name?: string | null;
+                        }
+                      | null
+                      | undefined)
                   : undefined;
                 return (
                   <Box
@@ -544,7 +552,9 @@ export default function GlobalEntryDialog({
                         <CloudinaryImage
                           url={thumbnailImage.url}
                           cloud_name={thumbnailImage.cloud_name}
-                          cloudinary_public_id={thumbnailImage.cloudinary_public_id}
+                          cloudinary_public_id={
+                            thumbnailImage.cloudinary_public_id
+                          }
                           alt={entry.name ?? ""}
                           context="thumbnail"
                         />
@@ -579,7 +589,11 @@ export default function GlobalEntryDialog({
                             if (!value) return null;
                             if (rf.multiple) {
                               return (value as NamedRef[]).map((ref) => (
-                                <Chip key={ref.id} label={ref.name} size="small" />
+                                <Chip
+                                  key={ref.id}
+                                  label={ref.name}
+                                  size="small"
+                                />
                               ));
                             }
                             const ref = value as NamedRef;
@@ -644,7 +658,8 @@ export default function GlobalEntryDialog({
           {createWithLayers && composeFieldConfig && composeFieldName ? (
             <>
               <Typography color="text.secondary" variant="body2">
-                Choose the {formatWorkflowFieldLabel(composeFieldName).toLowerCase()} in
+                Choose the{" "}
+                {formatWorkflowFieldLabel(composeFieldName).toLowerCase()} in
                 order. You can repeat the same entry more than once.
               </Typography>
               {layerRows.map((row, index) => (

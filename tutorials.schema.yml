@@ -14,7 +14,7 @@ properties:
     type: object
     description: Map of tutorial_id to tutorial definition.
     propertyNames:
-      pattern: '^[a-z][a-z0-9_]*$'
+      pattern: "^[a-z][a-z0-9_]*$"
     additionalProperties:
       $ref: "#/$defs/tutorial"
 

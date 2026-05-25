@@ -38,9 +38,13 @@ vi.mock("better-sqlite3", () => {
         return row ? { id: row.id } : undefined;
       }
 
-      if (sql === "SELECT id FROM source_lines WHERE source_file_id = ? AND line_number = ?") {
+      if (
+        sql ===
+        "SELECT id FROM source_lines WHERE source_file_id = ? AND line_number = ?"
+      ) {
         const row = this.sourceLines.find(
-          (entry) => entry.source_file_id === args[0] && entry.line_number === args[1],
+          (entry) =>
+            entry.source_file_id === args[0] && entry.line_number === args[1],
         );
         return row ? { id: row.id } : undefined;
       }
@@ -62,11 +66,20 @@ vi.mock("better-sqlite3", () => {
         return { count: this.tests.length };
       }
 
-      if (sql === "SELECT COUNT(*) AS count FROM source_lines WHERE total_hit_count > 0") {
-        return { count: this.sourceLines.filter((entry) => entry.total_hit_count > 0).length };
+      if (
+        sql ===
+        "SELECT COUNT(*) AS count FROM source_lines WHERE total_hit_count > 0"
+      ) {
+        return {
+          count: this.sourceLines.filter((entry) => entry.total_hit_count > 0)
+            .length,
+        };
       }
 
-      if (sql === "SELECT file_path, line_count, covered_lines, uncovered_lines, coverage_percent FROM combined_file_coverage") {
+      if (
+        sql ===
+        "SELECT file_path, line_count, covered_lines, uncovered_lines, coverage_percent FROM combined_file_coverage"
+      ) {
         const [file] = this.#combinedCoverage();
         return file;
       }
@@ -82,10 +95,16 @@ vi.mock("better-sqlite3", () => {
         return this.sourceLines
           .filter((line) => line.total_hit_count === 0)
           .map((line) => {
-            const file = this.sourceFiles.find((entry) => entry.id === line.source_file_id);
+            const file = this.sourceFiles.find(
+              (entry) => entry.id === line.source_file_id,
+            );
             return { file_path: file.path, line_number: line.line_number };
           })
-          .sort((a, b) => a.file_path.localeCompare(b.file_path) || a.line_number - b.line_number);
+          .sort(
+            (a, b) =>
+              a.file_path.localeCompare(b.file_path) ||
+              a.line_number - b.line_number,
+          );
       }
 
       if (
@@ -95,7 +114,9 @@ vi.mock("better-sqlite3", () => {
         return this.sourceLines
           .filter((line) => line.test_count >= 2)
           .map((line) => {
-            const file = this.sourceFiles.find((entry) => entry.id === line.source_file_id);
+            const file = this.sourceFiles.find(
+              (entry) => entry.id === line.source_file_id,
+            );
             return {
               file_path: file.path,
               line_number: line.line_number,
@@ -119,11 +140,20 @@ vi.mock("better-sqlite3", () => {
         const rows = [];
         for (const test of this.tests) {
           const perFile = new Map();
-          for (const coverageLine of this.coverageLines.filter((entry) => entry.test_id === test.id)) {
+          for (const coverageLine of this.coverageLines.filter(
+            (entry) => entry.test_id === test.id,
+          )) {
             if (coverageLine.hit_count <= 0) continue;
-            const sourceLine = this.sourceLines.find((entry) => entry.id === coverageLine.source_line_id);
-            const sourceFile = this.sourceFiles.find((entry) => entry.id === sourceLine.source_file_id);
-            perFile.set(sourceFile.path, (perFile.get(sourceFile.path) ?? 0) + coverageLine.hit_count);
+            const sourceLine = this.sourceLines.find(
+              (entry) => entry.id === coverageLine.source_line_id,
+            );
+            const sourceFile = this.sourceFiles.find(
+              (entry) => entry.id === sourceLine.source_file_id,
+            );
+            perFile.set(
+              sourceFile.path,
+              (perFile.get(sourceFile.path) ?? 0) + coverageLine.hit_count,
+            );
           }
           for (const [file_path, hit_count] of perFile.entries()) {
             rows.push({
@@ -135,7 +165,9 @@ vi.mock("better-sqlite3", () => {
             });
           }
         }
-        return rows.sort((a, b) => a.name.localeCompare(b.name) || b.hit_count - a.hit_count);
+        return rows.sort(
+          (a, b) => a.name.localeCompare(b.name) || b.hit_count - a.hit_count,
+        );
       }
 
       if (
@@ -154,7 +186,9 @@ vi.mock("better-sqlite3", () => {
           this.coverageLines
             .filter((cl) => cl.test_id === testId && cl.hit_count > 0)
             .map((cl) => {
-              const sl = this.sourceLines.find((s) => s.id === cl.source_line_id);
+              const sl = this.sourceLines.find(
+                (s) => s.id === cl.source_line_id,
+              );
               return sl?.source_file_id;
             })
             .filter(Boolean),
@@ -174,7 +208,10 @@ vi.mock("better-sqlite3", () => {
         return { lastInsertRowid: row.id };
       }
 
-      if (sql === "INSERT INTO source_lines(source_file_id, line_number) VALUES (?, ?)") {
+      if (
+        sql ===
+        "INSERT INTO source_lines(source_file_id, line_number) VALUES (?, ?)"
+      ) {
         const row = {
           id: this.nextIds.sourceLines++,
           source_file_id: args[0],
@@ -186,7 +223,10 @@ vi.mock("better-sqlite3", () => {
         return { lastInsertRowid: row.id };
       }
 
-      if (sql === "UPDATE tests SET report_path = ?, is_integration = ?, scope = ? WHERE id = ?") {
+      if (
+        sql ===
+        "UPDATE tests SET report_path = ?, is_integration = ?, scope = ? WHERE id = ?"
+      ) {
         const row = this.tests.find((entry) => entry.id === args[3]);
         row.report_path = args[0];
         row.is_integration = args[1];
@@ -194,7 +234,10 @@ vi.mock("better-sqlite3", () => {
         return { changes: 1 };
       }
 
-      if (sql === "INSERT INTO tests(name, report_path, is_integration, scope) VALUES (?, ?, ?, ?)") {
+      if (
+        sql ===
+        "INSERT INTO tests(name, report_path, is_integration, scope) VALUES (?, ?, ?, ?)"
+      ) {
         const row = {
           id: this.nextIds.tests++,
           name: args[0],
@@ -206,9 +249,13 @@ vi.mock("better-sqlite3", () => {
         return { lastInsertRowid: row.id };
       }
 
-      if (sql === "INSERT OR REPLACE INTO coverage_lines(test_id, source_line_id, hit_count) VALUES (?, ?, ?)") {
+      if (
+        sql ===
+        "INSERT OR REPLACE INTO coverage_lines(test_id, source_line_id, hit_count) VALUES (?, ?, ?)"
+      ) {
         const existing = this.coverageLines.find(
-          (entry) => entry.test_id === args[0] && entry.source_line_id === args[1],
+          (entry) =>
+            entry.test_id === args[0] && entry.source_line_id === args[1],
         );
         if (existing) {
           existing.hit_count = args[2];
@@ -224,7 +271,10 @@ vi.mock("better-sqlite3", () => {
         return { lastInsertRowid: row.id };
       }
 
-      if (sql === "UPDATE source_lines SET total_hit_count = total_hit_count + ?, test_count = test_count + 1 WHERE id = ?") {
+      if (
+        sql ===
+        "UPDATE source_lines SET total_hit_count = total_hit_count + ?, test_count = test_count + 1 WHERE id = ?"
+      ) {
         const row = this.sourceLines.find((entry) => entry.id === args[1]);
         row.total_hit_count += args[0];
         row.test_count += 1;
@@ -237,16 +287,25 @@ vi.mock("better-sqlite3", () => {
     #combinedCoverage() {
       return this.sourceFiles
         .map((file) => {
-          const lines = this.sourceLines.filter((line) => line.source_file_id === file.id);
-          const covered = lines.filter((line) => line.total_hit_count > 0).length;
-          const uncovered = lines.filter((line) => line.total_hit_count === 0).length;
+          const lines = this.sourceLines.filter(
+            (line) => line.source_file_id === file.id,
+          );
+          const covered = lines.filter(
+            (line) => line.total_hit_count > 0,
+          ).length;
+          const uncovered = lines.filter(
+            (line) => line.total_hit_count === 0,
+          ).length;
           const lineCount = lines.length;
           return {
             file_path: file.path,
             line_count: lineCount,
             covered_lines: covered,
             uncovered_lines: uncovered,
-            coverage_percent: lineCount === 0 ? 0 : Number(((covered / lineCount) * 100).toFixed(1)),
+            coverage_percent:
+              lineCount === 0
+                ? 0
+                : Number(((covered / lineCount) * 100).toFixed(1)),
           };
         })
         .sort((a, b) => a.file_path.localeCompare(b.file_path));
@@ -273,14 +332,22 @@ function makeTempRoot() {
   return mkdtempSync(join(tmpdir(), "glaze-coverage-audit-"));
 }
 
-function writeCoverageFile(root: string, relativePath: string, contents: string) {
+function writeCoverageFile(
+  root: string,
+  relativePath: string,
+  contents: string,
+) {
   const fullPath = join(root, relativePath);
   mkdirSync(resolve(fullPath, ".."), { recursive: true });
   writeFileSync(fullPath, contents);
   return fullPath;
 }
 
-function fakeLcov(testName: string, lines: Array<[number, number]>, filePath: string) {
+function fakeLcov(
+  testName: string,
+  lines: Array<[number, number]>,
+  filePath: string,
+) {
   return [
     `TN:${testName}`,
     `SF:${filePath}`,
@@ -364,18 +431,26 @@ describe("coverage audit tool", () => {
       writeCoverageFile(
         unitDir,
         "coverage.dat",
-        fakeLcov("unit-a", [
-          [1, 1],
-          [2, 0],
-        ], "web/src/redundant.ts"),
+        fakeLcov(
+          "unit-a",
+          [
+            [1, 1],
+            [2, 0],
+          ],
+          "web/src/redundant.ts",
+        ),
       );
       writeCoverageFile(
         unitDir2,
         "coverage.dat",
-        fakeLcov("unit-b", [
-          [1, 1],
-          [2, 1],
-        ], "web/src/redundant.ts"),
+        fakeLcov(
+          "unit-b",
+          [
+            [1, 1],
+            [2, 1],
+          ],
+          "web/src/redundant.ts",
+        ),
       );
 
       const db = await buildDatabase({
@@ -443,24 +518,34 @@ describe("coverage audit tool", () => {
 
 describe("globToRegex / matchesScope", () => {
   it("matches exact file paths", () => {
-    expect(globToRegex("api/piece_views.py").test("api/piece_views.py")).toBe(true);
+    expect(globToRegex("api/piece_views.py").test("api/piece_views.py")).toBe(
+      true,
+    );
     expect(globToRegex("api/piece_views.py").test("api/other.py")).toBe(false);
   });
 
   it("* matches within a single path segment", () => {
     expect(globToRegex("api/piece*").test("api/piece_views.py")).toBe(true);
-    expect(globToRegex("api/piece*").test("api/piece_views/sub.py")).toBe(false);
+    expect(globToRegex("api/piece*").test("api/piece_views/sub.py")).toBe(
+      false,
+    );
     expect(globToRegex("api/piece*").test("other/piece_views.py")).toBe(false);
   });
 
   it("** matches across path separators", () => {
-    expect(globToRegex("web/src/**").test("web/src/components/Foo.tsx")).toBe(true);
+    expect(globToRegex("web/src/**").test("web/src/components/Foo.tsx")).toBe(
+      true,
+    );
     expect(globToRegex("web/src/**").test("api/views.py")).toBe(false);
   });
 
   it("matchesScope returns true when any pattern matches", () => {
-    expect(matchesScope("api/piece_views.py", ["api/serializers.py", "api/piece*"])).toBe(true);
-    expect(matchesScope("api/admin.py", ["api/piece*", "api/serializers.py"])).toBe(false);
+    expect(
+      matchesScope("api/piece_views.py", ["api/serializers.py", "api/piece*"]),
+    ).toBe(true);
+    expect(
+      matchesScope("api/admin.py", ["api/piece*", "api/serializers.py"]),
+    ).toBe(false);
   });
 });
 
@@ -478,7 +563,10 @@ describe("scope violations", () => {
         ].join("\n"),
       );
       // Write .scope sidecar
-      writeFileSync(join(testDir, "coverage.dat.scope"), "api/piece_views.py\napi/models.py");
+      writeFileSync(
+        join(testDir, "coverage.dat.scope"),
+        "api/piece_views.py\napi/models.py",
+      );
 
       const db = await buildDatabase({
         command: "scope-violations",
@@ -513,7 +601,14 @@ describe("scope violations", () => {
       writeCoverageFile(
         testDir,
         "coverage.dat",
-        fakeLcov("unit", [[1, 1], [2, 1]], "api/workflow.py"),
+        fakeLcov(
+          "unit",
+          [
+            [1, 1],
+            [2, 1],
+          ],
+          "api/workflow.py",
+        ),
       );
       writeFileSync(join(testDir, "coverage.dat.scope"), "api/workflow*");
 

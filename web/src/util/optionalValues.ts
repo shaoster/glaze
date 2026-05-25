@@ -3,7 +3,9 @@
  * fields as absent. These helpers keep that translation consistent across
  * dialogs and autosaved forms.
  */
-export function normalizeOptionalText(value: string | null | undefined): string {
+export function normalizeOptionalText(
+  value: string | null | undefined,
+): string {
   return value ?? "";
 }
 

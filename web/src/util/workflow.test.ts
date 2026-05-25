@@ -286,10 +286,7 @@ vi.mock("../../../workflow.yml", () => ({
               args: [
                 {
                   op: "ratio",
-                  args: [
-                    { constant: 512 },
-                    { constant: 1000 },
-                  ],
+                  args: [{ constant: 512 }, { constant: 1000 }],
                 },
                 { constant: 100 },
               ],
@@ -429,9 +426,7 @@ describe("formatWorkflowFieldLabel", () => {
   });
 
   it("converts a multi-word snake_case name to Title Case", () => {
-    expect(formatWorkflowFieldLabel("clay_weight_lbs")).toBe(
-      "Clay Weight Lbs",
-    );
+    expect(formatWorkflowFieldLabel("clay_weight_lbs")).toBe("Clay Weight Lbs");
   });
 });
 
@@ -634,15 +629,21 @@ describe("getCustomFieldDefinitions", () => {
 
     it("falls back to a formatted label when neither ref nor target declare one", () => {
       const fields = getCustomFieldDefinitions("edge_cases");
-      const f = fields.find((field) => field.name === "clay_body_default_label")!;
+      const f = fields.find(
+        (field) => field.name === "clay_body_default_label",
+      )!;
       expect(f.label).toBe("Clay Body Default Label");
       expect(f.canCreate).toBe(false);
     });
 
     it("falls back to string metadata for malformed or missing global refs", () => {
       const fields = getCustomFieldDefinitions("edge_cases");
-      const malformed = fields.find((field) => field.name === "malformed_global_ref")!;
-      const missing = fields.find((field) => field.name === "missing_global_target")!;
+      const malformed = fields.find(
+        (field) => field.name === "malformed_global_ref",
+      )!;
+      const missing = fields.find(
+        (field) => field.name === "missing_global_target",
+      )!;
       expect(malformed.type).toBe("string");
       expect(malformed.globalName).toBeUndefined();
       expect(malformed.globalField).toBeUndefined();
@@ -700,9 +701,9 @@ describe("getCustomFieldDefinitions", () => {
 
     it("lets the ref field override a required target back to false", () => {
       const fields = getCustomFieldDefinitions("edge_cases");
-      expect(fields.find((field) => field.name === "optional_copy")!.required).toBe(
-        false,
-      );
+      expect(
+        fields.find((field) => field.name === "optional_copy")!.required,
+      ).toBe(false);
     });
 
     it("state ref chaining to a global ref is treated as a global ref, not a plain state ref", () => {
@@ -722,14 +723,16 @@ describe("getCustomFieldDefinitions", () => {
 
     it("state ref chaining to a global ref defaults canCreate to false (no can_create on the ref)", () => {
       const fields = getCustomFieldDefinitions("glaze_fired");
-      expect(fields.find((f) => f.name === "kiln_location")!.canCreate).toBe(false);
+      expect(fields.find((f) => f.name === "kiln_location")!.canCreate).toBe(
+        false,
+      );
     });
 
     it("falls back to string metadata for malformed, missing, or cyclic state refs", () => {
       const fields = getCustomFieldDefinitions("edge_cases");
-      expect(fields.find((field) => field.name === "malformed_state_ref")!.type).toBe(
-        "string",
-      );
+      expect(
+        fields.find((field) => field.name === "malformed_state_ref")!.type,
+      ).toBe("string");
       expect(
         fields.find((field) => field.name === "missing_state_target")!.type,
       ).toBe("string");
@@ -761,12 +764,11 @@ describe("getCustomFieldDefinitions", () => {
   });
 
   describe("inline fields are not state refs", () => {
-
     it("inline field has isStateRef false", () => {
       const fields = getCustomFieldDefinitions("wheel_thrown");
-      expect(
-        fields.find((f) => f.name === "clay_weight_lbs")!.isStateRef,
-      ).toBe(false);
+      expect(fields.find((f) => f.name === "clay_weight_lbs")!.isStateRef).toBe(
+        false,
+      );
     });
   });
 
@@ -862,7 +864,9 @@ describe("getProcessSummaryFieldOptions", () => {
         }),
       ]),
     );
-    expect(options.find((option) => option.ref === "piece.thumbnail")).toBeUndefined();
+    expect(
+      options.find((option) => option.ref === "piece.thumbnail"),
+    ).toBeUndefined();
   });
 });
 
@@ -947,22 +951,33 @@ describe("isTaggableGlobal", () => {
 describe("insertableStatesBetween", () => {
   it("returns all successors of designed when only designed is present", () => {
     const result = insertableStatesBetween("designed", new Set(["designed"]));
-    expect(result).toEqual(expect.arrayContaining(["wheel_thrown", "handbuilt"]));
+    expect(result).toEqual(
+      expect.arrayContaining(["wheel_thrown", "handbuilt"]),
+    );
     expect(result).toHaveLength(2);
   });
 
   it("filters out already-present states", () => {
-    const result = insertableStatesBetween("designed", new Set(["designed", "wheel_thrown"]));
+    const result = insertableStatesBetween(
+      "designed",
+      new Set(["designed", "wheel_thrown"]),
+    );
     expect(result).toEqual(["handbuilt"]);
   });
 
   it("returns empty when all successors are already present", () => {
-    const result = insertableStatesBetween("designed", new Set(["designed", "wheel_thrown", "handbuilt"]));
+    const result = insertableStatesBetween(
+      "designed",
+      new Set(["designed", "wheel_thrown", "handbuilt"]),
+    );
     expect(result).toEqual([]);
   });
 
   it("returns empty for a terminal state with no successors", () => {
-    const result = insertableStatesBetween("completed", new Set(["designed", "completed"]));
+    const result = insertableStatesBetween(
+      "completed",
+      new Set(["designed", "completed"]),
+    );
     expect(result).toEqual([]);
   });
 });

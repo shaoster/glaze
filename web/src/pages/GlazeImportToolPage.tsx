@@ -1,8 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Button,
   Dialog,
@@ -72,7 +68,11 @@ function buildCloudinaryJpgUrl(
 ) {
   return `https://res.cloudinary.com/${config.cloud_name}/image/upload/f_jpg/${publicId}.jpg`;
 }
-export default function GlazeImportToolPage({ adminBaseUrl }: { adminBaseUrl: string | null }) {
+export default function GlazeImportToolPage({
+  adminBaseUrl,
+}: {
+  adminBaseUrl: string | null;
+}) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const recordsRef = useRef<UploadedRecord[]>([]);
 

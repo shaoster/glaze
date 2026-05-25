@@ -32,16 +32,22 @@ describe("InvitePage", () => {
     mockValidateInviteCode.mockResolvedValue({ valid: true });
     renderWithCode("valid-uuid");
     await waitFor(() =>
-      expect(screen.getByText(/your invite code is valid/i)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/your invite code is valid/i),
+      ).toBeInTheDocument(),
     );
-    expect(screen.getByRole("button", { name: /continue to sign in/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /continue to sign in/i }),
+    ).toBeInTheDocument();
   });
 
   it("stores the code in sessionStorage on success", async () => {
     mockValidateInviteCode.mockResolvedValue({ valid: true });
     renderWithCode("valid-uuid");
     await waitFor(() =>
-      expect(screen.getByText(/your invite code is valid/i)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/your invite code is valid/i),
+      ).toBeInTheDocument(),
     );
     expect(sessionStorage.getItem("pendingInviteCode")).toBe("valid-uuid");
   });
@@ -52,7 +58,9 @@ describe("InvitePage", () => {
     });
     renderWithCode("bad-uuid");
     await waitFor(() =>
-      expect(screen.getByText(/invalid or expired invitation link/i)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/invalid or expired invitation link/i),
+      ).toBeInTheDocument(),
     );
   });
 

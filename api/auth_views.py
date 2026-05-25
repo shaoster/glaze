@@ -42,6 +42,7 @@ from .models import (
     PieceState,
     UserProfile,
 )
+from .preferences import UserPreferencesSerializer, get_preferences_config
 from .serializer_registry import (
     _GLOBAL_ENTRY_SERIALIZERS,  # auto-generated in _register_globals(); hand-written serializers overwrite
 )
@@ -137,9 +138,6 @@ def auth_me(request: Request) -> Response:
             "user": AuthUserSerializer(user).data if user else None,
         }
     )
-
-
-from .preferences import UserPreferencesSerializer, get_preferences_config
 
 
 # Whitelist of UserProfile fields that can be updated via the declarative system.

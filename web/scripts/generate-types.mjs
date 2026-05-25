@@ -81,9 +81,13 @@ export async function main(argv = process.argv) {
     ? pathToFileURL(resolvePath(schemaSource))
     : new URL("http://localhost:8080/api/schema/?format=json");
   const outputPath =
-    resolvePath(argOutput) ?? process.env.GLAZE_OUTPUT_PATH ?? "src/util/generated-types.ts";
+    resolvePath(argOutput) ??
+    process.env.GLAZE_OUTPUT_PATH ??
+    "src/util/generated-types.ts";
   const typesOutputPath =
-    resolvePath(argTypesOutput) ?? process.env.GLAZE_TYPES_OUTPUT_PATH ?? "src/util/types.ts";
+    resolvePath(argTypesOutput) ??
+    process.env.GLAZE_TYPES_OUTPUT_PATH ??
+    "src/util/types.ts";
 
   const DATE_NODE = ts.factory.createTypeReferenceNode(
     ts.factory.createIdentifier("Date"),
@@ -105,11 +109,15 @@ export async function main(argv = process.argv) {
   console.log(`✔ Generated ${typesOutputPath}`);
 }
 
-const invokedAsScript = process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
+const invokedAsScript =
+  process.argv[1] &&
+  pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
 
 if (invokedAsScript) {
   main().catch((error) => {
-    console.error(error instanceof Error ? error.stack ?? error.message : String(error));
+    console.error(
+      error instanceof Error ? (error.stack ?? error.message) : String(error),
+    );
     process.exit(1);
   });
 }

@@ -1,5 +1,13 @@
 import type { Dispatch, SetStateAction } from "react";
-import { Alert, Box, Button, Divider, Stack, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Divider,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import GlazeImportRecordList from "./GlazeImportRecordList";
 import { COMBO_NAME_SEPARATOR } from "./glazeImportToolOcr";
@@ -31,7 +39,9 @@ export default function GlazeImportReviewStage({
   const selectedRecord =
     records.find((record) => record.id === selectedRecordId) ?? null;
 
-  function updateSelectedRecord(updater: (record: UploadedRecord) => UploadedRecord) {
+  function updateSelectedRecord(
+    updater: (record: UploadedRecord) => UploadedRecord,
+  ) {
     if (!selectedRecord) return;
     setRecords((current) =>
       current.map((record) =>
@@ -79,7 +89,9 @@ export default function GlazeImportReviewStage({
                   }}
                 >
                   {cropPreviewLoading ? (
-                    <Typography color="text.secondary">Loading preview…</Typography>
+                    <Typography color="text.secondary">
+                      Loading preview…
+                    </Typography>
                   ) : cropPreviewUrl ? (
                     <Box
                       component="img"
@@ -95,11 +107,17 @@ export default function GlazeImportReviewStage({
                 </Box>
               </Box>
               <Box sx={{ flex: 1 }}>
-                <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1 }}>
+                <Stack
+                  direction="row"
+                  alignItems="baseline"
+                  spacing={1}
+                  sx={{ mb: 1 }}
+                >
                   <Typography variant="subtitle1">OCR Raw Text</Typography>
                   {selectedRecord.ocrSuggestion?.confidence != null ? (
                     <Typography variant="body2" color="text.secondary">
-                      confidence: {Math.round(selectedRecord.ocrSuggestion.confidence)}%
+                      confidence:{" "}
+                      {Math.round(selectedRecord.ocrSuggestion.confidence)}%
                     </Typography>
                   ) : null}
                 </Stack>
@@ -126,7 +144,9 @@ export default function GlazeImportReviewStage({
                 label="Parsed name"
                 fullWidth
                 value={selectedRecord.parsedFields.name}
-                disabled={selectedRecord.parsedFields.kind === "glaze_combination"}
+                disabled={
+                  selectedRecord.parsedFields.kind === "glaze_combination"
+                }
                 helperText={
                   selectedRecord.parsedFields.kind === "glaze_combination"
                     ? "Auto-computed from glaze fields"
@@ -151,7 +171,8 @@ export default function GlazeImportReviewStage({
                 value={selectedRecord.parsedFields.kind}
                 onChange={(event) =>
                   updateSelectedRecord((record) => {
-                    const kind = event.target.value as UploadedRecord["parsedFields"]["kind"];
+                    const kind = event.target
+                      .value as UploadedRecord["parsedFields"]["kind"];
                     const name =
                       kind === "glaze_combination"
                         ? `${record.parsedFields.first_glaze}${COMBO_NAME_SEPARATOR}${record.parsedFields.second_glaze}`
@@ -227,7 +248,9 @@ export default function GlazeImportReviewStage({
                     : String(selectedRecord.parsedFields.runs)
                 }
                 helperText={
-                  selectedRecord.parsedFields.runs === null ? "Not specified" : undefined
+                  selectedRecord.parsedFields.runs === null
+                    ? "Not specified"
+                    : undefined
                 }
                 onChange={(event) =>
                   updateSelectedRecord((record) => ({

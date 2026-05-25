@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import AddIcon from "@mui/icons-material/Add";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import SortIcon from "@mui/icons-material/Sort";
@@ -16,8 +22,16 @@ import type { PieceSummary, TagEntry } from "../util/types";
 import { formatState, isTerminalState, SUCCESSORS } from "../util/workflow";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
-import { MasonryScroller, createPositioner, useContainerPosition, useResizeObserver } from "masonic";
-import { DEFAULT_CARD_HEIGHT_ESTIMATE, getPieceCardLayout } from "./pieceCardHeight";
+import {
+  MasonryScroller,
+  createPositioner,
+  useContainerPosition,
+  useResizeObserver,
+} from "masonic";
+import {
+  DEFAULT_CARD_HEIGHT_ESTIMATE,
+  getPieceCardLayout,
+} from "./pieceCardHeight";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import CloudinaryImage from "./CloudinaryImage";
 import TagAutocomplete from "./TagAutocomplete";
@@ -209,7 +223,9 @@ const PieceCard = ({ piece, width, returnTo }: PieceCardProps) => {
             if (piece.thumbnail?.width && piece.thumbnail?.height) return;
             const img = e.currentTarget;
             if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-              setThumbnailAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
+              setThumbnailAspectRatio(
+                `${img.naturalWidth} / ${img.naturalHeight}`,
+              );
             }
           }}
         />
@@ -491,8 +507,13 @@ const PieceList = (props: PieceListProps) => {
   const hasActiveFilters = activeFilters.length > 0 || activeTagIds.length > 0;
   const windowHeight = useWindowHeight();
   const masonryRef = useRef<HTMLElement | null>(null);
-  const columnWidth = isMobile ? MASONRY_COLUMN_WIDTH_MOBILE : MASONRY_COLUMN_WIDTH_DESKTOP;
-  const { width: masonryWidth, offset: masonryOffset } = useContainerPosition(masonryRef, [isMobile]);
+  const columnWidth = isMobile
+    ? MASONRY_COLUMN_WIDTH_MOBILE
+    : MASONRY_COLUMN_WIDTH_DESKTOP;
+  const { width: masonryWidth, offset: masonryOffset } = useContainerPosition(
+    masonryRef,
+    [isMobile],
+  );
   const positioner = useMemo(() => {
     const [computedColumnWidth, computedColumnCount] = getMasonryColumns(
       masonryWidth,
@@ -510,7 +531,10 @@ const PieceList = (props: PieceListProps) => {
 
     filteredPieces.forEach((piece, index) => {
       if (piece.thumbnail?.crop) {
-        nextPositioner.set(index, getPieceCardLayout(piece, nextPositioner.columnWidth).estimatedHeight);
+        nextPositioner.set(
+          index,
+          getPieceCardLayout(piece, nextPositioner.columnWidth).estimatedHeight,
+        );
       }
     });
 
@@ -729,7 +753,9 @@ const PieceList = (props: PieceListProps) => {
                     ? "primary.contrastText"
                     : "text.secondary",
                   border: "1px solid",
-                  borderColor: activeFilters.includes(SHARED_FILTER_OPTION.value)
+                  borderColor: activeFilters.includes(
+                    SHARED_FILTER_OPTION.value,
+                  )
                     ? "primary.main"
                     : "divider",
                   fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",

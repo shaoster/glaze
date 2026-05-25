@@ -3,12 +3,12 @@ import CloudinaryImage from "../components/CloudinaryImage";
 
 /**
  * CloudinaryImage is an optimized image renderer with Cloudinary integration.
- * 
+ *
  * Rationale:
  * - Automatically requests size-appropriate renditions from Cloudinary.
  * - Falls back to standard `<img>` if Cloudinary metadata is missing.
  * - Prevents face-detection "zoom" by using center fill for pottery subjects (Issue #212).
- * 
+ *
  * Edge cases:
  * - Missing Metadata: Renders the fallback `url` directly.
  * - Custom Crops: Applies relative cropping transformations before resizing.
@@ -26,7 +26,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const SAMPLE_URL = "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800";
+const SAMPLE_URL =
+  "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800";
 
 export const Thumbnail: Story = {
   args: {

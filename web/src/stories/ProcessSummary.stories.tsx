@@ -87,5 +87,8 @@ export const WithHistory: Story = {
 };
 
 export const EmptyHistory: Story = {
-  args: { piece: { ...piece, history: [], current_state: history[0] }, history: [] },
+  args: {
+    piece: { ...piece, history: [], current_state: history[0] },
+    history: [],
+  },
 };

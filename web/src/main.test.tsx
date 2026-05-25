@@ -25,7 +25,9 @@ describe("main.tsx", () => {
   it("renders the app into the root element", async () => {
     await import("./main.tsx");
 
-    expect(createRootMock).toHaveBeenCalledWith(document.getElementById("root"));
+    expect(createRootMock).toHaveBeenCalledWith(
+      document.getElementById("root"),
+    );
     expect(renderMock).toHaveBeenCalledTimes(1);
   });
 });

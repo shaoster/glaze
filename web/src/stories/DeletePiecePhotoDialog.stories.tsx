@@ -6,11 +6,11 @@ import Button from "@mui/material/Button";
 
 /**
  * DeletePiecePhotoDialog is a confirmation modal for image removal.
- * 
+ *
  * Rationale:
  * - Provides a destructive action safety net (Issue #288).
  * - Styled with "error" theme colors to signal the severity of the action.
- * 
+ *
  * Edge cases:
  * - Deleting state: Disables buttons and shows a loading state on the confirm button.
  * - Backdrop click: Prevented during deletion to avoid accidental dismissal.
@@ -44,7 +44,9 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function DeletePiecePhotoDialogWithState(args: React.ComponentProps<typeof DeletePiecePhotoDialog>) {
+function DeletePiecePhotoDialogWithState(
+  args: React.ComponentProps<typeof DeletePiecePhotoDialog>,
+) {
   const [open, setOpen] = useState(false);
   return (
     <>

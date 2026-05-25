@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  Button,
-  Chip,
-  InputAdornment,
-  TextField,
-} from "@mui/material";
+import { Button, Chip, InputAdornment, TextField } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material";
 import GlobalEntryDialog from "./GlobalEntryDialog";
 

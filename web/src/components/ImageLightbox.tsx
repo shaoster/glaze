@@ -44,7 +44,10 @@ export default function ImageLightbox({
   const swipeHandlers = useSwipeable({
     onSwiping: ({ deltaX, dir }) => {
       // Resist at boundaries — dampen drag past the first/last image
-      if ((index === 0 && dir === "Right") || (index === images.length - 1 && dir === "Left")) {
+      if (
+        (index === 0 && dir === "Right") ||
+        (index === images.length - 1 && dir === "Left")
+      ) {
         setDragDeltaX(deltaX * 0.25);
       } else {
         setDragDeltaX(deltaX);
@@ -89,7 +92,9 @@ export default function ImageLightbox({
     >
       <Box
         data-testid="lightbox-backdrop"
-        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
         sx={{
           position: "fixed",
           inset: 0,
@@ -105,7 +110,10 @@ export default function ImageLightbox({
         <Box
           {...swipeHandlers}
           data-testid="lightbox-swipe-area"
-          sx={{ touchAction: "pan-y", cursor: images.length > 1 ? "grab" : undefined }}
+          sx={{
+            touchAction: "pan-y",
+            cursor: images.length > 1 ? "grab" : undefined,
+          }}
         >
           <Box
             sx={{
@@ -181,9 +189,7 @@ export default function ImageLightbox({
                     height: i === index ? 10 : 7,
                     borderRadius: "50%",
                     backgroundColor:
-                      i === index
-                        ? "white"
-                        : "rgba(255,255,255,0.35)",
+                      i === index ? "white" : "rgba(255,255,255,0.35)",
                     cursor: "pointer",
                     transition: "all 0.2s ease",
                     flexShrink: 0,

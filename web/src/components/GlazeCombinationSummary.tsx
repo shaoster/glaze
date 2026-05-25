@@ -32,8 +32,13 @@ export default function GlazeCombinationSummary() {
 
   return (
     <Box>
-      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
-        {combinationCount} combination{combinationCount === 1 ? "" : "s"} with images
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ mb: 1, display: "block" }}
+      >
+        {combinationCount} combination{combinationCount === 1 ? "" : "s"} with
+        images
       </Typography>
       <Box sx={{ display: "flex", gap: 0.5 }}>
         {representativeImages.map((img, idx) => (
@@ -72,7 +77,11 @@ export default function GlazeCombinationSummary() {
               borderColor: "divider",
             }}
           >
-            <Typography variant="caption" color="text.secondary" fontWeight="bold">
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              fontWeight="bold"
+            >
               +{combinationCount - 4}
             </Typography>
           </Box>

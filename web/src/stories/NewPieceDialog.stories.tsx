@@ -6,12 +6,12 @@ import Button from "@mui/material/Button";
 
 /**
  * NewPieceDialog is the entry point for adding new work to the Glaze library.
- * 
+ *
  * Rationale:
  * - Redesigned in Issue #165 to include a thumbnail selection gallery.
  * - Supports quick-add of location and notes (Issue #192).
  * - Enforces required name field and provides immediate feedback.
- * 
+ *
  * Edge cases:
  * - Validation error: Shows error state when attempting to submit without a name.
  * - Submitting: Displays a loading state on the Create button to prevent double-submission.
@@ -36,15 +36,16 @@ const meta = {
     },
   },
   tags: ["autodocs"],
-  argTypes: {
-  },
+  argTypes: {},
   render: (args) => <NewPieceDialogWithState {...args} />,
 } satisfies Meta<typeof NewPieceDialog>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function NewPieceDialogWithState(args: React.ComponentProps<typeof NewPieceDialog>) {
+function NewPieceDialogWithState(
+  args: React.ComponentProps<typeof NewPieceDialog>,
+) {
   const [open, setOpen] = useState(false);
   return (
     <>

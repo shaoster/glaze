@@ -251,3 +251,9 @@ prof/
 
 # gz_start
 nohup.out
+
+# Database backups
+db.bak.*.sqlite3
+
+# Agent / Tool temporary files
+.antigravitycli/

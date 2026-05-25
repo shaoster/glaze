@@ -266,7 +266,6 @@ describe("CloudinaryImage", () => {
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
-
   it("renders and clears loading state for lightbox-context images", () => {
     render(
       <CloudinaryImage

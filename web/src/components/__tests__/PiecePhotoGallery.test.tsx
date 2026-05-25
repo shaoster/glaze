@@ -1,5 +1,12 @@
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
@@ -13,9 +20,7 @@ function renderGallery(
   element: React.ReactElement<ComponentProps<typeof PiecePhotoGallery>>,
 ) {
   return render(
-    <MemoryRouter initialEntries={["/pieces/piece-1"]}>
-      {element}
-    </MemoryRouter>,
+    <MemoryRouter initialEntries={["/pieces/piece-1"]}>{element}</MemoryRouter>,
   );
 }
 
@@ -129,7 +134,9 @@ const DEFAULT_PIECE_STATES = [
 
 function openMoveSelect() {
   const moveControl = screen.getByLabelText("Move photo to state");
-  fireEvent.mouseDown(within(moveControl).getByRole("combobox", { hidden: true }));
+  fireEvent.mouseDown(
+    within(moveControl).getByRole("combobox", { hidden: true }),
+  );
 }
 
 function makeUpdatedPiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
@@ -166,28 +173,24 @@ function makeUpdatedPiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
 
 describe("PiecePhotoGallery", () => {
   it("opens a headerless gallery dialog from the photo count chip", async () => {
-    renderGallery(
-      <PiecePhotoGallery
-        images={makeImages()}
-      />,
-    );
+    renderGallery(<PiecePhotoGallery images={makeImages()} />);
 
     await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
 
     expect(screen.getByLabelText("Piece photos")).toBeInTheDocument();
     expect(screen.queryByText("Piece photos")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /open piece photo/i })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("button", { name: /open piece photo/i }),
+    ).toHaveLength(2);
   });
 
   it("shows the friendly state label in the lightbox footer", async () => {
-    renderGallery(
-      <PiecePhotoGallery
-        images={makeImages()}
-      />,
-    );
+    renderGallery(<PiecePhotoGallery images={makeImages()} />);
 
     await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 2" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Open piece photo 2" }),
+    );
 
     expect(screen.getByText("Added in Trimming")).toBeInTheDocument();
   });
@@ -208,7 +211,9 @@ describe("PiecePhotoGallery", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Open piece photo 1" }),
+    );
     await userEvent.click(screen.getByLabelText("Edit caption"));
     const captionInput = screen.getByLabelText("Edit photo caption", {
       selector: "input",
@@ -275,15 +280,14 @@ describe("PiecePhotoGallery", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Open piece photo 1" }),
+    );
     const lightbox = screen.getByLabelText("Mock lightbox");
     await userEvent.click(within(lightbox).getAllByText("Freshly thrown")[1]);
-    const captionInput = within(lightbox).getByLabelText(
-      "Edit photo caption",
-      {
-        selector: "input",
-      },
-    );
+    const captionInput = within(lightbox).getByLabelText("Edit photo caption", {
+      selector: "input",
+    });
     await act(async () => {
       fireEvent.change(captionInput, { target: { value: "Wheel detail" } });
       fireEvent.keyDown(captionInput, { key: "Enter" });
@@ -317,14 +321,15 @@ describe("PiecePhotoGallery", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-    await userEvent.click(screen.getByLabelText("Edit caption"));
-    const captionInput = within(screen.getByLabelText("Mock lightbox")).getByLabelText(
-      "Edit photo caption",
-      {
-        selector: "input",
-      },
+    await userEvent.click(
+      screen.getByRole("button", { name: "Open piece photo 1" }),
     );
+    await userEvent.click(screen.getByLabelText("Edit caption"));
+    const captionInput = within(
+      screen.getByLabelText("Mock lightbox"),
+    ).getByLabelText("Edit photo caption", {
+      selector: "input",
+    });
     await act(async () => {
       fireEvent.change(captionInput, { target: { value: "Discard me" } });
       fireEvent.keyDown(captionInput, { key: "Escape" });
@@ -337,7 +342,9 @@ describe("PiecePhotoGallery", () => {
       ),
     ).not.toBeInTheDocument();
     expect(
-      within(screen.getByLabelText("Mock lightbox")).getAllByText("Freshly thrown")[1],
+      within(screen.getByLabelText("Mock lightbox")).getAllByText(
+        "Freshly thrown",
+      )[1],
     ).toBeInTheDocument();
   });
 
@@ -356,12 +363,13 @@ describe("PiecePhotoGallery", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-    await userEvent.click(screen.getByLabelText("Edit caption"));
-    const captionInput = within(screen.getByLabelText("Mock lightbox")).getByLabelText(
-      "Edit photo caption",
-      { selector: "input" },
+    await userEvent.click(
+      screen.getByRole("button", { name: "Open piece photo 1" }),
     );
+    await userEvent.click(screen.getByLabelText("Edit caption"));
+    const captionInput = within(
+      screen.getByLabelText("Mock lightbox"),
+    ).getByLabelText("Edit photo caption", { selector: "input" });
     fireEvent.change(captionInput, { target: { value: "No-op caption" } });
     await userEvent.click(screen.getByText("Save"));
 
@@ -376,11 +384,7 @@ describe("PiecePhotoGallery", () => {
   });
 
   it("closes the gallery dialog from the Close button", async () => {
-    renderGallery(
-      <PiecePhotoGallery
-        images={makeImages()}
-      />,
-    );
+    renderGallery(<PiecePhotoGallery images={makeImages()} />);
 
     await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
@@ -391,18 +395,14 @@ describe("PiecePhotoGallery", () => {
   });
 
   it("closes the lightbox from the close button", async () => {
-    renderGallery(
-      <PiecePhotoGallery
-        images={makeImages()}
-      />,
-    );
+    renderGallery(<PiecePhotoGallery images={makeImages()} />);
 
     await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-    const lightbox = screen.getByLabelText("Mock lightbox");
     await userEvent.click(
-      within(lightbox).getByText("Close lightbox"),
+      screen.getByRole("button", { name: "Open piece photo 1" }),
     );
+    const lightbox = screen.getByLabelText("Mock lightbox");
+    await userEvent.click(within(lightbox).getByText("Close lightbox"));
 
     await waitFor(() =>
       expect(screen.queryByLabelText("Mock lightbox")).not.toBeInTheDocument(),
@@ -448,9 +448,13 @@ describe("PiecePhotoGallery", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
     await userEvent.click(
-      within(screen.getByLabelText("Mock lightbox")).getByText("Set as thumbnail"),
+      screen.getByRole("button", { name: "Open piece photo 1" }),
+    );
+    await userEvent.click(
+      within(screen.getByLabelText("Mock lightbox")).getByText(
+        "Set as thumbnail",
+      ),
     );
 
     expect(updatePieceFn).not.toHaveBeenCalled();
@@ -478,9 +482,13 @@ describe("PiecePhotoGallery", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
     await userEvent.click(
-      within(screen.getByLabelText("Mock lightbox")).getByText("Set as thumbnail"),
+      screen.getByRole("button", { name: "Open piece photo 1" }),
+    );
+    await userEvent.click(
+      within(screen.getByLabelText("Mock lightbox")).getByText(
+        "Set as thumbnail",
+      ),
     );
 
     await waitFor(() =>
@@ -508,7 +516,9 @@ describe("PiecePhotoGallery", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "1 photo" }));
-    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Open piece photo 1" }),
+    );
     await userEvent.click(
       within(screen.getByLabelText("Mock lightbox")).getByText("Add caption"),
     );
@@ -535,8 +545,12 @@ describe("PiecePhotoGallery", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "1 photo" }));
-    await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
-    await userEvent.click(screen.getByRole("button", { name: "Delete piece photo 1" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Open piece photo 1" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete piece photo 1" }),
+    );
     await userEvent.click(screen.getByRole("button", { name: "Remove" }));
 
     expect(updateCurrentStateFn).toHaveBeenCalledWith(
@@ -562,9 +576,13 @@ describe("PiecePhotoGallery", () => {
       );
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open piece photo 1" }),
+      );
 
-      expect(screen.queryByLabelText("Move photo to state")).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText("Move photo to state"),
+      ).not.toBeInTheDocument();
     });
 
     it("does not show the move control when moveImageFn is not provided", async () => {
@@ -580,9 +598,13 @@ describe("PiecePhotoGallery", () => {
       );
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open piece photo 1" }),
+      );
 
-      expect(screen.queryByLabelText("Move photo to state")).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText("Move photo to state"),
+      ).not.toBeInTheDocument();
     });
 
     it("shows an enabled move select when the move endpoint is wired", async () => {
@@ -599,7 +621,9 @@ describe("PiecePhotoGallery", () => {
       );
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open piece photo 1" }),
+      );
       const moveSelect = screen.getByLabelText("Move photo to state");
 
       expect(moveSelect).not.toBeDisabled();
@@ -619,7 +643,9 @@ describe("PiecePhotoGallery", () => {
       );
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open piece photo 1" }),
+      );
       openMoveSelect();
 
       expect(screen.getByText("Designed")).toBeInTheDocument();
@@ -640,7 +666,9 @@ describe("PiecePhotoGallery", () => {
       );
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 2" }));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open piece photo 2" }),
+      );
       openMoveSelect();
 
       expect(screen.getByText("Wheel Thrown")).toBeInTheDocument();
@@ -666,16 +694,22 @@ describe("PiecePhotoGallery", () => {
       );
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open piece photo 1" }),
+      );
       openMoveSelect();
       await userEvent.click(screen.getByText("Designed"));
 
-      await waitFor(() => expect(moveImageFn).toHaveBeenCalledWith(
-        "image-a",
-        "state-current",
-        "state-past",
-      ));
-      await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(finalPiece));
+      await waitFor(() =>
+        expect(moveImageFn).toHaveBeenCalledWith(
+          "image-a",
+          "state-current",
+          "state-past",
+        ),
+      );
+      await waitFor(() =>
+        expect(onPieceUpdated).toHaveBeenCalledWith(finalPiece),
+      );
     });
 
     it("moves a past-state image to the current state via the move endpoint", async () => {
@@ -697,16 +731,22 @@ describe("PiecePhotoGallery", () => {
       );
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 2" }));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open piece photo 2" }),
+      );
       openMoveSelect();
       await userEvent.click(screen.getByText("Wheel Thrown"));
 
-      await waitFor(() => expect(moveImageFn).toHaveBeenCalledWith(
-        "image-b",
-        "state-past",
-        "state-current",
-      ));
-      await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(finalPiece));
+      await waitFor(() =>
+        expect(moveImageFn).toHaveBeenCalledWith(
+          "image-b",
+          "state-past",
+          "state-current",
+        ),
+      );
+      await waitFor(() =>
+        expect(onPieceUpdated).toHaveBeenCalledWith(finalPiece),
+      );
     });
 
     it("shows error message when move API call fails", async () => {
@@ -725,12 +765,16 @@ describe("PiecePhotoGallery", () => {
       );
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open piece photo 1" }),
+      );
       openMoveSelect();
       await userEvent.click(screen.getByText("Designed"));
 
       await waitFor(() =>
-        expect(screen.getByText("Failed to move photo. Please try again.")).toBeInTheDocument(),
+        expect(
+          screen.getByText("Failed to move photo. Please try again."),
+        ).toBeInTheDocument(),
       );
     });
 
@@ -750,12 +794,16 @@ describe("PiecePhotoGallery", () => {
       );
 
       await userEvent.click(screen.getByRole("button", { name: "2 photos" }));
-      await userEvent.click(screen.getByRole("button", { name: "Open piece photo 1" }));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open piece photo 1" }),
+      );
       openMoveSelect();
       await userEvent.click(screen.getByText("Designed"));
 
       await waitFor(() =>
-        expect(screen.queryByLabelText("Mock lightbox")).not.toBeInTheDocument(),
+        expect(
+          screen.queryByLabelText("Mock lightbox"),
+        ).not.toBeInTheDocument(),
       );
     });
   });
@@ -773,7 +821,9 @@ describe("PiecePhotoGallery", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "1 photo" }));
-    await userEvent.click(screen.getByRole("button", { name: "Delete piece photo 1" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete piece photo 1" }),
+    );
 
     rerender(
       <MemoryRouter initialEntries={["/pieces/piece-1"]}>

@@ -11,7 +11,7 @@ vi.mock("../../util/api", async (importOriginal) => {
       preferences: {
         process_summary_fields: ["piece.name"],
         summary_customize_popover: true,
-          change_alias_prompt: true,
+        change_alias_prompt: true,
       },
     }),
   };
@@ -39,7 +39,7 @@ function renderDialog(activeSectionId: PreferencesSectionId | null) {
           preferences: {
             process_summary_fields: ["piece.name"],
             summary_customize_popover: true,
-              change_alias_prompt: true,
+            change_alias_prompt: true,
           },
         }}
       >
@@ -73,7 +73,7 @@ describe("UserPreferencesDialog", () => {
             preferences: {
               process_summary_fields: ["piece.name"],
               summary_customize_popover: true,
-                change_alias_prompt: true,
+              change_alias_prompt: true,
             },
           }}
         >
@@ -87,7 +87,12 @@ describe("UserPreferencesDialog", () => {
       </PreferencesDialogProvider>,
     );
 
-    await user.click(await screen.findByRole("button", { name: /Process Summary/i, hidden: true }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Process Summary/i,
+        hidden: true,
+      }),
+    );
     expect(onSectionChange).toHaveBeenCalledWith(null);
   });
 
@@ -99,9 +104,13 @@ describe("UserPreferencesDialog", () => {
       screen.getByText("Choose which fields appear in process summaries."),
     ).toBeInTheDocument();
     // Tutorials accordion is collapsed — its checkbox should not be visible.
-    expect(screen.queryByRole("checkbox", { name: /summary customization tip/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("checkbox", { name: /summary customization tip/i }),
+    ).not.toBeInTheDocument();
     // Identity accordion is collapsed — its alias textbox should not be visible.
-    expect(screen.queryByRole("textbox", { name: /alias/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: /alias/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("expands the Tutorials section when routed there", async () => {
@@ -137,7 +146,7 @@ describe("UserPreferencesDialog", () => {
             preferences: {
               process_summary_fields: ["piece.name"],
               summary_customize_popover: true,
-                change_alias_prompt: true,
+              change_alias_prompt: true,
             },
           }}
         >
@@ -157,14 +166,16 @@ describe("UserPreferencesDialog", () => {
         hidden: true,
       }),
     );
-    await user.click(await screen.findByRole("button", { name: /save/i, hidden: true }));
+    await user.click(
+      await screen.findByRole("button", { name: /save/i, hidden: true }),
+    );
 
     await waitFor(() => {
       expect(saveUserPreferences).toHaveBeenCalledWith(
         {
           process_summary_fields: ["piece.name"],
           summary_customize_popover: false,
-            change_alias_prompt: true,
+          change_alias_prompt: true,
         },
         "",
       );
@@ -190,7 +201,7 @@ describe("UserPreferencesDialog", () => {
             preferences: {
               process_summary_fields: ["piece.name"],
               summary_customize_popover: true,
-                change_alias_prompt: true,
+              change_alias_prompt: true,
             },
           }}
         >
@@ -219,7 +230,7 @@ describe("UserPreferencesDialog", () => {
         {
           process_summary_fields: ["piece.name"],
           summary_customize_popover: true,
-            change_alias_prompt: false,
+          change_alias_prompt: false,
         },
         "",
       );
@@ -237,7 +248,9 @@ describe("UserPreferencesDialog", () => {
     // Alias field should be visible.
     expect(screen.getByRole("textbox", { name: /alias/i })).toBeInTheDocument();
     // Tutorials accordion is collapsed — its checkbox should not be visible.
-    expect(screen.queryByRole("checkbox", { name: /summary customization tip/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("checkbox", { name: /summary customization tip/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("saves alias when the alias field is filled in", async () => {
@@ -258,7 +271,7 @@ describe("UserPreferencesDialog", () => {
             preferences: {
               process_summary_fields: ["piece.name"],
               summary_customize_popover: true,
-                change_alias_prompt: true,
+              change_alias_prompt: true,
             },
           }}
         >
@@ -277,7 +290,10 @@ describe("UserPreferencesDialog", () => {
     const aliasInput = await screen.findByRole("textbox", { hidden: true });
     fireEvent.change(aliasInput, { target: { value: "Studio Mug" } });
 
-    const saveButton = await screen.findByRole("button", { name: /save/i, hidden: true });
+    const saveButton = await screen.findByRole("button", {
+      name: /save/i,
+      hidden: true,
+    });
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -290,7 +306,9 @@ describe("UserPreferencesDialog", () => {
   });
 
   it("shows an error message and does not close when saving fails", async () => {
-    const saveUserPreferences = vi.fn().mockRejectedValue(new Error("Server error"));
+    const saveUserPreferences = vi
+      .fn()
+      .mockRejectedValue(new Error("Server error"));
     const onClose = vi.fn();
 
     render(
@@ -310,7 +328,7 @@ describe("UserPreferencesDialog", () => {
               // remount that would detach the save button before it can be clicked.
               process_summary_fields: ["piece.name"],
               summary_customize_popover: true,
-                change_alias_prompt: true,
+              change_alias_prompt: true,
             },
           }}
         >
@@ -326,11 +344,16 @@ describe("UserPreferencesDialog", () => {
 
     // fireEvent bypasses aria-hidden; MUI Dialog's Fade transition keeps content
     // aria-hidden in jsdom so userEvent won't reach it.
-    const saveButton = await screen.findByRole("button", { name: /save/i, hidden: true });
+    const saveButton = await screen.findByRole("button", {
+      name: /save/i,
+      hidden: true,
+    });
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/couldn't save your preferences/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/couldn't save your preferences/i),
+      ).toBeInTheDocument();
       expect(onClose).not.toHaveBeenCalled();
     });
   });

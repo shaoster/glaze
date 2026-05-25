@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Meta, StoryObj } from "@storybook/react";
 import PieceList from "../components/PieceList";
 import { http, HttpResponse } from "msw";
@@ -80,8 +81,10 @@ function makePiece(overrides: Partial<PieceSummary>): PieceSummary {
     last_modified: new Date("2026-05-12"),
     photo_count: 0,
     thumbnail: null,
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    current_state: { state: "designed", created: new Date("2026-05-10") } as any,
+    current_state: {
+      state: "designed",
+      created: new Date("2026-05-10"),
+    } as any,
     current_location: null,
     tags: [],
     shared: false,
@@ -97,8 +100,10 @@ const mockPieces: PieceSummary[] = [
     id: "p1",
     name: "Midnight Bowl",
     thumbnail: null,
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    current_state: { state: "glaze_fired", created: new Date("2026-05-12") } as any,
+    current_state: {
+      state: "glaze_fired",
+      created: new Date("2026-05-12"),
+    } as any,
     current_location: "Finished Goods Shelf",
     tags: [{ id: "t1", name: "midnight", color: "#121232", is_public: true }],
   }),
@@ -106,8 +111,10 @@ const mockPieces: PieceSummary[] = [
     id: "p2",
     name: "Spring Plate",
     thumbnail: null,
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    current_state: { state: "bisque_fired", created: new Date("2026-05-09") } as any,
+    current_state: {
+      state: "bisque_fired",
+      created: new Date("2026-05-09"),
+    } as any,
     current_location: "Bisque Shelf",
     tags: [{ id: "t2", name: "spring", color: "#8eb89a", is_public: true }],
     shared: true,
@@ -121,8 +128,10 @@ const mixedCropPieces: PieceSummary[] = [
   makePiece({
     id: "m1",
     name: "Tall Pitcher",
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    current_state: { state: "designed", created: new Date("2026-05-01") } as any,
+    current_state: {
+      state: "designed",
+      created: new Date("2026-05-01"),
+    } as any,
     thumbnail: {
       url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
       cloudinary_public_id: "sample",
@@ -133,14 +142,15 @@ const mixedCropPieces: PieceSummary[] = [
   makePiece({
     id: "m2",
     name: "Wide Tray",
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    current_state: { state: "bisque_fired", created: new Date("2026-05-02") } as any,
+    current_state: {
+      state: "bisque_fired",
+      created: new Date("2026-05-02"),
+    } as any,
     thumbnail: null, // no crop — falls back to 4:3 shell
   }),
   makePiece({
     id: "m3",
     name: "Round Mug",
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     current_state: { state: "glazed", created: new Date("2026-05-03") } as any,
     thumbnail: {
       url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
@@ -152,16 +162,22 @@ const mixedCropPieces: PieceSummary[] = [
   makePiece({
     id: "m4",
     name: "Shallow Bowl",
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    current_state: { state: "designed", created: new Date("2026-05-04") } as any,
+    current_state: {
+      state: "designed",
+      created: new Date("2026-05-04"),
+    } as any,
     thumbnail: null, // no crop — falls back to 4:3 shell
-    tags: [{ id: "tg1", name: "functional", color: "#E76F51", is_public: false }],
+    tags: [
+      { id: "tg1", name: "functional", color: "#E76F51", is_public: false },
+    ],
   }),
   makePiece({
     id: "m5",
     name: "Landscape Platter",
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    current_state: { state: "completed", created: new Date("2026-05-05") } as any,
+    current_state: {
+      state: "completed",
+      created: new Date("2026-05-05"),
+    } as any,
     thumbnail: {
       url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
       cloudinary_public_id: "sample",
@@ -172,8 +188,10 @@ const mixedCropPieces: PieceSummary[] = [
   makePiece({
     id: "m6",
     name: "Untagged Vase",
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    current_state: { state: "bisque_fired", created: new Date("2026-05-06") } as any,
+    current_state: {
+      state: "bisque_fired",
+      created: new Date("2026-05-06"),
+    } as any,
     thumbnail: null,
   }),
 ];
@@ -184,10 +202,22 @@ const mixedCropPieces: PieceSummary[] = [
 // useContainerPosition still returned width=0, so masonic measured Phase-1
 // items at columnWidth=0 and the thumbnail shell collapsed to 0 px.
 // This dataset exercises that path at realistic scale.
-type ThumbnailCrop = { x: number; y: number; width: number; height: number } | null;
+type ThumbnailCrop = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} | null;
 
 const largePieceDataset: PieceSummary[] = Array.from({ length: 24 }, (_, i) => {
-  const states = ["designed", "bisque_fired", "glazed", "glaze_fired", "completed", "touching_up"] as const;
+  const states = [
+    "designed",
+    "bisque_fired",
+    "glazed",
+    "glaze_fired",
+    "completed",
+    "touching_up",
+  ] as const;
   const crops: ThumbnailCrop[] = [
     { x: 0.05, y: 0.0, width: 0.45, height: 0.92 }, // portrait
     null,
@@ -213,8 +243,10 @@ const largePieceDataset: PieceSummary[] = Array.from({ length: 24 }, (_, i) => {
   return makePiece({
     id: `lp${i}`,
     name: `Piece ${i + 1}`,
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    current_state: { state: states[i % states.length], created: new Date("2026-05-01") } as any,
+    current_state: {
+      state: states[i % states.length],
+      created: new Date("2026-05-01"),
+    } as any,
     thumbnail: {
       url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
       cloudinary_public_id: "sample",
@@ -231,8 +263,10 @@ const firstLoadOverlapPieces: PieceSummary[] = [
   makePiece({
     id: "r1",
     name: "Tall Pitcher",
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    current_state: { state: "designed", created: new Date("2026-05-01") } as any,
+    current_state: {
+      state: "designed",
+      created: new Date("2026-05-01"),
+    } as any,
     thumbnail: {
       url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
       cloudinary_public_id: "sample",
@@ -243,15 +277,19 @@ const firstLoadOverlapPieces: PieceSummary[] = [
   makePiece({
     id: "r2",
     name: "Uncropped Vase",
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    current_state: { state: "bisque_fired", created: new Date("2026-05-02") } as any,
+    current_state: {
+      state: "bisque_fired",
+      created: new Date("2026-05-02"),
+    } as any,
     thumbnail: null,
   }),
   makePiece({
     id: "r3",
     name: "Uncropped Bowl",
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    current_state: { state: "glaze_fired", created: new Date("2026-05-03") } as any,
+    current_state: {
+      state: "glaze_fired",
+      created: new Date("2026-05-03"),
+    } as any,
     thumbnail: null,
   }),
 ];
@@ -292,7 +330,10 @@ export const MixedCropAndNoCrop: Story = {
     msw: {
       handlers: [
         http.get("/api/pieces/", () =>
-          HttpResponse.json({ count: mixedCropPieces.length, results: mixedCropPieces }),
+          HttpResponse.json({
+            count: mixedCropPieces.length,
+            results: mixedCropPieces,
+          }),
         ),
       ],
     },
@@ -388,9 +429,7 @@ export const Loading: Story = {
   },
   parameters: {
     msw: {
-      handlers: [
-        http.get("/api/pieces/", () => new Promise(() => {})),
-      ],
+      handlers: [http.get("/api/pieces/", () => new Promise(() => {}))],
     },
   },
 };

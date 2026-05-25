@@ -15,13 +15,13 @@ vi.mock("../../components/CloudinaryImage", () => ({
 describe("AnalyzePage", () => {
   it("renders AnalysisIndex by default", async () => {
     vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue([]);
-    
+
     render(
       <MemoryRouter initialEntries={["/analyze"]}>
         <Routes>
           <Route path="/analyze/*" element={<AnalyzePage />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(await screen.findByText("Glaze Combinations")).toBeInTheDocument();
@@ -29,16 +29,18 @@ describe("AnalyzePage", () => {
 
   it("renders GlazeCombinationGallery on sub-route with back button", async () => {
     vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue([]);
-    
+
     render(
       <MemoryRouter initialEntries={["/analyze/glaze-combinations"]}>
         <Routes>
           <Route path="/analyze/*" element={<AnalyzePage />} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("link", { name: /back/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("link", { name: /back/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Glaze Combinations")).toBeInTheDocument();
   });
 });

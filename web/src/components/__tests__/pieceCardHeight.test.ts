@@ -97,10 +97,13 @@ describe("getPieceCardLayout", () => {
     expect(layout).toEqual({
       thumbnailAspectRatio: `${DEFAULT_THUMBNAIL_ASPECT_WIDTH} / ${DEFAULT_THUMBNAIL_ASPECT_HEIGHT}`,
       estimatedHeight:
-        Math.round((240 * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) / DEFAULT_THUMBNAIL_ASPECT_WIDTH) +
-        CARD_CHROME_HEIGHT,
+        Math.round(
+          (240 * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) /
+            DEFAULT_THUMBNAIL_ASPECT_WIDTH,
+        ) + CARD_CHROME_HEIGHT,
       requestedHeight: Math.round(
-        (240 * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) / DEFAULT_THUMBNAIL_ASPECT_WIDTH,
+        (240 * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) /
+          DEFAULT_THUMBNAIL_ASPECT_WIDTH,
       ),
     });
   });

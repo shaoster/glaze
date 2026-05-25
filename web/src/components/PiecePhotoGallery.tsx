@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+  Navigate,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
 import PhotoLibraryOutlinedIcon from "@mui/icons-material/PhotoLibraryOutlined";
 import {
@@ -61,9 +66,9 @@ export function PiecePhotoGalleryButton({
   // Strip the internal fromLightbox flag before forwarding state — keeps
   // fromGallery/returnTo alive so PieceDetailPage's back button stays correct.
   const outerState = Object.fromEntries(
-    Object.entries((location.state as Record<string, unknown> | null) ?? {}).filter(
-      ([k]) => k !== "fromLightbox",
-    ),
+    Object.entries(
+      (location.state as Record<string, unknown> | null) ?? {},
+    ).filter(([k]) => k !== "fromLightbox"),
   );
 
   const photoCount = images.length;
@@ -142,9 +147,9 @@ export default function PiecePhotoGallery({
   // Strip the internal fromLightbox flag before forwarding state — keeps
   // fromGallery/returnTo alive so PieceDetailPage's back button stays correct.
   const outerState = Object.fromEntries(
-    Object.entries((location.state as Record<string, unknown> | null) ?? {}).filter(
-      ([k]) => k !== "fromLightbox",
-    ),
+    Object.entries(
+      (location.state as Record<string, unknown> | null) ?? {},
+    ).filter(([k]) => k !== "fromLightbox"),
   );
 
   const atGallery = location.pathname === galleryPath;
@@ -303,8 +308,7 @@ export default function PiecePhotoGallery({
     try {
       await persistCurrentStateImages(
         editableCurrentStateImages.filter(
-          (_editableImage, index) =>
-            index !== image.editableCurrentStateIndex,
+          (_editableImage, index) => index !== image.editableCurrentStateIndex,
         ),
       );
       if (lightboxIndex === deleteDialogIndex) {

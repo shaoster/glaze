@@ -6,12 +6,12 @@ import Button from "@mui/material/Button";
 
 /**
  * GlobalEntryDialog provides a searchable selection interface for global domain entities.
- * 
+ *
  * Rationale:
  * - Implemented in Issue #150 to replace simple dropdowns with a rich, searchable modal.
  * - Supports inline creation of new entries (Issue #185) when allowed by the workflow.
  * - Handles favorites and filtering for complex entities like Glaze Combinations (Issue #342).
- * 
+ *
  * Edge cases:
  * - Empty state: Shows a clear message when no entries match the current search filter.
  * - Inline creation: Displays a form to add a new entry if the user has permissions.
@@ -47,7 +47,9 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function GlobalEntryDialogWithState(args: React.ComponentProps<typeof GlobalEntryDialog>) {
+function GlobalEntryDialogWithState(
+  args: React.ComponentProps<typeof GlobalEntryDialog>,
+) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -78,9 +80,24 @@ export const Default: Story = {
       handlers: [
         http.get("/api/globals/location/", () => {
           return HttpResponse.json([
-            { id: "l1", name: "Studio Shelf A", is_public: false, is_favorite: true },
-            { id: "l2", name: "Kiln Room", is_public: false, is_favorite: false },
-            { id: "l3", name: "Drying Rack", is_public: false, is_favorite: false },
+            {
+              id: "l1",
+              name: "Studio Shelf A",
+              is_public: false,
+              is_favorite: true,
+            },
+            {
+              id: "l2",
+              name: "Kiln Room",
+              is_public: false,
+              is_favorite: false,
+            },
+            {
+              id: "l3",
+              name: "Drying Rack",
+              is_public: false,
+              is_favorite: false,
+            },
           ]);
         }),
       ],
@@ -106,8 +123,18 @@ export const GlazeCombinations: Story = {
       handlers: [
         http.get("/api/globals/glaze_combination/", () => {
           return HttpResponse.json([
-            { id: "gc1", name: "Midnight Blue", is_public: true, is_favorite: true },
-            { id: "gc2", name: "Celadon Crackle", is_public: true, is_favorite: false },
+            {
+              id: "gc1",
+              name: "Midnight Blue",
+              is_public: true,
+              is_favorite: true,
+            },
+            {
+              id: "gc2",
+              name: "Celadon Crackle",
+              is_public: true,
+              is_favorite: false,
+            },
             { id: "gc3", name: "Temmoku", is_public: true, is_favorite: true },
           ]);
         }),

@@ -128,13 +128,21 @@ describe("PieceListPage", () => {
 
   it("shows a loading spinner while pieces are loading", () => {
     mockFetchPieces.mockReturnValue(new Promise(() => {}));
-    render(<MemoryRouter><PieceListPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <PieceListPage />
+      </MemoryRouter>,
+    );
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
   it("shows an error message when loading pieces fails", async () => {
     mockFetchPieces.mockRejectedValue(new Error("boom"));
-    render(<MemoryRouter><PieceListPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <PieceListPage />
+      </MemoryRouter>,
+    );
     await waitFor(() => {
       expect(screen.getByText("Failed to load pieces.")).toBeInTheDocument();
     });
@@ -142,7 +150,11 @@ describe("PieceListPage", () => {
 
   it("renders pieces after successful load", async () => {
     mockFetchPieces.mockResolvedValue({ count: 1, results: [EXISTING_PIECE] });
-    render(<MemoryRouter><PieceListPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <PieceListPage />
+      </MemoryRouter>,
+    );
     await waitFor(() => {
       expect(screen.getByText("Existing Bowl")).toBeInTheDocument();
     });
@@ -150,7 +162,11 @@ describe("PieceListPage", () => {
 
   it("opens the dialog from the desktop button and prepends created pieces", async () => {
     mockFetchPieces.mockResolvedValue({ count: 1, results: [EXISTING_PIECE] });
-    render(<MemoryRouter><PieceListPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <PieceListPage />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => screen.getByText("Existing Bowl"));
 
@@ -162,25 +178,39 @@ describe("PieceListPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("piece-list").textContent).toContain("Fresh Mug");
+      expect(screen.getByTestId("piece-list").textContent).toContain(
+        "Fresh Mug",
+      );
     });
-    expect(screen.getByTestId("piece-list").textContent).toContain("Existing Bowl");
+    expect(screen.getByTestId("piece-list").textContent).toContain(
+      "Existing Bowl",
+    );
   });
 
   it("shows the mobile fab on small screens", async () => {
     installMatchMedia(true);
     mockFetchPieces.mockResolvedValue({ count: 0, results: [] });
-    render(<MemoryRouter><PieceListPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <PieceListPage />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => screen.getByTestId("piece-list"));
 
-    const newPieceButtons = screen.getAllByRole("button", { name: "New Piece" });
+    const newPieceButtons = screen.getAllByRole("button", {
+      name: "New Piece",
+    });
     expect(newPieceButtons.length).toBeGreaterThanOrEqual(1);
   });
 
   it("re-fetches with new sort order when sort changes", async () => {
     mockFetchPieces.mockResolvedValue({ count: 1, results: [EXISTING_PIECE] });
-    render(<MemoryRouter><PieceListPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <PieceListPage />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => screen.getByTestId("piece-list"));
 
@@ -195,8 +225,9 @@ describe("PieceListPage", () => {
   });
 
   it("keeps the current list mounted while refreshing a new sort order", async () => {
-    let resolveSortedPage: ((value: { count: number; results: PieceSummary[] }) => void) | null =
-      null;
+    let resolveSortedPage:
+      | ((value: { count: number; results: PieceSummary[] }) => void)
+      | null = null;
 
     mockFetchPieces
       .mockResolvedValueOnce({ count: 1, results: [EXISTING_PIECE] })
@@ -207,7 +238,11 @@ describe("PieceListPage", () => {
           }),
       );
 
-    render(<MemoryRouter><PieceListPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <PieceListPage />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => screen.getByText("Existing Bowl"));
     await userEvent.click(screen.getByRole("button", { name: "Sort by Name" }));
@@ -234,7 +269,11 @@ describe("PieceListPage", () => {
       name: `Piece ${i}`,
     }));
     mockFetchPieces.mockResolvedValueOnce({ count: 6, results: firstPage });
-    render(<MemoryRouter><PieceListPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <PieceListPage />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => screen.getByTestId("piece-list"));
 

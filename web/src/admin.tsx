@@ -133,7 +133,9 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
     pieceState.notes = "";
   }
 
-  const globalRefValues = rawState.global_ref_values as Record<string, unknown> | undefined;
+  const globalRefValues = rawState.global_ref_values as
+    | Record<string, unknown>
+    | undefined;
   if (globalRefValues) {
     pieceState.custom_fields = {
       ...pieceState.custom_fields,
@@ -143,7 +145,9 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
 
   const theme = createAdminTheme(themeMode);
 
-  const wrappedSaveStateFn = async (payload: UpdateStatePayload): Promise<PieceDetail> => {
+  const wrappedSaveStateFn = async (
+    payload: UpdateStatePayload,
+  ): Promise<PieceDetail> => {
     if (options.saveStateFn) {
       await options.saveStateFn(payload);
     }
@@ -183,7 +187,7 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
           />
         </ScopedCssBaseline>
       </ThemeProvider>
-    </React.StrictMode>
+    </React.StrictMode>,
   );
 
   return () => {

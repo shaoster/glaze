@@ -45,7 +45,9 @@ describe("PiecePhotoGalleryGrid", () => {
       />,
     );
 
-    expect(screen.getByText("No images for this piece yet.")).toBeInTheDocument();
+    expect(
+      screen.getByText("No images for this piece yet."),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
@@ -99,7 +101,9 @@ describe("PiecePhotoGalleryGrid", () => {
       />,
     );
 
-    const deleteButtons = screen.getAllByRole("button", { name: /delete piece photo/i });
+    const deleteButtons = screen.getAllByRole("button", {
+      name: /delete piece photo/i,
+    });
     expect(deleteButtons).toHaveLength(2);
 
     // First button (thumbnail) should be disabled

@@ -73,17 +73,17 @@ class WorkflowStateWidget(forms.Widget):
             Loading custom fields...
         </div>
         <input type="hidden" name="{name}" id="id_{name}" value="">
-        
+
         <script type="module">
             // Use dynamic import to catch errors and ensure predictable execution
             import {{ mountWorkflowStateWidget }} from "{js_url}";
-            
+
             const mount = () => {{
                 try {{
                     if (typeof mountWorkflowStateWidget !== 'function') {{
                         throw new Error("mountWorkflowStateWidget is not a function (is: " + typeof mountWorkflowStateWidget + ")");
                     }}
-                    
+
                     const initialState = JSON.parse(document.getElementById('{state_script_id}').textContent);
                     const uiSchema = JSON.parse(document.getElementById('{schema_script_id}').textContent);
                     document.getElementById('id_{name}').value = JSON.stringify(initialState);
@@ -103,15 +103,15 @@ class WorkflowStateWidget(forms.Widget):
                         saveStateFn: (payload) => {{
                             // Also update on explicit save (though autosave is disabled)
                             document.getElementById('id_{name}').value = JSON.stringify(payload);
-                            return Promise.resolve({{}}); 
+                            return Promise.resolve({{}});
                         }}
                     }});
                 }} catch (e) {{
                     console.error("Failed to mount WorkflowState widget:", e);
-                    document.getElementById('{container_id}').innerHTML = 
+                    document.getElementById('{container_id}').innerHTML =
                         '<div style="color: red; padding: 10px;">' +
-                        '<strong>Error loading workflow fields:</strong><br>' + 
-                        e.message + 
+                        '<strong>Error loading workflow fields:</strong><br>' +
+                        e.message +
                         '<br><br>Check browser console for details.' +
                         '</div>';
                 }}

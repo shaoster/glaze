@@ -1,12 +1,10 @@
 from pathlib import Path
 
 import jsonschema
-import pytest
 import yaml
 
 from api.preferences import (
     UserPreferencesSerializer,
-    get_preferences_config,
     get_tutorials_config,
 )
 
@@ -67,8 +65,7 @@ def test_user_preferences_serializer_validation():
     assert serializer.is_valid(), serializer.errors
     assert serializer.validated_data["alias"] == "New Name"
     assert (
-        serializer.validated_data["preferences"]["summary_customize_popover"]
-        is False
+        serializer.validated_data["preferences"]["summary_customize_popover"] is False
     )
 
 

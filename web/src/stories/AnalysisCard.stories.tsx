@@ -4,11 +4,11 @@ import TimelineIcon from "@mui/icons-material/Timeline";
 
 /**
  * AnalysisCard is a navigation and summary component used on the Analyze dashboard.
- * 
+ *
  * Rationale:
  * - Introduced in Issue #371 to provide a high-level entry point for different analysis tools.
  * - Designed to be visually consistent with other dashboard cards while highlighting key metrics.
- * 
+ *
  * Edge cases:
  * - Missing Metrics: Layout handles cases where specific metric strings are not provided.
  * - Long Titles: Text is truncated or wrapped to maintain card integrity.
@@ -28,7 +28,8 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     title: "Glaze Combinations",
-    description: "Explore and analyze successful glaze recipes and their interactions.",
+    description:
+      "Explore and analyze successful glaze recipes and their interactions.",
     summary: <TimelineIcon />,
     to: "/analyze/glaze-combinations",
   },

@@ -24,7 +24,9 @@ def validate_workflow_fields(values: list[str]) -> None:
     valid_refs = get_all_field_refs()
     for val in values:
         if val not in valid_refs:
-            raise serializers.ValidationError(f"Invalid workflow field reference: {val}")
+            raise serializers.ValidationError(
+                f"Invalid workflow field reference: {val}"
+            )
 
 
 def get_preferences_config() -> dict[str, Any]:

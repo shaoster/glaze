@@ -1,14 +1,14 @@
 import json
 import os
 import re
-from urllib.parse import urlencode
 from typing import Any, ClassVar
+from urllib.parse import urlencode
 
 import cloudinary
 from adminsortable2.admin import SortableAdminBase, SortableInlineAdminMixin
 from cloudinary import CloudinaryImage
-from django.conf import settings
 from django import forms
+from django.conf import settings
 from django.contrib import admin
 from django.forms import widgets
 from django.http import HttpRequest, HttpResponseRedirect
@@ -101,7 +101,10 @@ class GlazeAdminSite(admin.AdminSite):
         shared session.
         """
         request_host = request.get_host().split(":", 1)[0]
-        if not request.user.is_authenticated and request_host == settings.ADMIN_INGRESS_HOST:
+        if (
+            not request.user.is_authenticated
+            and request_host == settings.ADMIN_INGRESS_HOST
+        ):
             apex_host = request_host.removeprefix("admin.")
             if apex_host and apex_host != request_host:
                 next_path = request.GET.get("next") or request.get_full_path()

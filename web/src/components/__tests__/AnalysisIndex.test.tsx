@@ -15,11 +15,11 @@ vi.mock("../CloudinaryImage", () => ({
 describe("AnalysisIndex", () => {
   it("renders analysis cards", () => {
     vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue([]);
-    
+
     render(
       <MemoryRouter>
         <AnalysisIndex />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText("Glaze Combinations")).toBeInTheDocument();

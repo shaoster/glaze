@@ -115,10 +115,7 @@ export default function CloudinaryCleanupPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(PAGE_SIZE_OPTIONS[0]);
 
-  const assets = useMemo(
-    () => scanResult?.assets ?? [],
-    [scanResult],
-  );
+  const assets = useMemo(() => scanResult?.assets ?? [], [scanResult]);
   const pageAssets = useMemo(
     () => assets.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
     [assets, page, rowsPerPage],

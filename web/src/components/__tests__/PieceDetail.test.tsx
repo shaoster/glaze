@@ -342,7 +342,9 @@ describe("PieceDetail", () => {
     vi.mocked(api.updatePiece).mockResolvedValue(updated);
     const onPieceUpdated = vi.fn();
     await renderPieceDetail(undefined, onPieceUpdated);
-    fireEvent.click(screen.getByRole("button", { name: "Browse Current location" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Browse Current location" }),
+    );
     await waitFor(() =>
       expect(screen.getByText("Studio 7")).toBeInTheDocument(),
     );
@@ -362,16 +364,16 @@ describe("PieceDetail", () => {
     vi.mocked(api.updatePiece).mockRejectedValue(new Error("Network error"));
 
     await renderPieceDetail();
-    fireEvent.click(screen.getByRole("button", { name: "Browse Current location" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Browse Current location" }),
+    );
     await waitFor(() =>
       expect(screen.getByText("Studio 7")).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByText("Studio 7"));
 
     await waitFor(() =>
-      expect(
-        screen.getByText("Network error"),
-      ).toBeInTheDocument(),
+      expect(screen.getByText("Network error")).toBeInTheDocument(),
     );
   });
 
@@ -746,9 +748,7 @@ describe("PieceDetail", () => {
       fireEvent.click(screen.getByRole("button", { name: "Save name" }));
 
       await waitFor(() =>
-        expect(
-          screen.getByText("Network error"),
-        ).toBeInTheDocument(),
+        expect(screen.getByText("Network error")).toBeInTheDocument(),
       );
       expect(
         screen.getByRole("textbox", { name: "Piece name" }),
@@ -784,7 +784,9 @@ describe("PieceDetail", () => {
         await router.navigate("/other");
       });
 
-      fireEvent.click(screen.getByRole("button", { name: "Leave without saving" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Leave without saving" }),
+      );
 
       await waitFor(() =>
         expect(screen.getByText("Elsewhere")).toBeInTheDocument(),
@@ -845,7 +847,9 @@ describe("PieceDetail", () => {
       const updated = makePiece({ is_editable: true });
       vi.mocked(api.updatePiece).mockResolvedValueOnce(updated);
       await renderPieceDetail(makePiece({ is_editable: false }));
-      fireEvent.click(screen.getByRole("button", { name: /edit piece history/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /edit piece history/i }),
+      );
       await waitFor(() => {
         expect(api.updatePiece).toHaveBeenCalledWith(
           "piece-id-1",
@@ -860,7 +864,11 @@ describe("PieceDetail", () => {
       const updated = makePiece({ is_editable: false });
       vi.mocked(api.updatePiece).mockResolvedValueOnce(updated);
       await renderPieceDetail(
-        makePiece({ is_editable: true, history: [designed], current_state: thrown }),
+        makePiece({
+          is_editable: true,
+          history: [designed],
+          current_state: thrown,
+        }),
       );
       fireEvent.click(screen.getByRole("button", { name: /seal changes/i }));
       await waitFor(() => {
@@ -929,10 +937,14 @@ describe("PieceDetail", () => {
 
     it("disables 'Edit piece history' button when piece is shared", async () => {
       await renderPieceDetail(makePiece({ is_editable: false, shared: true }));
-      const editBtn = screen.getByRole("button", { name: /edit piece history/i });
+      const editBtn = screen.getByRole("button", {
+        name: /edit piece history/i,
+      });
       expect(editBtn).toBeDisabled();
       expect(
-        screen.getByText(/this piece is publicly shared. unshare it to edit history./i),
+        screen.getByText(
+          /this piece is publicly shared. unshare it to edit history./i,
+        ),
       ).toBeInTheDocument();
     });
 
@@ -946,7 +958,9 @@ describe("PieceDetail", () => {
       };
       vi.mocked(api.updatePiece).mockRejectedValueOnce(errorResponse);
       await renderPieceDetail(makePiece({ is_editable: false }));
-      fireEvent.click(screen.getByRole("button", { name: /edit piece history/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /edit piece history/i }),
+      );
 
       await waitFor(() => {
         expect(
@@ -971,11 +985,12 @@ describe("PieceDetail", () => {
       const textarea = screen.getByPlaceholderText(/tell the story/i);
       fireEvent.change(textarea, { target: { value: "New story" } });
 
-      await waitFor(() =>
-        expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
-          showcase_story: "New story",
-        }),
-        { timeout: 3000 }
+      await waitFor(
+        () =>
+          expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
+            showcase_story: "New story",
+          }),
+        { timeout: 3000 },
       );
       expect(onPieceUpdated).toHaveBeenCalledWith(updatedPiece);
     });
@@ -1001,10 +1016,12 @@ describe("PieceDetail", () => {
       expect(screen.getByText(/rewound to: designing/i)).toBeInTheDocument();
 
       // Clear rewind mode via the Chip's delete button
-      const chip = screen.getByRole("button", { name: /rewound to: designing/i });
+      const chip = screen.getByRole("button", {
+        name: /rewound to: designing/i,
+      });
       const clearButton = within(chip).getByTestId("CancelIcon");
       fireEvent.click(clearButton);
-      
+
       expect(
         screen.queryByText(/rewound to: designing/i),
       ).not.toBeInTheDocument();
@@ -1033,17 +1050,19 @@ describe("PieceDetail", () => {
 
       // Find the Notes input within the active historical editor
       // It's in the section card that has "Rewound to: ..."
-      const historicalEditor = screen.getByText(/Editing historical state/i).parentElement!.parentElement!;
+      const historicalEditor = screen.getByText(/Editing historical state/i)
+        .parentElement!.parentElement!;
       const notesInput = within(historicalEditor).getByLabelText("Notes");
       fireEvent.change(notesInput, { target: { value: "new" } });
 
-      await waitFor(() =>
-        expect(api.updatePastState).toHaveBeenCalledWith(
-          "piece-id-1",
-          "s1",
-          expect.anything(),
-        ),
-        { timeout: 3000 }
+      await waitFor(
+        () =>
+          expect(api.updatePastState).toHaveBeenCalledWith(
+            "piece-id-1",
+            "s1",
+            expect.anything(),
+          ),
+        { timeout: 3000 },
       );
     });
   });

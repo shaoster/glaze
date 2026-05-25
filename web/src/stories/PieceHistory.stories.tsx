@@ -6,12 +6,12 @@ import { http, HttpResponse } from "msw";
 
 /**
  * PieceHistory renders the vertical timeline of all states a piece has transitioned through.
- * 
+ *
  * Rationale:
  * - Redesigned in Issue #396 to allow editing of historical timestamps.
  * - Supports "Timeline Rewind" (Issue #312), allowing users to view the piece as it existed in the past.
  * - In edit mode, provides affordances for deleting states or inserting missing ones.
- * 
+ *
  * Edge cases:
  * - Read-only: Timeline items are clickable for rewinding but not editable.
  * - Rewound State: Visual highlighting of the currently selected historical state.

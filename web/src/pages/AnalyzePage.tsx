@@ -26,7 +26,8 @@ function SubRouteHeader({ title }: { title: string }) {
 
 export default function AnalyzePage() {
   const location = useLocation();
-  const isIndex = location.pathname === "/analyze" || location.pathname === "/analyze/";
+  const isIndex =
+    location.pathname === "/analyze" || location.pathname === "/analyze/";
 
   return (
     <Box>
@@ -40,7 +41,10 @@ export default function AnalyzePage() {
       )}
       <Routes>
         <Route index element={<AnalysisIndex />} />
-        <Route path="glaze-combinations" element={<GlazeCombinationGallery />} />
+        <Route
+          path="glaze-combinations"
+          element={<GlazeCombinationGallery />}
+        />
       </Routes>
     </Box>
   );

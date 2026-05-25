@@ -5,11 +5,11 @@ import { http, HttpResponse } from "msw";
 
 /**
  * GlobalEntryField is a specialized input component for selecting global domain entities.
- * 
+ *
  * Rationale:
  * - Refactored in Issue #396 to use TextField as base for perfect grid alignment.
  * - Integrates with GlobalEntryDialog to provide a rich search/selection experience.
- * 
+ *
  * Edge cases:
  * - Disabled: Disables both the input and the "Browse/Change" action.
  * - Long Values: Uses MUI Chips to display the current selection, handling overflow gracefully.

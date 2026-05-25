@@ -26,7 +26,7 @@ $defs:
       id:
         type: string
         description: Snake-case identifier for the section.
-        pattern: '^[a-z][a-z0-9_-]*$'
+        pattern: "^[a-z][a-z0-9_-]*$"
       title:
         type: string
         description: Display title for the section.
@@ -38,7 +38,7 @@ $defs:
         description: Map of field_id to field definition.
         minProperties: 1
         propertyNames:
-          pattern: '^[a-z][a-z0-9_]*$'
+          pattern: "^[a-z][a-z0-9_]*$"
         additionalProperties:
           $ref: "#/$defs/field"
 

@@ -55,6 +55,9 @@ from .models import (
     PieceState,
     models,
 )
+from .preferences import (
+    SavedUserPreferencesSerializer,
+)
 from .serializer_registry import _GLOBAL_ENTRY_SERIALIZERS, global_entry_serializer
 from .utils import (
     captioned_image_to_dict,
@@ -971,12 +974,6 @@ def _replace_piece_tags(piece: Piece, user, tag_ids: list[str]) -> None:
     piece_tag_model.objects.filter(piece=piece).delete()
     for order, tag_id in enumerate(tag_ids):
         piece_tag_model.objects.create(piece=piece, tag=tags_by_id[tag_id], order=order)
-
-
-from .preferences import (
-    SavedUserPreferencesSerializer,
-    UserPreferencesSerializer,
-)
 
 
 class AuthUserSerializer(serializers.Serializer):

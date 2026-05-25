@@ -124,18 +124,24 @@ describe("CloudinaryCleanupPage", () => {
     });
 
     const selectAllCheckbox = screen.getByLabelText("Select all on this page");
-    
+
     // Deselect all
     fireEvent.click(selectAllCheckbox);
-    expect(screen.getByRole("button", { name: /Delete Selected \(0\)/i })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: /Delete Selected \(0\)/i }),
+    ).toBeDefined();
 
     // Select all
     fireEvent.click(selectAllCheckbox);
-    expect(screen.getByRole("button", { name: /Delete Selected \(2\)/i })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: /Delete Selected \(2\)/i }),
+    ).toBeDefined();
   });
 
   it("handles scan failure", async () => {
-    vi.mocked(api.scanCloudinaryCleanupAssets).mockRejectedValue(new Error("Network Error"));
+    vi.mocked(api.scanCloudinaryCleanupAssets).mockRejectedValue(
+      new Error("Network Error"),
+    );
 
     render(
       <MemoryRouter>
@@ -147,7 +153,9 @@ describe("CloudinaryCleanupPage", () => {
     fireEvent.click(scanButton);
 
     await waitFor(() => {
-      expect(screen.getByText("Unable to scan Cloudinary assets.")).toBeDefined();
+      expect(
+        screen.getByText("Unable to scan Cloudinary assets."),
+      ).toBeDefined();
     });
   });
 
@@ -175,7 +183,9 @@ describe("CloudinaryCleanupPage", () => {
       },
     });
 
-    vi.mocked(api.deleteCloudinaryCleanupAssets).mockRejectedValue(new Error("Network Error"));
+    vi.mocked(api.deleteCloudinaryCleanupAssets).mockRejectedValue(
+      new Error("Network Error"),
+    );
 
     render(
       <MemoryRouter>
@@ -199,7 +209,9 @@ describe("CloudinaryCleanupPage", () => {
     fireEvent.click(confirmButton);
 
     await waitFor(() => {
-      expect(screen.getByText("Unable to delete the selected assets.")).toBeDefined();
+      expect(
+        screen.getByText("Unable to delete the selected assets."),
+      ).toBeDefined();
     });
   });
 });
