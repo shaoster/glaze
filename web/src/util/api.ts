@@ -85,14 +85,9 @@ export type AuthUser = {
 
 export type TutorialVisibility = boolean;
 
-export type UserTutorialPreferences = {
-  [key in TutorialToggleKey]: TutorialVisibility;
-};
-
 export type UserPreferences = {
   process_summary_fields: string[];
-  tutorials: UserTutorialPreferences;
-};
+} & Record<string, any>;
 
 const client = axios.create({ baseURL: "/api/" });
 client.defaults.withCredentials = true;
@@ -238,31 +233,23 @@ function mapPieceDetail(raw: Wire<PieceDetail>): PieceDetail {
   };
 }
 
-function normalizeUserTutorialPreferences(
-  tutorials:
-    | Partial<Record<TutorialToggleKey, boolean>>
-    | null
-    | undefined,
-): UserTutorialPreferences {
-  return Object.fromEntries(
-    TUTORIAL_TOGGLE_VALUES.map((key) => [
-      key,
-      tutorials?.[key] ?? true,
-    ]),
-  ) as UserTutorialPreferences;
-}
-
 function normalizeUserPreferences(
   preferences: Partial<UserPreferences> | null | undefined,
 ): UserPreferences {
-  return {
+  const normalized: UserPreferences = {
     process_summary_fields: Array.isArray(preferences?.process_summary_fields)
       ? preferences.process_summary_fields.filter(
           (value): value is string => typeof value === "string",
         )
       : [],
-    tutorials: normalizeUserTutorialPreferences(preferences?.tutorials),
   };
+
+  // Normalize tutorial flags (default to true if missing)
+  for (const key of TUTORIAL_TOGGLE_VALUES) {
+    normalized[key] = preferences?.[key] ?? true;
+  }
+
+  return normalized;
 }
 
 function normalizeAuthUser(raw: AuthUser): AuthUser {

@@ -336,10 +336,8 @@ describe("auth endpoints", () => {
     alias: "",
     preferences: {
       process_summary_fields: [],
-      tutorials: {
-        summary_customize_popover: true,
+      summary_customize_popover: true,
         change_alias_prompt: true,
-      },
     },
   };
 
@@ -473,10 +471,8 @@ describe("auth endpoints", () => {
       alias: "",
       preferences: {
         process_summary_fields: ["piece.name"],
-        tutorials: {
-          summary_customize_popover: true,
+        summary_customize_popover: true,
           change_alias_prompt: true,
-        },
       },
     });
     expect(mockClient.get).toHaveBeenCalledWith("auth/preferences/");
@@ -497,10 +493,8 @@ describe("auth endpoints", () => {
       ...authUser,
       preferences: {
         process_summary_fields: ["piece.name"],
-        tutorials: {
-          summary_customize_popover: true,
+        summary_customize_popover: true,
           change_alias_prompt: true,
-        },
       },
     });
   });
@@ -513,10 +507,8 @@ describe("auth endpoints", () => {
         alias: "",
         preferences: {
           process_summary_fields: ["piece.created"],
-          tutorials: {
-            summary_customize_popover: true,
+          summary_customize_popover: true,
             change_alias_prompt: true,
-          },
         },
       },
     });
@@ -524,29 +516,23 @@ describe("auth endpoints", () => {
     await expect(
       updateUserPreferences({
         process_summary_fields: ["piece.created"],
-      tutorials: {
-        summary_customize_popover: true,
+      summary_customize_popover: true,
         change_alias_prompt: true,
-      },
       }),
     ).resolves.toEqual({
       alias: "",
       preferences: {
         process_summary_fields: ["piece.created"],
-        tutorials: {
-          summary_customize_popover: true,
+        summary_customize_popover: true,
           change_alias_prompt: true,
-        },
       },
     });
     expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
     expect(mockClient.patch).toHaveBeenCalledWith("auth/preferences/", {
       preferences: {
         process_summary_fields: ["piece.created"],
-        tutorials: {
-          summary_customize_popover: true,
+        summary_customize_popover: true,
           change_alias_prompt: true,
-        },
       },
     });
   });

@@ -10,10 +10,8 @@ vi.mock("../../util/api", async (importOriginal) => {
       alias: "",
       preferences: {
         process_summary_fields: ["piece.name"],
-        tutorials: {
-          summary_customize_popover: true,
+        summary_customize_popover: true,
           change_alias_prompt: true,
-        },
       },
     }),
   };
@@ -40,10 +38,8 @@ function renderDialog(activeSectionId: PreferencesSectionId | null) {
           alias: "",
           preferences: {
             process_summary_fields: ["piece.name"],
-            tutorials: {
-              summary_customize_popover: true,
+            summary_customize_popover: true,
               change_alias_prompt: true,
-            },
           },
         }}
       >
@@ -76,10 +72,8 @@ describe("UserPreferencesDialog", () => {
             alias: "",
             preferences: {
               process_summary_fields: ["piece.name"],
-              tutorials: {
-                summary_customize_popover: true,
+              summary_customize_popover: true,
                 change_alias_prompt: true,
-              },
             },
           }}
         >
@@ -142,10 +136,8 @@ describe("UserPreferencesDialog", () => {
             openid_subject: "",
             preferences: {
               process_summary_fields: ["piece.name"],
-              tutorials: {
-                summary_customize_popover: true,
+              summary_customize_popover: true,
                 change_alias_prompt: true,
-              },
             },
           }}
         >
@@ -171,10 +163,8 @@ describe("UserPreferencesDialog", () => {
       expect(saveUserPreferences).toHaveBeenCalledWith(
         {
           process_summary_fields: ["piece.name"],
-          tutorials: {
-            summary_customize_popover: false,
+          summary_customize_popover: false,
             change_alias_prompt: true,
-          },
         },
         "",
       );
@@ -199,10 +189,8 @@ describe("UserPreferencesDialog", () => {
             openid_subject: "",
             preferences: {
               process_summary_fields: ["piece.name"],
-              tutorials: {
-                summary_customize_popover: true,
+              summary_customize_popover: true,
                 change_alias_prompt: true,
-              },
             },
           }}
         >
@@ -230,10 +218,8 @@ describe("UserPreferencesDialog", () => {
       expect(saveUserPreferences).toHaveBeenCalledWith(
         {
           process_summary_fields: ["piece.name"],
-          tutorials: {
-            summary_customize_popover: true,
+          summary_customize_popover: true,
             change_alias_prompt: false,
-          },
         },
         "",
       );
@@ -271,10 +257,8 @@ describe("UserPreferencesDialog", () => {
             alias: "",
             preferences: {
               process_summary_fields: ["piece.name"],
-              tutorials: {
-                summary_customize_popover: true,
+              summary_customize_popover: true,
                 change_alias_prompt: true,
-              },
             },
           }}
         >
@@ -325,10 +309,8 @@ describe("UserPreferencesDialog", () => {
               // preferencesKey doesn't change on fetch, avoiding a PreferencesForm
               // remount that would detach the save button before it can be clicked.
               process_summary_fields: ["piece.name"],
-              tutorials: {
-                summary_customize_popover: true,
+              summary_customize_popover: true,
                 change_alias_prompt: true,
-              },
             },
           }}
         >
