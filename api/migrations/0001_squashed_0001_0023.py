@@ -12,8 +12,8 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-
 # ── 0004_normalize_images ────────────────────────────────────────────────────
+
 
 def _normalize_payload(value):
     if value in (None, ""):
@@ -75,13 +75,19 @@ def _normalize_images_forwards(apps, schema_editor):
     GlazeCombination = apps.get_model("api", "GlazeCombination")
 
     for piece in Piece.objects.exclude(thumbnail_legacy__isnull=True).iterator():
-        image = _get_or_create_image(Image, piece.thumbnail_legacy, user_id=piece.user_id)
+        image = _get_or_create_image(
+            Image, piece.thumbnail_legacy, user_id=piece.user_id
+        )
         if image is not None:
             Piece.objects.filter(pk=piece.pk).update(thumbnail=image)
 
     for model_cls in (GlazeType, GlazeCombination):
-        for obj in model_cls.objects.exclude(test_tile_image_legacy__isnull=True).iterator():
-            image = _get_or_create_image(Image, obj.test_tile_image_legacy, user_id=obj.user_id)
+        for obj in model_cls.objects.exclude(
+            test_tile_image_legacy__isnull=True
+        ).iterator():
+            image = _get_or_create_image(
+                Image, obj.test_tile_image_legacy, user_id=obj.user_id
+            )
             if image is not None:
                 model_cls.objects.filter(pk=obj.pk).update(test_tile_image=image)
 
@@ -94,7 +100,9 @@ def _normalize_images_forwards(apps, schema_editor):
             PieceStateImage.objects.create(
                 piece_state=state,
                 image=image,
-                caption=(payload.get("caption") or "") if isinstance(payload, dict) else "",
+                caption=(payload.get("caption") or "")
+                if isinstance(payload, dict)
+                else "",
                 created=_coerce_datetime(
                     payload.get("created") if isinstance(payload, dict) else None
                 ),
@@ -133,7 +141,9 @@ def _normalize_images_backwards(apps, schema_editor):
 
     for state in PieceState.objects.iterator():
         images = []
-        for link in PieceStateImage.objects.filter(piece_state=state).order_by("order", "pk"):
+        for link in PieceStateImage.objects.filter(piece_state=state).order_by(
+            "order", "pk"
+        ):
             payload = image_payload(link.image_id)
             if payload is None:
                 continue
@@ -150,6 +160,7 @@ def _normalize_images_backwards(apps, schema_editor):
 
 # ── 0009_backfill_piece_state_order ─────────────────────────────────────────
 
+
 def _backfill_order(apps, schema_editor):
     Piece = apps.get_model("api", "Piece")
     PieceState = apps.get_model("api", "PieceState")
@@ -162,6 +173,7 @@ def _backfill_order(apps, schema_editor):
 
 # ── 0012_seed_allowedemail_from_users ────────────────────────────────────────
 
+
 def _seed_allowedemail(apps, schema_editor):
     User = apps.get_model("auth", "User")
     AllowedEmail = apps.get_model("api", "AllowedEmail")
@@ -173,6 +185,7 @@ def _seed_allowedemail(apps, schema_editor):
 
 
 # ── 0018_backfill_image_user ─────────────────────────────────────────────────
+
 
 def _populate_image_user(apps, schema_editor):
     PieceStateImage = apps.get_model("api", "PieceStateImage")
@@ -191,10 +204,13 @@ def _populate_image_user(apps, schema_editor):
         )
         if len(owner_ids) != 1:
             continue
-        Image.objects.filter(pk=image_id, user__isnull=True).update(user_id=owner_ids[0])
+        Image.objects.filter(pk=image_id, user__isnull=True).update(
+            user_id=owner_ids[0]
+        )
 
 
 # ── 0021_set_unusable_passwords ──────────────────────────────────────────────
+
 
 def _set_unusable_passwords(apps, schema_editor):
     User = apps.get_model("auth", "User")
@@ -202,6 +218,7 @@ def _set_unusable_passwords(apps, schema_editor):
 
 
 # ── 0022_scrub_pii_from_existing_users ───────────────────────────────────────
+
 
 def _scrub_pii(apps, schema_editor):
     UserProfile = apps.get_model("api", "UserProfile")
@@ -220,6 +237,7 @@ def _scrub_pii(apps, schema_editor):
 
 # ── 0023_userprofile_alias_clear_pii ─────────────────────────────────────────
 
+
 def _clear_pii_fields(apps, schema_editor):
     User = apps.get_model("auth", "User")
     User.objects.all().update(first_name="", last_name="", email="")
@@ -229,8 +247,31 @@ def _clear_pii_fields(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
-    replaces = [('api', '0001_initial'), ('api', '0002_piece_shared'), ('api', '0003_rename_custom_fields'), ('api', '0004_normalize_images'), ('api', '0005_image_crops'), ('api', '0006_asynctask'), ('api', '0007_piece_showcase_fields_piece_showcase_story'), ('api', '0008_add_editable_mode'), ('api', '0009_backfill_piece_state_order'), ('api', '0010_alter_piecestate_options_alter_piecestate_created'), ('api', '0011_allowedemail'), ('api', '0012_seed_allowedemail_from_users'), ('api', '0013_remove_allowedemail_email_redundant_index'), ('api', '0014_croprun'), ('api', '0015_croprun_piece_state_image'), ('api', '0016_image_dimensions'), ('api', '0017_userprofile_preferences'), ('api', '0018_backfill_image_user'), ('api', '0019_piecestateimage_unique_image_per_state'), ('api', '0020_invitecode'), ('api', '0021_set_unusable_passwords'), ('api', '0022_scrub_pii_from_existing_users'), ('api', '0023_userprofile_alias_clear_pii')]
+    replaces = [
+        ("api", "0001_initial"),
+        ("api", "0002_piece_shared"),
+        ("api", "0003_rename_custom_fields"),
+        ("api", "0004_normalize_images"),
+        ("api", "0005_image_crops"),
+        ("api", "0006_asynctask"),
+        ("api", "0007_piece_showcase_fields_piece_showcase_story"),
+        ("api", "0008_add_editable_mode"),
+        ("api", "0009_backfill_piece_state_order"),
+        ("api", "0010_alter_piecestate_options_alter_piecestate_created"),
+        ("api", "0011_allowedemail"),
+        ("api", "0012_seed_allowedemail_from_users"),
+        ("api", "0013_remove_allowedemail_email_redundant_index"),
+        ("api", "0014_croprun"),
+        ("api", "0015_croprun_piece_state_image"),
+        ("api", "0016_image_dimensions"),
+        ("api", "0017_userprofile_preferences"),
+        ("api", "0018_backfill_image_user"),
+        ("api", "0019_piecestateimage_unique_image_per_state"),
+        ("api", "0020_invitecode"),
+        ("api", "0021_set_unusable_passwords"),
+        ("api", "0022_scrub_pii_from_existing_users"),
+        ("api", "0023_userprofile_alias_clear_pii"),
+    ]
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
@@ -238,321 +279,827 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='ClayBody',
+            name="ClayBody",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('short_description', models.CharField(blank=True, default='', max_length=1024)),
-                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='clay_bodies', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "short_description",
+                    models.CharField(blank=True, default="", max_length=1024),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="clay_bodies",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='FiringTemperature',
+            name="FiringTemperature",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('cone', models.CharField(blank=True, choices=[('04', '04'), ('03', '03'), ('02', '02'), ('01', '01'), ('1', '1'), ('2', '2'), ('3', '3'), ('4', '4'), ('5', '5'), ('6', '6'), ('7', '7'), ('8', '8'), ('9', '9'), ('10', '10')], default='', max_length=16)),
-                ('temperature_c', models.IntegerField(blank=True, null=True)),
-                ('atmosphere', models.CharField(blank=True, default='', max_length=255)),
-                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='firing_temperatures', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "cone",
+                    models.CharField(
+                        blank=True,
+                        choices=[
+                            ("04", "04"),
+                            ("03", "03"),
+                            ("02", "02"),
+                            ("01", "01"),
+                            ("1", "1"),
+                            ("2", "2"),
+                            ("3", "3"),
+                            ("4", "4"),
+                            ("5", "5"),
+                            ("6", "6"),
+                            ("7", "7"),
+                            ("8", "8"),
+                            ("9", "9"),
+                            ("10", "10"),
+                        ],
+                        default="",
+                        max_length=16,
+                    ),
+                ),
+                ("temperature_c", models.IntegerField(blank=True, null=True)),
+                (
+                    "atmosphere",
+                    models.CharField(blank=True, default="", max_length=255),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="firing_temperatures",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='GlazeCombination',
+            name="GlazeCombination",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(blank=True, default='', max_length=2047)),
-                ('test_tile_image', models.JSONField(blank=True, default=None, null=True)),
-                ('is_food_safe', models.BooleanField(blank=True, null=True)),
-                ('runs', models.BooleanField(blank=True, null=True)),
-                ('highlights_grooves', models.BooleanField(blank=True, null=True)),
-                ('is_different_on_white_and_brown_clay', models.BooleanField(blank=True, null=True)),
-                ('apply_thin', models.BooleanField(blank=True, null=True)),
-                ('firing_temperature', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='glaze_combinations', to='api.firingtemperature')),
-                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='glaze_combinations', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(blank=True, default="", max_length=2047)),
+                (
+                    "test_tile_image",
+                    models.JSONField(blank=True, default=None, null=True),
+                ),
+                ("is_food_safe", models.BooleanField(blank=True, null=True)),
+                ("runs", models.BooleanField(blank=True, null=True)),
+                ("highlights_grooves", models.BooleanField(blank=True, null=True)),
+                (
+                    "is_different_on_white_and_brown_clay",
+                    models.BooleanField(blank=True, null=True),
+                ),
+                ("apply_thin", models.BooleanField(blank=True, null=True)),
+                (
+                    "firing_temperature",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="glaze_combinations",
+                        to="api.firingtemperature",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="glaze_combinations",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='FavoriteGlazeCombination',
+            name="FavoriteGlazeCombination",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='favorite_glaze_combinations', to=settings.AUTH_USER_MODEL)),
-                ('glaze_combination', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='favorited_by', to='api.glazecombination')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="favorite_glaze_combinations",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "glaze_combination",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="favorited_by",
+                        to="api.glazecombination",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='GlazeMethod',
+            name="GlazeMethod",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('short_description', models.CharField(blank=True, default='', max_length=1024)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='glaze_methods', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "short_description",
+                    models.CharField(blank=True, default="", max_length=1024),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="glaze_methods",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='GlazeType',
+            name="GlazeType",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('short_description', models.CharField(blank=True, default='', max_length=1024)),
-                ('test_tile_image', models.JSONField(blank=True, default=None, null=True)),
-                ('is_food_safe', models.BooleanField(blank=True, null=True)),
-                ('runs', models.BooleanField(blank=True, null=True)),
-                ('highlights_grooves', models.BooleanField(blank=True, null=True)),
-                ('is_different_on_white_and_brown_clay', models.BooleanField(blank=True, null=True)),
-                ('apply_thin', models.BooleanField(blank=True, null=True)),
-                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='glaze_types', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "short_description",
+                    models.CharField(blank=True, default="", max_length=1024),
+                ),
+                (
+                    "test_tile_image",
+                    models.JSONField(blank=True, default=None, null=True),
+                ),
+                ("is_food_safe", models.BooleanField(blank=True, null=True)),
+                ("runs", models.BooleanField(blank=True, null=True)),
+                ("highlights_grooves", models.BooleanField(blank=True, null=True)),
+                (
+                    "is_different_on_white_and_brown_clay",
+                    models.BooleanField(blank=True, null=True),
+                ),
+                ("apply_thin", models.BooleanField(blank=True, null=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="glaze_types",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='GlazeCombinationLayer',
+            name="GlazeCombinationLayer",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('order', models.PositiveSmallIntegerField()),
-                ('combination', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='layers', to='api.glazecombination')),
-                ('glaze_method', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='glaze_combination_layers', to='api.glazemethod')),
-                ('glaze_type', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='api.glazetype')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("order", models.PositiveSmallIntegerField()),
+                (
+                    "combination",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="layers",
+                        to="api.glazecombination",
+                    ),
+                ),
+                (
+                    "glaze_method",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="glaze_combination_layers",
+                        to="api.glazemethod",
+                    ),
+                ),
+                (
+                    "glaze_type",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT, to="api.glazetype"
+                    ),
+                ),
             ],
             options={
-                'ordering': ['order'],
+                "ordering": ["order"],
             },
         ),
         migrations.AddField(
-            model_name='glazecombination',
-            name='glaze_types',
-            field=models.ManyToManyField(related_name='combinations', through='api.GlazeCombinationLayer', to='api.glazetype'),
+            model_name="glazecombination",
+            name="glaze_types",
+            field=models.ManyToManyField(
+                related_name="combinations",
+                through="api.GlazeCombinationLayer",
+                to="api.glazetype",
+            ),
         ),
         migrations.CreateModel(
-            name='Location',
+            name="Location",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='locations', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="locations",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Piece',
+            name="Piece",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=255)),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('fields_last_modified', models.DateTimeField(auto_now=True)),
-                ('thumbnail', models.JSONField(blank=True, default=None, null=True)),
-                ('workflow_version', models.CharField(default='0.0.3', max_length=32)),
-                ('current_location', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='pieces', to='api.location')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='pieces', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                ("fields_last_modified", models.DateTimeField(auto_now=True)),
+                ("thumbnail", models.JSONField(blank=True, default=None, null=True)),
+                ("workflow_version", models.CharField(default="0.0.3", max_length=32)),
+                (
+                    "current_location",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="pieces",
+                        to="api.location",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="pieces",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-fields_last_modified'],
+                "ordering": ["-fields_last_modified"],
             },
         ),
         migrations.CreateModel(
-            name='PieceState',
+            name="PieceState",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('state', models.CharField(max_length=64)),
-                ('notes', models.TextField(blank=True, default='')),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('last_modified', models.DateTimeField(auto_now=True)),
-                ('images', models.JSONField(default=list)),
-                ('additional_fields', models.JSONField(default=dict)),
-                ('piece', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='states', to='api.piece')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='piece_states', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("state", models.CharField(max_length=64)),
+                ("notes", models.TextField(blank=True, default="")),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                ("last_modified", models.DateTimeField(auto_now=True)),
+                ("images", models.JSONField(default=list)),
+                ("additional_fields", models.JSONField(default=dict)),
+                (
+                    "piece",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="states",
+                        to="api.piece",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="piece_states",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['created'],
+                "ordering": ["created"],
             },
         ),
         migrations.CreateModel(
-            name='PieceStateClayBodyRef',
+            name="PieceStateClayBodyRef",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('field_name', models.CharField(max_length=100)),
-                ('clay_body', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='piece_state_refs', to='api.claybody')),
-                ('piece_state', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='clay_bodies_refs', to='api.piecestate')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("field_name", models.CharField(max_length=100)),
+                (
+                    "clay_body",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="piece_state_refs",
+                        to="api.claybody",
+                    ),
+                ),
+                (
+                    "piece_state",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="clay_bodies_refs",
+                        to="api.piecestate",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='PieceStateGlazeCombinationRef',
+            name="PieceStateGlazeCombinationRef",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('field_name', models.CharField(max_length=100)),
-                ('glaze_combination', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='piece_state_refs', to='api.glazecombination')),
-                ('piece_state', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='glaze_combinations_refs', to='api.piecestate')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("field_name", models.CharField(max_length=100)),
+                (
+                    "glaze_combination",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="piece_state_refs",
+                        to="api.glazecombination",
+                    ),
+                ),
+                (
+                    "piece_state",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="glaze_combinations_refs",
+                        to="api.piecestate",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='PieceStateLocationRef',
+            name="PieceStateLocationRef",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('field_name', models.CharField(max_length=100)),
-                ('location', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='piece_state_refs', to='api.location')),
-                ('piece_state', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='locations_refs', to='api.piecestate')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("field_name", models.CharField(max_length=100)),
+                (
+                    "location",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="piece_state_refs",
+                        to="api.location",
+                    ),
+                ),
+                (
+                    "piece_state",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="locations_refs",
+                        to="api.piecestate",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Tag',
+            name="Tag",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=64)),
-                ('color', models.CharField(blank=True, default='', max_length=7)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tags', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=64)),
+                ("color", models.CharField(blank=True, default="", max_length=7)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="tags",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='PieceTag',
+            name="PieceTag",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('order', models.PositiveSmallIntegerField()),
-                ('piece', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tag_links', to='api.piece')),
-                ('tag', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='piece_links', to='api.tag')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("order", models.PositiveSmallIntegerField()),
+                (
+                    "piece",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="tag_links",
+                        to="api.piece",
+                    ),
+                ),
+                (
+                    "tag",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="piece_links",
+                        to="api.tag",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['order', 'pk'],
+                "ordering": ["order", "pk"],
             },
         ),
         migrations.CreateModel(
-            name='UserProfile',
+            name="UserProfile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('openid_subject', models.CharField(blank=True, default='', max_length=255)),
-                ('profile_image_url', models.URLField(blank=True, default='')),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='profile', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "openid_subject",
+                    models.CharField(blank=True, default="", max_length=255),
+                ),
+                ("profile_image_url", models.URLField(blank=True, default="")),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="profile",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.AddConstraint(
-            model_name='claybody',
-            constraint=models.UniqueConstraint(condition=models.Q(('user__isnull', False)), fields=('user', 'name'), name='uniq_clay_body_name_per_user'),
+            model_name="claybody",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("user__isnull", False)),
+                fields=("user", "name"),
+                name="uniq_clay_body_name_per_user",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='claybody',
-            constraint=models.UniqueConstraint(condition=models.Q(('user__isnull', True)), fields=('name',), name='uniq_clay_body_name_public'),
+            model_name="claybody",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("user__isnull", True)),
+                fields=("name",),
+                name="uniq_clay_body_name_public",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='firingtemperature',
-            constraint=models.UniqueConstraint(condition=models.Q(('user__isnull', True)), fields=('name',), name='uniq_firing_temperature_name_public'),
+            model_name="firingtemperature",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("user__isnull", True)),
+                fields=("name",),
+                name="uniq_firing_temperature_name_public",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='favoriteglazecombination',
-            constraint=models.UniqueConstraint(fields=('user', 'glaze_combination'), name='uniq_favorite_glaze_combination_per_user'),
+            model_name="favoriteglazecombination",
+            constraint=models.UniqueConstraint(
+                fields=("user", "glaze_combination"),
+                name="uniq_favorite_glaze_combination_per_user",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='glazemethod',
-            constraint=models.UniqueConstraint(fields=('user', 'name'), name='uniq_glaze_method_name_per_user'),
+            model_name="glazemethod",
+            constraint=models.UniqueConstraint(
+                fields=("user", "name"), name="uniq_glaze_method_name_per_user"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='glazetype',
-            constraint=models.UniqueConstraint(condition=models.Q(('user__isnull', False)), fields=('user', 'name'), name='uniq_glaze_type_name_per_user'),
+            model_name="glazetype",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("user__isnull", False)),
+                fields=("user", "name"),
+                name="uniq_glaze_type_name_per_user",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='glazetype',
-            constraint=models.UniqueConstraint(condition=models.Q(('user__isnull', True)), fields=('name',), name='uniq_glaze_type_name_public'),
+            model_name="glazetype",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("user__isnull", True)),
+                fields=("name",),
+                name="uniq_glaze_type_name_public",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='glazecombination',
-            constraint=models.UniqueConstraint(condition=models.Q(('user__isnull', True)), fields=('name',), name='uniq_glaze_combination_name_public'),
+            model_name="glazecombination",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("user__isnull", True)),
+                fields=("name",),
+                name="uniq_glaze_combination_name_public",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='glazecombination',
-            constraint=models.UniqueConstraint(condition=models.Q(('user__isnull', False)), fields=('user', 'name'), name='uniq_glaze_combination_name_per_user'),
+            model_name="glazecombination",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("user__isnull", False)),
+                fields=("user", "name"),
+                name="uniq_glaze_combination_name_per_user",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='location',
-            constraint=models.UniqueConstraint(fields=('user', 'name'), name='uniq_location_name_per_user'),
+            model_name="location",
+            constraint=models.UniqueConstraint(
+                fields=("user", "name"), name="uniq_location_name_per_user"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='piecestateclaybodyref',
-            constraint=models.UniqueConstraint(fields=('piece_state', 'field_name'), name='uniq_piece_state_clay_body_ref'),
+            model_name="piecestateclaybodyref",
+            constraint=models.UniqueConstraint(
+                fields=("piece_state", "field_name"),
+                name="uniq_piece_state_clay_body_ref",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='piecestateglazecombinationref',
-            constraint=models.UniqueConstraint(fields=('piece_state', 'field_name'), name='uniq_piece_state_glaze_combination_ref'),
+            model_name="piecestateglazecombinationref",
+            constraint=models.UniqueConstraint(
+                fields=("piece_state", "field_name"),
+                name="uniq_piece_state_glaze_combination_ref",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='piecestatelocationref',
-            constraint=models.UniqueConstraint(fields=('piece_state', 'field_name'), name='uniq_piece_state_location_ref'),
+            model_name="piecestatelocationref",
+            constraint=models.UniqueConstraint(
+                fields=("piece_state", "field_name"),
+                name="uniq_piece_state_location_ref",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='tag',
-            constraint=models.UniqueConstraint(fields=('user', 'name'), name='uniq_tag_name_per_user'),
+            model_name="tag",
+            constraint=models.UniqueConstraint(
+                fields=("user", "name"), name="uniq_tag_name_per_user"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='piecetag',
-            constraint=models.UniqueConstraint(fields=('piece', 'tag'), name='uniq_piece_tag'),
+            model_name="piecetag",
+            constraint=models.UniqueConstraint(
+                fields=("piece", "tag"), name="uniq_piece_tag"
+            ),
         ),
         migrations.AddField(
-            model_name='piece',
-            name='shared',
+            model_name="piece",
+            name="shared",
             field=models.BooleanField(default=False),
         ),
         migrations.RenameField(
-            model_name='piecestate',
-            old_name='additional_fields',
-            new_name='custom_fields',
+            model_name="piecestate",
+            old_name="additional_fields",
+            new_name="custom_fields",
         ),
         migrations.CreateModel(
-            name='Image',
+            name="Image",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('url', models.CharField(max_length=2048)),
-                ('cloudinary_public_id', models.CharField(blank=True, max_length=1024, null=True)),
-                ('cloud_name', models.CharField(blank=True, max_length=255, null=True)),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('last_modified', models.DateTimeField(auto_now=True)),
-                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='images', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("url", models.CharField(max_length=2048)),
+                (
+                    "cloudinary_public_id",
+                    models.CharField(blank=True, max_length=1024, null=True),
+                ),
+                ("cloud_name", models.CharField(blank=True, max_length=255, null=True)),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                ("last_modified", models.DateTimeField(auto_now=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="images",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'constraints': [models.UniqueConstraint(condition=models.Q(('cloud_name__isnull', False), ('cloudinary_public_id__isnull', False)), fields=('cloud_name', 'cloudinary_public_id'), name='uniq_image_cloudinary_identity'), models.UniqueConstraint(condition=models.Q(('cloudinary_public_id__isnull', True)), fields=('url',), name='uniq_image_url_without_cloudinary_id')],
+                "constraints": [
+                    models.UniqueConstraint(
+                        condition=models.Q(
+                            ("cloud_name__isnull", False),
+                            ("cloudinary_public_id__isnull", False),
+                        ),
+                        fields=("cloud_name", "cloudinary_public_id"),
+                        name="uniq_image_cloudinary_identity",
+                    ),
+                    models.UniqueConstraint(
+                        condition=models.Q(("cloudinary_public_id__isnull", True)),
+                        fields=("url",),
+                        name="uniq_image_url_without_cloudinary_id",
+                    ),
+                ],
             },
         ),
         migrations.RenameField(
-            model_name='piece',
-            old_name='thumbnail',
-            new_name='thumbnail_legacy',
+            model_name="piece",
+            old_name="thumbnail",
+            new_name="thumbnail_legacy",
         ),
         migrations.RenameField(
-            model_name='piecestate',
-            old_name='images',
-            new_name='images_legacy',
+            model_name="piecestate",
+            old_name="images",
+            new_name="images_legacy",
         ),
         migrations.RenameField(
-            model_name='glazetype',
-            old_name='test_tile_image',
-            new_name='test_tile_image_legacy',
+            model_name="glazetype",
+            old_name="test_tile_image",
+            new_name="test_tile_image_legacy",
         ),
         migrations.RenameField(
-            model_name='glazecombination',
-            old_name='test_tile_image',
-            new_name='test_tile_image_legacy',
+            model_name="glazecombination",
+            old_name="test_tile_image",
+            new_name="test_tile_image_legacy",
         ),
         migrations.AddField(
-            model_name='piece',
-            name='thumbnail',
-            field=models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='thumbnail_for_pieces', to='api.image'),
+            model_name="piece",
+            name="thumbnail",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="thumbnail_for_pieces",
+                to="api.image",
+            ),
         ),
         migrations.AddField(
-            model_name='glazetype',
-            name='test_tile_image',
-            field=models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to='api.image'),
+            model_name="glazetype",
+            name="test_tile_image",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="+",
+                to="api.image",
+            ),
         ),
         migrations.AddField(
-            model_name='glazecombination',
-            name='test_tile_image',
-            field=models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to='api.image'),
+            model_name="glazecombination",
+            name="test_tile_image",
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="+",
+                to="api.image",
+            ),
         ),
         migrations.CreateModel(
-            name='PieceStateImage',
+            name="PieceStateImage",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('caption', models.CharField(blank=True, default='', max_length=1024)),
-                ('created', models.DateTimeField(default=django.utils.timezone.now)),
-                ('order', models.PositiveSmallIntegerField()),
-                ('image', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='piece_state_links', to='api.image')),
-                ('piece_state', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='image_links', to='api.piecestate')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("caption", models.CharField(blank=True, default="", max_length=1024)),
+                ("created", models.DateTimeField(default=django.utils.timezone.now)),
+                ("order", models.PositiveSmallIntegerField()),
+                (
+                    "image",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="piece_state_links",
+                        to="api.image",
+                    ),
+                ),
+                (
+                    "piece_state",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="image_links",
+                        to="api.piecestate",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['order', 'pk'],
-                'constraints': [models.UniqueConstraint(fields=('piece_state', 'order'), name='uniq_piece_state_image_order')],
+                "ordering": ["order", "pk"],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("piece_state", "order"),
+                        name="uniq_piece_state_image_order",
+                    )
+                ],
             },
         ),
         migrations.RunPython(
@@ -560,71 +1107,98 @@ class Migration(migrations.Migration):
             reverse_code=_normalize_images_backwards,
         ),
         migrations.RemoveField(
-            model_name='piece',
-            name='thumbnail_legacy',
+            model_name="piece",
+            name="thumbnail_legacy",
         ),
         migrations.RemoveField(
-            model_name='piecestate',
-            name='images_legacy',
+            model_name="piecestate",
+            name="images_legacy",
         ),
         migrations.RemoveField(
-            model_name='glazetype',
-            name='test_tile_image_legacy',
+            model_name="glazetype",
+            name="test_tile_image_legacy",
         ),
         migrations.RemoveField(
-            model_name='glazecombination',
-            name='test_tile_image_legacy',
+            model_name="glazecombination",
+            name="test_tile_image_legacy",
         ),
         migrations.AddField(
-            model_name='piece',
-            name='thumbnail_crop',
+            model_name="piece",
+            name="thumbnail_crop",
             field=models.JSONField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='piecestateimage',
-            name='crop',
+            model_name="piecestateimage",
+            name="crop",
             field=models.JSONField(blank=True, default=None, null=True),
         ),
         migrations.CreateModel(
-            name='AsyncTask',
+            name="AsyncTask",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('status', models.CharField(choices=[('pending', 'Pending'), ('running', 'Running'), ('success', 'Success'), ('failure', 'Failure')], default='pending', max_length=16)),
-                ('task_type', models.CharField(max_length=255)),
-                ('input_params', models.JSONField(blank=True, default=dict)),
-                ('result', models.JSONField(blank=True, null=True)),
-                ('error', models.TextField(blank=True, null=True)),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('last_modified', models.DateTimeField(auto_now=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='async_tasks', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("pending", "Pending"),
+                            ("running", "Running"),
+                            ("success", "Success"),
+                            ("failure", "Failure"),
+                        ],
+                        default="pending",
+                        max_length=16,
+                    ),
+                ),
+                ("task_type", models.CharField(max_length=255)),
+                ("input_params", models.JSONField(blank=True, default=dict)),
+                ("result", models.JSONField(blank=True, null=True)),
+                ("error", models.TextField(blank=True, null=True)),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                ("last_modified", models.DateTimeField(auto_now=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="async_tasks",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created'],
+                "ordering": ["-created"],
             },
         ),
         migrations.AddField(
-            model_name='piece',
-            name='showcase_fields',
+            model_name="piece",
+            name="showcase_fields",
             field=models.JSONField(default=list),
         ),
         migrations.AddField(
-            model_name='piece',
-            name='showcase_story',
-            field=models.TextField(blank=True, default=''),
+            model_name="piece",
+            name="showcase_story",
+            field=models.TextField(blank=True, default=""),
         ),
         migrations.AddField(
-            model_name='piece',
-            name='is_editable',
+            model_name="piece",
+            name="is_editable",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
-            model_name='piecestate',
-            name='order',
+            model_name="piecestate",
+            name="order",
             field=models.PositiveIntegerField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='piecestate',
-            name='has_been_edited',
+            model_name="piecestate",
+            name="has_been_edited",
             field=models.BooleanField(default=False),
         ),
         migrations.RunPython(
@@ -632,26 +1206,55 @@ class Migration(migrations.Migration):
             reverse_code=migrations.RunPython.noop,
         ),
         migrations.AlterModelOptions(
-            name='piecestate',
-            options={'ordering': ['order', 'created']},
+            name="piecestate",
+            options={"ordering": ["order", "created"]},
         ),
         migrations.AlterField(
-            model_name='piecestate',
-            name='created',
+            model_name="piecestate",
+            name="created",
             field=models.DateTimeField(default=django.utils.timezone.now),
         ),
         migrations.CreateModel(
-            name='AllowedEmail',
+            name="AllowedEmail",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('email', models.EmailField(db_index=True, max_length=254, unique=True)),
-                ('status', models.CharField(choices=[('waitlisted', 'Waitlisted'), ('approved', 'Approved')], db_index=True, default='approved', max_length=20)),
-                ('notes', models.TextField(blank=True)),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('last_modified', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "email",
+                    models.EmailField(db_index=True, max_length=254, unique=True),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("waitlisted", "Waitlisted"),
+                            ("approved", "Approved"),
+                        ],
+                        db_index=True,
+                        default="approved",
+                        max_length=20,
+                    ),
+                ),
+                ("notes", models.TextField(blank=True)),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                ("last_modified", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'ordering': [models.Case(models.When(status='waitlisted', then=0), default=1, output_field=models.IntegerField()), 'email'],
+                "ordering": [
+                    models.Case(
+                        models.When(status="waitlisted", then=0),
+                        default=1,
+                        output_field=models.IntegerField(),
+                    ),
+                    "email",
+                ],
             },
         ),
         migrations.RunPython(
@@ -659,50 +1262,107 @@ class Migration(migrations.Migration):
             reverse_code=migrations.RunPython.noop,
         ),
         migrations.AlterField(
-            model_name='allowedemail',
-            name='email',
+            model_name="allowedemail",
+            name="email",
             field=models.EmailField(max_length=254, unique=True),
         ),
         migrations.CreateModel(
-            name='CropRun',
+            name="CropRun",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('source', models.JSONField()),
-                ('crop', models.JSONField(blank=True, null=True)),
-                ('mask_asset', models.JSONField(blank=True, null=True)),
-                ('latency_ms', models.PositiveIntegerField(blank=True, null=True)),
-                ('status', models.CharField(choices=[('success', 'Success'), ('no_subject', 'No Subject'), ('error', 'Error')], max_length=32)),
-                ('error', models.TextField(blank=True, null=True)),
-                ('notes', models.TextField(blank=True, default='')),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('async_task', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='crop_runs', to='api.asynctask')),
-                ('image', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='crop_runs', to='api.image')),
-                ('submitter', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='submitted_crop_runs', to=settings.AUTH_USER_MODEL)),
-                ('piece_state_image', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='crop_runs', to='api.piecestateimage')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("source", models.JSONField()),
+                ("crop", models.JSONField(blank=True, null=True)),
+                ("mask_asset", models.JSONField(blank=True, null=True)),
+                ("latency_ms", models.PositiveIntegerField(blank=True, null=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("success", "Success"),
+                            ("no_subject", "No Subject"),
+                            ("error", "Error"),
+                        ],
+                        max_length=32,
+                    ),
+                ),
+                ("error", models.TextField(blank=True, null=True)),
+                ("notes", models.TextField(blank=True, default="")),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                (
+                    "async_task",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="crop_runs",
+                        to="api.asynctask",
+                    ),
+                ),
+                (
+                    "image",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="crop_runs",
+                        to="api.image",
+                    ),
+                ),
+                (
+                    "submitter",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="submitted_crop_runs",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "piece_state_image",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="crop_runs",
+                        to="api.piecestateimage",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created'],
-                'indexes': [models.Index(fields=['piece_state_image', '-created'], name='api_croprun_piece_s_5474cc_idx')],
+                "ordering": ["-created"],
+                "indexes": [
+                    models.Index(
+                        fields=["piece_state_image", "-created"],
+                        name="api_croprun_piece_s_5474cc_idx",
+                    )
+                ],
             },
         ),
         migrations.AddField(
-            model_name='image',
-            name='height',
+            model_name="image",
+            name="height",
             field=models.PositiveIntegerField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='image',
-            name='width',
+            model_name="image",
+            name="width",
             field=models.PositiveIntegerField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='piecestate',
-            name='custom_fields',
+            model_name="piecestate",
+            name="custom_fields",
             field=models.JSONField(blank=True, default=dict),
         ),
         migrations.AddField(
-            model_name='userprofile',
-            name='preferences',
+            model_name="userprofile",
+            name="preferences",
             field=models.JSONField(blank=True, default=dict),
         ),
         migrations.RunPython(
@@ -710,28 +1370,47 @@ class Migration(migrations.Migration):
             reverse_code=migrations.RunPython.noop,
         ),
         migrations.AddConstraint(
-            model_name='piecestateimage',
-            constraint=models.UniqueConstraint(fields=('piece_state', 'image'), name='uniq_piece_state_image'),
+            model_name="piecestateimage",
+            constraint=models.UniqueConstraint(
+                fields=("piece_state", "image"), name="uniq_piece_state_image"
+            ),
         ),
         migrations.CreateModel(
-            name='InviteCode',
+            name="InviteCode",
             fields=[
-                ('code', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('expires_at', models.DateTimeField()),
-                ('used_at', models.DateTimeField(blank=True, null=True)),
-                ('used_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='redeemed_invite_codes', to=settings.AUTH_USER_MODEL)),
+                (
+                    "code",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("expires_at", models.DateTimeField()),
+                ("used_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "used_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="redeemed_invite_codes",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created_at'],
+                "ordering": ["-created_at"],
             },
         ),
         migrations.DeleteModel(
-            name='AllowedEmail',
+            name="AllowedEmail",
         ),
         migrations.RemoveField(
-            model_name='userprofile',
-            name='profile_image_url',
+            model_name="userprofile",
+            name="profile_image_url",
         ),
         migrations.RunPython(
             code=_set_unusable_passwords,
@@ -742,9 +1421,9 @@ class Migration(migrations.Migration):
             reverse_code=migrations.RunPython.noop,
         ),
         migrations.AddField(
-            model_name='userprofile',
-            name='alias',
-            field=models.CharField(blank=True, default='', max_length=50),
+            model_name="userprofile",
+            name="alias",
+            field=models.CharField(blank=True, default="", max_length=50),
         ),
         migrations.RunPython(
             code=_clear_pii_fields,

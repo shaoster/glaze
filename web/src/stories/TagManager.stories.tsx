@@ -5,12 +5,12 @@ import { http, HttpResponse } from "msw";
 
 /**
  * TagManager is the orchestration component for managing a piece's tags.
- * 
+ *
  * Rationale:
  * - Unifies tag display, search, and creation into a single logical unit.
  * - Manages the draft state of tag selections before committing to the backend.
  * - Integrates with the global save status to provide consistent feedback.
- * 
+ *
  * Edge cases:
  * - Loading Tags: Fetches available tags on-demand when the user starts editing.
  * - Creating Inline: Allows spawning a CreateTagDialog without leaving the context.

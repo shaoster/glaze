@@ -4,12 +4,12 @@ import { http, HttpResponse } from "msw";
 
 /**
  * WorkflowState handles the data entry and image management for a single piece state.
- * 
+ *
  * Rationale:
  * - Decoupled from PieceDetail in Issue #172 to allow standalone usage and better testability.
  * - Dynamically renders fields based on UISchema fetched from the backend (Issue #210).
  * - Manages Cloudinary uploads (Issue #288) and image captions.
- * 
+ *
  * Edge cases:
  * - Read-only mode: Disables all inputs and hide save buttons.
  * - Loading schema: Shows skeleton or loading state while UISchema is being fetched.
@@ -61,16 +61,16 @@ export const Default: Story = {
           return HttpResponse.json({
             type: "object",
             properties: {
-              clay_weight_lbs: { 
-                type: "number", 
+              clay_weight_lbs: {
+                type: "number",
                 "x-label": "Clay Weight Lbs",
-                "x-description": "Weight of clay in pounds."
+                "x-description": "Weight of clay in pounds.",
               },
-              clay_body: { 
-                type: "string", 
+              clay_body: {
+                type: "string",
                 "x-label": "Clay Body",
-                "$ref": "@clay_body.name",
-                "x-can-create": true
+                $ref: "@clay_body.name",
+                "x-can-create": true,
               },
             },
           });

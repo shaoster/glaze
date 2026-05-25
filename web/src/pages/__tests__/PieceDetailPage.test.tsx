@@ -162,11 +162,7 @@ describe("PieceDetailPage", () => {
   it("returns to the originating pieces list state even if preferences are in history", async () => {
     function PiecesPage() {
       const location = useLocation();
-      return (
-        <div data-testid="pieces-page">
-          pieces{location.search}
-        </div>
-      );
+      return <div data-testid="pieces-page">pieces{location.search}</div>;
     }
 
     const router = createMemoryRouter(
@@ -176,7 +172,10 @@ describe("PieceDetailPage", () => {
           element: <PieceDetailPage showBackToPieces />,
         },
         { path: "/", element: <PiecesPage /> },
-        { path: "/preferences/:sectionId", element: <div data-testid="prefs-page" /> },
+        {
+          path: "/preferences/:sectionId",
+          element: <div data-testid="prefs-page" />,
+        },
       ],
       {
         initialEntries: [

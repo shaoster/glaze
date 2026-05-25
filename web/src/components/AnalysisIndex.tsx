@@ -30,7 +30,11 @@ export default function AnalysisIndex() {
               width: "fit-content",
             }}
           >
-            <Typography variant="caption" color="text.disabled" sx={{ fontStyle: "italic" }}>
+            <Typography
+              variant="caption"
+              color="text.disabled"
+              sx={{ fontStyle: "italic" }}
+            >
               Future analysis module
             </Typography>
           </Box>

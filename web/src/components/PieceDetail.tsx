@@ -26,11 +26,20 @@ import HistoryIcon from "@mui/icons-material/History";
 import LockIcon from "@mui/icons-material/Lock";
 import { useBlocker, useLocation, useNavigate } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
-import { formatState, isTerminalState, validateHistorySequence } from "../util/workflow";
 import {
-  getCustomFieldDefinitions,
+  formatState,
+  isTerminalState,
+  validateHistorySequence,
 } from "../util/workflow";
-import { updatePiece, updatePastState, updateCurrentState, moveImage, extractErrorMessage, addPieceState } from "../util/api";
+import { getCustomFieldDefinitions } from "../util/workflow";
+import {
+  updatePiece,
+  updatePastState,
+  updateCurrentState,
+  moveImage,
+  extractErrorMessage,
+  addPieceState,
+} from "../util/api";
 import { useAsyncFn } from "../util/useAsync";
 import CloudinaryImage from "./CloudinaryImage";
 import NavigationBlocker from "./NavigationBlocker";
@@ -105,15 +114,15 @@ function SectionCard({
               </Typography>
             )}
             {(title || subtitle) && (
-                <Box
-                  sx={{
-                    display: "flex",
-                    gap: 1.5,
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                  }}
-                >
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 1.5,
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                }}
+              >
                 {title ? (
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <Typography
@@ -125,7 +134,9 @@ function SectionCard({
                       {title}
                     </Typography>
                     {titleAdornment ? (
-                      <Box sx={{ ml: 0.5, display: "flex", alignItems: "center" }}>
+                      <Box
+                        sx={{ ml: 0.5, display: "flex", alignItems: "center" }}
+                      >
                         {titleAdornment}
                       </Box>
                     ) : null}
@@ -260,7 +271,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   // Keep rewindedStateId when toggling is_editable to allow viewing history in read-only mode.
 
   const rewindedState = rewindedStateId
-    ? pastHistory.find((ps) => ps.id === rewindedStateId) ?? null
+    ? (pastHistory.find((ps) => ps.id === rewindedStateId) ?? null)
     : null;
 
   const [showcaseStoryValue, setShowcaseStoryValue] = useState(
@@ -350,7 +361,10 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     [piece.id, onPieceUpdated],
   );
   const transitionError = rawTransitionError
-    ? extractErrorMessage(rawTransitionError, "Failed to transition state. Please try again.")
+    ? extractErrorMessage(
+        rawTransitionError,
+        "Failed to transition state. Please try again.",
+      )
     : null;
 
   function startEditingName() {
@@ -385,7 +399,10 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     setEditingName(false);
   }, [piece.id, piece.name, nameValue, onPieceUpdated, pieceDetailSaveStatus]);
   const nameError = rawNameError
-    ? extractErrorMessage(rawNameError, "Failed to save name. Please try again.")
+    ? extractErrorMessage(
+        rawNameError,
+        "Failed to save name. Please try again.",
+      )
     : null;
 
   const {
@@ -406,7 +423,10 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     [piece.id, onPieceUpdated, pieceDetailSaveStatus],
   );
   const locationError = rawLocationError
-    ? extractErrorMessage(rawLocationError, "Failed to save location. Please try again.")
+    ? extractErrorMessage(
+        rawLocationError,
+        "Failed to save location. Please try again.",
+      )
     : null;
 
   const navigate = useNavigate();
@@ -433,7 +453,10 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     pieceStates: canEdit
       ? [
           { id: currentState.id, label: formatState(currentState.state) },
-          ...piece.history.map((s) => ({ id: s.id, label: formatState(s.state) })),
+          ...piece.history.map((s) => ({
+            id: s.id,
+            label: formatState(s.state),
+          })),
         ]
       : undefined,
     moveImageFn: canEdit ? moveImage : undefined,
@@ -613,7 +636,11 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             <Box
               onClick={
                 hasGalleryImages
-                  ? () => navigate(`/pieces/${piece.id}/photos/${heroLightboxIndex}`, { state: location.state })
+                  ? () =>
+                      navigate(
+                        `/pieces/${piece.id}/photos/${heroLightboxIndex}`,
+                        { state: location.state },
+                      )
                   : undefined
               }
               sx={(theme) => ({
@@ -687,7 +714,9 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
 
         {rewindedState ? (
           <SectionCard>
-            <Box sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
+            <Box
+              sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}
+            >
               <Chip
                 icon={<HistoryIcon fontSize="small" />}
                 label={`Rewound to: ${formatState(rewindedState.state)}`}
@@ -718,8 +747,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
           <SectionCard>
             <WorkflowState
               key={
-                currentState.state +
-                (currentState.created?.toISOString() ?? "")
+                currentState.state + (currentState.created?.toISOString() ?? "")
               }
               initialPieceState={currentState}
               pieceId={piece.id}
@@ -742,10 +770,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
         )}
 
         <Box sx={{ mb: 2.5 }}>
-          <SectionCard
-            title="Process Summary"
-            titleId="process-summary-title"
-          >
+          <SectionCard title="Process Summary" titleId="process-summary-title">
             <ProcessSummary piece={piece} history={piece.history} />
           </SectionCard>
         </Box>

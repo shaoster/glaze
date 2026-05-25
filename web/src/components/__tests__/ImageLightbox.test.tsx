@@ -199,7 +199,9 @@ describe("ImageLightbox", () => {
       const area = getSwipeArea();
       fireEvent.touchStart(area, { touches: [{ clientX: 200, clientY: 0 }] });
       fireEvent.touchMove(area, { touches: [{ clientX: 260, clientY: 0 }] });
-      fireEvent.touchEnd(area, { changedTouches: [{ clientX: 260, clientY: 0 }] });
+      fireEvent.touchEnd(area, {
+        changedTouches: [{ clientX: 260, clientY: 0 }],
+      });
       expect(screen.getByRole("img")).toHaveAttribute("src", "/img/a.jpg");
     });
 
@@ -208,7 +210,9 @@ describe("ImageLightbox", () => {
       const area = getSwipeArea();
       fireEvent.touchStart(area, { touches: [{ clientX: 200, clientY: 0 }] });
       fireEvent.touchMove(area, { touches: [{ clientX: 140, clientY: 0 }] });
-      fireEvent.touchEnd(area, { changedTouches: [{ clientX: 140, clientY: 0 }] });
+      fireEvent.touchEnd(area, {
+        changedTouches: [{ clientX: 140, clientY: 0 }],
+      });
       expect(screen.getByRole("img")).toHaveAttribute("src", "/img/c.jpg");
     });
 
@@ -217,7 +221,9 @@ describe("ImageLightbox", () => {
       const area = getSwipeArea();
       fireEvent.touchStart(area, { touches: [{ clientX: 200, clientY: 0 }] });
       fireEvent.touchMove(area, { touches: [{ clientX: 230, clientY: 0 }] });
-      fireEvent.touchEnd(area, { changedTouches: [{ clientX: 230, clientY: 0 }] });
+      fireEvent.touchEnd(area, {
+        changedTouches: [{ clientX: 230, clientY: 0 }],
+      });
       expect(screen.getByRole("img")).toHaveAttribute("src", "/img/b.jpg");
     });
 
@@ -226,7 +232,9 @@ describe("ImageLightbox", () => {
       const area = getSwipeArea();
       fireEvent.touchStart(area, { touches: [{ clientX: 200, clientY: 0 }] });
       fireEvent.touchMove(area, { touches: [{ clientX: 260, clientY: 0 }] });
-      fireEvent.touchEnd(area, { changedTouches: [{ clientX: 260, clientY: 0 }] });
+      fireEvent.touchEnd(area, {
+        changedTouches: [{ clientX: 260, clientY: 0 }],
+      });
       expect(screen.getByRole("img")).toHaveAttribute("src", "/img/a.jpg");
     });
 
@@ -235,7 +243,9 @@ describe("ImageLightbox", () => {
       const area = getSwipeArea();
       fireEvent.touchStart(area, { touches: [{ clientX: 200, clientY: 0 }] });
       fireEvent.touchMove(area, { touches: [{ clientX: 140, clientY: 0 }] });
-      fireEvent.touchEnd(area, { changedTouches: [{ clientX: 140, clientY: 0 }] });
+      fireEvent.touchEnd(area, {
+        changedTouches: [{ clientX: 140, clientY: 0 }],
+      });
       expect(screen.getByRole("img")).toHaveAttribute("src", "/img/c.jpg");
     });
   });

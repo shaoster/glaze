@@ -5,12 +5,12 @@ import { http, HttpResponse } from "msw";
 
 /**
  * PieceDetail is the central orchestration component for viewing and editing a single piece.
- * 
+ *
  * Rationale:
  * - Redesigned in Issue #172 to support "Edit Piece History" (is_editable toggle).
  * - Implements Autosave (Issue #245) for name and showcase story.
  * - Supports "Rewind" viewing of past states (Issue #312).
- * 
+ *
  * Edge cases:
  * - Publicly shared pieces: Share controls show "Public" status and prevent history editing.
  * - Terminal states: Shows "Process Summary" and "Showcase" sections.
@@ -116,8 +116,14 @@ export const Default: Story = {
           return HttpResponse.json({
             type: "object",
             properties: {
-              trimmed_weight_lbs: { type: "number", "x-label": "Trimmed Weight Lbs" },
-              pre_trim_weight_lbs: { type: "number", "x-label": "Pre-trim Weight Lbs" },
+              trimmed_weight_lbs: {
+                type: "number",
+                "x-label": "Trimmed Weight Lbs",
+              },
+              pre_trim_weight_lbs: {
+                type: "number",
+                "x-label": "Pre-trim Weight Lbs",
+              },
             },
           });
         }),
@@ -180,7 +186,7 @@ export const TerminalState: Story = {
 };
 
 /**
- * Demonstrates the navigation blocking behavior. 
+ * Demonstrates the navigation blocking behavior.
  * If you try to navigate away while the form is dirty (e.g. by changing notes),
  * the `useBlocker` hook will trigger a confirmation dialog.
  */

@@ -86,9 +86,7 @@ describe("ProcessSummary", () => {
       },
     ] as PieceDetail["history"];
 
-    render(
-      <ProcessSummary piece={makePiece({}, history)} history={history} />,
-    );
+    render(<ProcessSummary piece={makePiece({}, history)} history={history} />);
 
     expect(screen.getByText("Making")).toBeInTheDocument();
     expect(screen.getByText("Starting weight")).toBeInTheDocument();
@@ -197,13 +195,16 @@ describe("ProcessSummary", () => {
           id: 1,
           is_staff: false,
           openid_subject: "",
-            preferences: {
-              process_summary_fields: ["piece.name", "wheel_thrown.clay_weight_lbs"],
-              summary_customize_popover: true,
-                change_alias_prompt: true,
-            },
+          preferences: {
+            process_summary_fields: [
+              "piece.name",
+              "wheel_thrown.clay_weight_lbs",
+            ],
+            summary_customize_popover: true,
+            change_alias_prompt: true,
+          },
         }}
-        >
+      >
         <ProcessSummary
           piece={makePiece()}
           history={[
@@ -242,7 +243,7 @@ describe("ProcessSummary", () => {
     const saveUserPreferences = vi.fn().mockResolvedValue({
       process_summary_fields: ["piece.current_location"],
       summary_customize_popover: false,
-        change_alias_prompt: true,
+      change_alias_prompt: true,
     });
 
     render(
@@ -258,7 +259,7 @@ describe("ProcessSummary", () => {
             preferences: {
               process_summary_fields: ["piece.current_location"],
               summary_customize_popover: true,
-                change_alias_prompt: true,
+              change_alias_prompt: true,
             },
           }}
         >
@@ -280,7 +281,9 @@ describe("ProcessSummary", () => {
     );
 
     expect(
-      screen.getByText("No selected summary fields have values for this piece."),
+      screen.getByText(
+        "No selected summary fields have values for this piece.",
+      ),
     ).toBeInTheDocument();
     screen.getByRole("button", { name: "Choose summary fields" }).click();
     expect(openPreferencesDialog).toHaveBeenCalledWith("process-summary");

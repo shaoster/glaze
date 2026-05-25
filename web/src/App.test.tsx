@@ -6,8 +6,14 @@ import userEvent from "@testing-library/user-event";
 let _googleOnSuccess: ((r: { code: string }) => void) | undefined;
 
 vi.mock("@react-oauth/google", () => ({
-  GoogleOAuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useGoogleLogin: ({ onSuccess }: { onSuccess: (r: { code: string }) => void }) => {
+  GoogleOAuthProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  useGoogleLogin: ({
+    onSuccess,
+  }: {
+    onSuccess: (r: { code: string }) => void;
+  }) => {
     _googleOnSuccess = onSuccess;
     return () => {
       /* no-op: tests invoke _googleOnSuccess directly */
@@ -19,7 +25,13 @@ vi.mock("./util/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./util/api")>();
   return {
     ...actual,
-    fetchAppInit: vi.fn().mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: null }),
+    fetchAppInit: vi
+      .fn()
+      .mockResolvedValue({
+        googleOauthClientId: "test-client-id",
+        adminBaseUrl: null,
+        user: null,
+      }),
     loginWithGoogle: vi.fn(),
     logoutUser: vi.fn().mockResolvedValue(undefined),
     validateInviteCode: vi.fn(),
@@ -71,7 +83,9 @@ vi.mock("./components/UserPreferencesDialog", () => ({
     open: boolean;
     activeSectionId: "process-summary" | "tutorials" | "identity" | null;
     onClose: () => void;
-    onSectionChange: (sectionId: "process-summary" | "tutorials" | "identity" | null) => void;
+    onSectionChange: (
+      sectionId: "process-summary" | "tutorials" | "identity" | null,
+    ) => void;
   }) =>
     open ? (
       <div>
@@ -106,7 +120,8 @@ import {
 import App from "./App";
 import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
 
-const MOCK_OPENID_SUBJECT = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2";
+const MOCK_OPENID_SUBJECT =
+  "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2";
 
 const MOCK_USER = {
   id: 1,
@@ -133,7 +148,11 @@ describe("App auth flow", () => {
     vi.clearAllMocks();
     _googleOnSuccess = undefined;
     window.history.pushState({}, "", "/");
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: null });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: null,
+    });
     sessionStorage.clear();
   });
 
@@ -167,7 +186,9 @@ describe("App auth flow", () => {
       screen.getByRole("link", { name: "Privacy Policy" }),
     ).toHaveAttribute("href", "/privacy-policy");
 
-    expect(screen.getByRole("button", { name: /sign in with google/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /sign in with google/i }),
+    ).toBeInTheDocument();
   });
 
   it("derives a safe admin redirect target from the apex next parameter", () => {
@@ -275,7 +296,9 @@ describe("App auth flow", () => {
     render(<App />);
 
     await waitFor(() =>
-      expect(screen.getByText(/track every pottery piece/i)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/track every pottery piece/i),
+      ).toBeInTheDocument(),
     );
 
     expect(_googleOnSuccess).toBeDefined();
@@ -297,7 +320,9 @@ describe("App auth flow", () => {
     render(<App />);
 
     await waitFor(() =>
-      expect(screen.getByText(/track every pottery piece/i)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/track every pottery piece/i),
+      ).toBeInTheDocument(),
     );
 
     expect(_googleOnSuccess).toBeDefined();
@@ -309,7 +334,11 @@ describe("App auth flow", () => {
   });
 
   it("switches between landing tabs and keeps the URL in sync", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: MOCK_USER });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
 
     render(<App />);
 
@@ -345,7 +374,11 @@ describe("App auth flow", () => {
   });
 
   it("clicking Log out calls logoutUser and returns to the login form", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: MOCK_USER });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
     vi.mocked(logoutUser).mockResolvedValue(undefined);
 
     render(<App />);
@@ -370,7 +403,11 @@ describe("App auth flow", () => {
   });
 
   it("shows the manual crop tool menu item only for admin users and routes to it", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: "https://admin.potterdoc.com", user: MOCK_ADMIN_USER });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: "https://admin.potterdoc.com",
+      user: MOCK_ADMIN_USER,
+    });
 
     render(<App />);
 
@@ -390,7 +427,11 @@ describe("App auth flow", () => {
   });
 
   it("shows the Admin Tool menu item only for admin users and redirects to /admin/", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: "https://admin.potterdoc.com", user: MOCK_ADMIN_USER });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: "https://admin.potterdoc.com",
+      user: MOCK_ADMIN_USER,
+    });
 
     render(<App />);
 
@@ -402,11 +443,18 @@ describe("App auth flow", () => {
 
     await userEvent.click(screen.getByText(MOCK_DISPLAY_NAME));
     const adminLink = screen.getByText("Admin Tool").closest("a");
-    expect(adminLink).toHaveAttribute("href", "https://admin.potterdoc.com/admin/");
+    expect(adminLink).toHaveAttribute(
+      "href",
+      "https://admin.potterdoc.com/admin/",
+    );
   });
 
   it("does not show the manual crop tool menu item for non-admin users", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: MOCK_USER });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
 
     render(<App />);
 
@@ -422,7 +470,11 @@ describe("App auth flow", () => {
   });
 
   it("navigates to the piece summary preferences route from the user menu", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: MOCK_USER });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
 
     render(<App />);
 
@@ -440,7 +492,11 @@ describe("App auth flow", () => {
   });
 
   it("shows the alias tutorial inlay and opens identity preferences from it", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: MOCK_USER });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
 
     render(<App />);
 
@@ -466,7 +522,11 @@ describe("App auth flow", () => {
   });
 
   it("opens the identity preferences route directly", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: MOCK_USER });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
     window.history.pushState({}, "", "/preferences/identity");
 
     render(<App />);
@@ -479,7 +539,11 @@ describe("App auth flow", () => {
   });
 
   it("opens the tutorials preferences route directly", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: MOCK_USER });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
     window.history.pushState({}, "", "/preferences/tutorials");
 
     render(<App />);
@@ -492,7 +556,11 @@ describe("App auth flow", () => {
   });
 
   it("cancels preferences back to the current piece detail instead of the pieces list return target", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: MOCK_USER });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
     vi.mocked(fetchPiece).mockResolvedValue({
       id: "piece-1",
       name: "Tall Mug",
@@ -537,7 +605,11 @@ describe("App auth flow", () => {
   });
 
   it("activates the analyze tab on direct navigation to /analyze", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: MOCK_USER });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
     window.history.pushState({}, "", "/analyze");
 
     render(<App />);
@@ -564,45 +636,67 @@ describe("invite page routing", () => {
   });
 
   it("renders InvitePage at /invite when the user is already signed in", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: MOCK_USER });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
     vi.mocked(validateInviteCode).mockResolvedValue({ valid: true });
     window.history.pushState({}, "", "/invite?code=test-uuid");
 
     render(<App />);
 
     await waitFor(() =>
-      expect(screen.getByText(/your invite code is valid/i)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/your invite code is valid/i),
+      ).toBeInTheDocument(),
     );
   });
 
   it("renders InvitePage at /invite when not signed in", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: null });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: null,
+    });
     vi.mocked(validateInviteCode).mockResolvedValue({ valid: true });
     window.history.pushState({}, "", "/invite?code=test-uuid");
 
     render(<App />);
 
     await waitFor(() =>
-      expect(screen.getByText(/your invite code is valid/i)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/your invite code is valid/i),
+      ).toBeInTheDocument(),
     );
   });
 
   it("stores invite code in sessionStorage after validation", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: null });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: null,
+    });
     vi.mocked(validateInviteCode).mockResolvedValue({ valid: true });
     window.history.pushState({}, "", "/invite?code=my-invite-uuid");
 
     render(<App />);
 
     await waitFor(() =>
-      expect(screen.getByText(/your invite code is valid/i)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/your invite code is valid/i),
+      ).toBeInTheDocument(),
     );
 
     expect(sessionStorage.getItem("pendingInviteCode")).toBe("my-invite-uuid");
   });
 
   it("shows error for invalid invite code", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({ googleOauthClientId: "test-client-id", adminBaseUrl: null, user: null });
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: null,
+    });
     vi.mocked(validateInviteCode).mockRejectedValue({
       response: { data: { detail: "This code has been used." } },
     });

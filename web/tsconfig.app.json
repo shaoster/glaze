@@ -26,12 +26,10 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "axios": ["./node_modules/axios"],
+      "axios": ["./node_modules/axios"]
     }
   },
-  "include": [
-    "src",
-  ],
+  "include": ["src"],
   "exclude": [
     "src/test-setup.ts",
     "**/*.test.ts",

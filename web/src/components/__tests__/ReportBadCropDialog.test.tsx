@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import ReportBadCropDialog from "../ReportBadCropDialog";
 
@@ -134,19 +140,20 @@ describe("ReportBadCropDialog", () => {
     mockCreate.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
-          resolveSubmit = () => resolve({
-            id: "run-1",
-            piece_state_image_id: 123,
-            source: {
-              type: "human",
-              backend: null,
-              deployment: "web-ui",
-              version: null,
-            },
-            crop: { x: 0, y: 0, width: 1, height: 1 },
-            status: "success",
-            created: new Date(),
-          });
+          resolveSubmit = () =>
+            resolve({
+              id: "run-1",
+              piece_state_image_id: 123,
+              source: {
+                type: "human",
+                backend: null,
+                deployment: "web-ui",
+                version: null,
+              },
+              crop: { x: 0, y: 0, width: 1, height: 1 },
+              status: "success",
+              created: new Date(),
+            });
         }),
     );
 

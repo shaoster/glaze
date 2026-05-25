@@ -1,5 +1,12 @@
 import CloseIcon from "@mui/icons-material/Close";
-import { Box, IconButton, Typography, useTheme, useMediaQuery, Tooltip } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  Typography,
+  useTheme,
+  useMediaQuery,
+  Tooltip,
+} from "@mui/material";
 import type { ImageCrop } from "../util/types";
 import CloudinaryImage from "./CloudinaryImage";
 import { Masonry } from "masonic";
@@ -40,7 +47,15 @@ export default function PiecePhotoGalleryGrid({
     );
   }
 
-  const MasonryTile = ({ data: image, index, width }: { data: PiecePhotoGalleryGridImage; index: number; width: number }) => {
+  const MasonryTile = ({
+    data: image,
+    index,
+    width,
+  }: {
+    data: PiecePhotoGalleryGridImage;
+    index: number;
+    width: number;
+  }) => {
     const isThumbnail = image.url === currentThumbnailUrl;
 
     return (
@@ -76,7 +91,9 @@ export default function PiecePhotoGalleryGrid({
               crop={image.crop}
               alt={image.caption || "Piece photo"}
               context="gallery"
-              requestedWidth={Math.round(width * (globalThis.window?.devicePixelRatio ?? 1))}
+              requestedWidth={Math.round(
+                width * (globalThis.window?.devicePixelRatio ?? 1),
+              )}
               style={{
                 width: "100%",
                 height: "auto",
@@ -87,7 +104,13 @@ export default function PiecePhotoGalleryGrid({
           </Box>
         </Box>
         {image.editableCurrentStateIndex !== null && canDeleteImages && (
-          <Tooltip title={isThumbnail ? "Cannot delete the current piece thumbnail" : "Delete photo"}>
+          <Tooltip
+            title={
+              isThumbnail
+                ? "Cannot delete the current piece thumbnail"
+                : "Delete photo"
+            }
+          >
             <span>
               <IconButton
                 aria-label={`Delete piece photo ${index + 1}`}
@@ -104,10 +127,14 @@ export default function PiecePhotoGalleryGrid({
                   width: 28,
                   height: 28,
                   color: "common.white",
-                  backgroundColor: isThumbnail ? "rgba(0,0,0,0.24)" : "rgba(0,0,0,0.52)",
+                  backgroundColor: isThumbnail
+                    ? "rgba(0,0,0,0.24)"
+                    : "rgba(0,0,0,0.52)",
                   backdropFilter: "blur(6px)",
                   "&:hover": {
-                    backgroundColor: isThumbnail ? "rgba(0,0,0,0.24)" : "rgba(0,0,0,0.68)",
+                    backgroundColor: isThumbnail
+                      ? "rgba(0,0,0,0.24)"
+                      : "rgba(0,0,0,0.68)",
                   },
                   "&.Mui-disabled": {
                     color: "rgba(255,255,255,0.45)",

@@ -3,13 +3,13 @@ import TagChipList from "../components/TagChipList";
 
 /**
  * TagChipList renders an array of tags with built-in overflow handling.
- * 
+ *
  * Rationale:
  * - Implemented to prevent tag clouds from breaking layouts in dense areas (e.g. PieceList cards).
  * - Provides a "Show more" affordance to expand the full set of tags inline.
- * 
+ *
  * Edge cases:
- * - Forced Visibility: Ensures certain high-priority tags (e.g. current selection) remain visible 
+ * - Forced Visibility: Ensures certain high-priority tags (e.g. current selection) remain visible
  *   even when the list is collapsed.
  * - Empty List: Renders nothing to save vertical space.
  * - Single Tag: No overflow button appears.

@@ -248,7 +248,6 @@ class TestGlazeCombinationAdmin:
         """
         from django.test import Client, override_settings
         from django.urls import reverse
-        from django.conf import settings
 
         gt = GlazeType.objects.create(user=None, name="Shino")
         combo, _ = GlazeCombination.get_or_create_with_components(
@@ -272,7 +271,9 @@ class TestGlazeCombinationAdmin:
         with override_settings(ALLOWED_HOSTS=["testserver"]):
             c = Client()
             c.force_login(admin_user)
-            response = c.get(reverse('admin:api_glazecombination_change', args=[combo.pk]))
+            response = c.get(
+                reverse("admin:api_glazecombination_change", args=[combo.pk])
+            )
 
         assert response.status_code == 200
 

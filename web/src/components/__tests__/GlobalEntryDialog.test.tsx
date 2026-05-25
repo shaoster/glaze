@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import GlobalEntryDialog from "../GlobalEntryDialog";
 import * as api from "../../util/api";
@@ -57,7 +63,8 @@ vi.mock("../../util/workflow", () => ({
       : [],
   getGlobalThumbnailField: (globalName: string) =>
     globalName === "glaze_combination" ? "test_tile_image" : null,
-  isFavoritableGlobal: (globalName: string) => globalName === "glaze_combination",
+  isFavoritableGlobal: (globalName: string) =>
+    globalName === "glaze_combination",
 }));
 
 vi.mock("../CloudinaryImage", () => ({
@@ -72,7 +79,11 @@ function makeCombo(
   return {
     id: "1",
     name: "Iron Red!Clear",
-    test_tile_image: { url: "https://example.com/test-tile.jpg", cloudinary_public_id: null, cloud_name: null },
+    test_tile_image: {
+      url: "https://example.com/test-tile.jpg",
+      cloudinary_public_id: null,
+      cloud_name: null,
+    },
     is_food_safe: true,
     runs: false,
     highlights_grooves: null,
@@ -143,7 +154,11 @@ describe("GlobalEntryDialog", () => {
   it("shows whether matching entries are public or private", async () => {
     vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([
       makeCombo({ id: "public-entry", name: "Studio White", is_public: true }),
-      makeCombo({ id: "private-entry", name: "Studio White", is_public: false }),
+      makeCombo({
+        id: "private-entry",
+        name: "Studio White",
+        is_public: false,
+      }),
     ]);
 
     render(
@@ -233,12 +248,16 @@ describe("GlobalEntryDialog", () => {
     );
     expect(screen.getByText("Other Combo")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("switch", { name: "Only favorites" }));
+    await userEvent.click(
+      screen.getByRole("switch", { name: "Only favorites" }),
+    );
 
     expect(screen.getByText("Favorite Combo")).toBeInTheDocument();
     expect(screen.queryByText("Other Combo")).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("switch", { name: "Only favorites" }));
+    await userEvent.click(
+      screen.getByRole("switch", { name: "Only favorites" }),
+    );
 
     expect(screen.getByText("Favorite Combo")).toBeInTheDocument();
     expect(screen.getByText("Other Combo")).toBeInTheDocument();
@@ -288,7 +307,9 @@ describe("GlobalEntryDialog", () => {
       }),
       { target: { value: "Iron" } },
     );
-    await userEvent.click(await screen.findByRole("option", { name: "Iron Red" }));
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Iron Red" }),
+    );
 
     await waitFor(() =>
       expect(api.fetchGlobalEntriesWithFilters).toHaveBeenLastCalledWith(
@@ -312,7 +333,9 @@ describe("GlobalEntryDialog", () => {
       screen.getByRole("combobox", { name: "Firing Temperature" }),
       { target: { value: "Cone" } },
     );
-    await userEvent.click(await screen.findByRole("option", { name: "Cone 6" }));
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Cone 6" }),
+    );
 
     await waitFor(() =>
       expect(api.fetchGlobalEntriesWithFilters).toHaveBeenLastCalledWith(
@@ -390,11 +413,12 @@ describe("GlobalEntryDialog", () => {
     );
 
     await userEvent.click(screen.getByRole("tab", { name: "Create" }));
-    fireEvent.change(
-      screen.getByRole("textbox", { name: "Location" }),
-      { target: { value: "Studio K" } },
+    fireEvent.change(screen.getByRole("textbox", { name: "Location" }), {
+      target: { value: "Studio K" },
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "Create Location" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
 
     await waitFor(() =>
       expect(api.createGlobalEntry).toHaveBeenCalledWith("location", {
@@ -402,7 +426,10 @@ describe("GlobalEntryDialog", () => {
         value: "Studio K",
       }),
     );
-    expect(onSelect).toHaveBeenCalledWith({ id: "created-id", name: "Studio K" });
+    expect(onSelect).toHaveBeenCalledWith({
+      id: "created-id",
+      name: "Studio K",
+    });
   });
 
   it("shows an error when simple entry creation fails", async () => {
@@ -419,18 +446,21 @@ describe("GlobalEntryDialog", () => {
     );
 
     await userEvent.click(screen.getByRole("tab", { name: "Create" }));
-    fireEvent.change(
-      screen.getByRole("textbox", { name: "Location" }),
-      { target: { value: "Studio K" } },
+    fireEvent.change(screen.getByRole("textbox", { name: "Location" }), {
+      target: { value: "Studio K" },
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "Create Location" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
 
     await waitFor(() =>
       expect(
         screen.getByText("Failed to create location."),
       ).toBeInTheDocument(),
     );
-    expect(screen.getByRole("button", { name: "Create Location" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Create Location" }),
+    ).toBeEnabled();
   });
 
   it("creates a composed entry from ordered layers", async () => {
@@ -452,16 +482,16 @@ describe("GlobalEntryDialog", () => {
     );
 
     await userEvent.click(screen.getByRole("tab", { name: "Create" }));
-    fireEvent.change(
-      screen.getByRole("combobox", { name: "Layer 1" }),
-      { target: { value: "Iron" } },
+    fireEvent.change(screen.getByRole("combobox", { name: "Layer 1" }), {
+      target: { value: "Iron" },
+    });
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Iron Red" }),
     );
-    await userEvent.click(await screen.findByRole("option", { name: "Iron Red" }));
     await userEvent.click(screen.getByRole("button", { name: "Add layer" }));
-    fireEvent.change(
-      screen.getByRole("combobox", { name: "Layer 2" }),
-      { target: { value: "Clear" } },
-    );
+    fireEvent.change(screen.getByRole("combobox", { name: "Layer 2" }), {
+      target: { value: "Clear" },
+    });
     await userEvent.click(await screen.findByRole("option", { name: "Clear" }));
     await userEvent.click(
       screen.getByRole("button", { name: "Create Glaze Combination" }),
@@ -493,7 +523,9 @@ describe("GlobalEntryDialog", () => {
 
     const removeButton = screen.getByRole("button", { name: "Remove" });
     expect(removeButton).toBeDisabled();
-    expect(screen.getByRole("combobox", { name: "Layer 1" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Layer 1" }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("combobox", { name: "Layer 2" }),
     ).not.toBeInTheDocument();
@@ -517,16 +549,16 @@ describe("GlobalEntryDialog", () => {
     );
 
     await userEvent.click(screen.getByRole("tab", { name: "Create" }));
-    fireEvent.change(
-      screen.getByRole("combobox", { name: "Layer 1" }),
-      { target: { value: "Iron" } },
+    fireEvent.change(screen.getByRole("combobox", { name: "Layer 1" }), {
+      target: { value: "Iron" },
+    });
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Iron Red" }),
     );
-    await userEvent.click(await screen.findByRole("option", { name: "Iron Red" }));
     await userEvent.click(screen.getByRole("button", { name: "Add layer" }));
-    fireEvent.change(
-      screen.getByRole("combobox", { name: "Layer 2" }),
-      { target: { value: "Clear" } },
-    );
+    fireEvent.change(screen.getByRole("combobox", { name: "Layer 2" }), {
+      target: { value: "Clear" },
+    });
     await userEvent.click(await screen.findByRole("option", { name: "Clear" }));
 
     const removeButtons = screen.getAllByRole("button", { name: "Remove" });

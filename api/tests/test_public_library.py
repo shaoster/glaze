@@ -188,9 +188,10 @@ class TestPublicLibraryAdmin:
         GlazeType.objects.create(user=private_user, name="PrivateGlaze")
 
         from django.urls import reverse
+
         c = DjangoClient()
         c.force_login(superuser)
-        resp = c.get(reverse('admin:api_glazetype_changelist'))
+        resp = c.get(reverse("admin:api_glazetype_changelist"))
         assert resp.status_code == 200
         content = resp.content.decode()
         assert "PublicGlaze" in content
@@ -294,15 +295,16 @@ class TestPublicLibraryAdmin:
 @pytest.mark.django_db
 class TestGlazeAdminSite:
     def test_app_label_subpage_is_returned_unchanged(self, monkeypatch):
-        from api.admin import GlazeAdminSite
         from django.urls import reverse
+
+        from api.admin import GlazeAdminSite
 
         expected = [{"app_label": "api", "models": []}]
         monkeypatch.setattr(
             AdminSite, "get_app_list", lambda self, request, app_label=None: expected
         )
 
-        request = RequestFactory().get(reverse('admin:index') + "api/")
+        request = RequestFactory().get(reverse("admin:index") + "api/")
         assert (
             GlazeAdminSite(name="glaze").get_app_list(request, app_label="api")
             is expected
@@ -311,9 +313,10 @@ class TestGlazeAdminSite:
     def test_index_without_public_models_does_not_add_public_libraries(
         self, monkeypatch
     ):
+        from django.urls import reverse
+
         from api import admin as admin_module
         from api.admin import GlazeAdminSite
-        from django.urls import reverse
 
         app_list = [
             {"app_label": "api", "models": [{"object_name": "Piece", "name": "Pieces"}]}
@@ -324,7 +327,7 @@ class TestGlazeAdminSite:
         monkeypatch.setattr(admin_module, "get_public_global_models", lambda: [])
 
         result = GlazeAdminSite(name="glaze").get_app_list(
-            RequestFactory().get(reverse('admin:index'))
+            RequestFactory().get(reverse("admin:index"))
         )
 
         assert result == app_list

@@ -35,8 +35,7 @@ export default function PieceListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const sortFromUrl = searchParams.get("sort") as PieceSortOrder | null;
   const sortOrder: PieceSortOrder =
-    sortFromUrl &&
-    PIECE_SORT_OPTIONS.some((o) => o.value === sortFromUrl)
+    sortFromUrl && PIECE_SORT_OPTIONS.some((o) => o.value === sortFromUrl)
       ? sortFromUrl
       : DEFAULT_PIECE_SORT;
   const [dialogOpen, setDialogOpen] = useState(false);

@@ -79,7 +79,9 @@ export default function GlazeImportOcrStage({
   onContinueToReview,
 }: GlazeImportOcrStageProps) {
   const ocrStageRef = useRef<HTMLDivElement | null>(null);
-  const [runningOcrRecordId, setRunningOcrRecordId] = useState<string | null>(null);
+  const [runningOcrRecordId, setRunningOcrRecordId] = useState<string | null>(
+    null,
+  );
   const [ocrDragState, setOcrDragState] = useState<OcrDragState | null>(null);
   const selectedRecord =
     records.find((record) => record.id === selectedRecordId) ?? null;
@@ -190,7 +192,9 @@ export default function GlazeImportOcrStage({
     };
   }, [ocrDragState, selectedCrop, selectedRecord, setRecords]);
 
-  function updateSelectedRecord(updater: (record: UploadedRecord) => UploadedRecord) {
+  function updateSelectedRecord(
+    updater: (record: UploadedRecord) => UploadedRecord,
+  ) {
     if (!selectedRecord) return;
     const selectedRecordId = selectedRecord.id;
     setRecords((current) =>
@@ -286,7 +290,8 @@ export default function GlazeImportOcrStage({
     handle: OcrDragState["handle"],
     event: ReactPointerEvent<HTMLDivElement>,
   ) {
-    if (!selectedRecord?.ocrRegion || !selectedCrop || !ocrStageRef.current) return;
+    if (!selectedRecord?.ocrRegion || !selectedCrop || !ocrStageRef.current)
+      return;
     const rect = ocrStageRef.current.getBoundingClientRect();
     const scale = rect.width / selectedCrop.size;
     const sourceX = (event.clientX - rect.left) / scale;
@@ -375,7 +380,9 @@ export default function GlazeImportOcrStage({
                     min={0.2}
                     max={0.85}
                     step={0.01}
-                    value={0.2 + 0.85 - selectedRecord.ocrTuning.textDarkThreshold}
+                    value={
+                      0.2 + 0.85 - selectedRecord.ocrTuning.textDarkThreshold
+                    }
                     onChange={(_, value) =>
                       updateSelectedRecord((record) => ({
                         ...record,
@@ -390,7 +397,12 @@ export default function GlazeImportOcrStage({
                   />
                 </Box>
               </Stack>
-              <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+              <Stack
+                direction="row"
+                spacing={1}
+                flexWrap="wrap"
+                alignItems="center"
+              >
                 <Chip label={selectedRecord.filename} />
                 <Button
                   variant="outlined"
@@ -413,7 +425,10 @@ export default function GlazeImportOcrStage({
                 ) : null}
               </Stack>
               {cropPreviewLoading ? (
-                <CircularProgress size={32} sx={{ alignSelf: "flex-start", m: 1 }} />
+                <CircularProgress
+                  size={32}
+                  sx={{ alignSelf: "flex-start", m: 1 }}
+                />
               ) : cropPreviewUrl && selectedCrop ? (
                 <Box
                   sx={{
@@ -449,7 +464,9 @@ export default function GlazeImportOcrStage({
                     {selectedOcrRegion ? (
                       <Box
                         data-testid="ocr-selection"
-                        onPointerDown={(event) => handleStartOcrDrag("move", event)}
+                        onPointerDown={(event) =>
+                          handleStartOcrDrag("move", event)
+                        }
                         sx={{
                           position: "absolute",
                           left: selectedOcrRegion.x * ocrStageScale,
@@ -544,7 +561,8 @@ export default function GlazeImportOcrStage({
                   <Typography variant="subtitle2">Last OCR result</Typography>
                   <Typography variant="body2" color="text.secondary">
                     Parsed as:{" "}
-                    {selectedRecord.ocrSuggestion.suggestedName || "No parsed name"}
+                    {selectedRecord.ocrSuggestion.suggestedName ||
+                      "No parsed name"}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Confidence:{" "}

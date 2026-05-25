@@ -4,8 +4,8 @@ from django.test.utils import CaptureQueriesContext
 
 from api.models import (
     ENTRY_STATE,
-    Location,
     Image,
+    Location,
     Piece,
     PieceState,
     PieceStateImage,

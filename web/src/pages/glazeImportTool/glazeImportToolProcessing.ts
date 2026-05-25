@@ -55,7 +55,12 @@ async function detectLabelRect(
   const canvas = renderCropToCanvas(image, crop, DETECT_OCR_ANALYSIS_SIZE);
   const ctx = canvas.getContext("2d");
   if (!ctx) return { labelRect: null };
-  const { data } = ctx.getImageData(0, 0, DETECT_OCR_ANALYSIS_SIZE, DETECT_OCR_ANALYSIS_SIZE);
+  const { data } = ctx.getImageData(
+    0,
+    0,
+    DETECT_OCR_ANALYSIS_SIZE,
+    DETECT_OCR_ANALYSIS_SIZE,
+  );
   return {
     labelRect: detectLabelRectFromData(
       data,

@@ -6,13 +6,13 @@ import Button from "@mui/material/Button";
 
 /**
  * NavigationBlocker is a confirmation dialog that prevents accidental loss of data.
- * 
+ *
  * Rationale:
  * - Implemented to support dirty-state protection across complex forms (Issue #245).
  * - Standardizes the warning UI for unsaved changes.
- * 
+ *
  * Edge cases:
- * - No data router: While this component just renders a Dialog, it is typically used 
+ * - No data router: While this component just renders a Dialog, it is typically used
  *   in conjunction with `useBlocker` from `react-router-dom`.
  */
 const meta = {
@@ -43,7 +43,9 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function NavigationBlockerWithState(args: React.ComponentProps<typeof NavigationBlocker>) {
+function NavigationBlockerWithState(
+  args: React.ComponentProps<typeof NavigationBlocker>,
+) {
   const [open, setOpen] = useState(false);
   return (
     <>

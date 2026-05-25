@@ -1,4 +1,13 @@
-import { Alert, Button, Chip, List, ListItemButton, ListItemText, Stack, Typography } from "@mui/material";
+import {
+  Alert,
+  Button,
+  Chip,
+  List,
+  ListItemButton,
+  ListItemText,
+  Stack,
+  Typography,
+} from "@mui/material";
 import type { ManualSquareCropImportResponse } from "../../util/api";
 import GlazeImportProgressList from "./GlazeImportProgressList";
 import type { UploadProgressEntry } from "./glazeImportToolTypes";
@@ -66,7 +75,12 @@ export default function GlazeImportImportStage({
       />
       {importResult ? (
         <Stack spacing={2}>
-          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1}
+            flexWrap="wrap"
+            alignItems="center"
+          >
             <Chip
               color="success"
               label={`${importResult.summary.created_glaze_types} glaze types created`}
@@ -96,9 +110,10 @@ export default function GlazeImportImportStage({
             }}
           >
             {importResult.results.map((result) => {
-              const adminPath = result.object_id && adminBaseUrl
-                ? `${adminBaseUrl}/admin/api/${result.kind.replace("_", "")}/${result.object_id}/change/`
-                : null;
+              const adminPath =
+                result.object_id && adminBaseUrl
+                  ? `${adminBaseUrl}/admin/api/${result.kind.replace("_", "")}/${result.object_id}/change/`
+                  : null;
               return (
                 <ListItemButton
                   key={result.client_id}

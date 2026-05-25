@@ -43,8 +43,7 @@ const meta = {
   decorators: [
     (Story, context) => {
       const initialPath =
-        (context.parameters.initialPath as string | undefined) ??
-        "/pieces/p1";
+        (context.parameters.initialPath as string | undefined) ?? "/pieces/p1";
       const router = createMemoryRouter(
         [{ path: "/pieces/:id/*", element: <Story /> }],
         { initialEntries: [initialPath] },
@@ -196,7 +195,12 @@ export const SinglePhotoAutoLightbox: Story = {
 export const ButtonStandalone: StoryObj<typeof PiecePhotoGalleryButton> = {
   render: (args) => {
     const router = createMemoryRouter(
-      [{ path: "/pieces/:id/*", element: <PiecePhotoGalleryButton {...args} /> }],
+      [
+        {
+          path: "/pieces/:id/*",
+          element: <PiecePhotoGalleryButton {...args} />,
+        },
+      ],
       { initialEntries: ["/pieces/p1"] },
     );
     return <RouterProvider router={router} />;

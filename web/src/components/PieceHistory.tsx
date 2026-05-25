@@ -226,7 +226,10 @@ export default function PieceHistory({
   // for a smooth scroll animation — no need to block paint with useLayoutEffect.
   useEffect(() => {
     if (isEditable) {
-      containerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      containerRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
     }
   }, [isEditable]);
 
@@ -284,7 +287,7 @@ export default function PieceHistory({
 
             // Predecessor for insert-before affordance
             const predecessor: StateEnum | null =
-              i === 0 ? null : pastHistory[i - 1]?.state ?? null;
+              i === 0 ? null : (pastHistory[i - 1]?.state ?? null);
 
             // Only show insert affordance in edit mode, with a valid predecessor,
             // and NOT before the last item (no affordance after pastHistory.at(-1))
@@ -361,7 +364,11 @@ export default function PieceHistory({
                       </Typography>
                       {isRewinded && (
                         <Chip
-                          icon={<HistoryIcon sx={{ fontSize: "0.8rem !important" }} />}
+                          icon={
+                            <HistoryIcon
+                              sx={{ fontSize: "0.8rem !important" }}
+                            />
+                          }
                           label="Viewing"
                           size="small"
                           color="primary"

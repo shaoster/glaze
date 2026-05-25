@@ -4,11 +4,11 @@ import { fn } from "@storybook/test";
 
 /**
  * PiecePhotoGalleryGrid is a non-interactive layout component for displaying a set of piece images.
- * 
+ *
  * Rationale:
  * - Decoupled from the interactive gallery to allow for simple read-only display.
  * - Optimized for different viewing contexts (e.g. mobile vs desktop).
- * 
+ *
  * Edge cases:
  * - Single Image: Occupies full width of the container.
  * - Even/Odd counts: Adjusts grid spacing to maintain balance.

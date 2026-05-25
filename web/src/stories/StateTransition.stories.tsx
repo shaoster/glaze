@@ -4,12 +4,12 @@ import { fn } from "@storybook/test";
 
 /**
  * StateTransition visualizes and controls the progression of a piece through its workflow.
- * 
+ *
  * Rationale:
  * - Provides a clear, branched visualization of potential next states.
  * - Enforces the "one-way" nature of state transitions by sealing historical data.
  * - Handles branching paths (e.g. standard workflow vs. recycled).
- * 
+ *
  * Edge cases:
  * - Disabled Mode: Prevents transitions when the piece is in an "editable" historical mode (Issue #387).
  * - Terminal State: Hides the branching connector and next-state chips when the piece is finished.

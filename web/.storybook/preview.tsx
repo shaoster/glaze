@@ -29,7 +29,13 @@ const DARK_THEME = createTheme({
     warning: { main: "#c97a4d" },
   },
   typography: {
-    fontFamily: ["Manrope", "Avenir Next", "Segoe UI", "Arial", "sans-serif"].join(","),
+    fontFamily: [
+      "Manrope",
+      "Avenir Next",
+      "Segoe UI",
+      "Arial",
+      "sans-serif",
+    ].join(","),
   },
 });
 
@@ -122,7 +128,9 @@ const preview: Preview = {
       const [viewportReady, setViewportReady] = useState(false);
 
       useLayoutEffect(() => {
-        const cleanup = applyPreviewViewport((layoutMode as LayoutMode) ?? "desktop");
+        const cleanup = applyPreviewViewport(
+          (layoutMode as LayoutMode) ?? "desktop",
+        );
         setViewportReady(true);
         return () => {
           cleanup();

@@ -89,19 +89,37 @@ describe("defaultOcrRegion", () => {
 
 describe("clampOcrRegion", () => {
   it("clamps x/y so the region stays inside the crop", () => {
-    const r = clampOcrRegion(200, { x: -10, y: -5, width: 100, height: 50, rotation: 0 });
+    const r = clampOcrRegion(200, {
+      x: -10,
+      y: -5,
+      width: 100,
+      height: 50,
+      rotation: 0,
+    });
     expect(r.x).toBe(0);
     expect(r.y).toBe(0);
   });
 
   it("clamps width/height to the crop size", () => {
-    const r = clampOcrRegion(100, { x: 0, y: 0, width: 300, height: 400, rotation: 0 });
+    const r = clampOcrRegion(100, {
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 400,
+      rotation: 0,
+    });
     expect(r.width).toBe(100);
     expect(r.height).toBe(100);
   });
 
   it("enforces a minimum size of 16 px", () => {
-    const r = clampOcrRegion(200, { x: 0, y: 0, width: 4, height: 2, rotation: 0 });
+    const r = clampOcrRegion(200, {
+      x: 0,
+      y: 0,
+      width: 4,
+      height: 2,
+      rotation: 0,
+    });
     expect(r.width).toBe(16);
     expect(r.height).toBe(16);
   });
@@ -122,7 +140,10 @@ describe("detectLabelRectFromData", () => {
 
     // White/salmon label sticker: rgb(215,190,180) → lum ≈ 0.82 (above 0.75)
     // Place it at rows 90-115 (bottom third starts at ~85), cols 20-108.
-    const labelR1 = 90, labelR2 = 115, labelC1 = 20, labelC2 = 108;
+    const labelR1 = 90,
+      labelR2 = 115,
+      labelC1 = 20,
+      labelC2 = 108;
     paintRect(data, N, labelR1, labelR2, labelC1, labelC2, 215, 190, 180);
 
     const rect = detectLabelRectFromData(data, N);
@@ -167,7 +188,9 @@ describe("detectLabelRectFromData", () => {
 
   it("returns correct luminance check boundary", () => {
     // Verify our lum() helper agrees with the threshold constant.
-    expect(lum(215, 190, 180)).toBeGreaterThan(DETECT_OCR_LABEL_WHITE_THRESHOLD);
+    expect(lum(215, 190, 180)).toBeGreaterThan(
+      DETECT_OCR_LABEL_WHITE_THRESHOLD,
+    );
     expect(lum(160, 120, 80)).toBeLessThan(DETECT_OCR_LABEL_WHITE_THRESHOLD);
   });
 });
@@ -177,8 +200,8 @@ describe("detectLabelRectFromData", () => {
 // ---------------------------------------------------------------------------
 
 describe("ocrRegionFromLabelData", () => {
-  const N1 = DETECT_OCR_ANALYSIS_SIZE;       // 128
-  const N2 = DETECT_OCR_TEXT_ANALYSIS_SIZE;  // 512
+  const N1 = DETECT_OCR_ANALYSIS_SIZE; // 128
+  const N2 = DETECT_OCR_TEXT_ANALYSIS_SIZE; // 512
   const CROP_SIZE = 400;
 
   // Matches the scenario in test-tile-label.png:
@@ -189,7 +212,11 @@ describe("ocrRegionFromLabelData", () => {
 
     // Three rows of dark text at rows 380-385, 395-400, 410-415.
     // Span columns 100-400 (wide enough to clear the 1% projection threshold).
-    for (const [tr1, tr2] of [[380, 385], [395, 400], [410, 415]] as const) {
+    for (const [tr1, tr2] of [
+      [380, 385],
+      [395, 400],
+      [410, 415],
+    ] as const) {
       paintRect(data, N2, tr1, tr2, 100, 400, 30, 20, 15); // near-black text
     }
 
@@ -209,18 +236,20 @@ describe("ocrRegionFromLabelData", () => {
 
     // The OCR region should be much smaller than the full label rect and
     // contain the text rows (380-415 in N2 ≈ rows 297-324 in crop pixels).
-    const labelN2Top = Math.floor(90 * 4);    // 360
+    const labelN2Top = Math.floor(90 * 4); // 360
     const textN2Top = 380;
     const cropScale = CROP_SIZE / N2;
 
     // y should be at or above the first text row, not at the top of the label.
-    expect(region.y).toBeGreaterThanOrEqual(Math.round((textN2Top - 12 /* pad */) * cropScale));
+    expect(region.y).toBeGreaterThanOrEqual(
+      Math.round((textN2Top - 12) /* pad */ * cropScale),
+    );
     expect(region.y).toBeLessThan(Math.round(labelN2Top * cropScale) + 40);
 
     // Height should be much less than the full label height.
     // Full label: rows 90-115 in N1 → 360-463 in N2 → ~81 crop px.
     // Text rows only span ~47 crop px (well under 70% of the label).
-    const fullLabelCropPx = Math.round(((115 - 90 + 2) * 4) * cropScale); // +2 ceil rounding
+    const fullLabelCropPx = Math.round((115 - 90 + 2) * 4 * cropScale); // +2 ceil rounding
     expect(region.height).toBeLessThan(fullLabelCropPx * 0.7);
   });
 
@@ -254,7 +283,12 @@ describe("ocrRegionFromLabelData", () => {
 
     // Single-pixel specks scattered around the label — each row/col has
     // ≤1 dark pixel so projection profiles reject them.
-    for (const [pr, pc] of [[360, 100], [365, 200], [370, 300], [450, 150]] as const) {
+    for (const [pr, pc] of [
+      [360, 100],
+      [365, 200],
+      [370, 300],
+      [450, 150],
+    ] as const) {
       paintRect(data, N2, pr, pr, pc, pc, 10, 10, 10);
     }
 
@@ -285,10 +319,20 @@ describe("ocrRegionFromLabelData", () => {
     paintRect(data, N2, 430, 435, 100, 400, 102, 102, 102);
 
     const regionLoose = ocrRegionFromLabelData(
-      data, N1, N2, labelRect, CROP_SIZE, 0.50, // catches both bands
+      data,
+      N1,
+      N2,
+      labelRect,
+      CROP_SIZE,
+      0.5, // catches both bands
     );
     const regionTight = ocrRegionFromLabelData(
-      data, N1, N2, labelRect, CROP_SIZE, 0.35, // only catches the dark band
+      data,
+      N1,
+      N2,
+      labelRect,
+      CROP_SIZE,
+      0.35, // only catches the dark band
     );
 
     // Tighter threshold → smaller height (only the dark text band).

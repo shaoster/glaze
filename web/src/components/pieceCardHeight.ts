@@ -97,7 +97,10 @@ export function getThumbnailAspectRatio(piece: PieceSummary): string {
  * Estimates the rendered card height from the thumbnail crop aspect ratio.
  * When original image dimensions are available uses the true pixel ratio.
  */
-export function estimateCardHeight(piece: PieceSummary, columnWidth: number): number {
+export function estimateCardHeight(
+  piece: PieceSummary,
+  columnWidth: number,
+): number {
   return getPieceCardLayout(piece, columnWidth).estimatedHeight;
 }
 
@@ -105,6 +108,9 @@ export function estimateCardHeight(piece: PieceSummary, columnWidth: number): nu
  * Returns the pixel height to request from Cloudinary for pieces without a valid crop,
  * or undefined for cropped pieces (Cloudinary infers height from the crop ratio).
  */
-export function getThumbnailRequestedHeight(piece: PieceSummary, columnWidth: number): number | undefined {
+export function getThumbnailRequestedHeight(
+  piece: PieceSummary,
+  columnWidth: number,
+): number | undefined {
   return getPieceCardLayout(piece, columnWidth).requestedHeight;
 }

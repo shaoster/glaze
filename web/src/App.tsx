@@ -85,7 +85,6 @@ const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
 const InvitePage = lazy(() => import("./pages/InvitePage"));
 const StaffInvitePage = lazy(() => import("./pages/StaffInvitePage"));
 
-
 const DARK_THEME = createTheme({
   palette: {
     mode: "dark",
@@ -114,12 +113,7 @@ const DARK_THEME = createTheme({
     },
   },
   typography: {
-    fontFamily: [
-      "Manrope",
-      "Avenir Next",
-      "Segoe UI",
-      "sans-serif",
-    ].join(","),
+    fontFamily: ["Manrope", "Avenir Next", "Segoe UI", "sans-serif"].join(","),
     h1: { fontWeight: 650, letterSpacing: "-0.03em" },
     h2: { fontWeight: 650, letterSpacing: "-0.03em" },
     h3: { fontWeight: 620, letterSpacing: "-0.03em" },
@@ -208,8 +202,13 @@ function GoogleSignInButton({
       setSubmitting(true);
       setError(null);
       try {
-        const inviteCode = sessionStorage.getItem("pendingInviteCode") ?? undefined;
-        const user = await loginWithGoogle(code, window.location.origin, inviteCode);
+        const inviteCode =
+          sessionStorage.getItem("pendingInviteCode") ?? undefined;
+        const user = await loginWithGoogle(
+          code,
+          window.location.origin,
+          inviteCode,
+        );
         if (inviteCode) sessionStorage.removeItem("pendingInviteCode");
         if (redirectTo) {
           window.location.replace(redirectTo);
@@ -232,13 +231,19 @@ function GoogleSignInButton({
         onClick={() => signIn()}
         disabled={submitting}
         startIcon={
-          submitting ? <CircularProgress size={16} color="inherit" /> : undefined
+          submitting ? (
+            <CircularProgress size={16} color="inherit" />
+          ) : undefined
         }
         fullWidth
       >
         {submitting ? "Signing in…" : "Sign in with Google"}
       </Button>
-      {error && <Alert severity="error" sx={{ width: "100%" }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ width: "100%" }}>
+          {error}
+        </Alert>
+      )}
     </Stack>
   );
 }
@@ -369,8 +374,9 @@ function AppShell({
   const preferencesRootMatch = useMatch("/preferences");
   const preferencesSectionMatch = useMatch("/preferences/:sectionId");
   const preferencesSectionId =
-    (preferencesSectionMatch?.params.sectionId as PreferencesSectionId | undefined) ??
-    null;
+    (preferencesSectionMatch?.params.sectionId as
+      | PreferencesSectionId
+      | undefined) ?? null;
   const preferencesOpen =
     preferencesRootMatch !== null || preferencesSectionMatch !== null;
 
@@ -498,54 +504,56 @@ function AppShell({
                 </ListItemIcon>
                 Preferences
               </MenuItem>
-              {currentUser.is_staff ? [
-                  <MenuItem
-                    key="invite"
-                    component={Link}
-                    to="/staff/invite"
-                    onClick={() => setMenuAnchor(null)}
-                  >
-                    <ListItemIcon>
-                      <AdminPanelSettingsIcon fontSize="small" />
-                    </ListItemIcon>
-                    Invite Code
-                  </MenuItem>,
-                  <MenuItem
-                    key="glaze-import"
-                    component={Link}
-                    to="/tools/glaze-import"
-                    onClick={() => setMenuAnchor(null)}
-                  >
-                    <ListItemIcon>
-                      <CropFreeIcon fontSize="small" />
-                    </ListItemIcon>
-                    Glaze Import Tool
-                  </MenuItem>,
-                  <MenuItem
-                    key="cloudinary-cleanup"
-                    component={Link}
-                    to="/tools/cloudinary-cleanup"
-                    onClick={() => setMenuAnchor(null)}
-                  >
-                    <ListItemIcon>
-                      <CleaningServicesIcon fontSize="small" />
-                    </ListItemIcon>
-                    Cloudinary Cleanup
-                  </MenuItem>,
-                  adminBaseUrl ? (
+              {currentUser.is_staff
+                ? [
                     <MenuItem
-                      key="admin-tool"
-                      component="a"
-                      href={`${adminBaseUrl}/admin/`}
+                      key="invite"
+                      component={Link}
+                      to="/staff/invite"
                       onClick={() => setMenuAnchor(null)}
                     >
                       <ListItemIcon>
                         <AdminPanelSettingsIcon fontSize="small" />
                       </ListItemIcon>
-                      Admin Tool
-                    </MenuItem>
-                  ) : null,
-                ] : null}
+                      Invite Code
+                    </MenuItem>,
+                    <MenuItem
+                      key="glaze-import"
+                      component={Link}
+                      to="/tools/glaze-import"
+                      onClick={() => setMenuAnchor(null)}
+                    >
+                      <ListItemIcon>
+                        <CropFreeIcon fontSize="small" />
+                      </ListItemIcon>
+                      Glaze Import Tool
+                    </MenuItem>,
+                    <MenuItem
+                      key="cloudinary-cleanup"
+                      component={Link}
+                      to="/tools/cloudinary-cleanup"
+                      onClick={() => setMenuAnchor(null)}
+                    >
+                      <ListItemIcon>
+                        <CleaningServicesIcon fontSize="small" />
+                      </ListItemIcon>
+                      Cloudinary Cleanup
+                    </MenuItem>,
+                    adminBaseUrl ? (
+                      <MenuItem
+                        key="admin-tool"
+                        component="a"
+                        href={`${adminBaseUrl}/admin/`}
+                        onClick={() => setMenuAnchor(null)}
+                      >
+                        <ListItemIcon>
+                          <AdminPanelSettingsIcon fontSize="small" />
+                        </ListItemIcon>
+                        Admin Tool
+                      </MenuItem>
+                    ) : null,
+                  ]
+                : null}
               <MenuItem
                 onClick={() => {
                   setMenuAnchor(null);
@@ -590,7 +598,9 @@ function AppShell({
               }}
             >
               <DialogTitle>Delete account?</DialogTitle>
-              <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <DialogContent
+                sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+              >
                 <DialogContentText>
                   This permanently deletes your account and all your pieces.
                   This cannot be undone. Download your data first if you want a
@@ -620,7 +630,10 @@ function AppShell({
                 </Button>
                 <Button
                   color="error"
-                  disabled={deleteConfirmText !== "delete my account" || deleteInProgress}
+                  disabled={
+                    deleteConfirmText !== "delete my account" ||
+                    deleteInProgress
+                  }
                   onClick={async () => {
                     setDeleteInProgress(true);
                     try {
@@ -749,15 +762,24 @@ function UnauthenticatedApp({
                 </ErrorBoundary>
               }
             />
-            <Route
-              path="/pieces/:id/*"
-              element={<PublicPieceShell />}
-            />
+            <Route path="/pieces/:id/*" element={<PublicPieceShell />} />
             <Route
               path="/invite"
               element={
                 <ErrorBoundary>
-                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                  <Suspense
+                    fallback={
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "center",
+                          py: 4,
+                        }}
+                      >
+                        <CircularProgress />
+                      </Box>
+                    }
+                  >
                     <InvitePage />
                   </Suspense>
                 </ErrorBoundary>
@@ -827,7 +849,19 @@ function AuthenticatedApp({
               path="/invite"
               element={
                 <ErrorBoundary>
-                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                  <Suspense
+                    fallback={
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "center",
+                          py: 4,
+                        }}
+                      >
+                        <CircularProgress />
+                      </Box>
+                    }
+                  >
                     <InvitePage />
                   </Suspense>
                 </ErrorBoundary>
@@ -838,7 +872,19 @@ function AuthenticatedApp({
               element={
                 currentUser.is_staff ? (
                   <ErrorBoundary>
-                    <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <Suspense
+                      fallback={
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "center",
+                            py: 4,
+                          }}
+                        >
+                          <CircularProgress />
+                        </Box>
+                      }
+                    >
                       <StaffInvitePage />
                     </Suspense>
                   </ErrorBoundary>
@@ -851,7 +897,10 @@ function AuthenticatedApp({
               path="/preferences"
               element={<Box sx={{ minHeight: "100dvh" }} />}
             />
-            <Route path="/preferences/:sectionId" element={<Box sx={{ minHeight: "100dvh" }} />} />
+            <Route
+              path="/preferences/:sectionId"
+              element={<Box sx={{ minHeight: "100dvh" }} />}
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>,
         ),

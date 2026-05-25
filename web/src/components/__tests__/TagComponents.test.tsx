@@ -41,7 +41,9 @@ describe("TagChipList", () => {
 
     expect(screen.getByText("Sold")).toBeInTheDocument();
     expect(screen.getByText("Blue")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Show less" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Show less" }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Show less" }));
 

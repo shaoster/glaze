@@ -37,14 +37,18 @@ const config = tutorialsConfig as unknown as TutorialsConfig;
 export default function TutorialManager() {
   const currentUser = useCurrentUser();
   const openPreferencesDialog = useOpenPreferencesDialog();
-  const [elements, setElements] = useState<Record<string, HTMLElement | null>>({});
+  const [elements, setElements] = useState<Record<string, HTMLElement | null>>(
+    {},
+  );
 
   useEffect(() => {
     const scan = () => {
       const newElements: Record<string, HTMLElement | null> = {};
       let changed = false;
       for (const [key, tutorial] of Object.entries(config.tutorials)) {
-        const el = document.querySelector(tutorial.attachment.selector) as HTMLElement | null;
+        const el = document.querySelector(
+          tutorial.attachment.selector,
+        ) as HTMLElement | null;
         newElements[key] = el;
         if (el !== (elements[key] || null)) {
           changed = true;
@@ -71,9 +75,13 @@ export default function TutorialManager() {
         if (!element || isDismissed) return null;
 
         const handleAction = () => {
-          if (tutorial.attachment.action.type === "open-preferences" && openPreferencesDialog) {
+          if (
+            tutorial.attachment.action.type === "open-preferences" &&
+            openPreferencesDialog
+          ) {
             openPreferencesDialog(
-              (tutorial.attachment.action.section as PreferencesSectionId) || null,
+              (tutorial.attachment.action.section as PreferencesSectionId) ||
+                null,
             );
           }
         };
@@ -85,7 +93,9 @@ export default function TutorialManager() {
             tutorialKey={key}
             label={tutorial.inlay.label}
             dismissLabel={tutorial.inlay.dismiss_label}
-            placement={tutorial.attachment.placement as SmallTutorialInlayPlacement}
+            placement={
+              tutorial.attachment.placement as SmallTutorialInlayPlacement
+            }
             onClick={handleAction}
           />
         );

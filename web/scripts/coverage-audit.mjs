@@ -24,12 +24,17 @@ import lcovParse from "lcov-parse";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = resolve(SCRIPT_DIR, "..");
-const REPO_ROOT = process.env.BUILD_WORKSPACE_DIRECTORY || resolve(WEB_DIR, "..");
+const REPO_ROOT =
+  process.env.BUILD_WORKSPACE_DIRECTORY || resolve(WEB_DIR, "..");
 const DEFAULT_REPORT_ROOT = resolve(REPO_ROOT, "bazel-testlogs");
 const DEFAULT_INTEGRATION_REGEX = /(?:^|[/_.-])integration(?:$|[/_.-])/i;
 
 function defaultDbPath() {
-  const preferred = resolve(REPO_ROOT, ".coverage-audit", "coverage-audit.sqlite3");
+  const preferred = resolve(
+    REPO_ROOT,
+    ".coverage-audit",
+    "coverage-audit.sqlite3",
+  );
   try {
     accessSync(REPO_ROOT, fsConstants.W_OK);
     return preferred;
@@ -117,7 +122,14 @@ export function normalizeCoveragePath(inputPath) {
     return path.slice(repoPrefix.length);
   }
 
-  const markers = ["/web/", "/api/", "/backend/", "/tools/", "/tests/", "/docs/"];
+  const markers = [
+    "/web/",
+    "/api/",
+    "/backend/",
+    "/tools/",
+    "/tests/",
+    "/docs/",
+  ];
   for (const marker of markers) {
     const idx = path.indexOf(marker);
     if (idx >= 0) {
@@ -297,12 +309,16 @@ export function getOrCreateSourceFile(db, fileCache, filePath) {
   if (fileCache.has(filePath)) {
     return fileCache.get(filePath);
   }
-  const existing = db.prepare("SELECT id FROM source_files WHERE path = ?").get(filePath);
+  const existing = db
+    .prepare("SELECT id FROM source_files WHERE path = ?")
+    .get(filePath);
   if (existing) {
     fileCache.set(filePath, existing.id);
     return existing.id;
   }
-  const result = db.prepare("INSERT INTO source_files(path) VALUES (?)").run(filePath);
+  const result = db
+    .prepare("INSERT INTO source_files(path) VALUES (?)")
+    .run(filePath);
   fileCache.set(filePath, Number(result.lastInsertRowid));
   return Number(result.lastInsertRowid);
 }
@@ -313,32 +329,43 @@ export function getOrCreateSourceLine(db, lineCache, sourceFileId, lineNumber) {
     return lineCache.get(key);
   }
   const existing = db
-    .prepare("SELECT id FROM source_lines WHERE source_file_id = ? AND line_number = ?")
+    .prepare(
+      "SELECT id FROM source_lines WHERE source_file_id = ? AND line_number = ?",
+    )
     .get(sourceFileId, lineNumber);
   if (existing) {
     lineCache.set(key, existing.id);
     return existing.id;
   }
   const result = db
-    .prepare("INSERT INTO source_lines(source_file_id, line_number) VALUES (?, ?)")
+    .prepare(
+      "INSERT INTO source_lines(source_file_id, line_number) VALUES (?, ?)",
+    )
     .run(sourceFileId, lineNumber);
   lineCache.set(key, Number(result.lastInsertRowid));
   return Number(result.lastInsertRowid);
 }
 
-export function upsertTest(db, testName, reportPath, isIntegration, scope = null) {
-  const existing = db.prepare("SELECT id FROM tests WHERE name = ?").get(testName);
+export function upsertTest(
+  db,
+  testName,
+  reportPath,
+  isIntegration,
+  scope = null,
+) {
+  const existing = db
+    .prepare("SELECT id FROM tests WHERE name = ?")
+    .get(testName);
   if (existing) {
-    db.prepare("UPDATE tests SET report_path = ?, is_integration = ?, scope = ? WHERE id = ?").run(
-      reportPath,
-      isIntegration ? 1 : 0,
-      scope,
-      existing.id,
-    );
+    db.prepare(
+      "UPDATE tests SET report_path = ?, is_integration = ?, scope = ? WHERE id = ?",
+    ).run(reportPath, isIntegration ? 1 : 0, scope, existing.id);
     return existing.id;
   }
   const result = db
-    .prepare("INSERT INTO tests(name, report_path, is_integration, scope) VALUES (?, ?, ?, ?)")
+    .prepare(
+      "INSERT INTO tests(name, report_path, is_integration, scope) VALUES (?, ?, ?, ?)",
+    )
     .run(testName, reportPath, isIntegration ? 1 : 0, scope);
   return Number(result.lastInsertRowid);
 }
@@ -356,7 +383,9 @@ export function readIntegrationMarker(reportPath) {
 
 export function ingestReport(db, reportPath, integrationRegex, caches) {
   const testName = displayReportName(reportPath);
-  const isIntegration = readIntegrationMarker(reportPath) || isIntegrationTest(testName, integrationRegex);
+  const isIntegration =
+    readIntegrationMarker(reportPath) ||
+    isIntegrationTest(testName, integrationRegex);
   const scope = readScopeFile(reportPath);
   const testId = upsertTest(db, testName, reportPath, isIntegration, scope);
   const tx = db.transaction((records) => {
@@ -364,10 +393,16 @@ export function ingestReport(db, reportPath, integrationRegex, caches) {
       const rawPath = record.file ?? record.path ?? "";
       if (!rawPath) continue;
       const filePath = normalizeCoveragePath(rawPath);
-      const sourceFileId = getOrCreateSourceFile(db, caches.fileCache, filePath);
+      const sourceFileId = getOrCreateSourceFile(
+        db,
+        caches.fileCache,
+        filePath,
+      );
       const lines = record.lines?.details ?? record.lines ?? [];
       for (const line of lines) {
-        const lineNumber = Number(line.line ?? line.lineNumber ?? line.lineno ?? line.line_number);
+        const lineNumber = Number(
+          line.line ?? line.lineNumber ?? line.lineno ?? line.line_number,
+        );
         const hitCount = Number(line.hit ?? line.count ?? line.hits ?? 0);
         if (!Number.isFinite(lineNumber) || lineNumber <= 0) {
           continue;
@@ -400,7 +435,9 @@ export function summarizeCoverage(db) {
     lines: db.prepare("SELECT COUNT(*) AS count FROM source_lines").get().count,
     tests: db.prepare("SELECT COUNT(*) AS count FROM tests").get().count,
     coveredLines: db
-      .prepare("SELECT COUNT(*) AS count FROM source_lines WHERE total_hit_count > 0")
+      .prepare(
+        "SELECT COUNT(*) AS count FROM source_lines WHERE total_hit_count > 0",
+      )
       .get().count,
   };
 }
@@ -461,7 +498,10 @@ export function reportGaps(db, limit) {
       uncovered: lines.length,
       ranges: contiguousRanges(lines),
     }))
-    .sort((a, b) => b.uncovered - a.uncovered || a.filePath.localeCompare(b.filePath));
+    .sort(
+      (a, b) =>
+        b.uncovered - a.uncovered || a.filePath.localeCompare(b.filePath),
+    );
 
   console.log("Coverage gaps:");
   for (const entry of ranked.slice(0, limit)) {
@@ -504,7 +544,13 @@ export function reportRedundancy(db, limit) {
   }
 }
 
-export function reportUnexpectedCoverage(db, limit, minFiles, minBuckets, integrationRegex) {
+export function reportUnexpectedCoverage(
+  db,
+  limit,
+  minFiles,
+  minBuckets,
+  integrationRegex,
+) {
   const tests = db
     .prepare(
       `
@@ -541,7 +587,8 @@ export function reportUnexpectedCoverage(db, limit, minFiles, minBuckets, integr
     const buckets = new Set(filePaths.map(bucketForPath));
     return {
       testName,
-      isIntegration: info.isIntegration || isIntegrationTest(testName, integrationRegex),
+      isIntegration:
+        info.isIntegration || isIntegrationTest(testName, integrationRegex),
       fileCount: filePaths.length,
       bucketCount: buckets.size,
       buckets: [...buckets].sort(),
@@ -550,8 +597,17 @@ export function reportUnexpectedCoverage(db, limit, minFiles, minBuckets, integr
   });
 
   const flagged = summaries
-    .filter((row) => !row.isIntegration && (row.fileCount >= minFiles || row.bucketCount >= minBuckets))
-    .sort((a, b) => b.fileCount - a.fileCount || b.bucketCount - a.bucketCount || a.testName.localeCompare(b.testName));
+    .filter(
+      (row) =>
+        !row.isIntegration &&
+        (row.fileCount >= minFiles || row.bucketCount >= minBuckets),
+    )
+    .sort(
+      (a, b) =>
+        b.fileCount - a.fileCount ||
+        b.bucketCount - a.bucketCount ||
+        a.testName.localeCompare(b.testName),
+    );
 
   console.log("Unexpected / broad non-integration coverage:");
   if (flagged.length === 0) {
@@ -568,7 +624,9 @@ export function reportUnexpectedCoverage(db, limit, minFiles, minBuckets, integr
 
 export function reportScopeViolations(db, limit) {
   const testsWithScope = db
-    .prepare("SELECT id, name, scope FROM tests WHERE scope IS NOT NULL AND is_integration = 0")
+    .prepare(
+      "SELECT id, name, scope FROM tests WHERE scope IS NOT NULL AND is_integration = 0",
+    )
     .all();
 
   if (testsWithScope.length === 0) {
@@ -594,7 +652,11 @@ export function reportScopeViolations(db, limit) {
     }
   }
 
-  violations.sort((a, b) => b.outOfScope.length - a.outOfScope.length || a.testName.localeCompare(b.testName));
+  violations.sort(
+    (a, b) =>
+      b.outOfScope.length - a.outOfScope.length ||
+      a.testName.localeCompare(b.testName),
+  );
 
   console.log("Scope violations (covered outside declared expected_coverage):");
   if (violations.length === 0) {
@@ -630,7 +692,9 @@ export async function buildDatabase(options) {
   };
 
   if (reportFiles.length === 0) {
-    throw new Error(`No coverage.dat files found under: ${options.reports.join(", ")}`);
+    throw new Error(
+      `No coverage.dat files found under: ${options.reports.join(", ")}`,
+    );
   }
 
   for (const reportPath of reportFiles) {
@@ -689,11 +753,15 @@ export async function main() {
   db.close();
 }
 
-const invokedAsScript = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+const invokedAsScript =
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === resolve(process.argv[1]);
 
 if (invokedAsScript) {
   main().catch((error) => {
-    console.error(error instanceof Error ? error.stack ?? error.message : String(error));
+    console.error(
+      error instanceof Error ? (error.stack ?? error.message) : String(error),
+    );
     process.exit(1);
   });
 }

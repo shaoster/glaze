@@ -6,9 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import GlazeImportReviewStage from "../glazeImportTool/GlazeImportReviewStage";
 import type { UploadedRecord } from "../glazeImportTool/glazeImportToolTypes";
 
-function makeRecord(
-  overrides: Partial<UploadedRecord> = {},
-): UploadedRecord {
+function makeRecord(overrides: Partial<UploadedRecord> = {}): UploadedRecord {
   return {
     id: "rec-1",
     file: null,
@@ -48,7 +46,9 @@ function makeRecord(
 describe("GlazeImportReviewStage", () => {
   function ReviewStageHarness() {
     const [records, setRecords] = useState([makeRecord()]);
-    const [selectedRecordId, setSelectedRecordId] = useState<string | null>("rec-1");
+    const [selectedRecordId, setSelectedRecordId] = useState<string | null>(
+      "rec-1",
+    );
     const selected = records[0];
 
     return (

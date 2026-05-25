@@ -43,7 +43,7 @@ class TestIssue337ThumbnailProtection:
     def test_block_deletion_of_state_containing_thumbnail(self, auth_client, user):
         piece = Piece.objects.create(user=user, name="Test Piece", is_editable=True)
         # Entry state (designed)
-        state1 = PieceState.objects.create(piece=piece, state=ENTRY_STATE, order=0)
+        PieceState.objects.create(piece=piece, state=ENTRY_STATE, order=0)
 
         # Second state (not designed)
         next_state = SUCCESSORS[ENTRY_STATE][0]
@@ -53,7 +53,7 @@ class TestIssue337ThumbnailProtection:
 
         # Third state (current)
         further_state = SUCCESSORS[next_state][0]
-        state3 = PieceState.objects.create(piece=piece, state=further_state, order=2)
+        PieceState.objects.create(piece=piece, state=further_state, order=2)
 
         piece.thumbnail = img
         piece.save()
@@ -96,7 +96,7 @@ class TestIssue337ThumbnailProtection:
     def test_allow_deletion_of_state_not_containing_thumbnail(self, auth_client, user):
         piece = Piece.objects.create(user=user, name="Test Piece", is_editable=True)
         # Entry state (designed)
-        state1 = PieceState.objects.create(piece=piece, state=ENTRY_STATE, order=0)
+        PieceState.objects.create(piece=piece, state=ENTRY_STATE, order=0)
 
         # Second state (not designed)
         next_state = SUCCESSORS[ENTRY_STATE][0]

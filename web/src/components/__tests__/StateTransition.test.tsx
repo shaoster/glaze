@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import StateTransition from "../StateTransition";
 
@@ -107,15 +113,23 @@ describe("StateTransition", () => {
     renderTransition("designed");
     const stateFlow = screen.getByRole("group", { name: "State flow" });
     expect(within(stateFlow).getByText("Designing")).toBeInTheDocument();
-    expect(within(stateFlow).getByRole("button", { name: "Throwing" })).toBeInTheDocument();
-    expect(within(stateFlow).getByRole("button", { name: "Handbuilding" })).toBeInTheDocument();
+    expect(
+      within(stateFlow).getByRole("button", { name: "Throwing" }),
+    ).toBeInTheDocument();
+    expect(
+      within(stateFlow).getByRole("button", { name: "Handbuilding" }),
+    ).toBeInTheDocument();
   });
 
   it("renders completed before recycled at the end of the successor list", () => {
     renderTransition("glaze_fired");
     const stateFlow = screen.getByRole("group", { name: "State flow" });
     const buttons = within(stateFlow).getAllByRole("button");
-    expect(buttons.map((b) => b.textContent)).toEqual(["Sanding", "Completed", "Recycled"]);
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      "Sanding",
+      "Completed",
+      "Recycled",
+    ]);
   });
 
   it("shows no successor buttons for terminal states", () => {
@@ -138,7 +152,9 @@ describe("StateTransition", () => {
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
-    expect(screen.queryByText("Confirm State Transition")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Confirm State Transition"),
+    ).not.toBeInTheDocument();
   });
 
   it("confirming calls onTransition with the target state", async () => {
@@ -146,7 +162,9 @@ describe("StateTransition", () => {
     renderTransition("designed", onTransition);
     fireEvent.click(screen.getByRole("button", { name: "Throwing" }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Confirm" })).toBeInTheDocument(),
+      expect(
+        screen.getByRole("button", { name: "Confirm" }),
+      ).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     expect(onTransition).toHaveBeenCalledWith("wheel_thrown");

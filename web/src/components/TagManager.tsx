@@ -1,10 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import {
-  Box,
-  Button,
-  Snackbar,
-  Typography,
-} from "@mui/material";
+import { Box, Button, Snackbar, Typography } from "@mui/material";
 import type { PieceDetail, TagEntry } from "../util/types";
 import { createTagEntry, fetchGlobalEntries, updatePiece } from "../util/api";
 import { useAsync } from "../util/useAsync";

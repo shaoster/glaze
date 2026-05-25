@@ -25,7 +25,7 @@ export default function TagChip({
         alignItems: "center",
         gap: 0.25,
         pl: size === "small" ? 1 : 1.5,
-        pr: onDelete ? 0.25 : (size === "small" ? 1 : 1.5),
+        pr: onDelete ? 0.25 : size === "small" ? 1 : 1.5,
         py: size === "small" ? 0.25 : 0.5,
         border: "1px solid",
         borderColor: "divider",

@@ -59,15 +59,16 @@ const meta = {
     },
   },
   tags: ["autodocs"],
-  argTypes: {
-  },
+  argTypes: {},
   render: (args) => <ImageLightboxWithState {...args} />,
 } satisfies Meta<typeof ImageLightbox>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function ImageLightboxWithState(args: React.ComponentProps<typeof ImageLightbox>) {
+function ImageLightboxWithState(
+  args: React.ComponentProps<typeof ImageLightbox>,
+) {
   const [open, setOpen] = useState(false);
   return (
     <>

@@ -61,7 +61,10 @@ type LightboxState =
 interface TileAvatarButtonProps {
   image: NonNullable<GlazeCombinationEntry["test_tile_image"]>;
   name: string;
-  onClick: (image: NonNullable<GlazeCombinationEntry["test_tile_image"]>, name: string) => void;
+  onClick: (
+    image: NonNullable<GlazeCombinationEntry["test_tile_image"]>,
+    name: string,
+  ) => void;
 }
 
 function TileAvatarButton({ image, name, onClick }: TileAvatarButtonProps) {
@@ -126,7 +129,10 @@ function PieceImageButton({ img, label, onClick }: PieceImageButtonProps) {
 interface ComboCardProps {
   combo: GlazeCombinationEntry;
   pieces: PieceEntry[];
-  onTileClick: (image: NonNullable<GlazeCombinationEntry["test_tile_image"]>, name: string) => void;
+  onTileClick: (
+    image: NonNullable<GlazeCombinationEntry["test_tile_image"]>,
+    name: string,
+  ) => void;
   onPieceImageClick: (images: GalleryImage[], idx: number) => void;
 }
 

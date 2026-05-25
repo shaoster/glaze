@@ -17,7 +17,6 @@ def flatten_tutorials(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("api", "0027_backfill_tutorial_preferences"),
     ]

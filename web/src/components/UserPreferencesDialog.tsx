@@ -16,10 +16,7 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 import { fetchUserPreferences, type UserPreferences } from "../util/api";
-import {
-  getFieldDefinition,
-  PREFERENCES_SCHEMA,
-} from "../util/preferences";
+import { getFieldDefinition, PREFERENCES_SCHEMA } from "../util/preferences";
 import { useAsync, useAsyncFn } from "../util/useAsync";
 import { getProcessSummaryFieldOptions } from "../util/workflow";
 import {
@@ -70,8 +67,12 @@ export default function UserPreferencesDialog({
         } else {
           // storage: UserProfile.preferences
           values[fieldId] =
-            (data?.preferences as Record<string, unknown> | undefined)?.[fieldId] ??
-            (currentUser?.preferences as Record<string, unknown> | undefined)?.[fieldId] ??
+            (data?.preferences as Record<string, unknown> | undefined)?.[
+              fieldId
+            ] ??
+            (currentUser?.preferences as Record<string, unknown> | undefined)?.[
+              fieldId
+            ] ??
             (field.type === "field-list" ? [] : true);
         }
       }
@@ -80,7 +81,10 @@ export default function UserPreferencesDialog({
   }, [data, currentUser]);
 
   // Use a stable key that forces remount only when foundational data changes
-  const preferencesKey = useMemo(() => JSON.stringify(initialValues), [initialValues]);
+  const preferencesKey = useMemo(
+    () => JSON.stringify(initialValues),
+    [initialValues],
+  );
 
   return (
     <Dialog
@@ -177,7 +181,9 @@ function PreferencesForm({
             disableGutters
             expanded={activeSectionId === section.id}
             onChange={(_, expanded) => {
-              onSectionChange(expanded ? (section.id as PreferencesSectionId) : null);
+              onSectionChange(
+                expanded ? (section.id as PreferencesSectionId) : null,
+              );
             }}
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>

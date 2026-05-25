@@ -15,7 +15,9 @@ describe("DeletePiecePhotoDialog", () => {
       />,
     );
 
-    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
 
     expect(onCancel).toHaveBeenCalledOnce();
   });
@@ -32,7 +34,9 @@ describe("DeletePiecePhotoDialog", () => {
       />,
     );
 
-    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
 
     expect(onCancel).not.toHaveBeenCalled();
   });

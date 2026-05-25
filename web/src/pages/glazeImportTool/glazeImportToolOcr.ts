@@ -2,7 +2,11 @@ import {
   DETECT_OCR_LABEL_WHITE_THRESHOLD,
   DETECT_OCR_TEXT_DARK_THRESHOLD,
 } from "../ocrDetection";
-import type { OcrSuggestion, OcrTuning, ParsedFields } from "./glazeImportToolTypes";
+import type {
+  OcrSuggestion,
+  OcrTuning,
+  ParsedFields,
+} from "./glazeImportToolTypes";
 
 export const COMBO_NAME_SEPARATOR = "!";
 

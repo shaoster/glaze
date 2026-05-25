@@ -30,13 +30,16 @@ function useResetTimer() {
     }
   }, []);
 
-  const scheduleReset = useCallback((callback: () => void) => {
-    clearResetTimer();
-    resetTimerRef.current = window.setTimeout(() => {
-      resetTimerRef.current = null;
-      callback();
-    }, RESET_DELAY_MS);
-  }, [clearResetTimer]);
+  const scheduleReset = useCallback(
+    (callback: () => void) => {
+      clearResetTimer();
+      resetTimerRef.current = window.setTimeout(() => {
+        resetTimerRef.current = null;
+        callback();
+      }, RESET_DELAY_MS);
+    },
+    [clearResetTimer],
+  );
 
   useEffect(() => clearResetTimer, [clearResetTimer]);
 

@@ -7,10 +7,7 @@ import {
   type WorkflowSummaryCondition,
   type WorkflowSummaryItem,
 } from "../util/workflow";
-import {
-  useOpenPreferencesDialog,
-  useCurrentUser,
-} from "./CurrentUserContext";
+import { useOpenPreferencesDialog, useCurrentUser } from "./CurrentUserContext";
 
 type ProcessSummaryProps = {
   piece: PieceDetail;
@@ -65,14 +62,23 @@ export default function ProcessSummary({
                       pt: 0.75,
                     }}
                   >
-                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: "text.secondary" }}
+                    >
                       {field.label}
                     </Typography>
-                    <Typography variant="body1" sx={{ overflowWrap: "anywhere" }}>
+                    <Typography
+                      variant="body1"
+                      sx={{ overflowWrap: "anywhere" }}
+                    >
                       {field.value}
                     </Typography>
                     {field.description ? (
-                      <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: "text.secondary" }}
+                      >
                         {field.description}
                       </Typography>
                     ) : null}
@@ -151,7 +157,10 @@ export default function ProcessSummary({
                   {field.value}
                 </Typography>
                 {field.description ? (
-                  <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: "text.secondary" }}
+                  >
                     {field.description}
                   </Typography>
                 ) : null}
@@ -304,7 +313,9 @@ function computeValue(
   history: PieceState[],
 ): number | null {
   if (compute.op === "sum" || compute.op === "product") {
-    const operands = compute.operands?.map((ref) => getNumericValue(history, ref));
+    const operands = compute.operands?.map((ref) =>
+      getNumericValue(history, ref),
+    );
     if (!operands || operands.some((value) => value === null)) {
       return null;
     }
@@ -363,7 +374,10 @@ function formatSummaryValue(value: unknown): string {
     return typeof name === "string" ? name : "";
   }
   if (Array.isArray(value)) {
-    return value.map((item) => formatSummaryValue(item)).filter(Boolean).join(", ");
+    return value
+      .map((item) => formatSummaryValue(item))
+      .filter(Boolean)
+      .join(", ");
   }
   return "";
 }

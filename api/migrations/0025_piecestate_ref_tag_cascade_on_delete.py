@@ -5,34 +5,52 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0024_publiclibraryversion'),
+        ("api", "0024_publiclibraryversion"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='publiclibraryversion',
-            options={'verbose_name': 'public library version', 'verbose_name_plural': 'public library version'},
+            name="publiclibraryversion",
+            options={
+                "verbose_name": "public library version",
+                "verbose_name_plural": "public library version",
+            },
         ),
         migrations.AlterField(
-            model_name='piecestateclaybodyref',
-            name='clay_body',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='piece_state_refs', to='api.claybody'),
+            model_name="piecestateclaybodyref",
+            name="clay_body",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="piece_state_refs",
+                to="api.claybody",
+            ),
         ),
         migrations.AlterField(
-            model_name='piecestateglazecombinationref',
-            name='glaze_combination',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='piece_state_refs', to='api.glazecombination'),
+            model_name="piecestateglazecombinationref",
+            name="glaze_combination",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="piece_state_refs",
+                to="api.glazecombination",
+            ),
         ),
         migrations.AlterField(
-            model_name='piecestatelocationref',
-            name='location',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='piece_state_refs', to='api.location'),
+            model_name="piecestatelocationref",
+            name="location",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="piece_state_refs",
+                to="api.location",
+            ),
         ),
         migrations.AlterField(
-            model_name='piecetag',
-            name='tag',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='piece_links', to='api.tag'),
+            model_name="piecetag",
+            name="tag",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="piece_links",
+                to="api.tag",
+            ),
         ),
     ]

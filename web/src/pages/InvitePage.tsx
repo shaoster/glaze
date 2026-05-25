@@ -17,10 +17,10 @@ export default function InvitePage() {
   const code = searchParams.get("code") ?? "";
 
   const [state, setState] = useState<"loading" | "ready" | "error">(
-    code ? "loading" : "error"
+    code ? "loading" : "error",
   );
   const [errorMessage, setErrorMessage] = useState(
-    code ? "" : "No invite code found in the URL."
+    code ? "" : "No invite code found in the URL.",
   );
 
   useEffect(() => {
@@ -50,17 +50,31 @@ export default function InvitePage() {
         py: 3,
       }}
     >
-      <Paper sx={{ width: "100%", p: { xs: 2.5, sm: 4 }, borderRadius: { xs: 3, sm: 4 } }}>
+      <Paper
+        sx={{
+          width: "100%",
+          p: { xs: 2.5, sm: 4 },
+          borderRadius: { xs: 3, sm: 4 },
+        }}
+      >
         <Stack spacing={2} alignItems="center">
-          {state === "loading" && <CircularProgress aria-label="Validating invite code" />}
+          {state === "loading" && (
+            <CircularProgress aria-label="Validating invite code" />
+          )}
 
           {state === "ready" && (
             <>
               <Alert severity="success" sx={{ width: "100%" }}>
-                Your invite code is valid! Sign in with Google to create your account.
+                Your invite code is valid! Sign in with Google to create your
+                account.
               </Alert>
-              <Typography variant="body2" color="text.secondary" textAlign="center">
-                No personal information is stored. Only a secure hash of your Google identity is saved.
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                textAlign="center"
+              >
+                No personal information is stored. Only a secure hash of your
+                Google identity is saved.
               </Typography>
               <Button
                 variant="contained"

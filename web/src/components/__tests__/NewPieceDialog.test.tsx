@@ -271,7 +271,9 @@ describe("NewPieceDialog", () => {
         expect(screen.getByText("Studio 7")).toBeInTheDocument(),
       );
       await userEvent.click(screen.getByText("Studio 7"));
-      await waitFor(() => expect(screen.getByText("Studio 7")).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByText("Studio 7")).toBeInTheDocument(),
+      );
       fireEvent.change(screen.getByTestId("name-input"), {
         target: { value: "Bowl" },
       });

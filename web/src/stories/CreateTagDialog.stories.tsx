@@ -6,11 +6,11 @@ import Button from "@mui/material/Button";
 
 /**
  * CreateTagDialog provides a simple interface for adding new categories/tags to the system.
- * 
+ *
  * Rationale:
  * - Decoupled state management allows it to be used within different contexts (e.g. TagManager).
  * - Provides a curated set of palette colors to maintain visual harmony across the app.
- * 
+ *
  * Edge cases:
  * - Validation: Displays errors passed from the parent if creation fails (e.g. duplicate name).
  * - Character Limit: Enforces a 64-character limit on the name field.
@@ -49,11 +49,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function CreateTagDialogWithState(args: React.ComponentProps<typeof CreateTagDialog>) {
+function CreateTagDialogWithState(
+  args: React.ComponentProps<typeof CreateTagDialog>,
+) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(args.name || "");
   const [color, setColor] = useState(args.color || "#8a5a3a");
-  
+
   return (
     <>
       <Button variant="contained" onClick={() => setOpen(true)}>

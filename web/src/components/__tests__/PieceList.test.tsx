@@ -5,7 +5,14 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceList from "../PieceList";
-import { CARD_CHROME_HEIGHT, DEFAULT_CARD_HEIGHT_ESTIMATE, DEFAULT_THUMBNAIL_ASPECT_HEIGHT, DEFAULT_THUMBNAIL_ASPECT_WIDTH, estimateCardHeight, getThumbnailRequestedHeight } from "../pieceCardHeight";
+import {
+  CARD_CHROME_HEIGHT,
+  DEFAULT_CARD_HEIGHT_ESTIMATE,
+  DEFAULT_THUMBNAIL_ASPECT_HEIGHT,
+  DEFAULT_THUMBNAIL_ASPECT_WIDTH,
+  estimateCardHeight,
+  getThumbnailRequestedHeight,
+} from "../pieceCardHeight";
 import type { PieceSummary } from "../../util/types";
 
 vi.mock("../CloudinaryImage", () => ({
@@ -66,7 +73,11 @@ vi.mock("masonic", () => ({
   }: {
     items: PieceSummary[];
     positioner: typeof mockPositioner;
-    render: React.ComponentType<{ data: PieceSummary; index: number; width: number }>;
+    render: React.ComponentType<{
+      data: PieceSummary;
+      index: number;
+      width: number;
+    }>;
     itemHeightEstimate: number;
     itemKey?: (item: PieceSummary, index: number) => string | number;
   }) => {
@@ -122,10 +133,18 @@ vi.mock("masonic", () => ({
         })()}
       </div>
     );
-    },
-  useContainerPosition: () => ({ width: mockContainerPosition.width, offset: mockContainerPosition.offset }),
+  },
+  useContainerPosition: () => ({
+    width: mockContainerPosition.width,
+    offset: mockContainerPosition.offset,
+  }),
   usePositioner: () => mockPositioner,
-  createPositioner: (columnCount: number, columnWidth: number, columnGutter: number, rowGutter: number) => {
+  createPositioner: (
+    columnCount: number,
+    columnWidth: number,
+    columnGutter: number,
+    rowGutter: number,
+  ) => {
     mockPositioner.columnCount = columnCount;
     mockPositioner.columnWidth = columnWidth;
     void columnGutter;
@@ -280,11 +299,18 @@ describe("PieceList", () => {
       ];
 
       const { container } = renderPieceList(pieces);
-      const expectedHeight = estimateCardHeight(pieces[0], mockPositioner.columnWidth);
+      const expectedHeight = estimateCardHeight(
+        pieces[0],
+        mockPositioner.columnWidth,
+      );
 
       await waitFor(() => {
-        const cards = container.querySelectorAll('[data-testid="piece-grid"] > div');
-        expect(Number(cards[0]?.getAttribute("data-height"))).toBe(expectedHeight);
+        const cards = container.querySelectorAll(
+          '[data-testid="piece-grid"] > div',
+        );
+        expect(Number(cards[0]?.getAttribute("data-height"))).toBe(
+          expectedHeight,
+        );
         expect(Number(cards[0]?.getAttribute("data-height"))).toBeGreaterThan(
           DEFAULT_CARD_HEIGHT_ESTIMATE,
         );
@@ -410,9 +436,9 @@ describe("PieceList", () => {
         "data-estimated-height",
         `${estimateCardHeight(pieces[2], 240)}`,
       );
-      expect(Number(cards[0].getAttribute("data-estimated-height"))).toBeGreaterThan(
-        DEFAULT_CARD_HEIGHT_ESTIMATE,
-      );
+      expect(
+        Number(cards[0].getAttribute("data-estimated-height")),
+      ).toBeGreaterThan(DEFAULT_CARD_HEIGHT_ESTIMATE);
     });
   });
 
@@ -422,13 +448,17 @@ describe("PieceList", () => {
     // tautological (DEFAULT_CARD_HEIGHT_ESTIMATE is also computed at 220px).
     function fallbackAt(columnWidth: number) {
       return (
-        Math.round((columnWidth * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) / DEFAULT_THUMBNAIL_ASPECT_WIDTH) +
-        CARD_CHROME_HEIGHT
+        Math.round(
+          (columnWidth * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) /
+            DEFAULT_THUMBNAIL_ASPECT_WIDTH,
+        ) + CARD_CHROME_HEIGHT
       );
     }
 
     it("falls back to 4:3 aspect ratio height when thumbnail is null", () => {
-      expect(estimateCardHeight({ thumbnail: null } as PieceSummary, 160)).toBe(fallbackAt(160));
+      expect(estimateCardHeight({ thumbnail: null } as PieceSummary, 160)).toBe(
+        fallbackAt(160),
+      );
     });
 
     it("falls back to 4:3 aspect ratio height when crop is null", () => {
@@ -438,9 +468,9 @@ describe("PieceList", () => {
     });
 
     it("falls back to 4:3 aspect ratio height when crop is absent", () => {
-      expect(
-        estimateCardHeight({ thumbnail: {} } as PieceSummary, 160),
-      ).toBe(fallbackAt(160));
+      expect(estimateCardHeight({ thumbnail: {} } as PieceSummary, 160)).toBe(
+        fallbackAt(160),
+      );
     });
 
     it("computes height from landscape crop aspect ratio", () => {
@@ -448,7 +478,9 @@ describe("PieceList", () => {
       const piece = {
         thumbnail: { crop: { x: 0, y: 0, width: 400, height: 200 } },
       } as PieceSummary;
-      expect(estimateCardHeight(piece, 220)).toBe(Math.round(220 * 0.5) + CARD_CHROME_HEIGHT);
+      expect(estimateCardHeight(piece, 220)).toBe(
+        Math.round(220 * 0.5) + CARD_CHROME_HEIGHT,
+      );
     });
 
     it("computes height from portrait crop aspect ratio", () => {
@@ -456,7 +488,9 @@ describe("PieceList", () => {
       const piece = {
         thumbnail: { crop: { x: 0, y: 0, width: 200, height: 400 } },
       } as PieceSummary;
-      expect(estimateCardHeight(piece, 220)).toBe(Math.round(220 * 2) + CARD_CHROME_HEIGHT);
+      expect(estimateCardHeight(piece, 220)).toBe(
+        Math.round(220 * 2) + CARD_CHROME_HEIGHT,
+      );
     });
 
     it("falls back to 4:3 aspect ratio height when crop.width is 0 (guard against division by zero)", () => {
@@ -485,7 +519,9 @@ describe("PieceList", () => {
           height: 800,
         },
       } as PieceSummary;
-      const expected = Math.round((220 * 0.8225 * 800) / (0.71875 * 1000)) + CARD_CHROME_HEIGHT;
+      const expected =
+        Math.round((220 * 0.8225 * 800) / (0.71875 * 1000)) +
+        CARD_CHROME_HEIGHT;
       expect(estimateCardHeight(piece, 220)).toBe(expected);
     });
 
@@ -549,33 +585,37 @@ describe("PieceList", () => {
 
       await waitFor(() => {
         // pieces[0]: set called with true pixel ratio height
-        const trueHeight = Math.round(
-          (mockPositioner.columnWidth * 0.8225 * 800) / (0.71875 * 1000),
-        ) + CARD_CHROME_HEIGHT;
+        const trueHeight =
+          Math.round(
+            (mockPositioner.columnWidth * 0.8225 * 800) / (0.71875 * 1000),
+          ) + CARD_CHROME_HEIGHT;
         expect(mockPositioner.set).toHaveBeenCalledWith(0, trueHeight);
 
         // pieces[1]: set called with naive fallback (no orig dims)
-        const naiveHeight = Math.round(
-          (mockPositioner.columnWidth * 0.9) / 0.8,
-        ) + CARD_CHROME_HEIGHT;
+        const naiveHeight =
+          Math.round((mockPositioner.columnWidth * 0.9) / 0.8) +
+          CARD_CHROME_HEIGHT;
         expect(mockPositioner.set).toHaveBeenCalledWith(1, naiveHeight);
 
         // pieces[2]: no crop → not seeded; exactly 2 set() calls total
-        expect(mockPositioner.set).not.toHaveBeenCalledWith(2, expect.anything());
+        expect(mockPositioner.set).not.toHaveBeenCalledWith(
+          2,
+          expect.anything(),
+        );
         expect(mockPositioner.set).toHaveBeenCalledTimes(2);
       });
 
       // The true-pixel height for pieces[0] must differ from the naive height
       // (proves orig dims are being used, not ignored).
-      const naiveForPieces0 = Math.round(
-        (mockPositioner.columnWidth * 0.8225) / 0.71875,
-      ) + CARD_CHROME_HEIGHT;
-      const trueForPieces0 = Math.round(
-        (mockPositioner.columnWidth * 0.8225 * 800) / (0.71875 * 1000),
-      ) + CARD_CHROME_HEIGHT;
+      const naiveForPieces0 =
+        Math.round((mockPositioner.columnWidth * 0.8225) / 0.71875) +
+        CARD_CHROME_HEIGHT;
+      const trueForPieces0 =
+        Math.round(
+          (mockPositioner.columnWidth * 0.8225 * 800) / (0.71875 * 1000),
+        ) + CARD_CHROME_HEIGHT;
       expect(trueForPieces0).not.toBe(naiveForPieces0);
     });
-
   });
 
   describe("with no pieces", () => {
@@ -662,7 +702,12 @@ describe("PieceList", () => {
         makePiece({
           tags: [
             { id: "tag-1", name: "Gift", color: "#2A9D8F", is_public: false },
-            { id: "tag-2", name: "Functional", color: "#E76F51", is_public: false },
+            {
+              id: "tag-2",
+              name: "Functional",
+              color: "#E76F51",
+              is_public: false,
+            },
           ],
         }),
       ]);
@@ -674,13 +719,17 @@ describe("PieceList", () => {
       renderPieceList([makePiece({ photo_count: 3 })]);
 
       expect(
-        within(screen.getByTestId("piece-thumbnail-shell")).getByText("3 photos"),
+        within(screen.getByTestId("piece-thumbnail-shell")).getByText(
+          "3 photos",
+        ),
       ).toBeInTheDocument();
     });
 
     it("renders a piece card without tag chips when the piece has no tags", () => {
       renderPieceList([makePiece({ tags: [] })]);
-      expect(screen.queryByRole("button", { name: /\+\d+/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /\+\d+/i }),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -699,8 +748,16 @@ describe("PieceList", () => {
 
     it("shows the state chip label on each card", () => {
       const pieces = [
-        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
-        makePiece({ id: "id-2", name: "Mug", current_state: { state: "glazed" } as any }),
+        makePiece({
+          id: "id-1",
+          name: "Bowl",
+          current_state: { state: "designed" } as any,
+        }),
+        makePiece({
+          id: "id-2",
+          name: "Mug",
+          current_state: { state: "glazed" } as any,
+        }),
       ];
       renderPieceList(pieces);
       expect(screen.getByText("Designing")).toBeInTheDocument();
@@ -709,12 +766,20 @@ describe("PieceList", () => {
 
     it("passes stable piece ids to the masonry renderer as item keys", () => {
       const pieces = [
-        makePiece({ id: "id-1", name: "Tagged Bowl", tags: [{ id: "tag-1", name: "Gift", color: "#2A9D8F", is_public: false }] }),
+        makePiece({
+          id: "id-1",
+          name: "Tagged Bowl",
+          tags: [
+            { id: "tag-1", name: "Gift", color: "#2A9D8F", is_public: false },
+          ],
+        }),
         makePiece({ id: "id-2", name: "Plain Mug", tags: [] }),
       ];
 
       const { container } = renderPieceList(pieces);
-      const wrappers = container.querySelectorAll('[data-testid="piece-grid"] > div');
+      const wrappers = container.querySelectorAll(
+        '[data-testid="piece-grid"] > div',
+      );
 
       expect(wrappers[0]?.getAttribute("data-key")).toBe("id-1");
       expect(wrappers[1]?.getAttribute("data-key")).toBe("id-2");
@@ -743,9 +808,21 @@ describe("PieceList", () => {
 
     it("shows all pieces when no filter is selected", () => {
       const pieces = [
-        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
-        makePiece({ id: "id-2", name: "Mug", current_state: { state: "completed" } as any }),
-        makePiece({ id: "id-3", name: "Vase", current_state: { state: "recycled" } as any }),
+        makePiece({
+          id: "id-1",
+          name: "Bowl",
+          current_state: { state: "designed" } as any,
+        }),
+        makePiece({
+          id: "id-2",
+          name: "Mug",
+          current_state: { state: "completed" } as any,
+        }),
+        makePiece({
+          id: "id-3",
+          name: "Vase",
+          current_state: { state: "recycled" } as any,
+        }),
       ];
       renderPieceList(pieces);
       expect(screen.getByText("Bowl")).toBeInTheDocument();
@@ -756,17 +833,29 @@ describe("PieceList", () => {
     it("filters to work in progress pieces only", async () => {
       const user = userEvent.setup();
       const pieces = [
-        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
-        makePiece({ id: "id-2", name: "Mug", current_state: { state: "completed" } as any }),
-        makePiece({ id: "id-3", name: "Vase", current_state: { state: "recycled" } as any }),
+        makePiece({
+          id: "id-1",
+          name: "Bowl",
+          current_state: { state: "designed" } as any,
+        }),
+        makePiece({
+          id: "id-2",
+          name: "Mug",
+          current_state: { state: "completed" } as any,
+        }),
+        makePiece({
+          id: "id-3",
+          name: "Vase",
+          current_state: { state: "recycled" } as any,
+        }),
       ];
       renderPieceList(pieces);
 
       await openFilters(user);
       // Click the "Active" chip inside the filter panel
-      const activeChip = screen.getAllByText("Active").find(
-        (el) => el.closest('[role="button"]'),
-      );
+      const activeChip = screen
+        .getAllByText("Active")
+        .find((el) => el.closest('[role="button"]'));
       await user.click(activeChip!.closest('[role="button"]')!);
 
       expect(screen.getByText("Bowl")).toBeInTheDocument();
@@ -777,16 +866,28 @@ describe("PieceList", () => {
     it("filters to completed pieces only", async () => {
       const user = userEvent.setup();
       const pieces = [
-        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
-        makePiece({ id: "id-2", name: "Mug", current_state: { state: "completed" } as any }),
-        makePiece({ id: "id-3", name: "Vase", current_state: { state: "recycled" } as any }),
+        makePiece({
+          id: "id-1",
+          name: "Bowl",
+          current_state: { state: "designed" } as any,
+        }),
+        makePiece({
+          id: "id-2",
+          name: "Mug",
+          current_state: { state: "completed" } as any,
+        }),
+        makePiece({
+          id: "id-3",
+          name: "Vase",
+          current_state: { state: "recycled" } as any,
+        }),
       ];
       renderPieceList(pieces);
 
       await openFilters(user);
-      const completedChip = screen.getAllByText("Completed").find(
-        (el) => el.closest('[role="button"]'),
-      );
+      const completedChip = screen
+        .getAllByText("Completed")
+        .find((el) => el.closest('[role="button"]'));
       await user.click(completedChip!.closest('[role="button"]')!);
 
       expect(screen.queryByText("Bowl")).not.toBeInTheDocument();
@@ -797,16 +898,28 @@ describe("PieceList", () => {
     it("filters to recycled pieces only", async () => {
       const user = userEvent.setup();
       const pieces = [
-        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
-        makePiece({ id: "id-2", name: "Mug", current_state: { state: "completed" } as any }),
-        makePiece({ id: "id-3", name: "Vase", current_state: { state: "recycled" } as any }),
+        makePiece({
+          id: "id-1",
+          name: "Bowl",
+          current_state: { state: "designed" } as any,
+        }),
+        makePiece({
+          id: "id-2",
+          name: "Mug",
+          current_state: { state: "completed" } as any,
+        }),
+        makePiece({
+          id: "id-3",
+          name: "Vase",
+          current_state: { state: "recycled" } as any,
+        }),
       ];
       renderPieceList(pieces);
 
       await openFilters(user);
-      const recycledChip = screen.getAllByText("Recycled").find(
-        (el) => el.closest('[role="button"]'),
-      );
+      const recycledChip = screen
+        .getAllByText("Recycled")
+        .find((el) => el.closest('[role="button"]'));
       await user.click(recycledChip!.closest('[role="button"]')!);
 
       expect(screen.queryByText("Bowl")).not.toBeInTheDocument();
@@ -817,19 +930,31 @@ describe("PieceList", () => {
     it("supports combining multiple filters", async () => {
       const user = userEvent.setup();
       const pieces = [
-        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
-        makePiece({ id: "id-2", name: "Mug", current_state: { state: "completed" } as any }),
-        makePiece({ id: "id-3", name: "Vase", current_state: { state: "recycled" } as any }),
+        makePiece({
+          id: "id-1",
+          name: "Bowl",
+          current_state: { state: "designed" } as any,
+        }),
+        makePiece({
+          id: "id-2",
+          name: "Mug",
+          current_state: { state: "completed" } as any,
+        }),
+        makePiece({
+          id: "id-3",
+          name: "Vase",
+          current_state: { state: "recycled" } as any,
+        }),
       ];
       renderPieceList(pieces);
 
       await openFilters(user);
-      const completedChip = screen.getAllByText("Completed").find(
-        (el) => el.closest('[role="button"]'),
-      );
-      const recycledChip = screen.getAllByText("Recycled").find(
-        (el) => el.closest('[role="button"]'),
-      );
+      const completedChip = screen
+        .getAllByText("Completed")
+        .find((el) => el.closest('[role="button"]'));
+      const recycledChip = screen
+        .getAllByText("Recycled")
+        .find((el) => el.closest('[role="button"]'));
       await user.click(completedChip!.closest('[role="button"]')!);
       await user.click(recycledChip!.closest('[role="button"]')!);
 
@@ -841,15 +966,23 @@ describe("PieceList", () => {
     it("shows all pieces again when a filter chip is toggled off", async () => {
       const user = userEvent.setup();
       const pieces = [
-        makePiece({ id: "id-1", name: "Bowl", current_state: { state: "designed" } as any }),
-        makePiece({ id: "id-2", name: "Mug", current_state: { state: "completed" } as any }),
+        makePiece({
+          id: "id-1",
+          name: "Bowl",
+          current_state: { state: "designed" } as any,
+        }),
+        makePiece({
+          id: "id-2",
+          name: "Mug",
+          current_state: { state: "completed" } as any,
+        }),
       ];
       renderPieceList(pieces);
 
       await openFilters(user);
-      const completedChip = screen.getAllByText("Completed").find(
-        (el) => el.closest('[role="button"]'),
-      );
+      const completedChip = screen
+        .getAllByText("Completed")
+        .find((el) => el.closest('[role="button"]'));
       // Activate filter
       await user.click(completedChip!.closest('[role="button"]')!);
       expect(screen.queryByText("Bowl")).not.toBeInTheDocument();
@@ -889,11 +1022,15 @@ describe("PieceList", () => {
       await openFilters(user);
 
       // Select "Active"
-      const activeChip = screen.getAllByText("Active").find((el) => el.closest('[role="button"]'));
+      const activeChip = screen
+        .getAllByText("Active")
+        .find((el) => el.closest('[role="button"]'));
       await user.click(activeChip!.closest('[role="button"]')!);
 
       // Select "Shared"
-      const sharedChip = screen.getAllByText("Shared").find((el) => el.closest('[role="button"]'));
+      const sharedChip = screen
+        .getAllByText("Shared")
+        .find((el) => el.closest('[role="button"]'));
       await user.click(sharedChip!.closest('[role="button"]')!);
 
       expect(screen.getByText("Active Shared")).toBeInTheDocument();
@@ -911,13 +1048,20 @@ describe("PieceList", () => {
           name: "Bowl",
           tags: [
             { id: "gift", name: "Gift", color: "#2A9D8F", is_public: false },
-            { id: "sale", name: "For Sale", color: "#4FC3F7", is_public: false },
+            {
+              id: "sale",
+              name: "For Sale",
+              color: "#4FC3F7",
+              is_public: false,
+            },
           ],
         }),
         makePiece({
           id: "id-2",
           name: "Mug",
-          tags: [{ id: "gift", name: "Gift", color: "#2A9D8F", is_public: false }],
+          tags: [
+            { id: "gift", name: "Gift", color: "#2A9D8F", is_public: false },
+          ],
         }),
       ];
       renderPieceList(pieces);
@@ -941,7 +1085,12 @@ describe("PieceList", () => {
         makePiece({
           tags: [
             { id: "gift", name: "Gift", color: "#2A9D8F", is_public: false },
-            { id: "sale", name: "For Sale", color: "#4FC3F7", is_public: false },
+            {
+              id: "sale",
+              name: "For Sale",
+              color: "#4FC3F7",
+              is_public: false,
+            },
             { id: "sold", name: "Sold", color: "#F4A261", is_public: false },
             { id: "blue", name: "Blue", color: "#457B9D", is_public: false },
           ],
@@ -1031,12 +1180,12 @@ describe("PieceList", () => {
 
       render(<RouterProvider router={router} />);
 
-      expect(screen.getByTestId("piece-list-content").getAttribute("style")).toContain(
-        "opacity: 0.42",
-      );
-      expect(screen.getByTestId("piece-list-overlay").getAttribute("style")).not.toContain(
-        "background-color: transparent",
-      );
+      expect(
+        screen.getByTestId("piece-list-content").getAttribute("style"),
+      ).toContain("opacity: 0.42");
+      expect(
+        screen.getByTestId("piece-list-overlay").getAttribute("style"),
+      ).not.toContain("background-color: transparent");
     });
 
     it("keeps append pagination undimmed while showing the overlay spinner", () => {
@@ -1052,12 +1201,12 @@ describe("PieceList", () => {
 
       render(<RouterProvider router={router} />);
 
-      expect(screen.getByTestId("piece-list-content").getAttribute("style")).toContain(
-        "opacity: 1",
-      );
-      expect(screen.getByTestId("piece-list-overlay").getAttribute("style")).toContain(
-        "background-color: transparent",
-      );
+      expect(
+        screen.getByTestId("piece-list-content").getAttribute("style"),
+      ).toContain("opacity: 1");
+      expect(
+        screen.getByTestId("piece-list-overlay").getAttribute("style"),
+      ).toContain("background-color: transparent");
     });
   });
 });

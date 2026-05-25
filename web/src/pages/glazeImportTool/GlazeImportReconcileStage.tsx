@@ -40,10 +40,13 @@ export default function GlazeImportReconcileStage({
       </Typography>
       <Stack spacing={2}>
         {duplicateResults.map((result) => {
-          const sourceRecord = records.find((record) => record.id === result.client_id);
-          const adminPath = result.object_id && adminBaseUrl
-            ? `${adminBaseUrl}/admin/api/${result.kind.replace("_", "")}/${result.object_id}/change/`
-            : null;
+          const sourceRecord = records.find(
+            (record) => record.id === result.client_id,
+          );
+          const adminPath =
+            result.object_id && adminBaseUrl
+              ? `${adminBaseUrl}/admin/api/${result.kind.replace("_", "")}/${result.object_id}/change/`
+              : null;
           const isResolved = reconciledIds.has(result.client_id);
           return (
             <Box
@@ -58,7 +61,12 @@ export default function GlazeImportReconcileStage({
               }}
             >
               <Stack spacing={1.5}>
-                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  flexWrap="wrap"
+                >
                   <Typography variant="subtitle1" sx={{ flex: 1 }}>
                     {result.name || result.filename}
                   </Typography>
@@ -81,24 +89,27 @@ export default function GlazeImportReconcileStage({
                   <Box
                     sx={{
                       display: "grid",
-                      gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                      gridTemplateColumns:
+                        "repeat(auto-fill, minmax(160px, 1fr))",
                       gap: 1,
                     }}
                   >
-                    {Object.entries(sourceRecord.parsedFields).map(([key, value]) => (
-                      <Box key={key}>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          display="block"
-                        >
-                          {key.replace(/_/g, " ")}
-                        </Typography>
-                        <Typography variant="body2">
-                          {value === null ? "—" : String(value)}
-                        </Typography>
-                      </Box>
-                    ))}
+                    {Object.entries(sourceRecord.parsedFields).map(
+                      ([key, value]) => (
+                        <Box key={key}>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            display="block"
+                          >
+                            {key.replace(/_/g, " ")}
+                          </Typography>
+                          <Typography variant="body2">
+                            {value === null ? "—" : String(value)}
+                          </Typography>
+                        </Box>
+                      ),
+                    )}
                   </Box>
                 ) : null}
                 <FormControlLabel

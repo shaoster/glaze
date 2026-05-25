@@ -143,10 +143,14 @@ export default function StateTransition({
   transitionError,
   onTransition,
 }: StateTransitionProps) {
-  const successors = sortSuccessorsForDisplay(SUCCESSORS[currentStateName] ?? []);
+  const successors = sortSuccessorsForDisplay(
+    SUCCESSORS[currentStateName] ?? [],
+  );
   const isTerminal = successors.length === 0;
   const [hoveredSuccessor, setHoveredSuccessor] = useState<string | null>(null);
-  const [pendingTransition, setPendingTransition] = useState<string | null>(null);
+  const [pendingTransition, setPendingTransition] = useState<string | null>(
+    null,
+  );
   const dialogOpen = pendingTransition !== null;
 
   function openDialog(next: string) {
@@ -166,11 +170,7 @@ export default function StateTransition({
 
   return (
     <>
-      <Box
-        aria-label="State flow"
-        role="group"
-        sx={{ mb: 0.75 }}
-      >
+      <Box aria-label="State flow" role="group" sx={{ mb: 0.75 }}>
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Box
             sx={{
@@ -254,7 +254,8 @@ export default function StateTransition({
           variant="caption"
           sx={{ color: "text.secondary", mb: 1, display: "block" }}
         >
-          {disabledHint ?? "Save your changes before transitioning to a new state."}
+          {disabledHint ??
+            "Save your changes before transitioning to a new state."}
         </Typography>
       )}
 

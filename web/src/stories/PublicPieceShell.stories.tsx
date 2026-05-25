@@ -4,12 +4,12 @@ import { http, HttpResponse } from "msw";
 
 /**
  * PublicPieceShell is the visitor-facing view for a single piece.
- * 
+ *
  * Rationale:
  * - Redesigned in PR #338 to provide an immersive "Showcase" experience for public visitors.
  * - Highlights the final result with a hero image, story, and selected detail fields.
  * - Provides a "Process Summary" at the bottom to show the making-of journey.
- * 
+ *
  * Edge cases:
  * - Missing Story: Layout collapses gracefully if no showcase story is provided.
  * - No Showcase Fields: Hides the "Details" section if no fields are selected for showcase.
@@ -30,8 +30,11 @@ type Story = StoryObj<typeof meta>;
 const mockPiece = {
   id: "p1",
   name: "Hand-thrown Vase",
-  thumbnail: { url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800" },
-  showcase_story: "This piece was inspired by traditional Korean celadon techniques, focusing on the subtle crackle glaze and elegant form.",
+  thumbnail: {
+    url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
+  },
+  showcase_story:
+    "This piece was inspired by traditional Korean celadon techniques, focusing on the subtle crackle glaze and elegant form.",
   showcase_fields: ["wheel_thrown.clay_body", "trimmed.trimmed_weight_lbs"],
   history: [
     {

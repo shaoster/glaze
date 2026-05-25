@@ -1,7 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import PieceHistory from "../PieceHistory";
-import type { PieceDetail as PieceDetailType, PieceState } from "../../util/types";
+import type {
+  PieceDetail as PieceDetailType,
+  PieceState,
+} from "../../util/types";
 import * as api from "../../util/api";
 
 vi.mock("../../../workflow.yml", () => ({
@@ -112,21 +121,13 @@ beforeEach(() => {
 
 describe("PieceHistory", () => {
   it("renders nothing when there are no past states", () => {
-    const { container } = render(
-      <PieceHistory
-        pastHistory={[]}
-      />,
-    );
+    const { container } = render(<PieceHistory pastHistory={[]} />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it("shows the history toggle button when there is history", async () => {
     await act(async () => {
-      render(
-        <PieceHistory
-          pastHistory={[makeState({ state: "designed" })]}
-        />,
-      );
+      render(<PieceHistory pastHistory={[makeState({ state: "designed" })]} />);
     });
     expect(
       screen.getByRole("button", { name: /show history/i }),
@@ -144,22 +145,26 @@ describe("PieceHistory", () => {
         />,
       );
     });
-    expect(screen.getByRole("button", { name: /show history/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /hide history/i })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /show history/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /hide history/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("toggling shows and hides the history panel", async () => {
     await act(async () => {
-      render(
-        <PieceHistory
-          pastHistory={[makeState({ state: "designed" })]}
-        />,
-      );
+      render(<PieceHistory pastHistory={[makeState({ state: "designed" })]} />);
     });
     fireEvent.click(screen.getByRole("button", { name: /show history/i }));
-    expect(screen.getByRole("button", { name: /hide history/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /hide history/i }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /hide history/i }));
-    expect(screen.getByRole("button", { name: /show history/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /show history/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows past state labels and timestamps when open", async () => {
@@ -406,13 +411,16 @@ describe("PieceHistory", () => {
     fireEvent.change(input, { target: { value: "2024-01-16T12:00" } });
 
     // Wait for autosave (default 700ms, plus network mock)
-    await waitFor(() => {
-      expect(api.updatePastState).toHaveBeenCalledWith(
-        "piece-id-1",
-        "past-state-id",
-        expect.objectContaining({ created: expect.any(String) }),
-      );
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(api.updatePastState).toHaveBeenCalledWith(
+          "piece-id-1",
+          "past-state-id",
+          expect.objectContaining({ created: expect.any(String) }),
+        );
+      },
+      { timeout: 2000 },
+    );
 
     expect(onPieceUpdated).toHaveBeenCalledWith(updated);
   });
@@ -547,12 +555,15 @@ describe("auto-expand on edit mode", () => {
     const state = makeState({ state: "designed" });
     const piece = makePiece({ is_editable: false });
     const { rerender } = render(
-      <PieceHistory pastHistory={[state]} piece={piece} onPieceUpdated={vi.fn()} />,
+      <PieceHistory
+        pastHistory={[state]}
+        piece={piece}
+        onPieceUpdated={vi.fn()}
+      />,
     );
-    expect(screen.getByRole("button", { name: /show history/i })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
+    expect(
+      screen.getByRole("button", { name: /show history/i }),
+    ).toHaveAttribute("aria-expanded", "false");
 
     await act(async () => {
       rerender(
@@ -564,11 +575,13 @@ describe("auto-expand on edit mode", () => {
       );
     });
 
-    expect(screen.getByRole("button", { name: /hide history/i })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
-    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
+    expect(
+      screen.getByRole("button", { name: /hide history/i }),
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "nearest",
+    });
   });
 
   it("does not expand the timeline when is_editable stays false", async () => {
@@ -576,7 +589,11 @@ describe("auto-expand on edit mode", () => {
     const state2 = makeState({ id: "s2", state: "wheel_thrown" });
     const piece = makePiece({ is_editable: false });
     const { rerender } = render(
-      <PieceHistory pastHistory={[state1]} piece={piece} onPieceUpdated={vi.fn()} />,
+      <PieceHistory
+        pastHistory={[state1]}
+        piece={piece}
+        onPieceUpdated={vi.fn()}
+      />,
     );
 
     await act(async () => {
@@ -589,10 +606,9 @@ describe("auto-expand on edit mode", () => {
       );
     });
 
-    expect(screen.getByRole("button", { name: /show history/i })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
+    expect(
+      screen.getByRole("button", { name: /show history/i }),
+    ).toHaveAttribute("aria-expanded", "false");
     expect(scrollIntoViewMock).not.toHaveBeenCalled();
   });
 });

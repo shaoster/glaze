@@ -1,4 +1,9 @@
-import { clampOcrRegion, defaultOcrRegion, type CropSquare, type OcrRegion } from "../ocrDetection";
+import {
+  clampOcrRegion,
+  defaultOcrRegion,
+  type CropSquare,
+  type OcrRegion,
+} from "../ocrDetection";
 
 export const MIN_CROP_SIZE = 96;
 
@@ -19,7 +24,10 @@ function getOverflowPadding(dimensions: { width: number; height: number }) {
   return Math.max(dimensions.width, dimensions.height);
 }
 
-export function getViewportPadding(dimensions: { width: number; height: number }) {
+export function getViewportPadding(dimensions: {
+  width: number;
+  height: number;
+}) {
   return Math.min(
     180,
     Math.max(
@@ -65,7 +73,11 @@ export function defaultCropOcrRegion(crop: CropSquare) {
   return defaultOcrRegion(crop.size);
 }
 
-export function rotatePt(x: number, y: number, angleDeg: number): [number, number] {
+export function rotatePt(
+  x: number,
+  y: number,
+  angleDeg: number,
+): [number, number] {
   const rad = (angleDeg * Math.PI) / 180;
   return [
     x * Math.cos(rad) - y * Math.sin(rad),

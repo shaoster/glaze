@@ -66,12 +66,13 @@ function makePiece(overrides = {}): PieceDetail {
   };
 }
 
-function renderTagManager(
-  initialTags: TagEntry[] = [],
-  onSaved = vi.fn(),
-) {
+function renderTagManager(initialTags: TagEntry[] = [], onSaved = vi.fn()) {
   return render(
-    <TagManager pieceId="piece-id-1" initialTags={initialTags} onSaved={onSaved} />,
+    <TagManager
+      pieceId="piece-id-1"
+      initialTags={initialTags}
+      onSaved={onSaved}
+    />,
   );
 }
 
@@ -115,8 +116,12 @@ describe("TagManager", () => {
     );
     expect(screen.getByLabelText("Tags")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Open" }));
-    expect(screen.getByRole("option", { name: "+ New tag" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save tags" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "+ New tag" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Save tags" }),
+    ).toBeInTheDocument();
   });
 
   it("fetched tags are selectable in the autocomplete dropdown", async () => {
@@ -130,7 +135,9 @@ describe("TagManager", () => {
     fireEvent.mouseDown(screen.getByLabelText("Tags"));
     await waitFor(() => screen.getByRole("option", { name: "Gift" }));
     fireEvent.click(screen.getByRole("option", { name: "Gift" }));
-    expect(screen.getByRole("button", { name: "Save tags" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Save tags" }),
+    ).toBeInTheDocument();
     expect(api.updatePiece).not.toHaveBeenCalled();
   });
 
@@ -149,9 +156,11 @@ describe("TagManager", () => {
   });
 
   it("returns to the chip list after a successful tag save", async () => {
-    vi.mocked(api.updatePiece).mockResolvedValue(makePiece({
-      tags: [{ id: "gift", name: "Gift", color: "#2A9D8F" }],
-    }));
+    vi.mocked(api.updatePiece).mockResolvedValue(
+      makePiece({
+        tags: [{ id: "gift", name: "Gift", color: "#2A9D8F" }],
+      }),
+    );
     await act(async () => {
       renderTagManager([{ id: "gift", name: "Gift", color: "#2A9D8F" }]);
     });
@@ -223,9 +232,7 @@ describe("TagManager", () => {
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
     expect(api.createTagEntry).not.toHaveBeenCalled();
-    expect(
-      screen.getByText("Tag name cannot be empty."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Tag name cannot be empty.")).toBeInTheDocument();
   });
 
   it("adds a newly created tag to the draft selection and waits for Save to persist it", async () => {
@@ -250,12 +257,16 @@ describe("TagManager", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() =>
-      expect(screen.queryByRole("dialog", { name: "Create Tag" })).not.toBeInTheDocument(),
+      expect(
+        screen.queryByRole("dialog", { name: "Create Tag" }),
+      ).not.toBeInTheDocument(),
     );
     await waitFor(() =>
       expect(screen.getByText("For Sale")).toBeInTheDocument(),
     );
-    expect(screen.getByRole("button", { name: "Save tags" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Save tags" }),
+    ).toBeInTheDocument();
     expect(api.updatePiece).not.toHaveBeenCalled();
   });
 

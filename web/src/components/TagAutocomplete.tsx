@@ -8,7 +8,11 @@ import TagChip from "./TagChip";
 import type { TagEntry } from "../util/types";
 
 const CREATE_NEW_ID = "__create_new__";
-const CREATE_NEW_OPTION: TagEntry = { id: CREATE_NEW_ID, name: "+ New tag", is_public: false };
+const CREATE_NEW_OPTION: TagEntry = {
+  id: CREATE_NEW_ID,
+  name: "+ New tag",
+  is_public: false,
+};
 
 interface TagAutocompleteProps {
   label: string;
@@ -52,7 +56,9 @@ export default function TagAutocomplete({
       isOptionEqualToValue={(option, selected) => option.id === selected.id}
       renderOption={(props, option) => {
         if (option.id === CREATE_NEW_ID) {
-          const { key, ...restProps } = props as { key: React.Key } & React.HTMLAttributes<HTMLLIElement>;
+          const { key, ...restProps } = props as {
+            key: React.Key;
+          } & React.HTMLAttributes<HTMLLIElement>;
           return (
             <Box
               component="li"
@@ -82,7 +88,9 @@ export default function TagAutocomplete({
             </Box>
           );
         }
-        const { key, ...restProps } = props as { key: React.Key } & React.HTMLAttributes<HTMLLIElement>;
+        const { key, ...restProps } = props as {
+          key: React.Key;
+        } & React.HTMLAttributes<HTMLLIElement>;
         return (
           <Box component="li" key={key} {...restProps}>
             {option.name}

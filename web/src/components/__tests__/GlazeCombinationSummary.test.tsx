@@ -13,7 +13,9 @@ vi.mock("../CloudinaryImage", () => ({
 
 describe("GlazeCombinationSummary", () => {
   it("shows loading state", () => {
-    vi.mocked(api.fetchGlazeCombinationImages).mockReturnValue(new Promise(() => {}));
+    vi.mocked(api.fetchGlazeCombinationImages).mockReturnValue(
+      new Promise(() => {}),
+    );
     render(<GlazeCombinationSummary />);
     expect(screen.getByText(/Loading.../i)).toBeInTheDocument();
   });
@@ -39,20 +41,28 @@ describe("GlazeCombinationSummary", () => {
         ],
       },
     ];
-    vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue(mockData as any);
-    
+    vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue(
+      mockData as any,
+    );
+
     render(<GlazeCombinationSummary />);
-    
-    expect(await screen.findByText(/2 combinations with images/i)).toBeInTheDocument();
+
+    expect(
+      await screen.findByText(/2 combinations with images/i),
+    ).toBeInTheDocument();
     expect(screen.getAllByTestId("mock-image")).toHaveLength(2);
   });
 
   it("renders error state", async () => {
-    vi.mocked(api.fetchGlazeCombinationImages).mockRejectedValue(new Error("API Error"));
+    vi.mocked(api.fetchGlazeCombinationImages).mockRejectedValue(
+      new Error("API Error"),
+    );
     render(<GlazeCombinationSummary />);
-    
+
     await waitFor(() => {
-      expect(screen.queryByText(/combinations with images/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/combinations with images/i),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -61,10 +71,12 @@ describe("GlazeCombinationSummary", () => {
       glaze_combination: { id: `${i}`, name: `Combo ${i}` },
       pieces: [{ id: `p${i}`, images: [{ url: `url${i}` }] }],
     }));
-    vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue(mockData as any);
-    
+    vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue(
+      mockData as any,
+    );
+
     render(<GlazeCombinationSummary />);
-    
+
     expect(await screen.findByText("+2")).toBeInTheDocument();
   });
 
@@ -75,10 +87,14 @@ describe("GlazeCombinationSummary", () => {
         pieces: [{ id: "p1", images: [{ url: "url1" }] }],
       },
     ];
-    vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue(mockData as any);
-    
+    vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue(
+      mockData as any,
+    );
+
     render(<GlazeCombinationSummary />);
-    
-    expect(await screen.findByText("1 combination with images")).toBeInTheDocument();
+
+    expect(
+      await screen.findByText("1 combination with images"),
+    ).toBeInTheDocument();
   });
 });

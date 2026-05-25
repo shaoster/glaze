@@ -12,9 +12,9 @@ const mockCreate = vi.fn(() => mockClient);
 const mockIsAxiosError = vi.fn((error: unknown) => {
   return Boolean(
     typeof error === "object" &&
-      error !== null &&
-      "isAxiosError" in error &&
-      error.isAxiosError,
+    error !== null &&
+    "isAxiosError" in error &&
+    error.isAxiosError,
   );
 });
 
@@ -115,11 +115,15 @@ describe("client setup", () => {
 describe("piece endpoints", () => {
   it("fetchPieces maps wire data to PieceSummary values", async () => {
     const { fetchPieces } = await loadApiModule();
-    mockClient.get.mockResolvedValue({ data: { count: 1, results: [wirePieceSummary] } });
+    mockClient.get.mockResolvedValue({
+      data: { count: 1, results: [wirePieceSummary] },
+    });
 
     const result = await fetchPieces();
 
-    expect(mockClient.get).toHaveBeenCalledWith("pieces/", { params: undefined });
+    expect(mockClient.get).toHaveBeenCalledWith("pieces/", {
+      params: undefined,
+    });
     expect(result.count).toBe(1);
     expect(result.results).toHaveLength(1);
     expect(result.results[0].created).toBeInstanceOf(Date);
@@ -332,12 +336,13 @@ describe("auth endpoints", () => {
   const authUser = {
     id: 1,
     is_staff: false,
-    openid_subject: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    openid_subject:
+      "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
     alias: "",
     preferences: {
       process_summary_fields: [],
       summary_customize_popover: true,
-        change_alias_prompt: true,
+      change_alias_prompt: true,
     },
   };
 
@@ -410,7 +415,11 @@ describe("auth endpoints", () => {
     mockClient.get.mockResolvedValue({});
     mockClient.post.mockResolvedValue({ data: authUser });
 
-    await loginWithGoogle("auth-code-xyz", "https://example.com", "invite-uuid");
+    await loginWithGoogle(
+      "auth-code-xyz",
+      "https://example.com",
+      "invite-uuid",
+    );
 
     expect(mockClient.post).toHaveBeenCalledWith("auth/google/", {
       code: "auth-code-xyz",
@@ -423,8 +432,12 @@ describe("auth endpoints", () => {
     const { validateInviteCode } = await loadApiModule();
     mockClient.post.mockResolvedValue({ data: { valid: true } });
 
-    await expect(validateInviteCode("some-uuid")).resolves.toEqual({ valid: true });
-    expect(mockClient.post).toHaveBeenCalledWith("auth/validate-invite/", { code: "some-uuid" });
+    await expect(validateInviteCode("some-uuid")).resolves.toEqual({
+      valid: true,
+    });
+    expect(mockClient.post).toHaveBeenCalledWith("auth/validate-invite/", {
+      code: "some-uuid",
+    });
   });
 
   it("getStaffInviteCode calls GET on the staff invite endpoint", async () => {
@@ -504,7 +517,7 @@ describe("auth endpoints", () => {
         preferences: {
           process_summary_fields: ["piece.created"],
           summary_customize_popover: true,
-            change_alias_prompt: true,
+          change_alias_prompt: true,
         },
       },
     });
@@ -512,7 +525,7 @@ describe("auth endpoints", () => {
     await expect(
       updateUserPreferences({
         process_summary_fields: ["piece.created"],
-      summary_customize_popover: true,
+        summary_customize_popover: true,
         change_alias_prompt: true,
       }),
     ).resolves.toEqual({
@@ -520,7 +533,7 @@ describe("auth endpoints", () => {
       preferences: {
         process_summary_fields: ["piece.created"],
         summary_customize_popover: true,
-          change_alias_prompt: true,
+        change_alias_prompt: true,
       },
     });
     expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
@@ -528,7 +541,7 @@ describe("auth endpoints", () => {
       preferences: {
         process_summary_fields: ["piece.created"],
         summary_customize_popover: true,
-          change_alias_prompt: true,
+        change_alias_prompt: true,
       },
     });
   });

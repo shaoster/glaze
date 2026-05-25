@@ -2,7 +2,10 @@ import type { RefObject } from "react";
 import { Alert, Button, Stack, Typography } from "@mui/material";
 import GlazeImportProgressList from "./GlazeImportProgressList";
 import GlazeImportRecordList from "./GlazeImportRecordList";
-import type { UploadedRecord, UploadProgressEntry } from "./glazeImportToolTypes";
+import type {
+  UploadedRecord,
+  UploadProgressEntry,
+} from "./glazeImportToolTypes";
 
 interface GlazeImportUploadStageProps {
   fileInputRef: RefObject<HTMLInputElement | null>;
@@ -48,9 +51,9 @@ export default function GlazeImportUploadStage({
         its own record and starts uncropped.
       </Alert>
       <Alert severity="warning">
-        Browser-side upload works best for JPG and PNG. For `.heic` and
-        `.heif`, use `Upload Via Cloudinary` so Cloudinary can convert the
-        source before the crop tool loads it.
+        Browser-side upload works best for JPG and PNG. For `.heic` and `.heif`,
+        use `Upload Via Cloudinary` so Cloudinary can convert the source before
+        the crop tool loads it.
       </Alert>
       <input
         ref={fileInputRef}

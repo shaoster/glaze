@@ -20,8 +20,12 @@ describe("GlazeImportImportStage", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Run Bulk Import" })).toBeDisabled();
-    expect(screen.getByText("Review every record before importing.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Run Bulk Import" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText("Review every record before importing."),
+    ).toBeInTheDocument();
   });
 
   it("shows duplicate results and links to reconcile", async () => {
@@ -61,7 +65,9 @@ describe("GlazeImportImportStage", () => {
     );
 
     expect(screen.getByText("1 duplicates skipped")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Reconcile Duplicates →" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Reconcile Duplicates →" }),
+    );
     expect(onGoToReconcile).toHaveBeenCalled();
   });
 });

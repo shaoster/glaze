@@ -5,15 +5,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0025_piecestate_ref_tag_cascade_on_delete'),
+        ("api", "0025_piecestate_ref_tag_cascade_on_delete"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='glazecombinationlayer',
-            name='glaze_type',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.glazetype'),
+            model_name="glazecombinationlayer",
+            name="glaze_type",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="api.glazetype"
+            ),
         ),
     ]

@@ -152,15 +152,15 @@ export function buildDraftState(pieceState: PieceState): DraftState {
     baseState: pieceState,
     notes: pieceState.notes || "",
     images: stateImages(pieceState),
-    customFieldInputs: buildCustomFieldInputMap(
-      customFieldDefs,
-      customFields,
-    ),
+    customFieldInputs: buildCustomFieldInputMap(customFieldDefs, customFields),
     globalRefPks: buildGlobalRefPkMap(customFieldDefs, customFields),
   };
 }
 
-export function draftReducer(state: DraftState, action: DraftAction): DraftState {
+export function draftReducer(
+  state: DraftState,
+  action: DraftAction,
+): DraftState {
   switch (action.type) {
     case "replace_base_state":
       return buildDraftState(action.pieceState);

@@ -8,6 +8,7 @@ Refactors the documentation structure to be more maintainable and easier for AI 
 - Adds a new `docs-human` agent skill to help maintain these files.
 
 **Execution Strategy (Two-Commit PR)**: This PR contains exactly two commits:
+
 1. The actual documentation updates.
 2. A tracking update stamping the SHA of the first commit into `.agents/skills/docs-human/LAST_ANALYSIS_SHA`.
 

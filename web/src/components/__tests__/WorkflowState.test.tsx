@@ -392,7 +392,9 @@ describe("WorkflowState", () => {
     );
     // Only assert the field under test — other fields vary as workflow.yml evolves.
     expect(draft.customFieldInputs).toMatchObject({ clay_weight_lbs: "" });
-    expect(draft.customFieldInputs["clay_weight_lbs"]).not.toEqual({ bad: "shape" });
+    expect(draft.customFieldInputs["clay_weight_lbs"]).not.toEqual({
+      bad: "shape",
+    });
   });
 
   it("normalizeCustomFieldPayload trims and parses boolean strings", () => {
@@ -484,10 +486,7 @@ describe("WorkflowState", () => {
 
   it("draftReducer throws on an unhandled action", () => {
     expect(() =>
-      draftReducer(
-        buildDraftState(makeState()),
-        { type: "not-real" } as never,
-      ),
+      draftReducer(buildDraftState(makeState()), { type: "not-real" } as never),
     ).toThrow("Unhandled DraftAction");
   });
 
@@ -516,7 +515,9 @@ describe("WorkflowState", () => {
       },
     });
     await act(async () => {
-      render(<WorkflowState {...defaultProps} initialPieceState={bisqueState} />);
+      render(
+        <WorkflowState {...defaultProps} initialPieceState={bisqueState} />,
+      );
     });
     const tempInput = screen.getByLabelText("Kiln Temperature C");
     expect(tempInput).toBeInTheDocument();
@@ -533,7 +534,9 @@ describe("WorkflowState", () => {
       },
     });
     await act(async () => {
-      render(<WorkflowState {...defaultProps} initialPieceState={trimmedState} />);
+      render(
+        <WorkflowState {...defaultProps} initialPieceState={trimmedState} />,
+      );
     });
     expect(screen.getByLabelText("Trimmed Weight Lbs")).toHaveValue(900);
     expect(screen.getByLabelText("Pre-trim Weight Lbs")).toHaveValue(1200);
@@ -545,7 +548,9 @@ describe("WorkflowState", () => {
       custom_fields: { pre_trim_weight_lbs: 1200 },
     });
     await act(async () => {
-      render(<WorkflowState {...defaultProps} initialPieceState={trimmedState} />);
+      render(
+        <WorkflowState {...defaultProps} initialPieceState={trimmedState} />,
+      );
     });
     expect(screen.getByLabelText("Pre-trim Weight Lbs")).toBeDisabled();
   });
@@ -556,7 +561,9 @@ describe("WorkflowState", () => {
       custom_fields: { trimmed_weight_lbs: 900 },
     });
     await act(async () => {
-      render(<WorkflowState {...defaultProps} initialPieceState={trimmedState} />);
+      render(
+        <WorkflowState {...defaultProps} initialPieceState={trimmedState} />,
+      );
     });
     expect(screen.getByLabelText("Trimmed Weight Lbs")).not.toBeDisabled();
   });
@@ -573,9 +580,7 @@ describe("WorkflowState", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Browse Kiln Location" }),
     );
-    await waitFor(() =>
-      expect(screen.getByText("Kiln A")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("Kiln A")).toBeInTheDocument());
     await userEvent.click(screen.getByText("Kiln A"));
     expect(screen.getByText("Kiln A")).toBeInTheDocument();
   });
@@ -596,21 +601,24 @@ describe("WorkflowState", () => {
       screen.getByRole("button", { name: "Browse Kiln Location" }),
     );
     await userEvent.click(screen.getByRole("tab", { name: "Create" }));
-    fireEvent.change(
-      screen.getByRole("textbox", { name: "Location" }),
-      { target: { value: "New Kiln" } },
+    fireEvent.change(screen.getByRole("textbox", { name: "Location" }), {
+      target: { value: "New Kiln" },
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "Create Location" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Create Location" }));
     await waitFor(() =>
-      expect(api.createGlobalEntry).toHaveBeenCalledWith(
-        "location",
-        { field: "name", value: "New Kiln" },
-      ),
+      expect(api.createGlobalEntry).toHaveBeenCalledWith("location", {
+        field: "name",
+        value: "New Kiln",
+      }),
     );
     await act(async () =>
       resolveCreate({ id: "new-id", name: "New Kiln", isPublic: false }),
     );
-    await waitFor(() => expect(screen.getByText("New Kiln")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("New Kiln")).toBeInTheDocument(),
+    );
   });
 
   it("fetches global entries for createable global refs", async () => {
@@ -618,7 +626,9 @@ describe("WorkflowState", () => {
       state: "submitted_to_bisque_fire",
       custom_fields: { kiln_location: "" },
     });
-    render(<WorkflowState {...defaultProps} initialPieceState={withGlobalRef} />);
+    render(
+      <WorkflowState {...defaultProps} initialPieceState={withGlobalRef} />,
+    );
     await userEvent.click(
       screen.getByRole("button", { name: "Browse Kiln Location" }),
     );
@@ -909,14 +919,20 @@ describe("WorkflowState", () => {
       });
     });
 
-    await waitFor(() => expect(api.updateCurrentState).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(api.updateCurrentState).toHaveBeenCalledTimes(2),
+    );
     await waitFor(() =>
       expect(api.updateCurrentState).toHaveBeenLastCalledWith(
         "test-piece-id",
         expect.objectContaining({
           images: [
-            expect.objectContaining({ url: expect.stringContaining("one.jpg") }),
-            expect.objectContaining({ url: expect.stringContaining("two.jpg") }),
+            expect.objectContaining({
+              url: expect.stringContaining("one.jpg"),
+            }),
+            expect.objectContaining({
+              url: expect.stringContaining("two.jpg"),
+            }),
           ],
         }),
       ),
@@ -1073,7 +1089,15 @@ describe("WorkflowState", () => {
   it("renders enum and number additional fields for bisque_fired state", async () => {
     vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
     await act(async () => {
-      render(<WorkflowState {...defaultProps} initialPieceState={makeState({ state: "bisque_fired", custom_fields: {} })} />);
+      render(
+        <WorkflowState
+          {...defaultProps}
+          initialPieceState={makeState({
+            state: "bisque_fired",
+            custom_fields: {},
+          })}
+        />,
+      );
     });
     // cone is an enum field — verify select renders
     const coneField = screen.getByLabelText("Cone");
@@ -1162,7 +1186,9 @@ describe("WorkflowState", () => {
     it("renders a Browse button instead of a text input for thumbnail-backed globals", async () => {
       const glazedState = makeState({ state: "glazed", custom_fields: {} });
       await act(async () => {
-        render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
+        render(
+          <WorkflowState {...defaultProps} initialPieceState={glazedState} />,
+        );
       });
       expect(
         screen.getByRole("button", { name: "Browse Glaze Combination" }),
@@ -1181,7 +1207,9 @@ describe("WorkflowState", () => {
         },
       });
       await act(async () => {
-        render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
+        render(
+          <WorkflowState {...defaultProps} initialPieceState={glazedState} />,
+        );
       });
       expect(screen.getByText("Iron Red!Clear")).toBeInTheDocument();
       expect(
@@ -1197,7 +1225,9 @@ describe("WorkflowState", () => {
         },
       });
       await act(async () => {
-        render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
+        render(
+          <WorkflowState {...defaultProps} initialPieceState={glazedState} />,
+        );
       });
       const chip = screen.getByRole("button", { name: /iron red!clear/i });
       // MUI adds MuiChip-deletable when onDelete is wired up
@@ -1220,7 +1250,9 @@ describe("WorkflowState", () => {
         },
       });
       await act(async () => {
-        render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
+        render(
+          <WorkflowState {...defaultProps} initialPieceState={glazedState} />,
+        );
       });
       const chip = screen.getByRole("button", { name: /iron red!clear/i });
       // The MUI Chip cancel SVG icon is the last child element of the chip
@@ -1248,7 +1280,9 @@ describe("WorkflowState", () => {
 
     it("opens the browse dialog when Browse button is clicked", async () => {
       const glazedState = makeState({ state: "glazed", custom_fields: {} });
-      render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
+      render(
+        <WorkflowState {...defaultProps} initialPieceState={glazedState} />,
+      );
       await userEvent.click(
         screen.getByRole("button", { name: "Browse Glaze Combination" }),
       );
@@ -1261,7 +1295,9 @@ describe("WorkflowState", () => {
 
     it("keeps glaze combination browse-only when can_create is not set", async () => {
       const glazedState = makeState({ state: "glazed", custom_fields: {} });
-      render(<WorkflowState {...defaultProps} initialPieceState={glazedState} />);
+      render(
+        <WorkflowState {...defaultProps} initialPieceState={glazedState} />,
+      );
       await userEvent.click(
         screen.getByRole("button", { name: "Browse Glaze Combination" }),
       );

@@ -1,18 +1,9 @@
 import { useCallback } from "react";
 import CloseIcon from "@mui/icons-material/Close";
-import {
-  Box,
-  IconButton,
-  Paper,
-  Popper,
-  Typography,
-} from "@mui/material";
+import { Box, IconButton, Paper, Popper, Typography } from "@mui/material";
 
 import { useAsyncFn } from "../util/useAsync";
-import {
-  useCurrentUser,
-  useSaveUserPreferences,
-} from "./CurrentUserContext";
+import { useCurrentUser, useSaveUserPreferences } from "./CurrentUserContext";
 import {
   SMALL_TUTORIAL_INLAY_PLACEMENTS,
   SMALL_TUTORIAL_INLAY_LEFT_HORIZONTAL_OFFSET_PX,

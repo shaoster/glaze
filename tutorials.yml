@@ -16,7 +16,7 @@ tutorials:
 
   change_alias_prompt:
     preference:
-      label: "Show the \"Change your alias!\" tip"
+      label: 'Show the "Change your alias!" tip'
       hint: "Controls the alias guidance shown on the piece list."
     inlay:
       label: "Change your alias!"

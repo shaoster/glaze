@@ -4,12 +4,12 @@ import { fn } from "@storybook/test";
 
 /**
  * TagAutocomplete is a specialized MUI Autocomplete for searching and creating tags.
- * 
+ *
  * Rationale:
  * - Provides a unified search interface for tags across the app.
  * - Supports inline creation of new tags when no results are found (Issue #189).
  * - Displays tag colors and public/private status during selection.
- * 
+ *
  * Edge cases:
  * - New Tag Creation: Special "Create new tag" option appears when search doesn't match.
  * - Public vs Private: Visual distinction between public (shared) and private (internal) tags.
