@@ -58,7 +58,6 @@ from .serializers import (
     PieceSummarySerializer,
     PieceUpdateSerializer,
     TaskSubmissionSerializer,
-    UserPreferencesSerializer,
 )
 from .utils import bootstrap_dev_user
 from .workflow import (
@@ -140,6 +139,14 @@ def auth_me(request: Request) -> Response:
     )
 
 
+from .preferences import UserPreferencesSerializer, get_preferences_config
+
+
+# Whitelist of UserProfile fields that can be updated via the declarative system.
+# [SECURITY]: Strictly control which model fields are exposed to storage: UserProfile.
+ALLOWED_USER_PROFILE_FIELDS = {"alias"}
+
+
 @extend_schema(
     request=UserPreferencesSerializer,
     responses={200: UserPreferencesSerializer},
@@ -163,13 +170,22 @@ def auth_preferences(request: Request) -> Response:
     serializer = UserPreferencesSerializer(data=request.data, partial=True)
     serializer.is_valid(raise_exception=True)
     update_fields: list[str] = []
-    if "alias" in serializer.validated_data:
-        profile.alias = serializer.validated_data["alias"]
-        update_fields.append("alias")
+
+    config = get_preferences_config()
+    for section in config["sections"]:
+        for field_id, field_def in section["fields"].items():
+            if (
+                field_def["storage"] == "UserProfile"
+                and field_id in serializer.validated_data
+                and field_id in ALLOWED_USER_PROFILE_FIELDS
+            ):
+                setattr(profile, field_id, serializer.validated_data[field_id])
+                if field_id not in update_fields:
+                    update_fields.append(field_id)
+
     if "preferences" in serializer.validated_data:
-        existing_preferences = cast(
-            dict[str, Any],
-            profile.preferences if isinstance(profile.preferences, dict) else {},
+        existing_preferences = (
+            profile.preferences if isinstance(profile.preferences, dict) else {}
         )
         incoming_preferences = cast(
             dict[str, Any], serializer.validated_data["preferences"]
@@ -178,18 +194,9 @@ def auth_preferences(request: Request) -> Response:
             **existing_preferences,
             **incoming_preferences,
         }
-        if "tutorials" in incoming_preferences:
-            existing_tutorials = existing_preferences.get("tutorials")
-            incoming_tutorials = incoming_preferences.get("tutorials")
-            if isinstance(existing_tutorials, dict) and isinstance(
-                incoming_tutorials, dict
-            ):
-                merged_preferences["tutorials"] = {
-                    **cast(dict[str, Any], existing_tutorials),
-                    **cast(dict[str, Any], incoming_tutorials),
-                }
         profile.preferences = merged_preferences
         update_fields.append("preferences")
+
     if update_fields:
         profile.save(update_fields=update_fields)
     return Response(

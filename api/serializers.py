@@ -973,22 +973,10 @@ def _replace_piece_tags(piece: Piece, user, tag_ids: list[str]) -> None:
         piece_tag_model.objects.create(piece=piece, tag=tags_by_id[tag_id], order=order)
 
 
-class TutorialPreferencesSerializer(serializers.Serializer):
-    summary_customize_popover = serializers.BooleanField(required=False)
-    change_alias_prompt = serializers.BooleanField(required=False)
-
-
-class SavedUserPreferencesSerializer(serializers.Serializer):
-    process_summary_fields = serializers.ListField(
-        child=serializers.CharField(),
-        required=False,
-    )
-    tutorials = TutorialPreferencesSerializer(required=False)
-
-
-class UserPreferencesSerializer(serializers.Serializer):
-    preferences = SavedUserPreferencesSerializer(required=False)
-    alias = serializers.CharField(required=False, allow_blank=True, max_length=50)
+from .preferences import (
+    SavedUserPreferencesSerializer,
+    UserPreferencesSerializer,
+)
 
 
 class AuthUserSerializer(serializers.Serializer):

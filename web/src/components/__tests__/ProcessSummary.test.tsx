@@ -199,10 +199,8 @@ describe("ProcessSummary", () => {
           openid_subject: "",
             preferences: {
               process_summary_fields: ["piece.name", "wheel_thrown.clay_weight_lbs"],
-              tutorials: {
-                summary_customize_popover: true,
+              summary_customize_popover: true,
                 change_alias_prompt: true,
-              },
             },
         }}
         >
@@ -243,10 +241,8 @@ describe("ProcessSummary", () => {
     const openPreferencesDialog = vi.fn();
     const saveUserPreferences = vi.fn().mockResolvedValue({
       process_summary_fields: ["piece.current_location"],
-      tutorials: {
-        summary_customize_popover: false,
+      summary_customize_popover: false,
         change_alias_prompt: true,
-      },
     });
 
     render(
@@ -261,10 +257,8 @@ describe("ProcessSummary", () => {
             openid_subject: "",
             preferences: {
               process_summary_fields: ["piece.current_location"],
-              tutorials: {
-                summary_customize_popover: true,
+              summary_customize_popover: true,
                 change_alias_prompt: true,
-              },
             },
           }}
         >

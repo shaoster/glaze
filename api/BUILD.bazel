@@ -30,6 +30,7 @@ py_library(
         "logging.py",
         "models.py",
         "piece_views.py",
+        "preferences.py",
         "serializer_factories.py",
         "serializer_registry.py",
         "serializers.py",
@@ -116,6 +117,7 @@ filegroup(
         "model_factories.py",
         "models.py",
         "piece_views.py",
+        "preferences.py",
         "serializer_factories.py",
         "serializer_registry.py",
         "serializers.py",
@@ -373,6 +375,22 @@ pytest_test(
     expected_coverage = ["api/admin.py", "api/cloudinary_cleanup.py", "api/cloudinary_views.py"],
 )
 
+pytest_test(
+    name = "api_preferences_test",
+    size = "small",
+    srcs = _CONFTEST + [
+        "tests/test_preferences.py",
+    ],
+    args = ["api/tests/test_preferences.py"],
+    data = _TEST_DATA + [
+        "//:user_preferences_files",
+    ],
+    env = _TEST_ENV,
+    main = "//tools:pytest_main.py",
+    deps = _TEST_DEPS,
+    expected_coverage = ["api/preferences.py"],
+)
+
 # ── mypy type-check ───────────────────────────────────────────────────────────
 # Runs mypy over all of api/ with the full django + DRF plugins enabled.
 # Runs as a single target (coarser than per-library) because mypy_django_plugin
@@ -437,6 +455,7 @@ test_suite(
         ":api_model_test",
         ":api_otel_test",
         ":api_piece_test",
+        ":api_preferences_test",
         ":api_workflow_test",
     ],
 )

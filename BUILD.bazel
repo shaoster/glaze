@@ -50,6 +50,21 @@ js_library(
     visibility = ["//visibility:public"],
 )
 
+filegroup(
+    name = "user_preferences_files",
+    srcs = [
+        "user_preferences.schema.yml",
+        "user_preferences.yml",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+js_library(
+    name = "user_preferences_js",
+    srcs = ["user_preferences.yml"],
+    visibility = ["//visibility:public"],
+)
+
 # ── Fixture data ──────────────────────────────────────────────────────────────
 
 filegroup(
@@ -135,6 +150,8 @@ pkg_tar(
         "manage.py",
         "workflow.yml",
         "workflow.schema.yml",
+        "user_preferences.yml",
+        "user_preferences.schema.yml",
         "docker-entrypoint.sh",
         "//api:api_runtime_files",
         "//backend:backend_runtime_files",

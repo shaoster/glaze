@@ -21,10 +21,8 @@ function makeCurrentUser() {
     openid_subject: "",
     preferences: {
       process_summary_fields: [],
-      tutorials: {
-        summary_customize_popover: true as const,
+      summary_customize_popover: true as const,
         change_alias_prompt: true as const,
-      },
     },
   };
 }
@@ -121,10 +119,8 @@ describe("SmallTutorialInlay", () => {
       expect(openPreferencesDialog).toHaveBeenCalledWith("process-summary");
       expect(saveUserPreferencesMock).toHaveBeenCalledWith({
         process_summary_fields: [],
-        tutorials: {
-          summary_customize_popover: false,
+        summary_customize_popover: false,
           change_alias_prompt: true,
-        },
       });
       expect(screen.queryByText("Customize this summary!")).not.toBeInTheDocument();
     });
@@ -157,10 +153,8 @@ describe("SmallTutorialInlay", () => {
       expect(openPreferencesDialog).not.toHaveBeenCalled();
       expect(saveUserPreferencesMock).toHaveBeenCalledWith({
         process_summary_fields: [],
-        tutorials: {
-          summary_customize_popover: false,
+        summary_customize_popover: false,
           change_alias_prompt: true,
-        },
       });
       expect(screen.queryByText("Customize this summary!")).not.toBeInTheDocument();
     });

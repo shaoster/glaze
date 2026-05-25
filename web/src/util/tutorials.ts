@@ -1,17 +1,16 @@
-import type { components } from "./generated-types";
 
-type SavedUserPreferences = NonNullable<
-  components["schemas"]["UserPreferences"]["preferences"]
->;
-
-type TutorialPreferences = NonNullable<SavedUserPreferences["tutorials"]>;
-
-export type TutorialToggleKey = keyof TutorialPreferences;
-
+/**
+ * Metadata for tutorial toggles driven by user_preferences.yml.
+ *
+ * NOTE: The field keys here must match the field IDs in user_preferences.yml.
+ */
 export const TUTORIAL_TOGGLE_KEYS = {
   SUMMARY_CUSTOMIZE_POPUP: "summary_customize_popover",
   CHANGE_ALIAS_PROMPT: "change_alias_prompt",
-} as const satisfies Record<string, TutorialToggleKey>;
+} as const;
+
+export type TutorialToggleKey =
+  (typeof TUTORIAL_TOGGLE_KEYS)[keyof typeof TUTORIAL_TOGGLE_KEYS];
 
 export const TUTORIAL_TOGGLE_METADATA: Record<
   TutorialToggleKey,

@@ -179,10 +179,8 @@ class TestAuthEndpointsMocked:
             user=user,
             preferences={
                 "process_summary_fields": ["piece.name"],
-                "tutorials": {
-                    "summary_customize_popover": True,
-                    "other_tutorial": True,
-                },
+                "summary_customize_popover": True,
+                "other_tutorial": True,
                 "theme": "dark",
             },
         )
@@ -191,9 +189,7 @@ class TestAuthEndpointsMocked:
             "/api/auth/preferences/",
             {
                 "preferences": {
-                    "tutorials": {
-                        "summary_customize_popover": False,
-                    }
+                    "summary_customize_popover": False,
                 }
             },
             format="json",
@@ -202,20 +198,16 @@ class TestAuthEndpointsMocked:
         assert response.status_code == 200
         assert response.json()["preferences"] == {
             "process_summary_fields": ["piece.name"],
-            "tutorials": {
-                "summary_customize_popover": False,
-                "other_tutorial": True,
-            },
+            "summary_customize_popover": False,
+            "other_tutorial": True,
             "theme": "dark",
         }
 
         user.profile.refresh_from_db()
         assert user.profile.preferences == {
             "process_summary_fields": ["piece.name"],
-            "tutorials": {
-                "summary_customize_popover": False,
-                "other_tutorial": True,
-            },
+            "summary_customize_popover": False,
+            "other_tutorial": True,
             "theme": "dark",
         }
 
@@ -223,9 +215,7 @@ class TestAuthEndpointsMocked:
         UserProfile.objects.create(
             user=user,
             preferences={
-                "tutorials": {
-                    "summary_customize_popover": True,
-                },
+                "summary_customize_popover": True,
             },
         )
 
@@ -233,9 +223,7 @@ class TestAuthEndpointsMocked:
             "/api/auth/preferences/",
             {
                 "preferences": {
-                    "tutorials": {
-                        "change_alias_prompt": False,
-                    }
+                    "change_alias_prompt": False,
                 }
             },
             format="json",
@@ -243,18 +231,14 @@ class TestAuthEndpointsMocked:
 
         assert response.status_code == 200
         assert response.json()["preferences"] == {
-            "tutorials": {
-                "summary_customize_popover": True,
-                "change_alias_prompt": False,
-            },
+            "summary_customize_popover": True,
+            "change_alias_prompt": False,
         }
 
         user.profile.refresh_from_db()
         assert user.profile.preferences == {
-            "tutorials": {
-                "summary_customize_popover": True,
-                "change_alias_prompt": False,
-            },
+            "summary_customize_popover": True,
+            "change_alias_prompt": False,
         }
 
     def test_auth_me_includes_alias(self, client, user, settings):
@@ -309,7 +293,7 @@ class TestAuthEndpointsMocked:
                 "alias": "Studio Mug",
                 "preferences": {
                     "process_summary_fields": ["piece.name"],
-                    "tutorials": {"summary_customize_popover": False},
+                    "summary_customize_popover": False,
                 },
             },
             format="json",
@@ -318,7 +302,7 @@ class TestAuthEndpointsMocked:
         data = response.json()
         assert data["alias"] == "Studio Mug"
         assert data["preferences"]["process_summary_fields"] == ["piece.name"]
-        assert data["preferences"]["tutorials"]["summary_customize_popover"] is False
+        assert data["preferences"]["summary_customize_popover"] is False
         user.profile.refresh_from_db()
         assert user.profile.alias == "Studio Mug"
 

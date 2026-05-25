@@ -4,29 +4,22 @@ import {
   AccordionDetails,
   AccordionSummary,
   Alert,
-  Box,
   Button,
-  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
-  FormControlLabel,
-  FormGroup,
   LinearProgress,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
+import { fetchUserPreferences, type UserPreferences } from "../util/api";
 import {
-  fetchUserPreferences,
-  type UserPreferences,
-  type TutorialVisibility,
-} from "../util/api";
-import { TUTORIAL_TOGGLE_KEYS } from "../util/tutorials";
+  getFieldDefinition,
+  PREFERENCES_SCHEMA,
+} from "../util/preferences";
 import { useAsync, useAsyncFn } from "../util/useAsync";
 import { getProcessSummaryFieldOptions } from "../util/workflow";
 import {
@@ -34,6 +27,7 @@ import {
   useSaveUserPreferences,
   type PreferencesSectionId,
 } from "./CurrentUserContext";
+import { DynamicPreferenceField } from "./DynamicPreferenceField";
 
 type UserPreferencesDialogProps = {
   open: boolean;
@@ -53,7 +47,7 @@ export default function UserPreferencesDialog({
   const { data, loading, error } = useAsync(fetchUserPreferences, [open], {
     enabled: open,
   });
-  const options = useMemo(() => getProcessSummaryFieldOptions(), []);
+
   const saveState = useAsyncFn(
     async (preferences: UserPreferences, alias: string) => {
       if (!saveUserPreferences) {
@@ -63,45 +57,39 @@ export default function UserPreferencesDialog({
     },
     [saveUserPreferences],
   );
-  const initialAlias = data?.alias ?? currentUser?.alias ?? "";
-  const initialSelectedRefs =
-    data?.preferences.process_summary_fields ??
-    currentUser?.preferences.process_summary_fields ??
-    [];
-  const initialTutorialVisibility =
-    data?.preferences.tutorials[
-      TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP
-    ] ??
-    currentUser?.preferences.tutorials[
-      TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP
-    ] ??
-    true;
-  const initialAliasPromptVisibility =
-    data?.preferences.tutorials[TUTORIAL_TOGGLE_KEYS.CHANGE_ALIAS_PROMPT] ??
-    currentUser?.preferences.tutorials[TUTORIAL_TOGGLE_KEYS.CHANGE_ALIAS_PROMPT] ??
-    true;
-  const preferencesKey = `${initialAlias}::${initialSelectedRefs.join("|")}::${initialTutorialVisibility}::${initialAliasPromptVisibility}`;
 
-  const sections = useMemo(() => {
-    const grouped = new Map<string, typeof options>();
-    for (const option of options) {
-      const section = grouped.get(option.group) ?? [];
-      section.push(option);
-      grouped.set(option.group, section);
+  const initialValues = useMemo(() => {
+    const values: Record<string, unknown> = {};
+    for (const section of PREFERENCES_SCHEMA.sections) {
+      for (const [fieldId, field] of Object.entries(section.fields)) {
+        if (field.storage === "UserProfile") {
+          values[fieldId] =
+            (data as Record<string, unknown> | undefined)?.[fieldId] ??
+            (currentUser as Record<string, unknown> | null)?.[fieldId] ??
+            (field.type === "string" ? "" : false);
+        } else {
+          // storage: UserProfile.preferences
+          values[fieldId] =
+            (data?.preferences as Record<string, unknown> | undefined)?.[fieldId] ??
+            (currentUser?.preferences as Record<string, unknown> | undefined)?.[fieldId] ??
+            (field.type === "field-list" ? [] : true);
+        }
+      }
     }
-    return Array.from(grouped, ([title, fields]) => ({ title, fields }));
-  }, [options]);
+    return values;
+  }, [data, currentUser]);
 
-  const isSaving = saveState.loading;
+  // Use a stable key that forces remount only when foundational data changes
+  const preferencesKey = useMemo(() => JSON.stringify(initialValues), [initialValues]);
 
   return (
     <Dialog
       open={open}
-      onClose={isSaving ? undefined : onClose}
+      onClose={saveState.loading ? undefined : onClose}
       fullWidth
       maxWidth="md"
     >
-      {(loading || isSaving) && <LinearProgress />}
+      {(loading || saveState.loading) && <LinearProgress />}
       <DialogTitle>Preferences</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2}>
@@ -119,30 +107,25 @@ export default function UserPreferencesDialog({
 
           <PreferencesForm
             key={preferencesKey}
-            sections={sections}
-            initialAlias={initialAlias}
-            initialSelectedRefs={initialSelectedRefs}
-            initialTutorialVisibility={initialTutorialVisibility}
-            initialAliasPromptVisibility={initialAliasPromptVisibility}
+            initialValues={initialValues}
             activeSectionId={activeSectionId}
             onSectionChange={onSectionChange}
-            onSave={async (
-              alias,
-              selectedRefs,
-              tutorialVisibility,
-              aliasPromptVisibility,
-            ) => {
+            onSave={async (values) => {
+              const profileUpdates: Record<string, string> = {};
+              const preferenceUpdates: Record<string, unknown> = {};
+
+              for (const [fieldId, value] of Object.entries(values)) {
+                const field = getFieldDefinition(fieldId);
+                if (field?.storage === "UserProfile") {
+                  profileUpdates[fieldId] = value as string;
+                } else {
+                  preferenceUpdates[fieldId] = value;
+                }
+              }
+
               const response = await saveState.execute(
-                {
-                  process_summary_fields: selectedRefs,
-                  tutorials: {
-                    [TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP]:
-                      tutorialVisibility,
-                    [TUTORIAL_TOGGLE_KEYS.CHANGE_ALIAS_PROMPT]:
-                      aliasPromptVisibility,
-                  },
-                },
-                alias,
+                preferenceUpdates as UserPreferences,
+                profileUpdates.alias,
               );
               if (!response) {
                 return;
@@ -150,11 +133,12 @@ export default function UserPreferencesDialog({
               onClose();
             }}
             onCancel={onClose}
-            isSaving={isSaving}
+            isSaving={saveState.loading}
           />
 
           <Typography variant="caption" color="text.secondary">
-            The default workflow summary remains the fallback if no fields are selected.
+            The default workflow summary remains the fallback if no fields are
+            selected.
           </Typography>
         </Stack>
       </DialogContent>
@@ -163,208 +147,68 @@ export default function UserPreferencesDialog({
 }
 
 function PreferencesForm({
-  sections,
-  initialAlias,
-  initialSelectedRefs,
-  initialTutorialVisibility,
-  initialAliasPromptVisibility,
+  initialValues,
   activeSectionId,
   onSectionChange,
   onSave,
   onCancel,
   isSaving,
 }: {
-  sections: { title: string; fields: { ref: string; label: string }[] }[];
-  initialAlias: string;
-  initialSelectedRefs: string[];
-  initialTutorialVisibility: TutorialVisibility;
-  initialAliasPromptVisibility: TutorialVisibility;
+  initialValues: Record<string, unknown>;
   activeSectionId: PreferencesSectionId | null;
   onSectionChange: (sectionId: PreferencesSectionId | null) => void;
-  onSave: (
-    alias: string,
-    selectedRefs: string[],
-    tutorialVisibility: TutorialVisibility,
-    aliasPromptVisibility: TutorialVisibility,
-  ) => Promise<void>;
+  onSave: (values: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
   isSaving: boolean;
 }) {
-  const [alias, setAlias] = useState(initialAlias);
-  const [selectedRefs, setSelectedRefs] = useState(initialSelectedRefs);
-  const [tutorialVisibility, setTutorialVisibility] =
-    useState<TutorialVisibility>(initialTutorialVisibility);
-  const [aliasPromptVisibility, setAliasPromptVisibility] =
-    useState<TutorialVisibility>(initialAliasPromptVisibility);
+  const [values, setValues] = useState(initialValues);
+  const options = useMemo(() => getProcessSummaryFieldOptions(), []);
 
-  function toggleRef(ref: string) {
-    setSelectedRefs((prev) =>
-      prev.includes(ref) ? prev.filter((value) => value !== ref) : [...prev, ref],
-    );
-  }
+  const handleChange = (fieldId: string, value: unknown) => {
+    setValues((prev) => ({ ...prev, [fieldId]: value }));
+  };
 
   return (
     <>
       <Stack spacing={2}>
-        <Accordion
-          disableGutters
-          expanded={activeSectionId === "identity"}
-          onChange={(_, expanded) => {
-            if (expanded) {
-              onSectionChange("identity");
-            } else if (activeSectionId === "identity") {
-              onSectionChange(null);
-            }
-          }}
-        >
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Stack spacing={0.25}>
-              <Typography variant="subtitle1" component="span">
-                Identity
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Manage your display name and alias.
-              </Typography>
-            </Stack>
-          </AccordionSummary>
-          <AccordionDetails>
-            <TextField
-              label="Alias"
-              value={alias}
-              onChange={(e) => setAlias(e.target.value.slice(0, 50))}
-              helperText="How you'd like to identify yourself in the app. Not visible to others."
-              fullWidth
-              disabled={isSaving}
-              inputProps={{ maxLength: 50 }}
-            />
-          </AccordionDetails>
-        </Accordion>
-        <Accordion
-          disableGutters
-          expanded={activeSectionId === "process-summary"}
-          onChange={(_, expanded) => {
-            if (expanded) {
-              onSectionChange("process-summary");
-            } else if (activeSectionId === "process-summary") {
-              onSectionChange(null);
-            }
-          }}
-        >
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Stack spacing={0.25}>
-              <Typography variant="subtitle1" component="span">
-                Process Summary
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Choose which fields appear in process summaries.
-              </Typography>
-            </Stack>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Stack spacing={2}>
-              {sections.map((section) => (
-                <Box key={section.title}>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{
-                      mb: 1,
-                      color: "text.secondary",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {section.title}
+        {PREFERENCES_SCHEMA.sections.map((section) => (
+          <Accordion
+            key={section.id}
+            disableGutters
+            expanded={activeSectionId === section.id}
+            onChange={(_, expanded) => {
+              onSectionChange(expanded ? (section.id as PreferencesSectionId) : null);
+            }}
+          >
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Stack spacing={0.25}>
+                <Typography variant="subtitle1" component="span">
+                  {section.title}
+                </Typography>
+                {section.description && (
+                  <Typography variant="body2" color="text.secondary">
+                    {section.description}
                   </Typography>
-                  <FormGroup>
-                    {section.fields.map((field) => (
-                      <FormControlLabel
-                        key={field.ref}
-                        control={
-                          <Checkbox
-                            checked={selectedRefs.includes(field.ref)}
-                            onChange={() => toggleRef(field.ref)}
-                          />
-                        }
-                        label={
-                          <Stack spacing={0.25}>
-                            <Typography variant="body2">
-                              {field.label}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {field.ref}
-                            </Typography>
-                          </Stack>
-                        }
-                      />
-                    ))}
-                  </FormGroup>
-                  <Divider sx={{ mt: 1.5 }} />
-                </Box>
-              ))}
-            </Stack>
-          </AccordionDetails>
-        </Accordion>
-        <Accordion
-          disableGutters
-          expanded={activeSectionId === "tutorials"}
-          onChange={(_, expanded) => {
-            if (expanded) {
-              onSectionChange("tutorials");
-            } else if (activeSectionId === "tutorials") {
-              onSectionChange(null);
-            }
-          }}
-        >
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Stack spacing={0.25}>
-              <Typography variant="subtitle1" component="span">
-                Tutorials
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Small stubs that point to upcoming guided help.
-              </Typography>
-            </Stack>
-          </AccordionSummary>
-          <AccordionDetails>
-            <FormGroup>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={tutorialVisibility}
-                    onChange={() => setTutorialVisibility((prev) => !prev)}
+                )}
+              </Stack>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Stack spacing={2}>
+                {Object.entries(section.fields).map(([fieldId, field]) => (
+                  <DynamicPreferenceField
+                    key={fieldId}
+                    fieldId={fieldId}
+                    field={field}
+                    value={values[fieldId]}
+                    onChange={(val) => handleChange(fieldId, val)}
+                    isSaving={isSaving}
+                    options={options}
                   />
-                }
-                label={
-                  <Stack spacing={0.25}>
-                    <Typography variant="body2">
-                      Show the summary customization tip
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Controls the summary guidance shown on piece details.
-                    </Typography>
-                  </Stack>
-                }
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={aliasPromptVisibility}
-                    onChange={() => setAliasPromptVisibility((prev) => !prev)}
-                  />
-                }
-                label={
-                  <Stack spacing={0.25}>
-                    <Typography variant="body2">
-                      Show the "Change your alias!" tip
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Controls the alias guidance shown on the piece list.
-                    </Typography>
-                  </Stack>
-                }
-              />
-            </FormGroup>
-          </AccordionDetails>
-        </Accordion>
+                ))}
+              </Stack>
+            </AccordionDetails>
+          </Accordion>
+        ))}
       </Stack>
       <DialogActions>
         <Button onClick={onCancel} disabled={isSaving}>
@@ -372,14 +216,7 @@ function PreferencesForm({
         </Button>
         <Button
           variant="contained"
-          onClick={() =>
-            void onSave(
-              alias,
-              selectedRefs,
-              tutorialVisibility,
-              aliasPromptVisibility,
-            )
-          }
+          onClick={() => void onSave(values)}
           disabled={isSaving}
         >
           Save

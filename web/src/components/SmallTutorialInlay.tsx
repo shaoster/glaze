@@ -43,8 +43,7 @@ export default function SmallTutorialInlay({
   const currentUser = useCurrentUser();
   const saveUserPreferences = useSaveUserPreferences();
   const copy = TUTORIAL_TOGGLE_METADATA[tutorialKey];
-  const tutorialVisibility =
-    currentUser?.preferences.tutorials[tutorialKey] ?? true;
+  const tutorialVisibility = currentUser?.preferences[tutorialKey] ?? true;
   const shouldShow =
     Boolean(attachedElement && currentUser && saveUserPreferences) &&
     tutorialVisibility;
@@ -108,10 +107,7 @@ export default function SmallTutorialInlay({
     }
     await saveUserPreferences({
       ...currentUser.preferences,
-      tutorials: {
-        ...currentUser.preferences.tutorials,
-        [tutorialKey]: false,
-      },
+      [tutorialKey]: false,
     });
   }, [currentUser, saveUserPreferences, tutorialKey]);
 
