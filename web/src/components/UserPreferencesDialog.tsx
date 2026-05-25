@@ -123,9 +123,15 @@ export default function UserPreferencesDialog({
             initialAlias={initialAlias}
             initialSelectedRefs={initialSelectedRefs}
             initialTutorialVisibility={initialTutorialVisibility}
+            initialAliasPromptVisibility={initialAliasPromptVisibility}
             activeSectionId={activeSectionId}
             onSectionChange={onSectionChange}
-            onSave={async (alias, selectedRefs, tutorialVisibility) => {
+            onSave={async (
+              alias,
+              selectedRefs,
+              tutorialVisibility,
+              aliasPromptVisibility,
+            ) => {
               const response = await saveState.execute(
                 {
                   process_summary_fields: selectedRefs,
@@ -133,7 +139,7 @@ export default function UserPreferencesDialog({
                     [TUTORIAL_TOGGLE_KEYS.SUMMARY_CUSTOMIZE_POPUP]:
                       tutorialVisibility,
                     [TUTORIAL_TOGGLE_KEYS.CHANGE_ALIAS_PROMPT]:
-                      initialAliasPromptVisibility,
+                      aliasPromptVisibility,
                   },
                 },
                 alias,
@@ -161,6 +167,7 @@ function PreferencesForm({
   initialAlias,
   initialSelectedRefs,
   initialTutorialVisibility,
+  initialAliasPromptVisibility,
   activeSectionId,
   onSectionChange,
   onSave,
@@ -171,12 +178,14 @@ function PreferencesForm({
   initialAlias: string;
   initialSelectedRefs: string[];
   initialTutorialVisibility: TutorialVisibility;
+  initialAliasPromptVisibility: TutorialVisibility;
   activeSectionId: PreferencesSectionId | null;
   onSectionChange: (sectionId: PreferencesSectionId | null) => void;
   onSave: (
     alias: string,
     selectedRefs: string[],
     tutorialVisibility: TutorialVisibility,
+    aliasPromptVisibility: TutorialVisibility,
   ) => Promise<void>;
   onCancel: () => void;
   isSaving: boolean;
@@ -185,6 +194,8 @@ function PreferencesForm({
   const [selectedRefs, setSelectedRefs] = useState(initialSelectedRefs);
   const [tutorialVisibility, setTutorialVisibility] =
     useState<TutorialVisibility>(initialTutorialVisibility);
+  const [aliasPromptVisibility, setAliasPromptVisibility] =
+    useState<TutorialVisibility>(initialAliasPromptVisibility);
 
   function toggleRef(ref: string) {
     setSelectedRefs((prev) =>
@@ -333,6 +344,24 @@ function PreferencesForm({
                   </Stack>
                 }
               />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={aliasPromptVisibility}
+                    onChange={() => setAliasPromptVisibility((prev) => !prev)}
+                  />
+                }
+                label={
+                  <Stack spacing={0.25}>
+                    <Typography variant="body2">
+                      Show the "Change your alias!" tip
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Controls the alias guidance shown on the piece list.
+                    </Typography>
+                  </Stack>
+                }
+              />
             </FormGroup>
           </AccordionDetails>
         </Accordion>
@@ -343,7 +372,14 @@ function PreferencesForm({
         </Button>
         <Button
           variant="contained"
-          onClick={() => void onSave(alias, selectedRefs, tutorialVisibility)}
+          onClick={() =>
+            void onSave(
+              alias,
+              selectedRefs,
+              tutorialVisibility,
+              aliasPromptVisibility,
+            )
+          }
           disabled={isSaving}
         >
           Save
