@@ -12,7 +12,17 @@ spec:
   valuesContent: |-
     crds:
       enabled: true
+    resources:
+      limits:
+        memory: 128Mi
+    cainjector:
+      resources:
+        limits:
+          memory: 128Mi
     webhook:
+      resources:
+        limits:
+          memory: 128Mi
       livenessProbe:
         timeoutSeconds: 5
       readinessProbe:

@@ -52,6 +52,8 @@ spec:
           requests:
             cpu: "10m"
             memory: "64Mi"
+          limits:
+            memory: "96Mi"
 ---
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
