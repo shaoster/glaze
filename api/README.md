@@ -40,6 +40,24 @@ Per-user data isolation rules:
 - Detail/update endpoints fetch objects from a user-filtered queryset. If another user's ID is requested, the API returns `404` (not `403`) to avoid leaking object existence.
 - Global reference entries are user-scoped; names are unique per user (for example, two users can both have a `Location` named "Kiln A" without colliding).
 
+## Declarative Configuration
+
+Glaze uses YAML-driven configuration to minimize boilerplate and ensure consistency between backend validation and frontend UI.
+
+### User Preferences (`user_preferences.yml`)
+
+Drives the `UserPreferencesSerializer` and the frontend settings dialog.
+- Defines sections, fields, types (`string`, `boolean`, `field-list`), and storage locations (`UserProfile` or `UserProfile.preferences`).
+- Backend logic in `api/preferences.py` generates serializers dynamically at module load.
+- See the [Frontend Client (`web/`)](../web/README.md) for UI implementation details.
+
+### Tutorials (`tutorials.yml`)
+
+Drives small, dismissible tutorial tips.
+- Defines preference keys, inlay labels, and declarative DOM attachment rules (CSS selectors).
+- Automatically injected into user preferences for persistence.
+- Frontend `TutorialManager` handles dynamic attachment without manual JSX.
+
 ## Testing
 
 The API Bazel test targets in [`api/BUILD.bazel`](./BUILD.bazel) set

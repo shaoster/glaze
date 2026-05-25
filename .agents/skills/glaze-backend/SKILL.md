@@ -37,8 +37,18 @@ inside async views.
 
 - `api/workflow.py` — strictly for helpers that read from `workflow.yml`: state lookups,
   successor queries, globals-map queries, field-definition resolution, JSON Schema generation
+- `api/preferences.py` — dynamically generates serializers from `user_preferences.yml` and `tutorials.yml`.
 - `api/utils.py` — shared business-logic helpers that span modules but have nothing to
   do with the state machine (e.g. `sync_glaze_type_singleton_combination`)
+
+## Declarative User Preferences and Tutorials
+
+Glaze uses `user_preferences.yml` and `tutorials.yml` to drive backend validation and persistence.
+
+- **`api/preferences.py`**: Loads both YAMLs at module import.
+- **`SavedUserPreferencesSerializer`**: Injects fields defined in `user_preferences.yml` (storage: `UserProfile.preferences`) and all tutorials from `tutorials.yml` as booleans.
+- **`UserPreferencesSerializer`**: Top-level serializer for the `/api/auth/me/` and `/api/auth/preferences/` endpoints.
+- New preferences or tutorials should be added to the YAML files, not hardcoded in serializers.
 
 ## Model Factory Pattern (`api/model_factories.py`)
 

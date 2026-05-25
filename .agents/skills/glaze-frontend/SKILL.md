@@ -154,6 +154,15 @@ concept in multiple places, extract a reusable component in `web/src/components/
 - `ProcessSummary.tsx` — renders read-only `summary` section for terminal states; displays promoted fields, computed numeric results, static text with optional `when` visibility
 - `PieceShareControls.tsx` — owner-only sharing controls on terminal pieces; toggle for public access + copyable share link
 - `PublicPieceShell.tsx` — thin unauthenticated route wrapper rendering `PieceDetailPage` for publicly shared pieces
+- `TutorialManager.tsx` — global component that renders tutorial tips based on `tutorials.yml`.
+
+## Declarative UI
+
+Glaze uses YAML-driven UI generation to maintain consistency with the backend.
+
+- **`UserPreferencesDialog.tsx`**: Renders settings based on `user_preferences.yml`.
+- **`TutorialManager.tsx`**: Declaratively attaches tutorials to DOM nodes using CSS selectors defined in `tutorials.yml`.
+- **`util/preferences.ts`**: Provides the frontend interface to the preferences and tutorials configuration.
 
 ## Visual Design System — State Chips
 

@@ -57,6 +57,16 @@ For CI/CD workflow details, deployment variables, and GitHub Actions behavior, s
 
 `env-agent.sh` exports `BASH_ENV` pointing at itself, so any agent process spawned from a shell that has already sourced `env.sh` (e.g. a VS Code terminal) automatically propagates the bootstrap to its own subshells. No per-tool config is needed for Codex or similar CLI agents launched from the integrated terminal.
 
+### Declarative Sources of Truth
+
+When implementing features, always check if they should be driven by one of the project's declarative YAML files instead of being hardcoded:
+
+- **[`workflow.yml`](../../workflow.yml)**: Lifecycle states, transitions, and per-state custom fields.
+- **[`user_preferences.yml`](../../user_preferences.yml)**: User settings and account-level flags.
+- **[`tutorials.yml`](../../tutorials.yml)**: Small dismissible tips and their DOM attachment rules.
+
+Modifying these files often requires a `gz_reload` or a backend restart to pick up the new generated serializers/schemas.
+
 ### Agent worktree location
 
 Keep agent-created worktrees inside the repository instead of under `/tmp` or another system temp directory:
