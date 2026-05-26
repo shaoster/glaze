@@ -1,15 +1,14 @@
 import React, { useState } from "react";
 import {
   Box,
-  Button,
-  CircularProgress,
   IconButton,
   Modal,
   Typography,
 } from "@mui/material";
 import { useSwipeable } from "react-swipeable";
-import type { CaptionedImage } from "../util/types";
+import type { CaptionedImage, ImageCrop } from "../util/types";
 import CloudinaryImage from "./CloudinaryImage";
+import CropOverlay from "./CropOverlay";
 
 const SWIPE_THRESHOLD = 50;
 
@@ -19,7 +18,15 @@ type ImageLightboxProps = {
   onClose: () => void;
   currentThumbnailUrl?: string;
   onSetAsThumbnail?: (image: CaptionedImage) => Promise<void>;
-  footerActions?: (index: number) => React.ReactNode;
+  onCropSave?: (image: CaptionedImage, crop: ImageCrop) => Promise<void>;
+  canEditImage?: (index: number) => boolean;
+  footerActions?: (opts: {
+    index: number;
+    onCrop?: () => void;
+    onSetAsThumbnail?: () => Promise<void>;
+    settingThumbnail: boolean;
+    isCurrentThumbnail: boolean;
+  }) => React.ReactNode;
 };
 
 export default function ImageLightbox({
@@ -28,26 +35,32 @@ export default function ImageLightbox({
   onClose,
   currentThumbnailUrl,
   onSetAsThumbnail,
+  onCropSave,
+  canEditImage,
   footerActions,
 }: ImageLightboxProps) {
   const [index, setIndex] = useState(initialIndex);
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [settingThumbnail, setSettingThumbnail] = useState(false);
+  const [cropMode, setCropMode] = useState(false);
 
   function prev() {
-    setIndex((i) => (i > 0 ? i - 1 : i));
+    setIndex((i) => {
+      if (i > 0) { setCropMode(false); return i - 1; }
+      return i;
+    });
   }
   function next() {
-    setIndex((i) => (i < images.length - 1 ? i + 1 : i));
+    setIndex((i) => {
+      if (i < images.length - 1) { setCropMode(false); return i + 1; }
+      return i;
+    });
   }
 
   const swipeHandlers = useSwipeable({
     onSwiping: ({ deltaX, dir }) => {
       // Resist at boundaries — dampen drag past the first/last image
-      if (
-        (index === 0 && dir === "Right") ||
-        (index === images.length - 1 && dir === "Left")
-      ) {
+      if ((index === 0 && dir === "Right") || (index === images.length - 1 && dir === "Left")) {
         setDragDeltaX(deltaX * 0.25);
       } else {
         setDragDeltaX(deltaX);
@@ -92,9 +105,7 @@ export default function ImageLightbox({
     >
       <Box
         data-testid="lightbox-backdrop"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         sx={{
           position: "fixed",
           inset: 0,
@@ -106,79 +117,72 @@ export default function ImageLightbox({
           outline: "none",
         }}
       >
-        {/* Swipeable image area */}
-        <Box
-          {...swipeHandlers}
-          data-testid="lightbox-swipe-area"
-          sx={{
-            touchAction: "pan-y",
-            cursor: images.length > 1 ? "grab" : undefined,
-          }}
-        >
-          <Box
-            sx={{
-              transform: `translateX(${dragDeltaX}px)`,
-              transition: dragDeltaX === 0 ? "transform 0.25s ease" : "none",
+        {/* Swipeable image area / crop editor */}
+        {cropMode && image.cloudinary_public_id && image.cloud_name ? (
+          <CropOverlay
+            cloudinaryPublicId={image.cloudinary_public_id}
+            cloudName={image.cloud_name}
+            initialCrop={image.crop ?? null}
+            onSave={async (crop) => {
+              await onCropSave?.(image, crop);
+              setCropMode(false);
             }}
+            onCancel={() => setCropMode(false)}
+          />
+        ) : (
+          <Box
+            {...swipeHandlers}
+            data-testid="lightbox-swipe-area"
+            sx={{ touchAction: "pan-y", cursor: images.length > 1 ? "grab" : undefined }}
           >
-            <CloudinaryImage
-              url={image.url}
-              cloud_name={image.cloud_name}
-              cloudinary_public_id={image.cloudinary_public_id}
-              crop={image.crop}
-              alt={image.caption || "Pottery image"}
-              context="lightbox"
-              style={{
-                maxWidth: "90vw",
-                maxHeight: "80vh",
-                objectFit: "contain",
-                borderRadius: 4,
-                userSelect: "none",
-                pointerEvents: "none",
+            <Box
+              sx={{
+                transform: `translateX(${dragDeltaX}px)`,
+                transition: dragDeltaX === 0 ? "transform 0.25s ease" : "none",
               }}
-            />
+            >
+              <CloudinaryImage
+                url={image.url}
+                cloud_name={image.cloud_name}
+                cloudinary_public_id={image.cloudinary_public_id}
+                crop={image.crop}
+                alt={image.caption || "Pottery image"}
+                context="lightbox"
+                style={{
+                  maxWidth: "90vw",
+                  maxHeight: "80vh",
+                  objectFit: "contain",
+                  borderRadius: 4,
+                  userSelect: "none",
+                  pointerEvents: "none",
+                }}
+              />
+            </Box>
           </Box>
-        </Box>
-
-        {footerActions && footerActions(index)}
-        {onSetAsThumbnail && (
-          <Button
-            size="small"
-            variant="outlined"
-            disabled={isCurrentThumbnail || settingThumbnail}
-            onClick={handleSetAsThumbnail}
-            startIcon={
-              settingThumbnail ? (
-                <CircularProgress size={14} color="inherit" />
-              ) : undefined
-            }
-            sx={{ color: "white", borderColor: "rgba(255,255,255,0.5)" }}
-          >
-            {isCurrentThumbnail
-              ? "Current thumbnail"
-              : settingThumbnail
-                ? "Setting…"
-                : "Set as thumbnail"}
-          </Button>
         )}
 
-        {/* Navigation — arrows on non-touch, dots always when multiple images */}
-        {images.length > 1 && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        {!cropMode && footerActions && footerActions({
+          index,
+          onCrop: onCropSave && canEditImage?.(index) && image.image_id && image.cloudinary_public_id && image.cloud_name
+            ? () => setCropMode(true)
+            : undefined,
+          onSetAsThumbnail: onSetAsThumbnail ? handleSetAsThumbnail : undefined,
+          settingThumbnail,
+          isCurrentThumbnail,
+        })}
+
+        {/* Nav row — centered */}
+        {!cropMode && images.length > 1 && (
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
             <IconButton
               onClick={prev}
               disabled={index === 0}
-              sx={{
-                color: "white",
-                fontSize: "1.5rem",
-                display: { xs: "none", sm: "inline-flex" },
-              }}
+              size="small"
+              sx={{ color: "white", display: { xs: "none", sm: "inline-flex" } }}
               aria-label="previous image"
             >
               ←
             </IconButton>
-
-            {/* Indicator dots */}
             <Box sx={{ display: "flex", gap: 0.75, alignItems: "center" }}>
               {images.map((_, i) => (
                 <Box
@@ -188,8 +192,7 @@ export default function ImageLightbox({
                     width: i === index ? 10 : 7,
                     height: i === index ? 10 : 7,
                     borderRadius: "50%",
-                    backgroundColor:
-                      i === index ? "white" : "rgba(255,255,255,0.35)",
+                    backgroundColor: i === index ? "white" : "rgba(255,255,255,0.35)",
                     cursor: "pointer",
                     transition: "all 0.2s ease",
                     flexShrink: 0,
@@ -199,34 +202,22 @@ export default function ImageLightbox({
                 />
               ))}
             </Box>
-
             <IconButton
               onClick={next}
               disabled={index === images.length - 1}
-              sx={{
-                color: "white",
-                fontSize: "1.5rem",
-                display: { xs: "none", sm: "inline-flex" },
-              }}
+              size="small"
+              sx={{ color: "white", display: { xs: "none", sm: "inline-flex" } }}
               aria-label="next image"
             >
               →
             </IconButton>
+            <Typography
+              variant="caption"
+              sx={{ color: "rgba(255,255,255,0.5)", display: { xs: "none", sm: "block" }, ml: 0.5 }}
+            >
+              {index + 1} / {images.length}
+            </Typography>
           </Box>
-        )}
-
-        {/* Counter — non-touch only, alongside arrows */}
-        {images.length > 1 && (
-          <Typography
-            variant="body2"
-            sx={{
-              color: "rgba(255,255,255,0.5)",
-              mt: -1.5,
-              display: { xs: "none", sm: "block" },
-            }}
-          >
-            {index + 1} / {images.length}
-          </Typography>
         )}
       </Box>
     </Modal>

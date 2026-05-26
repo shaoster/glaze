@@ -55,6 +55,7 @@ from .serializers import (
     AuthUserSerializer,
     GlazeCombinationImageEntrySerializer,
     GoogleAuthSerializer,
+    ImageCropSerializer,
     PieceCreateSerializer,
     PieceDetailSerializer,
     PieceStateCreateSerializer,
@@ -469,6 +470,30 @@ def piece_image_detail(request, image_id, piece_state_id):
                 link.piece_state = to_state
                 link.order = next_order
                 link.save(update_fields=["piece_state", "order"])
+
+    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece.pk)
+    return Response(_serialize_piece_detail(piece, request))
+
+
+@extend_schema(request=ImageCropSerializer, responses=PieceDetailSerializer)
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def patch_image_crop(request, image_id):
+    image = get_object_or_404(Image, pk=image_id, user=request.user)
+    serializer = ImageCropSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    link = (
+        PieceStateImage.objects.select_related("piece_state__piece")
+        .filter(image=image, piece_state__piece__user=request.user)
+        .first()
+    )
+    if link is None:
+        raise Http404
+    piece = link.piece_state.piece
+
+    link.crop = serializer.validated_data
+    link.save(update_fields=["crop"])
 
     piece = get_object_or_404(_piece_detail_queryset(request), pk=piece.pk)
     return Response(_serialize_piece_detail(piece, request))

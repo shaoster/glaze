@@ -90,7 +90,11 @@ def cloudinary_widget_config(request: Request) -> Response:
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    payload: dict[str, str] = {"cloud_name": cloud_name, "api_key": api_key}
+    payload: dict[str, str] = {
+        "cloud_name": cloud_name,
+        "api_key": api_key,
+        "transformation": "fl_force_strip",
+    }
     if folder:
         payload["folder"] = folder
     preset = os.environ.get("CLOUDINARY_UPLOAD_PRESET", "").strip()
@@ -133,14 +137,6 @@ def cloudinary_widget_sign(request: Request) -> Response:
             {"detail": "params_to_sign must be an object."},
             status=status.HTTP_400_BAD_REQUEST,
         )
-
-    # Enforce image-only uploads and strip EXIF regardless of what the client sends.
-    params_to_sign = {
-        **params_to_sign,
-        "resource_type": "image",
-        "allowed_formats": "jpg,jpeg,png,webp,heic,avif",
-        "exif": "false",
-    }
 
     # Cloudinary signature format: sorted key=value pairs joined by '&',
     # then append the API secret and SHA1-hash the result.

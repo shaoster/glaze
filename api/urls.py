@@ -15,6 +15,11 @@ urlpatterns = [
         name="piece-image-detail",
     ),
     path(
+        "images/<uuid:image_id>/crop/",
+        views.patch_image_crop,
+        name="image-crop-update",
+    ),
+    path(
         "images/<uuid:image_id>/crop-runs/",
         views.ImageCropRunsView.as_view(),
         name="image-crop-runs",

@@ -249,4 +249,58 @@ describe("ImageLightbox", () => {
       expect(screen.getByRole("img")).toHaveAttribute("src", "/img/c.jpg");
     });
   });
+
+  describe("crop button", () => {
+    function makeCloudinaryImage(url: string, caption = ""): CaptionedImage {
+      return {
+        url,
+        caption,
+        created: new Date("2024-01-15T10:00:00Z"),
+        cloudinary_public_id: "test-public-id",
+        cloud_name: "test-cloud",
+      };
+    }
+
+    const CLOUDINARY_IMAGE = makeCloudinaryImage("/img/a.jpg", "First");
+
+    it("does not show Crop button when onCropSave is not provided", () => {
+      render(
+        <ImageLightbox
+          images={[CLOUDINARY_IMAGE]}
+          initialIndex={0}
+          onClose={vi.fn()}
+        />,
+      );
+      expect(screen.queryByLabelText("Edit crop")).not.toBeInTheDocument();
+    });
+
+    it("shows Crop button when onCropSave is provided", () => {
+      const onCropSave = vi.fn().mockResolvedValue(undefined);
+      render(
+        <ImageLightbox
+          images={[CLOUDINARY_IMAGE]}
+          initialIndex={0}
+          onClose={vi.fn()}
+          onCropSave={onCropSave}
+        />,
+      );
+      expect(screen.getByLabelText("Edit crop")).toBeInTheDocument();
+    });
+
+    it("clicking Crop button enters crop mode and shows crop editor", async () => {
+      const onCropSave = vi.fn().mockResolvedValue(undefined);
+      render(
+        <ImageLightbox
+          images={[CLOUDINARY_IMAGE]}
+          initialIndex={0}
+          onClose={vi.fn()}
+          onCropSave={onCropSave}
+        />,
+      );
+      fireEvent.click(screen.getByLabelText("Edit crop"));
+      await waitFor(() => {
+        expect(screen.getByAltText("Crop editor")).toBeInTheDocument();
+      });
+    });
+  });
 });

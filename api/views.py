@@ -38,6 +38,7 @@ from .health_views import (
 )
 from .import_views import admin_manual_square_crop_import
 from .piece_views import (
+    patch_image_crop,
     piece_current_state,
     piece_current_state_detail,
     piece_detail,
@@ -76,6 +77,7 @@ __all__ = [
     "make_global_entry_view",
     "piece_current_state",
     "piece_current_state_detail",
+    "patch_image_crop",
     "piece_detail",
     "piece_image_detail",
     "piece_past_state",
