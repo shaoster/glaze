@@ -21,7 +21,7 @@ import {
   useTheme,
 } from "@mui/material";
 import type { CaptionedImage, ImageCrop, PieceDetail } from "../util/types";
-import { moveImage, updateCurrentState, updateImageCrop, updatePiece } from "../util/api";
+import { moveImage, updateCurrentState, updateImageCrop, updatePastState, updatePiece } from "../util/api";
 import DeletePiecePhotoDialog from "./DeletePiecePhotoDialog";
 import ImageLightbox from "./ImageLightbox";
 import PiecePhotoGalleryGrid from "./PiecePhotoGalleryGrid";
@@ -112,6 +112,7 @@ type PiecePhotoGalleryProps = {
   onPieceUpdated?: (updated: PieceDetail) => void;
   updatePieceFn?: typeof updatePiece;
   updateCurrentStateFn?: typeof updateCurrentState;
+  updatePastStateFn?: typeof updatePastState;
   pieceStates?: PieceStateRef[];
   moveImageFn?: typeof moveImage;
 };
@@ -131,6 +132,7 @@ export default function PiecePhotoGallery({
   onPieceUpdated,
   updatePieceFn,
   updateCurrentStateFn,
+  updatePastStateFn,
   pieceStates,
   moveImageFn,
 }: PiecePhotoGalleryProps) {
@@ -303,21 +305,36 @@ export default function PiecePhotoGallery({
   }
 
   async function handleDeleteImage() {
-    if (deleteDialogIndex === null || !updateCurrentStateFn) {
-      return;
-    }
+    if (deleteDialogIndex === null) return;
     const image = images[deleteDialogIndex];
-    if (!image || image.editableCurrentStateIndex === null) {
-      return;
-    }
+    if (!image) return;
+
     setDeleteSaving(true);
     try {
-      await persistCurrentStateImages(
-        editableCurrentStateImages.filter(
-          (_editableImage, index) =>
-            index !== image.editableCurrentStateIndex,
-        ),
-      );
+      if (image.editableCurrentStateIndex !== null && updateCurrentStateFn) {
+        await persistCurrentStateImages(
+          editableCurrentStateImages.filter(
+            (_editableImage, index) =>
+              index !== image.editableCurrentStateIndex,
+          ),
+        );
+      } else if (image.editableCurrentStateIndex === null && updatePastStateFn && pieceId) {
+        const siblingImages = images
+          .filter((img) => img.stateId === image.stateId && img !== image)
+          .map(({ url, caption, cloudinary_public_id, cloud_name, crop }) => ({
+            url,
+            caption,
+            cloudinary_public_id: cloudinary_public_id ?? null,
+            cloud_name: cloud_name ?? null,
+            crop: crop ?? null,
+          }));
+        const updated = await updatePastStateFn(pieceId, image.stateId, {
+          images: siblingImages,
+        });
+        onPieceUpdated?.(updated);
+      } else {
+        return;
+      }
       if (lightboxIndex === deleteDialogIndex) {
         navigate(galleryPath, { state: { ...outerState, fromLightbox: true } });
       }
@@ -332,6 +349,10 @@ export default function PiecePhotoGallery({
     currentStateNotes !== undefined &&
     onPieceUpdated !== undefined &&
     updateCurrentStateFn !== undefined;
+  const canDeletePastStateImages =
+    pieceId !== undefined &&
+    onPieceUpdated !== undefined &&
+    updatePastStateFn !== undefined;
   const canSetThumbnail =
     pieceId !== undefined &&
     onPieceUpdated !== undefined &&
@@ -508,6 +529,7 @@ export default function PiecePhotoGallery({
           <PiecePhotoGalleryGrid
             images={images}
             canDeleteImages={canMutateCurrentStateImages}
+            canDeletePastImages={canDeletePastStateImages}
             currentThumbnailUrl={currentThumbnailUrl}
             onOpenImage={(index) =>
               navigate(`${galleryPath}/${index}`, { state: outerState })
