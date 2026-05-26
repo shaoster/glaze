@@ -153,9 +153,7 @@ export default function PiecePhotoGallery({
   );
 
   const atGallery = location.pathname === galleryPath;
-  const atPhotos =
-    location.pathname === galleryPath ||
-    location.pathname.startsWith(`${galleryPath}/`);
+  const atPhotos = atGallery || location.pathname.startsWith(`${galleryPath}/`);
   const photoIndexMatch = location.pathname.match(/\/photos\/(\d+)$/);
   const urlPhotoIndex = photoIndexMatch
     ? parseInt(photoIndexMatch[1], 10)

@@ -105,7 +105,7 @@ export default function ImageLightbox({
     >
       <Box
         data-testid="lightbox-backdrop"
-        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        onClick={onClose}
         sx={{
           position: "fixed",
           inset: 0,
@@ -133,6 +133,7 @@ export default function ImageLightbox({
           <Box
             {...swipeHandlers}
             data-testid="lightbox-swipe-area"
+            onClick={(e) => e.stopPropagation()}
             sx={{ touchAction: "pan-y", cursor: images.length > 1 ? "grab" : undefined }}
           >
             <Box
@@ -161,19 +162,26 @@ export default function ImageLightbox({
           </Box>
         )}
 
-        {!cropMode && footerActions && footerActions({
-          index,
-          onCrop: onCropSave && canEditImage?.(index) && image.image_id && image.cloudinary_public_id && image.cloud_name
-            ? () => setCropMode(true)
-            : undefined,
-          onSetAsThumbnail: onSetAsThumbnail ? handleSetAsThumbnail : undefined,
-          settingThumbnail,
-          isCurrentThumbnail,
-        })}
+        {!cropMode && footerActions && (
+          <Box onClick={(e) => e.stopPropagation()} sx={{ alignSelf: "center" }}>
+            {footerActions({
+              index,
+              onCrop: onCropSave && canEditImage?.(index) && image.image_id && image.cloudinary_public_id && image.cloud_name
+                ? () => setCropMode(true)
+                : undefined,
+              onSetAsThumbnail: onSetAsThumbnail ? handleSetAsThumbnail : undefined,
+              settingThumbnail,
+              isCurrentThumbnail,
+            })}
+          </Box>
+        )}
 
         {/* Nav row — centered */}
         {!cropMode && images.length > 1 && (
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
+          <Box
+            onClick={(e) => e.stopPropagation()}
+            sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5 }}
+          >
             <IconButton
               onClick={prev}
               disabled={index === 0}
