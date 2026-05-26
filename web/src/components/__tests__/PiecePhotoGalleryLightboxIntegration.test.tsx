@@ -114,13 +114,15 @@ describe("PiecePhotoGallery + real ImageLightbox integration", () => {
     expect(screen.getByTestId("masonry-grid")).toBeInTheDocument();
   });
 
-  it("clicking image area (swipe-area) does not close the lightbox", async () => {
+  it("clicking the swipe area outside the image closes the lightbox", async () => {
+    // The swipe area may cover letter-boxed space around the image (especially on mobile).
+    // Clicking that space should close the lightbox — only the image translate Box itself
+    // stops propagation.
     renderAt("/pieces/piece-1/photos/0");
 
     await waitFor(() => screen.getByTestId("lightbox-backdrop"));
     fireEvent.click(screen.getByTestId("lightbox-swipe-area"));
 
-    // Lightbox should still be open
-    expect(screen.getByTestId("lightbox-backdrop")).toBeInTheDocument();
+    expect(screen.queryByTestId("lightbox-backdrop")).not.toBeInTheDocument();
   });
 });

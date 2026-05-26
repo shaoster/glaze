@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import {
   Box,
+  CircularProgress,
   IconButton,
   Modal,
   Typography,
 } from "@mui/material";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import { useSwipeable } from "react-swipeable";
 import type { CaptionedImage, ImageCrop } from "../util/types";
 import CloudinaryImage from "./CloudinaryImage";
@@ -23,6 +25,7 @@ type ImageLightboxProps = {
   footerActions?: (opts: {
     index: number;
     onCrop?: () => void;
+    cropAvailable?: boolean;
     onSetAsThumbnail?: () => Promise<void>;
     settingThumbnail: boolean;
     isCurrentThumbnail: boolean;
@@ -41,8 +44,11 @@ export default function ImageLightbox({
 }: ImageLightboxProps) {
   const [index, setIndex] = useState(initialIndex);
   const [dragDeltaX, setDragDeltaX] = useState(0);
+  const [dragDeltaY, setDragDeltaY] = useState(0);
   const [settingThumbnail, setSettingThumbnail] = useState(false);
   const [cropMode, setCropMode] = useState(false);
+  const [postCropLoading, setPostCropLoading] = useState(false);
+  const [pendingCropAspect, setPendingCropAspect] = useState<number | null>(null);
 
   function prev() {
     setIndex((i) => {
@@ -58,12 +64,16 @@ export default function ImageLightbox({
   }
 
   const swipeHandlers = useSwipeable({
-    onSwiping: ({ deltaX, dir }) => {
-      // Resist at boundaries — dampen drag past the first/last image
-      if ((index === 0 && dir === "Right") || (index === images.length - 1 && dir === "Left")) {
-        setDragDeltaX(deltaX * 0.25);
+    onSwiping: ({ deltaX, deltaY, dir }) => {
+      if (dir === "Up" || dir === "Down") {
+        setDragDeltaY(deltaY);
       } else {
-        setDragDeltaX(deltaX);
+        // Resist at boundaries — dampen drag past the first/last image
+        if ((index === 0 && dir === "Right") || (index === images.length - 1 && dir === "Left")) {
+          setDragDeltaX(deltaX * 0.25);
+        } else {
+          setDragDeltaX(deltaX);
+        }
       }
     },
     onSwipedLeft: ({ absX }) => {
@@ -74,8 +84,11 @@ export default function ImageLightbox({
       setDragDeltaX(0);
       if (absX >= SWIPE_THRESHOLD) prev();
     },
+    onSwipedUp: () => { setDragDeltaY(0); onClose(); },
+    onSwipedDown: () => setDragDeltaY(0),
     onTouchEndOrOnMouseUp: () => {
       setDragDeltaX(0);
+      setDragDeltaY(0);
     },
     trackMouse: false,
     trackTouch: true,
@@ -105,7 +118,7 @@ export default function ImageLightbox({
     >
       <Box
         data-testid="lightbox-backdrop"
-        onClick={onClose}
+        onClick={cropMode ? undefined : onClose}
         sx={{
           position: "fixed",
           inset: 0,
@@ -117,6 +130,31 @@ export default function ImageLightbox({
           outline: "none",
         }}
       >
+        {/* Swipe-up-to-close hint overlay */}
+        {dragDeltaY < 0 && (
+          <Box
+            sx={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              pt: 2,
+              gap: 0.5,
+              opacity: Math.min(1, Math.abs(dragDeltaY) / 80),
+              pointerEvents: "none",
+              color: "white",
+            }}
+          >
+            <ArrowUpwardIcon fontSize="small" />
+            <Typography variant="caption" sx={{ letterSpacing: 1, textTransform: "uppercase" }}>
+              drag to close
+            </Typography>
+          </Box>
+        )}
+
         {/* Swipeable image area / crop editor */}
         {cropMode && image.cloudinary_public_id && image.cloud_name ? (
           <CropOverlay
@@ -125,6 +163,8 @@ export default function ImageLightbox({
             initialCrop={image.crop ?? null}
             onSave={async (crop) => {
               await onCropSave?.(image, crop);
+              setPendingCropAspect(crop.width / crop.height);
+              setPostCropLoading(true);
               setCropMode(false);
             }}
             onCancel={() => setCropMode(false)}
@@ -133,31 +173,61 @@ export default function ImageLightbox({
           <Box
             {...swipeHandlers}
             data-testid="lightbox-swipe-area"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
             sx={{ touchAction: "pan-y", cursor: images.length > 1 ? "grab" : undefined }}
           >
             <Box
+              onClick={(e) => e.stopPropagation()}
               sx={{
-                transform: `translateX(${dragDeltaX}px)`,
-                transition: dragDeltaX === 0 ? "transform 0.25s ease" : "none",
+                transform: `translate(${dragDeltaX}px, ${dragDeltaY}px)`,
+                transition: dragDeltaX === 0 && dragDeltaY === 0 ? "transform 0.25s ease" : "none",
+                width: "fit-content",
+                position: "relative",
               }}
             >
-              <CloudinaryImage
-                url={image.url}
-                cloud_name={image.cloud_name}
-                cloudinary_public_id={image.cloudinary_public_id}
-                crop={image.crop}
-                alt={image.caption || "Pottery image"}
-                context="lightbox"
-                style={{
-                  maxWidth: "90vw",
-                  maxHeight: "80vh",
-                  objectFit: "contain",
-                  borderRadius: 4,
-                  userSelect: "none",
+              {postCropLoading && pendingCropAspect !== null && (
+                <Box
+                  sx={{
+                    aspectRatio: pendingCropAspect,
+                    maxWidth: "90vw",
+                    maxHeight: "80vh",
+                    width: "90vw",
+                    borderRadius: "4px",
+                    bgcolor: "rgba(255,255,255,0.06)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <CircularProgress sx={{ color: "white" }} />
+                </Box>
+              )}
+              <Box
+                sx={postCropLoading ? {
+                  position: "absolute",
+                  inset: 0,
+                  opacity: 0,
                   pointerEvents: "none",
-                }}
-              />
+                } : undefined}
+              >
+                <CloudinaryImage
+                  url={image.url}
+                  cloud_name={image.cloud_name}
+                  cloudinary_public_id={image.cloudinary_public_id}
+                  crop={image.crop}
+                  alt={image.caption || "Pottery image"}
+                  context="lightbox"
+                  onLoad={() => { setPostCropLoading(false); setPendingCropAspect(null); }}
+                  style={{
+                    maxWidth: "90vw",
+                    maxHeight: "80vh",
+                    objectFit: "contain",
+                    borderRadius: 4,
+                    userSelect: "none",
+                    pointerEvents: "none",
+                  }}
+                />
+              </Box>
             </Box>
           </Box>
         )}
@@ -169,6 +239,7 @@ export default function ImageLightbox({
               onCrop: onCropSave && canEditImage?.(index) && image.image_id && image.cloudinary_public_id && image.cloud_name
                 ? () => setCropMode(true)
                 : undefined,
+              cropAvailable: !!onCropSave,
               onSetAsThumbnail: onSetAsThumbnail ? handleSetAsThumbnail : undefined,
               settingThumbnail,
               isCurrentThumbnail,

@@ -361,8 +361,9 @@ export default function PiecePhotoGallery({
     activeImage?.image_id && pieceStates && pieceStates.length > 1;
   const canMove = Boolean(moveImageFn) && !moveSaving;
 
-  const footer = ({ onCrop, onSetAsThumbnail: onSetThumb, settingThumbnail, isCurrentThumbnail }: {
+  const footer = ({ onCrop, cropAvailable, onSetAsThumbnail: onSetThumb, settingThumbnail, isCurrentThumbnail }: {
     onCrop?: () => void;
+    cropAvailable?: boolean;
     onSetAsThumbnail?: () => Promise<void>;
     settingThumbnail: boolean;
     isCurrentThumbnail: boolean;
@@ -477,11 +478,13 @@ export default function PiecePhotoGallery({
           )}
 
           {/* Crop */}
-          {onCrop && (
-            <Tooltip title="Edit crop">
-              <IconButton onClick={onCrop} aria-label="Edit crop" sx={{ color: "white" }}>
-                <CropIcon />
-              </IconButton>
+          {cropAvailable && (
+            <Tooltip title={onCrop ? "Edit crop" : "Crop only available for Cloudinary images"}>
+              <span>
+                <IconButton onClick={onCrop} disabled={!onCrop} aria-label="Edit crop" sx={{ color: "white" }}>
+                  <CropIcon />
+                </IconButton>
+              </span>
             </Tooltip>
           )}
         </Box>
@@ -555,7 +558,10 @@ export default function PiecePhotoGallery({
           currentThumbnailUrl={currentThumbnailUrl}
           onSetAsThumbnail={canSetThumbnail ? handleSetThumbnail : undefined}
           onCropSave={onPieceUpdated ? handleCropSave : undefined}
-          canEditImage={(i) => isEditableImage(images[i])}
+          canEditImage={(i) => {
+            const img = images[i];
+            return !!(img?.cloudinary_public_id && img?.cloud_name && img?.image_id);
+          }}
           footerActions={footer}
         />
       )}
