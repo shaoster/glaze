@@ -921,6 +921,22 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_piece_photo_gallery_lightbox_integration_test",
+    srcs = [
+        "src/components/__tests__/PiecePhotoGalleryLightboxIntegration.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":image_lightbox_src",
+        ":piece_photo_gallery_src",
+    ],
+    expected_coverage = [
+        "web/src/components/ImageLightbox*",
+        "web/src/components/PiecePhotoGallery*",
+    ],
+)
+
+vitest_test(
     name = "web_report_bad_crop_dialog_test",
     srcs = [
         "src/components/__tests__/ReportBadCropDialog.test.tsx",
@@ -1301,6 +1317,7 @@ test_suite(
         ":web_crop_overlay_test",
         ":web_image_lightbox_test",
         ":web_new_piece_dialog_test",
+        ":web_piece_photo_gallery_lightbox_integration_test",
         ":web_piece_photo_gallery_test",
         ":web_normalize_workflow_fields_test",
         ":web_ocr_detection_test",

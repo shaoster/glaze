@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Dialog, Box } from "@mui/material";
 
 // CropOverlay uses useAsync to preload images; skip network in tests.
 vi.mock("../../util/useAsync", () => ({
@@ -179,6 +180,64 @@ describe("ImageLightbox", () => {
     it("nav button clicks do not propagate to close the lightbox", () => {
       const { onClose } = renderLightbox(THREE_IMAGES, 1);
       fireEvent.click(screen.getByRole("button", { name: /next image/i }));
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("calls onClose when backdrop is clicked with a MUI Dialog also open (simulates PiecePhotoGallery context)", () => {
+      // Repro: PiecePhotoGallery renders both a Dialog (gallery grid) and ImageLightbox
+      // simultaneously when atPhotos && atLightbox. The Dialog backdrop must not intercept
+      // clicks intended for the lightbox backdrop.
+      const onClose = vi.fn();
+      const onDialogClose = vi.fn();
+      render(
+        <>
+          <Dialog open onClose={onDialogClose}>
+            <Box>Gallery grid content</Box>
+          </Dialog>
+          <ImageLightbox
+            images={ONE_IMAGE}
+            initialIndex={0}
+            onClose={onClose}
+          />
+        </>,
+      );
+      fireEvent.click(screen.getByTestId("lightbox-backdrop"));
+      expect(onClose).toHaveBeenCalledOnce();
+      expect(onDialogClose).not.toHaveBeenCalled();
+    });
+
+    it("calls onClose when backdrop area outside footerActions content is clicked", () => {
+      // Repro: footerActions renders a Box that as a flex child might stretch full-width,
+      // covering the dark area. Clicking the dark backdrop area must still close.
+      const onClose = vi.fn();
+      render(
+        <ImageLightbox
+          images={ONE_IMAGE}
+          initialIndex={0}
+          onClose={onClose}
+          footerActions={() => (
+            <Box data-testid="footer-content">Footer here</Box>
+          )}
+        />,
+      );
+      // Click directly on the backdrop (not on footer content)
+      fireEvent.click(screen.getByTestId("lightbox-backdrop"));
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it("does not close when footer content is clicked", () => {
+      const onClose = vi.fn();
+      render(
+        <ImageLightbox
+          images={ONE_IMAGE}
+          initialIndex={0}
+          onClose={onClose}
+          footerActions={() => (
+            <button>Footer button</button>
+          )}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Footer button" }));
       expect(onClose).not.toHaveBeenCalled();
     });
 
