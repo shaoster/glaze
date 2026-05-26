@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 
 from django.apps import apps
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -239,7 +238,6 @@ class Piece(models.Model):
         to="api.Image",
         related_name="thumbnail_for_pieces",
     )
-    thumbnail_crop = models.JSONField(null=True, blank=True, default=None)
     shared = models.BooleanField(default=False)
     showcase_story = models.TextField(blank=True, default="")
     showcase_fields = models.JSONField(default=list)
@@ -311,18 +309,46 @@ class Piece(models.Model):
             return self.fields_last_modified
         return max(self.fields_last_modified, cs.last_modified)
 
-    def clean(self):
-        if self.thumbnail_crop is not None:
-            thumbnail = self.thumbnail if self.thumbnail_id else None
-            if thumbnail is None or not thumbnail.cloudinary_public_id:
-                raise ValidationError(
-                    {
-                        "thumbnail_crop": "thumbnail_crop requires a Cloudinary-backed thumbnail."
-                    }
+    def _thumbnail_crop_from_history(self) -> dict | None:
+        """Return the current thumbnail crop from piece history when available."""
+
+        thumbnail = self.thumbnail if self.thumbnail_id else None
+        if thumbnail is None:
+            return None
+
+        def _crop_from_links(links):
+            matching_links = [link for link in links if link.image_id == thumbnail.id]
+            if not matching_links:
+                return None
+            latest_link = max(matching_links, key=lambda link: link.pk)
+            return latest_link.crop
+
+        states = self._prefetched_states()
+        if states is not None:
+            links = []
+            for state in states:
+                prefetched_links = getattr(state, "_prefetched_objects_cache", {}).get(
+                    "image_links"
                 )
+                if prefetched_links is None:
+                    continue
+                links.extend(prefetched_links)
+            return _crop_from_links(links)
+
+        links = (
+            PieceStateImage.objects.filter(
+                piece_state__piece=self,
+                image=thumbnail,
+            )
+            .order_by("-pk")
+            .only("crop", "image_id")
+        )
+        return _crop_from_links(links)
+
+    def get_thumbnail_crop(self) -> dict | None:
+        return self._thumbnail_crop_from_history()
 
     def save(self, *args, **kwargs):
-        self.clean()
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:

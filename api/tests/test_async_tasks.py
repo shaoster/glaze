@@ -222,7 +222,7 @@ class TestDetectSubjectCropTask:
         assert task.status == AsyncTask.Status.SUCCESS
         assert task.result["status"] == "skipped"
 
-    def test_writes_thumbnail_crop_for_piece(self, user, monkeypatch):
+    def test_writes_crop_for_thumbnail_image_via_piece_id(self, user, monkeypatch):
         from api.models import CropRun
 
         image = self._make_cloudinary_image(user)
@@ -242,25 +242,25 @@ class TestDetectSubjectCropTask:
             },
         )
         self._run_sync(task.id)
-        piece_state_image.piece_state.piece.refresh_from_db()
-        assert piece_state_image.piece_state.piece.thumbnail_crop == crop
         piece_state_image.refresh_from_db()
         assert piece_state_image.crop == crop
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.SUCCESS
         assert task.result["status"] == "success"
 
-    def test_skips_piece_that_already_has_crop(self, user, monkeypatch):
+    def test_skips_piece_state_image_that_already_has_crop_via_piece_id(
+        self, user, monkeypatch
+    ):
         from api.models import CropRun, Piece, PieceState, PieceStateImage
 
         image = self._make_cloudinary_image(user)
-        existing = {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0}
-        piece = Piece.objects.create(
-            user=user, name="Mug", thumbnail=image, thumbnail_crop=existing
-        )
+        piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
         state = PieceState.objects.create(piece=piece, user=user, state="designed")
         piece_state_image = PieceStateImage.objects.create(
-            piece_state=state, image=image, order=0
+            piece_state=state,
+            image=image,
+            order=0,
+            crop={"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0},
         )
         crop_run = self._mock_crop_run(
             piece_state_image,
@@ -274,18 +274,16 @@ class TestDetectSubjectCropTask:
             user, {"image_id": str(image.id), "piece_id": str(piece.id)}
         )
         self._run_sync(task.id)
-        piece.refresh_from_db()
-        assert piece.thumbnail_crop == existing  # unchanged
         piece_state_image.refresh_from_db()
         assert piece_state_image.crop == {
-            "x": 0.2,
-            "y": 0.2,
-            "width": 0.5,
-            "height": 0.5,
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0,
         }
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.SUCCESS
-        assert task.result["status"] == "success"
+        assert task.result["status"] == "skipped"
 
     def test_writes_crop_for_piece_state_image(self, user, monkeypatch):
         from api.models import ENTRY_STATE, CropRun, Piece, PieceState, PieceStateImage
@@ -333,7 +331,12 @@ class TestDetectSubjectCropTask:
         )
         self._run_sync(task.id)
         psi.refresh_from_db()
-        assert psi.crop == existing  # unchanged
+        assert psi.crop == {
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0,
+        }  # unchanged
         task.refresh_from_db()
         assert task.result["status"] == "skipped"
 
@@ -472,8 +475,6 @@ class TestRemoteDetectSubjectCrop:
         assert task.status == AsyncTask.Status.SUCCESS
         assert task.result["status"] == "success"
 
-        piece.refresh_from_db()
-        assert piece.thumbnail_crop is not None
         piece_state_image.refresh_from_db()
         assert piece_state_image.crop is not None
 

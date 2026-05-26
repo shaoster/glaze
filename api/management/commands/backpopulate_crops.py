@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
-from api.models import AsyncTask, Image, Piece, PieceStateImage
+from api.models import AsyncTask, Image, PieceStateImage
 from api.tasks import get_task_interface
 
 
@@ -62,26 +62,12 @@ class Command(BaseCommand):
                 if force
                 else PieceStateImage.objects.filter(image=image, crop__isnull=True)
             )
-            piece_qs = (
-                Piece.objects.filter(thumbnail=image)
-                if force
-                else Piece.objects.filter(thumbnail=image, thumbnail_crop__isnull=True)
-            )
-
-            piece_ids = list(piece_qs.values_list("id", flat=True))
             psi_ids = list(link_qs.values_list("id", flat=True))
 
-            if not piece_ids and not psi_ids:
+            if not psi_ids:
                 skipped += 1
                 continue
 
-            for piece_id in piece_ids:
-                work_items.append(
-                    {
-                        "image_id": str(image.id),
-                        "piece_id": str(piece_id),
-                    }
-                )
             for psi_id in psi_ids:
                 work_items.append(
                     {
