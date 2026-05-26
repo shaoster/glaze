@@ -440,8 +440,8 @@ class PublicLibraryAdmin(admin.ModelAdmin):
 class PrivateGlobalAdmin(admin.ModelAdmin):
     """Admin for private-only globals that are not part of the public library."""
 
-    list_display: ClassVar[tuple[str, ...]] = ("name", "user")
-    search_fields: ClassVar[tuple[str, ...]] = ("name", "user__username", "user__email")
+    list_display = ("name", "user")
+    search_fields = ("name", "user__username", "user__email")
 
 
 class GlazeTypeAdmin(PublicLibraryAdmin):
