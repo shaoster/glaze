@@ -13,6 +13,7 @@ Nothing in this module should be imported directly by application code outside o
 ``api/models.py``.  All public symbols are re-exported from there.
 """
 
+import re
 from typing import Any, ClassVar
 
 from django.conf import settings
@@ -173,6 +174,31 @@ def _pluralize_snake(name: str) -> str:
     return name + "s"
 
 
+def _humanize_camel(name: str) -> str:
+    """Convert a CamelCase model name to a human-readable label.
+
+    Examples: ``ClayBody`` -> ``Clay Body``, ``FiringTemperature`` ->
+    ``Firing Temperature``.
+    """
+    parts = re.findall(r"[A-Z]+(?=[A-Z][a-z]|\b)|[A-Z]?[a-z]+|[0-9]+", name)
+    return " ".join(parts) if parts else name
+
+
+def _pluralize_words(label: str) -> str:
+    """Pluralize the final word in a human-readable label."""
+    words = label.split()
+    if not words:
+        return label
+    last = words[-1]
+    if last.endswith(("s", "x", "z", "ch", "sh")):
+        words[-1] = last + "es"
+    elif last.endswith("y") and len(last) > 1 and last[-2].lower() not in "aeiou":
+        words[-1] = last[:-1] + "ies"
+    else:
+        words[-1] = last + "s"
+    return " ".join(words)
+
+
 def dsl_field_to_django_field(field_name: str, field_def: dict) -> models.Field:
     """Convert a workflow.yml DSL field definition to a Django model Field.
 
@@ -243,6 +269,8 @@ def make_simple_global_model(global_name: str) -> type:
     is_private: bool = bool(config.get("private", True))
     dsl_fields: dict = config.get("fields", {})
     plural: str = config.get("plural", _pluralize_snake(global_name))
+    verbose_name = _humanize_camel(model_name)
+    verbose_name_plural = _pluralize_words(verbose_name)
 
     attrs: dict = {
         "__module__": "api.models",
@@ -297,7 +325,15 @@ def make_simple_global_model(global_name: str) -> type:
             )
         )
 
-    attrs["Meta"] = type("Meta", (), {"constraints": constraints})
+    attrs["Meta"] = type(
+        "Meta",
+        (),
+        {
+            "constraints": constraints,
+            "verbose_name": verbose_name,
+            "verbose_name_plural": verbose_name_plural,
+        },
+    )
     _deregister_model_if_exists("api", model_name)
     return type(model_name, (GlobalModel,), attrs)
 
@@ -338,6 +374,8 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
     is_private: bool = bool(config.get("private", True))
     dsl_fields: dict = config.get("fields", {})
     plural: str = config.get("plural", _pluralize_snake(global_name))
+    verbose_name = _humanize_camel(model_name)
+    verbose_name_plural = _pluralize_words(verbose_name)
 
     # compose_from has exactly one key (the M2M relationship name, e.g. 'glaze_types').
     compose_key = next(iter(compose_from))
@@ -505,7 +543,15 @@ def make_compose_global_models(global_name: str) -> tuple[type, type]:
                 name=f"uniq_{global_name}_name_per_user",
             )
         )
-    composite_attrs["Meta"] = type("Meta", (), {"constraints": constraints})
+    composite_attrs["Meta"] = type(
+        "Meta",
+        (),
+        {
+            "constraints": constraints,
+            "verbose_name": verbose_name,
+            "verbose_name_plural": verbose_name_plural,
+        },
+    )
 
     # compute_name — joins component display names with the standard separator.
     @staticmethod  # type: ignore[misc]
@@ -694,7 +740,11 @@ def make_favorite_model(global_name: str) -> type:
                         fields=["user", global_name],
                         name=f"uniq_favorite_{global_name}_per_user",
                     )
-                ]
+                ],
+                "verbose_name": _humanize_camel(f"Favorite{model_name}"),
+                "verbose_name_plural": _pluralize_words(
+                    _humanize_camel(f"Favorite{model_name}")
+                ),
             },
         ),
     }
@@ -757,7 +807,11 @@ def make_piece_state_global_ref_model(global_name: str) -> type:
                         fields=["piece_state", "field_name"],
                         name=f"uniq_piece_state_{global_name}_ref",
                     )
-                ]
+                ],
+                "verbose_name": _humanize_camel(ref_model_class_name),
+                "verbose_name_plural": _pluralize_words(
+                    _humanize_camel(ref_model_class_name)
+                ),
             },
         ),
     }
@@ -801,6 +855,10 @@ def make_taggable_model(global_name: str) -> type:
                         name=f"uniq_{global_name}_tag",
                     )
                 ],
+                "verbose_name": _humanize_camel(through_model_name),
+                "verbose_name_plural": _pluralize_words(
+                    _humanize_camel(through_model_name)
+                ),
             },
         ),
     }
