@@ -38,6 +38,7 @@ class TestCloudinaryWidgetConfig:
         assert response.json() == {
             "cloud_name": "demo-cloud",
             "api_key": "public-api-key",
+            "transformation": "fl_force_strip",
         }
 
     def test_returns_config_with_folder(self, client, monkeypatch):
@@ -52,6 +53,7 @@ class TestCloudinaryWidgetConfig:
         assert response.json() == {
             "cloud_name": "demo-cloud",
             "api_key": "public-api-key",
+            "transformation": "fl_force_strip",
             "folder": "glaze",
         }
 
@@ -67,6 +69,7 @@ class TestCloudinaryWidgetConfig:
         assert response.json() == {
             "cloud_name": "demo-cloud",
             "api_key": "public-api-key",
+            "transformation": "fl_force_strip",
             "upload_preset": "glaze_signed",
         }
 
@@ -104,6 +107,7 @@ class TestCloudinaryWidgetSign:
     def test_returns_signature(self, client, monkeypatch):
         monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
 
+        # Server signs exactly the params the widget sends — no injection.
         params = {"folder": "glaze", "timestamp": "1700000000"}
         response = client.post(
             "/api/uploads/cloudinary/widget-signature/",
@@ -112,24 +116,19 @@ class TestCloudinaryWidgetSign:
         )
 
         assert response.status_code == 200
-        # Server enforces allowed_formats, resource_type, and exif before signing.
-        enforced = {
-            **params,
-            "allowed_formats": "jpg,jpeg,png,webp,heic,avif",
-            "exif": "false",
-            "resource_type": "image",
-        }
-        signing_string = "&".join(f"{k}={enforced[k]}" for k in sorted(enforced.keys()))
+        signing_string = "&".join(f"{k}={params[k]}" for k in sorted(params.keys()))
         expected = hashlib.sha1(
             f"{signing_string}super-secret".encode("utf-8")
         ).hexdigest()
         assert response.json() == {"signature": expected}
 
-    def test_enforces_resource_type_image(self, client, monkeypatch):
+    def test_signs_params_as_received(self, client, monkeypatch):
         monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
 
-        # Client sends resource_type=video; server must override it to image.
-        params = {"resource_type": "video", "timestamp": "1700000000"}
+        # EXIF stripping is now enforced via fl_force_strip in the widget config
+        # transformation, not by injecting params into the signing string.
+        # The server signs whatever params the widget sends unchanged.
+        params = {"source": "uw", "timestamp": "1700000000", "upload_preset": "test"}
         response = client.post(
             "/api/uploads/cloudinary/widget-signature/",
             {"params_to_sign": params},
@@ -137,79 +136,11 @@ class TestCloudinaryWidgetSign:
         )
 
         assert response.status_code == 200
-        enforced = {
-            **params,
-            "allowed_formats": "jpg,jpeg,png,webp,heic,avif",
-            "exif": "false",
-            "resource_type": "image",
-        }
-        signing_string = "&".join(f"{k}={enforced[k]}" for k in sorted(enforced.keys()))
+        signing_string = "&".join(f"{k}={params[k]}" for k in sorted(params.keys()))
         expected = hashlib.sha1(
             f"{signing_string}super-secret".encode("utf-8")
         ).hexdigest()
         assert response.json() == {"signature": expected}
-
-        # Confirm the signature differs from what the tampered params would have produced.
-        tampered_string = "&".join(f"{k}={params[k]}" for k in sorted(params.keys()))
-        tampered_sig = hashlib.sha1(
-            f"{tampered_string}super-secret".encode("utf-8")
-        ).hexdigest()
-        assert response.json()["signature"] != tampered_sig
-
-    def test_enforces_allowed_formats(self, client, monkeypatch):
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
-
-        # Client omits allowed_formats; server must inject the allowlist.
-        params = {"timestamp": "1700000000"}
-        response = client.post(
-            "/api/uploads/cloudinary/widget-signature/",
-            {"params_to_sign": params},
-            format="json",
-        )
-
-        assert response.status_code == 200
-        enforced = {
-            **params,
-            "allowed_formats": "jpg,jpeg,png,webp,heic,avif",
-            "exif": "false",
-            "resource_type": "image",
-        }
-        signing_string = "&".join(f"{k}={enforced[k]}" for k in sorted(enforced.keys()))
-        expected = hashlib.sha1(
-            f"{signing_string}super-secret".encode("utf-8")
-        ).hexdigest()
-        assert response.json() == {"signature": expected}
-
-    def test_enforces_exif_stripped(self, client, monkeypatch):
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
-
-        # Client sends exif=true; server must override it to false.
-        params = {"exif": "true", "timestamp": "1700000000"}
-        response = client.post(
-            "/api/uploads/cloudinary/widget-signature/",
-            {"params_to_sign": params},
-            format="json",
-        )
-
-        assert response.status_code == 200
-        enforced = {
-            **params,
-            "allowed_formats": "jpg,jpeg,png,webp,heic,avif",
-            "exif": "false",
-            "resource_type": "image",
-        }
-        signing_string = "&".join(f"{k}={enforced[k]}" for k in sorted(enforced.keys()))
-        expected = hashlib.sha1(
-            f"{signing_string}super-secret".encode("utf-8")
-        ).hexdigest()
-        assert response.json() == {"signature": expected}
-
-        # Confirm the signature differs from what the tampered params would have produced.
-        tampered_string = "&".join(f"{k}={params[k]}" for k in sorted(params.keys()))
-        tampered_sig = hashlib.sha1(
-            f"{tampered_string}super-secret".encode("utf-8")
-        ).hexdigest()
-        assert response.json()["signature"] != tampered_sig
 
     def test_returns_400_when_params_not_dict(self, client, monkeypatch):
         monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
