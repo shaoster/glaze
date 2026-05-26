@@ -285,12 +285,12 @@ export default function GlazeCombinationGallery() {
           onClose={() => setLightbox(null)}
           footerActions={
             lightbox.kind === "piece"
-              ? (i) => (
+              ? ({ index }) => (
                   <Button
                     size="small"
                     variant="outlined"
                     onClick={() =>
-                      navigate(`/pieces/${lightbox.images[i].pieceId}`, {
+                      navigate(`/pieces/${lightbox.images[index].pieceId}`, {
                         state: { fromGallery: true },
                       })
                     }

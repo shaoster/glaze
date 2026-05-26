@@ -14,7 +14,7 @@ vi.mock("../CloudinaryImage", () => ({
 }));
 
 // Stub out ImageLightbox to keep lightbox tests simple.
-// footerActions is a function of the current index; the stub calls it with 0.
+// footerActions receives an opts object; the stub calls it with initialIndex.
 vi.mock("../ImageLightbox", () => ({
   default: ({
     images,
@@ -24,12 +24,12 @@ vi.mock("../ImageLightbox", () => ({
   }: {
     images: { url: string }[];
     initialIndex: number;
-    footerActions?: (index: number) => React.ReactNode;
+    footerActions?: (opts: { index: number; settingThumbnail: boolean; isCurrentThumbnail: boolean }) => React.ReactNode;
     onClose: () => void;
   }) => (
     <div data-testid="lightbox">
       <img src={images[initialIndex ?? 0].url} alt="lightbox-image" />
-      {footerActions?.(initialIndex ?? 0)}
+      {footerActions?.({ index: initialIndex ?? 0, settingThumbnail: false, isCurrentThumbnail: false })}
       <button onClick={onClose}>Close</button>
     </div>
   ),

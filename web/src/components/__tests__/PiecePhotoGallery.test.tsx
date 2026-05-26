@@ -64,13 +64,13 @@ vi.mock("../ImageLightbox", () => ({
   }: {
     images: PiecePhotoGalleryImage[];
     initialIndex: number;
-    footerActions?: (index: number) => ReactNode;
+    footerActions?: (opts: { index: number; settingThumbnail: boolean; isCurrentThumbnail: boolean }) => ReactNode;
     onClose: () => void;
     onSetAsThumbnail?: (image: PiecePhotoGalleryImage) => Promise<void>;
   }) => (
     <div aria-label="Mock lightbox" role="dialog">
       <div>{images[initialIndex].caption}</div>
-      {footerActions?.(initialIndex)}
+      {footerActions?.({ index: initialIndex, settingThumbnail: false, isCurrentThumbnail: false })}
       {onSetAsThumbnail && (
         <button onClick={() => void onSetAsThumbnail(images[initialIndex])}>
           Set as thumbnail
@@ -132,11 +132,9 @@ const DEFAULT_PIECE_STATES = [
   { id: "state-past", label: "Designed" },
 ];
 
-function openMoveSelect() {
-  const moveControl = screen.getByLabelText("Move photo to state");
-  fireEvent.mouseDown(
-    within(moveControl).getByRole("combobox", { hidden: true }),
-  );
+async function openMoveMenu() {
+  // hidden: true because MUI Dialog aria-hides the inline mock lightbox
+  await userEvent.click(screen.getByRole("button", { name: /Move to/i, hidden: true }));
 }
 
 function makeUpdatedPiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
@@ -520,7 +518,7 @@ describe("PiecePhotoGallery", () => {
       screen.getByRole("button", { name: "Open piece photo 1" }),
     );
     await userEvent.click(
-      within(screen.getByLabelText("Mock lightbox")).getByText("Add caption"),
+      within(screen.getByLabelText("Mock lightbox")).getByRole("button", { name: /Caption/i, hidden: true }),
     );
 
     expect(
@@ -581,7 +579,7 @@ describe("PiecePhotoGallery", () => {
       );
 
       expect(
-        screen.queryByLabelText("Move photo to state"),
+        screen.queryByRole("button", { name: /Move to/i }),
       ).not.toBeInTheDocument();
     });
 
@@ -603,7 +601,7 @@ describe("PiecePhotoGallery", () => {
       );
 
       expect(
-        screen.queryByLabelText("Move photo to state"),
+        screen.queryByRole("button", { name: /Move to/i }),
       ).not.toBeInTheDocument();
     });
 
@@ -624,9 +622,9 @@ describe("PiecePhotoGallery", () => {
       await userEvent.click(
         screen.getByRole("button", { name: "Open piece photo 1" }),
       );
-      const moveSelect = screen.getByLabelText("Move photo to state");
+      const moveButton = screen.getByRole("button", { name: /Move to/i, hidden: true });
 
-      expect(moveSelect).not.toBeDisabled();
+      expect(moveButton).not.toBeDisabled();
     });
 
     it("opens state picker showing only other states", async () => {
@@ -646,7 +644,7 @@ describe("PiecePhotoGallery", () => {
       await userEvent.click(
         screen.getByRole("button", { name: "Open piece photo 1" }),
       );
-      openMoveSelect();
+      await openMoveMenu();
 
       expect(screen.getByText("Designed")).toBeInTheDocument();
       expect(screen.queryByText("Wheel Thrown")).not.toBeInTheDocument();
@@ -669,7 +667,7 @@ describe("PiecePhotoGallery", () => {
       await userEvent.click(
         screen.getByRole("button", { name: "Open piece photo 2" }),
       );
-      openMoveSelect();
+      await openMoveMenu();
 
       expect(screen.getByText("Wheel Thrown")).toBeInTheDocument();
       expect(screen.queryByText("Designed")).not.toBeInTheDocument();
@@ -697,7 +695,7 @@ describe("PiecePhotoGallery", () => {
       await userEvent.click(
         screen.getByRole("button", { name: "Open piece photo 1" }),
       );
-      openMoveSelect();
+      await openMoveMenu();
       await userEvent.click(screen.getByText("Designed"));
 
       await waitFor(() =>
@@ -734,7 +732,7 @@ describe("PiecePhotoGallery", () => {
       await userEvent.click(
         screen.getByRole("button", { name: "Open piece photo 2" }),
       );
-      openMoveSelect();
+      await openMoveMenu();
       await userEvent.click(screen.getByText("Wheel Thrown"));
 
       await waitFor(() =>
@@ -768,7 +766,7 @@ describe("PiecePhotoGallery", () => {
       await userEvent.click(
         screen.getByRole("button", { name: "Open piece photo 1" }),
       );
-      openMoveSelect();
+      await openMoveMenu();
       await userEvent.click(screen.getByText("Designed"));
 
       await waitFor(() =>
@@ -797,7 +795,7 @@ describe("PiecePhotoGallery", () => {
       await userEvent.click(
         screen.getByRole("button", { name: "Open piece photo 1" }),
       );
-      openMoveSelect();
+      await openMoveMenu();
       await userEvent.click(screen.getByText("Designed"));
 
       await waitFor(() =>

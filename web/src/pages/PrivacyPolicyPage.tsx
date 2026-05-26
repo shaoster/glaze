@@ -1,4 +1,7 @@
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Box,
   Button,
   Container,
@@ -6,6 +9,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { Link } from "react-router-dom";
 
 export default function PrivacyPolicyPage() {
@@ -123,7 +127,65 @@ export default function PrivacyPolicyPage() {
               admin@potterdoc.com
             </Box>{" "}
             and we will prioritize it. EXIF data is automatically stripped from
-            your uploaded images before they are stored.
+            your uploaded images before they are stored. What remains after
+            stripping is limited to image structure and color profile data
+            needed to display the image correctly — for example:
+          </Typography>
+
+          <Accordion disableGutters elevation={0} sx={{ bgcolor: "action.hover", borderRadius: 1 }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="body2">Example: retained image metadata</Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ pt: 0 }}>
+              <Box
+                component="pre"
+                sx={{
+                  fontFamily: "monospace",
+                  fontSize: "0.75rem",
+                  overflowX: "auto",
+                  m: 0,
+                  lineHeight: 1.6,
+                }}
+              >{`BitsPerSample           8
+BlueMatrixColumn        0.1571 0.06657 0.78407
+BlueTRC                 Binary data 32 bytes
+CMMFlags                Not Embedded, Independent
+ChromaticAdaptation     1.04788 0.02292 -0.0502 0.02959 0.99048 -0.01706 -0.00923 0.01508 0.75168
+ColorComponents         3
+ColorSpaceData          RGB
+ConnectionSpaceIlluminant 0.9642 1 0.82491
+DeviceAttributes        Reflective, Glossy, Positive, Color
+DeviceManufacturer      Apple Computer Inc.
+EncodingProcess         Progressive DCT, Huffman coding
+FileType                JPEG
+GreenMatrixColumn       0.29198 0.69225 0.04189
+GreenTRC                Binary data 32 bytes
+ImageHeight             1032
+ImageSize               774x1032
+ImageWidth              774
+JFIFVersion             1.01
+MIMEType                image/jpeg
+MediaWhitePoint         0.96419 1 0.82489
+Megapixels              0.799
+PrimaryPlatform         Apple Computer Inc.
+ProfileClass            Display Device Profile
+ProfileConnectionSpace  XYZ
+ProfileCopyright        Copyright Apple Inc., 2022
+ProfileDescription      Display P3
+ProfileVersion          4.0.0
+RedMatrixColumn         0.51512 0.2412 -0.00105
+RedTRC                  Binary data 32 bytes
+RenderingIntent         Perceptual
+ResolutionUnit          None
+XResolution             1
+YCbCrSubSampling        YCbCr4:2:0 (2 2)
+YResolution             1`}</Box>
+            </AccordionDetails>
+          </Accordion>
+
+          <Typography variant="body1">
+            No GPS coordinates, camera make or model, capture timestamp, or
+            other identifying metadata is retained.
           </Typography>
 
           <Typography variant="body1">

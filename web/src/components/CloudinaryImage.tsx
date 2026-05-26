@@ -30,8 +30,6 @@ import { useEffect, useRef, useState } from "react";
 import type { ImageCrop } from "../util/types";
 
 const THUMBNAIL_SIZE = 64;
-const LIGHTBOX_MAX_WIDTH = "90vw";
-const LIGHTBOX_MAX_HEIGHT = "80vh";
 const DEFAULT_VIEWPORT_WIDTH = 1200;
 const DEFAULT_VIEWPORT_HEIGHT = 900;
 const DEFAULT_DEVICE_PIXEL_RATIO = 1;
@@ -148,10 +146,8 @@ export default function CloudinaryImage({
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          width: LIGHTBOX_MAX_WIDTH,
-          height: LIGHTBOX_MAX_HEIGHT,
-          maxWidth: LIGHTBOX_MAX_WIDTH,
-          maxHeight: LIGHTBOX_MAX_HEIGHT,
+          width: "fit-content",
+          height: "fit-content",
         }
       : context === "detail"
         ? {

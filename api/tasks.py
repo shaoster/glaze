@@ -295,6 +295,9 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
                 updated = True
             else:
                 psi_skip_reason = "PieceStateImage already has a crop"
+                logger.warning(
+                    f"detect_subject_crop skipped psi={psi.id}: crop already set by user, not overwriting"
+                )
 
     if not updated:
         return {

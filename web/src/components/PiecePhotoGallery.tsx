@@ -1,29 +1,27 @@
 import { useEffect, useState } from "react";
-import {
-  Navigate,
-  useLocation,
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
+import CropIcon from "@mui/icons-material/Crop";
 import EditIcon from "@mui/icons-material/Edit";
 import PhotoLibraryOutlinedIcon from "@mui/icons-material/PhotoLibraryOutlined";
+import PhotoSizeSelectActualIcon from "@mui/icons-material/PhotoSizeSelectActual";
 import {
   alpha,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   IconButton,
+  Menu,
   MenuItem,
-  Select,
   TextField,
   Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
-import type { CaptionedImage, PieceDetail } from "../util/types";
-import { moveImage, updateCurrentState, updatePiece } from "../util/api";
+import type { CaptionedImage, ImageCrop, PieceDetail } from "../util/types";
+import { moveImage, updateCurrentState, updateImageCrop, updatePastState, updatePiece } from "../util/api";
 import DeletePiecePhotoDialog from "./DeletePiecePhotoDialog";
 import ImageLightbox from "./ImageLightbox";
 import PiecePhotoGalleryGrid from "./PiecePhotoGalleryGrid";
@@ -66,9 +64,9 @@ export function PiecePhotoGalleryButton({
   // Strip the internal fromLightbox flag before forwarding state — keeps
   // fromGallery/returnTo alive so PieceDetailPage's back button stays correct.
   const outerState = Object.fromEntries(
-    Object.entries(
-      (location.state as Record<string, unknown> | null) ?? {},
-    ).filter(([k]) => k !== "fromLightbox"),
+    Object.entries((location.state as Record<string, unknown> | null) ?? {}).filter(
+      ([k]) => k !== "fromLightbox",
+    ),
   );
 
   const photoCount = images.length;
@@ -114,6 +112,7 @@ type PiecePhotoGalleryProps = {
   onPieceUpdated?: (updated: PieceDetail) => void;
   updatePieceFn?: typeof updatePiece;
   updateCurrentStateFn?: typeof updateCurrentState;
+  updatePastStateFn?: typeof updatePastState;
   pieceStates?: PieceStateRef[];
   moveImageFn?: typeof moveImage;
 };
@@ -133,6 +132,7 @@ export default function PiecePhotoGallery({
   onPieceUpdated,
   updatePieceFn,
   updateCurrentStateFn,
+  updatePastStateFn,
   pieceStates,
   moveImageFn,
 }: PiecePhotoGalleryProps) {
@@ -147,15 +147,13 @@ export default function PiecePhotoGallery({
   // Strip the internal fromLightbox flag before forwarding state — keeps
   // fromGallery/returnTo alive so PieceDetailPage's back button stays correct.
   const outerState = Object.fromEntries(
-    Object.entries(
-      (location.state as Record<string, unknown> | null) ?? {},
-    ).filter(([k]) => k !== "fromLightbox"),
+    Object.entries((location.state as Record<string, unknown> | null) ?? {}).filter(
+      ([k]) => k !== "fromLightbox",
+    ),
   );
 
   const atGallery = location.pathname === galleryPath;
-  const atPhotos =
-    location.pathname === galleryPath ||
-    location.pathname.startsWith(`${galleryPath}/`);
+  const atPhotos = atGallery || location.pathname.startsWith(`${galleryPath}/`);
   const photoIndexMatch = location.pathname.match(/\/photos\/(\d+)$/);
   const urlPhotoIndex = photoIndexMatch
     ? parseInt(photoIndexMatch[1], 10)
@@ -175,6 +173,7 @@ export default function PiecePhotoGallery({
   const [deleteSaving, setDeleteSaving] = useState(false);
   const [moveSaving, setMoveSaving] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
+  const [moveMenuAnchor, setMoveMenuAnchor] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (urlPhotoIndex !== null) setLightboxIndex(urlPhotoIndex);
@@ -197,12 +196,13 @@ export default function PiecePhotoGallery({
       (left, right) =>
         left.editableCurrentStateIndex - right.editableCurrentStateIndex,
     )
-    .map(({ url, caption, cloudinary_public_id, cloud_name, crop }) => ({
+    .map(({ url, caption, cloudinary_public_id, cloud_name, crop, image_id }) => ({
       url,
       caption,
       cloudinary_public_id: cloudinary_public_id ?? null,
       cloud_name: cloud_name ?? null,
       crop: crop ?? null,
+      image_id: image_id ?? null,
     }));
 
   function stopEditingCaption() {
@@ -296,21 +296,43 @@ export default function PiecePhotoGallery({
     }
   }
 
+  async function handleCropSave(image: CaptionedImage, crop: ImageCrop) {
+    if (!image.image_id) return;
+    const updated = await updateImageCrop(image.image_id, crop);
+    onPieceUpdated?.(updated);
+  }
+
   async function handleDeleteImage() {
-    if (deleteDialogIndex === null || !updateCurrentStateFn) {
-      return;
-    }
+    if (deleteDialogIndex === null) return;
     const image = images[deleteDialogIndex];
-    if (!image || image.editableCurrentStateIndex === null) {
-      return;
-    }
+    if (!image) return;
+
     setDeleteSaving(true);
     try {
-      await persistCurrentStateImages(
-        editableCurrentStateImages.filter(
-          (_editableImage, index) => index !== image.editableCurrentStateIndex,
-        ),
-      );
+      if (image.editableCurrentStateIndex !== null && updateCurrentStateFn) {
+        await persistCurrentStateImages(
+          editableCurrentStateImages.filter(
+            (_editableImage, index) =>
+              index !== image.editableCurrentStateIndex,
+          ),
+        );
+      } else if (image.editableCurrentStateIndex === null && updatePastStateFn && pieceId) {
+        const siblingImages = images
+          .filter((img) => img.stateId === image.stateId && img !== image)
+          .map(({ url, caption, cloudinary_public_id, cloud_name, crop }) => ({
+            url,
+            caption,
+            cloudinary_public_id: cloudinary_public_id ?? null,
+            cloud_name: cloud_name ?? null,
+            crop: crop ?? null,
+          }));
+        const updated = await updatePastStateFn(pieceId, image.stateId, {
+          images: siblingImages,
+        });
+        onPieceUpdated?.(updated);
+      } else {
+        return;
+      }
       if (lightboxIndex === deleteDialogIndex) {
         navigate(galleryPath, { state: { ...outerState, fromLightbox: true } });
       }
@@ -325,14 +347,27 @@ export default function PiecePhotoGallery({
     currentStateNotes !== undefined &&
     onPieceUpdated !== undefined &&
     updateCurrentStateFn !== undefined;
+  const canDeletePastStateImages =
+    pieceId !== undefined &&
+    onPieceUpdated !== undefined &&
+    updatePastStateFn !== undefined;
   const canSetThumbnail =
     pieceId !== undefined &&
     onPieceUpdated !== undefined &&
     updatePieceFn !== undefined;
-  const canEditCaption =
-    editableCurrentStateIndex !== null && canMutateCurrentStateImages;
+  const canEditCaption = editableCurrentStateIndex !== null;
 
-  const footer = activeImage ? (
+  const showMoveButton =
+    activeImage?.image_id && pieceStates && pieceStates.length > 1;
+  const canMove = Boolean(moveImageFn) && !moveSaving;
+
+  const footer = ({ onCrop, cropAvailable, onSetAsThumbnail: onSetThumb, settingThumbnail, isCurrentThumbnail }: {
+    onCrop?: () => void;
+    cropAvailable?: boolean;
+    onSetAsThumbnail?: () => Promise<void>;
+    settingThumbnail: boolean;
+    isCurrentThumbnail: boolean;
+  }) => activeImage ? (
     <Box sx={{ display: "grid", gap: 0.75, justifyItems: "center" }}>
       {captionEditing ? (
         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
@@ -345,9 +380,7 @@ export default function PiecePhotoGallery({
               if (event.key === "Escape") stopEditingCaption();
             }}
             autoFocus
-            slotProps={{
-              htmlInput: { "aria-label": "Edit photo caption" },
-            }}
+            slotProps={{ htmlInput: { "aria-label": "Edit photo caption" } }}
             sx={{
               minWidth: 220,
               "& .MuiOutlinedInput-root": {
@@ -356,122 +389,114 @@ export default function PiecePhotoGallery({
               },
             }}
           />
-          <Button
-            size="small"
-            variant="contained"
-            onClick={() => void handleSaveCaption()}
-            disabled={captionSaving}
-          >
+          <Button size="small" variant="contained" onClick={() => void handleSaveCaption()} disabled={captionSaving}>
             {captionSaving ? "Saving…" : "Save"}
           </Button>
-          <Button
-            size="small"
-            variant="text"
-            onClick={stopEditingCaption}
-            disabled={captionSaving}
-          >
+          <Button size="small" variant="text" onClick={stopEditingCaption} disabled={captionSaving}>
             Cancel
           </Button>
         </Box>
-      ) : activeImage.caption ? (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <Button
-            size="small"
-            variant="text"
-            onClick={() => {
-              if (!canEditCaption) return;
-              setCaptionEditing(true);
-            }}
-            disabled={!canEditCaption}
-            sx={{
-              color: "rgba(255,255,255,0.85)",
-              textTransform: "none",
-              minWidth: 0,
-              p: 0,
-              lineHeight: 1.4,
-              "&:hover": { backgroundColor: "transparent", color: "white" },
-            }}
-          >
-            {activeImage.caption}
-          </Button>
-          {canEditCaption && (
-            <Tooltip title="Edit caption">
-              <IconButton
+      ) : (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap", justifyContent: "center" }}>
+          {/* Caption */}
+          {activeImage.caption ? (
+            <Tooltip title={canEditCaption ? "Edit caption" : activeImage.caption}>
+              <Button
                 size="small"
-                onClick={() => setCaptionEditing(true)}
-                aria-label="Edit caption"
-                sx={{
-                  color: "rgba(255,255,255,0.6)",
-                  "&:hover": { color: "white" },
-                }}
+                variant="outlined"
+                startIcon={<EditIcon fontSize="small" />}
+                onClick={() => { if (canEditCaption) setCaptionEditing(true); }}
+                disabled={!canEditCaption}
+                sx={{ color: "white", borderColor: "rgba(255,255,255,0.35)", textTransform: "none", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}
               >
-                <EditIcon sx={{ fontSize: 14 }} />
-              </IconButton>
+                {activeImage.caption}
+              </Button>
+            </Tooltip>
+          ) : (
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<EditIcon fontSize="small" />}
+              onClick={() => { setCaptionDraft(""); setCaptionEditing(true); }}
+              disabled={!canEditCaption}
+              sx={{ color: "white", borderColor: "rgba(255,255,255,0.35)" }}
+            >
+              Caption
+            </Button>
+          )}
+
+          {/* Move to */}
+          {showMoveButton && (
+            <>
+              <Button
+                size="small"
+                variant="outlined"
+                disabled={!canMove}
+                onClick={(e) => { if (canMove) setMoveMenuAnchor(e.currentTarget); }}
+                sx={{ color: "white", borderColor: "rgba(255,255,255,0.35)" }}
+              >
+                {moveSaving ? "Moving…" : "Move to…"}
+              </Button>
+              <Menu
+                anchorEl={moveMenuAnchor}
+                open={Boolean(moveMenuAnchor)}
+                onClose={() => setMoveMenuAnchor(null)}
+              >
+                {pieceStates!
+                  .filter((s) => s.id !== activeImage.stateId)
+                  .map((s) => (
+                    <MenuItem
+                      key={s.id}
+                      onClick={() => {
+                        setMoveMenuAnchor(null);
+                        void handleMoveImage(s.id);
+                      }}
+                    >
+                      {s.label}
+                    </MenuItem>
+                  ))}
+              </Menu>
+            </>
+          )}
+
+          {/* Thumbnail */}
+          {onSetThumb && (
+            <Tooltip title={isCurrentThumbnail ? "Current thumbnail" : "Set as thumbnail"}>
+              <span>
+                <IconButton
+                  disabled={isCurrentThumbnail || settingThumbnail}
+                  onClick={() => void onSetThumb()}
+                  aria-label="Set as thumbnail"
+                  sx={{ color: "white" }}
+                >
+                  {settingThumbnail
+                    ? <CircularProgress size={20} sx={{ color: "white" }} />
+                    : <PhotoSizeSelectActualIcon />}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+
+          {/* Crop */}
+          {cropAvailable && (
+            <Tooltip title={onCrop ? "Edit crop" : "Crop only available for Cloudinary images"}>
+              <span>
+                <IconButton onClick={onCrop} disabled={!onCrop} aria-label="Edit crop" sx={{ color: "white" }}>
+                  <CropIcon />
+                </IconButton>
+              </span>
             </Tooltip>
           )}
         </Box>
-      ) : canEditCaption ? (
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<EditIcon fontSize="small" />}
-          onClick={() => {
-            setCaptionDraft("");
-            setCaptionEditing(true);
-          }}
-          sx={{ color: "white", borderColor: "rgba(255,255,255,0.35)" }}
-        >
-          Add caption
-        </Button>
-      ) : null}
-      {captionSaveError && (
-        <Typography variant="caption" sx={{ color: "error.light" }}>
-          {captionSaveError}
-        </Typography>
       )}
-      {moveImageFn &&
-        activeImage.image_id &&
-        pieceStates &&
-        pieceStates.length > 1 && (
-          <Select
-            size="small"
-            displayEmpty
-            value=""
-            disabled={moveSaving}
-            onChange={(e) => {
-              if (e.target.value) void handleMoveImage(e.target.value);
-            }}
-            aria-label="Move photo to state"
-            sx={{
-              color: "rgba(255,255,255,0.85)",
-              fontSize: "0.75rem",
-              "& .MuiOutlinedInput-notchedOutline": {
-                borderColor: "rgba(255,255,255,0.35)",
-              },
-              "& .MuiSvgIcon-root": { color: "rgba(255,255,255,0.6)" },
-            }}
-          >
-            <MenuItem value="" disabled>
-              {moveSaving ? "Moving…" : "Move to…"}
-            </MenuItem>
-            {pieceStates
-              .filter((s) => s.id !== activeImage.stateId)
-              .map((s) => (
-                <MenuItem key={s.id} value={s.id}>
-                  {s.label}
-                </MenuItem>
-              ))}
-          </Select>
-        )}
+      {captionSaveError && (
+        <Typography variant="caption" sx={{ color: "error.light" }}>{captionSaveError}</Typography>
+      )}
       {moveError && (
-        <Typography variant="caption" sx={{ color: "error.light" }}>
-          {moveError}
-        </Typography>
+        <Typography variant="caption" sx={{ color: "error.light" }}>{moveError}</Typography>
       )}
       <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.55)" }}>
-        {editableCurrentStateIndex !== null
-          ? "Added in current state"
-          : `Added in ${activeImage.stateLabel}`}
+        {editableCurrentStateIndex !== null ? "Added in current state" : `Added in ${activeImage.stateLabel}`}
       </Typography>
     </Box>
   ) : null;
@@ -505,6 +530,7 @@ export default function PiecePhotoGallery({
           <PiecePhotoGalleryGrid
             images={images}
             canDeleteImages={canMutateCurrentStateImages}
+            canDeletePastImages={canDeletePastStateImages}
             currentThumbnailUrl={currentThumbnailUrl}
             onOpenImage={(index) =>
               navigate(`${galleryPath}/${index}`, { state: outerState })
@@ -521,6 +547,7 @@ export default function PiecePhotoGallery({
 
       {atLightbox && lightboxIndex !== null && (
         <ImageLightbox
+          key={lightboxIndex}
           images={images}
           initialIndex={lightboxIndex}
           onClose={() =>
@@ -530,7 +557,12 @@ export default function PiecePhotoGallery({
           }
           currentThumbnailUrl={currentThumbnailUrl}
           onSetAsThumbnail={canSetThumbnail ? handleSetThumbnail : undefined}
-          footerActions={() => footer}
+          onCropSave={onPieceUpdated ? handleCropSave : undefined}
+          canEditImage={(i) => {
+            const img = images[i];
+            return !!(img?.cloudinary_public_id && img?.cloud_name && img?.image_id);
+          }}
+          footerActions={footer}
         />
       )}
 

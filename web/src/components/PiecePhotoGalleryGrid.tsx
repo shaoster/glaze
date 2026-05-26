@@ -24,6 +24,7 @@ type PiecePhotoGalleryGridImage = {
 type PiecePhotoGalleryGridProps = {
   images: PiecePhotoGalleryGridImage[];
   canDeleteImages: boolean;
+  canDeletePastImages?: boolean;
   currentThumbnailUrl?: string;
   onOpenImage: (index: number) => void;
   onRequestDelete: (index: number) => void;
@@ -32,6 +33,7 @@ type PiecePhotoGalleryGridProps = {
 export default function PiecePhotoGalleryGrid({
   images,
   canDeleteImages,
+  canDeletePastImages = false,
   currentThumbnailUrl,
   onOpenImage,
   onRequestDelete,
@@ -103,7 +105,7 @@ export default function PiecePhotoGalleryGrid({
             />
           </Box>
         </Box>
-        {image.editableCurrentStateIndex !== null && canDeleteImages && (
+        {(image.editableCurrentStateIndex !== null ? canDeleteImages : canDeletePastImages) && (
           <Tooltip
             title={
               isThumbnail

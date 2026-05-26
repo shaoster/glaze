@@ -397,10 +397,20 @@ js_library(
 )
 
 js_library(
+    name = "crop_overlay_src",
+    srcs = ["src/components/CropOverlay.tsx"],
+    deps = [
+        ":node_modules",
+        ":util_lib",
+    ],
+)
+
+js_library(
     name = "image_lightbox_src",
     srcs = ["src/components/ImageLightbox.tsx"],
     deps = [
         ":cloudinary_image_src",
+        ":crop_overlay_src",
         ":node_modules",
     ],
 )
@@ -774,6 +784,20 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_crop_overlay_test",
+    srcs = [
+        "src/components/__tests__/CropOverlay.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":crop_overlay_src",
+    ],
+    expected_coverage = [
+        "web/src/components/CropOverlay*",
+    ],
+)
+
+vitest_test(
     name = "web_image_lightbox_test",
     srcs = [
         "src/components/__tests__/ImageLightbox.test.tsx",
@@ -782,10 +806,12 @@ vitest_test(
     tags = ["ibazel_notify_changes"],
     deps = [
         ":cloudinary_image_src",
+        ":crop_overlay_src",
         ":image_lightbox_src",
     ],
     expected_coverage = [
         "web/src/components/CloudinaryImage*",
+        "web/src/components/CropOverlay*",
         "web/src/components/ImageLightbox*",
     ],
 )
@@ -891,6 +917,22 @@ vitest_test(
     expected_coverage = [
         "web/src/components/PiecePhoto*",
         "web/src/components/DeletePiecePhotoDialog*",
+    ],
+)
+
+vitest_test(
+    name = "web_piece_photo_gallery_lightbox_integration_test",
+    srcs = [
+        "src/components/__tests__/PiecePhotoGalleryLightboxIntegration.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":image_lightbox_src",
+        ":piece_photo_gallery_src",
+    ],
+    expected_coverage = [
+        "web/src/components/ImageLightbox*",
+        "web/src/components/PiecePhotoGallery*",
     ],
 )
 
@@ -1272,8 +1314,11 @@ test_suite(
         ":web_format_test",
         ":web_glaze_gallery_test",
         ":web_glaze_import_test",
+        ":web_crop_overlay_test",
         ":web_image_lightbox_test",
         ":web_new_piece_dialog_test",
+        ":web_piece_photo_gallery_lightbox_integration_test",
+        ":web_piece_photo_gallery_test",
         ":web_normalize_workflow_fields_test",
         ":web_ocr_detection_test",
         ":web_picker_test",

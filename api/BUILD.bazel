@@ -261,6 +261,7 @@ pytest_test(
         "tests/test_editable_mode.py",
         "tests/test_images.py",
         "tests/test_issue_337.py",
+        "tests/test_patch_image_crop.py",
     ],
     args = [
         "api/tests/test_pieces_create.py",
@@ -275,6 +276,7 @@ pytest_test(
         "api/tests/test_editable_mode.py",
         "api/tests/test_images.py",
         "api/tests/test_issue_337.py",
+        "api/tests/test_patch_image_crop.py",
     ],
     data = _TEST_DATA,
     env = _TEST_ENV,

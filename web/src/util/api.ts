@@ -134,6 +134,7 @@ function mapImage(raw: Wire<CaptionedImage>): CaptionedImage {
     cloudinary_public_id: raw.cloudinary_public_id ?? null,
     cloud_name: raw.cloud_name ?? null,
     crop: normalizeCrop(raw.crop),
+    image_id: raw.image_id ?? null,
   };
 }
 
@@ -519,6 +520,17 @@ export async function moveImage(
   const { data } = await client.patch<Wire<PieceDetail>>(
     `images/${imageId}/piece_state/${fromStateId}/`,
     { piece_state_id: toStateId },
+  );
+  return mapPieceDetail(data);
+}
+
+export async function updateImageCrop(
+  imageId: string,
+  crop: ImageCrop,
+): Promise<PieceDetail> {
+  const { data } = await client.patch<Wire<PieceDetail>>(
+    `images/${imageId}/crop/`,
+    crop,
   );
   return mapPieceDetail(data);
 }
