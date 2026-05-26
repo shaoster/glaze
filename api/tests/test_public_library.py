@@ -333,6 +333,58 @@ class TestGlazeAdminSite:
         assert result == app_list
         assert all(app["app_label"] != "public_libraries" for app in result)
 
+    def test_public_globals_are_registered_and_labeled(self):
+        from django.contrib import admin
+        from django.urls import reverse
+
+        import api.admin as api_admin  # ensure registration side effects are loaded
+        from api.workflow import get_public_global_models
+
+        superuser = User.objects.create_superuser(
+            username="admin-public-libs@example.com",
+            email="admin-public-libs@example.com",
+            password="password",
+        )
+        request = RequestFactory().get(reverse("admin:index"))
+        request.user = superuser
+
+        public_models = get_public_global_models()
+        for model in public_models:
+            assert admin.site.is_registered(model), (
+                f"{model.__name__} is not registered in admin.site"
+            )
+
+        app_list = api_admin.admin.site.get_app_list(request)
+        public_section = next(
+            app for app in app_list if app["app_label"] == "public_libraries"
+        )
+        public_names = {model["name"] for model in public_section["models"]}
+        expected_names = {model._meta.verbose_name_plural for model in public_models}
+
+        assert public_names == expected_names
+
+    def test_private_globals_are_registered_in_api_section(self):
+        from django.contrib import admin
+        from django.urls import reverse
+
+        import api.admin as api_admin  # ensure registration side effects are loaded
+
+        superuser = User.objects.create_superuser(
+            username="admin-private-libs@example.com",
+            email="admin-private-libs@example.com",
+            password="password",
+        )
+        request = RequestFactory().get(reverse("admin:index"))
+        request.user = superuser
+
+        assert admin.site.is_registered(Location)
+
+        app_list = api_admin.admin.site.get_app_list(request)
+        api_section = next(app for app in app_list if app["app_label"] == "api")
+        api_names = {model["name"] for model in api_section["models"]}
+
+        assert "Locations" in api_names
+
 
 @pytest.mark.django_db
 class TestGlazeTypeAdmin:

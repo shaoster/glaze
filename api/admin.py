@@ -8,6 +8,7 @@ import cloudinary
 from adminsortable2.admin import SortableAdminBase, SortableInlineAdminMixin
 from cloudinary import CloudinaryImage
 from django import forms
+from django.apps import apps
 from django.conf import settings
 from django.contrib import admin
 from django.forms import widgets
@@ -41,8 +42,12 @@ from .utils import (
 from .widgets import WorkflowStateWidget
 from .workflow import (
     build_ui_schema,
+    get_global_config,
+    get_global_names,
     get_image_fields_for_global_model,
     get_public_global_models,
+    is_factory_global,
+    is_public_global,
 )
 
 
@@ -432,6 +437,13 @@ class PublicLibraryAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
+class PrivateGlobalAdmin(admin.ModelAdmin):
+    """Admin for private-only globals that are not part of the public library."""
+
+    list_display: ClassVar[tuple[str, ...]] = ("name", "user")
+    search_fields: ClassVar[tuple[str, ...]] = ("name", "user__username", "user__email")
+
+
 class GlazeTypeAdmin(PublicLibraryAdmin):
     """Admin for the public GlazeType library.
 
@@ -591,6 +603,14 @@ admin.site.register(GlazeCombination, GlazeCombinationAdmin)
 for _model_cls in get_public_global_models():
     if not admin.site.is_registered(_model_cls):
         admin.site.register(_model_cls, PublicLibraryAdmin)
+
+# Register private-only globals so they are manageable in admin as well.
+for _global_name in get_global_names():
+    if not is_factory_global(_global_name) or is_public_global(_global_name):
+        continue
+    _model_cls = apps.get_model("api", get_global_config(_global_name)["model"])
+    if not admin.site.is_registered(_model_cls):
+        admin.site.register(_model_cls, PrivateGlobalAdmin)
 
 
 class PieceStateInline(admin.TabularInline):
