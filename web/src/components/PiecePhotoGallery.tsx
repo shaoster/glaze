@@ -524,6 +524,7 @@ export default function PiecePhotoGallery({
 
       {atLightbox && lightboxIndex !== null && (
         <ImageLightbox
+          key={lightboxIndex}
           images={images}
           initialIndex={lightboxIndex}
           onClose={() =>
