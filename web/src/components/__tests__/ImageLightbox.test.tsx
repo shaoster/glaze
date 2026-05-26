@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
+// CropOverlay uses useAsync to preload images; skip network in tests.
+vi.mock("../../util/useAsync", () => ({
+  useAsync: () => ({ loading: false, error: null, value: undefined }),
+  useAsyncFn: () => [{ loading: false, error: null }, vi.fn()],
+}));
+
 import ImageLightbox from "../ImageLightbox";
 import type { CaptionedImage } from "../../util/types";
 
@@ -177,7 +184,19 @@ describe("ImageLightbox", () => {
 
     it("calls onSetAsThumbnail with the active image", async () => {
       const onSetAsThumbnail = vi.fn().mockResolvedValue(undefined);
-      renderLightbox(THREE_IMAGES, 1, vi.fn(), onSetAsThumbnail);
+      render(
+        <ImageLightbox
+          images={THREE_IMAGES}
+          initialIndex={1}
+          onClose={vi.fn()}
+          onSetAsThumbnail={onSetAsThumbnail}
+          footerActions={({ onSetAsThumbnail: onThumb }) =>
+            onThumb ? (
+              <button onClick={() => void onThumb()}>Set as thumbnail</button>
+            ) : null
+          }
+        />,
+      );
 
       await userEvent.click(
         screen.getByRole("button", { name: "Set as thumbnail" }),
@@ -258,10 +277,18 @@ describe("ImageLightbox", () => {
         created: new Date("2024-01-15T10:00:00Z"),
         cloudinary_public_id: "test-public-id",
         cloud_name: "test-cloud",
+        image_id: "test-image-id",
       };
     }
 
     const CLOUDINARY_IMAGE = makeCloudinaryImage("/img/a.jpg", "First");
+
+    // footerActions that renders the crop button when onCrop is passed.
+    function cropFooter({ onCrop }: { onCrop?: () => void; [k: string]: unknown }) {
+      return onCrop ? (
+        <button aria-label="Edit crop" onClick={onCrop}>Crop</button>
+      ) : null;
+    }
 
     it("does not show Crop button when onCropSave is not provided", () => {
       render(
@@ -269,6 +296,7 @@ describe("ImageLightbox", () => {
           images={[CLOUDINARY_IMAGE]}
           initialIndex={0}
           onClose={vi.fn()}
+          footerActions={cropFooter}
         />,
       );
       expect(screen.queryByLabelText("Edit crop")).not.toBeInTheDocument();
@@ -282,6 +310,8 @@ describe("ImageLightbox", () => {
           initialIndex={0}
           onClose={vi.fn()}
           onCropSave={onCropSave}
+          canEditImage={() => true}
+          footerActions={cropFooter}
         />,
       );
       expect(screen.getByLabelText("Edit crop")).toBeInTheDocument();
@@ -295,6 +325,8 @@ describe("ImageLightbox", () => {
           initialIndex={0}
           onClose={vi.fn()}
           onCropSave={onCropSave}
+          canEditImage={() => true}
+          footerActions={cropFooter}
         />,
       );
       fireEvent.click(screen.getByLabelText("Edit crop"));

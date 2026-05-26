@@ -1,6 +1,12 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+// Skip image preloading — no network in tests.
+vi.mock("../../util/useAsync", () => ({
+  useAsync: () => ({ loading: false, error: null, value: undefined }),
+  useAsyncFn: () => [{ loading: false, error: null }, vi.fn()],
+}));
+
 vi.mock("@cloudinary/url-gen", () => {
   const mockImg = {
     delivery: vi.fn().mockReturnThis(),

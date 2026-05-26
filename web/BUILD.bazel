@@ -401,6 +401,7 @@ js_library(
     srcs = ["src/components/CropOverlay.tsx"],
     deps = [
         ":node_modules",
+        ":util_lib",
     ],
 )
 
