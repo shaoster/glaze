@@ -335,7 +335,7 @@ class Piece(models.Model):
                 links.extend(prefetched_links)
             return _crop_from_links(links)
 
-        links = (
+        links = list(
             PieceStateImage.objects.filter(
                 piece_state__piece=self,
                 image=thumbnail,
