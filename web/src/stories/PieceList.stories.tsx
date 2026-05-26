@@ -20,10 +20,9 @@ import type { PieceSummary } from "../util/types";
  *
  * The pipeline has three interlocking parts that **must stay in sync**:
  *
- * 1. **`thumbnail_crop` on the API response** (`Piece.thumbnail_crop`, serialized
- *    as `thumbnail.crop` in `PieceSummary`). Relative coordinates `{x, y, width,
- *    height}` in the original image's coordinate space. Set when the user crops
- *    the thumbnail; `null` for pieces that have never been cropped.
+ * 1. **`thumbnail.crop` on the API response** in `PieceSummary`. Relative
+ *    coordinates `{x, y, width, height}` in the original image's coordinate
+ *    space, resolved from the thumbnail image's current crop in piece history.
  *
  * 2. **`getThumbnailAspectRatio(piece)`** (`pieceCardHeight.ts`) — returns a CSS
  *    `aspect-ratio` string. When crop is present: `"<crop.width> / <crop.height>"`.

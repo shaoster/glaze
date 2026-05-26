@@ -81,6 +81,41 @@ class TestPatchImageCrop:
         )
         assert link.crop == VALID_CROP
 
+    def test_success_updates_thumbnail_image_crop_in_piece_response(
+        self, client, user
+    ):
+        piece = Piece.objects.create(user=user, name="Thumbnail Bowl", is_editable=True)
+        state = PieceState.objects.create(
+            piece=piece,
+            user=user,
+            state=ENTRY_STATE,
+            order=1,
+        )
+        image = Image.objects.create(
+            user=user,
+            url="https://example.com/thumb.jpg",
+            cloud_name="demo",
+            cloudinary_public_id="pieces/thumb",
+        )
+        original_crop = {"x": 0.05, "y": 0.1, "width": 0.6, "height": 0.6}
+        PieceStateImage.objects.create(
+            piece_state=state,
+            image=image,
+            crop=original_crop,
+            order=0,
+        )
+        piece.thumbnail = image
+        piece.save(update_fields=["thumbnail"])
+
+        response = client.patch(
+            f"/api/images/{image.id}/crop/",
+            VALID_CROP,
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert response.json()["thumbnail"]["crop"] == VALID_CROP
+
     def test_non_owner_returns_404(self, other_client, image_in_editable_piece):
         image = image_in_editable_piece
         response = other_client.patch(

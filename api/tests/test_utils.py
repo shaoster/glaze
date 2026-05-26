@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from api.models import AsyncTask, GlazeCombination, GlazeType, Image, Piece
+from api.models import AsyncTask, GlazeCombination, GlazeType, Image
 from api.utils import (
     cloudinary_getinfo_url,
     crop_to_dict,
@@ -123,7 +123,11 @@ class TestBackpopulateCropsCommand:
         """--dry-run prints a count but creates no AsyncTask records."""
         image = self._make_cloudinary_image()
         user = self._make_user()
-        Piece.objects.create(user=user, name="Mug", thumbnail=image)
+        from api.models import Piece, PieceState, PieceStateImage
+
+        piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
+        state = PieceState.objects.create(piece=piece, user=user, state="designed")
+        PieceStateImage.objects.create(piece_state=state, image=image, order=0)
 
         call_command("backpopulate_crops", "--dry-run")
 
@@ -134,15 +138,19 @@ class TestBackpopulateCropsCommand:
         with pytest.raises(CommandError, match="No superuser found"):
             call_command("backpopulate_crops")
 
-    def test_live_mode_enqueues_task_for_missing_thumbnail_crop(self, monkeypatch):
-        """A piece with no thumbnail_crop gets one AsyncTask enqueued."""
+    def test_live_mode_enqueues_task_for_missing_image_crop(self, monkeypatch):
+        """A Cloudinary piece image with no crop gets one AsyncTask enqueued."""
         monkeypatch.setattr(
             "api.tasks.InMemoryTaskInterface.submit", lambda self, task: None
         )
         superuser = self._make_superuser()
         user = self._make_user()
         image = self._make_cloudinary_image()
-        Piece.objects.create(user=user, name="Mug", thumbnail=image)
+        from api.models import Piece, PieceState, PieceStateImage
+
+        piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
+        state = PieceState.objects.create(piece=piece, user=user, state="designed")
+        PieceStateImage.objects.create(piece_state=state, image=image, order=0)
 
         call_command("backpopulate_crops")
 
@@ -153,16 +161,22 @@ class TestBackpopulateCropsCommand:
         assert tasks[0].user == superuser
 
     def test_skips_images_with_existing_crop_by_default(self, monkeypatch):
-        """Images whose pieces already have thumbnail_crop are skipped."""
+        """Images whose piece-state images already have crops are skipped."""
         monkeypatch.setattr(
             "api.tasks.InMemoryTaskInterface.submit", lambda self, task: None
         )
         self._make_superuser()
         user = self._make_user()
         image = self._make_cloudinary_image()
-        existing_crop = {"x": 0.1, "y": 0.2, "width": 0.5, "height": 0.6}
-        Piece.objects.create(
-            user=user, name="Mug", thumbnail=image, thumbnail_crop=existing_crop
+        from api.models import Piece, PieceState, PieceStateImage
+
+        piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
+        state = PieceState.objects.create(piece=piece, user=user, state="designed")
+        PieceStateImage.objects.create(
+            piece_state=state,
+            image=image,
+            order=0,
+            crop={"x": 0.1, "y": 0.2, "width": 0.5, "height": 0.6},
         )
 
         call_command("backpopulate_crops")
@@ -170,16 +184,22 @@ class TestBackpopulateCropsCommand:
         assert AsyncTask.objects.count() == 0
 
     def test_force_enqueues_tasks_for_existing_crops(self, monkeypatch):
-        """--force enqueues a task even when the piece already has thumbnail_crop."""
+        """--force enqueues a task even when the piece-state image already has crop."""
         monkeypatch.setattr(
             "api.tasks.InMemoryTaskInterface.submit", lambda self, task: None
         )
         self._make_superuser()
         user = self._make_user()
         image = self._make_cloudinary_image()
-        existing_crop = {"x": 0.1, "y": 0.2, "width": 0.5, "height": 0.6}
-        Piece.objects.create(
-            user=user, name="Mug", thumbnail=image, thumbnail_crop=existing_crop
+        from api.models import Piece, PieceState, PieceStateImage
+
+        piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
+        state = PieceState.objects.create(piece=piece, user=user, state="designed")
+        PieceStateImage.objects.create(
+            piece_state=state,
+            image=image,
+            order=0,
+            crop={"x": 0.1, "y": 0.2, "width": 0.5, "height": 0.6},
         )
 
         call_command("backpopulate_crops", "--force")

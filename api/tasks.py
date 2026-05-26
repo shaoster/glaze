@@ -196,7 +196,7 @@ def ping_task(task: AsyncTask) -> Dict[str, str]:
 @TaskRegistry.register("detect_subject_crop")
 def detect_subject_crop(task: AsyncTask) -> dict | None:
     """Download an image, get a segmentation mask, derive crop, update targets."""
-    from .models import CropRun, Image, Piece, PieceStateImage
+    from .models import CropRun, Image, PieceStateImage
     from .utils import run_crop_inference
 
     params = task.input_params or {}
@@ -271,18 +271,6 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
         return {"status": "skipped", "reason": crop_run.error or crop_run.status}
     crop = crop_run.crop
 
-    updated = False
-    piece_skip_reason = None
-    if piece_id:
-        with transaction.atomic():
-            piece = Piece.objects.select_for_update().get(id=piece_id)
-            if piece.thumbnail_crop is None:
-                piece.thumbnail_crop = crop
-                piece.save(update_fields=["thumbnail_crop"])
-                updated = True
-            else:
-                piece_skip_reason = "Piece already has a thumbnail crop"
-
     psi_skip_reason = None
     if piece_state_image is not None:
         with transaction.atomic():
@@ -292,22 +280,16 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
             if psi.crop is None:
                 psi.crop = crop
                 psi.save(update_fields=["crop"])
-                updated = True
+                return {"status": "success", "crop": crop, "updated": True}
             else:
                 psi_skip_reason = "PieceStateImage already has a crop"
                 logger.warning(
                     f"detect_subject_crop skipped psi={psi.id}: crop already set by user, not overwriting"
                 )
-
-    if not updated:
-        return {
-            "status": "skipped",
-            "reason": psi_skip_reason
-            or piece_skip_reason
-            or "No crop targets were updated",
-        }
-
-    return {"status": "success", "crop": crop, "updated": updated}
+    return {
+        "status": "skipped",
+        "reason": psi_skip_reason or "No crop targets were updated",
+    }
 
 
 def fail_stuck_tasks(hours: int = 1) -> int:

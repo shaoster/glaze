@@ -61,7 +61,6 @@ from .preferences import (
 from .serializer_registry import _GLOBAL_ENTRY_SERIALIZERS, global_entry_serializer
 from .utils import (
     captioned_image_to_dict,
-    crop_to_dict,
     get_or_create_location,
     image_to_dict,
     normalize_image_payload,
@@ -507,7 +506,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         thumbnail = image_to_dict(obj.thumbnail)
         if thumbnail is None:
             return None
-        return {**thumbnail, "crop": obj.thumbnail_crop}
+        return {**thumbnail, "crop": obj.get_thumbnail_crop()}
 
     @extend_schema_field(serializers.IntegerField(min_value=0))
     def get_photo_count(self, obj: Piece) -> int:
@@ -586,13 +585,9 @@ class PieceCreateSerializer(serializers.ModelSerializer):
             user=user, piece=piece, state=ENTRY_STATE, notes=notes, order=1
         )
 
-        # Queue auto-detection for thumbnail if Cloudinary and no crop provided.
-        if (
-            thumbnail
-            and thumbnail.cloud_name
-            and thumbnail.cloudinary_public_id
-            and piece.thumbnail_crop is None
-        ):
+        # Queue auto-detection for Cloudinary thumbnails so the matching piece
+        # history image can pick up a crop if one exists.
+        if thumbnail and thumbnail.cloud_name and thumbnail.cloudinary_public_id:
             from .tasks import get_task_interface
 
             task = AsyncTask.objects.create(
@@ -915,19 +910,13 @@ class PieceUpdateSerializer(serializers.Serializer):
             instance.thumbnail = normalize_image_payload(
                 thumbnail_payload, user=instance.user
             )
-            crop = (
-                crop_to_dict(thumbnail_payload.get("crop"))
-                if thumbnail_payload is not None
-                else None
-            )
-            instance.thumbnail_crop = crop
 
-            # Queue auto-detection if it's a new Cloudinary thumbnail without a crop.
+            # Queue auto-detection for Cloudinary thumbnails so the matching
+            # piece history image can pick up a crop if one exists.
             if (
                 instance.thumbnail
                 and instance.thumbnail.cloud_name
                 and instance.thumbnail.cloudinary_public_id
-                and crop is None
             ):
                 from .tasks import get_task_interface
 

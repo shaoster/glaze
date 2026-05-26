@@ -368,13 +368,13 @@ class TestPieceDetail:
             "image_id": str(piece.thumbnail.id),
             "width": None,
             "height": None,
+            "crop": None,
         }
         assert piece.thumbnail == {
             "url": thumbnail["url"],
             "cloudinary_public_id": thumbnail["cloudinary_public_id"],
             "cloud_name": thumbnail["cloud_name"],
         }
-        assert piece.thumbnail_crop == thumbnail["crop"]
 
     def test_owner_can_share_completed_piece(self, client, piece):
         PieceState.objects.create(
