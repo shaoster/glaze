@@ -246,6 +246,7 @@ export default function CropOverlay({
               width: "100vw",
               height: "100vh",
               pointerEvents: "none",
+              touchAction: "none",
               zIndex: 1,
             }}
             viewBox={`0 0 ${W} ${H}`}

@@ -52,13 +52,13 @@ export default function ImageLightbox({
 
   function prev() {
     setIndex((i) => {
-      if (i > 0) { setCropMode(false); return i - 1; }
+      if (i > 0) { setCropMode(false); setPostCropLoading(false); setPendingCropAspect(null); return i - 1; }
       return i;
     });
   }
   function next() {
     setIndex((i) => {
-      if (i < images.length - 1) { setCropMode(false); return i + 1; }
+      if (i < images.length - 1) { setCropMode(false); setPostCropLoading(false); setPendingCropAspect(null); return i + 1; }
       return i;
     });
   }
@@ -66,7 +66,8 @@ export default function ImageLightbox({
   const swipeHandlers = useSwipeable({
     onSwiping: ({ deltaX, deltaY, dir }) => {
       if (dir === "Up" || dir === "Down") {
-        setDragDeltaY(deltaY);
+        // Resist downward swipes — only upward closes
+        setDragDeltaY(dir === "Down" ? deltaY * 0.25 : deltaY);
       } else {
         // Resist at boundaries — dampen drag past the first/last image
         if ((index === 0 && dir === "Right") || (index === images.length - 1 && dir === "Left")) {

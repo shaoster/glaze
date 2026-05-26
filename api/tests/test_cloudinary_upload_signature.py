@@ -152,3 +152,27 @@ class TestCloudinaryWidgetSign:
         )
 
         assert response.status_code == 400
+
+    def test_rejects_non_image_resource_type(self, client, monkeypatch):
+        monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
+
+        response = client.post(
+            "/api/uploads/cloudinary/widget-signature/",
+            {"params_to_sign": {"resource_type": "video", "timestamp": "1700000000"}},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Only image uploads are permitted."
+
+    def test_allows_explicit_image_resource_type(self, client, monkeypatch):
+        monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
+
+        params = {"resource_type": "image", "timestamp": "1700000000"}
+        response = client.post(
+            "/api/uploads/cloudinary/widget-signature/",
+            {"params_to_sign": params},
+            format="json",
+        )
+
+        assert response.status_code == 200

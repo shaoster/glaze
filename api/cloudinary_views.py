@@ -138,6 +138,13 @@ def cloudinary_widget_sign(request: Request) -> Response:
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    # Reject non-image resource types — enforcement without signature injection.
+    if params_to_sign.get("resource_type", "image") != "image":
+        return Response(
+            {"detail": "Only image uploads are permitted."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     # Cloudinary signature format: sorted key=value pairs joined by '&',
     # then append the API secret and SHA1-hash the result.
     signing_string = "&".join(
