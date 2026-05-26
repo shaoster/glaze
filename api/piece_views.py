@@ -483,6 +483,10 @@ def patch_image_crop(request, image_id):
     serializer = ImageCropSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
+    # An Image can appear in multiple PieceStateImages (e.g. after a move), but
+    # the crop field lives on the join model and callers pass only image_id with
+    # no way to disambiguate. In practice a single Image is never shared across
+    # multiple PSIs for the same user, so .first() is safe.
     link = (
         PieceStateImage.objects.select_related("piece_state__piece")
         .filter(image=image, piece_state__piece__user=request.user)

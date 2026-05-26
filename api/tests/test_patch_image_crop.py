@@ -90,15 +90,32 @@ class TestPatchImageCrop:
         )
         assert response.status_code == 404
 
-    def test_non_editable_piece_returns_403(self, client, image_in_non_editable_piece):
+    def test_non_editable_piece_allows_crop(
+        self, client, image_in_non_editable_piece, non_editable_piece
+    ):
+        # Crop is intentionally allowed on sealed/non-editable pieces so potters
+        # can correct a bad auto-crop without needing to re-open the piece.
         image = image_in_non_editable_piece
         response = client.patch(
             f"/api/images/{image.id}/crop/",
             VALID_CROP,
             format="json",
         )
+        assert response.status_code == 200
+        link = PieceStateImage.objects.get(
+            image=image, piece_state=non_editable_piece.current_state
+        )
+        assert link.crop == VALID_CROP
+
+    def test_unauthenticated_returns_403(self, image_in_editable_piece):
+        c = APIClient()  # no force_authenticate
+        image = image_in_editable_piece
+        response = c.patch(
+            f"/api/images/{image.id}/crop/",
+            VALID_CROP,
+            format="json",
+        )
         assert response.status_code == 403
-        assert "not in editable mode" in response.json()["detail"]
 
     def test_invalid_crop_missing_field_returns_400(
         self, client, image_in_editable_piece

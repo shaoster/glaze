@@ -286,6 +286,8 @@ export default function CropOverlay({
                 fill="white"
                 stroke="#555"
                 strokeWidth={1}
+                role="button"
+                aria-label={`Resize ${id}`}
                 style={{ pointerEvents: "all", cursor: handleCursor(id) }}
                 onMouseDown={(e) => startDrag(id, e)}
                 onTouchStart={(e) => startDrag(id, e)}
