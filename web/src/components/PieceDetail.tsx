@@ -1,35 +1,20 @@
 import {
   type ComponentProps,
-  type Ref,
-  type ReactNode,
   useEffect,
-  useRef,
   useState,
 } from "react";
 import {
   Alert,
   alpha,
   Box,
-  Button,
   Chip,
   Divider,
-  IconButton,
-  TextField,
-  Tooltip,
   Typography,
-  useTheme,
 } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import CheckIcon from "@mui/icons-material/Check";
-import CloseIcon from "@mui/icons-material/Close";
 import HistoryIcon from "@mui/icons-material/History";
-import LockIcon from "@mui/icons-material/Lock";
 import { useBlocker, useLocation, useNavigate } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
-import { formatState, isTerminalState, validateHistorySequence } from "../util/workflow";
-import {
-  getCustomFieldDefinitions,
-} from "../util/workflow";
+import { formatState, isTerminalState, getCustomFieldDefinitions } from "../util/workflow";
 import { updatePiece, updatePastState, updateCurrentState, moveImage, extractErrorMessage, addPieceState } from "../util/api";
 import { useAsyncFn } from "../util/useAsync";
 import CloudinaryImage from "./CloudinaryImage";
@@ -46,188 +31,16 @@ import PiecePhotoGallery, {
 } from "./PiecePhotoGallery";
 import { PieceDetailSaveStatusProvider } from "./PieceDetailSaveStatusContext";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
-
 import ShareControls from "./PieceShareControls";
-import { useAutosave } from "./useAutosave";
-import AutosaveStatus from "./AutosaveStatus";
+import SectionCard from "./SectionCard";
+import EditableToggle from "./EditableToggle";
+import PieceNameEditor from "./PieceNameEditor";
+import ShowcaseStoryEditor from "./ShowcaseStoryEditor";
 
 type PieceDetailProps = {
   piece: PieceDetailType;
   onPieceUpdated: (updated: PieceDetailType) => void;
 };
-
-type SectionCardProps = {
-  eyebrow?: string;
-  title?: string;
-  subtitle?: string;
-  titleId?: string;
-  titleRef?: Ref<HTMLHeadingElement>;
-  titleAdornment?: ReactNode;
-  children: ReactNode;
-};
-
-function SectionCard({
-  eyebrow,
-  title,
-  subtitle,
-  titleId,
-  titleRef,
-  titleAdornment,
-  children,
-}: SectionCardProps) {
-  return (
-    <Box
-      sx={(theme) => ({
-        borderRadius: "6px",
-        border: "1px solid",
-        borderColor: "divider",
-        backgroundColor: alpha(theme.palette.background.paper, 0.66),
-        backdropFilter: "blur(14px)",
-        boxShadow: `0 14px 34px ${alpha(theme.palette.common.black, 0.14)}`,
-        overflow: "hidden",
-      })}
-    >
-      <Box sx={{ px: { xs: 1.5, sm: 2 }, pt: 1.25, pb: 0.75 }}>
-        {(eyebrow || title || subtitle) && (
-          <>
-            {eyebrow && (
-              <Typography
-                variant="caption"
-                sx={{
-                  display: "block",
-                  mb: 0.25,
-                  color: "text.secondary",
-                  letterSpacing: "0.14em",
-                  textTransform: "uppercase",
-                }}
-              >
-                {eyebrow}
-              </Typography>
-            )}
-            {(title || subtitle) && (
-                <Box
-                  sx={{
-                    display: "flex",
-                    gap: 1.5,
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                  }}
-                >
-                {title ? (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography
-                      variant="h6"
-                      component="h3"
-                      id={titleId}
-                      ref={titleRef}
-                    >
-                      {title}
-                    </Typography>
-                    {titleAdornment ? (
-                      <Box sx={{ ml: 0.5, display: "flex", alignItems: "center" }}>
-                        {titleAdornment}
-                      </Box>
-                    ) : null}
-                  </Box>
-                ) : (
-                  <Box />
-                )}
-                {subtitle && (
-                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                    {subtitle}
-                  </Typography>
-                )}
-              </Box>
-            )}
-          </>
-        )}
-      </Box>
-      <Box sx={{ px: { xs: 1.5, sm: 2 }, pb: 1.5 }}>{children}</Box>
-    </Box>
-  );
-}
-
-function EditableToggle({ piece, onPieceUpdated }: PieceDetailProps) {
-  const {
-    execute: toggle,
-    loading: saving,
-    error: rawError,
-  } = useAsyncFn(async () => {
-    const updated = await updatePiece(piece.id, {
-      is_editable: !piece.is_editable,
-    });
-    onPieceUpdated(updated);
-  }, [piece.id, piece.is_editable, onPieceUpdated]);
-
-  const error = rawError ? extractErrorMessage(rawError) : null;
-  const seqError = piece.is_editable
-    ? validateHistorySequence(piece.history)
-    : null;
-
-  const disabledReason = piece.shared
-    ? "This piece is publicly shared. Unshare it to edit history."
-    : null;
-
-  return (
-    <Box>
-      <Tooltip
-        title={disabledReason || ""}
-        disableHoverListener={!disabledReason}
-        arrow
-      >
-        <span>
-          {piece.is_editable ? (
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<LockIcon fontSize="small" />}
-              onClick={toggle}
-              disabled={saving || !!seqError}
-            >
-              Seal changes
-            </Button>
-          ) : (
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<HistoryIcon fontSize="small" />}
-              onClick={toggle}
-              disabled={saving || !!disabledReason}
-              sx={{ borderStyle: "dashed", color: "text.secondary" }}
-            >
-              Edit piece history
-            </Button>
-          )}
-        </span>
-      </Tooltip>
-      {disabledReason && (
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{
-            ml: { sm: 1.5 },
-            mt: { xs: 0.5, sm: 0 },
-            display: { xs: "block", sm: "inline-block" },
-            verticalAlign: "middle",
-          }}
-        >
-          {disabledReason}
-        </Typography>
-      )}
-      {seqError && (
-        <Typography variant="caption" color="error" sx={{ ml: 1 }}>
-          {seqError}
-        </Typography>
-      )}
-      {error && (
-        <Typography variant="caption" color="error" sx={{ ml: 1 }}>
-          {error}
-        </Typography>
-      )}
-    </Box>
-  );
-}
 
 export default function PieceDetail({
   piece,
@@ -241,12 +54,7 @@ export default function PieceDetail({
 }
 
 function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
-  const theme = useTheme();
-
   const [isDirty, setIsDirty] = useState(false);
-  const [editingName, setEditingName] = useState(false);
-  const [nameValue, setNameValue] = useState(piece.name);
-  const nameInputRef = useRef<HTMLInputElement>(null);
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
   const currentState = piece.current_state;
   const isTerminal = isTerminalState(currentState.state);
@@ -263,24 +71,6 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     ? pastHistory.find((ps) => ps.id === rewindedStateId) ?? null
     : null;
 
-  const [showcaseStoryValue, setShowcaseStoryValue] = useState(
-    piece.showcase_story ?? "",
-  );
-
-  useEffect(() => {
-    setShowcaseStoryValue(piece.showcase_story ?? "");
-  }, [piece.showcase_story]);
-
-  const { status: showcaseAutosaveStatus } = useAutosave({
-    dirty: showcaseStoryValue !== (piece.showcase_story ?? ""),
-    saveKey: `piece-${piece.id}-showcase-story`,
-    save: async () => {
-      const updated = await updatePiece(piece.id, {
-        showcase_story: showcaseStoryValue,
-      });
-      onPieceUpdated(updated);
-    },
-  });
   function formatDate(d: Date): string {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -305,15 +95,6 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
       }));
     },
   );
-  const editButtonSx = {
-    width: 22,
-    height: 22,
-    borderRadius: "4px",
-    border: "1px solid",
-    borderColor: "divider",
-    color: "text.secondary",
-    backgroundColor: alpha(theme.palette.background.paper, 0.38),
-  } as const;
 
   const blocker = useBlocker(canEdit && isDirty);
 
@@ -351,41 +132,6 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   );
   const transitionError = rawTransitionError
     ? extractErrorMessage(rawTransitionError, "Failed to transition state. Please try again.")
-    : null;
-
-  function startEditingName() {
-    setNameValue(piece.name);
-    setEditingName(true);
-    setTimeout(() => nameInputRef.current?.focus(), 0);
-  }
-
-  function cancelEditingName() {
-    setEditingName(false);
-    setNameValue(piece.name);
-  }
-
-  const {
-    execute: saveName,
-    loading: nameSaving,
-    error: rawNameError,
-  } = useAsyncFn(async () => {
-    const trimmed = nameValue.trim();
-    if (!trimmed) {
-      throw new Error("Name cannot be empty.");
-    }
-    if (trimmed === piece.name) {
-      setEditingName(false);
-      return;
-    }
-    const saveNameRequest = () => updatePiece(piece.id, { name: trimmed });
-    const updated = pieceDetailSaveStatus
-      ? await pieceDetailSaveStatus.runManualSave(saveNameRequest)
-      : await saveNameRequest();
-    onPieceUpdated(updated);
-    setEditingName(false);
-  }, [piece.id, piece.name, nameValue, onPieceUpdated, pieceDetailSaveStatus]);
-  const nameError = rawNameError
-    ? extractErrorMessage(rawNameError, "Failed to save name. Please try again.")
     : null;
 
   const {
@@ -475,84 +221,11 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             >
               Created {createdLabel} · Modified {modifiedLabel}
             </Typography>
-            <Box sx={{ minWidth: 0, mb: 1.25 }}>
-              {editingName ? (
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 1,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <TextField
-                    inputRef={nameInputRef}
-                    value={nameValue}
-                    onChange={(e) => setNameValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") saveName();
-                      if (e.key === "Escape") cancelEditingName();
-                    }}
-                    size="small"
-                    error={!!nameError}
-                    helperText={nameError}
-                    disabled={nameSaving}
-                    slotProps={{
-                      htmlInput: { "aria-label": "Piece name", maxLength: 255 },
-                    }}
-                    sx={{
-                      minWidth: 220,
-                      flex: 1,
-                      maxWidth: 460,
-                    }}
-                  />
-                  <Box sx={{ display: "flex", alignItems: "center" }}>
-                    <IconButton
-                      aria-label="Save name"
-                      onClick={saveName}
-                      disabled={nameSaving}
-                      size="small"
-                      color="primary"
-                    >
-                      <CheckIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      aria-label="Cancel name edit"
-                      onClick={cancelEditingName}
-                      disabled={nameSaving}
-                      size="small"
-                    >
-                      <CloseIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </Box>
-              ) : (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                  <Typography
-                    variant="h3"
-                    component="h2"
-                    sx={{
-                      fontSize: { xs: "2rem", sm: "2.6rem", md: "2rem" },
-                      lineHeight: 1.05,
-                      letterSpacing: "-0.03em",
-                      textWrap: "balance",
-                    }}
-                  >
-                    {piece.name}
-                  </Typography>
-                  {canEdit && (
-                    <IconButton
-                      aria-label="Edit piece name"
-                      onClick={startEditingName}
-                      size="small"
-                      sx={{ ...editButtonSx, alignSelf: "center" }}
-                    >
-                      <EditIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-                  )}
-                </Box>
-              )}
-            </Box>
+            <PieceNameEditor
+              piece={piece}
+              canEdit={canEdit}
+              onPieceUpdated={onPieceUpdated}
+            />
             {canEdit ? (
               <TagManager
                 pieceId={piece.id}
@@ -751,39 +424,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
 
         {isTerminal && canEdit && (
           <Box sx={{ mb: 2.5 }}>
-            <SectionCard title="Showcase">
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <Box>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      mb: 1,
-                    }}
-                  >
-                    <Typography variant="subtitle2">Showcase Story</Typography>
-                    <AutosaveStatus status={showcaseAutosaveStatus} />
-                  </Box>
-                  <TextField
-                    multiline
-                    fullWidth
-                    rows={4}
-                    placeholder="Tell the story of this piece..."
-                    value={showcaseStoryValue}
-                    onChange={(e) => setShowcaseStoryValue(e.target.value)}
-                  />
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Showcase Fields
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    TODO: Showcase Field Selection
-                  </Typography>
-                </Box>
-              </Box>
-            </SectionCard>
+            <ShowcaseStoryEditor piece={piece} onPieceUpdated={onPieceUpdated} />
           </Box>
         )}
 

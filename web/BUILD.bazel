@@ -534,7 +534,9 @@ js_library(
 js_library(
     name = "workflow_state_src",
     srcs = [
+        "src/components/ImageUploader.tsx",
         "src/components/WorkflowState.tsx",
+        "src/components/useImageSaveQueue.ts",
         "src/components/workflowStateDraft.ts",
     ],
     deps = [
@@ -552,6 +554,7 @@ js_library(
     name = "piece_photo_gallery_src",
     srcs = [
         "src/components/DeletePiecePhotoDialog.tsx",
+        "src/components/LightboxFooter.tsx",
         "src/components/PiecePhotoGalleryGrid.tsx",
         "src/components/PiecePhotoGallery.tsx",
     ],
@@ -644,8 +647,12 @@ js_library(
 js_library(
     name = "piece_detail_src",
     srcs = [
+        "src/components/EditableToggle.tsx",
         "src/components/NavigationBlocker.tsx",
         "src/components/PieceDetail.tsx",
+        "src/components/PieceNameEditor.tsx",
+        "src/components/SectionCard.tsx",
+        "src/components/ShowcaseStoryEditor.tsx",
         "src/components/SmallTutorialInlay.tsx",
         "src/components/SmallTutorialInlayConfig.ts",
     ],
@@ -899,7 +906,9 @@ vitest_test(
         ":workflow_state_src",
     ],
     expected_coverage = [
+        "web/src/components/ImageUploader*",
         "web/src/components/WorkflowState*",
+        "web/src/components/useImageSaveQueue*",
     ],
 )
 
@@ -915,6 +924,7 @@ vitest_test(
         ":piece_photo_gallery_src",
     ],
     expected_coverage = [
+        "web/src/components/LightboxFooter*",
         "web/src/components/PiecePhoto*",
         "web/src/components/DeletePiecePhotoDialog*",
     ],
@@ -1046,7 +1056,11 @@ vitest_test(
         ":piece_detail_src",
     ],
     expected_coverage = [
+        "web/src/components/EditableToggle*",
         "web/src/components/PieceDetail*",
+        "web/src/components/PieceNameEditor*",
+        "web/src/components/SectionCard*",
+        "web/src/components/ShowcaseStoryEditor*",
     ],
 )
 
