@@ -16,12 +16,11 @@ from .auth_views import (
     staff_invite_code,
     validate_invite,
 )
-from .cloudinary_views import (
+from .cloudinary_admin_views import (
     admin_cloudinary_cleanup,
     admin_cloudinary_cleanup_archive,
-    cloudinary_widget_config,
-    cloudinary_widget_sign,
 )
+from .cloudinary_views import cloudinary_widget_config, cloudinary_widget_sign
 from .crop_run_views import CropRunViewSet, ImageCropRunsView
 from .global_entry_views import (
     _FAVORITES_REGISTRY,
@@ -37,12 +36,11 @@ from .health_views import (
     health_ready,
 )
 from .import_views import admin_manual_square_crop_import
+from .piece_image_views import patch_image_crop, piece_image_detail
 from .piece_views import (
-    patch_image_crop,
     piece_current_state,
     piece_current_state_detail,
     piece_detail,
-    piece_image_detail,
     piece_past_state,
     piece_states,
     pieces,
