@@ -7,10 +7,11 @@ import type { PiecePhotoGalleryImage } from "../components/PiecePhotoGallery";
  * LightboxFooter renders the control bar at the bottom of the ImageLightbox.
  *
  * Rationale: Extracted from PiecePhotoGallery.tsx (Issue #406) to own caption
- * editing and photo-move state independently of the gallery route logic.
+ * editing, photo-move, and thumbnail-setting state independently of the gallery
+ * route logic.
  *
  * Edge cases:
- * - Read-only: caption and move buttons are disabled.
+ * - Read-only: onSaveCaption is null; caption and move buttons are disabled.
  * - Caption editing: inline TextField replaces the caption chip.
  * - Move menu: lists other states the photo can be moved to.
  * - No caption: shows an "Add caption" button placeholder.
@@ -38,17 +39,6 @@ const activeImage: PiecePhotoGalleryImage = {
   editableCurrentStateIndex: 0,
 };
 
-const editableImages = [
-  {
-    url: activeImage.url,
-    caption: "",
-    cloudinary_public_id: "sample",
-    cloud_name: "demo",
-    crop: null,
-    image_id: "img1",
-  },
-];
-
 const pieceStates = [
   { id: "s1", label: "Trimmed" },
   { id: "s2", label: "Bisque fired" },
@@ -58,15 +48,11 @@ const pieceStates = [
 export const Default: Story = {
   args: {
     activeImage,
-    editableCurrentStateImages: editableImages,
-    editableCurrentStateIndex: 0,
+    onSaveCaption: fn(),
     pieceStates,
-    persistCurrentStateImages: fn(),
     moveImageFn: fn(),
     onPieceUpdated: fn(),
-    galleryPath: "/pieces/p1/photos",
-    outerState: {},
-    settingThumbnail: false,
+    onMoveSuccess: fn(),
     isCurrentThumbnail: false,
     cropAvailable: true,
     onCrop: fn(),
@@ -78,9 +64,6 @@ export const WithCaption: Story = {
   args: {
     ...Default.args,
     activeImage: { ...activeImage, caption: "Trimmed foot ring, 1.2lbs" },
-    editableCurrentStateImages: [
-      { ...editableImages[0], caption: "Trimmed foot ring, 1.2lbs" },
-    ],
   },
 };
 
@@ -94,7 +77,7 @@ export const CurrentThumbnail: Story = {
 export const ReadOnly: Story = {
   args: {
     ...Default.args,
-    editableCurrentStateIndex: null,
+    onSaveCaption: null,
     moveImageFn: undefined,
     onSetAsThumbnail: undefined,
   },

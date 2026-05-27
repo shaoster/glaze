@@ -341,20 +341,33 @@ export default function PiecePhotoGallery({
             const img = images[i];
             return !!(img?.cloudinary_public_id && img?.cloud_name && img?.image_id);
           }}
-          footerActions={(props) => (
-            <LightboxFooter
-              activeImage={activeImage}
-              editableCurrentStateImages={editableCurrentStateImages}
-              editableCurrentStateIndex={editableCurrentStateIndex}
-              pieceStates={pieceStates}
-              persistCurrentStateImages={persistCurrentStateImages}
-              moveImageFn={moveImageFn}
-              onPieceUpdated={onPieceUpdated}
-              galleryPath={galleryPath}
-              outerState={outerState}
-              {...props}
-            />
-          )}
+          footerActions={(props) => {
+            const onSaveCaption =
+              canMutateCurrentStateImages && editableCurrentStateIndex !== null
+                ? async (caption: string) => {
+                    await persistCurrentStateImages(
+                      editableCurrentStateImages.map((img, i) => ({
+                        ...img,
+                        caption:
+                          i === editableCurrentStateIndex ? caption : img.caption,
+                      })),
+                    );
+                  }
+                : null;
+            return (
+              <LightboxFooter
+                activeImage={activeImage}
+                onSaveCaption={onSaveCaption}
+                pieceStates={pieceStates}
+                moveImageFn={moveImageFn}
+                onPieceUpdated={onPieceUpdated}
+                onMoveSuccess={() =>
+                  navigate(galleryPath, { state: outerState })
+                }
+                {...props}
+              />
+            );
+          }}
         />
       )}
 

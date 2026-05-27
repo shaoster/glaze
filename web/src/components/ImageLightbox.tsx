@@ -27,7 +27,6 @@ type ImageLightboxProps = {
     onCrop?: () => void;
     cropAvailable?: boolean;
     onSetAsThumbnail?: () => Promise<void>;
-    settingThumbnail: boolean;
     isCurrentThumbnail: boolean;
   }) => React.ReactNode;
 };
@@ -45,7 +44,6 @@ export default function ImageLightbox({
   const [index, setIndex] = useState(initialIndex);
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [dragDeltaY, setDragDeltaY] = useState(0);
-  const [settingThumbnail, setSettingThumbnail] = useState(false);
   const [cropMode, setCropMode] = useState(false);
   const [postCropLoading, setPostCropLoading] = useState(false);
   const [pendingCropAspect, setPendingCropAspect] = useState<number | null>(null);
@@ -100,16 +98,6 @@ export default function ImageLightbox({
   const image = images[index];
   const isCurrentThumbnail =
     !!currentThumbnailUrl && image.url === currentThumbnailUrl;
-
-  async function handleSetAsThumbnail() {
-    if (!onSetAsThumbnail) return;
-    setSettingThumbnail(true);
-    try {
-      await onSetAsThumbnail(image);
-    } finally {
-      setSettingThumbnail(false);
-    }
-  }
 
   return (
     <Modal
@@ -241,8 +229,7 @@ export default function ImageLightbox({
                 ? () => setCropMode(true)
                 : undefined,
               cropAvailable: !!onCropSave,
-              onSetAsThumbnail: onSetAsThumbnail ? handleSetAsThumbnail : undefined,
-              settingThumbnail,
+              onSetAsThumbnail: onSetAsThumbnail ? () => onSetAsThumbnail(image) : undefined,
               isCurrentThumbnail,
             })}
           </Box>

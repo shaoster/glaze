@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import CropIcon from "@mui/icons-material/Crop";
 import EditIcon from "@mui/icons-material/Edit";
 import PhotoSizeSelectActualIcon from "@mui/icons-material/PhotoSizeSelectActual";
@@ -16,7 +15,7 @@ import {
 } from "@mui/material";
 import type { PieceDetail } from "../util/types";
 import type { moveImage } from "../util/api";
-import type { PiecePhotoGalleryImage, EditablePiecePhoto } from "./PiecePhotoGallery";
+import type { PiecePhotoGalleryImage } from "./PiecePhotoGallery";
 
 type PieceStateRef = {
   id: string;
@@ -25,46 +24,40 @@ type PieceStateRef = {
 
 export type LightboxFooterProps = {
   activeImage: PiecePhotoGalleryImage | null;
-  editableCurrentStateImages: (EditablePiecePhoto & { image_id: string | null })[];
-  editableCurrentStateIndex: number | null;
+  /** Null means the caption is read-only for the active image. */
+  onSaveCaption: ((caption: string) => Promise<void>) | null;
   pieceStates?: PieceStateRef[];
-  persistCurrentStateImages: (nextImages: EditablePiecePhoto[]) => Promise<void>;
   moveImageFn?: typeof moveImage;
   onPieceUpdated?: (updated: PieceDetail) => void;
-  galleryPath: string;
-  outerState: Record<string, unknown>;
+  /** Called after a successful move so the parent can navigate away. */
+  onMoveSuccess: () => void;
+  isCurrentThumbnail: boolean;
+  /** Absent means thumbnail controls are not available. Footer owns loading state. */
+  onSetAsThumbnail?: () => Promise<void>;
   /** Passed through from ImageLightbox's footerActions render prop. */
   onCrop?: () => void;
   cropAvailable?: boolean;
-  onSetAsThumbnail?: () => Promise<void>;
-  settingThumbnail: boolean;
-  isCurrentThumbnail: boolean;
 };
 
 /**
  * Footer content rendered inside the ImageLightbox for piece photos.
  *
- * Owns all caption-editing and photo-move state so PiecePhotoGallery only
- * coordinates data flow and route-level navigation. Resets its local state
- * whenever `activeImage` changes (i.e. the user navigates between photos).
+ * Owns caption-editing, photo-move, and thumbnail-setting state so
+ * PiecePhotoGallery only coordinates data flow and route-level navigation.
+ * Resets its local state whenever `activeImage` changes.
  */
 export default function LightboxFooter({
   activeImage,
-  editableCurrentStateImages,
-  editableCurrentStateIndex,
+  onSaveCaption,
   pieceStates,
-  persistCurrentStateImages,
   moveImageFn,
   onPieceUpdated,
-  galleryPath,
-  outerState,
+  onMoveSuccess,
+  isCurrentThumbnail,
+  onSetAsThumbnail,
   onCrop,
   cropAvailable,
-  onSetAsThumbnail: onSetThumb,
-  settingThumbnail,
-  isCurrentThumbnail,
 }: LightboxFooterProps) {
-  const navigate = useNavigate();
   const [captionDraft, setCaptionDraft] = useState(activeImage?.caption ?? "");
   const [captionEditing, setCaptionEditing] = useState(false);
   const [captionSaving, setCaptionSaving] = useState(false);
@@ -72,8 +65,9 @@ export default function LightboxFooter({
   const [moveSaving, setMoveSaving] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
   const [moveMenuAnchor, setMoveMenuAnchor] = useState<HTMLElement | null>(null);
+  const [settingThumbnail, setSettingThumbnail] = useState(false);
 
-  const canEditCaption = editableCurrentStateIndex !== null;
+  const canEditCaption = onSaveCaption !== null;
   const showMoveButton =
     activeImage?.image_id && pieceStates && pieceStates.length > 1;
   const canMove = Boolean(moveImageFn) && !moveSaving;
@@ -93,19 +87,11 @@ export default function LightboxFooter({
   }
 
   async function handleSaveCaption() {
-    if (editableCurrentStateIndex === null) return;
+    if (!onSaveCaption) return;
     setCaptionSaving(true);
     setCaptionSaveError(null);
     try {
-      await persistCurrentStateImages(
-        editableCurrentStateImages.map((image, index) => ({
-          ...image,
-          caption:
-            index === editableCurrentStateIndex
-              ? captionDraft.trim()
-              : image.caption,
-        })),
-      );
+      await onSaveCaption(captionDraft.trim());
       setCaptionEditing(false);
     } catch {
       setCaptionSaveError("Failed to save caption. Please try again.");
@@ -125,11 +111,21 @@ export default function LightboxFooter({
         toStateId,
       );
       onPieceUpdated(updated);
-      navigate(galleryPath, { state: outerState });
+      onMoveSuccess();
     } catch {
       setMoveError("Failed to move photo. Please try again.");
     } finally {
       setMoveSaving(false);
+    }
+  }
+
+  async function handleSetAsThumbnail() {
+    if (!onSetAsThumbnail) return;
+    setSettingThumbnail(true);
+    try {
+      await onSetAsThumbnail();
+    } finally {
+      setSettingThumbnail(false);
     }
   }
 
@@ -228,12 +224,12 @@ export default function LightboxFooter({
           )}
 
           {/* Thumbnail */}
-          {onSetThumb && (
+          {onSetAsThumbnail && (
             <Tooltip title={isCurrentThumbnail ? "Current thumbnail" : "Set as thumbnail"}>
               <span>
                 <IconButton
                   disabled={isCurrentThumbnail || settingThumbnail}
-                  onClick={() => void onSetThumb()}
+                  onClick={() => void handleSetAsThumbnail()}
                   aria-label="Set as thumbnail"
                   sx={{ color: "white" }}
                 >
@@ -264,7 +260,7 @@ export default function LightboxFooter({
         <Typography variant="caption" sx={{ color: "error.light" }}>{moveError}</Typography>
       )}
       <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.55)" }}>
-        {editableCurrentStateIndex !== null ? "Added in current state" : `Added in ${activeImage.stateLabel}`}
+        {canEditCaption ? "Added in current state" : `Added in ${activeImage.stateLabel}`}
       </Typography>
     </Box>
   );
