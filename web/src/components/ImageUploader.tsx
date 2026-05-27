@@ -44,7 +44,6 @@ export default function ImageUploader({
             aria-label="Upload Image"
             onClick={onUploadClick}
             disabled={buttonDisabled}
-            hidden={hidden}
             sx={{
               display: hidden ? "none" : undefined,
               position: "fixed",
@@ -90,7 +89,6 @@ export default function ImageUploader({
             size="small"
             onClick={onUploadClick}
             disabled={buttonDisabled}
-            hidden={hidden}
             startIcon={
               saving ? (
                 <CircularProgress size={14} color="inherit" />

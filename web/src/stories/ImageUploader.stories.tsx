@@ -59,3 +59,10 @@ export const DesktopUploadError: Story = {
     uploadError: "Upload failed. Please try again.",
   },
 };
+
+export const Hidden: Story = {
+  args: {
+    ...Desktop.args,
+    hidden: true,
+  },
+};

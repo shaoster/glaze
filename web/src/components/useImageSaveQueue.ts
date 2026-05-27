@@ -95,7 +95,7 @@ export function useImageSaveQueue({
     ],
   );
 
-  async function handleUploadWidgetClick() {
+  const handleUploadWidgetClick = useCallback(async () => {
     if (readOnly) {
       return;
     }
@@ -187,7 +187,7 @@ export function useImageSaveQueue({
       setWidgetLoading(false);
       cleanupWidgetStyles();
     }
-  }
+  }, [readOnly, saveUploadedImage, theme]);
 
   return {
     uploadError,
