@@ -536,7 +536,6 @@ js_library(
     srcs = [
         "src/components/ImageUploader.tsx",
         "src/components/WorkflowState.tsx",
-        "src/components/useImageSaveQueue.ts",
         "src/components/workflowStateDraft.ts",
     ],
     deps = [
@@ -908,7 +907,6 @@ vitest_test(
     expected_coverage = [
         "web/src/components/ImageUploader*",
         "web/src/components/WorkflowState*",
-        "web/src/components/useImageSaveQueue*",
     ],
 )
 

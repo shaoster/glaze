@@ -223,7 +223,6 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             </Typography>
             <PieceNameEditor
               piece={piece}
-              canEdit={canEdit}
               onPieceUpdated={onPieceUpdated}
             />
             {canEdit ? (

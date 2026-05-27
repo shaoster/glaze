@@ -1,19 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { fn } from "@storybook/test";
 import ImageUploader from "../components/ImageUploader";
+import type { ImageEntry } from "../components/workflowStateDraft";
 
 /**
- * ImageUploader renders the upload trigger for adding photos to a workflow state.
+ * ImageUploader manages the full Cloudinary upload lifecycle and renders the
+ * upload trigger for adding photos to a workflow state.
  *
- * Rationale: Extracted from WorkflowState.tsx (Issue #406) to enable independent
- * testing of desktop vs mobile layouts and the loading/error states.
+ * Rationale: Extracted from WorkflowState.tsx (Issue #406) and refactored to
+ * own its loading/error state rather than receiving it as props.
  *
  * Edge cases:
  * - Mobile FAB: fixed-position floating action button via Portal.
  * - Desktop button: portaled into #piece-upload-trigger on the page.
- * - Saving: spinner in button, text changes to "Saving…".
- * - Widget loading: spinner overlays button text; button is disabled.
- * - Error: error message shown below the trigger.
+ * - Hidden: component is invisible but retains its DOM node (used when readOnly).
  */
 const meta = {
   title: "Components/ImageUploader",
@@ -25,44 +24,34 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const baseArgs = {
+  pieceId: "p1",
+  initialStateId: "s1",
+  notes: "",
+  normalizedCustomFields: {} as Record<string, string | number | boolean | null>,
+  images: [] as ImageEntry[],
+  onSaved: () => {},
+  dispatch: () => {},
+};
+
 export const Desktop: Story = {
   args: {
-    saving: false,
-    widgetLoading: false,
-    uploadError: null,
-    imageError: null,
+    ...baseArgs,
     mobile: false,
-    onUploadClick: fn(),
   },
 };
 
-export const DesktopSaving: Story = {
-  name: "Desktop / Saving",
+export const Mobile: Story = {
   args: {
-    ...Desktop.args,
-    saving: true,
-  },
-};
-
-export const DesktopWidgetLoading: Story = {
-  name: "Desktop / Widget loading",
-  args: {
-    ...Desktop.args,
-    widgetLoading: true,
-  },
-};
-
-export const DesktopUploadError: Story = {
-  name: "Desktop / Upload error",
-  args: {
-    ...Desktop.args,
-    uploadError: "Upload failed. Please try again.",
+    ...baseArgs,
+    mobile: true,
   },
 };
 
 export const Hidden: Story = {
   args: {
-    ...Desktop.args,
+    ...baseArgs,
+    mobile: false,
     hidden: true,
   },
 };

@@ -64,15 +64,13 @@ const basePiece: PieceDetail = {
 export const Default: Story = {
   args: {
     piece: basePiece,
-    canEdit: true,
     onPieceUpdated: fn(),
   },
 };
 
 export const ReadOnly: Story = {
   args: {
-    piece: basePiece,
-    canEdit: false,
+    piece: { ...basePiece, can_edit: false },
     onPieceUpdated: fn(),
   },
 };

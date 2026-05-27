@@ -34,7 +34,6 @@ import {
   normalizeCustomFieldPayload,
 } from "./workflowStateDraft";
 import ImageUploader from "./ImageUploader";
-import { useImageSaveQueue } from "./useImageSaveQueue";
 
 type WorkflowStateProps = {
   initialPieceState: PieceState;
@@ -166,23 +165,6 @@ export default function WorkflowState({
   });
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
 
-  const {
-    uploadError,
-    widgetLoading,
-    savingImage,
-    imageError,
-    handleUploadWidgetClick,
-  } = useImageSaveQueue({
-    pieceId,
-    initialStateId: initialPieceState.id,
-    saveStateFn,
-    notes,
-    normalizedCustomFields,
-    images,
-    onSaved,
-    dispatch,
-    readOnly,
-  });
 
   useEffect(() => {
     pieceDetailSaveStatus?.publishWorkflowStatus({
@@ -394,13 +376,16 @@ export default function WorkflowState({
       )}
 
       <ImageUploader
-        saving={savingImage}
-        widgetLoading={widgetLoading}
-        uploadError={uploadError}
-        imageError={imageError}
+        pieceId={pieceId}
+        initialStateId={initialPieceState.id}
+        saveStateFn={saveStateFn}
+        notes={notes}
+        normalizedCustomFields={normalizedCustomFields}
+        images={images}
+        onSaved={onSaved}
+        dispatch={dispatch}
         mobile={isMobileLayout}
         hidden={readOnly || hideImageUpload}
-        onUploadClick={handleUploadWidgetClick}
       />
     </Box>
   );

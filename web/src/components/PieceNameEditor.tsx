@@ -10,7 +10,6 @@ import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
 
 type PieceNameEditorProps = {
   piece: PieceDetail;
-  canEdit: boolean;
   onPieceUpdated: (updated: PieceDetail) => void;
 };
 
@@ -22,9 +21,9 @@ type PieceNameEditorProps = {
  */
 export default function PieceNameEditor({
   piece,
-  canEdit,
   onPieceUpdated,
 }: PieceNameEditorProps) {
+  const canEdit = piece.can_edit;
   const theme = useTheme();
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
   const [editingName, setEditingName] = useState(false);
