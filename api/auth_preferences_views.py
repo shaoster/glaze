@@ -27,6 +27,7 @@ ALLOWED_USER_PROFILE_FIELDS = {"alias"}
 @permission_classes([IsAuthenticated])
 @traced
 def auth_preferences(request: Request) -> Response:
+    """Return or update the current user's saved preferences."""
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
     if request.method == "GET":
         return Response(

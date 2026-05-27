@@ -184,4 +184,5 @@ def auth_google_impl(
 @permission_classes([AllowAny])
 @traced
 def auth_google(request: Request) -> Response:
+    """Exchange a Google OAuth code and log the user in."""
     return auth_google_impl(request)

@@ -34,6 +34,7 @@ _DEFAULT_PAGE_SIZE = 16
 
 @traced
 def piece_queryset(request: Request):
+    """Return the authenticated user's piece queryset."""
     user_id = request.user.id
     assert user_id is not None
     return (
@@ -43,7 +44,9 @@ def piece_queryset(request: Request):
     )
 
 
+@traced
 def piece_read_queryset(request: Request):
+    """Return the queryset for pieces visible to the current request."""
     qs = Piece.objects.select_related("current_location", "thumbnail").prefetch_related(
         "states", "tag_links__tag"
     )
@@ -54,7 +57,9 @@ def piece_read_queryset(request: Request):
     return qs.filter(shared=True, is_editable=False)
 
 
+@traced
 def piece_state_ref_prefetches() -> list[Prefetch]:
+    """Build Prefetch objects for workflow global refs on piece states."""
     prefetches: list[Prefetch] = []
     for global_name in get_state_global_ref_map():
         config = get_global_config(global_name)
@@ -74,6 +79,7 @@ def piece_state_ref_prefetches() -> list[Prefetch]:
 
 @traced
 def piece_detail_queryset(request: Request):
+    """Return the queryset needed to serialize full piece detail."""
     return piece_read_queryset(request).prefetch_related(
         "states__image_links__image", *piece_state_ref_prefetches()
     )
@@ -81,16 +87,19 @@ def piece_detail_queryset(request: Request):
 
 @traced
 def serialize_piece_detail(piece: Piece, request: Request):
+    """Serialize a single piece into the detail payload."""
     return PieceDetailSerializer(piece, context={"request": request}).data
 
 
 @traced
 def serialize_piece_summary(qs, request: Request):
+    """Serialize a piece queryset into summary rows."""
     return PieceSummarySerializer(qs, many=True, context={"request": request}).data
 
 
 @traced
 def apply_piece_ordering(qs, ordering_param: str):
+    """Apply the requested piece ordering to a queryset."""
     db_ordering = _PIECE_ORDERING_MAP.get(
         ordering_param, _PIECE_ORDERING_MAP[_DEFAULT_ORDERING]
     )
@@ -112,7 +121,9 @@ def apply_piece_ordering(qs, ordering_param: str):
     return qs.order_by(db_ordering)
 
 
+@traced
 def piece_photo_counts(piece_ids: list[UUID]) -> dict[UUID, int]:
+    """Return photo counts keyed by piece ID."""
     if not piece_ids:
         return {}
     rows = (

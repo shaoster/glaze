@@ -8,8 +8,6 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from backend.otel import traced
-
 from .models import FavoriteGlazeCombination, GlazeCombination
 from .serializer_registry import _GLOBAL_ENTRY_SERIALIZERS
 from .workflow import get_global_model_and_field, is_private_global, is_public_global
@@ -66,7 +64,6 @@ def _apply_global_filters(qs, model_cls, request):
     return qs
 
 
-@traced
 def _global_entries_impl(request: Request, global_name: str) -> Response:
     """Core implementation for GET/POST /api/globals/<global_name>/."""
     return _global_entries_impl_with_resolvers(
@@ -227,7 +224,6 @@ def _global_entries_impl_with_resolvers(
     )
 
 
-@traced
 def _global_entry_favorite_impl(
     request: Request, model_cls, fav_model_cls, pk: str
 ) -> Response:

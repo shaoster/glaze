@@ -92,6 +92,7 @@ def piece_image_detail(request: Request, image_id, piece_state_id):
 @permission_classes([IsAuthenticated])
 @traced
 def patch_image_crop(request, image_id):
+    """Update the crop metadata for the most recent piece-state image link."""
     image = get_object_or_404(Image, pk=image_id, user=request.user)
     serializer = ImageCropSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)

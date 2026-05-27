@@ -9,6 +9,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from backend.otel import traced
+
 from .global_entry_logic import (
     _FAVORITES_REGISTRY,
     _GLOBAL_CREATE_REQUEST_SCHEMA,
@@ -57,6 +59,7 @@ def make_global_entry_view(global_name: str):
     )
     @api_view(["GET", "POST"])
     @permission_classes([IsAuthenticated])
+    @traced
     def view(request: Request) -> Response:
         return _global_entries_impl(request, global_name)
 
@@ -76,6 +79,7 @@ def make_global_entry_favorite_view(global_name: str):
     @extend_schema(methods=["DELETE"], request=None, responses={204: None, 404: None})
     @api_view(["POST", "DELETE"])
     @permission_classes([IsAuthenticated])
+    @traced
     def view(request: Request, pk: str) -> Response:
         return _global_entry_favorite_impl(request, model_cls, fav_model_cls, pk)
 

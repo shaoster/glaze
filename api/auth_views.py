@@ -31,7 +31,8 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
-from .auth_account_views import _delete_account_impl, auth_export
+from .auth_account_views import _delete_account_impl
+from .auth_export_views import auth_export
 from .auth_google_views import (
     _exchange_google_auth_code,
     _verify_google_id_token,
@@ -84,7 +85,9 @@ logger = logging.getLogger(__name__)
 @ensure_csrf_cookie
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@traced
 def csrf(request: Request) -> Response:
+    """Set the CSRF cookie for browser clients."""
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -97,6 +100,7 @@ def csrf(request: Request) -> Response:
 @permission_classes([IsAuthenticated])
 @traced
 def auth_logout(request: Request) -> Response:
+    """Log out the current session."""
     logout(request)
     return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -116,6 +120,7 @@ def auth_logout(request: Request) -> Response:
 @permission_classes([IsAuthenticated])
 @traced
 def auth_delete_account(request: Request) -> Response:
+    """Delete the current account and invalidate the session first."""
     return _delete_account_impl(request, logout_fn=logout)
 
 
@@ -138,6 +143,7 @@ def auth_delete_account(request: Request) -> Response:
 @permission_classes([AllowAny])
 @traced
 def auth_me(request: Request) -> Response:
+    """Return bootstrap app state and the current user if authenticated."""
     client_id = settings.GOOGLE_OAUTH_CLIENT_ID
     if not client_id:
         return Response(
@@ -176,6 +182,7 @@ def auth_me(request: Request) -> Response:
 @permission_classes([AllowAny])
 @traced
 def auth_google(request: Request) -> Response:
+    """Exchange a Google OAuth code and log the user in."""
     return auth_google_impl(
         request,
         exchange_auth_code=_exchange_google_auth_code,

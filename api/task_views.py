@@ -70,6 +70,7 @@ from .workflow import (
 @permission_classes([IsAdminUser])
 @traced
 def submit_task(request: Request) -> Response:
+    """Queue a background task for asynchronous processing."""
     from .tasks import get_task_interface
 
     serializer = TaskSubmissionSerializer(data=request.data)
@@ -95,6 +96,7 @@ def submit_task(request: Request) -> Response:
 @permission_classes([IsAdminUser])
 @traced
 def task_detail(request: Request, task_id: str) -> Response:
+    """Fetch a submitted task by ID for the current admin user."""
     # Scope to current user to prevent leaking task state between accounts.
     task = get_object_or_404(AsyncTask, id=task_id, user=request.user)
     return Response(AsyncTaskSerializer(task).data)

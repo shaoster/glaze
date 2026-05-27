@@ -6,7 +6,10 @@ import os
 
 from django.conf import settings
 
+from backend.otel import traced
 
+
+@traced
 def bootstrap_dev_user(user, count: int | None = None) -> None:
     """Make a fresh DEBUG-only account immediately usable in local development.
 

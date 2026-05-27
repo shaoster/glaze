@@ -25,6 +25,8 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from backend.otel import traced
+
 from .dev_bootstrap import bootstrap_dev_user
 from .models import (
     AsyncTask,
@@ -91,7 +93,9 @@ _READINESS_CHECKS: tuple[str, ...] = ("database", "migrations", "async_tasks")
 @extend_schema(exclude=True)
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@traced
 def health_ready(request: Request) -> Response:
+    """Return readiness status for database, migrations, and async tasks."""
     checks: dict[str, bool] = {}
     for name in _READINESS_CHECKS:
         check: Callable[[], bool] = globals()[f"_check_{name}"]

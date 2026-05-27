@@ -22,6 +22,7 @@ from .models import InviteCode
 @permission_classes([AllowAny])
 @traced
 def validate_invite(request: Request) -> Response:
+    """Validate a user-supplied invite code."""
     code_value = request.data.get("code", "")
     if not code_value:
         return Response(
@@ -66,6 +67,7 @@ def _get_or_create_active_invite_code() -> InviteCode:
 @permission_classes([IsAdminUser])
 @traced
 def staff_invite_code(request: Request) -> Response:
+    """Return or create the active staff invite code."""
     if request.method == "POST":
         invite = InviteCode.objects.create()
     else:

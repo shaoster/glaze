@@ -25,6 +25,8 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from backend.otel import traced
+
 from .dev_bootstrap import bootstrap_dev_user
 from .models import (
     AsyncTask,
@@ -74,7 +76,9 @@ from .workflow import (
 @api_view(["POST"])
 @permission_classes([IsAdminUser])
 @parser_classes([MultiPartParser, FormParser])
+@traced
 def admin_manual_square_crop_import(request: Request) -> Response:
+    """Import reviewed manual square crop records from a multipart payload."""
     from .manual_tile_imports import import_manual_tile_records
 
     payload_raw = request.data.get("payload", "")

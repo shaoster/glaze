@@ -127,6 +127,7 @@ _serialize_piece_summary = serialize_piece_summary
 @permission_classes([IsAuthenticated])
 @traced
 def pieces(request: Request) -> Response:
+    """List the current user's pieces or create a new one."""
     if request.method == "GET":
         qs = _piece_queryset(request)
         raw_tag_ids = request.query_params.get("tag_ids", "").strip()
@@ -182,6 +183,7 @@ def pieces(request: Request) -> Response:
 @permission_classes([AllowAny])
 @traced
 def piece_detail(request: Request, piece_id: str) -> Response:
+    """Retrieve or update a single piece."""
     if request.method == "GET":
         piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
         return Response(_serialize_piece_detail(piece, request))
@@ -214,6 +216,7 @@ def piece_detail(request: Request, piece_id: str) -> Response:
 @permission_classes([IsAuthenticated])
 @traced
 def piece_states(request: Request, piece_id: str) -> Response:
+    """Advance a piece into a new workflow state."""
     piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
     serializer = PieceStateCreateSerializer(data=request.data, context={"piece": piece})
     serializer.is_valid(raise_exception=True)
@@ -233,6 +236,7 @@ def piece_states(request: Request, piece_id: str) -> Response:
 @permission_classes([IsAuthenticated])
 @traced
 def piece_current_state_detail(request: Request, piece_id: str) -> Response:
+    """Return the current state object for a piece."""
     piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
     current = piece.current_state
     if current is None:
@@ -252,6 +256,7 @@ def piece_current_state_detail(request: Request, piece_id: str) -> Response:
 @permission_classes([IsAuthenticated])
 @traced
 def piece_current_state(request: Request, piece_id: str) -> Response:
+    """Update the current mutable state for a piece."""
     piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
     current = piece.current_state
     if current is None:
