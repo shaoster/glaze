@@ -6,6 +6,7 @@ from django.apps import apps
 from django.db.models import (
     Count,
     DateTimeField,
+    JSONField,
     OuterRef,
     Prefetch,
     Q,
@@ -32,6 +33,19 @@ _DEFAULT_ORDERING = "-last_modified"
 _DEFAULT_PAGE_SIZE = 16
 
 
+def _thumbnail_crop_subquery():
+    return Subquery(
+        PieceStateImage.objects.filter(
+            piece_state__piece=OuterRef("pk"),
+            image_id=OuterRef("thumbnail_id"),
+            crop__isnull=False,
+        )
+        .order_by("-pk")
+        .values("crop")[:1],
+        output_field=JSONField(),
+    )
+
+
 @traced
 def piece_queryset(request: Request):
     """Return the authenticated user's piece queryset."""
@@ -39,6 +53,7 @@ def piece_queryset(request: Request):
     assert user_id is not None
     return (
         Piece.objects.select_related("current_location", "thumbnail")
+        .annotate(thumbnail_crop=_thumbnail_crop_subquery())
         .prefetch_related("states", "tag_links__tag")
         .filter(user_id=user_id)
     )
@@ -47,8 +62,10 @@ def piece_queryset(request: Request):
 @traced
 def piece_read_queryset(request: Request):
     """Return the queryset for pieces visible to the current request."""
-    qs = Piece.objects.select_related("current_location", "thumbnail").prefetch_related(
-        "states", "tag_links__tag"
+    qs = (
+        Piece.objects.select_related("current_location", "thumbnail")
+        .annotate(thumbnail_crop=_thumbnail_crop_subquery())
+        .prefetch_related("states", "tag_links__tag")
     )
     if request.user.is_authenticated:
         # Editable pieces are inaccessible to non-owners even when shared=True,

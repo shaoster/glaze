@@ -14,6 +14,7 @@ from django.db import transaction
 from django.db.models import (
     Count,
     DateTimeField,
+    JSONField,
     Max,
     OuterRef,
     Prefetch,
@@ -91,20 +92,36 @@ class PieceImageMoveSerializer(drf_serializers.Serializer):
     piece_state_id = drf_serializers.UUIDField(required=False)
 
 
+def _thumbnail_crop_subquery():
+    return Subquery(
+        PieceStateImage.objects.filter(
+            piece_state__piece=OuterRef("pk"),
+            image_id=OuterRef("thumbnail_id"),
+            crop__isnull=False,
+        )
+        .order_by("-pk")
+        .values("crop")[:1],
+        output_field=JSONField(),
+    )
+
+
 @traced
 def _piece_queryset(request: Request):
     user_id = request.user.id
     assert user_id is not None
     return (
         Piece.objects.select_related("current_location", "thumbnail")
+        .annotate(thumbnail_crop=_thumbnail_crop_subquery())
         .prefetch_related("states", "tag_links__tag")
         .filter(user_id=user_id)
     )
 
 
 def _piece_read_queryset(request: Request):
-    qs = Piece.objects.select_related("current_location", "thumbnail").prefetch_related(
-        "states", "tag_links__tag"
+    qs = (
+        Piece.objects.select_related("current_location", "thumbnail")
+        .annotate(thumbnail_crop=_thumbnail_crop_subquery())
+        .prefetch_related("states", "tag_links__tag")
     )
     if request.user.is_authenticated:
         # Editable pieces are inaccessible to non-owners even when shared=True,
