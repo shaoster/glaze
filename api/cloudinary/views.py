@@ -1,4 +1,3 @@
-# ruff: noqa: F401
 import hashlib
 import os
 

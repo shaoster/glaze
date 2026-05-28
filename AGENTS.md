@@ -35,6 +35,7 @@ command fails. State any deviation explicitly.
 - Public library objects (`user=NULL`) are managed via Django admin only — regular API users cannot create, edit, or delete them
 - `POST /api/pieces/` always initializes a piece in the `designed` state
 - State names and transitions must be derived from `workflow.yml` on both backend and frontend
+- Never add file-level noqa comments like `# ruff: noqa: F401` to Python files. Unused imports must always be removed, or if they are intended to be exposed as public module APIs, listed in the module's `__all__` list to ensure they are preserved by linters.
 
 ## Scope Limits — Ask Before Acting
 
