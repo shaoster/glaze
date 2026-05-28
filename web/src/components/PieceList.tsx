@@ -494,22 +494,9 @@ const PieceList = (props: PieceListProps) => {
   }, [activeFilters, activeTagIds, activeTags]);
 
   const hasActiveFilters = activeFilters.length > 0 || activeTagIds.length > 0;
-
-  // Detect changes that invalidate existing item positions: sort, filter, and
-  // non-append mutations such as the prepend done by handleCreated. A pure
-  // pagination append (items grow from the end, existing order preserved) does
-  // NOT increment the counter so the positioner is reused without a flash.
-  const prevFilteredIdsRef = useRef<string[]>([]);
-  const positionerResetCounterRef = useRef(0);
-  const currentFilteredIds = filteredPieces.map((p) => p.id);
-  const isPureAppend =
-    currentFilteredIds.length >= prevFilteredIdsRef.current.length &&
-    prevFilteredIdsRef.current.every((id, i) => currentFilteredIds[i] === id);
-  if (!isPureAppend) positionerResetCounterRef.current++;
-  prevFilteredIdsRef.current = currentFilteredIds;
-
-  // usePositioner resets only when the counter or layout opts change.
-  // Pagination appends leave the counter unchanged so existing positions survive.
+  // usePositioner resets only when its deps (sort/filter keys) or layout opts change.
+  // Pagination appends change neither, so the positioner is reused and existing
+  // item positions are preserved — eliminating the full re-layout flash.
   const positioner = usePositioner(
     {
       width: masonryWidth,
@@ -520,7 +507,7 @@ const PieceList = (props: PieceListProps) => {
         ? MASONRY_MAX_COLUMNS_MOBILE
         : MASONRY_MAX_COLUMNS_DESKTOP,
     },
-    [positionerResetCounterRef.current],
+    [sortOrder ?? "", activeFilters.join(","), activeTagIds.join(",")],
   );
 
   // Seed crop heights for unpositioned items only. On a pure append the existing
