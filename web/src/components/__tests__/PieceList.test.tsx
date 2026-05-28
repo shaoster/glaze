@@ -1166,6 +1166,34 @@ describe("PieceList", () => {
     });
   });
 
+  describe("scroll sentinel", () => {
+    it("does not call onLoadMore before the masonry container has a measured width", () => {
+      // Regression for #734 Bug 1: when hasMore=true, check() fires immediately on
+      // mount. At that moment masonryWidth=0 (ResizeObserver not yet fired), so the
+      // sentinel sits at top≈0 and onLoadMore fires before any cards are visible.
+      // The fix adds masonryWidth to the effect deps and returns early when it is 0.
+      mockContainerPosition.width = 0;
+      const onLoadMore = vi.fn();
+      const router = createMemoryRouter(
+        [
+          {
+            path: "/",
+            element: (
+              <PieceList
+                pieces={[makePiece()]}
+                onLoadMore={onLoadMore}
+                hasMore
+              />
+            ),
+          },
+        ],
+        { initialEntries: ["/"] },
+      );
+      render(<RouterProvider router={router} />);
+      expect(onLoadMore).not.toHaveBeenCalled();
+    });
+  });
+
   describe("loading states", () => {
     it("dims the existing list during replace-style refreshes", () => {
       const router = createMemoryRouter(
