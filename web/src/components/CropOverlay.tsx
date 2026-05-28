@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useReducer, useMemo } from "react";
 import { Alert, Box, Button, CircularProgress } from "@mui/material";
-import { useAsync } from "../util/useAsync";
 import { Cloudinary } from "@cloudinary/url-gen";
 import { format } from "@cloudinary/url-gen/actions/delivery";
 import { auto as autoFormat } from "@cloudinary/url-gen/qualifiers/format";
+import Cropper from "react-easy-crop";
+import type { Area } from "react-easy-crop";
 import type { ImageCrop } from "../util/types";
 
 interface CropOverlayProps {
@@ -14,17 +15,6 @@ interface CropOverlayProps {
   onCancel: () => void;
 }
 
-type Handle =
-  | "nw"
-  | "n"
-  | "ne"
-  | "w"
-  | "e"
-  | "sw"
-  | "s"
-  | "se"
-  | "move";
-
 function buildUncroppedUrl(publicId: string, cloudName: string): string {
   const cld = new Cloudinary({ cloud: { cloudName } });
   const img = cld.image(publicId);
@@ -32,85 +22,52 @@ function buildUncroppedUrl(publicId: string, cloudName: string): string {
   return img.toURL();
 }
 
-function handleCursor(h: Handle): string {
-  const map: Record<Handle, string> = {
-    nw: "nwse-resize",
-    ne: "nesw-resize",
-    sw: "nesw-resize",
-    se: "nwse-resize",
-    n: "ns-resize",
-    s: "ns-resize",
-    e: "ew-resize",
-    w: "ew-resize",
-    move: "move",
+const DEFAULT_IMAGE_CROP: ImageCrop = { x: 0, y: 0, width: 1, height: 1 };
+
+function toImageCrop(area: Area): ImageCrop {
+  return {
+    x: area.x / 100,
+    y: area.y / 100,
+    width: area.width / 100,
+    height: area.height / 100,
   };
-  return map[h];
 }
 
-function clamp(v: number, lo: number, hi: number) {
-  return Math.max(lo, Math.min(hi, v));
-}
+type State = {
+  imageLoading: boolean;
+  crop: { x: number; y: number };
+  zoom: number;
+  committedCrop: ImageCrop;
+  saving: boolean;
+  saveError: string | null;
+};
 
-function applyCropDelta(
-  base: ImageCrop,
-  handle: Handle,
-  dx: number,
-  dy: number,
-): ImageCrop {
-  let { x, y, width: w, height: h } = base;
-  const MIN = 0.02;
-  switch (handle) {
-    case "move":
-      x = clamp(x + dx, 0, 1 - w);
-      y = clamp(y + dy, 0, 1 - h);
-      break;
-    case "nw": {
-      const nx = clamp(x + dx, 0, x + w - MIN);
-      const ny = clamp(y + dy, 0, y + h - MIN);
-      w += x - nx;
-      h += y - ny;
-      x = nx;
-      y = ny;
-      break;
-    }
-    case "ne": {
-      w = clamp(w + dx, MIN, 1 - x);
-      const ny = clamp(y + dy, 0, y + h - MIN);
-      h += y - ny;
-      y = ny;
-      break;
-    }
-    case "sw": {
-      const nx = clamp(x + dx, 0, x + w - MIN);
-      w += x - nx;
-      x = nx;
-      h = clamp(h + dy, MIN, 1 - y);
-      break;
-    }
-    case "se":
-      w = clamp(w + dx, MIN, 1 - x);
-      h = clamp(h + dy, MIN, 1 - y);
-      break;
-    case "n": {
-      const ny = clamp(y + dy, 0, y + h - MIN);
-      h += y - ny;
-      y = ny;
-      break;
-    }
-    case "s":
-      h = clamp(h + dy, MIN, 1 - y);
-      break;
-    case "w": {
-      const nx = clamp(x + dx, 0, x + w - MIN);
-      w += x - nx;
-      x = nx;
-      break;
-    }
-    case "e":
-      w = clamp(w + dx, MIN, 1 - x);
-      break;
+type Action =
+  | { type: "IMAGE_LOADED" }
+  | { type: "CROP_CHANGE"; crop: { x: number; y: number } }
+  | { type: "ZOOM_CHANGE"; zoom: number }
+  | { type: "CROP_COMPLETE"; area: Area }
+  | { type: "SAVE_START" }
+  | { type: "SAVE_SUCCESS" }
+  | { type: "SAVE_ERROR"; error: string };
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "IMAGE_LOADED":
+      return { ...state, imageLoading: false };
+    case "CROP_CHANGE":
+      return { ...state, crop: action.crop };
+    case "ZOOM_CHANGE":
+      return { ...state, zoom: action.zoom };
+    case "CROP_COMPLETE":
+      return { ...state, committedCrop: toImageCrop(action.area) };
+    case "SAVE_START":
+      return { ...state, saving: true, saveError: null };
+    case "SAVE_SUCCESS":
+      return { ...state, saving: false };
+    case "SAVE_ERROR":
+      return { ...state, saving: false, saveError: action.error };
   }
-  return { x, y, width: w, height: h };
 }
 
 export default function CropOverlay({
@@ -120,184 +77,32 @@ export default function CropOverlay({
   onSave,
   onCancel,
 }: CropOverlayProps) {
-  const defaultCrop: ImageCrop = initialCrop ?? {
-    x: 0,
-    y: 0,
-    width: 1,
-    height: 1,
-  };
-  const [crop, setCrop] = useState<ImageCrop>(defaultCrop);
-  const [imgRect, setImgRect] = useState<DOMRect | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
-  const dragRef = useRef<{
-    handle: Handle;
-    startX: number;
-    startY: number;
-    startCrop: ImageCrop;
-  } | null>(null);
+  const [state, dispatch] = useReducer(reducer, {
+    imageLoading: true,
+    crop: { x: 0, y: 0 },
+    zoom: 1,
+    committedCrop: initialCrop ?? DEFAULT_IMAGE_CROP,
+    saving: false,
+    saveError: null,
+  });
 
   const url = useMemo(
     () => buildUncroppedUrl(cloudinaryPublicId, cloudName),
     [cloudinaryPublicId, cloudName],
   );
 
-  const { loading: imageLoading } = useAsync<void>(
-    useCallback(
-      () =>
-        new Promise<void>((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve();
-          img.onerror = () => reject(new Error("Failed to load image"));
-          img.src = url;
-        }),
-      [url],
-    ),
-  );
-
-  const updateRect = useCallback(() => {
-    if (imgRef.current) setImgRect(imgRef.current.getBoundingClientRect());
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener("resize", updateRect);
-    return () => window.removeEventListener("resize", updateRect);
-  }, [updateRect]);
-
-  function toPx(n: ImageCrop, rect: DOMRect) {
-    return {
-      x: rect.left + n.x * rect.width,
-      y: rect.top + n.y * rect.height,
-      w: n.width * rect.width,
-      h: n.height * rect.height,
-    };
-  }
-
-  useEffect(() => {
-    function applyMove(clientX: number, clientY: number) {
-      if (!dragRef.current || !imgRect) return;
-      const { handle, startX, startY, startCrop } = dragRef.current;
-      const dx = (clientX - startX) / imgRect.width;
-      const dy = (clientY - startY) / imgRect.height;
-      setCrop(applyCropDelta(startCrop, handle, dx, dy));
-    }
-    function onMouseMove(e: MouseEvent) { applyMove(e.clientX, e.clientY); }
-    function onMouseUp() { dragRef.current = null; }
-    function onTouchMove(e: TouchEvent) {
-      e.preventDefault();
-      applyMove(e.touches[0].clientX, e.touches[0].clientY);
-    }
-    function onTouchEnd() { dragRef.current = null; }
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-    document.addEventListener("touchmove", onTouchMove, { passive: false });
-    document.addEventListener("touchend", onTouchEnd);
-    return () => {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-      document.removeEventListener("touchmove", onTouchMove);
-      document.removeEventListener("touchend", onTouchEnd);
-    };
-  }, [imgRect]);
-
-  function startDrag(handle: Handle, e: React.MouseEvent | React.TouchEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    dragRef.current = { handle, startX: clientX, startY: clientY, startCrop: crop };
-  }
-
   async function handleSave() {
-    setSaving(true);
-    setSaveError(null);
+    dispatch({ type: "SAVE_START" });
     try {
-      await onSave(crop);
+      await onSave(state.committedCrop);
+      dispatch({ type: "SAVE_SUCCESS" });
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Save failed");
-    } finally {
-      setSaving(false);
+      dispatch({
+        type: "SAVE_ERROR",
+        error: e instanceof Error ? e.message : "Save failed",
+      });
     }
   }
-
-  const HANDLE_R = 6;
-  const overlay = imgRect
-    ? (() => {
-        const { x: px, y: py, w: pw, h: ph } = toPx(crop, imgRect);
-        const handles: { id: Handle; cx: number; cy: number }[] = [
-          { id: "nw", cx: px, cy: py },
-          { id: "n", cx: px + pw / 2, cy: py },
-          { id: "ne", cx: px + pw, cy: py },
-          { id: "w", cx: px, cy: py + ph / 2 },
-          { id: "e", cx: px + pw, cy: py + ph / 2 },
-          { id: "sw", cx: px, cy: py + ph },
-          { id: "s", cx: px + pw / 2, cy: py + ph },
-          { id: "se", cx: px + pw, cy: py + ph },
-        ];
-        const MASK_ALPHA = 0.55;
-        const W = window.innerWidth;
-        const H = window.innerHeight;
-        return (
-          <svg
-            style={{
-              position: "fixed",
-              inset: 0,
-              width: "100vw",
-              height: "100vh",
-              pointerEvents: "none",
-              touchAction: "none",
-              zIndex: 1,
-            }}
-            viewBox={`0 0 ${W} ${H}`}
-          >
-            <rect
-              x={0}
-              y={0}
-              width={W}
-              height={H}
-              fill={`rgba(0,0,0,${MASK_ALPHA})`}
-            />
-            <rect x={px} y={py} width={pw} height={ph} fill="transparent" />
-            <rect
-              x={px}
-              y={py}
-              width={pw}
-              height={ph}
-              fill="none"
-              stroke="white"
-              strokeWidth={1.5}
-            />
-            <rect
-              x={px}
-              y={py}
-              width={pw}
-              height={ph}
-              fill="transparent"
-              style={{ pointerEvents: "all", cursor: "move" }}
-              onMouseDown={(e) => startDrag("move", e)}
-              onTouchStart={(e) => startDrag("move", e)}
-            />
-            {handles.map(({ id, cx, cy }) => (
-              <circle
-                key={id}
-                cx={cx}
-                cy={cy}
-                r={HANDLE_R * 2}
-                fill="white"
-                stroke="#555"
-                strokeWidth={1}
-                role="button"
-                aria-label={`Resize ${id}`}
-                style={{ pointerEvents: "all", cursor: handleCursor(id) }}
-                onMouseDown={(e) => startDrag(id, e)}
-                onTouchStart={(e) => startDrag(id, e)}
-              />
-            ))}
-          </svg>
-        );
-      })()
-    : null;
 
   return (
     <Box
@@ -308,13 +113,19 @@ export default function CropOverlay({
         gap: 1,
       }}
     >
-      <Box sx={{ position: "relative" }}>
-        {imageLoading ? (
+      <Box
+        sx={{
+          position: "relative",
+          width: "90vw",
+          maxWidth: 800,
+          height: "70vh",
+        }}
+      >
+        {state.imageLoading && (
           <Box
             sx={{
-              width: "90vw",
-              maxWidth: 800,
-              height: "60vh",
+              width: "100%",
+              height: "100%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -322,34 +133,31 @@ export default function CropOverlay({
           >
             <CircularProgress sx={{ color: "white" }} />
           </Box>
-        ) : (
-          <>
-            <img
-              ref={imgRef}
-              src={url}
-              onLoad={updateRect}
-              style={{
-                maxWidth: "90vw",
-                maxHeight: "70vh",
-                objectFit: "contain",
-                display: "block",
-              }}
-              alt="Crop editor"
-            />
-            {overlay}
-          </>
         )}
+        <Cropper
+          image={url}
+          crop={state.crop}
+          zoom={state.zoom}
+          onCropChange={(crop) => dispatch({ type: "CROP_CHANGE", crop })}
+          onZoomChange={(zoom) => dispatch({ type: "ZOOM_CHANGE", zoom })}
+          onCropComplete={(_croppedArea, croppedAreaPixels) => {
+            // croppedArea is percentages (0-100); convert to 0-1 fractions
+            dispatch({ type: "CROP_COMPLETE", area: _croppedArea });
+            void croppedAreaPixels; // pixels not needed for ImageCrop
+          }}
+          onMediaLoaded={() => dispatch({ type: "IMAGE_LOADED" })}
+        />
       </Box>
-      {saveError && (
+      {state.saveError && (
         <Alert severity="error" sx={{ maxWidth: "90vw", position: "relative", zIndex: 2 }}>
-          {saveError}
+          {state.saveError}
         </Alert>
       )}
       <Box sx={{ display: "flex", gap: 1, mt: 1, position: "relative", zIndex: 2 }}>
         <Button
           variant="outlined"
           onClick={onCancel}
-          disabled={saving}
+          disabled={state.saving}
           sx={{ color: "white", borderColor: "rgba(255,255,255,0.5)" }}
         >
           Cancel
@@ -357,9 +165,9 @@ export default function CropOverlay({
         <Button
           variant="contained"
           onClick={() => void handleSave()}
-          disabled={saving || imageLoading}
+          disabled={state.saving || state.imageLoading}
         >
-          {saving ? <CircularProgress size={18} /> : "Save Crop"}
+          {state.saving ? <CircularProgress size={18} /> : "Save Crop"}
         </Button>
       </Box>
     </Box>

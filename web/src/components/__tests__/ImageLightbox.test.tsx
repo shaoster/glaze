@@ -17,10 +17,11 @@ vi.mock("../CloudinaryImage", async (importOriginal) => {
   };
 });
 
-// CropOverlay uses useAsync to preload images; skip network in tests.
-vi.mock("../../util/useAsync", () => ({
-  useAsync: () => ({ loading: false, error: null, value: undefined }),
-  useAsyncFn: () => [{ loading: false, error: null }, vi.fn()],
+vi.mock("react-easy-crop", () => ({
+  default: ({ onMediaLoaded }: any) => {
+    onMediaLoaded?.({ naturalWidth: 100, naturalHeight: 100 });
+    return <div data-testid="mock-cropper" />;
+  },
 }));
 
 import ImageLightbox from "../ImageLightbox";
@@ -426,7 +427,7 @@ describe("ImageLightbox", () => {
       );
       fireEvent.click(screen.getByLabelText("Edit crop"));
       await waitFor(() => {
-        expect(screen.getByAltText("Crop editor")).toBeInTheDocument();
+        expect(screen.getByTestId("mock-cropper")).toBeInTheDocument();
       });
     });
   });
