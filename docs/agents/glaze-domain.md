@@ -18,6 +18,8 @@ The app has two parts:
 - **Web** (`/web/`): React 19 + TypeScript + Vite + Material UI
 - **Remote ML** (`/services/piece_image_segment_service.py`): Optional serverless offload via Modal.com
 
+Within `/api/`, helper modules that expose reusable logic are treated as public contracts: their functions should be documented, tested directly, and traced so refactors keep the behavior observable.
+
 ---
 
 ## Remote ML Offloading

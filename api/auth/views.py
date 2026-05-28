@@ -1,3 +1,10 @@
+"""Compatibility wrappers for auth endpoints.
+
+Public wrapper functions in this module are traced so the stable import surface
+remains observable even while implementation details move into feature
+subpackages.
+"""
+
 # ruff: noqa: F401
 import hashlib
 import json
@@ -79,6 +86,7 @@ logger = logging.getLogger(__name__)
 @ensure_csrf_cookie
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@traced
 def csrf(request: Request) -> Response:
     """Return the CSRF cookie used by browser clients before mutating requests."""
     return Response(status=status.HTTP_204_NO_CONTENT)

@@ -1,4 +1,8 @@
-"""Data assembly helpers for the user export endpoint."""
+"""Data assembly helpers for the user export endpoint.
+
+Public helper entry points in this module are traced so export assembly stays
+observable as a documented contract.
+"""
 
 import json
 from typing import Any
@@ -6,10 +10,13 @@ from typing import Any
 from django.db.models import Q
 from rest_framework.request import Request
 
+from backend.otel import traced
+
 from ..models import Image, Piece, UserProfile
 from ..serializers import PieceDetailSerializer
 
 
+@traced
 def collect_export_data(user: Any, request: Request) -> tuple[str, str, list[Image]]:
     """Assemble the JSON payloads and referenced images for a user export."""
     pieces = (

@@ -434,6 +434,7 @@ def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response
 )
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
+@traced
 def piece_image_detail(request, image_id, piece_state_id):
     """Move a user-owned PieceStateImage link to a different state atomically."""
     image = get_object_or_404(Image, pk=image_id, user=request.user)
@@ -483,6 +484,7 @@ def piece_image_detail(request, image_id, piece_state_id):
 @extend_schema(request=ImageCropSerializer, responses=PieceDetailSerializer)
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
+@traced
 def patch_image_crop(request, image_id):
     """Update the crop metadata for a piece image."""
     image = get_object_or_404(Image, pk=image_id, user=request.user)

@@ -1,4 +1,8 @@
-"""ZIP streaming helpers for the user export endpoint."""
+"""ZIP streaming helpers for the user export endpoint.
+
+Public helper entry points in this module are traced so archive-building work
+remains observable as a documented contract.
+"""
 
 import logging
 import posixpath
@@ -9,12 +13,15 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import httpx
 
+from backend.otel import traced
+
 from ..cloudinary_cleanup import _StreamingZipBuffer
 from ..models import Image
 
 logger = logging.getLogger(__name__)
 
 
+@traced
 def export_image_name(image: Image) -> str:
     """Return the ZIP member path for an exported Cloudinary image."""
     public_id = cast(str, image.cloudinary_public_id)
@@ -23,6 +30,7 @@ def export_image_name(image: Image) -> str:
     return f"images/{sanitized}{ext}"
 
 
+@traced
 async def stream_export_archive(
     pieces_json: str, profile_json: str, images: list[Image]
 ) -> AsyncIterator[bytes]:

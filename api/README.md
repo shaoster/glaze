@@ -50,7 +50,7 @@ Endpoint logic now lives in feature subpackages so each concern can keep its own
 - `api/cloudinary/` — widget config and admin cleanup endpoints
 - `api/dev/` — local bootstrap helpers
 
-Top-level `api/*.py` modules remain thin compatibility wrappers for stable URL registrations and older imports. When a helper module exposes reusable logic, its public functions should be documented and tested directly.
+Top-level `api/*.py` modules remain thin compatibility wrappers for stable URL registrations and older imports. When a helper module exposes reusable logic, its public functions should be documented, tested directly, and traced so the module boundary stays observable.
 
 ## Declarative Configuration
 

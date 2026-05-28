@@ -1,4 +1,8 @@
-"""Implementation helpers for global entry list/create/favorite endpoints."""
+"""Implementation helpers for global entry list/create/favorite endpoints.
+
+Public helper entry points in this module are traced so global-entry behavior
+remains observable as a documented contract.
+"""
 
 import re
 
@@ -7,6 +11,8 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
+
+from backend.otel import traced
 
 from ..models import FavoriteGlazeCombination, GlazeCombination
 from ..serializer_registry import _GLOBAL_ENTRY_SERIALIZERS
@@ -42,6 +48,7 @@ _GLOBAL_CREATE_REQUEST_SCHEMA = {
 }
 
 
+@traced
 def apply_global_filters(qs, model_cls, request):
     """Apply query-param filters declared in a model's ``filterable_fields`` dict."""
     filterable = getattr(model_cls, "filterable_fields", {})
@@ -64,6 +71,7 @@ def apply_global_filters(qs, model_cls, request):
     return qs
 
 
+@traced
 def global_entries_impl(request: Request, global_name: str) -> Response:
     """Core implementation for GET/POST /api/globals/<global_name>/."""
     return global_entries_impl_with_resolvers(
@@ -75,6 +83,7 @@ def global_entries_impl(request: Request, global_name: str) -> Response:
     )
 
 
+@traced
 def global_entries_impl_with_resolvers(
     request: Request,
     global_name: str,
@@ -225,6 +234,7 @@ def global_entries_impl_with_resolvers(
     )
 
 
+@traced
 def global_entry_favorite_impl(
     request: Request, model_cls, fav_model_cls, pk: str
 ) -> Response:

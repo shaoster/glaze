@@ -1,3 +1,10 @@
+"""Compatibility and factory helpers for global entry endpoints.
+
+Public functions in this module are traced so the stable import surface and
+route factories remain observable while implementation details live in the
+shared logic module.
+"""
+
 # ruff: noqa: F401
 import hashlib
 import json
@@ -281,6 +288,7 @@ def _global_entries_impl(request: Request, global_name: str) -> Response:
     )
 
 
+@traced
 def make_global_entry_view(global_name: str):
     """Return a fully-annotated view function for the given global type.
 
@@ -338,6 +346,7 @@ def _global_entry_favorite_impl(
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@traced
 def make_global_entry_favorite_view(global_name: str):
     """Return an annotated POST/DELETE favorite-toggle view for the given global.
 

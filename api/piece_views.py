@@ -1,4 +1,13 @@
+"""Compatibility wrappers for piece endpoints.
+
+Public wrapper functions in this module are traced so the stable import surface
+remains observable even while implementation details move into feature
+subpackages.
+"""
+
 # ruff: noqa: F401
+from backend.otel import traced
+
 from .piece import views as _impl
 from .piece.views import (
     Http404,
@@ -68,41 +77,49 @@ def _sync_impl() -> None:
         setattr(_impl, name, globals()[name])
 
 
+@traced
 def pieces(request):
     _sync_impl()
     return _impl.pieces(request)
 
 
+@traced
 def piece_detail(request, piece_id):
     _sync_impl()
     return _impl.piece_detail(request, piece_id)
 
 
+@traced
 def piece_states(request, piece_id):
     _sync_impl()
     return _impl.piece_states(request, piece_id)
 
 
+@traced
 def piece_current_state_detail(request, piece_id):
     _sync_impl()
     return _impl.piece_current_state_detail(request, piece_id)
 
 
+@traced
 def piece_current_state(request, piece_id):
     _sync_impl()
     return _impl.piece_current_state(request, piece_id)
 
 
+@traced
 def piece_past_state(request, piece_id, state_id):
     _sync_impl()
     return _impl.piece_past_state(request, piece_id, state_id)
 
 
+@traced
 def piece_image_detail(request, image_id, piece_state_id):
     _sync_impl()
     return _impl.piece_image_detail(request, image_id, piece_state_id)
 
 
+@traced
 def patch_image_crop(request, image_id):
     _sync_impl()
     return _impl.patch_image_crop(request, image_id)

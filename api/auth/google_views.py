@@ -1,4 +1,8 @@
-"""Google OAuth login flow for the Glaze API."""
+"""Google OAuth login flow for the Glaze API.
+
+Public helper entry points in this module are traced so login behavior remains
+observable at the module boundary.
+"""
 
 import hashlib
 from typing import Any, cast
@@ -58,6 +62,7 @@ def _verify_google_id_token(id_token: str) -> dict:
     )
 
 
+@traced
 def auth_google_impl(
     request: Request,
     *,

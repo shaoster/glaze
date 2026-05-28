@@ -1,4 +1,13 @@
+"""Compatibility wrappers for global entry endpoints.
+
+Public wrapper functions in this module are traced so the stable import surface
+remains observable even while implementation details move into feature
+subpackages.
+"""
+
 # ruff: noqa: F401
+from backend.otel import traced
+
 from .global_entries import views as _impl
 from .global_entries.views import (
     _FAVORITES_REGISTRY,
@@ -32,11 +41,13 @@ def _global_entries_impl(request, global_name):
     return _impl_global_entries_impl(request, global_name)
 
 
+@traced
 def make_global_entry_view(global_name):
     _sync_impl()
     return _impl.make_global_entry_view(global_name)
 
 
+@traced
 def make_global_entry_favorite_view(global_name):
     _sync_impl()
     return _impl.make_global_entry_favorite_view(global_name)
