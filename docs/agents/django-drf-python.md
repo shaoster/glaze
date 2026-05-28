@@ -37,6 +37,7 @@ Django, Django REST Framework, SQLite (dev), django-cors-headers
 - When a user requests another user's object ID, return `404` (not `403`) so object existence is not leaked.
 - **`is_staff` checks**: use `request.user.is_staff` directly — Django guarantees `AnonymousUser.is_staff is False`, so no prior `is_authenticated` guard is needed. Never introduce a redundant `user is not None and user.is_staff` pattern; the direct attribute is always safe.
 - Generic functions (views, helpers, base classes) must not reference concrete subclasses or sibling implementations by name — an application of the Law of Demeter. A generic view that handles all `GlobalModel` subclasses should depend only on the `GlobalModel` interface; knowledge of specific subclasses belongs in registries or on the concrete class itself. Use explicit registries (dicts mapping model class → collaborator) or protocol attributes (`filterable_fields`, `get_favorite_ids_for`) to keep generic code decoupled from concrete implementations.
+- Never add file-level noqa comments like `# ruff: noqa: F401` to Python files. Unused imports must always be removed, or if they are intended to be exposed as public module APIs, listed in the module's `__all__` list to ensure they are preserved by linters.
 
 ## Production environment variables and settings
 

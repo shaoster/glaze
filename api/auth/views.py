@@ -4,7 +4,6 @@ Public wrapper functions in this module keep the stable import surface visible
 while the actual implementations live in focused feature submodules.
 """
 
-# ruff: noqa: F401
 from django.conf import settings
 from django.contrib.auth import logout
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -24,6 +23,18 @@ from .export_views import auth_export
 from .google_views import auth_google
 from .invite_views import staff_invite_code, validate_invite
 from .preferences_views import auth_preferences
+
+__all__ = [
+    "auth_delete_account",
+    "auth_export",
+    "auth_google",
+    "auth_logout",
+    "auth_me",
+    "auth_preferences",
+    "csrf",
+    "staff_invite_code",
+    "validate_invite",
+]
 
 
 @extend_schema(

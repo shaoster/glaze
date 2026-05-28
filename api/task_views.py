@@ -1,63 +1,19 @@
-# ruff: noqa: F401
-import hashlib
-import json
-import os
-import re
-from collections import defaultdict
-from typing import Callable
-
-from django.apps import apps
-from django.conf import settings
-from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.db.models import DateTimeField, OuterRef, Q, Subquery
-from django.db.models.functions import Coalesce, Greatest
-from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
-from django.views.decorators.csrf import ensure_csrf_cookie
-from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token as google_id_token
-from rest_framework import serializers as drf_serializers
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.decorators import api_view, parser_classes, permission_classes
-from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from backend.otel import traced
 
-from .dev.bootstrap import bootstrap_dev_user
 from .models import (
     AsyncTask,
-    FavoriteGlazeCombination,
-    GlazeCombination,
-    Piece,
-    PieceState,
-    UserProfile,
-)
-from .serializer_registry import (
-    _GLOBAL_ENTRY_SERIALIZERS,  # auto-generated in _register_globals(); hand-written serializers overwrite
 )
 from .serializers import (
     AsyncTaskSerializer,
-    AuthUserSerializer,
-    GlazeCombinationImageEntrySerializer,
-    GoogleAuthSerializer,
-    PieceCreateSerializer,
-    PieceDetailSerializer,
-    PieceStateCreateSerializer,
-    PieceStateSerializer,
-    PieceStateUpdateSerializer,
-    PieceSummarySerializer,
-    PieceUpdateSerializer,
     TaskSubmissionSerializer,
-)
-from .workflow import (
-    get_glaze_image_qualifying_states,
-    get_global_model_and_field,
-    is_private_global,
-    is_public_global,
 )
 
 

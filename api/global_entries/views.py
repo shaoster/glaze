@@ -5,9 +5,7 @@ route factories remain observable while implementation details live in the
 shared logic module.
 """
 
-# ruff: noqa: F401
-from drf_spectacular.utils import extend_schema, inline_serializer
-from rest_framework import serializers as drf_serializers
+from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
