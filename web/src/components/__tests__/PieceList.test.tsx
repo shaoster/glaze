@@ -43,8 +43,14 @@ vi.mock("../CloudinaryImage", () => ({
   ),
 }));
 
-const { mockPositioner, mockContainerPosition } = vi.hoisted(() => {
+const { mockPositioner, mockContainerPosition, mockState } = vi.hoisted(() => {
   const mockContainerPosition = { width: 440, offset: 0 };
+  // mockState is shared between vi.mock (hoisted) and beforeEach so that the
+  // usePositioner mock can simulate positioner resets by clearing seededMap.
+  const mockState = {
+    seededMap: new Map<number, number>(),
+    positionerDeps: [] as unknown[],
+  };
   return {
     mockPositioner: {
       get: vi.fn().mockReturnValue(undefined),
@@ -59,6 +65,7 @@ const { mockPositioner, mockContainerPosition } = vi.hoisted(() => {
       all: vi.fn().mockReturnValue([]),
     },
     mockContainerPosition,
+    mockState,
   };
 });
 
@@ -139,7 +146,19 @@ vi.mock("masonic", () => ({
     width: mockContainerPosition.width,
     offset: mockContainerPosition.offset,
   }),
-  usePositioner: () => mockPositioner,
+  usePositioner: (_opts: unknown, deps: unknown[] = []) => {
+    // Simulate usePositioner's reset behaviour: when deps change, clear the
+    // seeded-heights map so get() returns undefined for all items, exactly as
+    // the real hook creates a fresh positioner and discards cached positions.
+    const depsChanged =
+      deps.length !== mockState.positionerDeps.length ||
+      !deps.every((d, i) => Object.is(d, mockState.positionerDeps[i]));
+    if (depsChanged) {
+      mockState.positionerDeps = [...deps];
+      mockState.seededMap.clear();
+    }
+    return mockPositioner;
+  },
   createPositioner: (
     columnCount: number,
     columnWidth: number,
@@ -206,21 +225,21 @@ function RerenderHarness({ pieces }: { pieces: PieceSummary[] }) {
 
 describe("PieceList", () => {
   beforeEach(() => {
-    // Use a stateful seededMap so get() returns the value written by set().
-    // This mirrors the real positioner's behaviour: once an index is placed,
-    // subsequent calls to get() return non-undefined and the seeding loop
-    // skips that item on the next render.
-    const seededMap = new Map<number, number>();
+    // Reset mockState so each test starts with an empty positioner.
+    mockState.seededMap.clear();
+    mockState.positionerDeps = [];
     mockPositioner.set.mockReset();
     mockPositioner.get.mockReset();
     mockPositioner.update.mockReset();
+    // set() writes to mockState.seededMap so get() can return the seeded value,
+    // matching real positioner behaviour (once placed, get() returns non-undefined).
     mockPositioner.set.mockImplementation((index: number, height: number) => {
-      seededMap.set(index, height);
+      mockState.seededMap.set(index, height);
       rerenderMasonryScroller?.();
     });
     mockPositioner.get.mockImplementation((index: number) =>
-      seededMap.has(index)
-        ? { height: seededMap.get(index)!, top: 0, left: 0, column: 0 }
+      mockState.seededMap.has(index)
+        ? { height: mockState.seededMap.get(index)!, top: 0, left: 0, column: 0 }
         : undefined,
     );
     mockPositioner.update.mockImplementation(() => undefined);
@@ -399,6 +418,77 @@ describe("PieceList", () => {
 
       // Index 0 is already positioned — must not be re-seeded
       expect(mockPositioner.set).toHaveBeenCalledTimes(1);
+    });
+
+    it("resets the positioner when pieces are prepended (non-pure-append)", () => {
+      // Regression for the handleCreated prepend edge case: prepending a new piece
+      // shifts all existing item indices. Without a reset, the positioner still has
+      // heights cached at the old indices, so masonic uses the wrong height for the
+      // prepended item and any crop-seeded item at its new index is skipped.
+      // The fix detects the non-pure-append and increments positionerResetCounterRef,
+      // which changes usePositioner's deps → fresh positioner → all items re-seeded.
+      const pieceA = makePiece({
+        id: "p-a",
+        thumbnail: {
+          url: "https://example.com/a.jpg",
+          cloudinary_public_id: "a",
+          cloud_name: "demo",
+          crop: { x: 0, y: 0, width: 200, height: 400 },
+        },
+      });
+      const pieceB = makePiece({
+        id: "p-b",
+        thumbnail: {
+          url: "https://example.com/b.jpg",
+          cloudinary_public_id: "b",
+          cloud_name: "demo",
+          crop: { x: 0, y: 0, width: 100, height: 150 },
+        },
+      });
+
+      function PrependHarness() {
+        const [pieces, setPieces] = useState([pieceA]);
+        return (
+          <>
+            <button
+              type="button"
+              onClick={() => setPieces((prev) => [pieceB, ...prev])}
+            >
+              prepend
+            </button>
+            <PieceList pieces={pieces} />
+          </>
+        );
+      }
+
+      const router = createMemoryRouter(
+        [{ path: "/", element: <PrependHarness /> }],
+        { initialEntries: ["/"] },
+      );
+      render(<RouterProvider router={router} />);
+
+      // Initial render: pieceA at index 0 seeded
+      expect(mockPositioner.set).toHaveBeenCalledTimes(1);
+      expect(mockPositioner.set).toHaveBeenCalledWith(
+        0,
+        estimateCardHeight(pieceA, mockPositioner.columnWidth),
+      );
+
+      // Prepend pieceB: order is now [pieceB(0), pieceA(1)]
+      fireEvent.click(screen.getByRole("button", { name: /prepend/i }));
+
+      // Positioner was reset → both items re-seeded at their new indices.
+      // Without the fix: seededMap still has {0: h_A}, so get(0)!==undefined
+      // and pieceB is never seeded, leaving masonic with the wrong height at 0.
+      expect(mockPositioner.set).toHaveBeenCalledTimes(3);
+      expect(mockPositioner.set).toHaveBeenCalledWith(
+        0,
+        estimateCardHeight(pieceB, mockPositioner.columnWidth),
+      );
+      expect(mockPositioner.set).toHaveBeenCalledWith(
+        1,
+        estimateCardHeight(pieceA, mockPositioner.columnWidth),
+      );
     });
 
     it("reserves the thumbnail crop ratio in the card shell", () => {
