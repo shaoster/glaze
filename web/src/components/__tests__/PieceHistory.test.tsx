@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   act,
@@ -35,6 +36,58 @@ vi.mock("../../../workflow.yml", () => ({
         past_friendly_name: "Wheel Thrown",
       },
     ],
+  },
+}));
+
+vi.mock("../../util/workflow", () => ({
+  formatPastState: (state: string) =>
+    state === "designed"
+      ? "Designed"
+      : state
+          .split("_")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" "),
+  formatState: (state: string) =>
+    state === "wheel_thrown"
+      ? "Throwing"
+      : state
+          .split("_")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" "),
+  insertableStatesBetween: (predecessor: string | null) =>
+    predecessor === "designed" ? ["wheel_thrown"] : [],
+}));
+
+vi.mock("../useAutosave", () => ({
+  useAutosave: ({
+    dirty,
+    save,
+  }: {
+    dirty: boolean;
+    save: () => Promise<void>;
+  }) => {
+    const [status, setStatus] = useState<"idle" | "pending" | "saving" | "saved" | "error">(
+      "idle",
+    );
+
+    useEffect(() => {
+      if (!dirty) return;
+      let active = true;
+      setStatus("saving");
+      const timer = window.setTimeout(() => {
+        void save().then(() => {
+          if (active) {
+            setStatus("saved");
+          }
+        });
+      }, 0);
+      return () => {
+        active = false;
+        window.clearTimeout(timer);
+      };
+    }, [dirty, save]);
+
+    return { status, error: null, lastSavedAt: null, saveNow: save };
   },
 }));
 

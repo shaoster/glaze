@@ -1270,6 +1270,7 @@ vitest_test(
     ],
     expected_coverage = [
         "web/src/util/generateTypes*",
+        "web/scripts/generate-types.mjs",
     ],
 )
 

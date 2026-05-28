@@ -161,3 +161,27 @@ class TestPieceImagePatch:
             format="json",
         )
         assert response.status_code == 400
+
+
+@pytest.mark.django_db
+class TestImageModelHelpers:
+    def test_image_str_as_dict_and_getitem(self):
+        image = Image.objects.create(
+            user=None,
+            url="https://example.com/img.jpg",
+            cloud_name="demo",
+            cloudinary_public_id="piece/img",
+        )
+
+        assert str(image) == "https://example.com/img.jpg"
+        assert image.as_dict() == {
+            "url": "https://example.com/img.jpg",
+            "cloudinary_public_id": "piece/img",
+            "cloud_name": "demo",
+        }
+        assert image["cloudinary_public_id"] == "piece/img"
+
+    def test_image_equality_falls_back_for_non_dict(self):
+        image = Image(url="https://example.com/img.jpg")
+
+        assert (image == object()) is False

@@ -363,6 +363,59 @@ class TestGlazeAdminSite:
 
         assert public_names == expected_names
 
+    def test_login_falls_through_to_admin_site_when_not_redirecting(self, monkeypatch):
+        from django.contrib.admin.sites import AdminSite
+
+        from api.admin import GlazeAdminSite
+
+        called = {}
+        from django.conf import settings
+
+        settings.ALLOWED_HOSTS = ["example.com"]
+
+        def fake_login(self, request, extra_context=None):
+            called["request_host"] = request.get_host()
+            return "fallback"
+
+        monkeypatch.setattr(AdminSite, "login", fake_login)
+
+        request = RequestFactory().get("/admin/login/")
+        request.user = User.objects.create_user(
+            username="anon-login@example.com",
+            email="anon-login@example.com",
+        )
+        request.META["HTTP_HOST"] = "example.com"
+
+        assert GlazeAdminSite(name="glaze").login(request) == "fallback"
+        assert called["request_host"] == "example.com"
+
+    def test_login_normalizes_invalid_next_path(self, monkeypatch, settings):
+        from django.contrib.admin.sites import AdminSite
+        from django.contrib.auth.models import AnonymousUser
+
+        from api.admin import GlazeAdminSite
+
+        settings.ALLOWED_HOSTS = ["admin.potterdoc.com", "potterdoc.com"]
+        monkeypatch.setattr(
+            AdminSite,
+            "login",
+            lambda self, request, extra_context=None: (
+                "should-not-be-used-for-admin-host"
+            ),
+        )
+
+        settings.ADMIN_INGRESS_HOST = "admin.potterdoc.com"
+        request = RequestFactory().get(
+            "/admin/login/?next=https://evil.example.com/",
+            HTTP_HOST="admin.potterdoc.com",
+            secure=True,
+        )
+        request.user = AnonymousUser()
+
+        response = GlazeAdminSite(name="glaze").login(request)
+        assert response.status_code == 302
+        assert response["Location"].startswith("https://potterdoc.com/?next=")
+
     def test_private_globals_are_registered_in_api_section(self):
         from django.contrib import admin
         from django.urls import reverse

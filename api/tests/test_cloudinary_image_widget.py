@@ -5,6 +5,7 @@ import pytest
 
 from api.admin import (
     CloudinaryImageWidget,
+    CloudinaryImageFormField,
     _admin_image_preview,
     _cloudinary_lightbox_url,
     _cloudinary_preview_url,
@@ -70,6 +71,26 @@ class TestImageUrl:
 
     def test_returns_empty_string_for_empty_dict(self):
         assert _image_url({}) == ""
+
+    def test_falls_back_to_dict_url_when_image_to_dict_returns_none(self, monkeypatch):
+        monkeypatch.setattr("api.admin.image_to_dict", lambda value: None)
+        assert _image_url(
+            {"url": "https://example.com/fallback.jpg"}
+        ) == "https://example.com/fallback.jpg"
+
+    def test_image_cloud_name_falls_back_to_env_for_dict_without_cloud_name(
+        self, monkeypatch
+    ):
+        monkeypatch.setattr("api.admin.image_to_dict", lambda value: None)
+        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "env-cloud")
+        assert _image_cloud_name({"url": "https://example.com/img.jpg"}) == "env-cloud"
+
+
+class TestJsonImagePayload:
+    def test_invalid_json_returns_none(self):
+        from api.admin import _json_image_payload
+
+        assert _json_image_payload("not json") is None
 
 
 class TestCloudinaryPreviewUrl:
@@ -171,6 +192,12 @@ class TestCloudinaryLightboxUrl:
         monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
         assert _cloudinary_lightbox_url(HEIC_URL) == HEIC_URL
 
+    def test_returns_original_when_public_id_cannot_be_resolved(self, monkeypatch):
+        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
+        assert _cloudinary_lightbox_url(
+            "https://example.com/does-not-have-a-public-id"
+        ) == "https://example.com/does-not-have-a-public-id"
+
 
 class TestCloudinaryImageWidgetFormatValue:
     def test_dict_value_encoded_as_json_string(self):
@@ -187,6 +214,13 @@ class TestCloudinaryImageWidgetFormatValue:
 
     def test_string_value_returned_unchanged(self):
         assert CloudinaryImageWidget().format_value(HEIC_URL) == HEIC_URL
+
+    def test_dict_value_is_json_encoded_even_without_image_payload(self, monkeypatch):
+        monkeypatch.setattr("api.admin.image_to_dict", lambda value: None)
+        result = CloudinaryImageWidget().format_value(
+            {"url": HEIC_URL, "cloudinary_public_id": HEIC_PUBLIC_ID}
+        )
+        assert json.loads(result)["url"] == HEIC_URL
 
 
 class TestCloudinaryImageWidgetRender:
@@ -227,6 +261,23 @@ class TestCloudinaryImageWidgetRender:
         )
 
         assert "cloudinary-upload-btn" in html
+
+
+class TestCloudinaryImageFormField:
+    @pytest.mark.django_db
+    def test_prepare_value_returns_json_for_missing_uuid_lookup(self, monkeypatch):
+        import uuid
+
+        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
+        monkeypatch.setenv("CLOUDINARY_API_KEY", "api-key")
+        monkeypatch.setenv("CLOUDINARY_PUBLIC_UPLOAD_FOLDER", "glaze-public")
+
+        field = CloudinaryImageFormField()
+        missing_uuid = uuid.uuid4()
+        assert field.prepare_value(missing_uuid) is None
+        html = field.widget.render(
+            "image_url", field.prepare_value(missing_uuid), attrs={"id": "id_image_url"}
+        )
         assert "disabled" not in html
         assert "CLOUDINARY_PUBLIC_UPLOAD_FOLDER must be set" not in html
         assert 'data-cloudinary-folder="glaze-public"' in html
@@ -367,6 +418,10 @@ class TestAdminImagePreview:
         # but if we pass something that doesn't result in a preview...
         # Wait, if it returns original URL, it's NOT empty.
         assert _admin_image_preview("") == "—"
+
+    def test_returns_dash_when_preview_source_is_empty(self, monkeypatch):
+        monkeypatch.setattr("api.admin._cloudinary_preview_url", lambda value: "")
+        assert _admin_image_preview({"url": "https://example.com/img.jpg"}) == "—"
 
     def test_renders_img_tag_for_valid_image(self, monkeypatch):
         monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")

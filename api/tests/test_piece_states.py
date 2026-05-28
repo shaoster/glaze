@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError
 from api.models import (
     ENTRY_STATE,
     SUCCESSORS,
+    _MISSING,
     ClayBody,
     GlazeCombination,
     GlazeType,
@@ -339,15 +340,125 @@ class TestPieceStateSerializerNavigation:
         assert serializer.get_previous_state(s2) is None
         assert serializer.get_next_state(s2) is None
 
+    def test_prefetched_state_returns_missing_sentinel_when_not_prefetched(self, user):
+        piece = Piece.objects.create(user=user, name="Missing Prefetch Test")
+
+        assert piece._prefetched_state("designed") is _MISSING
+
+    def test_prefetched_state_returns_none_when_no_state_matches(self, user):
+        piece = Piece.objects.create(user=user, name="No Match Prefetch Test")
+        state = PieceState.objects.create(piece=piece, state="designed", order=1)
+        piece._prefetched_objects_cache = {"states": [state]}
+
+        assert piece._prefetched_state("trimmed") is None
+
+    def test_current_state_returns_none_for_empty_prefetched_list(self, user):
+        piece = Piece.objects.create(user=user, name="Empty Prefetch Test")
+        piece._prefetched_objects_cache = {"states": []}
+
+        assert piece.current_state is None
+
+    def test_last_modified_uses_fields_timestamp_when_no_states(self, user):
+        piece = Piece.objects.create(user=user, name="No States Last Modified")
+
+        assert piece.last_modified == piece.fields_last_modified
+
+    def test_thumbnail_crop_returns_none_without_thumbnail(self, user):
+        piece = Piece.objects.create(user=user, name="No Thumbnail")
+
+        assert piece.get_thumbnail_crop() is None
+
+    def test_thumbnail_crop_returns_link_crop_from_history(self, user):
+        piece = Piece.objects.create(user=user, name="With Thumbnail")
+        state = PieceState.objects.create(piece=piece, state="designed", order=1)
+        from api.models import Image, PieceStateImage
+
+        image = Image.objects.create(
+            user=user,
+            url="https://example.com/thumb.jpg",
+            cloud_name="demo",
+            cloudinary_public_id="thumbs/thumb",
+        )
+        piece.thumbnail = image
+        piece.save(update_fields=["thumbnail"])
+        PieceStateImage.objects.create(
+            piece_state=state,
+            image=image,
+            order=0,
+            crop={"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.4},
+        )
+
+        assert piece.get_thumbnail_crop() == {
+            "x": 0.1,
+            "y": 0.2,
+            "width": 0.3,
+            "height": 0.4,
+        }
+
+    def test_piece_str_returns_name(self, user):
+        piece = Piece.objects.create(user=user, name="Label Test")
+
+        assert str(piece) == "Label Test"
+
+    def test_workflow_version_matches_piece(self, user):
+        piece = Piece.objects.create(user=user, name="Workflow Version Test")
+
+        assert PieceState(piece=piece, state="designed").workflow_version == piece.workflow_version
+
+    def test_piece_sort_key_orders_unordered_states_last(self, user):
+        piece = Piece.objects.create(user=user, name="Sort Key Test")
+        ordered = PieceState.objects.create(piece=piece, state="designed", order=2)
+        unordered = PieceState(piece=piece, state="trimmed", order=None)
+        unordered.created = ordered.created
+
+        assert Piece._state_sort_key(ordered) == (True, 2, ordered.created)
+        assert Piece._state_sort_key(unordered) == (False, -1, unordered.created)
+
     def test_navigation_without_order(self, user):
         piece = Piece.objects.create(user=user, name="No Order Test")
         # Ensure distinct 'created' times by saving explicitly if needed,
         # but usually separate creates are enough.
         s1 = PieceState.objects.create(piece=piece, state="designed", order=None)
         s2 = PieceState.objects.create(piece=piece, state="trimmed", order=None)
+        s1.order = None
+        s2.order = None
 
         serializer = PieceStateSerializer()
         assert serializer.get_previous_state(s2) == "designed"
         assert serializer.get_next_state(s1) == "trimmed"
         assert serializer.get_previous_state(s1) is None
         assert serializer.get_next_state(s2) is None
+
+    def test_editable_insert_prefers_predecessor_order(self, user):
+        piece = Piece.objects.create(user=user, name="Editable Pred")
+        piece.is_editable = True
+        piece.save(update_fields=["is_editable"])
+        PieceState.objects.create(piece=piece, state="wheel_thrown", order=1)
+        PieceState.objects.create(piece=piece, state="glazed", order=3)
+
+        serializer = PieceStateCreateSerializer(context={"piece": piece})
+        state = serializer.create({"state": "trimmed", "custom_fields": {}, "images": []})
+
+        assert state.order == 2
+        assert list(piece.states.order_by("order").values_list("state", flat=True)) == [
+            "wheel_thrown",
+            "trimmed",
+            "glazed",
+        ]
+
+    def test_editable_insert_uses_successor_order_when_no_predecessor(self, user):
+        piece = Piece.objects.create(user=user, name="Editable Succ")
+        piece.is_editable = True
+        piece.save(update_fields=["is_editable"])
+        PieceState.objects.create(piece=piece, state="glazed", order=3)
+
+        serializer = PieceStateCreateSerializer(context={"piece": piece})
+        state = serializer.create(
+            {"state": "wheel_thrown", "custom_fields": {}, "images": []}
+        )
+
+        assert state.order == 3
+        assert list(piece.states.order_by("order").values_list("state", flat=True)) == [
+            "wheel_thrown",
+            "glazed",
+        ]

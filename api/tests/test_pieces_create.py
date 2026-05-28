@@ -1,6 +1,6 @@
 import pytest
 
-from api.models import ENTRY_STATE, Piece
+from api.models import ENTRY_STATE, Image, Piece
 
 # ---------------------------------------------------------------------------
 # POST /api/pieces/
@@ -50,3 +50,42 @@ class TestPiecesCreate:
         assert response.status_code == 201
         data = response.json()
         assert data["current_state"]["notes"] == ""
+
+    def test_create_with_cloudinary_thumbnail_queues_task(self, client, monkeypatch):
+        submitted = []
+        thumbnail = Image.objects.create(
+            user=None,
+            url="https://res.cloudinary.com/demo/image/upload/v1/pieces/mug.jpg",
+            cloud_name="demo",
+            cloudinary_public_id="pieces/mug",
+        )
+
+        monkeypatch.setattr(
+            "api.tasks.get_task_interface",
+            lambda: type(
+                "FakeTaskInterface",
+                (),
+                {"submit": lambda self, task: submitted.append(task.input_params)},
+            )(),
+        )
+        monkeypatch.setattr(
+            "api.serializers.normalize_image_payload",
+            lambda payload, user=None: thumbnail,
+        )
+
+        response = client.post(
+            "/api/pieces/",
+            {
+                "name": "Cloud Mug",
+                "thumbnail": "https://example.com/ignored.jpg",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 201
+        assert submitted == [
+            {
+                "image_id": response.json()["thumbnail"]["image_id"],
+                "piece_id": response.json()["id"],
+            }
+        ]

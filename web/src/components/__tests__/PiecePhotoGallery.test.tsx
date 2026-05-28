@@ -16,6 +16,18 @@ import PiecePhotoGallery, {
   type PiecePhotoGalleryImage,
 } from "../PiecePhotoGallery";
 
+vi.mock("../../util/api", () => ({
+  moveImage: vi.fn(),
+  updateCurrentState: vi.fn(),
+  updateImageCrop: vi.fn(),
+  updatePastState: vi.fn(),
+  updatePiece: vi.fn(),
+}));
+
+vi.mock("../../util/normalizeWorkflowFields", () => ({
+  normalizeFields: (value: unknown) => value,
+}));
+
 function renderGallery(
   element: React.ReactElement<ComponentProps<typeof PiecePhotoGallery>>,
 ) {

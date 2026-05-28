@@ -11,13 +11,9 @@ import PieceDetailPage from "../PieceDetailPage";
 import * as api from "../../util/api";
 import type { PieceDetail } from "../../util/types";
 
-vi.mock("../../util/api", async (importOriginal) => {
-  const actual = await importOriginal<typeof api>();
-  return {
-    ...actual,
-    fetchPiece: vi.fn(),
-  };
-});
+vi.mock("../../util/api", () => ({
+  fetchPiece: vi.fn(),
+}));
 
 vi.mock("../../components/PieceDetail", () => ({
   default: ({ piece }: { piece: PieceDetail }) => (

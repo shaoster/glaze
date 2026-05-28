@@ -9,65 +9,49 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import StateTransition from "../StateTransition";
 
-const { mockWorkflow } = vi.hoisted(() => ({
-  mockWorkflow: {
-    version: "test",
-    globals: {},
-    states: [
-      {
-        id: "designed",
-        visible: true,
-        friendly_name: "Designing",
-        description: "Design phase.",
-        successors: ["wheel_thrown", "handbuilt"],
-      },
-      {
-        id: "wheel_thrown",
-        visible: true,
-        friendly_name: "Throwing",
-        description: "Wheel-thrown.",
-        successors: ["trimmed", "recycled"],
-      },
-      {
-        id: "handbuilt",
-        visible: true,
-        friendly_name: "Handbuilding",
-        description: "Handbuilt.",
-        successors: ["recycled"],
-      },
-      {
-        id: "trimmed",
-        visible: true,
-        friendly_name: "Trimming",
-        description: "Trimmed.",
-        successors: ["recycled"],
-      },
-      {
-        id: "glaze_fired",
-        visible: true,
-        friendly_name: "Touching Up",
-        description: "Glaze fired.",
-        successors: ["sanded", "completed", "recycled"],
-      },
-      {
-        id: "completed",
-        visible: true,
-        friendly_name: "Completed",
-        description: "Completed.",
-        terminal: true,
-      },
-      {
-        id: "recycled",
-        visible: true,
-        friendly_name: "Recycled",
-        description: "Recycled.",
-        terminal: true,
-      },
-    ],
-  },
+vi.mock("../StateChip", () => ({
+  default: ({
+    label,
+    onClick,
+    disabled,
+  }: {
+    label: string;
+    onClick?: () => void;
+    disabled?: boolean;
+  }) =>
+    onClick ? (
+      <button type="button" onClick={onClick} disabled={disabled}>
+        {label}
+      </button>
+    ) : (
+      <span>{label}</span>
+    ),
 }));
 
-vi.mock("../../../workflow.yml", () => ({ default: mockWorkflow }));
+vi.mock("../../util/workflow", () => ({
+  SUCCESSORS: {
+    designed: ["wheel_thrown", "handbuilt"],
+    wheel_thrown: ["trimmed", "recycled"],
+    handbuilt: ["recycled"],
+    trimmed: ["recycled"],
+    glaze_fired: ["sanded", "completed", "recycled"],
+    completed: [],
+    recycled: [],
+  },
+  formatState: (state: string) =>
+    ({
+      designed: "Designing",
+      wheel_thrown: "Throwing",
+      handbuilt: "Handbuilding",
+      trimmed: "Trimming",
+      glaze_fired: "Touching Up",
+      sanded: "Sanding",
+      completed: "Completed",
+      recycled: "Recycled",
+    })[state] ?? state,
+  getStateDescription: (state: string) => `${state} description`,
+  isTerminalState: (state: string) => state === "completed" || state === "recycled",
+}));
 
 const TEST_THEME = createTheme({
   transitions: {
