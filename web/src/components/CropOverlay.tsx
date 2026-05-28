@@ -138,13 +138,21 @@ export default function CropOverlay({
           image={url}
           crop={state.crop}
           zoom={state.zoom}
+          initialCroppedAreaPercentages={
+            initialCrop
+              ? {
+                  x: initialCrop.x * 100,
+                  y: initialCrop.y * 100,
+                  width: initialCrop.width * 100,
+                  height: initialCrop.height * 100,
+                }
+              : undefined
+          }
           onCropChange={(crop) => dispatch({ type: "CROP_CHANGE", crop })}
           onZoomChange={(zoom) => dispatch({ type: "ZOOM_CHANGE", zoom })}
-          onCropComplete={(_croppedArea, croppedAreaPixels) => {
-            // croppedArea is percentages (0-100); convert to 0-1 fractions
-            dispatch({ type: "CROP_COMPLETE", area: _croppedArea });
-            void croppedAreaPixels; // pixels not needed for ImageCrop
-          }}
+          onCropComplete={(croppedArea) =>
+            dispatch({ type: "CROP_COMPLETE", area: croppedArea })
+          }
           onMediaLoaded={() => dispatch({ type: "IMAGE_LOADED" })}
         />
       </Box>

@@ -45,7 +45,7 @@ type CropEditorAction =
   | { type: "CROP_CHANGE"; crop: { x: number; y: number } }
   | { type: "ZOOM_CHANGE"; zoom: number }
   | { type: "ROTATION_CHANGE"; rotation: number }
-  | { type: "RECORD_SELECTED" };
+  | { type: "RECORD_SELECTED"; rotation: number };
 
 function cropEditorReducer(
   state: CropEditorState,
@@ -59,7 +59,7 @@ function cropEditorReducer(
     case "ROTATION_CHANGE":
       return { ...state, rotation: action.rotation };
     case "RECORD_SELECTED":
-      return { crop: { x: 0, y: 0 }, zoom: 1, rotation: 0 };
+      return { crop: { x: 0, y: 0 }, zoom: 1, rotation: action.rotation };
   }
 }
 
@@ -118,7 +118,7 @@ export default function GlazeImportCropStage({
 
   function handleResetCrop() {
     if (!selectedRecord) return;
-    dispatchCropEditor({ type: "RECORD_SELECTED" });
+    dispatchCropEditor({ type: "RECORD_SELECTED", rotation: 0 });
     setRecords((current) =>
       current.map((record) => {
         if (record.id !== selectedRecord.id) return record;
@@ -161,7 +161,14 @@ export default function GlazeImportCropStage({
           <GlazeImportRecordList
             records={records}
             selectedId={selectedRecordId}
-            onSelect={setSelectedRecordId}
+            onSelect={(id) => {
+              const record = records.find((r) => r.id === id);
+              dispatchCropEditor({
+                type: "RECORD_SELECTED",
+                rotation: record?.crop?.rotation ?? 0,
+              });
+              setSelectedRecordId(id);
+            }}
             onDelete={onDelete}
           />
         ) : (
@@ -214,11 +221,22 @@ export default function GlazeImportCropStage({
                     }}
                   >
                     <Cropper
+                      key={selectedRecord.id}
                       image={selectedRecord.sourceUrl}
                       crop={cropEditor.crop}
                       zoom={cropEditor.zoom}
                       rotation={cropEditor.rotation}
                       aspect={1}
+                      initialCroppedAreaPixels={
+                        selectedCrop
+                          ? {
+                              x: selectedCrop.x,
+                              y: selectedCrop.y,
+                              width: selectedCrop.size,
+                              height: selectedCrop.size,
+                            }
+                          : undefined
+                      }
                       onCropChange={(crop) =>
                         dispatchCropEditor({ type: "CROP_CHANGE", crop })
                       }

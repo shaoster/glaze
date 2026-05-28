@@ -3,10 +3,11 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("react-easy-crop", () => ({
-  default: ({ onMediaLoaded }: any) => {
+  default: function MockCropper({ onMediaLoaded }: any) {
+    const onMediaLoadedRef = React.useRef(onMediaLoaded);
     React.useEffect(() => {
-      onMediaLoaded?.({ naturalWidth: 100, naturalHeight: 100 });
-    }, [onMediaLoaded]);
+      onMediaLoadedRef.current?.({ naturalWidth: 100, naturalHeight: 100 });
+    }, []);
     return <div data-testid="mock-cropper" />;
   },
 }));
