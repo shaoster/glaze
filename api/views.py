@@ -44,6 +44,7 @@ from .piece.views import (
     pieces,
 )
 from .task_views import submit_task, task_detail
+from .telemetry_views import browser_traces
 from .workflow_views import workflow_state_schema
 
 __all__ = [
@@ -79,6 +80,7 @@ __all__ = [
     "staff_invite_code",
     "submit_task",
     "task_detail",
+    "browser_traces",
     "validate_invite",
     "workflow_state_schema",
 ]

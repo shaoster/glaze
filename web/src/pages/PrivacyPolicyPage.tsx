@@ -40,7 +40,7 @@ export default function PrivacyPolicyPage() {
               Privacy Policy
             </Typography>
             <Typography color="text.secondary">
-              Effective April 22, 2026
+              Effective May 28, 2026
             </Typography>
           </Box>
 
@@ -102,6 +102,15 @@ export default function PrivacyPolicyPage() {
             as reasonably necessary to operate, maintain, secure, debug,
             support, and improve PotterDoc. We do not sell your data or sell
             third-party access to your data.
+          </Typography>
+
+          <Typography variant="body1">
+            We also collect frontend usage traces from the browser to help us
+            fix bugs, reproduce UI issues, and reduce friction points in the
+            product experience. These traces can include page navigation,
+            user interactions, request timing, and related performance metadata
+            needed to understand what happened in the app. We use them to
+            diagnose problems and improve the UI, not for advertising.
           </Typography>
 
           <Typography variant="body1">

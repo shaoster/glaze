@@ -232,10 +232,21 @@ js_library(
         "src/util/postLoginRedirect.ts",
         "src/util/preferences.ts",
         "src/util/queryKeys.ts",
+        "src/util/telemetry.ts",
         "src/util/useAsync.ts",
         "src/util/workflow.ts",
     ],
     deps = [
+        ":node_modules/@opentelemetry/api",
+        ":node_modules/@opentelemetry/exporter-trace-otlp-http",
+        ":node_modules/@opentelemetry/instrumentation",
+        ":node_modules/@opentelemetry/instrumentation-document-load",
+        ":node_modules/@opentelemetry/instrumentation-fetch",
+        ":node_modules/@opentelemetry/instrumentation-user-interaction",
+        ":node_modules/@opentelemetry/instrumentation-xml-http-request",
+        ":node_modules/@opentelemetry/resources",
+        ":node_modules/@opentelemetry/sdk-trace-web",
+        ":node_modules/@opentelemetry/semantic-conventions",
         ":generated_types",
         "//:tutorials_js",
         "//:user_preferences_js",
@@ -1173,6 +1184,20 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_telemetry_test",
+    srcs = [
+        "src/util/__tests__/telemetry.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":util_lib",
+    ],
+    expected_coverage = [
+        "web/src/util/telemetry*",
+    ],
+)
+
+vitest_test(
     name = "web_normalize_workflow_fields_test",
     srcs = [
         "src/util/__tests__/normalizeWorkflowFields.test.ts",
@@ -1351,6 +1376,7 @@ test_suite(
         ":web_user_preferences_dialog_test",
         ":web_tag_test",
         ":web_generate_types_test",
+        ":web_telemetry_test",
         ":web_workflow_state_test",
         ":web_workflow_summary_test",
         ":workflow_test",

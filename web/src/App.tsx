@@ -58,6 +58,7 @@ import {
   updateUserPreferences,
   type UserPreferences,
 } from "./util/api";
+import { initializeFrontendTelemetry } from "./util/telemetry";
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -948,6 +949,10 @@ export default function App() {
 
 function AppContent() {
   const queryClient = useQueryClient();
+  useState(() => {
+    initializeFrontendTelemetry();
+    return null;
+  });
   const postLoginRedirect = useMemo(
     () =>
       getPostLoginRedirectTarget(

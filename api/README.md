@@ -52,6 +52,11 @@ Endpoint logic now lives in feature subpackages so each concern can keep its own
 
 Top-level `api/*.py` modules remain thin compatibility wrappers for stable URL registrations and older imports. When a helper module exposes reusable logic, its public functions should be documented, tested directly, and traced so the module boundary stays observable.
 
+The backend also exposes `POST /api/telemetry/traces/`, which accepts browser
+OTLP/HTTP trace batches and proxies them to the local collector. The frontend
+uses this path for same-origin trace export so the browser never needs direct
+Grafana credentials.
+
 ## Declarative Configuration
 
 Glaze uses YAML-driven configuration to minimize boilerplate and ensure consistency between backend validation and frontend UI.

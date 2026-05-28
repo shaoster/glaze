@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 
 // Capture the onSuccess callback so tests can trigger Google sign-in.
 let _googleOnSuccess: ((r: { code: string }) => void) | undefined;
+const mockInitializeFrontendTelemetry = vi.hoisted(() => vi.fn());
 
 vi.mock("@react-oauth/google", () => ({
   GoogleOAuthProvider: ({ children }: { children: React.ReactNode }) => (
@@ -109,6 +110,10 @@ vi.mock("./pages/GlazeImportToolPage", () => ({
   default: () => <div>Glaze Import Tool Page</div>,
 }));
 
+vi.mock("./util/telemetry", () => ({
+  initializeFrontendTelemetry: mockInitializeFrontendTelemetry,
+}));
+
 // Now import App and the mocked api
 import {
   fetchAppInit,
@@ -189,6 +194,7 @@ describe("App auth flow", () => {
     expect(
       screen.getByRole("button", { name: /sign in with google/i }),
     ).toBeInTheDocument();
+    expect(mockInitializeFrontendTelemetry).toHaveBeenCalledTimes(1);
   });
 
   it("derives a safe admin redirect target from the apex next parameter", () => {
