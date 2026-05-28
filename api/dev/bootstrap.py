@@ -30,7 +30,7 @@ def bootstrap_dev_user(user, count: int | None = None) -> None:
         user.is_superuser = True
         user.save(update_fields=["is_staff", "is_superuser"])
 
-    from .models import Piece  # noqa: PLC0415
+    from ..models import Piece  # noqa: PLC0415
 
     if not Piece.objects.exists() and not Piece.objects.filter(user=user).exists():
         if count is None:
@@ -45,7 +45,7 @@ def _seed_dev_pieces(user, count: int = 75) -> None:
     """Create *count* pieces in random workflow states for a bootstrapped dev user."""
     import random  # noqa: PLC0415
 
-    from .models import (  # noqa: PLC0415
+    from ..models import (  # noqa: PLC0415
         ClayBody,
         GlazeCombination,
         GlazeType,
@@ -53,7 +53,7 @@ def _seed_dev_pieces(user, count: int = 75) -> None:
         Piece,
         Tag,
     )
-    from .utils import DEV_THUMBNAIL_URLS, normalize_image_payload  # noqa: PLC0415
+    from ..utils import DEV_THUMBNAIL_URLS, normalize_image_payload  # noqa: PLC0415
 
     rng = random.Random(42)
 
@@ -287,8 +287,8 @@ def _create_piece_state(
     """Create a PieceState plus any workflow global-ref junction rows it needs."""
     from django.apps import apps  # noqa: PLC0415
 
-    from .models import PieceState  # noqa: PLC0415
-    from .workflow import get_global_config  # noqa: PLC0415
+    from ..models import PieceState  # noqa: PLC0415
+    from ..workflow import get_global_config  # noqa: PLC0415
 
     piece_state = PieceState.objects.create(
         user=piece.user,

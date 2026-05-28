@@ -80,6 +80,7 @@ logger = logging.getLogger(__name__)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def csrf(request: Request) -> Response:
+    """Return the CSRF cookie used by browser clients before mutating requests."""
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -92,6 +93,7 @@ def csrf(request: Request) -> Response:
 @permission_classes([IsAuthenticated])
 @traced
 def auth_logout(request: Request) -> Response:
+    """Log the current user out of the active session."""
     logout(request)
     return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -115,6 +117,7 @@ def auth_logout(request: Request) -> Response:
 @permission_classes([AllowAny])
 @traced
 def auth_me(request: Request) -> Response:
+    """Return the current app bootstrap payload and authenticated user, if any."""
     client_id = settings.GOOGLE_OAUTH_CLIENT_ID
     if not client_id:
         return Response(
@@ -154,6 +157,7 @@ ALLOWED_USER_PROFILE_FIELDS = {"alias"}
 @permission_classes([IsAuthenticated])
 @traced
 def auth_preferences(request: Request) -> Response:
+    """Read or update the current user's saved preferences."""
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
     if request.method == "GET":
         return Response(
@@ -256,6 +260,7 @@ def _verify_google_id_token(id_token: str) -> dict:
 @permission_classes([AllowAny])
 @traced
 def auth_google(request: Request) -> Response:
+    """Delegate the Google OAuth login flow to the auth submodule."""
     client_id = settings.GOOGLE_OAUTH_CLIENT_ID
     client_secret = settings.GOOGLE_OAUTH_CLIENT_SECRET
     if not client_id or not client_secret:
@@ -380,6 +385,7 @@ def auth_google(request: Request) -> Response:
 @permission_classes([AllowAny])
 @traced
 def validate_invite(request: Request) -> Response:
+    """Validate an invite code for the current client."""
     code_value = request.data.get("code", "")
     if not code_value:
         return Response(
@@ -427,6 +433,7 @@ def _get_or_create_active_invite_code() -> InviteCode:
 @permission_classes([IsAdminUser])
 @traced
 def staff_invite_code(request: Request) -> Response:
+    """Create or return the current staff invite code."""
     if request.method == "POST":
         invite = InviteCode.objects.create()
     else:
@@ -534,6 +541,7 @@ async def _stream_export_archive(
 @permission_classes([IsAuthenticated])
 @traced
 def auth_export(request: Request) -> StreamingHttpResponse:
+    """Download a ZIP archive of the current user's data."""
     pieces_json, profile_json, images = _collect_export_data(request.user, request)
     response = StreamingHttpResponse(
         _stream_export_archive(pieces_json, profile_json, images),
@@ -563,6 +571,7 @@ def auth_export(request: Request) -> StreamingHttpResponse:
 @permission_classes([IsAuthenticated])
 @traced
 def auth_delete_account(request: Request) -> Response:
+    """Delete the current user after invalidating their session."""
     user = request.user
     # Invalidate the session before deleting the user to avoid dangling session
     # references to a now-deleted User row.

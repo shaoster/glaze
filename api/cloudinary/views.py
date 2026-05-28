@@ -179,6 +179,7 @@ def cloudinary_widget_sign(request: Request) -> Response:
 @permission_classes([IsAdminUser])
 @traced
 def admin_cloudinary_cleanup(request: Request) -> Response:
+    """List or delete unused Cloudinary assets for administrators."""
     from ..cloudinary_cleanup import (
         delete_cloudinary_assets,
         list_cloudinary_assets,
@@ -272,6 +273,7 @@ def admin_cloudinary_cleanup(request: Request) -> Response:
 def admin_cloudinary_cleanup_archive(
     request: Request,
 ) -> StreamingHttpResponse | Response:
+    """Download a ZIP archive of the Cloudinary cleanup report and asset metadata."""
     from ..cloudinary_cleanup import (
         list_cloudinary_assets,
         stream_cloudinary_cleanup_archive,

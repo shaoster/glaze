@@ -7,7 +7,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 
-def _delete_account_impl(request: Request, *, logout_fn=logout) -> Response:
+def delete_account_impl(request: Request, *, logout_fn=logout) -> Response:
     """Delete the current user after invalidating their session."""
     user = request.user
     # Invalidate the session before deleting the user to avoid dangling session
@@ -16,3 +16,6 @@ def _delete_account_impl(request: Request, *, logout_fn=logout) -> Response:
     with transaction.atomic():
         user.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+_delete_account_impl = delete_account_impl

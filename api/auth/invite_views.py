@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
-from .models import InviteCode
+from ..models import InviteCode
 
 
 @extend_schema(

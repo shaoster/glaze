@@ -83,7 +83,7 @@ from backend.otel import traced
 @traced
 def admin_cloudinary_cleanup(request: Request) -> Response:
     """List or delete Cloudinary assets for admin cleanup."""
-    from .cloudinary_cleanup import (
+    from ..cloudinary_cleanup import (
         delete_cloudinary_assets,
         list_cloudinary_assets,
         summarize_referenced_public_ids,
@@ -177,7 +177,7 @@ def admin_cloudinary_cleanup_archive(
     request: Request,
 ) -> StreamingHttpResponse | Response:
     """Download a ZIP archive of Cloudinary assets for admin cleanup."""
-    from .cloudinary_cleanup import (
+    from ..cloudinary_cleanup import (
         list_cloudinary_assets,
         stream_cloudinary_cleanup_archive,
     )

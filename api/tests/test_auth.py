@@ -14,9 +14,10 @@ from django.apps import apps as django_apps
 from django.contrib.auth.models import User
 from django.test import Client
 from django.utils import timezone
+from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from api.models import InviteCode, Piece, UserProfile
+from api.models import Image, InviteCode, Piece, UserProfile
 
 FAKE_SUB = "google-subject-12345"
 FAKE_HASHED_SUB = hashlib.sha256(FAKE_SUB.encode()).hexdigest()
@@ -497,6 +498,37 @@ class TestAuthGoogle:
         response = auth_views.auth_google(request)
         assert response.status_code == 503
 
+    def test_auth_google_impl_creates_user_and_logs_in(self, db, settings, monkeypatch):
+        from api.auth.google_views import auth_google_impl
+
+        settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
+        settings.GOOGLE_OAUTH_CLIENT_SECRET = "test-secret"
+        invite = InviteCode.objects.create()
+        monkeypatch.setattr(
+            "api.auth.google_views.bootstrap_dev_user", lambda user: None
+        )
+        login_calls = []
+
+        def fake_login(request, user):
+            login_calls.append(user)
+
+        request = SimpleNamespace(
+            data={
+                "code": "authcode",
+                "redirect_uri": "http://localhost",
+                "invite_code": str(invite.code),
+            }
+        )
+        response = auth_google_impl(
+            request,
+            exchange_auth_code=lambda code, redirect_uri: {"id_token": "fake-id-token"},
+            verify_id_token=lambda id_token: FAKE_PAYLOAD,
+            login_fn=fake_login,
+        )
+
+        assert response.status_code == 200
+        assert login_calls and login_calls[0].username == FAKE_HASHED_SUB
+
 
 async def _collect_async_bytes(chunks: AsyncIterable[bytes]) -> bytes:
     return b"".join([chunk async for chunk in chunks])
@@ -558,6 +590,99 @@ class TestAuthExport:
             assert str(my_piece.id) in piece_ids
             assert str(other_piece.id) not in piece_ids
 
+    def test_collect_export_data_returns_profile_and_piece_payloads(self, user, piece):
+        from api.auth.export_data import collect_export_data
+
+        UserProfile.objects.create(
+            user=user,
+            alias="Studio Alias",
+            preferences={"process_summary_fields": ["piece.name"]},
+        )
+        factory = APIRequestFactory()
+        request = Request(factory.get("/api/auth/export/"))
+        request._user = user
+
+        pieces_json, profile_json, images = collect_export_data(user, request)
+
+        pieces = json.loads(pieces_json)
+        profile = json.loads(profile_json)
+        assert any(str(piece.id) == item["id"] for item in pieces)
+        assert profile == {
+            "alias": "Studio Alias",
+            "preferences": {"process_summary_fields": ["piece.name"]},
+        }
+        assert images == []
+
+    def test_export_image_name_uses_public_id_and_url_extension(self, user):
+        from api.auth.export_archive import export_image_name
+
+        image = Image.objects.create(
+            user=user,
+            url="https://res.cloudinary.com/demo/image/upload/v1/photos/glaze/test.jpg",
+            cloudinary_public_id="exports/gallery/test",
+        )
+
+        assert export_image_name(image) == "images/exports__gallery__test.jpg"
+
+    def test_stream_export_archive_writes_zip_entries(self, monkeypatch):
+        from api.auth.export_archive import stream_export_archive
+
+        image = Image.objects.create(
+            url="https://example.com/path/to/image.png",
+            cloudinary_public_id="exports/path/to/image",
+        )
+
+        class FakeResponse:
+            def raise_for_status(self):
+                return None
+
+            async def aiter_bytes(self, chunk_size):
+                yield b"fake-image-bytes"
+
+        class FakeStreamContext:
+            def __init__(self, response):
+                self.response = response
+
+            async def __aenter__(self):
+                return self.response
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+        class FakeAsyncClient:
+            def __init__(self, timeout=None):
+                self.timeout = timeout
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+            def stream(self, method, url):
+                assert method == "GET"
+                assert url == image.url
+                return FakeStreamContext(FakeResponse())
+
+        monkeypatch.setattr(
+            "api.auth.export_archive.httpx.AsyncClient", FakeAsyncClient
+        )
+
+        archive_bytes = asyncio.run(
+            _collect_async_bytes(
+                stream_export_archive(
+                    '[{"id": "piece-1"}]', '{"alias": "Studio Alias"}', [image]
+                )
+            )
+        )
+        with ZipFile(BytesIO(archive_bytes)) as archive:
+            assert archive.read("pieces.json") == b'[{"id": "piece-1"}]'
+            assert archive.read("profile.json") == b'{"alias": "Studio Alias"}'
+            assert (
+                archive.read("images/exports__path__to__image.png")
+                == b"fake-image-bytes"
+            )
+
 
 @pytest.mark.django_db
 class TestAuthDeleteAccount:
@@ -569,25 +694,21 @@ class TestAuthDeleteAccount:
         response = auth_views.auth_delete_account(request)
         assert response.status_code == 403
 
-    def test_delete_account_removes_user_and_returns_204(self, user, monkeypatch):
-        from api import auth_views
-
-        monkeypatch.setattr(auth_views, "logout", lambda req: None)
+    def test_delete_account_removes_user_and_returns_204(self, user):
+        from api.auth.account_views import delete_account_impl
 
         factory = APIRequestFactory()
         request = factory.delete("/api/auth/account/")
-        force_authenticate(request, user=user)
+        request.user = user
         user_id = user.id
 
-        response = auth_views.auth_delete_account(request)
+        response = delete_account_impl(request, logout_fn=lambda req: None)
 
         assert response.status_code == 204
         assert not User.objects.filter(id=user_id).exists()
 
-    def test_delete_account_invalidates_session_before_deletion(
-        self, user, monkeypatch
-    ):
-        from api import auth_views
+    def test_delete_account_invalidates_session_before_deletion(self, user):
+        from api.auth.account_views import delete_account_impl
 
         deletion_order: list[str] = []
 
@@ -597,28 +718,22 @@ class TestAuthDeleteAccount:
             )
             deletion_order.append("logout")
 
-        monkeypatch.setattr(auth_views, "logout", fake_logout)
-
         factory = APIRequestFactory()
         request = factory.delete("/api/auth/account/")
-        force_authenticate(request, user=user)
-        auth_views.auth_delete_account(request)
+        request.user = user
+        delete_account_impl(request, logout_fn=fake_logout)
 
         assert deletion_order == ["logout"]
         assert not User.objects.filter(id=user.id).exists()
 
-    def test_delete_account_only_affects_own_account(
-        self, user, other_user, monkeypatch
-    ):
-        from api import auth_views
-
-        monkeypatch.setattr(auth_views, "logout", lambda req: None)
+    def test_delete_account_only_affects_own_account(self, user, other_user):
+        from api.auth.account_views import delete_account_impl
 
         factory = APIRequestFactory()
         request = factory.delete("/api/auth/account/")
-        force_authenticate(request, user=user)
+        request.user = user
         other_user_id = other_user.id
 
-        auth_views.auth_delete_account(request)
+        delete_account_impl(request, logout_fn=lambda req: None)
 
         assert User.objects.filter(id=other_user_id).exists()

@@ -27,7 +27,7 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
-from .dev_bootstrap import bootstrap_dev_user
+from .dev.bootstrap import bootstrap_dev_user
 from .models import (
     AsyncTask,
     FavoriteGlazeCombination,

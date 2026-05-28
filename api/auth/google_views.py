@@ -17,9 +17,9 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
-from .dev_bootstrap import bootstrap_dev_user
-from .models import InviteCode, UserProfile
-from .serializers import AuthUserSerializer, GoogleAuthSerializer
+from ..dev.bootstrap import bootstrap_dev_user
+from ..models import InviteCode, UserProfile
+from ..serializers import AuthUserSerializer, GoogleAuthSerializer
 
 
 def _exchange_google_auth_code(code: str, redirect_uri: str) -> dict:
@@ -65,6 +65,7 @@ def auth_google_impl(
     verify_id_token=_verify_google_id_token,
     login_fn=login,
 ) -> Response:
+    """Run the Google OAuth login flow and return the authenticated user payload."""
     client_id = settings.GOOGLE_OAUTH_CLIENT_ID
     client_secret = settings.GOOGLE_OAUTH_CLIENT_SECRET
     if not client_id or not client_secret:

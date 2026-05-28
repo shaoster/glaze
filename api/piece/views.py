@@ -227,6 +227,7 @@ def _piece_photo_counts(piece_ids: list[UUID]) -> dict[UUID, int]:
 @permission_classes([IsAuthenticated])
 @traced
 def pieces(request: Request) -> Response:
+    """List or create the current user's pieces."""
     if request.method == "GET":
         qs = _piece_queryset(request)
         raw_tag_ids = request.query_params.get("tag_ids", "").strip()
@@ -282,6 +283,7 @@ def pieces(request: Request) -> Response:
 @permission_classes([AllowAny])
 @traced
 def piece_detail(request: Request, piece_id: str) -> Response:
+    """Read, update, or delete a single piece owned by the current user."""
     if request.method == "GET":
         piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
         return Response(_serialize_piece_detail(piece, request))
@@ -314,6 +316,7 @@ def piece_detail(request: Request, piece_id: str) -> Response:
 @permission_classes([IsAuthenticated])
 @traced
 def piece_states(request: Request, piece_id: str) -> Response:
+    """List or append workflow states for a piece."""
     piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
     serializer = PieceStateCreateSerializer(data=request.data, context={"piece": piece})
     serializer.is_valid(raise_exception=True)
@@ -333,6 +336,7 @@ def piece_states(request: Request, piece_id: str) -> Response:
 @permission_classes([IsAuthenticated])
 @traced
 def piece_current_state_detail(request: Request, piece_id: str) -> Response:
+    """Read or update the current workflow state detail for a piece."""
     piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
     current = piece.current_state
     if current is None:
@@ -352,6 +356,7 @@ def piece_current_state_detail(request: Request, piece_id: str) -> Response:
 @permission_classes([IsAuthenticated])
 @traced
 def piece_current_state(request: Request, piece_id: str) -> Response:
+    """Read or update the current workflow state for a piece."""
     piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
     current = piece.current_state
     if current is None:
@@ -479,6 +484,7 @@ def piece_image_detail(request, image_id, piece_state_id):
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
 def patch_image_crop(request, image_id):
+    """Update the crop metadata for a piece image."""
     image = get_object_or_404(Image, pk=image_id, user=request.user)
     serializer = ImageCropSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)

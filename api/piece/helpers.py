@@ -16,9 +16,9 @@ from rest_framework.request import Request
 
 from backend.otel import traced
 
-from .models import Piece, PieceState, PieceStateImage
-from .serializers import PieceDetailSerializer, PieceSummarySerializer
-from .workflow import get_global_config, get_state_global_ref_map
+from ..models import Piece, PieceState, PieceStateImage
+from ..serializers import PieceDetailSerializer, PieceSummarySerializer
+from ..workflow import get_global_config, get_state_global_ref_map
 
 _PIECE_ORDERING_MAP = {
     "last_modified": "computed_last_modified",

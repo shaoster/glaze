@@ -18,7 +18,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from .dev_bootstrap import bootstrap_dev_user as _bootstrap_dev_user
+from .dev.bootstrap import bootstrap_dev_user as _bootstrap_dev_user
 
 bootstrap_dev_user = _bootstrap_dev_user
 

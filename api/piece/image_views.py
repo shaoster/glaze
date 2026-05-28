@@ -16,9 +16,9 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
-from .models import Image, PieceStateImage
-from .piece_helpers import piece_detail_queryset, serialize_piece_detail
-from .serializers import ImageCropSerializer, PieceDetailSerializer
+from ..models import Image, PieceStateImage
+from ..serializers import ImageCropSerializer, PieceDetailSerializer
+from .helpers import piece_detail_queryset, serialize_piece_detail
 
 
 class PieceImageMoveSerializer(drf_serializers.Serializer):

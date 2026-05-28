@@ -10,8 +10,8 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
-from .models import UserProfile
-from .preferences import UserPreferencesSerializer, get_preferences_config
+from ..models import UserProfile
+from ..preferences import UserPreferencesSerializer, get_preferences_config
 
 # Whitelist of UserProfile fields that can be updated via the declarative system.
 # [SECURITY]: Strictly control which model fields are exposed to storage: UserProfile.

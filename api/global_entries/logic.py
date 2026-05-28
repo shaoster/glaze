@@ -8,9 +8,9 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .models import FavoriteGlazeCombination, GlazeCombination
-from .serializer_registry import _GLOBAL_ENTRY_SERIALIZERS
-from .workflow import get_global_model_and_field, is_private_global, is_public_global
+from ..models import FavoriteGlazeCombination, GlazeCombination
+from ..serializer_registry import _GLOBAL_ENTRY_SERIALIZERS
+from ..workflow import get_global_model_and_field, is_private_global, is_public_global
 
 _HEX_COLOR_RE = re.compile(r"^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 
@@ -42,7 +42,7 @@ _GLOBAL_CREATE_REQUEST_SCHEMA = {
 }
 
 
-def _apply_global_filters(qs, model_cls, request):
+def apply_global_filters(qs, model_cls, request):
     """Apply query-param filters declared in a model's ``filterable_fields`` dict."""
     filterable = getattr(model_cls, "filterable_fields", {})
     for lookup, meta in filterable.items():
@@ -64,9 +64,9 @@ def _apply_global_filters(qs, model_cls, request):
     return qs
 
 
-def _global_entries_impl(request: Request, global_name: str) -> Response:
+def global_entries_impl(request: Request, global_name: str) -> Response:
     """Core implementation for GET/POST /api/globals/<global_name>/."""
-    return _global_entries_impl_with_resolvers(
+    return global_entries_impl_with_resolvers(
         request,
         global_name,
         resolve_global=get_global_model_and_field,
@@ -75,7 +75,7 @@ def _global_entries_impl(request: Request, global_name: str) -> Response:
     )
 
 
-def _global_entries_impl_with_resolvers(
+def global_entries_impl_with_resolvers(
     request: Request,
     global_name: str,
     *,
@@ -83,6 +83,7 @@ def _global_entries_impl_with_resolvers(
     public_global,
     private_global,
 ) -> Response:
+    """Core implementation for list and create operations on a global entry type."""
     model_cls, fields, display_field = resolve_global(global_name)
     has_public_library = public_global(global_name)
 
@@ -94,7 +95,7 @@ def _global_entries_impl_with_resolvers(
         else:
             base_qs = model_cls.objects.filter(user=request.user)
 
-        base_qs = _apply_global_filters(base_qs, model_cls, request)
+        base_qs = apply_global_filters(base_qs, model_cls, request)
 
         entry_serializer_cls = _GLOBAL_ENTRY_SERIALIZERS.get(model_cls)
         if entry_serializer_cls is not None:
@@ -224,9 +225,10 @@ def _global_entries_impl_with_resolvers(
     )
 
 
-def _global_entry_favorite_impl(
+def global_entry_favorite_impl(
     request: Request, model_cls, fav_model_cls, pk: str
 ) -> Response:
+    """Toggle the current user's favorite for a global entry object."""
     obj = get_object_or_404(model_cls, pk=pk)
     if obj.user_id is not None and obj.user_id != request.user.pk:
         return Response(status=status.HTTP_404_NOT_FOUND)
@@ -238,3 +240,9 @@ def _global_entry_favorite_impl(
         fav_model_cls.objects.filter(user=request.user, **{fk_field: obj}).delete()
 
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+_apply_global_filters = apply_global_filters
+_global_entries_impl = global_entries_impl
+_global_entries_impl_with_resolvers = global_entries_impl_with_resolvers
+_global_entry_favorite_impl = global_entry_favorite_impl

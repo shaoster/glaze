@@ -6,11 +6,11 @@ from typing import Any
 from django.db.models import Q
 from rest_framework.request import Request
 
-from .models import Image, Piece, UserProfile
-from .serializers import PieceDetailSerializer
+from ..models import Image, Piece, UserProfile
+from ..serializers import PieceDetailSerializer
 
 
-def _collect_export_data(user: Any, request: Request) -> tuple[str, str, list[Image]]:
+def collect_export_data(user: Any, request: Request) -> tuple[str, str, list[Image]]:
     """Assemble the JSON payloads and referenced images for a user export."""
     pieces = (
         Piece.objects.filter(user=user)
@@ -47,3 +47,6 @@ def _collect_export_data(user: Any, request: Request) -> tuple[str, str, list[Im
         .distinct()
     )
     return json.dumps(list(pieces_data), default=str), profile_json, images
+
+
+_collect_export_data = collect_export_data

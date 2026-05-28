@@ -9,13 +9,13 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import httpx
 
-from .cloudinary_cleanup import _StreamingZipBuffer
-from .models import Image
+from ..cloudinary_cleanup import _StreamingZipBuffer
+from ..models import Image
 
 logger = logging.getLogger(__name__)
 
 
-def _export_image_name(image: Image) -> str:
+def export_image_name(image: Image) -> str:
     """Return the ZIP member path for an exported Cloudinary image."""
     public_id = cast(str, image.cloudinary_public_id)
     sanitized = public_id.replace("/", "__")
@@ -23,7 +23,7 @@ def _export_image_name(image: Image) -> str:
     return f"images/{sanitized}{ext}"
 
 
-async def _stream_export_archive(
+async def stream_export_archive(
     pieces_json: str, profile_json: str, images: list[Image]
 ) -> AsyncIterator[bytes]:
     """Stream the export archive as ZIP bytes."""
@@ -36,7 +36,7 @@ async def _stream_export_archive(
                 yield c
 
             for image in images:
-                member_name = _export_image_name(image)
+                member_name = export_image_name(image)
                 try:
                     async with client.stream("GET", image.url) as response:
                         response.raise_for_status()
@@ -56,3 +56,7 @@ async def _stream_export_archive(
 
     for c in buffer.flush_chunks():
         yield c
+
+
+_export_image_name = export_image_name
+_stream_export_archive = stream_export_archive

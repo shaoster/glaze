@@ -43,7 +43,9 @@ inside async views.
 - Feature-specific endpoint logic should live under concern packages such as
   `api/auth/`, `api/piece/`, `api/global_entries/`, `api/cloudinary/`, and
   `api/dev/`. Keep top-level `api/*.py` modules as thin compatibility wrappers
-  when needed for stable imports, tests, or URL registration.
+  when needed for stable imports, tests, or URL registration. When a feature
+  package exposes reusable logic, the public functions in that package are the
+  supported contract: document them, trace them, and test them directly.
 
 ## Declarative User Preferences and Tutorials
 
