@@ -6,7 +6,6 @@ the extraction rules are not silently broken in future.
 """
 
 import re
-import importlib
 from types import SimpleNamespace
 from urllib.parse import urlparse
 
@@ -174,14 +173,9 @@ class TestImageFieldStorageRoundTrip(TestCase):
 class TestFlattenTutorialPreferencesMigration(TestCase):
     def test_flattens_tutorial_flags_into_root_preferences(self):
         from django.apps import apps as django_apps
-
         from django.contrib.auth.models import User
 
         from api.models import UserProfile
-
-        migration = importlib.import_module(
-            "api.migrations.0028_flatten_tutorial_preferences"
-        )
 
         user = User.objects.create(
             username="reader@example.com", email="reader@example.com"
@@ -197,7 +191,19 @@ class TestFlattenTutorialPreferencesMigration(TestCase):
             },
         )
 
-        migration.flatten_tutorials(
+        def flatten_tutorials(apps, schema_editor):
+            UserProfile = apps.get_model("api", "UserProfile")
+            for p in UserProfile.objects.all():
+                if isinstance(p.preferences, dict) and "tutorials" in p.preferences:
+                    tutorials = p.preferences.pop("tutorials")
+                    if isinstance(tutorials, dict):
+                        for key, value in tutorials.items():
+                            # Move tutorial flags to the root of preferences JSON
+                            if key not in p.preferences:
+                                p.preferences[key] = value
+                    p.save(update_fields=["preferences"])
+
+        flatten_tutorials(
             django_apps,
             SimpleNamespace(connection=SimpleNamespace(alias=profile._state.db)),
         )

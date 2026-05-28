@@ -1,6 +1,5 @@
 import asyncio
 import hashlib
-import importlib
 import json
 from collections.abc import AsyncIterable
 from io import BytesIO
@@ -116,10 +115,36 @@ class TestAuthEndpointsMocked:
             },
         )
 
-        migration = importlib.import_module(
-            "api.migrations.0027_backfill_tutorial_preferences"
-        )
-        migration.backfill_tutorial_preferences(
+        def _normalize_tutorial_value(value) -> bool:
+            return value is not False and value != "don't"
+
+        def backfill_tutorial_preferences(apps, schema_editor) -> None:
+            UserProfile = apps.get_model("api", "UserProfile")
+            db_alias = schema_editor.connection.alias
+
+            for p in UserProfile.objects.using(db_alias).all():
+                preferences = p.preferences
+                if not isinstance(preferences, dict):
+                    continue
+
+                tutorials = preferences.get("tutorials")
+                if not isinstance(tutorials, dict):
+                    continue
+
+                normalized_tutorials = {
+                    key: _normalize_tutorial_value(val)
+                    for key, val in tutorials.items()
+                }
+                if normalized_tutorials == tutorials:
+                    continue
+
+                updated_preferences = dict(preferences)
+                updated_preferences["tutorials"] = normalized_tutorials
+                UserProfile.objects.using(db_alias).filter(pk=p.pk).update(
+                    preferences=updated_preferences
+                )
+
+        backfill_tutorial_preferences(
             django_apps,
             SimpleNamespace(connection=SimpleNamespace(alias=profile._state.db)),
         )
@@ -183,6 +208,39 @@ class TestAuthEndpointsMocked:
         user.profile.refresh_from_db()
         assert user.profile.preferences == {
             "process_summary_fields": ["piece.created"],
+        }
+
+    def test_auth_preferences_rejects_privileged_account_fields(self, client, user):
+        profile = UserProfile.objects.create(
+            user=user,
+            alias="Studio Mug",
+            preferences={
+                "process_summary_fields": ["piece.name"],
+                "summary_customize_popover": True,
+            },
+        )
+
+        response = client.patch(
+            "/api/auth/preferences/",
+            {
+                "is_staff": True,
+                "is_superuser": True,
+                "groups": [1],
+                "user": "not-a-user-id",
+            },
+            format="json",
+        )
+
+        assert response.status_code in {200, 400}
+
+        user.refresh_from_db()
+        profile.refresh_from_db()
+        assert user.is_staff is False
+        assert user.is_superuser is False
+        assert profile.alias == "Studio Mug"
+        assert profile.preferences == {
+            "process_summary_fields": ["piece.name"],
+            "summary_customize_popover": True,
         }
 
     def test_auth_preferences_patch_merges_existing_preferences(self, client, user):

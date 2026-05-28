@@ -13,6 +13,7 @@ from django.db.models import (
     Subquery,
 )
 from django.db.models.functions import Coalesce, Greatest
+from rest_framework import serializers as drf_serializers
 from rest_framework.request import Request
 
 from backend.otel import traced
@@ -44,6 +45,10 @@ def _thumbnail_crop_subquery():
         .values("crop")[:1],
         output_field=JSONField(),
     )
+
+
+class PieceImageMoveSerializer(drf_serializers.Serializer):
+    piece_state_id = drf_serializers.UUIDField(required=False)
 
 
 @traced

@@ -10,7 +10,6 @@ from uuid import UUID
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.db import transaction
 from django.db.models import (
     Count,
     DateTimeField,
@@ -22,7 +21,7 @@ from django.db.models import (
     Subquery,
 )
 from django.db.models.functions import Coalesce, Greatest
-from django.http import Http404, StreamingHttpResponse
+from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
@@ -42,10 +41,8 @@ from ..models import (
     AsyncTask,
     FavoriteGlazeCombination,
     GlazeCombination,
-    Image,
     Piece,
     PieceState,
-    PieceStateImage,
     UserProfile,
 )
 from ..serializer_registry import (
@@ -56,7 +53,6 @@ from ..serializers import (
     AuthUserSerializer,
     GlazeCombinationImageEntrySerializer,
     GoogleAuthSerializer,
-    ImageCropSerializer,
     PieceCreateSerializer,
     PieceDetailSerializer,
     PieceStateCreateSerializer,
@@ -75,128 +71,35 @@ from ..workflow import (
     is_private_global,
     is_public_global,
 )
-
-_PIECE_ORDERING_MAP = {
-    "last_modified": "computed_last_modified",
-    "-last_modified": "-computed_last_modified",
-    "name": "name",
-    "-name": "-name",
-    "created": "created",
-    "-created": "-created",
-}
-_DEFAULT_ORDERING = "-last_modified"
-_DEFAULT_PAGE_SIZE = 16
-
-
-class PieceImageMoveSerializer(drf_serializers.Serializer):
-    piece_state_id = drf_serializers.UUIDField(required=False)
-
-
-def _thumbnail_crop_subquery():
-    return Subquery(
-        PieceStateImage.objects.filter(
-            piece_state__piece=OuterRef("pk"),
-            image_id=OuterRef("thumbnail_id"),
-            crop__isnull=False,
-        )
-        .order_by("-pk")
-        .values("crop")[:1],
-        output_field=JSONField(),
-    )
-
-
-@traced
-def _piece_queryset(request: Request):
-    user_id = request.user.id
-    assert user_id is not None
-    return (
-        Piece.objects.select_related("current_location", "thumbnail")
-        .annotate(thumbnail_crop=_thumbnail_crop_subquery())
-        .prefetch_related("states", "tag_links__tag")
-        .filter(user_id=user_id)
-    )
-
-
-def _piece_read_queryset(request: Request):
-    qs = (
-        Piece.objects.select_related("current_location", "thumbnail")
-        .annotate(thumbnail_crop=_thumbnail_crop_subquery())
-        .prefetch_related("states", "tag_links__tag")
-    )
-    if request.user.is_authenticated:
-        # Editable pieces are inaccessible to non-owners even when shared=True,
-        # without altering the shared flag itself.
-        return qs.filter(Q(user=request.user) | Q(shared=True, is_editable=False))
-    return qs.filter(shared=True, is_editable=False)
-
-
-def _piece_state_ref_prefetches() -> list[Prefetch]:
-    prefetches: list[Prefetch] = []
-    for global_name in get_state_global_ref_map():
-        config = get_global_config(global_name)
-        ref_model = apps.get_model("api", f"PieceState{config['model']}Ref")
-        related_name = ref_model._meta.get_field(
-            "piece_state"
-        ).remote_field.related_name
-        assert related_name is not None
-        prefetches.append(
-            Prefetch(
-                f"states__{related_name}",
-                queryset=ref_model.objects.select_related(global_name),
-            )
-        )
-    return prefetches
-
-
-@traced
-def _piece_detail_queryset(request: Request):
-    return _piece_read_queryset(request).prefetch_related(
-        "states__image_links__image", *_piece_state_ref_prefetches()
-    )
-
-
-@traced
-def _serialize_piece_detail(piece: Piece, request: Request):
-    return PieceDetailSerializer(piece, context={"request": request}).data
-
-
-@traced
-def _serialize_piece_summary(qs, request: Request):
-    return PieceSummarySerializer(qs, many=True, context={"request": request}).data
-
-
-@traced
-def _apply_piece_ordering(qs, ordering_param: str):
-    db_ordering = _PIECE_ORDERING_MAP.get(
-        ordering_param, _PIECE_ORDERING_MAP[_DEFAULT_ORDERING]
-    )
-    if "computed_last_modified" in db_ordering:
-        latest_state_lm = (
-            PieceState.objects.filter(piece=OuterRef("pk"))
-            .order_by("-last_modified")
-            .values("last_modified")[:1]
-        )
-        qs = qs.annotate(
-            computed_last_modified=Greatest(
-                "fields_last_modified",
-                Coalesce(
-                    Subquery(latest_state_lm, output_field=DateTimeField()),
-                    "fields_last_modified",
-                ),
-            )
-        )
-    return qs.order_by(db_ordering)
-
-
-def _piece_photo_counts(piece_ids: list[UUID]) -> dict[UUID, int]:
-    if not piece_ids:
-        return {}
-    rows = (
-        PieceStateImage.objects.filter(piece_state__piece_id__in=piece_ids)
-        .values("piece_state__piece_id")
-        .annotate(photo_count=Count("id"))
-    )
-    return {row["piece_state__piece_id"]: row["photo_count"] for row in rows}
+from .helpers import (
+    _DEFAULT_ORDERING,
+    _DEFAULT_PAGE_SIZE,
+    _PIECE_ORDERING_MAP,
+)
+from .helpers import (
+    apply_piece_ordering as _apply_piece_ordering,
+)
+from .helpers import (
+    piece_detail_queryset as _piece_detail_queryset,
+)
+from .helpers import (
+    piece_photo_counts as _piece_photo_counts,
+)
+from .helpers import (
+    piece_queryset as _piece_queryset,
+)
+from .helpers import (
+    piece_read_queryset as _piece_read_queryset,
+)
+from .helpers import (
+    piece_state_ref_prefetches as _piece_state_ref_prefetches,
+)
+from .helpers import (
+    serialize_piece_detail as _serialize_piece_detail,
+)
+from .helpers import (
+    serialize_piece_summary as _serialize_piece_summary,
+)
 
 
 @extend_schema(
@@ -436,94 +339,4 @@ def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response
     serializer.is_valid(raise_exception=True)
     serializer.update(ps, serializer.validated_data)
     piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
-    return Response(_serialize_piece_detail(piece, request))
-
-
-@extend_schema(
-    methods=["PATCH"],
-    request=PieceImageMoveSerializer,
-    responses={200: PieceDetailSerializer},
-    description=(
-        "Move a user-owned image from one piece state to another atomically. "
-        "Requires the piece to be in editable mode. Returns the full updated piece. "
-        "Omitting `piece_state_id` is a no-op that returns the current piece state."
-    ),
-)
-@api_view(["PATCH"])
-@permission_classes([IsAuthenticated])
-@traced
-def piece_image_detail(request, image_id, piece_state_id):
-    """Move a user-owned PieceStateImage link to a different state atomically."""
-    image = get_object_or_404(Image, pk=image_id, user=request.user)
-    request_serializer = PieceImageMoveSerializer(data=request.data)
-    request_serializer.is_valid(raise_exception=True)
-    target_state_id = request_serializer.validated_data.get("piece_state_id")
-
-    with transaction.atomic():
-        link = get_object_or_404(
-            PieceStateImage.objects.select_for_update().select_related(
-                "piece_state__piece"
-            ),
-            image=image,
-            piece_state_id=piece_state_id,
-        )
-        piece = link.piece_state.piece
-        if piece.user_id != request.user.pk:
-            raise Http404
-        if not piece.is_editable:
-            return Response(
-                {"detail": "Piece is not in editable mode."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        if target_state_id and target_state_id != link.piece_state_id:
-            to_state = get_object_or_404(piece.states, pk=target_state_id)
-            duplicate_link = (
-                PieceStateImage.objects.select_for_update()
-                .filter(piece_state=to_state, image=image)
-                .exclude(pk=link.pk)
-                .first()
-            )
-            if duplicate_link is not None:
-                link.delete()
-            else:
-                next_order = (
-                    to_state.image_links.aggregate(m=Max("order"))["m"] or -1
-                ) + 1
-                link.piece_state = to_state
-                link.order = next_order
-                link.save(update_fields=["piece_state", "order"])
-
-    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece.pk)
-    return Response(_serialize_piece_detail(piece, request))
-
-
-@extend_schema(request=ImageCropSerializer, responses=PieceDetailSerializer)
-@api_view(["PATCH"])
-@permission_classes([IsAuthenticated])
-@traced
-def patch_image_crop(request, image_id):
-    """Update the crop metadata for a piece image."""
-    image = get_object_or_404(Image, pk=image_id, user=request.user)
-    serializer = ImageCropSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-
-    # An Image can appear in multiple PieceStateImages (e.g. after a "Move to"
-    # operation). Callers pass only image_id with no way to disambiguate, so we
-    # target the most recently created PSI (highest id) which is the one the user
-    # last interacted with.
-    link = (
-        PieceStateImage.objects.select_related("piece_state__piece")
-        .filter(image=image, piece_state__piece__user=request.user)
-        .order_by("-id")
-        .first()
-    )
-    if link is None:
-        raise Http404
-    piece = link.piece_state.piece
-
-    link.crop = serializer.validated_data
-    link.save(update_fields=["crop"])
-
-    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece.pk)
     return Response(_serialize_piece_detail(piece, request))

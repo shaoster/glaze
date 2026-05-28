@@ -1,7 +1,6 @@
-from unittest.mock import Mock
 from types import SimpleNamespace
+from unittest.mock import Mock
 
-import pytest
 from rest_framework.test import APIRequestFactory
 
 import api.workflow as workflow_module
