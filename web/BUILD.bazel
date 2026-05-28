@@ -311,7 +311,6 @@ js_library(
             "src/assets/**/*",
             "src/components/**/*",
             "src/pages/**/*",
-            "src/stories/**/*",
             "*.json",
             "*.config.*",
             "public/**/*",
