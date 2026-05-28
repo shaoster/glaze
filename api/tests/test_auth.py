@@ -185,6 +185,39 @@ class TestAuthEndpointsMocked:
             "process_summary_fields": ["piece.created"],
         }
 
+    def test_auth_preferences_rejects_privileged_account_fields(self, client, user):
+        profile = UserProfile.objects.create(
+            user=user,
+            alias="Studio Mug",
+            preferences={
+                "process_summary_fields": ["piece.name"],
+                "summary_customize_popover": True,
+            },
+        )
+
+        response = client.patch(
+            "/api/auth/preferences/",
+            {
+                "is_staff": True,
+                "is_superuser": True,
+                "groups": [1],
+                "user": "not-a-user-id",
+            },
+            format="json",
+        )
+
+        assert response.status_code in {200, 400}
+
+        user.refresh_from_db()
+        profile.refresh_from_db()
+        assert user.is_staff is False
+        assert user.is_superuser is False
+        assert profile.alias == "Studio Mug"
+        assert profile.preferences == {
+            "process_summary_fields": ["piece.name"],
+            "summary_customize_popover": True,
+        }
+
     def test_auth_preferences_patch_merges_existing_preferences(self, client, user):
         UserProfile.objects.create(
             user=user,
