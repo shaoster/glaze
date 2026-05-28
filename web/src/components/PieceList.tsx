@@ -24,8 +24,8 @@ import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import {
   MasonryScroller,
-  createPositioner,
   useContainerPosition,
+  usePositioner,
   useResizeObserver,
 } from "masonic";
 import {
@@ -47,31 +47,6 @@ const MASONRY_GUTTER = 8;
 const MASONRY_MAX_COLUMNS_MOBILE = 2;
 const MASONRY_MAX_COLUMNS_DESKTOP = 4;
 
-function getMasonryColumns(
-  width = 0,
-  minimumWidth = 0,
-  gutter = 8,
-  columnCount?: number,
-  maxColumnCount?: number,
-  maxColumnWidth?: number,
-): [number, number] {
-  columnCount =
-    columnCount ||
-    Math.min(
-      Math.floor((width + gutter) / (minimumWidth + gutter)),
-      maxColumnCount || Infinity,
-    ) ||
-    1;
-  let computedColumnWidth = Math.floor(
-    (width - gutter * (columnCount - 1)) / columnCount,
-  );
-
-  if (maxColumnWidth !== undefined && computedColumnWidth > maxColumnWidth) {
-    computedColumnWidth = maxColumnWidth;
-  }
-
-  return [computedColumnWidth, columnCount];
-}
 
 function useWindowHeight(): number {
   const [height, setHeight] = useState(() =>
@@ -408,6 +383,12 @@ type PieceListProps = {
   hasMore?: boolean;
   loading?: boolean;
   loadingMore?: boolean;
+  /**
+   * Increment this whenever the parent mutates pieces in a non-append way
+   * (e.g. prepending a newly created piece). The positioner resets so masonic
+   * re-lays out all items with correct index→height mappings.
+   */
+  positionerResetKey?: number;
 };
 
 const PieceList = (props: PieceListProps) => {
@@ -420,6 +401,7 @@ const PieceList = (props: PieceListProps) => {
     hasMore = false,
     loading = false,
     loadingMore = false,
+    positionerResetKey = 0,
   } = props;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -442,8 +424,22 @@ const PieceList = (props: PieceListProps) => {
   }, [onLoadMore]);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+  const windowHeight = useWindowHeight();
+  const masonryRef = useRef<HTMLElement | null>(null);
+  const columnWidth = isMobile
+    ? MASONRY_COLUMN_WIDTH_MOBILE
+    : MASONRY_COLUMN_WIDTH_DESKTOP;
+  const { width: masonryWidth, offset: masonryOffset } = useContainerPosition(
+    masonryRef,
+    [isMobile],
+  );
+
   useEffect(() => {
-    if (!hasMore) return;
+    // Guard on masonryWidth: when width=0 the masonry grid hasn't rendered yet,
+    // so the sentinel sits at top≈0 and check() would fire onLoadMore prematurely
+    // before any cards are visible. Deferring until width>0 ensures the sentinel
+    // is at its true position in the document.
+    if (!hasMore || masonryWidth === 0) return;
     function check() {
       const sentinel = sentinelRef.current;
       if (!sentinel) return;
@@ -453,7 +449,7 @@ const PieceList = (props: PieceListProps) => {
     window.addEventListener("scroll", check, { passive: true });
     check();
     return () => window.removeEventListener("scroll", check);
-  }, [hasMore]);
+  }, [hasMore, masonryWidth]);
 
   const availableTags = useMemo(() => {
     const deduped = new Map<string, TagEntry>();
@@ -505,41 +501,36 @@ const PieceList = (props: PieceListProps) => {
   }, [activeFilters, activeTagIds, activeTags]);
 
   const hasActiveFilters = activeFilters.length > 0 || activeTagIds.length > 0;
-  const windowHeight = useWindowHeight();
-  const masonryRef = useRef<HTMLElement | null>(null);
-  const columnWidth = isMobile
-    ? MASONRY_COLUMN_WIDTH_MOBILE
-    : MASONRY_COLUMN_WIDTH_DESKTOP;
-  const { width: masonryWidth, offset: masonryOffset } = useContainerPosition(
-    masonryRef,
-    [isMobile],
-  );
-  const positioner = useMemo(() => {
-    const [computedColumnWidth, computedColumnCount] = getMasonryColumns(
-      masonryWidth,
+
+  // usePositioner resets when sort, filters, or positionerResetKey change.
+  // Pagination appends change none of these, so the positioner is reused and
+  // existing item positions survive — eliminating the re-layout flash.
+  // positionerResetKey is incremented by the parent for non-append mutations
+  // (e.g. handleCreated prepend) that would otherwise leave stale positions.
+  const positioner = usePositioner(
+    {
+      width: masonryWidth,
       columnWidth,
-      MASONRY_GUTTER,
-      undefined,
-      isMobile ? MASONRY_MAX_COLUMNS_MOBILE : MASONRY_MAX_COLUMNS_DESKTOP,
-    );
-    const nextPositioner = createPositioner(
-      computedColumnCount,
-      computedColumnWidth,
-      MASONRY_GUTTER,
-      MASONRY_GUTTER,
-    );
+      columnGutter: MASONRY_GUTTER,
+      rowGutter: MASONRY_GUTTER,
+      maxColumnCount: isMobile
+        ? MASONRY_MAX_COLUMNS_MOBILE
+        : MASONRY_MAX_COLUMNS_DESKTOP,
+    },
+    [positionerResetKey, sortOrder ?? "", activeFilters.join(","), activeTagIds.join(",")],
+  );
 
-    filteredPieces.forEach((piece, index) => {
-      if (piece.thumbnail?.crop) {
-        nextPositioner.set(
-          index,
-          getPieceCardLayout(piece, nextPositioner.columnWidth).estimatedHeight,
-        );
-      }
-    });
-
-    return nextPositioner;
-  }, [filteredPieces, masonryWidth, columnWidth, isMobile]);
+  // Seed crop heights for unpositioned items only. On a pure append the existing
+  // items already have positions (get returns non-undefined) so they are skipped.
+  // After a sort/filter reset all items are undefined and get fully reseeded.
+  filteredPieces.forEach((piece, index) => {
+    if (piece.thumbnail?.crop && positioner.get(index) === undefined) {
+      positioner.set(
+        index,
+        getPieceCardLayout(piece, positioner.columnWidth).estimatedHeight,
+      );
+    }
+  });
   const resizeObserver = useResizeObserver(positioner);
 
   const toggleFilter = useCallback(
