@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
-import { Box, Button, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import AnalysisIndex from "../components/AnalysisIndex";
 import GlazeCombinationGallery from "../components/GlazeCombinationGallery";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 function SubRouteHeader({ title }: { title: string }) {
   return (
@@ -43,7 +45,13 @@ export default function AnalyzePage() {
         <Route index element={<AnalysisIndex />} />
         <Route
           path="glaze-combinations"
-          element={<GlazeCombinationGallery />}
+          element={
+            <ErrorBoundary>
+              <Suspense fallback={<CircularProgress sx={{ display: "block", mx: "auto", mt: 4 }} />}>
+                <GlazeCombinationGallery />
+              </Suspense>
+            </ErrorBoundary>
+          }
         />
       </Routes>
     </Box>

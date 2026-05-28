@@ -763,7 +763,16 @@ function UnauthenticatedApp({
                 </ErrorBoundary>
               }
             />
-            <Route path="/pieces/:id/*" element={<PublicPieceShell />} />
+            <Route
+              path="/pieces/:id/*"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <PublicPieceShell />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
             <Route
               path="/invite"
               element={
