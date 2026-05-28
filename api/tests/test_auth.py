@@ -867,7 +867,9 @@ class TestMockIdp:
         me_response = client.get("/api/auth/me/")
         assert me_response.status_code == 200
         assert me_response.json()["user"] is not None
-        assert me_response.json()["user"]["email"] == "dev@localhost"
+        # AuthUserSerializer exposes openid_subject, not email.
+        # For mock-IdP users the subject is sha256("mock-idp:<email>").
+        assert me_response.json()["user"]["openid_subject"] != ""
 
     def test_complete_creates_user_if_missing(self, db, settings, monkeypatch):
         settings.DEV_BOOTSTRAP_ENABLED = True
