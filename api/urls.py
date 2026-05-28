@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from . import views
+from .global_entries.views import _FAVORITES_REGISTRY
 from .workflow import get_global_model_and_field, get_global_names
 
 _router = DefaultRouter()
@@ -110,7 +111,7 @@ for _global_name in get_global_names():
         )
     )
 
-    if _model_cls in views._FAVORITES_REGISTRY:
+    if _model_cls in _FAVORITES_REGISTRY:
         urlpatterns.append(
             path(
                 f"globals/{_global_name}/<str:pk>/favorite/",

@@ -1,11 +1,12 @@
-"""Compatibility re-exports for API endpoint callables.
+"""Stable API endpoint imports used by URL registration and legacy call sites.
 
 Endpoint implementations live in focused modules. Keep this module thin so
-existing URL registrations and tests can import stable names from api.views.
+existing URL registrations can import the stable names they need without
+depending on compatibility wrappers.
 """
 
 from .analysis_views import glaze_combination_images
-from .auth_views import (
+from .auth.views import (
     auth_delete_account,
     auth_export,
     auth_google,
@@ -16,16 +17,13 @@ from .auth_views import (
     staff_invite_code,
     validate_invite,
 )
-from .cloudinary_admin_views import (
+from .cloudinary.admin_views import (
     admin_cloudinary_cleanup,
     admin_cloudinary_cleanup_archive,
 )
-from .cloudinary_views import cloudinary_widget_config, cloudinary_widget_sign
+from .cloudinary.views import cloudinary_widget_config, cloudinary_widget_sign
 from .crop_run_views import CropRunViewSet, ImageCropRunsView
-from .global_entry_views import (
-    _FAVORITES_REGISTRY,
-    _apply_global_filters,
-    _global_entries_impl,
+from .global_entries.views import (
     make_global_entry_favorite_view,
     make_global_entry_view,
 )
@@ -36,8 +34,8 @@ from .health_views import (
     health_ready,
 )
 from .import_views import admin_manual_square_crop_import
-from .piece_image_views import patch_image_crop, piece_image_detail
-from .piece_views import (
+from .piece.image_views import patch_image_crop, piece_image_detail
+from .piece.views import (
     piece_current_state,
     piece_current_state_detail,
     piece_detail,
@@ -49,14 +47,11 @@ from .task_views import submit_task, task_detail
 from .workflow_views import workflow_state_schema
 
 __all__ = [
-    "_FAVORITES_REGISTRY",
     "CropRunViewSet",
     "ImageCropRunsView",
-    "_apply_global_filters",
     "_check_async_tasks",
     "_check_database",
     "_check_migrations",
-    "_global_entries_impl",
     "admin_cloudinary_cleanup",
     "admin_cloudinary_cleanup_archive",
     "admin_manual_square_crop_import",
