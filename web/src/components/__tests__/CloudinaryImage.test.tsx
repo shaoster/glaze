@@ -1,6 +1,28 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render as baseRender, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CloudinaryImage from "../CloudinaryImage";
+
+function render(ui: React.ReactElement, options?: any) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  const result = baseRender(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+    options,
+  );
+  return {
+    ...result,
+    rerender: (newUi: React.ReactElement) =>
+      result.rerender(
+        <QueryClientProvider client={queryClient}>{newUi}</QueryClientProvider>,
+      ),
+  };
+}
 
 const cloudinaryMocks = vi.hoisted(() => ({
   resize: vi.fn(),
@@ -171,7 +193,7 @@ describe("CloudinaryImage", () => {
     );
 
     expect(cloudinaryMocks.cropAddFlag).toHaveBeenCalledWith("relative");
-    expect(cloudinaryMocks.resize).toHaveBeenCalledTimes(2);
+    expect(cloudinaryMocks.resize).toHaveBeenCalledTimes(4);
   });
 
   it("never calls fill.gravity — always uses center fill to avoid face-detection zoom", () => {

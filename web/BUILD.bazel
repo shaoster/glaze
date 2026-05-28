@@ -227,7 +227,6 @@ js_library(
         "src/util/api.ts",
         "src/util/cloudinaryUpload.ts",
         "src/util/format.ts",
-        "src/util/imageQueries.ts",
         "src/util/normalizeWorkflowFields.ts",
         "src/util/optionalValues.ts",
         "src/util/postLoginRedirect.ts",

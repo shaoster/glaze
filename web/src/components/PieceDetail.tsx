@@ -1,6 +1,5 @@
 import {
   type ComponentProps,
-  useEffect,
   useState,
 } from "react";
 import {
@@ -15,10 +14,10 @@ import HistoryIcon from "@mui/icons-material/History";
 import { useBlocker, useLocation, useNavigate } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
 import { formatState, isTerminalState, getCustomFieldDefinitions } from "../util/workflow";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { updatePiece, updatePastState, updateCurrentState, moveImage, extractErrorMessage, addPieceState } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
-import { prefetchCloudinaryImage } from "../util/imageQueries";
+
 import NavigationBlocker from "./NavigationBlocker";
 import WorkflowState from "./WorkflowState";
 import TagManager from "./TagManager";
@@ -57,7 +56,7 @@ export default function PieceDetail({
 function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   const [isDirty, setIsDirty] = useState(false);
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
-  const queryClient = useQueryClient();
+
   const currentState = piece.current_state;
   const isTerminal = isTerminalState(currentState.state);
   const canEdit = piece.can_edit;
@@ -100,30 +99,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
 
   const blocker = useBlocker(canEdit && isDirty);
 
-  // Preload all piece images aggressively: hero first, then the rest async.
-  useEffect(() => {
-    const heroUrl = piece.thumbnail?.url;
-    const galleryUrls = galleryImages.map((img) => img.url).filter(Boolean);
-    // Prioritize hero, then background-load the rest.
-    const ordered = heroUrl
-      ? [heroUrl, ...galleryUrls.filter((u) => u !== heroUrl)]
-      : galleryUrls;
-    ordered.forEach((url, i) => {
-      const img = new Image();
-      if (i === 0) img.fetchPriority = "high";
-      img.src = url;
-    });
 
-    // Also prefetch the lightbox-sized Cloudinary queries via TanStack Query
-    galleryImages.forEach((img) => {
-      if (img.url) {
-        prefetchCloudinaryImage(queryClient, img, "lightbox");
-      }
-    });
-    // galleryImages is recomputed every render but its identity changes with piece,
-    // so depend only on piece to avoid re-running on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [piece, queryClient]);
 
   const { mutate: handleTransition, isPending: transitioning, error: rawTransitionError } = useMutation({
     mutationFn: (nextState: string) =>

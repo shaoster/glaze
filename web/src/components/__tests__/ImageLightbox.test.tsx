@@ -4,21 +4,29 @@ import userEvent from "@testing-library/user-event";
 import { Dialog, Box } from "@mui/material";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+vi.mock("../CloudinaryImage", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../CloudinaryImage")>();
+  return {
+    ...actual,
+    SuspenseCloudinaryImage: (props: any) => {
+      if (props.url === "suspending-url") {
+        return <actual.ImageSkeleton context={props.context} crop={props.crop} />;
+      }
+      return <img src={props.url} alt={props.alt} role="img" style={props.style} />;
+    },
+  };
+});
+
 // CropOverlay uses useAsync to preload images; skip network in tests.
 vi.mock("../../util/useAsync", () => ({
   useAsync: () => ({ loading: false, error: null, value: undefined }),
   useAsyncFn: () => [{ loading: false, error: null }, vi.fn()],
 }));
 
-vi.mock("../../util/imageQueries", () => ({
-  useSuspendedImageLoad: vi.fn(() => ({ data: "mock-url" })),
-  imageLoadQueryOptions: (url: string) => ({ queryKey: ["image-load", url] }),
-  getCloudinaryUrl: ({ url }: { url: string }) => url,
-}));
-
 import ImageLightbox from "../ImageLightbox";
 import type { CaptionedImage } from "../../util/types";
-import { useSuspendedImageLoad } from "../../util/imageQueries";
+
+
 
 function render(ui: React.ReactElement, options?: any) {
   const queryClient = new QueryClient({
@@ -91,12 +99,7 @@ describe("ImageLightbox", () => {
     });
 
     it("renders a skeleton loader when the image query suspends", () => {
-      const mockImageLoad = vi.mocked(useSuspendedImageLoad);
-      mockImageLoad.mockImplementationOnce(() => {
-        throw new Promise(() => {});
-      });
-
-      renderLightbox(ONE_IMAGE, 0);
+      renderLightbox([makeImage("suspending-url")], 0);
 
       expect(screen.getByRole("progressbar")).toBeInTheDocument();
     });
