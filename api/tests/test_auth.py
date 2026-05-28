@@ -75,11 +75,11 @@ class TestAuthEndpointsMocked:
         assert followup.status_code == 403, followup.content
 
     def test_csrf_view(self):
-        from api import auth_views
+        from api.auth.views import csrf
 
         factory = APIRequestFactory()
         request = factory.get("/api/auth/csrf/")
-        response = auth_views.csrf(request)
+        response = csrf(request)
         assert response.status_code == 204
 
     def test_auth_me_sets_csrf_cookie(self, client, settings):
@@ -321,18 +321,18 @@ class TestAuthEndpointsMocked:
 @pytest.mark.django_db
 class TestAuthMe:
     def test_returns_config_and_null_user_when_unauthenticated(self, settings):
-        from api import auth_views
+        from api.auth.views import auth_me
 
         settings.GOOGLE_OAUTH_CLIENT_ID = "my-client-id"
         factory = APIRequestFactory()
         request = factory.get("/api/auth/me/")
-        response = auth_views.auth_me(request)
+        response = auth_me(request)
         assert response.status_code == 200
         assert response.data["googleOauthClientId"] == "my-client-id"
         assert response.data["user"] is None
 
     def test_returns_config_and_user_when_authenticated(self, settings):
-        from api import auth_views
+        from api.auth.views import auth_me
 
         settings.GOOGLE_OAUTH_CLIENT_ID = "my-client-id"
         factory = APIRequestFactory()
@@ -340,18 +340,18 @@ class TestAuthMe:
         user = User(username="testhash")
         user.save()
         force_authenticate(request, user=user)
-        response = auth_views.auth_me(request)
+        response = auth_me(request)
         assert response.status_code == 200
         assert response.data["googleOauthClientId"] == "my-client-id"
         assert response.data["user"] is not None
 
     def test_returns_503_when_not_configured(self, settings):
-        from api import auth_views
+        from api.auth.views import auth_me
 
         settings.GOOGLE_OAUTH_CLIENT_ID = ""
         factory = APIRequestFactory()
         request = factory.get("/api/auth/me/")
-        response = auth_views.auth_me(request)
+        response = auth_me(request)
         assert response.status_code == 503
 
     def test_refreshes_session_cookie_for_shared_admin_domain(self, user, settings):
@@ -493,14 +493,17 @@ class TestAuthGoogle:
         assert response.status_code == 403
 
     def test_not_configured_returns_503(self, db, settings):
-        from api import auth_views
+        from api.auth.google_views import auth_google_impl
 
         settings.GOOGLE_OAUTH_CLIENT_ID = ""
         settings.GOOGLE_OAUTH_CLIENT_SECRET = ""
 
-        factory = APIRequestFactory()
-        request = factory.post("/api/auth/google/", {}, format="json")
-        response = auth_views.auth_google(request)
+        response = auth_google_impl(
+            _make_auth_google_impl_request(),
+            exchange_auth_code=lambda code, redirect_uri: {"id_token": "fake-id-token"},
+            verify_id_token=lambda id_token: FAKE_PAYLOAD,
+            login_fn=lambda req, user: None,
+        )
         assert response.status_code == 503
 
     def test_auth_google_impl_creates_user_and_logs_in(self, db, settings, monkeypatch):
@@ -542,20 +545,20 @@ async def _collect_async_bytes(chunks: AsyncIterable[bytes]) -> bytes:
 @pytest.mark.django_db
 class TestAuthExport:
     def test_export_requires_authentication(self):
-        from api import auth_views
+        from api.auth.views import auth_export
 
         factory = APIRequestFactory()
         request = factory.get("/api/auth/export/")
-        response = auth_views.auth_export(request)
+        response = auth_export(request)
         assert response.status_code == 403
 
     def test_export_returns_zip_with_pieces_json(self, user, piece):
-        from api import auth_views
+        from api.auth.views import auth_export
 
         factory = APIRequestFactory()
         request = factory.get("/api/auth/export/")
         force_authenticate(request, user=user)
-        response = auth_views.auth_export(request)
+        response = auth_export(request)
 
         assert response.status_code == 200
         assert response["Content-Type"] == "application/zip"
@@ -571,7 +574,7 @@ class TestAuthExport:
             assert any(str(piece.id) == p["id"] for p in pieces)
 
     def test_export_user_isolation(self, user, other_user):
-        from api import auth_views
+        from api.auth.views import auth_export
         from api.models import PieceState
         from api.workflow import ENTRY_STATE
 
@@ -586,7 +589,7 @@ class TestAuthExport:
         factory = APIRequestFactory()
         request = factory.get("/api/auth/export/")
         force_authenticate(request, user=user)
-        response = auth_views.auth_export(request)
+        response = auth_export(request)
 
         archive_bytes = asyncio.run(_collect_async_bytes(response.streaming_content))
         with ZipFile(BytesIO(archive_bytes)) as archive:
@@ -692,11 +695,11 @@ class TestAuthExport:
 @pytest.mark.django_db
 class TestAuthDeleteAccount:
     def test_delete_account_requires_authentication(self):
-        from api import auth_views
+        from api.auth.views import auth_delete_account
 
         factory = APIRequestFactory()
         request = factory.delete("/api/auth/account/")
-        response = auth_views.auth_delete_account(request)
+        response = auth_delete_account(request)
         assert response.status_code == 403
 
     def test_delete_account_removes_user_and_returns_204(self, user):
