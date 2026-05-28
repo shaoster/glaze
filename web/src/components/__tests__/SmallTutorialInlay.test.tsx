@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import SmallTutorialInlay from "../SmallTutorialInlay";
 import {
@@ -39,7 +40,9 @@ function renderHarness({
   function Harness() {
     const [currentUser, setCurrentUser] = useState(makeCurrentUser());
 
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
     return (
+      <QueryClientProvider client={queryClient}>
       <PreferencesDialogProvider
         openPreferencesDialog={openPreferencesDialog}
         saveUserPreferences={async (preferences) => {
@@ -59,6 +62,7 @@ function renderHarness({
           />
         </CurrentUserProvider>
       </PreferencesDialogProvider>
+      </QueryClientProvider>
     );
   }
 

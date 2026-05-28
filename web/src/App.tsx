@@ -58,6 +58,7 @@ import {
   updateUserPreferences,
   type UserPreferences,
 } from "./util/api";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
 import { useAsync } from "./util/useAsync";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -925,6 +926,8 @@ function FullscreenCenter({ children }: { children: React.ReactNode }) {
   );
 }
 
+const appQueryClient = new QueryClient();
+
 export default function App() {
   const postLoginRedirect = useMemo(
     () =>
@@ -962,6 +965,7 @@ export default function App() {
   }, [init?.user, postLoginRedirect]);
 
   return (
+    <QueryClientProvider client={appQueryClient}>
     <GoogleOAuthProvider clientId={init?.googleOauthClientId ?? ""}>
       <ThemeProvider theme={DARK_THEME}>
         <CssBaseline />
@@ -995,5 +999,6 @@ export default function App() {
         )}
       </ThemeProvider>
     </GoogleOAuthProvider>
+    </QueryClientProvider>
   );
 }

@@ -4,8 +4,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import type { PieceDetail } from "../util/types";
+import { useMutation } from "@tanstack/react-query";
 import { updatePiece, extractErrorMessage } from "../util/api";
-import { useAsyncFn } from "../util/useAsync";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
 
 type PieceNameEditorProps = {
@@ -51,30 +51,27 @@ export default function PieceNameEditor({
     setNameValue(piece.name);
   }
 
-  const {
-    execute: saveName,
-    loading: nameSaving,
-    error: rawNameError,
-  } = useAsyncFn(async () => {
-    const trimmed = nameValue.trim();
-    if (!trimmed) {
-      throw new Error("Name cannot be empty.");
-    }
-    if (trimmed === piece.name) {
-      setEditingName(false);
-      return;
-    }
-    const saveNameRequest = () => updatePiece(piece.id, { name: trimmed });
-    const updated = pieceDetailSaveStatus
-      ? await pieceDetailSaveStatus.runManualSave(saveNameRequest)
-      : await saveNameRequest();
-    onPieceUpdated(updated);
-    setEditingName(false);
-  }, [piece.id, piece.name, nameValue, onPieceUpdated, pieceDetailSaveStatus]);
+  const [nameValidationError, setNameValidationError] = useState<string | null>(null);
+  const { mutate: commitName, isPending: nameSaving, error: rawNameError } = useMutation({
+    mutationFn: (trimmed: string) => {
+      const saveNameRequest = () => updatePiece(piece.id, { name: trimmed });
+      return pieceDetailSaveStatus
+        ? pieceDetailSaveStatus.runManualSave(saveNameRequest)
+        : saveNameRequest();
+    },
+    onSuccess: (updated) => { onPieceUpdated(updated); setEditingName(false); },
+  });
 
-  const nameError = rawNameError
-    ? extractErrorMessage(rawNameError, "Failed to save name. Please try again.")
-    : null;
+  function saveName() {
+    setNameValidationError(null);
+    const trimmed = nameValue.trim();
+    if (!trimmed) { setNameValidationError("Name cannot be empty."); return; }
+    if (trimmed === piece.name) { setEditingName(false); return; }
+    commitName(trimmed);
+  }
+
+  const nameError = nameValidationError
+    ?? (rawNameError ? extractErrorMessage(rawNameError, "Failed to save name. Please try again.") : null);
 
   return (
     <Box sx={{ minWidth: 0, mb: 1.25 }}>

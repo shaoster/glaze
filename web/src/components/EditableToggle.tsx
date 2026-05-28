@@ -2,8 +2,8 @@ import { Box, Button, Tooltip, Typography } from "@mui/material";
 import HistoryIcon from "@mui/icons-material/History";
 import LockIcon from "@mui/icons-material/Lock";
 import type { PieceDetail } from "../util/types";
+import { useMutation } from "@tanstack/react-query";
 import { updatePiece, extractErrorMessage } from "../util/api";
-import { useAsyncFn } from "../util/useAsync";
 import { validateHistorySequence } from "../util/workflow";
 
 type EditableToggleProps = {
@@ -17,16 +17,10 @@ type EditableToggleProps = {
  * the history sequence has a validation error.
  */
 export default function EditableToggle({ piece, onPieceUpdated }: EditableToggleProps) {
-  const {
-    execute: toggle,
-    loading: saving,
-    error: rawError,
-  } = useAsyncFn(async () => {
-    const updated = await updatePiece(piece.id, {
-      is_editable: !piece.is_editable,
-    });
-    onPieceUpdated(updated);
-  }, [piece.id, piece.is_editable, onPieceUpdated]);
+  const { mutate: toggle, isPending: saving, error: rawError } = useMutation({
+    mutationFn: () => updatePiece(piece.id, { is_editable: !piece.is_editable }),
+    onSuccess: (updated) => onPieceUpdated(updated),
+  });
 
   const error = rawError ? extractErrorMessage(rawError) : null;
   const seqError = piece.is_editable

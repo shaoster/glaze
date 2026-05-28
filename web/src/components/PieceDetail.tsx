@@ -15,8 +15,8 @@ import HistoryIcon from "@mui/icons-material/History";
 import { useBlocker, useLocation, useNavigate } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
 import { formatState, isTerminalState, getCustomFieldDefinitions } from "../util/workflow";
+import { useMutation } from "@tanstack/react-query";
 import { updatePiece, updatePastState, updateCurrentState, moveImage, extractErrorMessage, addPieceState } from "../util/api";
-import { useAsyncFn } from "../util/useAsync";
 import CloudinaryImage from "./CloudinaryImage";
 import NavigationBlocker from "./NavigationBlocker";
 import WorkflowState from "./WorkflowState";
@@ -116,41 +116,24 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [piece]);
 
-  const {
-    execute: handleTransition,
-    loading: transitioning,
-    error: rawTransitionError,
-  } = useAsyncFn(
-    async (nextState: string) => {
-      const updated = await addPieceState(piece.id, {
-        state: nextState as PieceDetailType["current_state"]["state"],
-      });
-      onPieceUpdated(updated);
-      setIsDirty(false);
-    },
-    [piece.id, onPieceUpdated],
-  );
+  const { mutate: handleTransition, isPending: transitioning, error: rawTransitionError } = useMutation({
+    mutationFn: (nextState: string) =>
+      addPieceState(piece.id, { state: nextState as PieceDetailType["current_state"]["state"] }),
+    onSuccess: (updated) => { onPieceUpdated(updated); setIsDirty(false); },
+  });
   const transitionError = rawTransitionError
     ? extractErrorMessage(rawTransitionError, "Failed to transition state. Please try again.")
     : null;
 
-  const {
-    execute: handleLocationSelect,
-    loading: locationSaving,
-    error: rawLocationError,
-  } = useAsyncFn(
-    async (entry: { id: string; name: string } | null) => {
-      const saveLocationRequest = () =>
-        updatePiece(piece.id, {
-          current_location: entry?.name ?? "",
-        });
-      const updated = pieceDetailSaveStatus
-        ? await pieceDetailSaveStatus.runManualSave(saveLocationRequest)
-        : await saveLocationRequest();
-      onPieceUpdated(updated);
+  const { mutate: handleLocationSelect, isPending: locationSaving, error: rawLocationError } = useMutation({
+    mutationFn: (entry: { id: string; name: string } | null) => {
+      const saveLocationRequest = () => updatePiece(piece.id, { current_location: entry?.name ?? "" });
+      return pieceDetailSaveStatus
+        ? pieceDetailSaveStatus.runManualSave(saveLocationRequest)
+        : saveLocationRequest();
     },
-    [piece.id, onPieceUpdated, pieceDetailSaveStatus],
-  );
+    onSuccess: (updated) => onPieceUpdated(updated),
+  });
   const locationError = rawLocationError
     ? extractErrorMessage(rawLocationError, "Failed to save location. Please try again.")
     : null;

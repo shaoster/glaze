@@ -273,6 +273,7 @@ js_library(
     srcs = WEB_APP_SRCS,
     deps = [
         ":generated_types",
+        ":node_modules/@tanstack/react-query",
         ":node_modules/@cloudinary/react",
         ":node_modules/@cloudinary/url-gen",
         ":node_modules/@emotion/react",
