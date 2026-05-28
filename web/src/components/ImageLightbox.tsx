@@ -177,7 +177,7 @@ export default function ImageLightbox({
               }}
             >
               {postCropLoading && pendingCropAspect !== null && (
-                <LightboxSkeleton crop={image.crop} />
+                <LightboxSkeleton aspectRatio={pendingCropAspect} />
               )}
               <Box
                 sx={postCropLoading ? {
@@ -271,8 +271,14 @@ export default function ImageLightbox({
   );
 }
 
-function LightboxSkeleton({ crop }: { crop?: ImageCrop | null }) {
-  const aspect = crop ? crop.width / crop.height : 4 / 3;
+function LightboxSkeleton({
+  crop,
+  aspectRatio,
+}: {
+  crop?: ImageCrop | null;
+  aspectRatio?: number | null;
+}) {
+  const aspect = aspectRatio ?? (crop ? crop.width / crop.height : 4 / 3);
   return (
     <Box
       sx={{
