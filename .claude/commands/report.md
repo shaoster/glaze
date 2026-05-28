@@ -1,0 +1,1 @@
+@../../.agents/skills/report-bug/SKILL.md

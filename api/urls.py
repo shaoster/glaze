@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
@@ -53,6 +54,14 @@ urlpatterns = [
     path("auth/validate-invite/", views.validate_invite, name="auth-validate-invite"),
     path("auth/export/", views.auth_export, name="auth-export"),
     path("auth/account/", views.auth_delete_account, name="auth-delete-account"),
+    *(
+        [
+            path("auth/mock-idp/authorize/", views.mock_idp_authorize, name="mock-idp-authorize"),
+            path("auth/mock-idp/complete/", views.mock_idp_complete, name="mock-idp-complete"),
+        ]
+        if getattr(settings, "DEV_BOOTSTRAP_ENABLED", False)
+        else []
+    ),
     path("staff/invite-code/", views.staff_invite_code, name="staff-invite-code"),
     path("health/ready/", views.health_ready, name="health-ready"),
     path("tasks/", views.submit_task, name="tasks-submit"),

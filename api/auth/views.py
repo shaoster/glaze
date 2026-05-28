@@ -22,6 +22,7 @@ from .account_views import delete_account_impl as auth_delete_account
 from .export_views import auth_export
 from .google_views import auth_google
 from .invite_views import staff_invite_code, validate_invite
+from .mock_idp_views import mock_idp_authorize, mock_idp_complete
 from .preferences_views import auth_preferences
 
 __all__ = [
@@ -32,6 +33,8 @@ __all__ = [
     "auth_me",
     "auth_preferences",
     "csrf",
+    "mock_idp_authorize",
+    "mock_idp_complete",
     "staff_invite_code",
     "validate_invite",
 ]
@@ -86,7 +89,8 @@ def auth_logout(request: Request) -> Response:
 def auth_me(request: Request) -> Response:
     """Return the current app bootstrap payload and authenticated user, if any."""
     client_id = settings.GOOGLE_OAUTH_CLIENT_ID
-    if not client_id:
+    mock_idp_enabled = getattr(settings, "DEV_BOOTSTRAP_ENABLED", False)
+    if not client_id and not mock_idp_enabled:
         return Response(
             {"detail": "Authentication provider is not configured."},
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -97,9 +101,15 @@ def auth_me(request: Request) -> Response:
         # cookie so the admin subdomain can receive the same login state.
         request.session.modified = True
     admin_host = settings.ADMIN_INGRESS_HOST
+    mock_idp_url = (
+        "/api/auth/mock-idp/authorize/?redirect_uri=/api/auth/mock-idp/complete/"
+        if mock_idp_enabled
+        else None
+    )
     return Response(
         {
             "googleOauthClientId": client_id,
+            "mockIdpUrl": mock_idp_url,
             "adminBaseUrl": (
                 f"https://{admin_host}"
                 if (request.user.is_staff and admin_host)

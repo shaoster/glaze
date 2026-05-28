@@ -14,6 +14,8 @@ from .auth.views import (
     auth_me,
     auth_preferences,
     csrf,
+    mock_idp_authorize,
+    mock_idp_complete,
     staff_invite_code,
     validate_invite,
 )
@@ -59,6 +61,8 @@ __all__ = [
     "auth_delete_account",
     "auth_export",
     "auth_google",
+    "mock_idp_authorize",
+    "mock_idp_complete",
     "auth_logout",
     "auth_me",
     "auth_preferences",

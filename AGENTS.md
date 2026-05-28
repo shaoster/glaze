@@ -50,8 +50,10 @@ command fails. State any deviation explicitly.
 
 ## Agent Resources
 
-Eight user-invocable skills:
-`/do` (implement an issue), `/spec` (draft and file a new issue), `/dream` (create a milestone and sub-issues), `/audit` (test performance audit), `/cover` (analyze test coverage), `/deps` (audit Bazel dependency graphs), `/docs` (assess and update human-facing READMEs), and `/stories` (populate Storybook stories).
+Ten user-invocable skills:
+`/do` (implement an issue), `/fix` (write failing regression test then fix a bug), `/spec` (draft and file a new issue), `/report` (gather evidence, reproduce locally, and file a bug issue), `/dream` (create a milestone and sub-issues), `/audit` (test performance audit), `/cover` (analyze test coverage), `/deps` (audit Bazel dependency graphs), `/docs` (assess and update human-facing READMEs), and `/stories` (populate Storybook stories).
+
+`/report` → `/fix` is the bug workflow: `/report` produces a filed issue with validated local repro steps; `/fix` takes that issue, writes a failing regression test first, implements the fix, and opens a PR.
 
 All other resources are loaded on demand via the `activate_skill` tool. Load what the task touches —
 typically 2–4 skills. The `/do` flow scouts dependencies and announces which to load.
@@ -86,6 +88,8 @@ bazel query "rdeps(//..., set(\$(git diff --name-only main | sed 's/.*/\"&\"/' |
 | Django admin: custom widgets, inlines, static files, FK wrapping                                                                         | [`.agents/skills/django-admin/SKILL.md`](.agents/skills/django-admin/SKILL.md)                         |
 | React: component patterns, state shape, reducer migration, MUI conventions                                                               | [`.agents/skills/react-conventions/SKILL.md`](.agents/skills/react-conventions/SKILL.md)               |
 | Frontend testing: async assertions, mock boundaries, Autocomplete wrappers; debugging prod-only visual bugs and establishing dev repros  | [`.agents/skills/react-testing/SKILL.md`](.agents/skills/react-testing/SKILL.md)                       |
+| Bug reporting: interactive evidence gathering, local reproduction, filing issue with validated repro steps                               | [`.agents/skills/report-bug/SKILL.md`](.agents/skills/report-bug/SKILL.md)                             |
+| Bug fixing: failing regression test first, minimal fix, verify, open PR                                                                 | [`.agents/skills/fix-bug/SKILL.md`](.agents/skills/fix-bug/SKILL.md)                                   |
 | Opening PRs, issue bodies, DoD checklist, branch naming, scope limits                                                                    | [`.agents/skills/github-pr/SKILL.md`](.agents/skills/github-pr/SKILL.md)                               |
 | Modifying ci.yml, cd.yml, or static.yml                                                                                                  | [`.agents/skills/github-actions/SKILL.md`](.agents/skills/github-actions/SKILL.md)                     |
 | k8s cluster ops: events, probe diagnosis, Helm management, health endpoint, convergence rule                                             | [`.agents/skills/k8s/SKILL.md`](.agents/skills/k8s/SKILL.md)                                           |

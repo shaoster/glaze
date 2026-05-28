@@ -32,7 +32,7 @@ def bootstrap_dev_user(user, count: int | None = None) -> None:
 
     from ..models import Piece  # noqa: PLC0415
 
-    if not Piece.objects.exists() and not Piece.objects.filter(user=user).exists():
+    if not Piece.objects.filter(user=user).exists():
         if count is None:
             try:
                 count = int(os.environ.get("GLAZE_BOOTSTRAP_COUNT", "75"))
