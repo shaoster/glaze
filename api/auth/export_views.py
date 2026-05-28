@@ -8,8 +8,8 @@ from rest_framework.request import Request
 
 from backend.otel import traced
 
-from .auth_export_archive import stream_export_archive
-from .auth_export_data import collect_export_data
+from .export_archive import stream_export_archive
+from .export_data import collect_export_data
 
 
 @extend_schema(
