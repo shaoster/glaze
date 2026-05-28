@@ -1,4 +1,8 @@
 from unittest.mock import Mock
+from types import SimpleNamespace
+
+import pytest
+from rest_framework.test import APIRequestFactory
 
 import api.workflow as workflow_module
 from api.models import Piece
@@ -518,6 +522,27 @@ def test_get_compose_from_returns_none_when_absent(monkeypatch):
 def test_get_compose_from_returns_none_for_unknown_global(monkeypatch):
     monkeypatch.setattr(workflow_module, "_GLOBALS_MAP", _MOCK_GLOBALS_MAP)
     assert workflow_module.get_compose_from("does_not_exist") is None
+
+
+def test_workflow_state_schema_uses_build_ui_schema(monkeypatch):
+    from api.workflow_views import workflow_state_schema
+
+    seen = {}
+
+    def fake_build_ui_schema(state_id):
+        seen["state_id"] = state_id
+        return {"state_id": state_id}
+
+    monkeypatch.setattr("api.workflow_views.build_ui_schema", fake_build_ui_schema)
+
+    request = APIRequestFactory().get("/api/workflow/schema/")
+    request.user = SimpleNamespace(is_authenticated=True, is_active=True)
+
+    response = workflow_state_schema(request, state_id="trimmed")
+
+    assert response.status_code == 200
+    assert response.data == {"state_id": "trimmed"}
+    assert seen["state_id"] == "trimmed"
 
 
 # ---------------------------------------------------------------------------

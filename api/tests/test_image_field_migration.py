@@ -6,6 +6,8 @@ the extraction rules are not silently broken in future.
 """
 
 import re
+import importlib
+from types import SimpleNamespace
 from urllib.parse import urlparse
 
 from django.test import TestCase
@@ -167,3 +169,42 @@ class TestImageFieldStorageRoundTrip(TestCase):
         gt.refresh_from_db()
         assert gt.test_tile_image["cloudinary_public_id"] == EXPECTED_PUBLIC_ID
         assert gt.test_tile_image["cloud_name"] == EXPECTED_CLOUD_NAME
+
+
+class TestFlattenTutorialPreferencesMigration(TestCase):
+    def test_flattens_tutorial_flags_into_root_preferences(self):
+        from django.apps import apps as django_apps
+
+        from django.contrib.auth.models import User
+
+        from api.models import UserProfile
+
+        migration = importlib.import_module(
+            "api.migrations.0028_flatten_tutorial_preferences"
+        )
+
+        user = User.objects.create(
+            username="reader@example.com", email="reader@example.com"
+        )
+        profile = UserProfile.objects.create(
+            user=user,
+            preferences={
+                "process_summary_fields": ["piece.name"],
+                "tutorials": {
+                    "summary_customize_popover": True,
+                    "change_alias_prompt": False,
+                },
+            },
+        )
+
+        migration.flatten_tutorials(
+            django_apps,
+            SimpleNamespace(connection=SimpleNamespace(alias=profile._state.db)),
+        )
+
+        profile.refresh_from_db()
+        assert profile.preferences == {
+            "process_summary_fields": ["piece.name"],
+            "summary_customize_popover": True,
+            "change_alias_prompt": False,
+        }
