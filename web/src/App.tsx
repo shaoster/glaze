@@ -824,7 +824,7 @@ function UnauthenticatedApp({
           </>,
         ),
       ),
-    [onAuthenticated, redirectTo],
+    [onAuthenticated, redirectTo, googleOauthClientId, mockIdpUrl],
   );
 
   return <RouterProvider router={router} />;
