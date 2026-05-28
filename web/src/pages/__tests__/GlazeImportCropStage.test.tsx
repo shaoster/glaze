@@ -1,7 +1,23 @@
 import { useState } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+
+vi.mock("react-easy-crop", () => ({
+  default: ({ onCropComplete }: any) => {
+    return (
+      <div
+        data-testid="mock-cropper"
+        onClick={() =>
+          onCropComplete?.(
+            { x: 10, y: 10, width: 80, height: 80 },
+            { x: 64, y: 48, width: 512, height: 512 },
+          )
+        }
+      />
+    );
+  },
+}));
 
 import GlazeImportCropStage from "../glazeImportTool/GlazeImportCropStage";
 import type { UploadedRecord } from "../glazeImportTool/glazeImportToolTypes";
@@ -89,22 +105,7 @@ describe("GlazeImportCropStage", () => {
     ).toBeInTheDocument();
   });
 
-  it("handles the back button and updates crop geometry through a handle drag", async () => {
-    Object.defineProperty(HTMLElement.prototype, "getBoundingClientRect", {
-      configurable: true,
-      value: () => ({
-        left: 0,
-        top: 0,
-        width: 752,
-        height: 592,
-        right: 752,
-        bottom: 592,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      }),
-    });
-
+  it("handles the back button and updates crop geometry via onCropComplete", async () => {
     render(<CropStageHarness />);
 
     expect(screen.getByTestId("selected-id")).toHaveTextContent("record-1");
@@ -116,13 +117,11 @@ describe("GlazeImportCropStage", () => {
     await userEvent.click(screen.getByText("Oribe"));
     expect(screen.getByTestId("crop-probe")).toHaveTextContent("0,0,640");
 
-    fireEvent.pointerDown(screen.getByTestId("crop-handle-nw"), {
-      clientX: 56,
-      clientY: 56,
-    });
-    fireEvent.pointerMove(window, { clientX: 156, clientY: 156 });
-    fireEvent.pointerUp(window);
+    // Simulate crop complete via mock cropper click
+    await userEvent.click(screen.getByTestId("mock-cropper"));
 
-    expect(screen.getByTestId("crop-probe")).toHaveTextContent("100,100,540");
+    // After onCropComplete fires with { x:64, y:48, width:512, height:512 }
+    // crop.size = croppedAreaPixels.width = 512
+    expect(screen.getByTestId("crop-probe")).toHaveTextContent("64,48,512");
   });
 });

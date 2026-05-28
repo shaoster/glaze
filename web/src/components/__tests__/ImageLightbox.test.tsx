@@ -1,8 +1,19 @@
+import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render as baseRender, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Dialog, Box } from "@mui/material";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+vi.mock("react-easy-crop", () => ({
+  default: function MockCropper({ onMediaLoaded }: any) {
+    const onMediaLoadedRef = React.useRef(onMediaLoaded);
+    React.useEffect(() => {
+      onMediaLoadedRef.current?.({ naturalWidth: 100, naturalHeight: 100 });
+    }, []);
+    return <div data-testid="mock-cropper" />;
+  },
+}));
 
 vi.mock("../CloudinaryImage", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../CloudinaryImage")>();
@@ -16,12 +27,6 @@ vi.mock("../CloudinaryImage", async (importOriginal) => {
     },
   };
 });
-
-// CropOverlay uses useAsync to preload images; skip network in tests.
-vi.mock("../../util/useAsync", () => ({
-  useAsync: () => ({ loading: false, error: null, value: undefined }),
-  useAsyncFn: () => [{ loading: false, error: null }, vi.fn()],
-}));
 
 import ImageLightbox from "../ImageLightbox";
 import type { CaptionedImage } from "../../util/types";
@@ -426,7 +431,7 @@ describe("ImageLightbox", () => {
       );
       fireEvent.click(screen.getByLabelText("Edit crop"));
       await waitFor(() => {
-        expect(screen.getByAltText("Crop editor")).toBeInTheDocument();
+        expect(screen.getByTestId("mock-cropper")).toBeInTheDocument();
       });
     });
   });

@@ -8,11 +8,15 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 
-// Skip image preloading used by CropOverlay.
-vi.mock("../../util/useAsync", () => ({
-  useAsync: () => ({ loading: false, error: null, value: undefined }),
-  useAsyncFn: () => [{ loading: false, error: null }, vi.fn()],
-}));
+// CropOverlay preloads images; stub Image so imageLoading resolves immediately in tests.
+Object.defineProperty(globalThis, "Image", {
+  value: class {
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    set src(_url: string) { this.onload?.(); }
+  },
+  writable: true,
+});
 
 vi.mock("../CloudinaryImage", () => ({
   default: ({ alt, url }: { alt?: string; url: string }) => (

@@ -1,10 +1,15 @@
+import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-// Skip image preloading — no network in tests.
-vi.mock("../../util/useAsync", () => ({
-  useAsync: () => ({ loading: false, error: null, value: undefined }),
-  useAsyncFn: () => [{ loading: false, error: null }, vi.fn()],
+vi.mock("react-easy-crop", () => ({
+  default: function MockCropper({ onMediaLoaded }: any) {
+    const onMediaLoadedRef = React.useRef(onMediaLoaded);
+    React.useEffect(() => {
+      onMediaLoadedRef.current?.({ naturalWidth: 100, naturalHeight: 100 });
+    }, []);
+    return <div data-testid="mock-cropper" />;
+  },
 }));
 
 vi.mock("@cloudinary/url-gen", () => {
@@ -37,9 +42,9 @@ const DEFAULT_PROPS = {
 };
 
 describe("CropOverlay", () => {
-  it("renders the crop editor image", () => {
+  it("renders the crop editor", () => {
     render(<CropOverlay {...DEFAULT_PROPS} />);
-    expect(screen.getByAltText("Crop editor")).toBeInTheDocument();
+    expect(screen.getByTestId("mock-cropper")).toBeInTheDocument();
   });
 
   it("Cancel button calls onCancel without calling onSave", async () => {

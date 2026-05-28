@@ -233,7 +233,6 @@ js_library(
         "src/util/preferences.ts",
         "src/util/queryKeys.ts",
         "src/util/telemetry.ts",
-        "src/util/useAsync.ts",
         "src/util/workflow.ts",
     ],
     deps = [
@@ -390,7 +389,6 @@ js_library(
         "src/components/TagChip.tsx",
         "src/components/tagPalette.ts",
         "src/components/thumbnailConstants.ts",
-        "src/util/useAsync.ts",
     ],
     deps = [
         ":generated_types",
@@ -414,6 +412,7 @@ js_library(
     srcs = ["src/components/CropOverlay.tsx"],
     deps = [
         ":node_modules",
+        ":node_modules/react-easy-crop",
         ":util_lib",
     ],
 )
@@ -744,6 +743,7 @@ js_library(
     deps = [
         ":generated_types",
         ":node_modules",
+        ":node_modules/react-easy-crop",
         ":ocr_detection_src",
         ":util_lib",
     ],
