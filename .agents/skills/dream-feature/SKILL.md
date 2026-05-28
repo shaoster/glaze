@@ -58,9 +58,9 @@ body** until the user is satisfied.
 
 Once the user approves the refined plan, present the **Final Milestone Draft**.
 
-### 4. Create Milestone
+### 4. Create Milestone and Project
 
-Once the final draft is confirmed, create the milestone:
+Once the final draft is confirmed, create the milestone and a linked GitHub Project:
 
 ```bash
 gh milestone create \
@@ -69,6 +69,33 @@ gh milestone create \
 ```
 
 **Capture the milestone number** from the command output (e.g., "created milestone #5").
+
+Then create a matching GitHub Project V2 and link it to the repository:
+
+```bash
+OWNER_ID=$(gh api graphql -f query='{ user(login: "shaoster") { id } }' --jq '.data.user.id')
+REPO_ID=$(gh api repos/shaoster/glaze --jq '.node_id')
+
+PROJECT=$(gh api graphql -f query='
+  mutation($ownerId: ID!, $title: String!) {
+    createProjectV2(input: { ownerId: $ownerId, title: $title }) {
+      projectV2 { id number url title }
+    }
+  }' -f ownerId="$OWNER_ID" -f title="<Title>" \
+  --jq '.data.createProjectV2.projectV2')
+
+PROJECT_ID=$(echo "$PROJECT" | jq -r '.id')
+PROJECT_URL=$(echo "$PROJECT" | jq -r '.url')
+
+gh api graphql -f query='
+  mutation($projectId: ID!, $repositoryId: ID!) {
+    linkProjectV2ToRepository(input: { projectId: $projectId, repositoryId: $repositoryId }) {
+      repository { name }
+    }
+  }' -f projectId="$PROJECT_ID" -f repositoryId="$REPO_ID"
+```
+
+**Capture `PROJECT_ID` and `PROJECT_URL`** for use in Step 6.
 
 ### 5. Spawn Specs (Execution)
 
@@ -112,11 +139,29 @@ rather than delegating to a new context-free agent.
 ### 6. Link and Finalize
 
 Collect all created issue URLs and numbers. Update the milestone description to
-replace the checkboxes with links to the created issues.
+replace the checkboxes with links to the created issues, and include the Project URL.
 
 ```bash
 gh milestone edit <Milestone Number> \
-  --description "<Description>\n\n## Sub-Issues\n- [x] [<Sub-task 1 Title>](<Issue URL 1>)\n- [x] [<Sub-task 2 Title>](<Issue URL 2>)"
+  --description "<Description>\n\nProject: <PROJECT_URL>\n\n## Sub-Issues\n- [x] [<Sub-task 1 Title>](<Issue URL 1>)\n- [x] [<Sub-task 2 Title>](<Issue URL 2>)"
+```
+
+Then add each created issue to the project:
+
+```bash
+for ISSUE_NODE_ID in <node_id_1> <node_id_2> ...; do
+  gh api graphql -f query='
+    mutation($projectId: ID!, $contentId: ID!) {
+      addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+        item { id }
+      }
+    }' -f projectId="$PROJECT_ID" -f contentId="$ISSUE_NODE_ID"
+done
+```
+
+To get each issue's `node_id` after creation:
+```bash
+gh issue view <Issue Number> --json nodeId --jq '.nodeId'
 ```
 
 ### 7. Cross-Reference Dependencies
