@@ -75,6 +75,8 @@ def auth_logout(request: Request) -> Response:
             "AppInit",
             fields={
                 "googleOauthClientId": drf_serializers.CharField(),
+                "mockIdpUrl": drf_serializers.CharField(allow_null=True),
+                "adminBaseUrl": drf_serializers.CharField(allow_null=True),
                 "user": drf_serializers.JSONField(allow_null=True),
             },
         ),

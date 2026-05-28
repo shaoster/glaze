@@ -833,9 +833,22 @@ class TestMockIdp:
         assert "state=mystate" in location
         assert location.startswith("/api/auth/mock-idp/complete/")
 
+    def test_authorize_post_rejects_invalid_redirect_uri(self, db, settings):
+        settings.DEV_BOOTSTRAP_ENABLED = True
+        client = Client()
+        response = client.post(
+            "/api/auth/mock-idp/authorize/",
+            {
+                "redirect_uri": "https://evil.example.com/steal",
+                "state": "x",
+                "login_hint": "dev@localhost",
+            },
+        )
+        assert response.status_code == 400
+
     def test_complete_creates_session(self, db, settings, monkeypatch):
         settings.DEV_BOOTSTRAP_ENABLED = True
-        monkeypatch.setattr("api.auth.mock_idp_views.bootstrap_dev_user", lambda u: None)
+        monkeypatch.setattr("api.auth.mock_idp_views.seed_dev_pieces", lambda u, **kw: None)
         client = Client()
         # POST authorize to get code
         auth_response = client.post(
@@ -858,7 +871,7 @@ class TestMockIdp:
 
     def test_complete_creates_user_if_missing(self, db, settings, monkeypatch):
         settings.DEV_BOOTSTRAP_ENABLED = True
-        monkeypatch.setattr("api.auth.mock_idp_views.bootstrap_dev_user", lambda u: None)
+        monkeypatch.setattr("api.auth.mock_idp_views.seed_dev_pieces", lambda u, **kw: None)
         from django.contrib.auth import get_user_model
 
         User = get_user_model()

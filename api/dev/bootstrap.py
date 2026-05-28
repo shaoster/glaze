@@ -38,10 +38,10 @@ def bootstrap_dev_user(user, count: int | None = None) -> None:
                 count = int(os.environ.get("GLAZE_BOOTSTRAP_COUNT", "75"))
             except (ValueError, TypeError):
                 count = 75
-        _seed_dev_pieces(user, count=count)
+        seed_dev_pieces(user, count=count)
 
 
-def _seed_dev_pieces(user, count: int = 75) -> None:
+def seed_dev_pieces(user, count: int = 75) -> None:
     """Create *count* pieces in random workflow states for a bootstrapped dev user."""
     import random  # noqa: PLC0415
 

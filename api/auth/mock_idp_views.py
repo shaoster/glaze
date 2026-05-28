@@ -2,17 +2,20 @@
 
 Only active when DEV_BOOTSTRAP_ENABLED is True (DEBUG mode, never in production).
 Provides a no-credential login path: browser users see an Accept button; agents
-POST directly to the authorize endpoint and follow the redirect chain.
+POST directly to the authorize endpoint and follow the two-step redirect chain.
 
 Flow:
   GET  /api/auth/mock-idp/authorize/  →  HTML accept page
   POST /api/auth/mock-idp/authorize/  →  302 → /api/auth/mock-idp/complete/?code=<signed>
   GET  /api/auth/mock-idp/complete/   →  creates Django session → 302 → /
 
-For agent headless use, POST authorize with redirect_uri and follow redirects:
-  curl -b cookies.txt -c cookies.txt -X POST \\
-    --data "redirect_uri=/api/auth/mock-idp/complete/&state=x" \\
-    http://localhost:8000/api/auth/mock-idp/authorize/
+Agent headless two-step curl flow (single -L is unreliable — see report-bug skill):
+  BASE=http://localhost:$(cat .dev-pids/backend.port)
+  COMPLETE=$(curl -s -c cookies.txt -b cookies.txt -D - -X POST \\
+    --data "redirect_uri=${BASE}/api/auth/mock-idp/complete/&state=x" \\
+    "${BASE}/api/auth/mock-idp/authorize/" \\
+    | grep -i "^location:" | sed 's/[Ll]ocation: //' | tr -d '\\r\\n')
+  curl -s -c cookies.txt -b cookies.txt "$COMPLETE" -o /dev/null
   # Session cookie is now in cookies.txt
 """
 
@@ -26,7 +29,7 @@ from django.utils.html import escape
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from ..dev.bootstrap import bootstrap_dev_user, _seed_dev_pieces
+from ..dev.bootstrap import seed_dev_pieces
 from ..models import UserProfile
 
 _SIGNING_SALT = "glaze-mock-idp"
@@ -52,7 +55,7 @@ def _find_or_create_user(email: str):
     # check since that guard is for the Google OAuth first-login flow, not here.
     user = User.objects.create_superuser(username=subject, email=email, password=None)
     UserProfile.objects.create(user=user, openid_subject=subject)
-    _seed_dev_pieces(user)
+    seed_dev_pieces(user)
     return user
 
 
@@ -114,7 +117,11 @@ def mock_idp_authorize(request: HttpRequest) -> HttpResponse:
             content_type="text/html",
         )
 
-    # POST: issue a signed code and redirect.
+    # POST: validate redirect_uri then issue a signed code and redirect.
+    # Restricting to the complete/ path prevents open-redirect if this endpoint
+    # is ever reachable with DEV_BOOTSTRAP_ENABLED accidentally set in staging.
+    if not redirect_uri.startswith("/api/auth/mock-idp/complete/"):
+        return HttpResponse("Invalid redirect_uri.", status=400)
     code = signing.dumps(
         {"email": login_hint, "state": state},
         salt=_SIGNING_SALT,
@@ -138,6 +145,5 @@ def mock_idp_complete(request: HttpRequest) -> HttpResponse:
 
     email = payload.get("email", "dev@localhost")
     user = _find_or_create_user(email)
-    bootstrap_dev_user(user)
     login(request, user)
     return HttpResponseRedirect("/")
