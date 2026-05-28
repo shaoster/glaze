@@ -94,6 +94,42 @@ class TestPiecesList:
         data = client.get("/api/pieces/").json()
         assert data["results"][0]["photo_count"] == 2
 
+    def test_thumbnail_crop_comes_from_the_latest_history_entry_with_a_crop(
+        self, client, user
+    ):
+        piece = Piece.objects.create(user=user, name="Crop History Bowl")
+        first_state = PieceState.objects.create(piece=piece, state=ENTRY_STATE, order=0)
+        later_state = PieceState.objects.create(
+            piece=piece,
+            state=SUCCESSORS[ENTRY_STATE][0],
+            order=1,
+        )
+        image = Image.objects.create(
+            user=user,
+            url="https://example.com/thumbnail.jpg",
+            cloudinary_public_id="pieces/thumbnail",
+            cloud_name="demo",
+        )
+        crop = {"x": 0.1, "y": 0.2, "width": 0.6, "height": 0.5}
+        PieceStateImage.objects.create(
+            piece_state=first_state,
+            image=image,
+            crop=crop,
+            order=0,
+        )
+        PieceStateImage.objects.create(
+            piece_state=later_state,
+            image=image,
+            crop=None,
+            order=0,
+        )
+        piece.thumbnail = image
+        piece.save(update_fields=["thumbnail"])
+
+        data = client.get("/api/pieces/").json()
+
+        assert data["results"][0]["thumbnail"]["crop"] == crop
+
     def test_summary_shape(self, client, piece):
         data = client.get("/api/pieces/").json()
         keys = set(data["results"][0].keys())

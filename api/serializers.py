@@ -506,7 +506,10 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         thumbnail = image_to_dict(obj.thumbnail)
         if thumbnail is None:
             return None
-        return {**thumbnail, "crop": obj.get_thumbnail_crop()}
+        crop = getattr(obj, "thumbnail_crop", None)
+        if crop is None:
+            crop = obj.get_thumbnail_crop()
+        return {**thumbnail, "crop": crop}
 
     @extend_schema_field(serializers.IntegerField(min_value=0))
     def get_photo_count(self, obj: Piece) -> int:

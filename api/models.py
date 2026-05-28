@@ -320,8 +320,10 @@ class Piece(models.Model):
             matching_links = [link for link in links if link.image_id == thumbnail.id]
             if not matching_links:
                 return None
-            latest_link = max(matching_links, key=lambda link: link.pk)
-            return latest_link.crop
+            for link in sorted(matching_links, key=lambda link: link.pk, reverse=True):
+                if link.crop is not None:
+                    return link.crop
+            return None
 
         states = self._prefetched_states()
         if states is not None:

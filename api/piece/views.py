@@ -1,56 +1,16 @@
-# ruff: noqa: F401
-import hashlib
-import json
-import os
-import re
-from collections import defaultdict
-from typing import Callable
-from uuid import UUID
 
-from django.apps import apps
-from django.conf import settings
-from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.db.models import (
-    Count,
-    DateTimeField,
-    OuterRef,
-    Prefetch,
-    Q,
-    Subquery,
-)
-from django.db.models.functions import Coalesce, Greatest
-from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
-from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token as google_id_token
 from rest_framework import serializers as drf_serializers
 from rest_framework import status
-from rest_framework.decorators import api_view, parser_classes, permission_classes
-from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from backend.otel import traced
 
-from ..models import (
-    AsyncTask,
-    FavoriteGlazeCombination,
-    GlazeCombination,
-    Piece,
-    PieceState,
-    UserProfile,
-)
-from ..serializer_registry import (
-    _GLOBAL_ENTRY_SERIALIZERS,  # auto-generated in _register_globals(); hand-written serializers overwrite
-)
 from ..serializers import (
-    AsyncTaskSerializer,
-    AuthUserSerializer,
-    GlazeCombinationImageEntrySerializer,
-    GoogleAuthSerializer,
     PieceCreateSerializer,
     PieceDetailSerializer,
     PieceStateCreateSerializer,
@@ -58,16 +18,6 @@ from ..serializers import (
     PieceStateUpdateSerializer,
     PieceSummarySerializer,
     PieceUpdateSerializer,
-    TaskSubmissionSerializer,
-)
-from ..utils import bootstrap_dev_user
-from ..workflow import (
-    get_glaze_image_qualifying_states,
-    get_global_config,
-    get_global_model_and_field,
-    get_state_global_ref_map,
-    is_private_global,
-    is_public_global,
 )
 from .helpers import (
     _DEFAULT_ORDERING,
@@ -85,12 +35,6 @@ from .helpers import (
 )
 from .helpers import (
     piece_queryset as _piece_queryset,
-)
-from .helpers import (
-    piece_read_queryset as _piece_read_queryset,
-)
-from .helpers import (
-    piece_state_ref_prefetches as _piece_state_ref_prefetches,
 )
 from .helpers import (
     serialize_piece_detail as _serialize_piece_detail,
