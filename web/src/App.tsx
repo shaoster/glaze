@@ -934,7 +934,9 @@ function FullscreenCenter({ children }: { children: React.ReactNode }) {
   );
 }
 
-const appQueryClient = new QueryClient();
+const appQueryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
 
 export default function App() {
   return (
