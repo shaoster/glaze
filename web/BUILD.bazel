@@ -339,6 +339,7 @@ js_library(
     deps = [
         ":generated_types",
         ":node_modules",
+        ":node_modules/react-easy-crop",
         ":util_lib",
         "//:workflow_js",
     ],
