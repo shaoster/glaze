@@ -383,6 +383,12 @@ type PieceListProps = {
   hasMore?: boolean;
   loading?: boolean;
   loadingMore?: boolean;
+  /**
+   * Increment this whenever the parent mutates pieces in a non-append way
+   * (e.g. prepending a newly created piece). The positioner resets so masonic
+   * re-lays out all items with correct index→height mappings.
+   */
+  positionerResetKey?: number;
 };
 
 const PieceList = (props: PieceListProps) => {
@@ -395,6 +401,7 @@ const PieceList = (props: PieceListProps) => {
     hasMore = false,
     loading = false,
     loadingMore = false,
+    positionerResetKey = 0,
   } = props;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -495,21 +502,11 @@ const PieceList = (props: PieceListProps) => {
 
   const hasActiveFilters = activeFilters.length > 0 || activeTagIds.length > 0;
 
-  // Detect changes that invalidate existing item positions: sort, filter, and
-  // non-append mutations such as the prepend done by handleCreated. A pure
-  // pagination append (items grow from the end, existing order preserved) does
-  // NOT increment the counter so the positioner is reused without a flash.
-  const prevFilteredIdsRef = useRef<string[]>([]);
-  const positionerResetCounterRef = useRef(0);
-  const currentFilteredIds = filteredPieces.map((p) => p.id);
-  const isPureAppend =
-    currentFilteredIds.length >= prevFilteredIdsRef.current.length &&
-    prevFilteredIdsRef.current.every((id, i) => currentFilteredIds[i] === id);
-  if (!isPureAppend) positionerResetCounterRef.current++;
-  prevFilteredIdsRef.current = currentFilteredIds;
-
-  // usePositioner resets only when the counter or layout opts change.
-  // Pagination appends leave the counter unchanged so existing positions survive.
+  // usePositioner resets when sort, filters, or positionerResetKey change.
+  // Pagination appends change none of these, so the positioner is reused and
+  // existing item positions survive — eliminating the re-layout flash.
+  // positionerResetKey is incremented by the parent for non-append mutations
+  // (e.g. handleCreated prepend) that would otherwise leave stale positions.
   const positioner = usePositioner(
     {
       width: masonryWidth,
@@ -520,7 +517,7 @@ const PieceList = (props: PieceListProps) => {
         ? MASONRY_MAX_COLUMNS_MOBILE
         : MASONRY_MAX_COLUMNS_DESKTOP,
     },
-    [positionerResetCounterRef.current],
+    [positionerResetKey, sortOrder ?? "", activeFilters.join(","), activeTagIds.join(",")],
   );
 
   // Seed crop heights for unpositioned items only. On a pure append the existing
