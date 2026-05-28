@@ -4,8 +4,15 @@ from django.contrib.auth.models import User
 from rest_framework.request import Request
 from rest_framework.test import APIClient, APIRequestFactory
 
-from api.global_entry_views import _apply_global_filters, _global_entries_impl
-from api.models import ClayBody, FiringTemperature, GlazeCombination, GlazeType, Tag
+from api.global_entries.logic import apply_global_filters, global_entries_impl
+from api.models import (
+    ClayBody,
+    FavoriteGlazeCombination,
+    FiringTemperature,
+    GlazeCombination,
+    GlazeType,
+    Tag,
+)
 from api.serializer_registry import _GLOBAL_ENTRY_SERIALIZERS
 
 
@@ -246,7 +253,7 @@ class TestGlobalEntries:
         )
         monkeypatch.delitem(_GLOBAL_ENTRY_SERIALIZERS, GlazeCombination, raising=False)
         monkeypatch.setattr(
-            "api.global_entry_views.get_global_model_and_field",
+            "api.global_entries.logic.get_global_model_and_field",
             lambda global_name: (
                 GlazeCombination,
                 {"firing_temperature": {"$ref": "@firing_temperature.name"}},
@@ -254,16 +261,16 @@ class TestGlobalEntries:
             ),
         )
         monkeypatch.setattr(
-            "api.global_entry_views.is_public_global", lambda global_name: False
+            "api.global_entries.logic.is_public_global", lambda global_name: False
         )
         monkeypatch.setattr(
-            "api.global_entry_views.is_private_global", lambda global_name: True
+            "api.global_entries.logic.is_private_global", lambda global_name: True
         )
         django_request = APIRequestFactory().get("/api/globals/fake/")
         request = Request(django_request)
         request._user = user
 
-        response = _global_entries_impl(request, "fake")
+        response = global_entries_impl(request, "fake")
 
         assert response.data == [
             {
@@ -272,6 +279,59 @@ class TestGlobalEntries:
                 "is_public": False,
             }
         ]
+
+    def test_global_entries_impl_with_resolvers_uses_injected_dependencies(
+        self, user, monkeypatch
+    ):
+        from api.global_entries.logic import global_entries_impl_with_resolvers
+
+        location_model = apps.get_model("api", "Location")
+        location = location_model.objects.create(user=user, name="Shelf")
+        monkeypatch.delitem(_GLOBAL_ENTRY_SERIALIZERS, location_model, raising=False)
+
+        django_request = APIRequestFactory().get("/api/globals/location/")
+        request = Request(django_request)
+        request._user = user
+
+        response = global_entries_impl_with_resolvers(
+            request,
+            "location",
+            resolve_global=lambda global_name: (
+                location_model,
+                {"name": {"type": "string"}},
+                "name",
+            ),
+            public_global=lambda global_name: False,
+            private_global=lambda global_name: True,
+        )
+
+        assert response.data == [
+            {
+                "id": str(location.pk),
+                "name": "Shelf",
+                "is_public": False,
+            }
+        ]
+
+    def test_global_entry_favorite_impl_toggles_favorite(self, user):
+        from api.global_entries.logic import global_entry_favorite_impl
+
+        combo = GlazeCombination.objects.create(user=user, name="Favorite Me")
+        factory = APIRequestFactory()
+        request = factory.post(f"/api/globals/glaze_combination/{combo.pk}/favorite/")
+        request.user = user
+
+        response = global_entry_favorite_impl(
+            request,
+            GlazeCombination,
+            FavoriteGlazeCombination,
+            str(combo.pk),
+        )
+
+        assert response.status_code == 204
+        assert FavoriteGlazeCombination.objects.filter(
+            user=user, glaze_combination=combo
+        ).exists()
 
 
 class TestApplyGlobalFilters:
@@ -304,7 +364,7 @@ class TestApplyGlobalFilters:
         )
         request = Request(django_request)
 
-        result = _apply_global_filters(qs, self.FilterableModel, request)
+        result = apply_global_filters(qs, self.FilterableModel, request)
 
         assert result is qs
         assert qs.filters == [

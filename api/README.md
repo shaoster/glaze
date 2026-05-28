@@ -40,6 +40,18 @@ Per-user data isolation rules:
 - Detail/update endpoints fetch objects from a user-filtered queryset. If another user's ID is requested, the API returns `404` (not `403`) to avoid leaking object existence.
 - Global reference entries are user-scoped; names are unique per user (for example, two users can both have a `Location` named "Kiln A" without colliding).
 
+## Package Layout
+
+Endpoint logic now lives in feature subpackages so each concern can keep its own helpers, tests, and compatibility shims:
+
+- `api/auth/` — auth/login/logout/export/account helpers
+- `api/piece/` — piece list/detail/state/image helpers
+- `api/global_entries/` — shared globals list/create/favorite logic
+- `api/cloudinary/` — widget config and admin cleanup endpoints
+- `api/dev/` — local bootstrap helpers
+
+Top-level `api/*.py` modules remain thin compatibility wrappers for stable URL registrations and older imports. When a helper module exposes reusable logic, its public functions should be documented, tested directly, and traced so the module boundary stays observable.
+
 ## Declarative Configuration
 
 Glaze uses YAML-driven configuration to minimize boilerplate and ensure consistency between backend validation and frontend UI.

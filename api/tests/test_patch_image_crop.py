@@ -81,9 +81,7 @@ class TestPatchImageCrop:
         )
         assert link.crop == VALID_CROP
 
-    def test_success_updates_thumbnail_image_crop_in_piece_response(
-        self, client, user
-    ):
+    def test_success_updates_thumbnail_image_crop_in_piece_response(self, client, user):
         piece = Piece.objects.create(user=user, name="Thumbnail Bowl", is_editable=True)
         state = PieceState.objects.create(
             piece=piece,
