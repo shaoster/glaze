@@ -36,7 +36,7 @@ import type {
   GlazeCombinationImageEntry,
 } from "../util/types";
 import { formatState } from "../util/workflow";
-import { GLAZE_COMBINATION_IMAGES_QUERY_KEY } from "./GlazeCombinationSummary";
+import { GLAZE_COMBINATION_IMAGES_QUERY_KEY } from "../util/queryKeys";
 
 const EMPTY_STATE_MESSAGE =
   "No images yet — add images to pieces that use a glaze combination to see them here.";

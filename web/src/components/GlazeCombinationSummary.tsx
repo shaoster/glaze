@@ -3,8 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { fetchGlazeCombinationImages } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
 import type { GlazeCombinationImageEntry } from "../util/types";
-
-export const GLAZE_COMBINATION_IMAGES_QUERY_KEY = ["glazeCombinationImages"] as const;
+import { GLAZE_COMBINATION_IMAGES_QUERY_KEY } from "../util/queryKeys";
 
 export default function GlazeCombinationSummary() {
   const { data } = useSuspenseQuery<GlazeCombinationImageEntry[]>({
