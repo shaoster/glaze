@@ -314,7 +314,7 @@ pytest_test(
         "api/tests/test_issue_337.py",
         "api/tests/test_patch_image_crop.py",
     ],
-    data = _TEST_DATA,
+    data = _TEST_DATA + [":api_dev_commands"],
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
@@ -399,18 +399,25 @@ pytest_test(
         "tests/test_cloudinary_cleanup.py",
         "tests/test_cloudinary_image_widget.py",
         "tests/test_cloudinary_upload_signature.py",
+        "tests/test_management_commands.py",
     ],
     args = [
         "api/tests/test_admin_exports.py",
         "api/tests/test_cloudinary_cleanup.py",
         "api/tests/test_cloudinary_image_widget.py",
         "api/tests/test_cloudinary_upload_signature.py",
+        "api/tests/test_management_commands.py",
     ],
-    data = _TEST_DATA,
+    data = _TEST_DATA + [":api_dev_commands"],
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
-    expected_coverage = ["api/admin.py", "api/cloudinary_cleanup.py", "api/cloudinary/views.py"],
+    expected_coverage = [
+        "api/admin.py",
+        "api/cloudinary_cleanup.py",
+        "api/cloudinary/views.py",
+        "api/management/commands/*.py",
+    ],
 )
 
 pytest_test(
