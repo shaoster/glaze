@@ -48,12 +48,9 @@ export default function ImageLightbox({
 
   const image = images[index];
 
-  const currentCrop = image.crop ?? null;
-  const [prevCrop, setPrevCrop] = useState<ImageCrop | null>(currentCrop);
   const [prevIndex, setPrevIndex] = useState(index);
 
-  if (!isSameCrop(currentCrop, prevCrop) || index !== prevIndex) {
-    setPrevCrop(currentCrop);
+  if (index !== prevIndex) {
     setPrevIndex(index);
     setOptimisticCrop(null);
   }
@@ -157,9 +154,13 @@ export default function ImageLightbox({
             cloudName={image.cloud_name}
             initialCrop={image.crop ?? null}
             onSave={async (crop) => {
-              await onCropSave?.(image, crop);
               setOptimisticCrop(crop);
               setCropMode(false);
+              try {
+                await onCropSave?.(image, crop);
+              } finally {
+                setOptimisticCrop(null);
+              }
             }}
             onCancel={() => setCropMode(false)}
           />
@@ -270,13 +271,3 @@ export default function ImageLightbox({
   );
 }
 
-function isSameCrop(c1: ImageCrop | null, c2: ImageCrop | null): boolean {
-  if (c1 === c2) return true;
-  if (!c1 || !c2) return false;
-  return (
-    c1.x === c2.x &&
-    c1.y === c2.y &&
-    c1.width === c2.width &&
-    c1.height === c2.height
-  );
-}
