@@ -74,26 +74,17 @@ with a data router) mounted in `App`. No server-side rendering.
 
 ## Custom Hooks
 
-Extract reusable logic into custom hooks. The `useAsync` hook is the idiomatic pattern:
+Extract reusable logic into custom hooks.
 
-```ts
-function useAsync<T>(asyncFunction: () => Promise<T>, immediate = true) {
-  const [state, setState] = useState<{ data: T | null; loading: boolean; error: Error | null }>({
-    data: null, loading: immediate, error: null,
-  })
-  const execute = useCallback(async () => {
-    setState({ data: null, loading: true, error: null })
-    try {
-      const data = await asyncFunction()
-      setState({ data, loading: false, error: null })
-    } catch (error) {
-      setState({ data: null, loading: false, error: error as Error })
-    }
-  }, [asyncFunction])
-  useEffect(() => { if (immediate) execute() }, [execute, immediate])
-  return { ...state, execute }
-}
-```
+**Server state** uses `@tanstack/react-query` — not hand-rolled `useState` + `useEffect`:
+
+- `useSuspenseQuery` — unconditional reads; component suspends, errors go to `<ErrorBoundary>`
+- `useQuery` with `enabled` — conditional reads (fetch only when a flag is true)
+- `useMutation` — create/update/delete; `onSuccess` for side effects, `queryClient.setQueryData` for optimistic updates
+
+Do not write a `useAsync`-style wrapper around fetch calls. That is the pattern TanStack Query replaces.
+
+**Client state** (UI toggles, form drafts, selection) belongs in `useState` or `useReducer`.
 
 ## Conventions
 

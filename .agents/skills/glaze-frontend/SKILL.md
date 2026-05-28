@@ -89,24 +89,46 @@ never perform their own serialization or deserialization.
 When passing references to backend API calls, always use `id`/`pk` — never human-readable
 name fields (names are not stable identifiers).
 
-## Data-Fetching Pattern (`useAsync`)
+## Data-Fetching Pattern (`@tanstack/react-query`)
 
-Any component loading data from the API must use the `useAsync` hook from
-`web/src/util/useAsync`. Do not inline `useState` + `useEffect` + `.catch` + `.finally`.
+All data fetching uses TanStack Query v5. Do not use the legacy `useAsync` hook or
+inline `useState` + `useEffect` + `.catch` + `.finally`.
+
+| Scenario | Hook | Notes |
+|---|---|---|
+| Always fetch on mount | `useSuspenseQuery` | Component suspends; parent needs `<Suspense>` + `<ErrorBoundary>` |
+| Fetch only when condition is true | `useQuery` with `enabled` | Handle `isLoading`/`error` inline |
+| Create / update / delete | `useMutation` | Use `onSuccess` for side effects |
+| Optimistic local update | `queryClient.setQueryData(key, updater)` | Replaces old `setData` from `useAsync` |
 
 ```tsx
-// ✅ correct
-const { data: pieces, loading, error, setData: setPieces } =
-  useAsync<PieceSummary[]>(fetchPieces);
-setPieces((prev) => [newPiece, ...(prev ?? [])]);  // optimistic mutation
+// ✅ unconditional read
+const { data: pieces } = useSuspenseQuery<PieceSummary[]>({
+  queryKey: ["pieces"],
+  queryFn: fetchPieces,
+});
 
-// ❌ incorrect — do not inline this pattern
-const [data, setData] = useState(null);
-useEffect(() => { fetchSomething().then(setData).catch(...).finally(...) }, []);
+// ✅ conditional read
+const { data, isLoading, error } = useQuery({
+  queryKey: ["tags"],
+  queryFn: fetchTags,
+  enabled: dialogOpen,
+});
+
+// ✅ mutation + optimistic update
+const queryClient = useQueryClient();
+const { mutate: save } = useMutation({
+  mutationFn: (payload) => updatePiece(id, payload),
+  onSuccess: (updated) => queryClient.setQueryData(["piece", id], updated),
+});
 ```
 
-Render `<CircularProgress />` while `loading` is true; render an error message when
-`error` is non-null. Silent `.catch(() => {})` only for genuinely invisible background ops.
+`QueryClientProvider` is already at the `App` root. Tests rendering a component in
+isolation must wrap it: `<QueryClientProvider client={new QueryClient({ defaultOptions:
+{ queries: { retry: false }, mutations: { retry: false } } })}>`.
+
+Components using `useSuspenseQuery` need a `<Suspense>` + `<ErrorBoundary>` parent.
+Components using `useQuery` own their loading/error rendering inline.
 
 ## Shared UI Extraction
 

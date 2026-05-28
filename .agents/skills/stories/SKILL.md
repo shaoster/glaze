@@ -36,7 +36,7 @@ For each target component:
   - Set `tags: ["autodocs"]`.
   - Add a comprehensive JSDoc block to the `meta` object with **Rationale** and **Edge cases** sections.
 - **Mocking (MSW)**:
-  - All API calls (via `axios`, `useAsync`, etc.) **must** be mocked in `parameters.msw.handlers`.
+  - All API calls (via `axios`, TanStack Query, etc.) **must** be mocked in `parameters.msw.handlers`.
   - Use `http.get("/api/...", () => HttpResponse.json(...))` to provide deterministic data.
   - **Deployment Support**: In `preview.tsx`, configure `initialize({ serviceWorker: { url: ... } })` to dynamically detect the path for `mockServiceWorker.js` if the Storybook is deployed to a subpath (e.g., GitHub Pages).
 - **Modal/Portal Handling**:

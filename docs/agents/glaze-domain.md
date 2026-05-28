@@ -403,32 +403,45 @@ These supplement the generic TypeScript/React/Vite conventions.
 
 **HTTP calls:** All go through [`web/src/util/api.ts`](../../web/src/util/api.ts) (imported as `./util/api`). This is the single place where wire types (ISO date strings, etc.) are mapped to domain types. Components must never perform their own serialization or deserialization.
 
-**Data-fetching pattern (`useAsync`):** Any component that loads data from the API on mount or when a dependency changes must use the `useAsync` hook from `../../web/src/util/useAsync`. Do not inline `useState` + `useEffect` + `.catch` + `.finally` for loading/error/data state management — use `useAsync` instead. It handles the cancellation flag, error normalization, and exposes `setData` for optimistic local mutations.
+**Data-fetching pattern (`@tanstack/react-query`):** All data fetching uses TanStack Query v5. Do not inline `useState` + `useEffect` + `.catch` + `.finally`, and do not use the legacy `useAsync` hook.
+
+- **Unconditional reads** (always fetch on mount): `useSuspenseQuery` — component suspends while loading, errors go to the nearest `<ErrorBoundary>`. The parent route must supply a `<Suspense>` boundary.
+- **Conditional reads** (fetch only when a flag is true, e.g. a dialog is open): `useQuery` with `enabled`. Handle `isLoading` and `error` inline.
+- **Mutations** (create, update, delete): `useMutation`. Use `onSuccess` on the mutation definition for unconditional side effects; use the per-call `onSuccess` option when the callback depends on the call site.
+- **Optimistic local updates**: `queryClient.setQueryData(queryKey, updater)` — replaces the old `setData` from `useAsync`.
 
 ```tsx
-// ✅ correct
-const {
-  data: pieces,
-  loading,
-  error,
-  setData: setPieces,
-} = useAsync<PieceSummary[]>(fetchPieces);
-// On new piece created locally:
-setPieces((prev) => [newPiece, ...(prev ?? [])]);
+// ✅ unconditional read
+const { data: pieces } = useSuspenseQuery<PieceSummary[]>({
+  queryKey: ["pieces"],
+  queryFn: fetchPieces,
+});
 
-// ❌ incorrect — do not inline this pattern
+// ✅ conditional read (fetch only when dialog is open)
+const { data, isLoading, error } = useQuery({
+  queryKey: ["tags"],
+  queryFn: fetchTags,
+  enabled: dialogOpen,
+});
+
+// ✅ mutation with optimistic update
+const queryClient = useQueryClient();
+const { mutate: createPiece } = useMutation({
+  mutationFn: (payload) => apiCreatePiece(payload),
+  onSuccess: (newPiece) =>
+    queryClient.setQueryData(["pieces"], (prev: PieceSummary[]) => [newPiece, ...prev]),
+});
+
+// ❌ do not inline this pattern
 const [data, setData] = useState(null);
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState<string | null>(null);
 useEffect(() => {
-  fetchSomething()
-    .then(setData)
-    .catch(() => setError("Failed"))
-    .finally(() => setLoading(false));
+  fetchSomething().then(setData).catch(() => setError("Failed")).finally(() => setLoading(false));
 }, []);
 ```
 
-All data-fetching components must render a loading spinner (`<CircularProgress />`) while `loading` is true and an error message when `error` is non-null. Silent `.catch(() => {})` is only acceptable for best-effort background operations where failure is genuinely invisible to the user.
+`QueryClientProvider` is already mounted at the `App` root — no need to add it in components or tests that render through `<App />`. Tests that render a component in isolation must wrap it: `<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>`.
+
+Components using `useSuspenseQuery` need `<Suspense>` + `<ErrorBoundary>` in their parent. Components using `useQuery` render their own loading/error states.
 
 **Shared UI extraction:** Treat route-level and detail/list container components such as `PieceDetail.tsx` and `PieceList.tsx` as orchestration layers, not homes for duplicated presentational subtrees. When a feature introduces the same UI concept in multiple places, extract a reusable component in `web/src/components/` rather than keeping separate inline implementations in each parent. If a new feature adds more than a small self-contained JSX block to one of these containers, prefer a named child component with typed props.
 

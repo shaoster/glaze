@@ -84,29 +84,17 @@ When migrating a drafty or workflow-heavy component from multiple setters to a r
 
 ## Custom hooks
 
-Extract reusable logic into custom hooks rather than duplicating it across components. A `useAsync` hook is the idiomatic Axios-native pattern for managing loading/error/data state without a server-state library:
+Extract reusable logic into custom hooks rather than duplicating it across components.
 
-```ts
-function useAsync<T>(asyncFunction: () => Promise<T>, immediate = true) {
-  const [state, setState] = useState<{ data: T | null; loading: boolean; error: Error | null }>({
-    data: null, loading: immediate, error: null,
-  })
+**Server state** (anything fetched from or written to an API) belongs in `@tanstack/react-query`, not in hand-rolled `useState` + `useEffect` hooks:
 
-  const execute = useCallback(async () => {
-    setState({ data: null, loading: true, error: null })
-    try {
-      const data = await asyncFunction()
-      setState({ data, loading: false, error: null })
-    } catch (error) {
-      setState({ data: null, loading: false, error: error as Error })
-    }
-  }, [asyncFunction])
+- `useSuspenseQuery` for unconditional reads — component suspends while loading, errors propagate to `<ErrorBoundary>`.
+- `useQuery` with `enabled` for conditional reads (e.g. fetch only when a dialog is open).
+- `useMutation` for create/update/delete — use `onSuccess` for side effects and `queryClient.setQueryData` for optimistic updates.
 
-  useEffect(() => { if (immediate) execute() }, [execute, immediate])
+Do not inline `useState` + `useEffect` + `.catch` + `.finally` for loading/error/data state. Do not use a `useAsync` wrapper around fetch calls — that is the pattern TanStack Query replaces.
 
-  return { ...state, execute }
-}
-```
+**Client state** (UI toggles, form drafts, local selection) still belongs in `useState` or `useReducer` as appropriate.
 
 ## Conventions
 
