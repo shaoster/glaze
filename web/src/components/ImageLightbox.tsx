@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   Box,
-  CircularProgress,
   IconButton,
   Modal,
   Typography,
@@ -9,7 +8,7 @@ import {
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import { useSwipeable } from "react-swipeable";
 import type { CaptionedImage, ImageCrop } from "../util/types";
-import CloudinaryImage from "./CloudinaryImage";
+import { SuspenseCloudinaryImage } from "./CloudinaryImage";
 import CropOverlay from "./CropOverlay";
 
 const SWIPE_THRESHOLD = 50;
@@ -45,18 +44,25 @@ export default function ImageLightbox({
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [dragDeltaY, setDragDeltaY] = useState(0);
   const [cropMode, setCropMode] = useState(false);
-  const [postCropLoading, setPostCropLoading] = useState(false);
-  const [pendingCropAspect, setPendingCropAspect] = useState<number | null>(null);
+  const [optimisticCrop, setOptimisticCrop] = useState<ImageCrop | null>(null);
 
+  const image = images[index];
+
+  const [prevIndex, setPrevIndex] = useState(index);
+
+  if (index !== prevIndex) {
+    setPrevIndex(index);
+    setOptimisticCrop(null);
+  }
   function prev() {
     setIndex((i) => {
-      if (i > 0) { setCropMode(false); setPostCropLoading(false); setPendingCropAspect(null); return i - 1; }
+      if (i > 0) { setCropMode(false); return i - 1; }
       return i;
     });
   }
   function next() {
     setIndex((i) => {
-      if (i < images.length - 1) { setCropMode(false); setPostCropLoading(false); setPendingCropAspect(null); return i + 1; }
+      if (i < images.length - 1) { setCropMode(false); return i + 1; }
       return i;
     });
   }
@@ -94,8 +100,6 @@ export default function ImageLightbox({
     delta: 10,
     preventScrollOnSwipe: true,
   });
-
-  const image = images[index];
   const isCurrentThumbnail =
     !!currentThumbnailUrl && image.url === currentThumbnailUrl;
 
@@ -144,17 +148,19 @@ export default function ImageLightbox({
           </Box>
         )}
 
-        {/* Swipeable image area / crop editor */}
         {cropMode && image.cloudinary_public_id && image.cloud_name ? (
           <CropOverlay
             cloudinaryPublicId={image.cloudinary_public_id}
             cloudName={image.cloud_name}
             initialCrop={image.crop ?? null}
             onSave={async (crop) => {
-              await onCropSave?.(image, crop);
-              setPendingCropAspect(crop.width / crop.height);
-              setPostCropLoading(true);
+              setOptimisticCrop(crop);
               setCropMode(false);
+              try {
+                await onCropSave?.(image, crop);
+              } finally {
+                setOptimisticCrop(null);
+              }
             }}
             onCancel={() => setCropMode(false)}
           />
@@ -174,49 +180,23 @@ export default function ImageLightbox({
                 position: "relative",
               }}
             >
-              {postCropLoading && pendingCropAspect !== null && (
-                <Box
-                  sx={{
-                    aspectRatio: pendingCropAspect,
-                    maxWidth: "90vw",
-                    maxHeight: "80vh",
-                    width: "90vw",
-                    borderRadius: "4px",
-                    bgcolor: "rgba(255,255,255,0.06)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <CircularProgress sx={{ color: "white" }} />
-                </Box>
-              )}
-              <Box
-                sx={postCropLoading ? {
-                  position: "absolute",
-                  inset: 0,
-                  opacity: 0,
+              <SuspenseCloudinaryImage
+                key={`${index}-${optimisticCrop ? "optimistic" : "real"}`}
+                url={image.url}
+                cloud_name={image.cloud_name}
+                cloudinary_public_id={image.cloudinary_public_id}
+                crop={optimisticCrop !== null ? optimisticCrop : image.crop}
+                alt={image.caption || "Pottery image"}
+                context="lightbox"
+                style={{
+                  maxWidth: "90vw",
+                  maxHeight: "80vh",
+                  objectFit: "contain",
+                  borderRadius: 4,
+                  userSelect: "none",
                   pointerEvents: "none",
-                } : undefined}
-              >
-                <CloudinaryImage
-                  url={image.url}
-                  cloud_name={image.cloud_name}
-                  cloudinary_public_id={image.cloudinary_public_id}
-                  crop={image.crop}
-                  alt={image.caption || "Pottery image"}
-                  context="lightbox"
-                  onLoad={() => { setPostCropLoading(false); setPendingCropAspect(null); }}
-                  style={{
-                    maxWidth: "90vw",
-                    maxHeight: "80vh",
-                    objectFit: "contain",
-                    borderRadius: 4,
-                    userSelect: "none",
-                    pointerEvents: "none",
-                  }}
-                />
-              </Box>
+                }}
+              />
             </Box>
           </Box>
         )}
@@ -290,3 +270,4 @@ export default function ImageLightbox({
     </Modal>
   );
 }
+

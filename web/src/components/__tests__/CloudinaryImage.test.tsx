@@ -1,50 +1,33 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { forwardRef, useImperativeHandle, useRef } from "react";
+import { fireEvent, render as baseRender, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CloudinaryImage from "../CloudinaryImage";
+
+function render(ui: React.ReactElement, options?: any) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  const result = baseRender(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+    options,
+  );
+  return {
+    ...result,
+    rerender: (newUi: React.ReactElement) =>
+      result.rerender(
+        <QueryClientProvider client={queryClient}>{newUi}</QueryClientProvider>,
+      ),
+  };
+}
 
 const cloudinaryMocks = vi.hoisted(() => ({
   resize: vi.fn(),
   cropAddFlag: vi.fn(),
   fillGravity: vi.fn(), // retained to confirm gravity is never called
-}));
-
-vi.mock("@cloudinary/react", () => ({
-  AdvancedImage: forwardRef(function MockAdvancedImage(
-    {
-      alt,
-      className,
-      "data-testid": testId,
-      onError,
-      onLoad,
-      style,
-    }: {
-      alt?: string;
-      className?: string;
-      "data-testid"?: string;
-      onError?: React.ReactEventHandler<HTMLImageElement>;
-      onLoad?: React.ReactEventHandler<HTMLImageElement>;
-      style?: React.CSSProperties;
-    },
-    ref: React.ForwardedRef<{
-      imageRef: React.RefObject<HTMLImageElement | null>;
-    }>,
-  ) {
-    const imageRef = useRef<HTMLImageElement>(null);
-    useImperativeHandle(ref, () => ({ imageRef }), []);
-
-    return (
-      <img
-        ref={imageRef}
-        alt={alt}
-        className={className}
-        data-testid={testId}
-        onError={onError}
-        onLoad={onLoad}
-        style={style}
-      />
-    );
-  }),
 }));
 
 vi.mock("@cloudinary/url-gen", () => ({
@@ -57,6 +40,9 @@ vi.mock("@cloudinary/url-gen", () => ({
         }),
         delivery() {
           return this;
+        },
+        toURL() {
+          return `https://res.cloudinary.com/mock/${this.publicId}`;
         },
       };
     }
@@ -207,7 +193,7 @@ describe("CloudinaryImage", () => {
     );
 
     expect(cloudinaryMocks.cropAddFlag).toHaveBeenCalledWith("relative");
-    expect(cloudinaryMocks.resize).toHaveBeenCalledTimes(2);
+    expect(cloudinaryMocks.resize).toHaveBeenCalledTimes(4);
   });
 
   it("never calls fill.gravity — always uses center fill to avoid face-detection zoom", () => {

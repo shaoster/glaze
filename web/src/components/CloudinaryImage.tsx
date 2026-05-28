@@ -1,10 +1,9 @@
 /**
  * CloudinaryImage — optimized image renderer.
  *
- * When cloud_name and cloudinary_public_id are both provided and non-null,
- * the component uses @cloudinary/url-gen to request a size-appropriate
- * rendition from Cloudinary's image pipeline (auto format, auto quality,
- * fill gravity). Otherwise it falls back to a plain <img> at the original URL.
+ * Renders a standard <img> using the size-appropriate delivery URL computed via
+ * getCloudinaryUrl (backed by Cloudinary transforms if identity is present,
+ * otherwise falling back to standard URLs).
  *
  * Context-specific sizing:
  *   thumbnail — 64×64 fill, used in image lists and history rows
@@ -13,6 +12,9 @@
  *   detail    — fills the local container, for the PieceDetail hero image
  *   preview   — 64×64 fill, used for the upload preview before saving
  */
+import { Box, CircularProgress } from "@mui/material";
+import { useEffect, useRef, useState, Suspense } from "react";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Cloudinary } from "@cloudinary/url-gen";
 import {
   crop as cropAction,
@@ -24,15 +26,19 @@ import { format, quality } from "@cloudinary/url-gen/actions/delivery";
 import { auto as autoFormat, jpg } from "@cloudinary/url-gen/qualifiers/format";
 import { auto as autoQuality } from "@cloudinary/url-gen/qualifiers/quality";
 import { relative } from "@cloudinary/url-gen/qualifiers/flag";
-import { AdvancedImage } from "@cloudinary/react";
-import { Box, CircularProgress } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
 import type { ImageCrop } from "../util/types";
 
 const THUMBNAIL_SIZE = 64;
 const DEFAULT_VIEWPORT_WIDTH = 1200;
 const DEFAULT_VIEWPORT_HEIGHT = 900;
 const DEFAULT_DEVICE_PIXEL_RATIO = 1;
+
+export type CloudinaryImageContext =
+  | "thumbnail"
+  | "gallery"
+  | "lightbox"
+  | "detail"
+  | "preview";
 
 type ViewportSnapshot = {
   width: number;
@@ -49,16 +55,89 @@ function getViewportSnapshot(): ViewportSnapshot {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+function getCloudinaryUrl({
+  url,
+  cloud_name,
+  cloudinary_public_id,
+  context,
+  crop,
+  requestedWidth,
+  requestedHeight,
+}: {
+  url: string;
+  cloud_name?: string | null;
+  cloudinary_public_id?: string | null;
+  context: CloudinaryImageContext;
+  crop?: ImageCrop | null;
+  requestedWidth?: number;
+  requestedHeight?: number;
+}): string {
+  const cloudName = cloud_name?.trim() || null;
+  const publicId = cloudinary_public_id?.trim() || null;
 
-export type CloudinaryImageContext =
-  | "thumbnail"
-  | "gallery"
-  | "lightbox"
-  | "detail"
-  | "preview";
+  if (cloudName && publicId) {
+    const cld = new Cloudinary({ cloud: { cloudName } });
+    const img = cld.image(publicId);
+    const viewport = getViewportSnapshot();
+
+    if (crop) {
+      img.resize(
+        cropAction()
+          .width(crop.width)
+          .height(crop.height)
+          .x(crop.x)
+          .y(crop.y)
+          .addFlag(relative()),
+      );
+    }
+
+    if (context === "lightbox") {
+      const vw = Math.round(viewport.width * viewport.pixelRatio * 0.9);
+      const vh = Math.round(viewport.height * viewport.pixelRatio * 0.8);
+      img.resize(fit().width(vw).height(vh));
+    } else if (context === "detail") {
+      const vw = Math.round(viewport.width * viewport.pixelRatio);
+      const vh = Math.round(viewport.height * viewport.pixelRatio * 0.65);
+      img.resize(fit().width(vw).height(vh));
+    } else {
+      const targetWidth = Math.round(
+        context === "gallery" ? (requestedWidth ?? 320) : THUMBNAIL_SIZE,
+      );
+
+      if (crop) {
+        img.resize(scale().width(targetWidth));
+      } else {
+        const targetHeight = Math.round(
+          context === "gallery" ? (requestedHeight ?? 240) : THUMBNAIL_SIZE,
+        );
+        img.resize(fill().width(targetWidth).height(targetHeight));
+      }
+    }
+
+    img.delivery(format(context === "lightbox" ? autoFormat() : jpg()));
+    img.delivery(quality(autoQuality()));
+
+    return img.toURL();
+  }
+
+  return url;
+}
+
+const imageLoadQueryOptions = (url: string) => ({
+  queryKey: ["image-load", url],
+  queryFn: () =>
+    new Promise<string>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(url);
+      img.onerror = () => reject(new Error(`Failed to load image: ${url}`));
+      img.src = url;
+    }),
+  staleTime: Infinity,
+});
+
+function useSuspendedImageLoad(url: string) {
+  return useSuspenseQuery(imageLoadQueryOptions(url));
+}
 
 export type CloudinaryImageProps = {
   /** Full delivery URL — always required as fallback. */
@@ -96,7 +175,7 @@ export default function CloudinaryImage({
 }: CloudinaryImageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const advancedImageRef = useRef<AdvancedImage | null>(null);
+  const queryClient = useQueryClient();
 
   // Reset loading state when the image source changes. Storing the previous key
   // in state (not a ref) is the React-documented pattern for deriving state from
@@ -112,10 +191,19 @@ export default function CloudinaryImage({
     setIsLoading(true);
   }
 
+  const resolvedUrl = getCloudinaryUrl({
+    url,
+    cloud_name,
+    cloudinary_public_id,
+    context,
+    crop,
+    requestedWidth,
+    requestedHeight,
+  });
+
   useEffect(() => {
     function syncLoadedStateFromDom() {
-      const image =
-        imageRef.current ?? advancedImageRef.current?.imageRef?.current ?? null;
+      const image = imageRef.current;
       if (image?.complete && image.naturalWidth > 0) {
         setIsLoading(false);
       }
@@ -128,7 +216,21 @@ export default function CloudinaryImage({
       window.removeEventListener("pageshow", syncLoadedStateFromDom);
       document.removeEventListener("visibilitychange", syncLoadedStateFromDom);
     };
-  }, [url, cloudinary_public_id, context, cropKey]);
+  }, [resolvedUrl]);
+
+  // Parallel prefetching: optimistically prefetch the high-res lightbox counterpart when a gallery/detail image renders
+  useEffect(() => {
+    if ((context === "gallery" || context === "detail") && url) {
+      const lightboxUrl = getCloudinaryUrl({
+        url,
+        cloud_name,
+        cloudinary_public_id,
+        crop,
+        context: "lightbox",
+      });
+      queryClient.prefetchQuery(imageLoadQueryOptions(lightboxUrl));
+    }
+  }, [url, cloud_name, cloudinary_public_id, crop, context, queryClient]);
 
   function handleLoad(event: React.SyntheticEvent<HTMLImageElement>) {
     setIsLoading(false);
@@ -186,79 +288,6 @@ export default function CloudinaryImage({
     opacity: isLoading ? 0 : 1,
   };
 
-  const cloudName = cloud_name?.trim() || null;
-  const publicId = cloudinary_public_id?.trim() || null;
-  const viewport = getViewportSnapshot();
-
-  if (cloudName && publicId) {
-    const cld = new Cloudinary({ cloud: { cloudName } });
-    const img = cld.image(publicId);
-
-    if (crop) {
-      img.resize(
-        cropAction()
-          .width(crop.width)
-          .height(crop.height)
-          .x(crop.x)
-          .y(crop.y)
-          .addFlag(relative()),
-      );
-    }
-
-    if (context === "lightbox") {
-      const vw = Math.round(viewport.width * viewport.pixelRatio * 0.9);
-      const vh = Math.round(viewport.height * viewport.pixelRatio * 0.8);
-      img.resize(fit().width(vw).height(vh));
-    } else if (context === "detail") {
-      const vw = Math.round(viewport.width * viewport.pixelRatio);
-      const vh = Math.round(viewport.height * viewport.pixelRatio * 0.65);
-      img.resize(fit().width(vw).height(vh));
-    } else {
-      const targetWidth = Math.round(
-        context === "gallery" ? (requestedWidth ?? 320) : THUMBNAIL_SIZE,
-      );
-
-      if (crop) {
-        // We already cropped perfectly to the subject. Scale the width to match the column,
-        // and let Cloudinary naturally infer the exact height based on the crop's intrinsic ratio.
-        img.resize(scale().width(targetWidth));
-      } else {
-        const targetHeight = Math.round(
-          context === "gallery" ? (requestedHeight ?? 240) : THUMBNAIL_SIZE,
-        );
-        // Without a subject crop, fill the bounds (may trim edges to fit).
-        img.resize(fill().width(targetWidth).height(targetHeight));
-      }
-    }
-
-    // Thumbnail and preview contexts request JPG explicitly — consistent
-    // format for small fill crops. Lightbox uses auto format so the browser
-    // can receive WebP/AVIF for large images.
-    img.delivery(format(context === "lightbox" ? autoFormat() : jpg()));
-    img.delivery(quality(autoQuality()));
-
-    return (
-      <Box style={wrapperStyle}>
-        {isLoading && (
-          <Box style={spinnerStyle}>
-            <CircularProgress size={24} />
-          </Box>
-        )}
-        <AdvancedImage
-          ref={advancedImageRef}
-          cldImg={img}
-          alt={alt}
-          style={imageStyle}
-          className={className}
-          onLoad={handleLoad}
-          onError={handleError}
-          data-testid={testId}
-        />
-      </Box>
-    );
-  }
-
-  // No Cloudinary identity available — plain img fallback.
   return (
     <Box style={wrapperStyle}>
       {isLoading && (
@@ -268,7 +297,7 @@ export default function CloudinaryImage({
       )}
       <img
         ref={imageRef}
-        src={url}
+        src={resolvedUrl}
         alt={alt}
         style={imageStyle}
         className={className}
@@ -278,5 +307,110 @@ export default function CloudinaryImage({
         role="img"
       />
     </Box>
+  );
+}
+
+export function ImageSkeleton({
+  context,
+  crop,
+  aspectRatio,
+}: {
+  context: CloudinaryImageContext;
+  crop?: ImageCrop | null;
+  aspectRatio?: number | null;
+}) {
+  const aspect = aspectRatio ?? (crop ? crop.width / crop.height : 4 / 3);
+
+  if (context === "lightbox") {
+    return (
+      <Box
+        sx={{
+          aspectRatio: aspect,
+          maxWidth: "90vw",
+          maxHeight: "80vh",
+          width: "90vw",
+          borderRadius: "4px",
+          bgcolor: "rgba(255,255,255,0.06)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CircularProgress sx={{ color: "white" }} />
+      </Box>
+    );
+  }
+
+  if (context === "detail") {
+    return (
+      <Box
+        sx={{
+          width: "100%",
+          height: "100%",
+          minHeight: { xs: 200, sm: 260 },
+          aspectRatio: { md: "4 / 3" },
+          bgcolor: "rgba(255,255,255,0.06)",
+          borderRadius: "4px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CircularProgress size={24} />
+      </Box>
+    );
+  }
+
+  // Fallback for gallery/thumbnail/preview
+  return (
+    <Box
+      sx={{
+        width: "100%",
+        height: "100%",
+        aspectRatio: aspect,
+        bgcolor: "rgba(255,255,255,0.06)",
+        borderRadius: "4px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <CircularProgress size={16} />
+    </Box>
+  );
+}
+
+function InnerSuspenseCloudinaryImage(props: CloudinaryImageProps) {
+  const url = getCloudinaryUrl({
+    url: props.url,
+    cloud_name: props.cloud_name,
+    cloudinary_public_id: props.cloudinary_public_id,
+    crop: props.crop,
+    context: props.context,
+    requestedWidth: props.requestedWidth,
+    requestedHeight: props.requestedHeight,
+  });
+
+  useSuspendedImageLoad(url);
+
+  return <CloudinaryImage {...props} />;
+}
+
+export type SuspenseCloudinaryImageProps = CloudinaryImageProps & {
+  fallback?: React.ReactNode;
+};
+
+export function SuspenseCloudinaryImage({
+  fallback,
+  ...props
+}: SuspenseCloudinaryImageProps) {
+  const defaultFallback = fallback ?? (
+    <ImageSkeleton context={props.context} crop={props.crop} />
+  );
+
+  return (
+    <Suspense fallback={defaultFallback}>
+      <InnerSuspenseCloudinaryImage {...props} />
+    </Suspense>
   );
 }
