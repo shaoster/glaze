@@ -64,6 +64,10 @@ def _ensure_combination_layers(
         )
 
 
+# Public test seam for layer-order assertions in import tests.
+ensure_combination_layers = _ensure_combination_layers
+
+
 def _image_url(image: dict | None) -> str | None:
     """Extract the URL string from a test_tile_image dict value."""
     return (image_to_dict(image) or {}).get("url") if image else None

@@ -8,8 +8,8 @@ from rest_framework.request import Request
 
 from backend.otel import traced
 
-from .auth_export_archive import _stream_export_archive
-from .auth_export_data import _collect_export_data
+from .auth_export_archive import stream_export_archive
+from .auth_export_data import collect_export_data
 
 
 @extend_schema(
@@ -26,9 +26,9 @@ from .auth_export_data import _collect_export_data
 @traced
 def auth_export(request: Request) -> StreamingHttpResponse:
     """Download a ZIP archive of the current user's data."""
-    pieces_json, profile_json, images = _collect_export_data(request.user, request)
+    pieces_json, profile_json, images = collect_export_data(request.user, request)
     response = StreamingHttpResponse(
-        _stream_export_archive(pieces_json, profile_json, images),
+        stream_export_archive(pieces_json, profile_json, images),
         content_type="application/zip",
     )
     response["Content-Disposition"] = 'attachment; filename="potterdoc-export.zip"'

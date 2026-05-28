@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from rest_framework.request import Request
 from rest_framework.test import APIClient, APIRequestFactory
 
-from api.global_entries.logic import apply_global_filters, global_entries_impl
+from api.global_entries.logic import apply_global_filters
 from api.models import (
     ClayBody,
     FavoriteGlazeCombination,
@@ -239,6 +239,8 @@ class TestGlobalEntries:
     def test_default_get_serializer_stringifies_relation_display_field(
         self, user, monkeypatch
     ):
+        from api.global_entries.logic import global_entries_impl_with_resolvers
+
         temp = FiringTemperature.objects.create(
             user=None,
             name="Cone 6 Electric",
@@ -252,25 +254,21 @@ class TestGlobalEntries:
             firing_temperature=temp,
         )
         monkeypatch.delitem(_GLOBAL_ENTRY_SERIALIZERS, GlazeCombination, raising=False)
-        monkeypatch.setattr(
-            "api.global_entries.logic.get_global_model_and_field",
-            lambda global_name: (
-                GlazeCombination,
-                {"firing_temperature": {"$ref": "@firing_temperature.name"}},
-                "firing_temperature",
-            ),
-        )
-        monkeypatch.setattr(
-            "api.global_entries.logic.is_public_global", lambda global_name: False
-        )
-        monkeypatch.setattr(
-            "api.global_entries.logic.is_private_global", lambda global_name: True
-        )
         django_request = APIRequestFactory().get("/api/globals/fake/")
         request = Request(django_request)
         request._user = user
 
-        response = global_entries_impl(request, "fake")
+        response = global_entries_impl_with_resolvers(
+            request,
+            "fake",
+            resolve_global=lambda global_name: (
+                GlazeCombination,
+                {"firing_temperature": {"$ref": "@firing_temperature.name"}},
+                "firing_temperature",
+            ),
+            public_global=lambda global_name: False,
+            private_global=lambda global_name: True,
+        )
 
         assert response.data == [
             {

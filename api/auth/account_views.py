@@ -23,6 +23,3 @@ def delete_account_impl(request: Request, *, logout_fn=logout) -> Response:
     with transaction.atomic():
         user.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-_delete_account_impl = delete_account_impl

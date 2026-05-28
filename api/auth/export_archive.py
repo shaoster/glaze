@@ -64,7 +64,3 @@ async def stream_export_archive(
 
     for c in buffer.flush_chunks():
         yield c
-
-
-_export_image_name = export_image_name
-_stream_export_archive = stream_export_archive

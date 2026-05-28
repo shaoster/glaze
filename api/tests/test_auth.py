@@ -5,7 +5,6 @@ import json
 from collections.abc import AsyncIterable
 from io import BytesIO
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlparse
 from zipfile import ZipFile
 
@@ -30,16 +29,6 @@ FAKE_PAYLOAD = {
 }
 
 
-def _make_google_post_mock(id_token="fake-id-token"):
-    token_resp = MagicMock()
-    token_resp.raise_for_status = MagicMock()
-    token_resp.json.return_value = {
-        "id_token": id_token,
-        "access_token": "fake-access-token",
-    }
-    return token_resp
-
-
 def _make_auth_google_request(
     code="authcode", redirect_uri="http://localhost", invite_code=""
 ):
@@ -51,27 +40,46 @@ def _make_auth_google_request(
     )
 
 
+def _make_auth_google_impl_request(
+    code="authcode", redirect_uri="http://localhost", invite_code=""
+):
+    return SimpleNamespace(
+        data={"code": code, "redirect_uri": redirect_uri, "invite_code": invite_code},
+        _request=_make_auth_google_request(code, redirect_uri, invite_code),
+    )
+
+
 @pytest.mark.django_db
 class TestAuthEndpointsMocked:
-    def test_logout_success(self, monkeypatch):
-        from api import auth_views
+    def test_logout_success(self, settings):
+        from rest_framework.test import APIClient
 
-        monkeypatch.setattr(auth_views, "logout", lambda req: None)
+        settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
 
-        factory = APIRequestFactory()
-        request = factory.post("/api/auth/logout/")
-        user = User(username="testhash")
-        force_authenticate(request, user=user)
+        login_user = User.objects.create_user(
+            username="logout-test@example.com",
+            email="logout-test@example.com",
+            password="password123",
+        )
+        session_client = APIClient()
+        assert session_client.login(
+            username=login_user.username, password="password123"
+        )
 
-        response = auth_views.auth_logout(request)
+        response = session_client.post("/api/auth/logout/")
         assert response.status_code == 204
 
+        assert session_client.session.get("_auth_user_id") is None
+
+        followup = session_client.post("/api/auth/logout/")
+        assert followup.status_code == 403, followup.content
+
     def test_csrf_view(self):
-        from api import auth_views
+        from api.auth.views import csrf
 
         factory = APIRequestFactory()
         request = factory.get("/api/auth/csrf/")
-        response = auth_views.csrf(request)
+        response = csrf(request)
         assert response.status_code == 204
 
     def test_auth_me_sets_csrf_cookie(self, client, settings):
@@ -313,18 +321,18 @@ class TestAuthEndpointsMocked:
 @pytest.mark.django_db
 class TestAuthMe:
     def test_returns_config_and_null_user_when_unauthenticated(self, settings):
-        from api import auth_views
+        from api.auth.views import auth_me
 
         settings.GOOGLE_OAUTH_CLIENT_ID = "my-client-id"
         factory = APIRequestFactory()
         request = factory.get("/api/auth/me/")
-        response = auth_views.auth_me(request)
+        response = auth_me(request)
         assert response.status_code == 200
         assert response.data["googleOauthClientId"] == "my-client-id"
         assert response.data["user"] is None
 
     def test_returns_config_and_user_when_authenticated(self, settings):
-        from api import auth_views
+        from api.auth.views import auth_me
 
         settings.GOOGLE_OAUTH_CLIENT_ID = "my-client-id"
         factory = APIRequestFactory()
@@ -332,18 +340,18 @@ class TestAuthMe:
         user = User(username="testhash")
         user.save()
         force_authenticate(request, user=user)
-        response = auth_views.auth_me(request)
+        response = auth_me(request)
         assert response.status_code == 200
         assert response.data["googleOauthClientId"] == "my-client-id"
         assert response.data["user"] is not None
 
     def test_returns_503_when_not_configured(self, settings):
-        from api import auth_views
+        from api.auth.views import auth_me
 
         settings.GOOGLE_OAUTH_CLIENT_ID = ""
         factory = APIRequestFactory()
         request = factory.get("/api/auth/me/")
-        response = auth_views.auth_me(request)
+        response = auth_me(request)
         assert response.status_code == 503
 
     def test_refreshes_session_cookie_for_shared_admin_domain(self, user, settings):
@@ -386,35 +394,20 @@ class TestAuthMe:
 
 @pytest.mark.django_db
 class TestAuthGoogle:
-    def _google_mocks(self, payload=None):
-        """Context manager stack: mock token exchange + id_token verification."""
-        from contextlib import ExitStack
-
-        stack = ExitStack()
-        stack.enter_context(
-            patch("api.auth_views.httpx.post", return_value=_make_google_post_mock())
-        )
-        stack.enter_context(
-            patch(
-                "api.auth_views._verify_google_id_token",
-                return_value=payload or FAKE_PAYLOAD,
-            )
-        )
-        stack.enter_context(patch("api.auth_views.login"))
-        stack.enter_context(patch("api.auth_views.bootstrap_dev_user"))
-        return stack
-
     def test_new_user_created_with_valid_invite(self, db, settings):
-        from api import auth_views
+        from api.auth.google_views import auth_google_impl
 
         settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
         settings.GOOGLE_OAUTH_CLIENT_SECRET = "test-secret"
 
         invite = InviteCode.objects.create()
 
-        with self._google_mocks():
-            request = _make_auth_google_request(invite_code=str(invite.code))
-            response = auth_views.auth_google(request)
+        response = auth_google_impl(
+            _make_auth_google_impl_request(invite_code=str(invite.code)),
+            exchange_auth_code=lambda code, redirect_uri: {"id_token": "fake-id-token"},
+            verify_id_token=lambda id_token: FAKE_PAYLOAD,
+            login_fn=lambda req, user: None,
+        )
 
         assert response.status_code == 200
         assert User.objects.filter(username=FAKE_HASHED_SUB).exists()
@@ -422,16 +415,19 @@ class TestAuthGoogle:
         assert invite.used_at is not None
 
     def test_sha256_sub_stored_never_raw_sub(self, db, settings):
-        from api import auth_views
+        from api.auth.google_views import auth_google_impl
 
         settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
         settings.GOOGLE_OAUTH_CLIENT_SECRET = "test-secret"
 
         invite = InviteCode.objects.create()
 
-        with self._google_mocks():
-            request = _make_auth_google_request(invite_code=str(invite.code))
-            auth_views.auth_google(request)
+        auth_google_impl(
+            _make_auth_google_impl_request(invite_code=str(invite.code)),
+            exchange_auth_code=lambda code, redirect_uri: {"id_token": "fake-id-token"},
+            verify_id_token=lambda id_token: FAKE_PAYLOAD,
+            login_fn=lambda req, user: None,
+        )
 
         created_user = User.objects.get(username=FAKE_HASHED_SUB)
         assert created_user.email == ""
@@ -442,7 +438,7 @@ class TestAuthGoogle:
         assert FAKE_SUB not in profile.openid_subject
 
     def test_existing_user_logs_in_without_invite(self, db, settings):
-        from api import auth_views
+        from api.auth.google_views import auth_google_impl
 
         settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
         settings.GOOGLE_OAUTH_CLIENT_SECRET = "test-secret"
@@ -450,28 +446,34 @@ class TestAuthGoogle:
         existing_user = User.objects.create_user(username=FAKE_HASHED_SUB)
         UserProfile.objects.create(user=existing_user, openid_subject=FAKE_HASHED_SUB)
 
-        with self._google_mocks():
-            request = _make_auth_google_request()
-            response = auth_views.auth_google(request)
+        response = auth_google_impl(
+            _make_auth_google_impl_request(),
+            exchange_auth_code=lambda code, redirect_uri: {"id_token": "fake-id-token"},
+            verify_id_token=lambda id_token: FAKE_PAYLOAD,
+            login_fn=lambda req, user: None,
+        )
 
         assert response.status_code == 200
         assert User.objects.count() == 1
 
     def test_new_user_without_invite_gets_403(self, db, settings):
-        from api import auth_views
+        from api.auth.google_views import auth_google_impl
 
         settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
         settings.GOOGLE_OAUTH_CLIENT_SECRET = "test-secret"
 
-        with self._google_mocks():
-            request = _make_auth_google_request()
-            response = auth_views.auth_google(request)
+        response = auth_google_impl(
+            _make_auth_google_impl_request(),
+            exchange_auth_code=lambda code, redirect_uri: {"id_token": "fake-id-token"},
+            verify_id_token=lambda id_token: FAKE_PAYLOAD,
+            login_fn=lambda req, user: None,
+        )
 
         assert response.status_code == 403
         assert response.data["code"] == "invite_required"
 
     def test_used_invite_code_rejected(self, db, settings, user):
-        from api import auth_views
+        from api.auth.google_views import auth_google_impl
 
         settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
         settings.GOOGLE_OAUTH_CLIENT_SECRET = "test-secret"
@@ -481,21 +483,27 @@ class TestAuthGoogle:
         invite.used_by = user
         invite.save(update_fields=["used_at", "used_by"])
 
-        with self._google_mocks():
-            request = _make_auth_google_request(invite_code=str(invite.code))
-            response = auth_views.auth_google(request)
+        response = auth_google_impl(
+            _make_auth_google_impl_request(invite_code=str(invite.code)),
+            exchange_auth_code=lambda code, redirect_uri: {"id_token": "fake-id-token"},
+            verify_id_token=lambda id_token: FAKE_PAYLOAD,
+            login_fn=lambda req, user: None,
+        )
 
         assert response.status_code == 403
 
     def test_not_configured_returns_503(self, db, settings):
-        from api import auth_views
+        from api.auth.google_views import auth_google_impl
 
         settings.GOOGLE_OAUTH_CLIENT_ID = ""
         settings.GOOGLE_OAUTH_CLIENT_SECRET = ""
 
-        factory = APIRequestFactory()
-        request = factory.post("/api/auth/google/", {}, format="json")
-        response = auth_views.auth_google(request)
+        response = auth_google_impl(
+            _make_auth_google_impl_request(),
+            exchange_auth_code=lambda code, redirect_uri: {"id_token": "fake-id-token"},
+            verify_id_token=lambda id_token: FAKE_PAYLOAD,
+            login_fn=lambda req, user: None,
+        )
         assert response.status_code == 503
 
     def test_auth_google_impl_creates_user_and_logs_in(self, db, settings, monkeypatch):
@@ -537,20 +545,20 @@ async def _collect_async_bytes(chunks: AsyncIterable[bytes]) -> bytes:
 @pytest.mark.django_db
 class TestAuthExport:
     def test_export_requires_authentication(self):
-        from api import auth_views
+        from api.auth.views import auth_export
 
         factory = APIRequestFactory()
         request = factory.get("/api/auth/export/")
-        response = auth_views.auth_export(request)
+        response = auth_export(request)
         assert response.status_code == 403
 
     def test_export_returns_zip_with_pieces_json(self, user, piece):
-        from api import auth_views
+        from api.auth.views import auth_export
 
         factory = APIRequestFactory()
         request = factory.get("/api/auth/export/")
         force_authenticate(request, user=user)
-        response = auth_views.auth_export(request)
+        response = auth_export(request)
 
         assert response.status_code == 200
         assert response["Content-Type"] == "application/zip"
@@ -566,7 +574,7 @@ class TestAuthExport:
             assert any(str(piece.id) == p["id"] for p in pieces)
 
     def test_export_user_isolation(self, user, other_user):
-        from api import auth_views
+        from api.auth.views import auth_export
         from api.models import PieceState
         from api.workflow import ENTRY_STATE
 
@@ -581,7 +589,7 @@ class TestAuthExport:
         factory = APIRequestFactory()
         request = factory.get("/api/auth/export/")
         force_authenticate(request, user=user)
-        response = auth_views.auth_export(request)
+        response = auth_export(request)
 
         archive_bytes = asyncio.run(_collect_async_bytes(response.streaming_content))
         with ZipFile(BytesIO(archive_bytes)) as archive:
@@ -687,11 +695,11 @@ class TestAuthExport:
 @pytest.mark.django_db
 class TestAuthDeleteAccount:
     def test_delete_account_requires_authentication(self):
-        from api import auth_views
+        from api.auth.views import auth_delete_account
 
         factory = APIRequestFactory()
         request = factory.delete("/api/auth/account/")
-        response = auth_views.auth_delete_account(request)
+        response = auth_delete_account(request)
         assert response.status_code == 403
 
     def test_delete_account_removes_user_and_returns_204(self, user):

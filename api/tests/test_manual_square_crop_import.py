@@ -332,13 +332,13 @@ class TestEnsureCombinationLayers:
 
     @pytest.mark.django_db
     def test_creates_layers_when_none_exist(self):
-        from api.manual_tile_imports import _ensure_combination_layers
+        from api.manual_tile_imports import ensure_combination_layers
 
         combo = self._make_combo("A")
         t1 = self._make_public_type("TypeA")
         t2 = self._make_public_type("TypeB")
 
-        _ensure_combination_layers(combo, [t1, t2])
+        ensure_combination_layers(combo, [t1, t2])
 
         layers = list(combo.layers.order_by("order"))
         assert len(layers) == 2
@@ -349,20 +349,20 @@ class TestEnsureCombinationLayers:
 
     @pytest.mark.django_db
     def test_no_op_when_layers_already_correct(self):
-        from api.manual_tile_imports import _ensure_combination_layers
+        from api.manual_tile_imports import ensure_combination_layers
         from api.models import GlazeCombinationLayer
 
         combo = self._make_combo("B")
         t1 = self._make_public_type("TypeC")
         GlazeCombinationLayer.objects.create(combination=combo, glaze_type=t1, order=0)
 
-        _ensure_combination_layers(combo, [t1])
+        ensure_combination_layers(combo, [t1])
 
         assert combo.layers.count() == 1
 
     @pytest.mark.django_db
     def test_replaces_layers_when_order_differs(self):
-        from api.manual_tile_imports import _ensure_combination_layers
+        from api.manual_tile_imports import ensure_combination_layers
         from api.models import GlazeCombinationLayer
 
         combo = self._make_combo("C")
@@ -371,7 +371,7 @@ class TestEnsureCombinationLayers:
         GlazeCombinationLayer.objects.create(combination=combo, glaze_type=t2, order=0)
         GlazeCombinationLayer.objects.create(combination=combo, glaze_type=t1, order=1)
 
-        _ensure_combination_layers(combo, [t1, t2])
+        ensure_combination_layers(combo, [t1, t2])
 
         layers = list(combo.layers.order_by("order"))
         assert layers[0].glaze_type_id == t1.id

@@ -250,9 +250,3 @@ def global_entry_favorite_impl(
         fav_model_cls.objects.filter(user=request.user, **{fk_field: obj}).delete()
 
     return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-_apply_global_filters = apply_global_filters
-_global_entries_impl = global_entries_impl
-_global_entries_impl_with_resolvers = global_entries_impl_with_resolvers
-_global_entry_favorite_impl = global_entry_favorite_impl

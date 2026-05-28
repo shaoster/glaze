@@ -43,7 +43,7 @@ def used_code(db, user):
 @pytest.mark.django_db
 class TestValidateInviteEndpoint:
     def test_valid_code_returns_true(self, active_code):
-        from api.auth_views import validate_invite
+        from api.auth.views import validate_invite
 
         factory = APIRequestFactory()
         request = factory.post(
@@ -56,7 +56,7 @@ class TestValidateInviteEndpoint:
         assert response.data["valid"] is True
 
     def test_missing_code_returns_400(self, db):
-        from api.auth_views import validate_invite
+        from api.auth.views import validate_invite
 
         factory = APIRequestFactory()
         request = factory.post("/api/auth/validate-invite/", {}, format="json")
@@ -64,7 +64,7 @@ class TestValidateInviteEndpoint:
         assert response.status_code == 400
 
     def test_nonexistent_code_returns_400(self, db):
-        from api.auth_views import validate_invite
+        from api.auth.views import validate_invite
 
         factory = APIRequestFactory()
         request = factory.post(
@@ -76,7 +76,7 @@ class TestValidateInviteEndpoint:
         assert response.status_code == 400
 
     def test_expired_code_returns_400(self, expired_code):
-        from api.auth_views import validate_invite
+        from api.auth.views import validate_invite
 
         factory = APIRequestFactory()
         request = factory.post(
@@ -88,7 +88,7 @@ class TestValidateInviteEndpoint:
         assert response.status_code == 400
 
     def test_used_code_returns_400(self, used_code):
-        from api.auth_views import validate_invite
+        from api.auth.views import validate_invite
 
         factory = APIRequestFactory()
         request = factory.post(
@@ -103,7 +103,7 @@ class TestValidateInviteEndpoint:
 @pytest.mark.django_db
 class TestStaffInviteCodeEndpoint:
     def test_get_creates_code_if_none_exist(self, staff_user):
-        from api.auth_views import staff_invite_code
+        from api.auth.views import staff_invite_code
 
         factory = APIRequestFactory()
         request = factory.get("/api/staff/invite-code/")
@@ -115,7 +115,7 @@ class TestStaffInviteCodeEndpoint:
         assert InviteCode.objects.count() == 1
 
     def test_get_returns_existing_active_code(self, staff_user, active_code):
-        from api.auth_views import staff_invite_code
+        from api.auth.views import staff_invite_code
 
         factory = APIRequestFactory()
         request = factory.get("/api/staff/invite-code/")
@@ -125,7 +125,7 @@ class TestStaffInviteCodeEndpoint:
         assert response.data["code"] == str(active_code.code)
 
     def test_post_generates_new_code(self, staff_user, active_code):
-        from api.auth_views import staff_invite_code
+        from api.auth.views import staff_invite_code
 
         factory = APIRequestFactory()
         request = factory.post("/api/staff/invite-code/", {}, format="json")
@@ -137,7 +137,7 @@ class TestStaffInviteCodeEndpoint:
         assert InviteCode.objects.count() == 2
 
     def test_non_staff_user_gets_403(self, user):
-        from api.auth_views import staff_invite_code
+        from api.auth.views import staff_invite_code
 
         factory = APIRequestFactory()
         request = factory.get("/api/staff/invite-code/")

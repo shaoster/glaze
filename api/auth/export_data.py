@@ -54,6 +54,3 @@ def collect_export_data(user: Any, request: Request) -> tuple[str, str, list[Ima
         .distinct()
     )
     return json.dumps(list(pieces_data), default=str), profile_json, images
-
-
-_collect_export_data = collect_export_data
