@@ -39,7 +39,6 @@ export default function PieceListPage() {
       ? sortFromUrl
       : DEFAULT_PIECE_SORT;
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [positionerResetKey, setPositionerResetKey] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -138,9 +137,6 @@ export default function PieceListPage() {
   function handleCreated(piece: PieceDetail) {
     setPieces((prev) => [piece, ...prev]);
     setCount((c) => c + 1);
-    // Prepending shifts all existing item indices, invalidating cached positions.
-    // Signal PieceList to reset the positioner so masonic re-lays out correctly.
-    setPositionerResetKey((k) => k + 1);
   }
 
   const hasMore = pieces.length < count;
@@ -186,7 +182,6 @@ export default function PieceListPage() {
           hasMore={hasMore}
           loading={refreshing}
           loadingMore={loadingMore}
-          positionerResetKey={positionerResetKey}
         />
       )}
       <NewPieceDialog

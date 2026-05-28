@@ -420,12 +420,13 @@ describe("PieceList", () => {
       expect(mockPositioner.set).toHaveBeenCalledTimes(1);
     });
 
-    it("resets the positioner when positionerResetKey changes (e.g. piece prepended)", () => {
+    it("resets the positioner when pieces are prepended (non-pure-append)", () => {
       // Regression for the handleCreated prepend edge case: prepending a new piece
       // shifts all existing item indices. Without a reset, the positioner still has
       // heights cached at the old indices, so masonic uses the wrong height for the
-      // prepended slot. PieceListPage increments positionerResetKey on create,
-      // which changes usePositioner deps → fresh positioner → all items re-seeded.
+      // prepended item and any crop-seeded item at its new index is skipped.
+      // The fix detects the non-pure-append and increments positionerResetCounterRef,
+      // which changes usePositioner's deps → fresh positioner → all items re-seeded.
       const pieceA = makePiece({
         id: "p-a",
         thumbnail: {
@@ -447,19 +448,15 @@ describe("PieceList", () => {
 
       function PrependHarness() {
         const [pieces, setPieces] = useState([pieceA]);
-        const [resetKey, setResetKey] = useState(0);
         return (
           <>
             <button
               type="button"
-              onClick={() => {
-                setPieces((prev) => [pieceB, ...prev]);
-                setResetKey((k) => k + 1); // mirrors PieceListPage.handleCreated
-              }}
+              onClick={() => setPieces((prev) => [pieceB, ...prev])}
             >
               prepend
             </button>
-            <PieceList pieces={pieces} positionerResetKey={resetKey} />
+            <PieceList pieces={pieces} />
           </>
         );
       }
@@ -477,12 +474,12 @@ describe("PieceList", () => {
         estimateCardHeight(pieceA, mockPositioner.columnWidth),
       );
 
-      // Prepend pieceB with explicit reset signal: order is now [pieceB(0), pieceA(1)]
+      // Prepend pieceB: order is now [pieceB(0), pieceA(1)]
       fireEvent.click(screen.getByRole("button", { name: /prepend/i }));
 
-      // usePositioner deps changed → seededMap cleared → both items re-seeded.
-      // Without the reset: seededMap still has {0: h_A}, get(0)!==undefined,
-      // pieceB never seeded, masonic uses pieceA's height for the wrong slot.
+      // Positioner was reset → both items re-seeded at their new indices.
+      // Without the fix: seededMap still has {0: h_A}, so get(0)!==undefined
+      // and pieceB is never seeded, leaving masonic with the wrong height at 0.
       expect(mockPositioner.set).toHaveBeenCalledTimes(3);
       expect(mockPositioner.set).toHaveBeenCalledWith(
         0,
