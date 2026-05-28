@@ -1,322 +1,128 @@
 # ruff: noqa: F401
-import hashlib
-import re
-from collections import defaultdict
-from typing import Callable
-
-from django.conf import settings
-from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.db.models import Q
-from django.shortcuts import get_object_or_404
-from django.views.decorators.csrf import ensure_csrf_cookie
-from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token as google_id_token
-from rest_framework import serializers as drf_serializers
-from rest_framework import status
-from rest_framework.decorators import api_view, parser_classes, permission_classes
-from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
-from rest_framework.request import Request
-from rest_framework.response import Response
-
-from backend.otel import traced
-
-from .dev_bootstrap import bootstrap_dev_user
-from .models import (
-    AsyncTask,
-    FavoriteGlazeCombination,
-    GlazeCombination,
+from .piece import views as _impl
+from .piece.views import (
+    Http404,
+    Image,
+    ImageCropSerializer,
+    Max,
     Piece,
-    PieceState,
-    UserProfile,
-)
-from .piece_helpers import (
-    _DEFAULT_ORDERING,
-    _DEFAULT_PAGE_SIZE,
-    _PIECE_ORDERING_MAP,
-    apply_piece_ordering,
-    piece_detail_queryset,
-    piece_photo_counts,
-    piece_queryset,
-    serialize_piece_detail,
-    serialize_piece_summary,
-)
-from .piece_image_views import (
-    PieceImageMoveSerializer,
-    patch_image_crop,
-    piece_image_detail,
-)
-from .serializer_registry import (
-    _GLOBAL_ENTRY_SERIALIZERS,  # auto-generated in _register_globals(); hand-written serializers overwrite
-)
-from .serializers import (
-    AsyncTaskSerializer,
-    AuthUserSerializer,
-    GlazeCombinationImageEntrySerializer,
-    GoogleAuthSerializer,
     PieceCreateSerializer,
     PieceDetailSerializer,
+    PieceImageMoveSerializer,
+    PieceState,
     PieceStateCreateSerializer,
+    PieceStateImage,
     PieceStateSerializer,
     PieceStateUpdateSerializer,
     PieceSummarySerializer,
     PieceUpdateSerializer,
-    TaskSubmissionSerializer,
-)
-from .workflow import (
-    get_glaze_image_qualifying_states,
+    Prefetch,
+    Q,
+    _apply_piece_ordering,
+    _piece_detail_queryset,
+    _piece_photo_counts,
+    _piece_queryset,
+    _serialize_piece_detail,
+    apps,
+    bootstrap_dev_user,
     get_global_config,
     get_global_model_and_field,
-    is_private_global,
-    is_public_global,
+    get_object_or_404,
+    get_state_global_ref_map,
+    transaction,
 )
 
-# Compatibility shims for older tests and call sites that still monkeypatch the
-# private helpers on api.piece_views directly.
-_piece_queryset = piece_queryset
-_piece_detail_queryset = piece_detail_queryset
-_apply_piece_ordering = apply_piece_ordering
-_piece_photo_counts = piece_photo_counts
-_serialize_piece_detail = serialize_piece_detail
-_serialize_piece_summary = serialize_piece_summary
+
+def _sync_impl() -> None:
+    for name in [
+        "Image",
+        "ImageCropSerializer",
+        "Piece",
+        "PieceCreateSerializer",
+        "PieceDetailSerializer",
+        "PieceImageMoveSerializer",
+        "PieceState",
+        "PieceStateCreateSerializer",
+        "PieceStateImage",
+        "PieceStateSerializer",
+        "PieceStateUpdateSerializer",
+        "PieceSummarySerializer",
+        "PieceUpdateSerializer",
+        "Prefetch",
+        "Q",
+        "Max",
+        "apps",
+        "bootstrap_dev_user",
+        "get_global_config",
+        "get_global_model_and_field",
+        "get_state_global_ref_map",
+        "transaction",
+        "get_object_or_404",
+        "Http404",
+        "_apply_piece_ordering",
+        "_piece_detail_queryset",
+        "_piece_photo_counts",
+        "_piece_queryset",
+        "_serialize_piece_detail",
+    ]:
+        setattr(_impl, name, globals()[name])
 
 
-@extend_schema(
-    methods=["GET"],
-    operation_id="pieces_list",
-    description="List the authenticated user's pieces, paginated and sortable.",
-    parameters=[
-        OpenApiParameter(
-            name="ordering",
-            description="Sort order. Prefix with '-' for descending.",
-            required=False,
-            type=str,
-            enum=list(_PIECE_ORDERING_MAP.keys()),
-        ),
-        OpenApiParameter(
-            name="limit", description="Page size.", required=False, type=int
-        ),
-        OpenApiParameter(
-            name="offset", description="Pagination offset.", required=False, type=int
-        ),
-        OpenApiParameter(
-            name="tag_ids",
-            description="Comma-separated tag IDs (AND filter).",
-            required=False,
-            type=str,
-        ),
-    ],
-    responses={
-        200: inline_serializer(
-            name="PiecePage",
-            fields={
-                "count": drf_serializers.IntegerField(),
-                "results": PieceSummarySerializer(many=True),
-            },
-        )
-    },
-)
-@extend_schema(
-    methods=["POST"],
-    request=PieceCreateSerializer,
-    responses={201: PieceDetailSerializer},
-    description="Create a new piece. The piece is initialized in the `designed` state.",
-)
-@api_view(["GET", "POST"])
-@permission_classes([IsAuthenticated])
-@traced
-def pieces(request: Request) -> Response:
-    """List the current user's pieces or create a new one."""
-    if request.method == "GET":
-        qs = _piece_queryset(request)
-        raw_tag_ids = request.query_params.get("tag_ids", "").strip()
-        if raw_tag_ids:
-            for tag_id in (
-                item.strip() for item in raw_tag_ids.split(",") if item.strip()
-            ):
-                qs = qs.filter(tag_links__tag_id=tag_id)
-            qs = qs.distinct()
-        ordering_param = request.query_params.get("ordering", _DEFAULT_ORDERING)
-        qs = _apply_piece_ordering(qs, ordering_param)
-        try:
-            limit = max(
-                1, min(100, int(request.query_params.get("limit", _DEFAULT_PAGE_SIZE)))
-            )
-            offset = max(0, int(request.query_params.get("offset", 0)))
-        except (ValueError, TypeError):
-            limit = _DEFAULT_PAGE_SIZE
-            offset = 0
-        count = qs.count()
-        page_qs = list(qs[offset : offset + limit])
-        photo_counts = _piece_photo_counts([piece.id for piece in page_qs])
-        for piece in page_qs:
-            piece.photo_count = photo_counts.get(piece.id, 0)
-        return Response(
-            {"count": count, "results": _serialize_piece_summary(page_qs, request)}
-        )
-
-    serializer = PieceCreateSerializer(data=request.data, context={"request": request})
-    serializer.is_valid(raise_exception=True)
-    piece = serializer.save()
-    return Response(
-        _serialize_piece_detail(piece, request), status=status.HTTP_201_CREATED
-    )
+def pieces(request):
+    _sync_impl()
+    return _impl.pieces(request)
 
 
-@extend_schema(
-    methods=["GET"],
-    operation_id="pieces_retrieve",
-    responses={200: PieceDetailSerializer},
-    description=(
-        "Retrieve a single piece. Publicly shared terminal pieces are readable "
-        "without authentication; all others require the owning user's session."
-    ),
-)
-@extend_schema(
-    methods=["PATCH"],
-    request=PieceUpdateSerializer,
-    responses={200: PieceDetailSerializer},
-    description="Update piece metadata (name, notes, thumbnail, shared flag). Requires authentication.",
-)
-@api_view(["GET", "PATCH"])
-@permission_classes([AllowAny])
-@traced
-def piece_detail(request: Request, piece_id: str) -> Response:
-    """Retrieve or update a single piece."""
-    if request.method == "GET":
-        piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
-        return Response(_serialize_piece_detail(piece, request))
-
-    if not request.user.is_authenticated:
-        return Response(
-            {"detail": "Authentication credentials were not provided."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-    piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
-    if request.method == "PATCH":
-        serializer = PieceUpdateSerializer(
-            data=request.data, context={"request": request, "piece": piece}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.update(piece, serializer.validated_data)
-        piece.refresh_from_db()
-    return Response(_serialize_piece_detail(piece, request))
+def piece_detail(request, piece_id):
+    _sync_impl()
+    return _impl.piece_detail(request, piece_id)
 
 
-@extend_schema(
-    request=PieceStateCreateSerializer,
-    responses={201: PieceDetailSerializer},
-    description=(
-        "Advance the piece to a new state. The `state` field must be a valid "
-        "successor of the current state as defined in `workflow.yml`."
-    ),
-)
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-@traced
-def piece_states(request: Request, piece_id: str) -> Response:
-    """Advance a piece into a new workflow state."""
-    piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
-    serializer = PieceStateCreateSerializer(data=request.data, context={"piece": piece})
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
-    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
-    return Response(
-        _serialize_piece_detail(piece, request), status=status.HTTP_201_CREATED
-    )
+def piece_states(request, piece_id):
+    _sync_impl()
+    return _impl.piece_states(request, piece_id)
 
 
-@extend_schema(
-    methods=["GET"],
-    responses={200: PieceStateSerializer},
-    description="Return the current (most recent) state of the piece.",
-)
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-@traced
-def piece_current_state_detail(request: Request, piece_id: str) -> Response:
-    """Return the current state object for a piece."""
-    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
-    current = piece.current_state
-    if current is None:
-        return Response(
-            {"detail": "Piece has no states."}, status=status.HTTP_404_NOT_FOUND
-        )
-    return Response(PieceStateSerializer(current, context={"request": request}).data)
+def piece_current_state_detail(request, piece_id):
+    _sync_impl()
+    return _impl.piece_current_state_detail(request, piece_id)
 
 
-@extend_schema(
-    methods=["PATCH"],
-    request=PieceStateUpdateSerializer,
-    responses={200: PieceDetailSerializer},
-    description="Update fields on the current (unsealed) state: notes, location, custom fields, images.",
-)
-@api_view(["PATCH"])
-@permission_classes([IsAuthenticated])
-@traced
-def piece_current_state(request: Request, piece_id: str) -> Response:
-    """Update the current mutable state for a piece."""
-    piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
-    current = piece.current_state
-    if current is None:
-        return Response(
-            {"detail": "Piece has no states."}, status=status.HTTP_404_NOT_FOUND
-        )
-    serializer = PieceStateUpdateSerializer(current, data=request.data)
-    serializer.is_valid(raise_exception=True)
-    serializer.update(current, serializer.validated_data)
-    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
-    return Response(_serialize_piece_detail(piece, request))
+def piece_current_state(request, piece_id):
+    _sync_impl()
+    return _impl.piece_current_state(request, piece_id)
 
 
-@extend_schema(
-    methods=["PATCH"],
-    request=PieceStateUpdateSerializer,
-    responses={200: PieceDetailSerializer},
-    description="Edit a sealed past state while the piece is in editable mode. Returns 403 if not editable.",
-)
-@extend_schema(
-    methods=["DELETE"],
-    responses={200: PieceDetailSerializer},
-    description="Delete a sealed past state while in editable mode. Cannot delete the `designed` state.",
-)
-@api_view(["PATCH", "DELETE"])
-@permission_classes([IsAuthenticated])
-@traced
-def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response:
-    """Patch or delete a past (sealed) state while the piece is in editable mode.
+def piece_past_state(request, piece_id, state_id):
+    _sync_impl()
+    return _impl.piece_past_state(request, piece_id, state_id)
 
-    Returns 403 if the piece is not currently in editable mode.
-    DELETE also returns 403 if the targeted state is 'designed'.
-    """
-    piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
-    if not piece.is_editable:
-        return Response(
-            {"detail": "Piece is not in editable mode."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-    ps = get_object_or_404(piece.states, pk=state_id)
-    if request.method == "DELETE":
-        if ps.state == "designed":
-            return Response(
-                {"detail": "Cannot delete the 'designed' state."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        if piece.thumbnail:
-            state_image_urls = {img["url"] for img in ps.images}
-            if piece.thumbnail.url in state_image_urls:
-                return Response(
-                    {
-                        "detail": "Cannot delete a state that contains the current piece thumbnail."
-                    },
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-        ps.delete()
-        piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
-        return Response(_serialize_piece_detail(piece, request))
-    serializer = PieceStateUpdateSerializer(ps, data=request.data)
-    serializer.is_valid(raise_exception=True)
-    serializer.update(ps, serializer.validated_data)
-    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
-    return Response(_serialize_piece_detail(piece, request))
+
+def piece_image_detail(request, image_id, piece_state_id):
+    _sync_impl()
+    return _impl.piece_image_detail(request, image_id, piece_state_id)
+
+
+def patch_image_crop(request, image_id):
+    _sync_impl()
+    return _impl.patch_image_crop(request, image_id)
+
+
+def _copy_view_metadata(name: str) -> None:
+    proxy = globals()[name]
+    target = getattr(_impl, name)
+    proxy.__dict__.update(target.__dict__)
+    proxy.__doc__ = target.__doc__
+
+
+for _name in [
+    "pieces",
+    "piece_detail",
+    "piece_states",
+    "piece_current_state_detail",
+    "piece_current_state",
+    "piece_past_state",
+    "piece_image_detail",
+    "patch_image_crop",
+]:
+    _copy_view_metadata(_name)

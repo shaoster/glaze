@@ -20,7 +20,7 @@ allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 ## Project Layout
 
 - `backend/` — Django project settings, root URL config (`backend/urls.py`), WSGI/ASGI
-- `api/` — single Django app; models, views, serializers, tests
+- `api/` — single Django app; models, serializers, tests, and feature subpackages
 - `manage.py` — Django management entrypoint
 
 All API endpoints are registered in `backend/urls.py`.
@@ -40,6 +40,10 @@ inside async views.
 - `api/preferences.py` — dynamically generates serializers from `user_preferences.yml` and `tutorials.yml`.
 - `api/utils.py` — shared business-logic helpers that span modules but have nothing to
   do with the state machine (e.g. `sync_glaze_type_singleton_combination`)
+- Feature-specific endpoint logic should live under concern packages such as
+  `api/auth/`, `api/piece/`, `api/global_entries/`, `api/cloudinary/`, and
+  `api/dev/`. Keep top-level `api/*.py` modules as thin compatibility wrappers
+  when needed for stable imports, tests, or URL registration.
 
 ## Declarative User Preferences and Tutorials
 

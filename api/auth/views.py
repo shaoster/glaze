@@ -1,0 +1,572 @@
+# ruff: noqa: F401
+import hashlib
+import json
+import logging
+import posixpath
+from collections import defaultdict
+from collections.abc import AsyncIterator
+from typing import Any, Callable, cast
+from urllib.parse import urlparse
+from zipfile import ZIP_DEFLATED, ZipFile
+
+import httpx
+from django.apps import apps
+from django.conf import settings
+from django.contrib.auth import get_user_model, login, logout
+from django.db import transaction
+from django.db.models import DateTimeField, OuterRef, Q, Subquery
+from django.db.models.functions import Coalesce, Greatest
+from django.http import StreamingHttpResponse
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.views.decorators.csrf import ensure_csrf_cookie
+from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
+from rest_framework import serializers as drf_serializers
+from rest_framework import status
+from rest_framework.decorators import api_view, parser_classes, permission_classes
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.request import Request
+from rest_framework.response import Response
+
+from backend.otel import traced
+
+from ..cloudinary_cleanup import _StreamingZipBuffer
+from ..models import (
+    AsyncTask,
+    FavoriteGlazeCombination,
+    GlazeCombination,
+    Image,
+    InviteCode,
+    Piece,
+    PieceState,
+    UserProfile,
+)
+from ..preferences import UserPreferencesSerializer, get_preferences_config
+from ..serializer_registry import (
+    _GLOBAL_ENTRY_SERIALIZERS,  # auto-generated in _register_globals(); hand-written serializers overwrite
+)
+from ..serializers import (
+    AsyncTaskSerializer,
+    AuthUserSerializer,
+    GlazeCombinationImageEntrySerializer,
+    GoogleAuthSerializer,
+    PieceCreateSerializer,
+    PieceDetailSerializer,
+    PieceStateCreateSerializer,
+    PieceStateSerializer,
+    PieceStateUpdateSerializer,
+    PieceSummarySerializer,
+    PieceUpdateSerializer,
+    TaskSubmissionSerializer,
+)
+from ..utils import bootstrap_dev_user
+from ..workflow import (
+    get_glaze_image_qualifying_states,
+    get_global_model_and_field,
+    is_private_global,
+    is_public_global,
+)
+
+logger = logging.getLogger(__name__)
+
+
+@extend_schema(
+    request=None,
+    responses={204: None},
+    description="Set the CSRF cookie. Call this before any POST/PATCH/DELETE request from a browser client.",
+)
+@ensure_csrf_cookie
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def csrf(request: Request) -> Response:
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(
+    request=None,
+    responses={204: None},
+    description="Log out the current session.",
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@traced
+def auth_logout(request: Request) -> Response:
+    logout(request)
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(
+    request=None,
+    responses={
+        200: inline_serializer(
+            "AppInit",
+            fields={
+                "googleOauthClientId": drf_serializers.CharField(),
+                "user": drf_serializers.JSONField(allow_null=True),
+            },
+        ),
+        503: None,
+    },
+    description="Bootstrap response: public config plus the current user if authenticated.",
+)
+@ensure_csrf_cookie
+@api_view(["GET"])
+@permission_classes([AllowAny])
+@traced
+def auth_me(request: Request) -> Response:
+    client_id = settings.GOOGLE_OAUTH_CLIENT_ID
+    if not client_id:
+        return Response(
+            {"detail": "Authentication provider is not configured."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    user = request.user if request.user.is_authenticated else None
+    if user is not None and getattr(settings, "SESSION_COOKIE_DOMAIN", None):
+        # Re-issue the authenticated session with the shared parent-domain
+        # cookie so the admin subdomain can receive the same login state.
+        request.session.modified = True
+    admin_host = settings.ADMIN_INGRESS_HOST
+    return Response(
+        {
+            "googleOauthClientId": client_id,
+            "adminBaseUrl": (
+                f"https://{admin_host}"
+                if (request.user.is_staff and admin_host)
+                else None
+            ),
+            "user": AuthUserSerializer(user).data if user else None,
+        }
+    )
+
+
+# Whitelist of UserProfile fields that can be updated via the declarative system.
+# [SECURITY]: Strictly control which model fields are exposed to storage: UserProfile.
+ALLOWED_USER_PROFILE_FIELDS = {"alias"}
+
+
+@extend_schema(
+    request=UserPreferencesSerializer,
+    responses={200: UserPreferencesSerializer},
+    description="Return or update the current user's saved preferences.",
+)
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+@traced
+def auth_preferences(request: Request) -> Response:
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    if request.method == "GET":
+        return Response(
+            {
+                "alias": profile.alias,
+                "preferences": profile.preferences
+                if isinstance(profile.preferences, dict)
+                else {},
+            }
+        )
+
+    serializer = UserPreferencesSerializer(data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    update_fields: list[str] = []
+
+    config = get_preferences_config()
+    for section in config["sections"]:
+        for field_id, field_def in section["fields"].items():
+            if (
+                field_def["storage"] == "UserProfile"
+                and field_id in serializer.validated_data
+                and field_id in ALLOWED_USER_PROFILE_FIELDS
+            ):
+                setattr(profile, field_id, serializer.validated_data[field_id])
+                if field_id not in update_fields:
+                    update_fields.append(field_id)
+
+    if "preferences" in serializer.validated_data:
+        existing_preferences = (
+            profile.preferences if isinstance(profile.preferences, dict) else {}
+        )
+        incoming_preferences = cast(
+            dict[str, Any], serializer.validated_data["preferences"]
+        )
+        merged_preferences: dict[str, Any] = {
+            **existing_preferences,
+            **incoming_preferences,
+        }
+        profile.preferences = merged_preferences
+        update_fields.append("preferences")
+
+    if update_fields:
+        profile.save(update_fields=update_fields)
+    return Response(
+        {
+            "alias": profile.alias,
+            "preferences": profile.preferences
+            if isinstance(profile.preferences, dict)
+            else {},
+        }
+    )
+
+
+def _exchange_google_auth_code(code: str, redirect_uri: str) -> dict:
+    """Exchange an OAuth 2.0 authorization code for tokens at Google's token endpoint."""
+    resp = httpx.post(
+        "https://oauth2.googleapis.com/token",
+        data={
+            "code": code,
+            "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
+            "client_secret": settings.GOOGLE_OAUTH_CLIENT_SECRET,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+        },
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _verify_google_id_token(id_token: str) -> dict:
+    """Verify a Google id_token JWT and return the payload dict.
+
+    Uses google-auth's verify_token which fetches Google's public keys and
+    validates the RSA signature, iss, aud, and exp.
+    """
+    from google.auth.transport import requests as google_requests
+    from google.oauth2 import id_token as google_id_token
+
+    return cast(
+        dict[Any, Any],
+        google_id_token.verify_token(
+            id_token,
+            google_requests.Request(),
+            audience=settings.GOOGLE_OAUTH_CLIENT_ID,
+            certs_url="https://www.googleapis.com/oauth2/v3/certs",
+        ),
+    )
+
+
+@extend_schema(
+    request=GoogleAuthSerializer,
+    responses={200: AuthUserSerializer},
+    description=(
+        "Exchange a Google OAuth 2.0 authorization code and log in. "
+        "New users must supply a valid invite_code. "
+        "Returns 503 if Google OAuth is not configured on this server."
+    ),
+)
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@traced
+def auth_google(request: Request) -> Response:
+    client_id = settings.GOOGLE_OAUTH_CLIENT_ID
+    client_secret = settings.GOOGLE_OAUTH_CLIENT_SECRET
+    if not client_id or not client_secret:
+        return Response(
+            {"detail": "Google sign-in is not configured on this server."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    serializer = GoogleAuthSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    code = serializer.validated_data["code"]
+    redirect_uri = serializer.validated_data["redirect_uri"]
+    invite_code_value = serializer.validated_data.get("invite_code")
+
+    try:
+        token_response = _exchange_google_auth_code(code, redirect_uri)
+    except httpx.HTTPError as exc:
+        logger.error("Google token exchange failed: %s", exc)
+        return Response(
+            {"detail": "Google sign-in failed. Please try again."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    id_token = token_response.get("id_token", "")
+    if not id_token:
+        return Response(
+            {"detail": "Google did not return an id_token."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        payload = _verify_google_id_token(id_token)
+    except ValueError as exc:
+        logger.error("Google id_token verification failed: %s", exc)
+        return Response(
+            {"detail": "Invalid Google credential."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    google_sub = payload["sub"]
+    hashed_sub = hashlib.sha256(google_sub.encode()).hexdigest()
+
+    User = get_user_model()
+
+    # Look up existing user by hashed subject.
+    profile = (
+        UserProfile.objects.filter(openid_subject=hashed_sub)
+        .select_related("user")
+        .first()
+    )
+
+    if profile:
+        user = profile.user
+    else:
+        # New user — invite code required (bypassed in local dev).
+        dev_mode = getattr(settings, "DEV_BOOTSTRAP_ENABLED", False)
+
+        if not dev_mode:
+            # select_for_update must be inside transaction.atomic to hold the lock.
+            if not invite_code_value:
+                return Response(
+                    {
+                        "detail": "A valid invite code is required to create an account.",
+                        "code": "invite_required",
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            with transaction.atomic():
+                try:
+                    invite_code = InviteCode.objects.select_for_update().get(
+                        code=invite_code_value
+                    )
+                except InviteCode.DoesNotExist:
+                    invite_code = None
+
+                if invite_code is None or not invite_code.is_valid:
+                    return Response(
+                        {
+                            "detail": "A valid invite code is required to create an account.",
+                            "code": "invite_required",
+                        },
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+
+                user = User.objects.create_user(
+                    username=hashed_sub,
+                    email="",
+                    first_name="",
+                    last_name="",
+                    password=None,
+                )
+                UserProfile.objects.create(user=user, openid_subject=hashed_sub)
+                invite_code.used_at = timezone.now()
+                invite_code.used_by = user
+                invite_code.save(update_fields=["used_at", "used_by"])
+        else:
+            user = User.objects.create_user(
+                username=hashed_sub,
+                email="",
+                first_name="",
+                last_name="",
+                password=None,
+            )
+            UserProfile.objects.create(user=user, openid_subject=hashed_sub)
+
+    # Dev bootstrap: promote first user to staff/superuser and seed sample data.
+    bootstrap_dev_user(user)
+    login(request, user)
+    return Response(AuthUserSerializer(user).data)
+
+
+# ── Invite validation (public) ────────────────────────────────────────────────
+
+
+@extend_schema(
+    request=None,
+    responses={200: None},
+    description="Validate a UUID invite code. Returns {valid: true} if usable.",
+)
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@traced
+def validate_invite(request: Request) -> Response:
+    code_value = request.data.get("code", "")
+    if not code_value:
+        return Response(
+            {"detail": "code is required.", "code": "code_required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        invite = InviteCode.objects.get(code=code_value)
+    except InviteCode.DoesNotExist:
+        return Response(
+            {"detail": "Invalid or expired invite code.", "code": "invalid_code"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if not invite.is_valid:
+        return Response(
+            {
+                "detail": "This invite code has already been used or has expired.",
+                "code": "invalid_code",
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return Response({"valid": True})
+
+
+# ── Staff invite management ───────────────────────────────────────────────────
+
+
+def _get_or_create_active_invite_code() -> InviteCode:
+    active = (
+        InviteCode.objects.filter(used_at__isnull=True, expires_at__gt=timezone.now())
+        .order_by("-created_at")
+        .first()
+    )
+    if active:
+        return active
+    return InviteCode.objects.create()
+
+
+@extend_schema(
+    request=None,
+    responses={200: None},
+    description="(Staff only) Get the current active invite code, creating one if none exists.",
+)
+@api_view(["GET", "POST"])
+@permission_classes([IsAdminUser])
+@traced
+def staff_invite_code(request: Request) -> Response:
+    if request.method == "POST":
+        invite = InviteCode.objects.create()
+    else:
+        invite = _get_or_create_active_invite_code()
+    return Response(
+        {"code": str(invite.code), "expires_at": invite.expires_at.isoformat()}
+    )
+
+
+# ── Data export ───────────────────────────────────────────────────────────────
+
+
+def _collect_export_data(user: Any, request: Request) -> tuple[str, str, list[Image]]:
+    pieces = (
+        Piece.objects.filter(user=user)
+        .select_related("thumbnail", "current_location")
+        .prefetch_related(
+            "states",
+            "states__image_links",
+            "states__image_links__image",
+            "tag_links",
+            "tag_links__tag",
+        )
+    )
+    pieces_data = PieceDetailSerializer(
+        pieces, many=True, context={"request": request}
+    ).data
+    pieces_json = json.dumps(list(pieces_data), default=str)
+
+    profile = UserProfile.objects.filter(user=user).first()
+    profile_json = json.dumps(
+        {
+            "alias": profile.alias if profile else None,
+            "preferences": profile.preferences
+            if profile and isinstance(profile.preferences, dict)
+            else {},
+        },
+        default=str,
+    )
+
+    images = list(
+        Image.objects.filter(cloudinary_public_id__isnull=False)
+        .filter(
+            Q(thumbnail_for_pieces__user=user)
+            | Q(piece_state_links__piece_state__user=user)
+        )
+        .distinct()
+    )
+    return pieces_json, profile_json, images
+
+
+def _export_image_name(image: Image) -> str:
+    # cloudinary_public_id is guaranteed non-null: _collect_export_data filters
+    # with cloudinary_public_id__isnull=False before passing images here.
+    public_id = cast(str, image.cloudinary_public_id)
+    sanitized = public_id.replace("/", "__")
+    _, ext = posixpath.splitext(urlparse(image.url).path)
+    return f"images/{sanitized}{ext}"
+
+
+async def _stream_export_archive(
+    pieces_json: str, profile_json: str, images: list[Image]
+) -> AsyncIterator[bytes]:
+    buffer = _StreamingZipBuffer()
+    async with httpx.AsyncClient(timeout=60) as client:
+        with ZipFile(cast(Any, buffer), "w", ZIP_DEFLATED) as archive:
+            archive.writestr("pieces.json", pieces_json)
+            archive.writestr("profile.json", profile_json)
+            for c in buffer.flush_chunks():
+                yield c
+
+            for image in images:
+                member_name = _export_image_name(image)
+                try:
+                    async with client.stream("GET", image.url) as response:
+                        response.raise_for_status()
+                        with archive.open(member_name, "w") as member:
+                            async for data in response.aiter_bytes(1024 * 1024):
+                                member.write(data)
+                                for c in buffer.flush_chunks():
+                                    yield c
+                except httpx.HTTPError as exc:
+                    logger.warning(
+                        "Export: failed to fetch image %s: %s",
+                        image.cloudinary_public_id,
+                        exc,
+                    )
+                for c in buffer.flush_chunks():
+                    yield c
+
+    for c in buffer.flush_chunks():
+        yield c
+
+
+@extend_schema(
+    request=None,
+    responses={200: None},
+    description=(
+        "Download a ZIP archive of all the current user's data: "
+        "pieces.json (full piece history as JSON), profile.json (alias and preferences), "
+        "and images/ (Cloudinary-backed images). Download this before deleting your account."
+    ),
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@traced
+def auth_export(request: Request) -> StreamingHttpResponse:
+    pieces_json, profile_json, images = _collect_export_data(request.user, request)
+    response = StreamingHttpResponse(
+        _stream_export_archive(pieces_json, profile_json, images),
+        content_type="application/zip",
+    )
+    response["Content-Disposition"] = 'attachment; filename="potterdoc-export.zip"'
+    response["Cache-Control"] = "no-store"
+    response["X-Accel-Buffering"] = "no"
+    return response
+
+
+# ── Account deletion ──────────────────────────────────────────────────────────
+
+
+@extend_schema(
+    request=None,
+    responses={204: None},
+    description=(
+        "Permanently delete the current user's account and all associated data. "
+        "This action cannot be undone. Download your data first via GET /api/auth/export/. "
+        "The session is invalidated before deletion. Cloudinary-hosted images are "
+        "removed from this database but Cloudinary assets are cleaned up separately "
+        "by the admin cleanup tool."
+    ),
+)
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+@traced
+def auth_delete_account(request: Request) -> Response:
+    user = request.user
+    # Invalidate the session before deleting the user to avoid dangling session
+    # references to a now-deleted User row.
+    logout(request)
+    with transaction.atomic():
+        user.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
