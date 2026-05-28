@@ -1,5 +1,6 @@
 import type React from "react";
 import { useState } from "react";
+import { fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -205,14 +206,23 @@ function RerenderHarness({ pieces }: { pieces: PieceSummary[] }) {
 
 describe("PieceList", () => {
   beforeEach(() => {
+    // Use a stateful seededMap so get() returns the value written by set().
+    // This mirrors the real positioner's behaviour: once an index is placed,
+    // subsequent calls to get() return non-undefined and the seeding loop
+    // skips that item on the next render.
+    const seededMap = new Map<number, number>();
     mockPositioner.set.mockReset();
     mockPositioner.get.mockReset();
     mockPositioner.update.mockReset();
-    mockPositioner.set.mockImplementation(() => {
+    mockPositioner.set.mockImplementation((index: number, height: number) => {
+      seededMap.set(index, height);
       rerenderMasonryScroller?.();
-      return undefined;
     });
-    mockPositioner.get.mockImplementation(() => undefined);
+    mockPositioner.get.mockImplementation((index: number) =>
+      seededMap.has(index)
+        ? { height: seededMap.get(index)!, top: 0, left: 0, column: 0 }
+        : undefined,
+    );
     mockPositioner.update.mockImplementation(() => undefined);
     rerenderMasonryScroller = undefined;
     mockContainerPosition.width = 440;
@@ -336,6 +346,58 @@ describe("PieceList", () => {
       expect(mockPositioner.set).toHaveBeenCalledTimes(1);
 
       await user.click(screen.getByRole("button", { name: /rerender/i }));
+      expect(mockPositioner.set).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not re-seed existing crop heights when pieces are appended via pagination", () => {
+      // Regression for #734: each filteredPieces change previously called createPositioner
+      // from scratch, discarding all cached positions and re-seeding every item.
+      // The fix switches to usePositioner so the positioner is reused on append,
+      // and guards the seeding loop with positioner.get(index) === undefined so
+      // already-positioned items are never re-seeded.
+      // beforeEach makes get() stateful (returns seeded value after set()),
+      // matching real positioner behaviour.
+      const pieceWithCrop = makePiece({
+        id: "p-crop",
+        thumbnail: {
+          url: "https://example.com/img.jpg",
+          cloudinary_public_id: "id",
+          cloud_name: "demo",
+          crop: { x: 0, y: 0, width: 200, height: 400 },
+        },
+      });
+
+      function AppendHarness() {
+        const [pieces, setPieces] = useState([pieceWithCrop]);
+        return (
+          <>
+            <button
+              type="button"
+              onClick={() =>
+                setPieces((prev) => [...prev, makePiece({ id: "p-plain" })])
+              }
+            >
+              append
+            </button>
+            <PieceList pieces={pieces} />
+          </>
+        );
+      }
+
+      const router = createMemoryRouter(
+        [{ path: "/", element: <AppendHarness /> }],
+        { initialEntries: ["/"] },
+      );
+      render(<RouterProvider router={router} />);
+
+      // Initial render: crop piece at index 0 is seeded once
+      expect(mockPositioner.set).toHaveBeenCalledTimes(1);
+      expect(mockPositioner.set).toHaveBeenCalledWith(0, expect.any(Number));
+
+      // Simulate pagination: append a plain piece
+      fireEvent.click(screen.getByRole("button", { name: /append/i }));
+
+      // Index 0 is already positioned — must not be re-seeded
       expect(mockPositioner.set).toHaveBeenCalledTimes(1);
     });
 
@@ -1163,6 +1225,34 @@ describe("PieceList", () => {
       await waitFor(() => {
         expect(onSortChange).toHaveBeenCalledWith("name");
       });
+    });
+  });
+
+  describe("scroll sentinel", () => {
+    it("does not call onLoadMore before the masonry container has a measured width", () => {
+      // Regression for #734: when hasMore=true, check() fires immediately on mount.
+      // At that moment masonryWidth=0 (ResizeObserver not yet fired), so the sentinel
+      // sits at top≈0 and onLoadMore would fire before any cards are visible.
+      // The fix adds masonryWidth to the effect deps and returns early when it is 0.
+      mockContainerPosition.width = 0;
+      const onLoadMore = vi.fn();
+      const router = createMemoryRouter(
+        [
+          {
+            path: "/",
+            element: (
+              <PieceList
+                pieces={[makePiece()]}
+                onLoadMore={onLoadMore}
+                hasMore
+              />
+            ),
+          },
+        ],
+        { initialEntries: ["/"] },
+      );
+      render(<RouterProvider router={router} />);
+      expect(onLoadMore).not.toHaveBeenCalled();
     });
   });
 
