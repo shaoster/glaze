@@ -252,9 +252,13 @@ function GoogleSignInButton({
 function AuthLanding({
   onAuthenticated,
   redirectTo,
+  googleOauthClientId,
+  mockIdpUrl,
 }: {
   onAuthenticated: (user: AuthUser) => void;
   redirectTo: string | null;
+  googleOauthClientId: string;
+  mockIdpUrl: string | null;
 }) {
   return (
     <Container
@@ -302,10 +306,25 @@ function AuthLanding({
             Track every pottery piece through your workflow.
           </Typography>
 
-          <GoogleSignInButton
-            onAuthenticated={onAuthenticated}
-            redirectTo={redirectTo}
-          />
+          {googleOauthClientId && (
+            <GoogleSignInButton
+              onAuthenticated={onAuthenticated}
+              redirectTo={redirectTo}
+            />
+          )}
+
+          {mockIdpUrl && (
+            <Button
+              variant="outlined"
+              component="a"
+              href={mockIdpUrl}
+              fullWidth
+              color="inherit"
+              sx={{ opacity: 0.6 }}
+            >
+              Dev Sign In
+            </Button>
+          )}
 
           <Box component="footer" sx={{ pt: 1 }}>
             <Stack
@@ -679,9 +698,13 @@ function AppShell({
 function UnauthenticatedApp({
   onAuthenticated,
   redirectTo,
+  googleOauthClientId,
+  mockIdpUrl,
 }: {
   onAuthenticated: (user: AuthUser) => void;
   redirectTo: string | null;
+  googleOauthClientId: string;
+  mockIdpUrl: string | null;
 }) {
   const router = useMemo(
     () =>
@@ -694,6 +717,8 @@ function UnauthenticatedApp({
                 <AuthLanding
                   onAuthenticated={onAuthenticated}
                   redirectTo={redirectTo}
+                  googleOauthClientId={googleOauthClientId}
+                  mockIdpUrl={mockIdpUrl}
                 />
               }
             />
@@ -799,7 +824,7 @@ function UnauthenticatedApp({
           </>,
         ),
       ),
-    [onAuthenticated, redirectTo],
+    [onAuthenticated, redirectTo, googleOauthClientId, mockIdpUrl],
   );
 
   return <RouterProvider router={router} />;
@@ -1018,6 +1043,8 @@ function AppContent() {
           <UnauthenticatedApp
             onAuthenticated={handleAuthenticated}
             redirectTo={postLoginRedirect}
+            googleOauthClientId={init?.googleOauthClientId ?? ""}
+            mockIdpUrl={init?.mockIdpUrl ?? null}
           />
         )}
       </ThemeProvider>

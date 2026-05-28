@@ -778,3 +778,151 @@ class TestAuthDeleteAccount:
         delete_account_impl(request, logout_fn=lambda req: None)
 
         assert User.objects.filter(id=other_user_id).exists()
+
+
+@pytest.mark.django_db
+class TestMockIdp:
+    def test_authorize_get_blocked_when_disabled(self, settings):
+        settings.DEV_BOOTSTRAP_ENABLED = False
+        client = Client()
+        response = client.get(
+            "/api/auth/mock-idp/authorize/",
+            {"redirect_uri": "/api/auth/mock-idp/complete/", "state": "x"},
+        )
+        assert response.status_code == 403
+
+    def test_authorize_get_shows_accept_form(self, db, settings):
+        settings.DEV_BOOTSTRAP_ENABLED = True
+        client = Client()
+        response = client.get(
+            "/api/auth/mock-idp/authorize/",
+            {"redirect_uri": "/api/auth/mock-idp/complete/", "state": "x"},
+        )
+        assert response.status_code == 200
+        assert b"Accept" in response.content
+        assert b"dev@localhost" in response.content
+
+    def test_authorize_get_shows_login_hint(self, db, settings):
+        settings.DEV_BOOTSTRAP_ENABLED = True
+        client = Client()
+        response = client.get(
+            "/api/auth/mock-idp/authorize/",
+            {
+                "redirect_uri": "/api/auth/mock-idp/complete/",
+                "state": "x",
+                "login_hint": "pm@example.com",
+            },
+        )
+        assert response.status_code == 200
+        assert b"pm@example.com" in response.content
+
+    def test_authorize_post_redirects_with_code(self, db, settings):
+        settings.DEV_BOOTSTRAP_ENABLED = True
+        client = Client()
+        response = client.post(
+            "/api/auth/mock-idp/authorize/",
+            {
+                "redirect_uri": "/api/auth/mock-idp/complete/",
+                "state": "mystate",
+                "login_hint": "dev@localhost",
+            },
+        )
+        assert response.status_code == 302
+        location = response["Location"]
+        assert "code=" in location
+        assert "state=mystate" in location
+        assert location.startswith("/api/auth/mock-idp/complete/")
+
+    def test_authorize_post_rejects_invalid_redirect_uri(self, db, settings):
+        settings.DEV_BOOTSTRAP_ENABLED = True
+        client = Client()
+        response = client.post(
+            "/api/auth/mock-idp/authorize/",
+            {
+                "redirect_uri": "https://evil.example.com/steal",
+                "state": "x",
+                "login_hint": "dev@localhost",
+            },
+        )
+        assert response.status_code == 400
+
+    def test_complete_creates_session(self, db, settings, monkeypatch):
+        settings.DEV_BOOTSTRAP_ENABLED = True
+        monkeypatch.setattr("api.auth.mock_idp_views.seed_dev_pieces", lambda u, **kw: None)
+        client = Client()
+        # POST authorize to get code
+        auth_response = client.post(
+            "/api/auth/mock-idp/authorize/",
+            {
+                "redirect_uri": "/api/auth/mock-idp/complete/",
+                "state": "x",
+                "login_hint": "dev@localhost",
+            },
+        )
+        complete_url = auth_response["Location"]
+        complete_response = client.get(complete_url)
+        assert complete_response.status_code == 302
+        assert complete_response["Location"] == "/"
+        # Session should now be authenticated
+        me_response = client.get("/api/auth/me/")
+        assert me_response.status_code == 200
+        assert me_response.json()["user"] is not None
+        # AuthUserSerializer exposes openid_subject, not email.
+        # For mock-IdP users the subject is sha256("mock-idp:<email>").
+        assert me_response.json()["user"]["openid_subject"] != ""
+
+    def test_complete_creates_user_if_missing(self, db, settings, monkeypatch):
+        settings.DEV_BOOTSTRAP_ENABLED = True
+        monkeypatch.setattr("api.auth.mock_idp_views.seed_dev_pieces", lambda u, **kw: None)
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        assert not User.objects.filter(email="new@example.com").exists()
+
+        client = Client()
+        auth_response = client.post(
+            "/api/auth/mock-idp/authorize/",
+            {
+                "redirect_uri": "/api/auth/mock-idp/complete/",
+                "state": "x",
+                "login_hint": "new@example.com",
+            },
+        )
+        client.get(auth_response["Location"])
+        assert User.objects.filter(email="new@example.com").exists()
+
+    def test_complete_rejects_tampered_code(self, db, settings):
+        settings.DEV_BOOTSTRAP_ENABLED = True
+        client = Client()
+        response = client.get(
+            "/api/auth/mock-idp/complete/",
+            {"code": "tampered.invalid.code", "state": "x"},
+        )
+        assert response.status_code == 400
+
+    def test_complete_blocked_when_disabled(self, settings):
+        settings.DEV_BOOTSTRAP_ENABLED = False
+        client = Client()
+        response = client.get(
+            "/api/auth/mock-idp/complete/",
+            {"code": "anycode", "state": "x"},
+        )
+        assert response.status_code == 403
+
+    def test_auth_me_includes_mock_idp_url_when_enabled(self, db, settings):
+        settings.DEV_BOOTSTRAP_ENABLED = True
+        settings.GOOGLE_OAUTH_CLIENT_ID = ""
+        client = Client()
+        response = client.get("/api/auth/me/")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["mockIdpUrl"] is not None
+        assert "mock-idp/authorize" in data["mockIdpUrl"]
+
+    def test_auth_me_mock_idp_url_absent_in_prod(self, db, settings):
+        settings.DEV_BOOTSTRAP_ENABLED = False
+        settings.GOOGLE_OAUTH_CLIENT_ID = "real-client-id"
+        client = Client()
+        response = client.get("/api/auth/me/")
+        assert response.status_code == 200
+        assert response.json()["mockIdpUrl"] is None
