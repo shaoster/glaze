@@ -302,6 +302,7 @@ js_library(
         ":node_modules/qrcode.react",
         ":node_modules/react",
         ":node_modules/react-dom",
+        ":node_modules/react-easy-crop",
         ":node_modules/react-router-dom",
         ":node_modules/react-sketch-canvas",
         ":node_modules/react-swipeable",
