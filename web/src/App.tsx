@@ -58,8 +58,8 @@ import {
   updateUserPreferences,
   type UserPreferences,
 } from "./util/api";
+import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
-import { useAsync } from "./util/useAsync";
 import ErrorBoundary from "./components/ErrorBoundary";
 import PublicPieceShell from "./components/PublicPieceShell";
 import UserPreferencesDialog from "./components/UserPreferencesDialog";
@@ -762,7 +762,16 @@ function UnauthenticatedApp({
                 </ErrorBoundary>
               }
             />
-            <Route path="/pieces/:id/*" element={<PublicPieceShell />} />
+            <Route
+              path="/pieces/:id/*"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <PublicPieceShell />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
             <Route
               path="/invite"
               element={
@@ -925,7 +934,20 @@ function FullscreenCenter({ children }: { children: React.ReactNode }) {
   );
 }
 
+const appQueryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
 export default function App() {
+  return (
+    <QueryClientProvider client={appQueryClient}>
+      <AppContent />
+    </QueryClientProvider>
+  );
+}
+
+function AppContent() {
+  const queryClient = useQueryClient();
   const postLoginRedirect = useMemo(
     () =>
       getPostLoginRedirectTarget(
@@ -935,25 +957,25 @@ export default function App() {
       ),
     [],
   );
-  const {
-    data: init,
-    loading,
-    error,
-    setData: setInit,
-  } = useAsync(fetchAppInit);
+  const { data: init, isLoading: loading, error } = useQuery({
+    queryKey: ["appInit"],
+    queryFn: fetchAppInit,
+  });
 
   const handleAuthenticated = useCallback(
-    (user: AuthUser) => setInit((prev) => ({ ...prev!, user })),
-    [setInit],
+    (user: AuthUser) =>
+      queryClient.setQueryData(["appInit"], (prev: typeof init) => ({ ...prev!, user })),
+    [queryClient],
   );
   const handleCurrentUserUpdated = useCallback(
-    (user: AuthUser) => setInit((prev) => ({ ...prev!, user })),
-    [setInit],
+    (user: AuthUser) =>
+      queryClient.setQueryData(["appInit"], (prev: typeof init) => ({ ...prev!, user })),
+    [queryClient],
   );
   const handleLogout = useCallback(async () => {
     await logoutUser();
-    setInit((prev) => ({ ...prev!, user: null }));
-  }, [setInit]);
+    queryClient.setQueryData(["appInit"], (prev: typeof init) => ({ ...prev!, user: null }));
+  }, [queryClient]);
 
   useEffect(() => {
     if (postLoginRedirect && init?.user) {

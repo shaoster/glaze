@@ -8,6 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import TagManager from "../TagManager";
 import type { PieceDetail, TagEntry } from "../../util/types";
 import * as api from "../../util/api";
@@ -67,12 +68,17 @@ function makePiece(overrides = {}): PieceDetail {
 }
 
 function renderTagManager(initialTags: TagEntry[] = [], onSaved = vi.fn()) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   return render(
-    <TagManager
-      pieceId="piece-id-1"
-      initialTags={initialTags}
-      onSaved={onSaved}
-    />,
+    <QueryClientProvider client={queryClient}>
+      <TagManager
+        pieceId="piece-id-1"
+        initialTags={initialTags}
+        onSaved={onSaved}
+      />
+    </QueryClientProvider>,
   );
 }
 

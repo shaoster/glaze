@@ -1,6 +1,8 @@
-import { Stack, Typography, Box, alpha } from "@mui/material";
+import { Suspense } from "react";
+import { Stack, Typography, Box, alpha, CircularProgress } from "@mui/material";
 import AnalysisCard from "./AnalysisCard";
 import GlazeCombinationSummary from "./GlazeCombinationSummary";
+import ErrorBoundary from "./ErrorBoundary";
 
 export default function AnalysisIndex() {
   return (
@@ -9,7 +11,13 @@ export default function AnalysisIndex() {
         title="Glaze Combinations"
         description="Browse images of glaze combinations applied to your pieces."
         to="/analyze/glaze-combinations"
-        summary={<GlazeCombinationSummary />}
+        summary={
+          <ErrorBoundary>
+            <Suspense fallback={<CircularProgress size={16} />}>
+              <GlazeCombinationSummary />
+            </Suspense>
+          </ErrorBoundary>
+        }
       />
 
       <AnalysisCard

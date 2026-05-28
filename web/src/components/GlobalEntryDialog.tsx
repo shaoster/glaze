@@ -36,7 +36,7 @@ import {
   isFavoritableGlobal,
   type GlobalPickerFilter,
 } from "../util/workflow";
-import { useAsync } from "../util/useAsync";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AutosaveStatus from "./AutosaveStatus";
 import CloudinaryImage from "./CloudinaryImage";
 import type { AutosaveStatus as AutosaveStatusValue } from "./useAutosave";
@@ -219,23 +219,17 @@ export default function GlobalEntryDialog({
       });
   }, [composeFieldConfig, createWithLayers, open, tab]);
 
-  const {
-    data: entriesData,
-    loading,
-    error: entriesAsyncError,
-    setData: setEntries,
-  } = useAsync<GenericGlobalEntry[]>(
-    () => {
-      if (!open || tab !== "browse") return Promise.resolve([]);
+  const queryClient = useQueryClient();
+  const entriesQueryKey = ["globalEntries", globalName, tab, filters, boolFieldNames, relatedFilterDefs] as const;
+  const { data: entriesData, isLoading: loading, error: entriesAsyncError } = useQuery<GenericGlobalEntry[]>({
+    queryKey: entriesQueryKey,
+    queryFn: () => {
+      if (tab !== "browse") return Promise.resolve([]);
       const params = buildParams(filters, boolFieldNames, relatedFilterDefs);
-      return fetchGlobalEntriesWithFilters<GenericGlobalEntry>(
-        globalName,
-        params,
-      );
+      return fetchGlobalEntriesWithFilters<GenericGlobalEntry>(globalName, params);
     },
-    [boolFieldNames, filters, globalName, open, relatedFilterDefs, tab],
-    { enabled: open },
-  );
+    enabled: open,
+  });
 
   const entries = entriesData ?? [];
   const entriesError = entriesAsyncError
@@ -306,7 +300,7 @@ export default function GlobalEntryDialog({
     setSaveError(null);
     try {
       await toggleGlobalEntryFavorite(globalName, entry.id, !entry.is_favorite);
-      setEntries((prev) =>
+      queryClient.setQueryData(entriesQueryKey, (prev: GenericGlobalEntry[] | undefined) =>
         (prev ?? []).map((candidate) =>
           candidate.id === entry.id
             ? { ...candidate, is_favorite: !candidate.is_favorite }

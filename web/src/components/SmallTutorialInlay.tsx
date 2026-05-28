@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import { Box, IconButton, Paper, Popper, Typography } from "@mui/material";
 
-import { useAsyncFn } from "../util/useAsync";
+import { useMutation } from "@tanstack/react-query";
 import { useCurrentUser, useSaveUserPreferences } from "./CurrentUserContext";
 import {
   SMALL_TUTORIAL_INLAY_PLACEMENTS,
@@ -106,8 +106,8 @@ export default function SmallTutorialInlay({
     await onClick();
   }, [dismissTutorial, onClick]);
 
-  const openState = useAsyncFn(openTutorial, [openTutorial]);
-  const dismissState = useAsyncFn(dismissTutorial, [dismissTutorial]);
+  const { mutate: openMutate, isPending: openPending } = useMutation({ mutationFn: openTutorial });
+  const { mutate: dismissMutate, isPending: dismissPending } = useMutation({ mutationFn: dismissTutorial });
 
   if (!shouldShow) {
     return null;
@@ -131,11 +131,11 @@ export default function SmallTutorialInlay({
         role="button"
         tabIndex={0}
         aria-label={label}
-        onClick={() => void openState.execute()}
+        onClick={() => void openMutate()}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            void openState.execute();
+            void openMutate();
           }
         }}
         sx={{
@@ -200,9 +200,9 @@ export default function SmallTutorialInlay({
           aria-label={dismissLabel}
           onClick={(event) => {
             event.stopPropagation();
-            void dismissState.execute();
+            dismissMutate();
           }}
-          disabled={openState.loading || dismissState.loading}
+          disabled={openPending || dismissPending}
           sx={{ ml: "auto" }}
         >
           <CloseIcon fontSize="small" />

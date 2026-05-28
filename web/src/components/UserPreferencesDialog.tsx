@@ -17,7 +17,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 import { fetchUserPreferences, type UserPreferences } from "../util/api";
 import { getFieldDefinition, PREFERENCES_SCHEMA } from "../util/preferences";
-import { useAsync, useAsyncFn } from "../util/useAsync";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { getProcessSummaryFieldOptions } from "../util/workflow";
 import {
   useCurrentUser,
@@ -41,19 +41,18 @@ export default function UserPreferencesDialog({
 }: UserPreferencesDialogProps) {
   const currentUser = useCurrentUser();
   const saveUserPreferences = useSaveUserPreferences();
-  const { data, loading, error } = useAsync(fetchUserPreferences, [open], {
+  const { data, isLoading: loading, error } = useQuery({
+    queryKey: ["userPreferences"],
+    queryFn: fetchUserPreferences,
     enabled: open,
   });
 
-  const saveState = useAsyncFn(
-    async (preferences: UserPreferences, alias: string) => {
-      if (!saveUserPreferences) {
-        return null;
-      }
+  const { mutate: savePreferences, isPending: savePending, error: saveError, reset: resetSave } = useMutation({
+    mutationFn: async ({ preferences, alias }: { preferences: UserPreferences; alias: string }) => {
+      if (!saveUserPreferences) return null;
       return saveUserPreferences(preferences, alias);
     },
-    [saveUserPreferences],
-  );
+  });
 
   const initialValues = useMemo(() => {
     const values: Record<string, unknown> = {};
@@ -89,11 +88,11 @@ export default function UserPreferencesDialog({
   return (
     <Dialog
       open={open}
-      onClose={saveState.loading ? undefined : onClose}
+      onClose={savePending ? undefined : onClose}
       fullWidth
       maxWidth="md"
     >
-      {(loading || saveState.loading) && <LinearProgress />}
+      {(loading || savePending) && <LinearProgress />}
       <DialogTitle>Preferences</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2}>
@@ -103,7 +102,7 @@ export default function UserPreferencesDialog({
             </Typography>
           ) : null}
 
-          {saveState.error !== null ? (
+          {saveError !== null ? (
             <Alert severity="error">
               Couldn't save your preferences. Please try again.
             </Alert>
@@ -127,17 +126,14 @@ export default function UserPreferencesDialog({
                 }
               }
 
-              const response = await saveState.execute(
-                preferenceUpdates as UserPreferences,
-                profileUpdates.alias,
+              resetSave();
+              savePreferences(
+                { preferences: preferenceUpdates as UserPreferences, alias: profileUpdates.alias },
+                { onSuccess: (response) => { if (response) onClose(); } },
               );
-              if (!response) {
-                return;
-              }
-              onClose();
             }}
             onCancel={onClose}
-            isSaving={saveState.loading}
+            isSaving={savePending}
           />
 
           <Typography variant="caption" color="text.secondary">

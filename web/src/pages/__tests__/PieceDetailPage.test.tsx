@@ -6,6 +6,7 @@ import {
   RouterProvider,
   useLocation,
 } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import PieceDetailPage from "../PieceDetailPage";
 import * as api from "../../util/api";
 import type { PieceDetail } from "../../util/types";
@@ -54,6 +55,9 @@ function renderPage({
   id?: string;
   showBackToPieces?: boolean;
 } = {}) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   const router = createMemoryRouter(
     [
       {
@@ -72,7 +76,11 @@ function renderPage({
       ],
     },
   );
-  return render(<RouterProvider router={router} />);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
 }
 
 describe("PieceDetailPage", () => {
@@ -198,7 +206,14 @@ describe("PieceDetailPage", () => {
       },
     );
 
-    render(<RouterProvider router={router} />);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
 
     await userEvent.click(
       await screen.findByRole("button", { name: /Back to Pieces/i }),

@@ -22,13 +22,13 @@ import {
   CardContent,
   CardHeader,
   Chip,
-  CircularProgress,
   Stack,
   Tooltip,
   Typography,
 } from "@mui/material";
 import CloudinaryImage from "./CloudinaryImage";
 import ImageLightbox from "./ImageLightbox";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { fetchGlazeCombinationImages } from "../util/api";
 import type {
   CaptionedImage,
@@ -36,7 +36,7 @@ import type {
   GlazeCombinationImageEntry,
 } from "../util/types";
 import { formatState } from "../util/workflow";
-import { useAsync } from "../util/useAsync";
+import { GLAZE_COMBINATION_IMAGES_QUERY_KEY } from "../util/queryKeys";
 
 const EMPTY_STATE_MESSAGE =
   "No images yet — add images to pieces that use a glaze combination to see them here.";
@@ -210,31 +210,14 @@ function ComboCard({
 // ---------------------------------------------------------------------------
 
 export default function GlazeCombinationGallery() {
-  const {
-    data: entries,
-    loading,
-    error,
-  } = useAsync<GlazeCombinationImageEntry[]>(fetchGlazeCombinationImages);
+  const { data: entries } = useSuspenseQuery<GlazeCombinationImageEntry[]>({
+    queryKey: GLAZE_COMBINATION_IMAGES_QUERY_KEY,
+    queryFn: fetchGlazeCombinationImages,
+  });
   const [lightbox, setLightbox] = useState<LightboxState | null>(null);
   const navigate = useNavigate();
 
-  if (loading) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Typography color="error">
-        Failed to load glaze combination gallery.
-      </Typography>
-    );
-  }
-
-  if (!entries || entries.length === 0) {
+  if (entries.length === 0) {
     return (
       <Typography color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
         {EMPTY_STATE_MESSAGE}

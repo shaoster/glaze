@@ -1,28 +1,25 @@
 import { useParams } from "react-router-dom";
 import {
   Box,
-  CircularProgress,
   Container,
   Typography,
   alpha,
   Divider,
 } from "@mui/material";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { formatValue } from "../util/format";
 import { fetchPiece } from "../util/api";
-import { useAsync } from "../util/useAsync";
 import { type PieceDetail } from "../util/types";
 import { formatWorkflowFieldLabel } from "../util/workflow";
-import ErrorBoundary from "./ErrorBoundary";
 import CloudinaryImage from "./CloudinaryImage";
 import ProcessSummary from "./ProcessSummary";
 
 export default function PublicPieceShell() {
   const { id } = useParams<{ id: string }>();
-  const {
-    data: piece,
-    loading,
-    error,
-  } = useAsync<PieceDetail>(() => fetchPiece(id!), [id]);
+  const { data: piece } = useSuspenseQuery<PieceDetail>({
+    queryKey: ["piece", id],
+    queryFn: () => fetchPiece(id!),
+  });
 
   return (
     <Container
@@ -56,17 +53,7 @@ export default function PublicPieceShell() {
         </Typography>
       </Box>
 
-      <ErrorBoundary>
-        {loading && (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-            <CircularProgress />
-          </Box>
-        )}
-        {!!error && (
-          <Typography color="error">Failed to load piece.</Typography>
-        )}
-        {piece && <ShowcaseView piece={piece} />}
-      </ErrorBoundary>
+      <ShowcaseView piece={piece} />
     </Container>
   );
 }

@@ -1,28 +1,15 @@
-import { Box, Typography, CircularProgress, alpha } from "@mui/material";
+import { Box, Typography, alpha } from "@mui/material";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { fetchGlazeCombinationImages } from "../util/api";
-import { useAsync } from "../util/useAsync";
 import CloudinaryImage from "./CloudinaryImage";
 import type { GlazeCombinationImageEntry } from "../util/types";
+import { GLAZE_COMBINATION_IMAGES_QUERY_KEY } from "../util/queryKeys";
 
 export default function GlazeCombinationSummary() {
-  const { data, loading, error } = useAsync<GlazeCombinationImageEntry[]>(
-    fetchGlazeCombinationImages,
-  );
-
-  if (loading) {
-    return (
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, height: 40 }}>
-        <CircularProgress size={16} />
-        <Typography variant="caption" color="text.secondary">
-          Loading...
-        </Typography>
-      </Box>
-    );
-  }
-
-  if (error || !data) {
-    return null;
-  }
+  const { data } = useSuspenseQuery<GlazeCombinationImageEntry[]>({
+    queryKey: GLAZE_COMBINATION_IMAGES_QUERY_KEY,
+    queryFn: fetchGlazeCombinationImages,
+  });
 
   const combinationCount = data.length;
   // Get up to 4 representative images from different combinations

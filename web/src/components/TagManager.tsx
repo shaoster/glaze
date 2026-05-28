@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Box, Button, Snackbar, Typography } from "@mui/material";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PieceDetail, TagEntry } from "../util/types";
 import { createTagEntry, fetchGlobalEntries, updatePiece } from "../util/api";
-import { useAsync } from "../util/useAsync";
 import TagAutocomplete from "./TagAutocomplete";
 import CreateTagDialog from "./CreateTagDialog";
 import TagChipList from "./TagChipList";
@@ -39,14 +39,14 @@ export default function TagManager({
   initialTags,
   onSaved,
 }: TagManagerProps) {
-  const fetchTags = useCallback(() => fetchGlobalEntries("tag"), []);
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
+  const queryClient = useQueryClient();
   const [shouldLoadTags, setShouldLoadTags] = useState(false);
-  const {
-    data: rawAvailableTags,
-    error: tagsLoadError,
-    setData: setRawAvailableTags,
-  } = useAsync(fetchTags, [], { enabled: shouldLoadTags });
+  const { data: rawAvailableTags, error: tagsLoadError } = useQuery({
+    queryKey: ["tags"],
+    queryFn: () => fetchGlobalEntries("tag"),
+    enabled: shouldLoadTags,
+  });
   const availableTags: TagEntry[] = (rawAvailableTags ?? []).map(toTagEntry);
 
   const [selectedTags, setSelectedTags] = useState<TagEntry[]>(initialTags);
@@ -120,14 +120,9 @@ export default function TagManager({
         name: trimmed,
         color: newTagColor,
       });
-      setRawAvailableTags((prev) => [
+      queryClient.setQueryData(["tags"], (prev: typeof rawAvailableTags) => [
         ...(prev ?? []),
-        {
-          id: created.id,
-          name: created.name,
-          color: created.color,
-          isPublic: false,
-        },
+        { id: created.id, name: created.name, color: created.color, isPublic: false },
       ]);
       const createdTag: TagEntry = {
         id: created.id,

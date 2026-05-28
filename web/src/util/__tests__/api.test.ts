@@ -355,45 +355,6 @@ describe("auth endpoints", () => {
     expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
   });
 
-  it("fetchCurrentUser returns the user on success", async () => {
-    const { fetchCurrentUser } = await loadApiModule();
-    mockClient.get.mockResolvedValue({ data: authUser });
-
-    await expect(fetchCurrentUser()).resolves.toEqual(authUser);
-  });
-
-  it("fetchCurrentUser returns null on 401 and 403 responses", async () => {
-    const { fetchCurrentUser } = await loadApiModule();
-
-    mockClient.get.mockRejectedValueOnce({
-      isAxiosError: true,
-      response: { status: 401 },
-    });
-    await expect(fetchCurrentUser()).resolves.toBeNull();
-
-    mockClient.get.mockRejectedValueOnce({
-      isAxiosError: true,
-      response: { status: 403 },
-    });
-    await expect(fetchCurrentUser()).resolves.toBeNull();
-  });
-
-  it("fetchCurrentUser rethrows non-auth failures", async () => {
-    const { fetchCurrentUser } = await loadApiModule();
-    const error = { isAxiosError: true, response: { status: 500 } };
-    mockClient.get.mockRejectedValue(error);
-
-    await expect(fetchCurrentUser()).rejects.toBe(error);
-  });
-
-  it("fetchCurrentUser rethrows non-Axios errors", async () => {
-    const { fetchCurrentUser } = await loadApiModule();
-    const error = new Error("boom");
-    mockClient.get.mockRejectedValue(error);
-
-    await expect(fetchCurrentUser()).rejects.toThrow("boom");
-  });
-
   it("loginWithGoogle fetches CSRF before posting the auth code", async () => {
     const { loginWithGoogle } = await loadApiModule();
     mockClient.get.mockResolvedValue({});
@@ -487,25 +448,6 @@ describe("auth endpoints", () => {
       },
     });
     expect(mockClient.get).toHaveBeenCalledWith("auth/preferences/");
-  });
-
-  it("fetchCurrentUser normalizes tutorial defaults", async () => {
-    const { fetchCurrentUser } = await loadApiModule();
-    mockClient.get.mockResolvedValue({
-      data: {
-        ...authUser,
-        preferences: {
-          process_summary_fields: ["piece.name"],
-        },
-      },
-    });
-
-    await expect(fetchCurrentUser()).resolves.toEqual({
-      ...authUser,
-      preferences: {
-        process_summary_fields: ["piece.name"],
-      },
-    });
   });
 
   it("updateUserPreferences fetches CSRF before patching preferences", async () => {

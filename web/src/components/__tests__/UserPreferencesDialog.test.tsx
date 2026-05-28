@@ -1,6 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+function renderWithQuery(ui: ReactElement) {
+  const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
 
 vi.mock("../../util/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../util/api")>();
@@ -25,7 +32,7 @@ import {
 } from "../CurrentUserContext";
 
 function renderDialog(activeSectionId: PreferencesSectionId | null) {
-  return render(
+  return renderWithQuery(
     <PreferencesDialogProvider
       openPreferencesDialog={vi.fn()}
       saveUserPreferences={async (preferences) => preferences}
@@ -59,7 +66,7 @@ describe("UserPreferencesDialog", () => {
     const user = userEvent.setup();
     const onSectionChange = vi.fn();
 
-    render(
+    renderWithQuery(
       <PreferencesDialogProvider
         openPreferencesDialog={vi.fn()}
         saveUserPreferences={async (preferences) => preferences}
@@ -133,7 +140,7 @@ describe("UserPreferencesDialog", () => {
     const saveUserPreferences = vi.fn(async (preferences) => preferences);
     const onClose = vi.fn();
 
-    render(
+    renderWithQuery(
       <PreferencesDialogProvider
         openPreferencesDialog={vi.fn()}
         saveUserPreferences={saveUserPreferences}
@@ -188,7 +195,7 @@ describe("UserPreferencesDialog", () => {
     const saveUserPreferences = vi.fn(async (preferences) => preferences);
     const onClose = vi.fn();
 
-    render(
+    renderWithQuery(
       <PreferencesDialogProvider
         openPreferencesDialog={vi.fn()}
         saveUserPreferences={saveUserPreferences}
@@ -257,7 +264,7 @@ describe("UserPreferencesDialog", () => {
     const saveUserPreferences = vi.fn(async (preferences) => preferences);
     const onClose = vi.fn();
 
-    render(
+    renderWithQuery(
       <PreferencesDialogProvider
         openPreferencesDialog={vi.fn()}
         saveUserPreferences={saveUserPreferences}
@@ -311,7 +318,7 @@ describe("UserPreferencesDialog", () => {
       .mockRejectedValue(new Error("Server error"));
     const onClose = vi.fn();
 
-    render(
+    renderWithQuery(
       <PreferencesDialogProvider
         openPreferencesDialog={vi.fn()}
         saveUserPreferences={saveUserPreferences}

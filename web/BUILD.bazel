@@ -231,6 +231,7 @@ js_library(
         "src/util/optionalValues.ts",
         "src/util/postLoginRedirect.ts",
         "src/util/preferences.ts",
+        "src/util/queryKeys.ts",
         "src/util/useAsync.ts",
         "src/util/workflow.ts",
     ],
@@ -273,6 +274,7 @@ js_library(
     srcs = WEB_APP_SRCS,
     deps = [
         ":generated_types",
+        ":node_modules/@tanstack/react-query",
         ":node_modules/@cloudinary/react",
         ":node_modules/@cloudinary/url-gen",
         ":node_modules/@emotion/react",
@@ -483,6 +485,7 @@ js_library(
     name = "glaze_gallery_src",
     srcs = ["src/components/GlazeCombinationGallery.tsx"],
     deps = [
+        ":analysis_src",
         ":cloudinary_image_src",
         ":generated_types",
         ":image_lightbox_src",
@@ -534,6 +537,7 @@ js_library(
 js_library(
     name = "workflow_state_src",
     srcs = [
+        "src/components/ImageUploader.tsx",
         "src/components/WorkflowState.tsx",
         "src/components/workflowStateDraft.ts",
     ],
@@ -552,6 +556,7 @@ js_library(
     name = "piece_photo_gallery_src",
     srcs = [
         "src/components/DeletePiecePhotoDialog.tsx",
+        "src/components/LightboxFooter.tsx",
         "src/components/PiecePhotoGalleryGrid.tsx",
         "src/components/PiecePhotoGallery.tsx",
     ],
@@ -644,8 +649,12 @@ js_library(
 js_library(
     name = "piece_detail_src",
     srcs = [
+        "src/components/EditableToggle.tsx",
         "src/components/NavigationBlocker.tsx",
         "src/components/PieceDetail.tsx",
+        "src/components/PieceNameEditor.tsx",
+        "src/components/SectionCard.tsx",
+        "src/components/ShowcaseStoryEditor.tsx",
         "src/components/SmallTutorialInlay.tsx",
         "src/components/SmallTutorialInlayConfig.ts",
     ],
@@ -899,6 +908,7 @@ vitest_test(
         ":workflow_state_src",
     ],
     expected_coverage = [
+        "web/src/components/ImageUploader*",
         "web/src/components/WorkflowState*",
     ],
 )
@@ -915,6 +925,7 @@ vitest_test(
         ":piece_photo_gallery_src",
     ],
     expected_coverage = [
+        "web/src/components/LightboxFooter*",
         "web/src/components/PiecePhoto*",
         "web/src/components/DeletePiecePhotoDialog*",
     ],
@@ -1046,7 +1057,11 @@ vitest_test(
         ":piece_detail_src",
     ],
     expected_coverage = [
+        "web/src/components/EditableToggle*",
         "web/src/components/PieceDetail*",
+        "web/src/components/PieceNameEditor*",
+        "web/src/components/SectionCard*",
+        "web/src/components/ShowcaseStoryEditor*",
     ],
 )
 

@@ -1,8 +1,12 @@
+import { Suspense } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import CircularProgress from "@mui/material/CircularProgress";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import GlazeCombinationGallery from "../GlazeCombinationGallery";
+import ErrorBoundary from "../ErrorBoundary";
 import * as api from "../../util/api";
 import type { GlazeCombinationImageEntry } from "../../util/types";
 
@@ -87,14 +91,30 @@ const MOCK_COMBO_ENTRY: GlazeCombinationImageEntry = {
 // ---------------------------------------------------------------------------
 
 function renderGallery() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   const router = createMemoryRouter(
     [
-      { path: "/", element: <GlazeCombinationGallery /> },
+      {
+        path: "/",
+        element: (
+          <ErrorBoundary>
+            <Suspense fallback={<CircularProgress />}>
+              <GlazeCombinationGallery />
+            </Suspense>
+          </ErrorBoundary>
+        ),
+      },
       { path: "/pieces/:id", element: <div data-testid="piece-detail" /> },
     ],
     { initialEntries: ["/"] },
   );
-  return render(<RouterProvider router={router} />);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -326,7 +346,7 @@ describe("GlazeCombinationGallery", () => {
       renderGallery();
       await waitFor(() =>
         expect(
-          screen.getByText(/Failed to load glaze combination gallery/i),
+          screen.getByText(/Something went wrong/i),
         ).toBeInTheDocument(),
       );
     });

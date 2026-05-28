@@ -8,6 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceDetail from "../PieceDetail";
 import { PieceDetailSaveStatusProvider } from "../PieceDetailSaveStatusContext";
@@ -251,13 +252,16 @@ async function renderPieceDetail(
     ],
     { initialEntries: ["/pieces/piece-id-1"] },
   );
+  const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   await act(async () => {
     render(
-      <ThemeProvider theme={TEST_THEME}>
-        <PieceDetailSaveStatusProvider>
-          <RouterProvider router={router} />
-        </PieceDetailSaveStatusProvider>
-      </ThemeProvider>,
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={TEST_THEME}>
+          <PieceDetailSaveStatusProvider>
+            <RouterProvider router={router} />
+          </PieceDetailSaveStatusProvider>
+        </ThemeProvider>
+      </QueryClientProvider>,
     );
   });
   return { router };
