@@ -1,3 +1,7 @@
+#
+# Declarative tutorials for in-app guidance and attachment rules.
+# See `tutorials.schema.yml` for the validation contract.
+#
 version: "1.0"
 tutorials:
   summary_customize_popover:
