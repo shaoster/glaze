@@ -151,6 +151,9 @@ class TestInviteCodeModel:
     def test_is_valid_true_for_fresh_code(self, active_code):
         assert active_code.is_valid is True
 
+    def test_str_returns_code_string(self, active_code):
+        assert str(active_code) == str(active_code.code)
+
     def test_is_valid_false_for_used_code(self, used_code):
         assert used_code.is_valid is False
 

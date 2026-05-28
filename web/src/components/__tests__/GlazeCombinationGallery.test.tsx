@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Component, Suspense, type ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -17,6 +17,42 @@ vi.mock("../CloudinaryImage", () => ({
   ),
 }));
 
+vi.mock("../ErrorBoundary", () => ({
+  default: class TestErrorBoundary extends Component<
+    { children: ReactNode },
+    { hasError: boolean }
+  > {
+    constructor(props: { children: ReactNode }) {
+      super(props);
+      this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError() {
+      return { hasError: true };
+    }
+
+    override render() {
+      return this.state.hasError ? <div>Something went wrong</div> : this.props.children;
+    }
+  },
+}));
+
+vi.mock("../../util/api", () => ({
+  fetchGlazeCombinationImages: vi.fn(),
+}));
+
+vi.mock("../../util/queryKeys", () => ({
+  GLAZE_COMBINATION_IMAGES_QUERY_KEY: ["glaze-combination-images"],
+}));
+
+vi.mock("../../util/workflow", () => ({
+  formatState: (state: string) =>
+    state
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" "),
+}));
+
 // Stub out ImageLightbox to keep lightbox tests simple.
 // footerActions receives an opts object; the stub calls it with initialIndex.
 vi.mock("../ImageLightbox", () => ({
@@ -28,7 +64,7 @@ vi.mock("../ImageLightbox", () => ({
   }: {
     images: { url: string }[];
     initialIndex: number;
-    footerActions?: (opts: { index: number; settingThumbnail: boolean; isCurrentThumbnail: boolean }) => React.ReactNode;
+    footerActions?: (opts: { index: number; settingThumbnail: boolean; isCurrentThumbnail: boolean }) => ReactNode;
     onClose: () => void;
   }) => (
     <div data-testid="lightbox">
@@ -38,14 +74,6 @@ vi.mock("../ImageLightbox", () => ({
     </div>
   ),
 }));
-
-vi.mock("../../util/api", async (importOriginal) => {
-  const actual = await importOriginal<typeof api>();
-  return {
-    ...actual,
-    fetchGlazeCombinationImages: vi.fn(),
-  };
-});
 
 // ---------------------------------------------------------------------------
 // Fixtures

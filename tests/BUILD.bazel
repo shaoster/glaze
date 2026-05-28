@@ -2,6 +2,7 @@ load("//:python.bzl", "pytest_test")
 
 pytest_test(
     name = "common_test",
+    tags = ["integration"],
     size = "small",
     srcs = glob(["**/*.py"]) + ["//tools:pytest_main.py"],
     main = "//tools:pytest_main.py",

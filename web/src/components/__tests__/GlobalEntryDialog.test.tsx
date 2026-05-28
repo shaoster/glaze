@@ -29,6 +29,12 @@ vi.mock("../../util/api", () => ({
   toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../AutosaveStatus", () => ({
+  default: ({ error }: { error?: string | null }) => (
+    <div data-testid="autosave-status">{error ?? null}</div>
+  ),
+}));
+
 vi.mock("../../util/workflow", () => ({
   formatWorkflowFieldLabel: (value: string) =>
     value

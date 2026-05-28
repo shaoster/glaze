@@ -6,6 +6,7 @@ from zipfile import ZipFile
 import cloudinary.exceptions
 import pytest
 from django.contrib.auth.models import User
+from rest_framework.test import APIRequestFactory, force_authenticate
 
 from api.cloudinary_cleanup import (
     REFERENCED_BREAKDOWN_WORKFLOW_IMAGE_PATHS,
@@ -13,6 +14,7 @@ from api.cloudinary_cleanup import (
     stream_cloudinary_cleanup_archive,
     summarize_referenced_public_ids,
 )
+from api.cloudinary.views import admin_cloudinary_cleanup
 from api.models import GlazeCombination, GlazeType, Image
 from api.workflow import _workflow
 
@@ -71,6 +73,124 @@ class TestCloudinaryCleanup:
         response = client.get(URL)
 
         assert response.status_code == 403
+
+    def test_get_returns_unused_assets_summary(
+        self, user, monkeypatch, cloudinary_env
+    ):
+        factory = APIRequestFactory()
+        admin = User.objects.create(
+            username="admin@example.com",
+            email="admin@example.com",
+            is_staff=True,
+        )
+        Image.objects.create(
+            user=user,
+            url="https://res.cloudinary.com/demo/image/upload/piece/used.jpg",
+            cloud_name="demo",
+            cloudinary_public_id="piece/used",
+        )
+
+        def fake_resources(**kwargs):
+            assert kwargs == {
+                "resource_type": "image",
+                "type": "upload",
+                "max_results": 500,
+            }
+            return {
+                "resources": [
+                    {
+                        "public_id": "piece/used",
+                        "secure_url": "https://example.com/used.jpg",
+                        "bytes": 1234,
+                        "created_at": "2026-05-06T12:00:00Z",
+                    },
+                    {
+                        "public_id": "piece/orphan",
+                        "secure_url": "https://example.com/orphan.jpg",
+                        "bytes": 5678,
+                        "created_at": "2026-05-06T12:05:00Z",
+                    },
+                ]
+            }
+
+        monkeypatch.setattr(
+            "api.cloudinary_cleanup.cloudinary.api.resources", fake_resources
+        )
+
+        request = factory.get("/api/admin/cloudinary-cleanup/")
+        force_authenticate(request, user=admin)
+        response = admin_cloudinary_cleanup(request)
+
+        assert response.status_code == 200
+        assert response.data == {
+            "assets": [
+                {
+                    "public_id": "piece/orphan",
+                    "cloud_name": "demo",
+                    "path_prefix": "glaze_dev",
+                    "url": "https://example.com/orphan.jpg",
+                    "thumbnail_url": (
+                        "https://res.cloudinary.com/demo/image/upload/"
+                        "c_fill,h_96,w_96/v1/piece/orphan.jpg"
+                    ),
+                    "bytes": 5678,
+                    "created_at": "2026-05-06T12:05:00Z",
+                },
+            ],
+            "summary": {
+                "total": 2,
+                "referenced": 1,
+                "unused": 1,
+                "referenced_breakdown": [
+                    {"key": "piece_list", "label": "PieceList", "count": 0},
+                    {
+                        "key": "piece_state_images",
+                        "label": "Piece State Images",
+                        "count": 0,
+                    },
+                    {"key": "glaze_tiles", "label": "Glaze Tiles", "count": 0},
+                    {
+                        "key": "glaze_combinations",
+                        "label": "Glaze Combinations",
+                        "count": 0,
+                    },
+                    {
+                        "key": "unknown_referenced_assets",
+                        "label": "Unknown Referenced Assets",
+                        "count": 1,
+                    },
+                ],
+                "reference_warnings": [
+                    "Found 1 referenced assets not explained by known source paths."
+                ],
+            },
+        }
+
+    def test_get_returns_503_when_cloudinary_scan_fails(
+        self, monkeypatch, cloudinary_env
+    ):
+        factory = APIRequestFactory()
+        admin = User.objects.create(
+            username="admin@example.com",
+            email="admin@example.com",
+            is_staff=True,
+        )
+
+        monkeypatch.setattr(
+            "api.cloudinary_cleanup.list_cloudinary_assets",
+            lambda: (_ for _ in ()).throw(
+                ValueError("Cloudinary is not configured on the server.")
+            ),
+        )
+
+        request = factory.get("/api/admin/cloudinary-cleanup/")
+        force_authenticate(request, user=admin)
+        response = admin_cloudinary_cleanup(request)
+
+        assert response.status_code == 503
+        assert response.data == {
+            "detail": "Cloudinary is not configured on the server."
+        }
 
     def test_scan_returns_unused_assets_only(
         self, client, user, monkeypatch, cloudinary_env
@@ -246,14 +366,14 @@ class TestCloudinaryCleanup:
         assert image_paths == REFERENCED_BREAKDOWN_WORKFLOW_IMAGE_PATHS
 
     def test_delete_rejects_referenced_assets(
-        self, client, user, monkeypatch, cloudinary_env
+        self, user, monkeypatch, cloudinary_env
     ):
+        factory = APIRequestFactory()
         admin = User.objects.create(
             username="admin@example.com",
             email="admin@example.com",
             is_staff=True,
         )
-        client.force_authenticate(user=admin)
         Image.objects.create(
             user=user,
             url="https://res.cloudinary.com/demo/image/upload/piece/used.jpg",
@@ -261,20 +381,47 @@ class TestCloudinaryCleanup:
             cloudinary_public_id="piece/used",
         )
 
-        response = client.delete(URL, {"public_ids": ["piece/used"]}, format="json")
+        request = factory.delete(
+            "/api/admin/cloudinary-cleanup/",
+            {"public_ids": ["piece/used"]},
+            format="json",
+        )
+        force_authenticate(request, user=admin)
+        response = admin_cloudinary_cleanup(request)
 
         assert response.status_code == 400
-        assert response.json() == {
+        assert response.data == {
             "detail": "Cannot delete referenced Cloudinary assets: piece/used"
         }
 
-    def test_delete_unused_assets(self, client, monkeypatch, cloudinary_env):
+    def test_delete_rejects_invalid_public_id_payload(self, cloudinary_env):
+        factory = APIRequestFactory()
         admin = User.objects.create(
             username="admin@example.com",
             email="admin@example.com",
             is_staff=True,
         )
-        client.force_authenticate(user=admin)
+
+        request = factory.delete(
+            "/api/admin/cloudinary-cleanup/",
+            {"public_ids": ["", 123]},
+            format="json",
+        )
+        force_authenticate(request, user=admin)
+        response = admin_cloudinary_cleanup(request)
+
+        assert response.status_code == 400
+        assert response.data == {
+            "detail": "public_ids must be a non-empty list of strings."
+        }
+
+    def test_delete_unused_assets(self, monkeypatch, cloudinary_env):
+        factory = APIRequestFactory()
+        admin = User.objects.create(
+            username="admin@example.com",
+            email="admin@example.com",
+            is_staff=True,
+        )
 
         def fake_delete_resources(public_ids, **kwargs):
             assert public_ids == ["piece/orphan"]
@@ -286,20 +433,26 @@ class TestCloudinaryCleanup:
             fake_delete_resources,
         )
 
-        response = client.delete(URL, {"public_ids": ["piece/orphan"]}, format="json")
+        request = factory.delete(
+            "/api/admin/cloudinary-cleanup/",
+            {"public_ids": ["piece/orphan"]},
+            format="json",
+        )
+        force_authenticate(request, user=admin)
+        response = admin_cloudinary_cleanup(request)
 
         assert response.status_code == 200
-        assert response.json() == {"deleted": {"piece/orphan": "deleted"}}
+        assert response.data == {"deleted": {"piece/orphan": "deleted"}}
 
     def test_delete_cloudinary_error_returns_503(
-        self, client, monkeypatch, cloudinary_env
+        self, monkeypatch, cloudinary_env
     ):
+        factory = APIRequestFactory()
         admin = User.objects.create(
             username="admin@example.com",
             email="admin@example.com",
             is_staff=True,
         )
-        client.force_authenticate(user=admin)
 
         def fake_delete_resources(public_ids, **kwargs):
             raise cloudinary.exceptions.Error("boom")
@@ -309,10 +462,16 @@ class TestCloudinaryCleanup:
             fake_delete_resources,
         )
 
-        response = client.delete(URL, {"public_ids": ["piece/orphan"]}, format="json")
+        request = factory.delete(
+            "/api/admin/cloudinary-cleanup/",
+            {"public_ids": ["piece/orphan"]},
+            format="json",
+        )
+        force_authenticate(request, user=admin)
+        response = admin_cloudinary_cleanup(request)
 
         assert response.status_code == 503
-        assert response.json() == {"detail": "Unable to delete Cloudinary assets."}
+        assert response.data == {"detail": "Unable to delete Cloudinary assets."}
 
     def test_archive_streams_all_unused_assets_with_cloudinary_paths(
         self, client, user, monkeypatch, cloudinary_env

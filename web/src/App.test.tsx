@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // Capture the onSuccess callback so tests can trigger Google sign-in.
 let _googleOnSuccess: ((r: { code: string }) => void) | undefined;
+let _googleOnError: (() => void) | undefined;
 const mockInitializeFrontendTelemetry = vi.hoisted(() => vi.fn());
 
 vi.mock("@react-oauth/google", () => ({
@@ -12,10 +13,13 @@ vi.mock("@react-oauth/google", () => ({
   ),
   useGoogleLogin: ({
     onSuccess,
+    onError,
   }: {
     onSuccess: (r: { code: string }) => void;
+    onError: () => void;
   }) => {
     _googleOnSuccess = onSuccess;
+    _googleOnError = onError;
     return () => {
       /* no-op: tests invoke _googleOnSuccess directly */
     };
@@ -110,6 +114,10 @@ vi.mock("./pages/GlazeImportToolPage", () => ({
   default: () => <div>Glaze Import Tool Page</div>,
 }));
 
+vi.mock("./pages/CloudinaryCleanupPage", () => ({
+  default: () => <div>Cloudinary Cleanup Page</div>,
+}));
+
 vi.mock("./util/telemetry", () => ({
   initializeFrontendTelemetry: mockInitializeFrontendTelemetry,
 }));
@@ -123,7 +131,7 @@ import {
   validateInviteCode,
 } from "./util/api";
 import App from "./App";
-import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
+import * as postLoginRedirect from "./util/postLoginRedirect";
 
 const MOCK_OPENID_SUBJECT =
   "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2";
@@ -152,6 +160,7 @@ describe("App auth flow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     _googleOnSuccess = undefined;
+    _googleOnError = undefined;
     window.history.pushState({}, "", "/");
     vi.mocked(fetchAppInit).mockResolvedValue({
       googleOauthClientId: "test-client-id",
@@ -159,6 +168,10 @@ describe("App auth flow", () => {
       user: null,
     });
     sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("shows error when /api/auth/me/ returns a server error", async () => {
@@ -194,12 +207,16 @@ describe("App auth flow", () => {
     expect(
       screen.getByRole("button", { name: /sign in with google/i }),
     ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: /sign in with google/i }),
+    );
+    expect(_googleOnSuccess).toBeDefined();
     expect(mockInitializeFrontendTelemetry).toHaveBeenCalledTimes(1);
   });
 
   it("derives a safe admin redirect target from the apex next parameter", () => {
     expect(
-      getPostLoginRedirectTarget(
+      postLoginRedirect.getPostLoginRedirectTarget(
         "potterdoc.com",
         "https:",
         "https://admin.potterdoc.com/admin/",
@@ -207,7 +224,7 @@ describe("App auth flow", () => {
     ).toBe("https://admin.potterdoc.com/admin/");
 
     expect(
-      getPostLoginRedirectTarget(
+      postLoginRedirect.getPostLoginRedirectTarget(
         "potterdoc.com",
         "https:",
         "https://example.com/admin/",
@@ -321,6 +338,23 @@ describe("App auth flow", () => {
   });
 
   it("shows error when Google sign-in fails", async () => {
+    render(<App />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/track every pottery piece/i),
+      ).toBeInTheDocument(),
+    );
+
+    expect(_googleOnError).toBeDefined();
+    _googleOnError!();
+
+    await waitFor(() =>
+      expect(screen.getByText(/google sign-in failed/i)).toBeInTheDocument(),
+    );
+  });
+
+  it("shows error when Google sign-in rejects after success", async () => {
     vi.mocked(loginWithGoogle).mockRejectedValue(new Error("network error"));
 
     render(<App />);
@@ -336,6 +370,38 @@ describe("App auth flow", () => {
 
     await waitFor(() =>
       expect(screen.getByText(/google sign-in failed/i)).toBeInTheDocument(),
+    );
+  });
+
+  it("redirects to the safe post-login target after Google sign-in", async () => {
+    vi.mocked(loginWithGoogle).mockResolvedValue(MOCK_USER);
+    vi.spyOn(postLoginRedirect, "getPostLoginRedirectTarget").mockReturnValue(
+      "https://admin.potterdoc.com/admin/",
+    );
+    const replaceSpy = vi
+      .spyOn(window.location, "replace")
+      .mockImplementation(() => undefined);
+
+    render(<App />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Track every pottery piece through your workflow."),
+      ).toBeInTheDocument(),
+    );
+
+    expect(_googleOnSuccess).toBeDefined();
+    await _googleOnSuccess!({ code: "auth-code-789" });
+
+    await waitFor(() =>
+      expect(loginWithGoogle).toHaveBeenCalledWith(
+        "auth-code-789",
+        window.location.origin,
+        undefined,
+      ),
+    );
+    expect(replaceSpy).toHaveBeenCalledWith(
+      "https://admin.potterdoc.com/admin/",
     );
   });
 
@@ -429,6 +495,30 @@ describe("App auth flow", () => {
     await waitFor(() => {
       expect(screen.getByText("Glaze Import Tool Page")).toBeInTheDocument();
       expect(window.location.pathname).toBe("/tools/glaze-import");
+    });
+  });
+
+  it("shows the Cloudinary cleanup menu item only for admin users and routes to it", async () => {
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: "https://admin.potterdoc.com",
+      user: MOCK_ADMIN_USER,
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /new piece/i }),
+      ).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByTestId("ExpandMoreIcon"));
+    await userEvent.click(screen.getByText("Cloudinary Cleanup"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Cloudinary Cleanup Page")).toBeInTheDocument();
+      expect(window.location.pathname).toBe("/tools/cloudinary-cleanup");
     });
   });
 

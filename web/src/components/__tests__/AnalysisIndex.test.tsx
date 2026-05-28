@@ -1,21 +1,19 @@
+import { type ReactNode } from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AnalysisIndex from "../AnalysisIndex";
-import * as api from "../../util/api";
 
-vi.mock("../../util/api", () => ({
-  fetchGlazeCombinationImages: vi.fn(),
+vi.mock("../ErrorBoundary", () => ({
+  default: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("../CloudinaryImage", () => ({
-  default: () => <div data-testid="mock-image" />,
+vi.mock("../GlazeCombinationSummary", () => ({
+  default: () => <div>Mock Summary</div>,
 }));
 
 describe("AnalysisIndex", () => {
   it("renders analysis cards", () => {
-    vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue([]);
-
     render(
       <MemoryRouter>
         <AnalysisIndex />

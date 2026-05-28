@@ -9,6 +9,15 @@ vi.mock("../../util/api", () => ({
   updatePiece: vi.fn(),
 }));
 
+vi.mock("../../util/workflow", () => ({
+  formatState: (state: string) =>
+    ({
+      designed: "Designing",
+      completed: "Completed",
+      glaze_fired: "Touching Up",
+    })[state] ?? state,
+}));
+
 function makePiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
   return {
     id: "piece-id-1",

@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -10,8 +10,16 @@ vi.mock("../../util/api", () => ({
   fetchGlazeCombinationImages: vi.fn(),
 }));
 
+vi.mock("../ErrorBoundary", () => ({
+  default: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
+
 vi.mock("../CloudinaryImage", () => ({
   default: () => <div data-testid="mock-image" />,
+}));
+
+vi.mock("../../util/queryKeys", () => ({
+  GLAZE_COMBINATION_IMAGES_QUERY_KEY: ["glaze-combination-images"],
 }));
 
 function renderSummary() {

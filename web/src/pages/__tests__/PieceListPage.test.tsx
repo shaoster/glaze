@@ -9,13 +9,15 @@ import type { PieceSortOrder } from "../../util/api";
 
 const mockFetchPieces = vi.fn();
 
-vi.mock("../../util/api", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../util/api")>();
-  return {
-    ...actual,
-    fetchPieces: (...args: unknown[]) => mockFetchPieces(...args),
-  };
-});
+vi.mock("../../util/api", () => ({
+  DEFAULT_PIECE_SORT: "last_modified",
+  PIECE_SORT_OPTIONS: [
+    { value: "last_modified", label: "Last modified" },
+    { value: "name", label: "Name" },
+  ],
+  PIECES_PAGE_SIZE: 24,
+  fetchPieces: (...args: unknown[]) => mockFetchPieces(...args),
+}));
 
 vi.mock("../../components/PieceList", () => ({
   default: ({

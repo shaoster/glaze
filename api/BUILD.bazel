@@ -40,6 +40,7 @@ py_library(
         "cloudinary/__init__.py",
         "cloudinary/views.py",
         "cloudinary/admin_views.py",
+        "cloudinary_cleanup.py",
         "crop_run_views.py",
         "global_entries/__init__.py",
         "global_entries/logic.py",
@@ -49,10 +50,12 @@ py_library(
         "invitations.py",
         "logging.py",
         "models.py",
+        "model_factories.py",
         "preferences.py",
         "serializer_factories.py",
         "serializer_registry.py",
         "serializers.py",
+        "tasks.py",
         "task_views.py",
         "telemetry_views.py",
         "urls.py",
@@ -85,6 +88,32 @@ py_library(
         ":api_workflow_lib",
         "@pypi//celery",
         "@pypi//redis",
+    ],
+)
+
+py_library(
+    name = "api_widgets_lib",
+    srcs = ["widgets.py"],
+    deps = [
+        "//backend:backend_lib",
+    ],
+)
+
+py_library(
+    name = "api_manual_tile_imports_lib",
+    srcs = ["manual_tile_imports.py"],
+    deps = [
+        ":api_schema_lib",
+        "@pypi//cloudinary",
+    ],
+)
+
+py_library(
+    name = "api_admin_lib",
+    srcs = ["admin.py"],
+    deps = [
+        ":api_schema_lib",
+        ":api_widgets_lib",
     ],
 )
 
@@ -177,8 +206,7 @@ filegroup(
 
 # ── Shared test infrastructure ────────────────────────────────────────────────
 
-_TEST_DEPS = [
-    ":api_lib",
+_PYTEST_DEPS = [
     "@pypi//pytest_django",
     "@pypi//pytest_env",
     "@pypi//tzdata",
@@ -189,6 +217,7 @@ _TEST_DATA = [
     "//:fixtures",
     "//:pytest_ini",
     "//backend:backend_test_settings",
+    ":api_runtime_commands",
     ":migrations",
     ":api_static",
 ]
@@ -226,7 +255,7 @@ pytest_test(
     data = _TEST_DATA,
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
-    deps = _TEST_DEPS,
+    deps = [":api_schema_lib"] + _PYTEST_DEPS,
     expected_coverage = ["api/workflow.py", "api/utils.py"],
 )
 
@@ -261,7 +290,7 @@ pytest_test(
     data = _TEST_DATA,
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
-    deps = _TEST_DEPS,
+    deps = [":api_schema_lib"] + _PYTEST_DEPS,
     expected_coverage = ["api/models.py", "api/model_factories.py", "api/utils.py"],
 )
 
@@ -280,7 +309,7 @@ pytest_test(
     data = _TEST_DATA,
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
-    deps = _TEST_DEPS,
+    deps = [":api_schema_lib"] + _PYTEST_DEPS,
     expected_coverage = ["api/logging.py", "api/telemetry_views.py"],
 )
 
@@ -321,12 +350,13 @@ pytest_test(
     data = _TEST_DATA + [":api_dev_commands"],
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
-    deps = _TEST_DEPS,
+    deps = [":api_schema_lib", ":api_admin_lib"] + _PYTEST_DEPS,
     expected_coverage = ["api/piece/views.py", "api/analysis_views.py", "api/workflow_views.py"],
 )
 
 pytest_test(
     name = "api_auth_test",
+    tags = ["integration"],
     size = "medium",
     srcs = _CONFTEST + [
         "tests/test_auth.py",
@@ -335,12 +365,13 @@ pytest_test(
     data = _TEST_DATA,
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
-    deps = _TEST_DEPS,
+    deps = [":api_schema_lib"] + _PYTEST_DEPS,
     expected_coverage = ["api/auth/views.py"],
 )
 
 pytest_test(
     name = "api_health_test",
+    tags = ["integration"],
     size = "small",
     srcs = _CONFTEST + [
         "tests/test_health.py",
@@ -349,12 +380,13 @@ pytest_test(
     data = _TEST_DATA,
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
-    deps = _TEST_DEPS,
+    deps = [":api_schema_lib"] + _PYTEST_DEPS,
     expected_coverage = ["api/health_views.py"],
 )
 
 pytest_test(
     name = "api_invitation_test",
+    tags = ["integration"],
     size = "medium",
     srcs = _CONFTEST + [
         "tests/test_invitations.py",
@@ -363,7 +395,7 @@ pytest_test(
     data = _TEST_DATA,
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
-    deps = _TEST_DEPS,
+    deps = [":api_schema_lib"] + _PYTEST_DEPS,
     expected_coverage = ["api/invitations.py"],
 )
 
@@ -390,7 +422,7 @@ pytest_test(
     data = _TEST_DATA,
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
-    deps = _TEST_DEPS,
+    deps = [":api_schema_lib", ":api_admin_lib", ":api_manual_tile_imports_lib"] + _PYTEST_DEPS,
     expected_coverage = ["api/import_views.py", "api/manual_tile_imports.py"],
 )
 
@@ -400,6 +432,7 @@ pytest_test(
     size = "medium",
     srcs = _CONFTEST + [
         "tests/test_admin_exports.py",
+        "tests/test_admin_scope.py",
         "tests/test_cloudinary_cleanup.py",
         "tests/test_cloudinary_image_widget.py",
         "tests/test_cloudinary_upload_signature.py",
@@ -407,6 +440,7 @@ pytest_test(
     ],
     args = [
         "api/tests/test_admin_exports.py",
+        "api/tests/test_admin_scope.py",
         "api/tests/test_cloudinary_cleanup.py",
         "api/tests/test_cloudinary_image_widget.py",
         "api/tests/test_cloudinary_upload_signature.py",
@@ -415,7 +449,7 @@ pytest_test(
     data = _TEST_DATA + [":api_dev_commands"],
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
-    deps = _TEST_DEPS,
+    deps = [":api_schema_lib", ":api_admin_lib"] + _PYTEST_DEPS,
     expected_coverage = [
         "api/admin.py",
         "api/cloudinary_cleanup.py",
@@ -426,6 +460,7 @@ pytest_test(
 
 pytest_test(
     name = "api_preferences_test",
+    tags = ["integration"],
     size = "small",
     srcs = _CONFTEST + [
         "tests/test_preferences.py",
@@ -436,7 +471,7 @@ pytest_test(
     ],
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
-    deps = _TEST_DEPS,
+    deps = [":api_schema_lib"] + _PYTEST_DEPS,
     expected_coverage = ["api/preferences.py"],
 )
 
@@ -484,7 +519,7 @@ pytest_test(
     data = _TEST_DATA,
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
-    deps = _TEST_DEPS,
+    deps = [":api_schema_lib"] + _PYTEST_DEPS,
     expected_coverage = ["api/migrations/*.py"],
 )
 

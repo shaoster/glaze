@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,6 +11,40 @@ import {
 } from "../CurrentUserContext";
 import type { UserPreferences } from "../../util/api";
 import { SMALL_TUTORIAL_INLAY_PLACEMENTS } from "../SmallTutorialInlayConfig";
+
+const mockContext = vi.hoisted(() => ({
+  currentUser: null as ReturnType<typeof makeCurrentUser> | null,
+  saveUserPreferences: undefined as
+    | ((preferences: UserPreferences) => Promise<UserPreferences>)
+    | undefined,
+}));
+
+vi.mock("../CurrentUserContext", () => ({
+  CurrentUserProvider: ({
+    currentUser,
+    children,
+  }: {
+    currentUser: ReturnType<typeof makeCurrentUser>;
+    children: ReactNode;
+  }) => {
+    mockContext.currentUser = currentUser;
+    return <>{children}</>;
+  },
+  PreferencesDialogProvider: ({
+    saveUserPreferences,
+    children,
+  }: {
+    saveUserPreferences: (
+      preferences: UserPreferences,
+    ) => Promise<UserPreferences>;
+    children: ReactNode;
+  }) => {
+    mockContext.saveUserPreferences = saveUserPreferences;
+    return <>{children}</>;
+  },
+  useCurrentUser: () => mockContext.currentUser,
+  useSaveUserPreferences: () => mockContext.saveUserPreferences,
+}));
 
 function makeCurrentUser() {
   return {

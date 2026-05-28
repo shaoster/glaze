@@ -1,11 +1,145 @@
+import { type ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import ProcessSummary from "../ProcessSummary";
 import {
   CurrentUserProvider,
   PreferencesDialogProvider,
 } from "../CurrentUserContext";
 import type { PieceDetail } from "../../util/types";
+
+const mockContext = vi.hoisted(() => ({
+  currentUser: null as any,
+  openPreferencesDialog: vi.fn(),
+  saveUserPreferences: vi.fn(),
+}));
+
+vi.mock("../CurrentUserContext", () => ({
+  CurrentUserProvider: ({
+    currentUser,
+    children,
+  }: {
+    currentUser: unknown;
+    children: ReactNode;
+  }) => {
+    mockContext.currentUser = currentUser;
+    return <>{children}</>;
+  },
+  PreferencesDialogProvider: ({
+    openPreferencesDialog,
+    saveUserPreferences,
+    children,
+  }: {
+    openPreferencesDialog: typeof mockContext.openPreferencesDialog;
+    saveUserPreferences: typeof mockContext.saveUserPreferences;
+    children: ReactNode;
+  }) => {
+    mockContext.openPreferencesDialog = openPreferencesDialog;
+    mockContext.saveUserPreferences = saveUserPreferences;
+    return <>{children}</>;
+  },
+  useCurrentUser: () => mockContext.currentUser,
+  useOpenPreferencesDialog: () => mockContext.openPreferencesDialog,
+}));
+
+vi.mock("../../util/workflow", () => ({
+  getProcessSummaryDefinition: () => [
+    {
+      title: "Making",
+      fields: [
+        {
+          kind: "value",
+          label: "Starting weight",
+          ref: "wheel_thrown.clay_weight_lbs",
+          stateId: "wheel_thrown",
+          fieldName: "clay_weight_lbs",
+          field: {},
+        },
+        {
+          kind: "value",
+          label: "Clay body",
+          ref: "wheel_thrown.clay_body",
+          stateId: "wheel_thrown",
+          fieldName: "clay_body",
+          field: {},
+        },
+        {
+          kind: "compute",
+          label: "Trimming loss",
+          compute: {
+            op: "difference",
+            left: "wheel_thrown.clay_weight_lbs",
+            right: "trimmed.trimmed_weight_lbs",
+            unit: "lb",
+            decimals: 2,
+          },
+        },
+        {
+          kind: "text",
+          label: "Wax resist",
+          text: "Not recorded",
+          when: { state_missing: "waxed" },
+        },
+        {
+          kind: "text",
+          label: "Wax resist",
+          text: "Applied",
+          when: { state_exists: "waxed" },
+        },
+        {
+          kind: "compute",
+          label: "Dimensions total",
+          compute: {
+            op: "sum",
+            operands: [
+              "submitted_to_bisque_fire.length_in",
+              "submitted_to_bisque_fire.width_in",
+              "submitted_to_bisque_fire.height_in",
+            ],
+            unit: "in",
+          },
+        },
+        {
+          kind: "compute",
+          label: "Approximate volume",
+          compute: {
+            op: "product",
+            operands: [
+              "submitted_to_bisque_fire.length_in",
+              "submitted_to_bisque_fire.width_in",
+              "submitted_to_bisque_fire.height_in",
+            ],
+            unit: "cu in",
+          },
+        },
+        {
+          kind: "compute",
+          label: "Length to width ratio",
+          compute: {
+            op: "ratio",
+            numerator: "submitted_to_bisque_fire.length_in",
+            denominator: "submitted_to_bisque_fire.width_in",
+          },
+        },
+      ],
+    },
+  ],
+  getProcessSummaryFieldOptions: () => [
+    { ref: "piece.name", label: "Name", group: "Piece" },
+    { ref: "piece.current_location", label: "Current Location", group: "Piece" },
+    {
+      ref: "wheel_thrown.clay_weight_lbs",
+      label: "Clay Weight Lbs",
+      group: "Thrown",
+    },
+  ],
+}));
+
+beforeEach(() => {
+  mockContext.currentUser = null;
+  mockContext.openPreferencesDialog.mockReset();
+  mockContext.saveUserPreferences.mockReset();
+});
 
 function makePiece(
   overrides: Partial<PieceDetail> = {},
