@@ -30,6 +30,7 @@ Django, Django REST Framework, SQLite (dev), django-cors-headers, drf-spectacula
 - **User data isolation is mandatory:** list endpoints must scope to `request.user`; object lookups must use user-filtered querysets
 - When a user requests another user's object ID, return `404` (not `403`) so object existence is not leaked
 - **Generic code must not reference concrete subclasses by name.** A generic view handling all `GlobalModel` subclasses should depend only on the `GlobalModel` interface. Use explicit registries (dicts mapping model class → collaborator) or protocol attributes (`filterable_fields`, `get_favorite_ids_for`) to keep generic code decoupled
+- Never add file-level noqa comments like `# ruff: noqa: F401` to Python files. Unused imports must always be removed, or if they are intended to be exposed as public module APIs, listed in the module's `__all__` list to ensure they are preserved by linters.
 
 ## Production Settings Rules
 

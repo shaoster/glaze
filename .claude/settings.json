@@ -57,7 +57,13 @@
       "Bash(awk '/env:/{found=1} found && /name:/{env_name=$0} found && /secretKeyRef:/{secret=1} secret && /name:/{secret_name=$0} secret && /key:/{print env_name; print secret_name; print $0; secret=0; print \"---\"}' /home/phil/code/glaze/chart/glaze/templates/deployment-web.yaml)",
       "Bash(sed 's/ *$//')",
       "Bash(/bin/grep -h \"key:\" /home/phil/code/glaze/chart/glaze/templates/*.yaml)",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Bash(npm install *)",
+      "Bash(rtk pnpm *)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:advanced-cropper.github.io)",
+      "Bash(GIT_SEQUENCE_EDITOR=\"sed -i '2s/pick/squash/'\" git rebase -i HEAD~2)",
+      "Bash(awk '/^diff --git/{file=$3} file ~ /CropOverlay|GlazeImportCrop|BUILD/')"
     ],
     "additionalDirectories": [
       "/tmp"
