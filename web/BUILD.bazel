@@ -225,7 +225,6 @@ js_library(
     srcs = [
         "src/cloudinary-widget.d.ts",
         "src/util/api.ts",
-        "src/util/cloudinary.ts",
         "src/util/cloudinaryUpload.ts",
         "src/util/format.ts",
         "src/util/imageQueries.ts",

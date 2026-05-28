@@ -26,6 +26,7 @@ vi.mock("../CloudinaryImage", () => ({
 vi.mock("../../util/imageQueries", () => ({
   useSuspendedImageLoad: () => ({ data: "mock-url" }),
   imageLoadQueryOptions: (url: string) => ({ queryKey: ["image-load", url] }),
+  getCloudinaryUrl: ({ url }: { url: string }) => url,
 }));
 
 vi.mock("masonic", () => ({

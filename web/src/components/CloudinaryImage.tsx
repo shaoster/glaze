@@ -15,8 +15,11 @@
 import { Box, CircularProgress } from "@mui/material";
 import { useEffect, useRef, useState, Suspense } from "react";
 import type { ImageCrop } from "../util/types";
-import { useSuspendedImageLoad } from "../util/imageQueries";
-import { getCloudinaryUrl, type CloudinaryImageContext } from "../util/cloudinary";
+import {
+  getCloudinaryUrl,
+  useSuspendedImageLoad,
+  type CloudinaryImageContext,
+} from "../util/imageQueries";
 
 const THUMBNAIL_SIZE = 64;
 

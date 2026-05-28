@@ -18,8 +18,7 @@ import { formatState, isTerminalState, getCustomFieldDefinitions } from "../util
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updatePiece, updatePastState, updateCurrentState, moveImage, extractErrorMessage, addPieceState } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
-import { getCloudinaryUrl } from "../util/cloudinary";
-import { imageLoadQueryOptions } from "../util/imageQueries";
+import { prefetchCloudinaryImage } from "../util/imageQueries";
 import NavigationBlocker from "./NavigationBlocker";
 import WorkflowState from "./WorkflowState";
 import TagManager from "./TagManager";
@@ -118,14 +117,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     // Also prefetch the lightbox-sized Cloudinary queries via TanStack Query
     galleryImages.forEach((img) => {
       if (img.url) {
-        const lightboxUrl = getCloudinaryUrl({
-          url: img.url,
-          cloud_name: img.cloud_name,
-          cloudinary_public_id: img.cloudinary_public_id,
-          crop: img.crop,
-          context: "lightbox",
-        });
-        queryClient.prefetchQuery(imageLoadQueryOptions(lightboxUrl));
+        prefetchCloudinaryImage(queryClient, img, "lightbox");
       }
     });
     // galleryImages is recomputed every render but its identity changes with piece,

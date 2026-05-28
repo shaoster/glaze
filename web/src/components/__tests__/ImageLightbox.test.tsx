@@ -13,6 +13,7 @@ vi.mock("../../util/useAsync", () => ({
 vi.mock("../../util/imageQueries", () => ({
   useSuspendedImageLoad: vi.fn(() => ({ data: "mock-url" })),
   imageLoadQueryOptions: (url: string) => ({ queryKey: ["image-load", url] }),
+  getCloudinaryUrl: ({ url }: { url: string }) => url,
 }));
 
 import ImageLightbox from "../ImageLightbox";
