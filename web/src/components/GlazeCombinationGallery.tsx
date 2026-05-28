@@ -22,7 +22,6 @@ import {
   CardContent,
   CardHeader,
   Chip,
-  CircularProgress,
   Stack,
   Tooltip,
   Typography,

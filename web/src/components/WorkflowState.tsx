@@ -27,7 +27,7 @@ import GlobalEntryField from "./GlobalEntryField";
 import AutosaveStatus from "./AutosaveStatus";
 import { useAutosave } from "./useAutosave";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
-import { useAsync } from "../util/useAsync";
+import { useQuery } from "@tanstack/react-query";
 import {
   buildDraftState,
   draftReducer,
@@ -73,11 +73,11 @@ export default function WorkflowState({
   );
   const { baseState, notes, images, customFieldInputs, globalRefPks } = draft;
 
-  const { data: uiSchema } = useAsync(
-    () => fetchWorkflowStateSchema(baseState.state),
-    [baseState.state],
-    { enabled: !initialUiSchema },
-  );
+  const { data: uiSchema } = useQuery({
+    queryKey: ["workflowStateSchema", baseState.state],
+    queryFn: () => fetchWorkflowStateSchema(baseState.state),
+    enabled: !initialUiSchema,
+  });
 
   const activeSchema = initialUiSchema ?? uiSchema;
 

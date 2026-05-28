@@ -44,7 +44,7 @@ export default function EditableToggle({ piece, onPieceUpdated }: EditableToggle
               variant="contained"
               size="small"
               startIcon={<LockIcon fontSize="small" />}
-              onClick={toggle}
+              onClick={() => toggle()}
               disabled={saving || !!seqError}
             >
               Seal changes
@@ -54,7 +54,7 @@ export default function EditableToggle({ piece, onPieceUpdated }: EditableToggle
               variant="outlined"
               size="small"
               startIcon={<HistoryIcon fontSize="small" />}
-              onClick={toggle}
+              onClick={() => toggle()}
               disabled={saving || !!disabledReason}
               sx={{ borderStyle: "dashed", color: "text.secondary" }}
             >

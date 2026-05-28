@@ -1,15 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
-  render,
+  render as baseRender,
   screen,
   fireEvent,
   waitFor,
   within,
 } from "@testing-library/react";
+import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import GlobalEntryDialog from "../GlobalEntryDialog";
 import * as api from "../../util/api";
 import type { GlazeCombinationEntry } from "../../util/api";
+
+function render(ui: ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return baseRender(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 vi.mock("../../util/api", () => ({
   createGlobalEntry: vi.fn(),

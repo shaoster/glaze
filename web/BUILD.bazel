@@ -484,6 +484,7 @@ js_library(
     name = "glaze_gallery_src",
     srcs = ["src/components/GlazeCombinationGallery.tsx"],
     deps = [
+        ":analysis_src",
         ":cloudinary_image_src",
         ":generated_types",
         ":image_lightbox_src",

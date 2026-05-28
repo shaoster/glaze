@@ -1,6 +1,9 @@
+import { Suspense } from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import GlazeCombinationSummary from "../GlazeCombinationSummary";
+import ErrorBoundary from "../ErrorBoundary";
 import * as api from "../../util/api";
 
 vi.mock("../../util/api", () => ({
@@ -11,12 +14,27 @@ vi.mock("../CloudinaryImage", () => ({
   default: () => <div data-testid="mock-image" />,
 }));
 
+function renderSummary() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <ErrorBoundary>
+        <Suspense fallback={<div>Loading...</div>}>
+          <GlazeCombinationSummary />
+        </Suspense>
+      </ErrorBoundary>
+    </QueryClientProvider>,
+  );
+}
+
 describe("GlazeCombinationSummary", () => {
   it("shows loading state", () => {
     vi.mocked(api.fetchGlazeCombinationImages).mockReturnValue(
       new Promise(() => {}),
     );
-    render(<GlazeCombinationSummary />);
+    renderSummary();
     expect(screen.getByText(/Loading.../i)).toBeInTheDocument();
   });
 
@@ -45,7 +63,7 @@ describe("GlazeCombinationSummary", () => {
       mockData as any,
     );
 
-    render(<GlazeCombinationSummary />);
+    renderSummary();
 
     expect(
       await screen.findByText(/2 combinations with images/i),
@@ -57,7 +75,7 @@ describe("GlazeCombinationSummary", () => {
     vi.mocked(api.fetchGlazeCombinationImages).mockRejectedValue(
       new Error("API Error"),
     );
-    render(<GlazeCombinationSummary />);
+    renderSummary();
 
     await waitFor(() => {
       expect(
@@ -75,7 +93,7 @@ describe("GlazeCombinationSummary", () => {
       mockData as any,
     );
 
-    render(<GlazeCombinationSummary />);
+    renderSummary();
 
     expect(await screen.findByText("+2")).toBeInTheDocument();
   });
@@ -91,7 +109,7 @@ describe("GlazeCombinationSummary", () => {
       mockData as any,
     );
 
-    render(<GlazeCombinationSummary />);
+    renderSummary();
 
     expect(
       await screen.findByText("1 combination with images"),

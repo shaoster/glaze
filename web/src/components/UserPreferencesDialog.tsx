@@ -17,8 +17,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 import { fetchUserPreferences, type UserPreferences } from "../util/api";
 import { getFieldDefinition, PREFERENCES_SCHEMA } from "../util/preferences";
-import { useMutation } from "@tanstack/react-query";
-import { useAsync } from "../util/useAsync";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { getProcessSummaryFieldOptions } from "../util/workflow";
 import {
   useCurrentUser,
@@ -42,7 +41,9 @@ export default function UserPreferencesDialog({
 }: UserPreferencesDialogProps) {
   const currentUser = useCurrentUser();
   const saveUserPreferences = useSaveUserPreferences();
-  const { data, loading, error } = useAsync(fetchUserPreferences, [open], {
+  const { data, isLoading: loading, error } = useQuery({
+    queryKey: ["userPreferences"],
+    queryFn: fetchUserPreferences,
     enabled: open,
   });
 
