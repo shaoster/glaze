@@ -11,11 +11,24 @@ from rest_framework.response import Response
 from backend.otel import traced
 
 from ..models import UserProfile
-from ..preferences import UserPreferencesSerializer, get_preferences_config
+from ..preferences import UserPreferencesSerializer
 
-# Whitelist of UserProfile fields that can be updated via the declarative system.
-# [SECURITY]: Strictly control which model fields are exposed to storage: UserProfile.
+# [SECURITY] Only these UserProfile fields may be written through the preferences
+# endpoint. Keep this explicit so future schema additions cannot widen the write
+# surface by accident.
 ALLOWED_USER_PROFILE_FIELDS = {"alias"}
+
+
+def _apply_user_profile_updates(
+    profile: UserProfile, validated_data: dict[str, Any]
+) -> list[str]:
+    """Apply allowlisted UserProfile writes and return the fields to persist."""
+    update_fields: list[str] = []
+    for field_name in ALLOWED_USER_PROFILE_FIELDS:
+        if field_name in validated_data:
+            setattr(profile, field_name, validated_data[field_name])
+            update_fields.append(field_name)
+    return update_fields
 
 
 @extend_schema(
@@ -41,19 +54,7 @@ def auth_preferences(request: Request) -> Response:
 
     serializer = UserPreferencesSerializer(data=request.data, partial=True)
     serializer.is_valid(raise_exception=True)
-    update_fields: list[str] = []
-
-    config = get_preferences_config()
-    for section in config["sections"]:
-        for field_id, field_def in section["fields"].items():
-            if (
-                field_def["storage"] == "UserProfile"
-                and field_id in serializer.validated_data
-                and field_id in ALLOWED_USER_PROFILE_FIELDS
-            ):
-                setattr(profile, field_id, serializer.validated_data[field_id])
-                if field_id not in update_fields:
-                    update_fields.append(field_id)
+    update_fields = _apply_user_profile_updates(profile, serializer.validated_data)
 
     if "preferences" in serializer.validated_data:
         existing_preferences = (

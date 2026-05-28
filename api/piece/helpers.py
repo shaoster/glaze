@@ -12,6 +12,7 @@ from django.db.models import (
     Subquery,
 )
 from django.db.models.functions import Coalesce, Greatest
+from rest_framework import serializers as drf_serializers
 from rest_framework.request import Request
 
 from backend.otel import traced
@@ -30,6 +31,10 @@ _PIECE_ORDERING_MAP = {
 }
 _DEFAULT_ORDERING = "-last_modified"
 _DEFAULT_PAGE_SIZE = 16
+
+
+class PieceImageMoveSerializer(drf_serializers.Serializer):
+    piece_state_id = drf_serializers.UUIDField(required=False)
 
 
 @traced
