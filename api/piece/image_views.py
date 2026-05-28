@@ -7,7 +7,6 @@ on piece list/detail/state behavior.
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
-from rest_framework import serializers as drf_serializers
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -18,11 +17,11 @@ from backend.otel import traced
 
 from ..models import Image, PieceStateImage
 from ..serializers import ImageCropSerializer, PieceDetailSerializer
-from .helpers import piece_detail_queryset, serialize_piece_detail
-
-
-class PieceImageMoveSerializer(drf_serializers.Serializer):
-    piece_state_id = drf_serializers.UUIDField(required=False)
+from .helpers import (
+    PieceImageMoveSerializer,
+    piece_detail_queryset,
+    serialize_piece_detail,
+)
 
 
 @extend_schema(
