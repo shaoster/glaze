@@ -1,7 +1,7 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchPiece } from "../util/api";
-import { useAsync } from "../util/useAsync";
 import PieceDetailComponent from "../components/PieceDetail";
 import { type PieceDetail } from "../util/types";
 
@@ -25,13 +25,13 @@ export default function PieceDetailPage({
   const fromGallery = state?.fromGallery === true;
   const returnTo = state?.returnTo ?? null;
   const showBackButton = fromGallery || showBackToPieces;
+  const queryClient = useQueryClient();
+  const pieceQueryKey = ["piece", id] as const;
   // id is always defined — this component is only rendered via the /pieces/:id route
-  const {
-    data: piece,
-    loading,
-    error,
-    setData: setPiece,
-  } = useAsync<PieceDetail>(() => fetchPiece(id!), [id]);
+  const { data: piece, isLoading: loading, error } = useQuery<PieceDetail>({
+    queryKey: pieceQueryKey,
+    queryFn: () => fetchPiece(id!),
+  });
 
   return (
     <>
@@ -64,7 +64,7 @@ export default function PieceDetailPage({
       {piece && (
         <PieceDetailComponent
           piece={piece}
-          onPieceUpdated={(updated) => setPiece(updated)}
+          onPieceUpdated={(updated) => queryClient.setQueryData(pieceQueryKey, updated)}
         />
       )}
     </>
