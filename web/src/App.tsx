@@ -949,6 +949,10 @@ export default function App() {
 
 function AppContent() {
   const queryClient = useQueryClient();
+  useState(() => {
+    initializeFrontendTelemetry();
+    return null;
+  });
   const postLoginRedirect = useMemo(
     () =>
       getPostLoginRedirectTarget(
@@ -962,12 +966,6 @@ function AppContent() {
     queryKey: ["appInit"],
     queryFn: fetchAppInit,
   });
-
-  useEffect(() => {
-    if (init) {
-      initializeFrontendTelemetry();
-    }
-  }, [init]);
 
   const handleAuthenticated = useCallback(
     (user: AuthUser) =>
