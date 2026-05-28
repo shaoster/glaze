@@ -58,6 +58,7 @@ import {
   updateUserPreferences,
   type UserPreferences,
 } from "./util/api";
+import { initializeFrontendTelemetry } from "./util/telemetry";
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -961,6 +962,12 @@ function AppContent() {
     queryKey: ["appInit"],
     queryFn: fetchAppInit,
   });
+
+  useEffect(() => {
+    if (init) {
+      initializeFrontendTelemetry();
+    }
+  }, [init]);
 
   const handleAuthenticated = useCallback(
     (user: AuthUser) =>

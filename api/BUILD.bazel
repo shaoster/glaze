@@ -54,6 +54,7 @@ py_library(
         "serializer_registry.py",
         "serializers.py",
         "task_views.py",
+        "telemetry_views.py",
         "urls.py",
         "views.py",
         "workflow_views.py",
@@ -158,6 +159,7 @@ filegroup(
         "serializer_registry.py",
         "serializers.py",
         "task_views.py",
+        "telemetry_views.py",
         "tasks.py",
         "urls.py",
         "utils.py",
@@ -269,15 +271,17 @@ pytest_test(
     size = "small",
     srcs = _CONFTEST + [
         "tests/test_otel.py",
+        "tests/test_telemetry.py",
     ],
     args = [
         "api/tests/test_otel.py",
+        "api/tests/test_telemetry.py",
     ],
     data = _TEST_DATA,
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = _TEST_DEPS,
-    expected_coverage = ["api/logging.py"],
+    expected_coverage = ["api/logging.py", "api/telemetry_views.py"],
 )
 
 pytest_test(

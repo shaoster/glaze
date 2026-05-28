@@ -255,6 +255,10 @@ Current web auth flow:
 3. If not authenticated, the login screen is shown.
 4. After successful login, the app shell appears with a "Current user" chip and Log out button.
 
+Frontend tracing is initialized from the same app bootstrap path and sends OTLP/HTTP
+spans to `/api/telemetry/traces/`. The backend proxies those trace batches to the
+collector, so the browser does not need any direct Grafana credentials.
+
 Sign-up behavior (temporary):
 
 - The backend registration endpoint (`POST /api/auth/register/`) remains available.
