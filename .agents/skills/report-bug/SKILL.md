@@ -84,14 +84,27 @@ cp /home/phil/code/glaze/.env.local .env.local
 .manage.venv/bin/python manage.py migrate
 ```
 
-**3c. Ask the user to start the server**
+**3c. Start the server**
 
-Agents do not start servers autonomously. Tell the user:
+`cd` into the worktree, source `env.sh` (which sets `GLAZE_ROOT` to the worktree),
+then start the servers in the background and poll for the port file:
 
-> Please run `gz_start` in a terminal pointed at this worktree. Once it is up,
-> share the backend port (or I will read it from `.dev-pids/backend.port`).
+```bash
+cd /path/to/worktree
+source env.sh
+gz_start &
+for i in $(seq 1 20); do
+  port=$(cat .dev-pids/backend.port 2>/dev/null)
+  [ -n "$port" ] && echo "Backend on port $port" && break
+  sleep 3
+done
+```
 
-Read the port once the server is running:
+**Critical:** `env.sh` must be sourced from inside the worktree directory.
+Sourcing it from the main checkout sets `GLAZE_ROOT` to the main checkout,
+causing `gz_start` to write pid/port files there instead of the worktree.
+
+Confirm the server is up:
 
 ```bash
 BASE=http://localhost:$(cat .dev-pids/backend.port)
@@ -105,11 +118,17 @@ do not use `curl -L` across the full chain, as curl does not reliably flush
 cookies written at intermediate redirects when the final hop (to `/`) returns
 a non-2xx status from Django's dev server.
 
+**Important:** The POST body contains `&` characters that shells and tool proxies
+interpret as operators. Write the body to a file and use `--data-binary @file`
+instead of inline `-d "..."`:
+
 ```bash
 # Step 1: POST to authorize → capture the redirect to complete/
+printf 'redirect_uri=%s/api/auth/mock-idp/complete/&state=repro&login_hint=dev@localhost' \
+  "$BASE" > /tmp/idp-post.txt
 COMPLETE_URL=$(curl -s -c /tmp/glaze-cookies.txt -b /tmp/glaze-cookies.txt \
   -D - -X POST \
-  -d "redirect_uri=${BASE}/api/auth/mock-idp/complete/&state=repro&login_hint=dev@localhost" \
+  --data-binary @/tmp/idp-post.txt \
   "${BASE}/api/auth/mock-idp/authorize/" \
   | grep -i "^location:" | sed 's/[Ll]ocation: //' | tr -d '\r\n')
 
