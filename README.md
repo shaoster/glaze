@@ -13,8 +13,9 @@ A pottery workflow tracking application. Log pieces and record state transitions
 - [Backend API (`api/`)](api/README.md) - Django, DRF, public libraries, auth flows, and data isolation.
 - [Frontend Client (`web/`)](web/README.md) - React components, Vite configuration, and frontend conventions.
 - [Common Tests (`tests/`)](tests/README.md) - Structural tests for the workflow state machine.
-- [Declarative Preferences (`user_preferences.yml`)](user_preferences.yml) - Central definition for user settings.
-- [Declarative Tutorials (`tutorials.yml`)](tutorials.yml) - Central definition for tutorial tips and attachment rules.
+- [Workflow (`workflow/README.md`)](workflow/README.md) - Source of truth for piece states, transitions, globals, and custom fields.
+- [Declarative Preferences (`user_preferences.schema.yml`)](user_preferences.schema.yml) - Schema for user settings.
+- [Declarative Tutorials (`tutorials.schema.yml`)](tutorials.schema.yml) - Schema for tutorial tips and attachment rules.
 - [Tools (`tools/`)](tools/README.md) - Standalone utilities, Modal crop offloading, and Glaze import tool.
 - [Pages (`pages/`)](pages/README.md) - Static published pages.
 - [CI / CD Infrastructure (`docs/`)](docs/ci-cd.md) - GitHub Actions workflows, deployment pipelines, and environment variables.
@@ -354,10 +355,3 @@ docker-entrypoint.sh       Container startup: exec Gunicorn
 tools/ensure_cluster.sh    Cluster infrastructure convergence (k3s, ESO, probe timeouts)
 tools/helm_deploy.sh       Helm upgrade with retry and failure diagnostics
 ```
-
-The workflow state machine and all valid transitions are defined in [`workflow.yml`](workflow.yml). Both the backend and web derive state names and transition rules from this file — nothing is hardcoded elsewhere.
-
-`workflow.yml` also contains two optional sections beyond the state list:
-
-- **`globals`** — named domain types backed by Django models. Each entry drives both the backend and frontend: `api/model_factories.py` auto-generates the Django model class at import time (a `makemigrations` run is all that is needed to add a new global), and the frontend reads the same declaration to render pickers and resolve display fields. Set `factory: false` for globals whose model is hand-written (currently only `piece`).
-- **`custom_fields`** (per-state) — state-specific fields declared using the embedded DSL. See `api/README.md` and `web/README.md` for more details.

@@ -1,3 +1,5 @@
+# Declarative workflow state machine for Glaze.
+# See `workflow.schema.yml` for the validation contract.
 version: "0.0.3"
 
 # ---------------------------------------------------------------------------
