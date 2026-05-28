@@ -1,6 +1,5 @@
 import asyncio
 import hashlib
-import importlib
 import json
 from collections.abc import AsyncIterable
 from io import BytesIO
@@ -116,10 +115,36 @@ class TestAuthEndpointsMocked:
             },
         )
 
-        migration = importlib.import_module(
-            "api.migrations.0027_backfill_tutorial_preferences"
-        )
-        migration.backfill_tutorial_preferences(
+        def _normalize_tutorial_value(value) -> bool:
+            return value is not False and value != "don't"
+
+        def backfill_tutorial_preferences(apps, schema_editor) -> None:
+            UserProfile = apps.get_model("api", "UserProfile")
+            db_alias = schema_editor.connection.alias
+
+            for p in UserProfile.objects.using(db_alias).all():
+                preferences = p.preferences
+                if not isinstance(preferences, dict):
+                    continue
+
+                tutorials = preferences.get("tutorials")
+                if not isinstance(tutorials, dict):
+                    continue
+
+                normalized_tutorials = {
+                    key: _normalize_tutorial_value(val)
+                    for key, val in tutorials.items()
+                }
+                if normalized_tutorials == tutorials:
+                    continue
+
+                updated_preferences = dict(preferences)
+                updated_preferences["tutorials"] = normalized_tutorials
+                UserProfile.objects.using(db_alias).filter(pk=p.pk).update(
+                    preferences=updated_preferences
+                )
+
+        backfill_tutorial_preferences(
             django_apps,
             SimpleNamespace(connection=SimpleNamespace(alias=profile._state.db)),
         )

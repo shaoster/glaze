@@ -1,13 +1,13 @@
 import importlib
-from io import BytesIO
 import sys
 import types
+from io import BytesIO
 
 import pytest
 import yaml
+from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.contrib.auth import get_user_model
 from PIL import Image as PILImage
 
 from api.models import (
@@ -28,8 +28,12 @@ if "pillow_heif" not in sys.modules:
 
 backfill = importlib.import_module("api.management.commands.backfill_image_dimensions")
 deploy_init = importlib.import_module("api.management.commands.deploy_init")
-import_tiles = importlib.import_module("api.management.commands.import_test_tile_images")
-restore_backup = importlib.import_module("api.management.commands.restore_images_from_backup")
+import_tiles = importlib.import_module(
+    "api.management.commands.import_test_tile_images"
+)
+restore_backup = importlib.import_module(
+    "api.management.commands.restore_images_from_backup"
+)
 
 
 def _image_payload(url: str, public_id: str, cloud_name: str = "demo") -> dict:
@@ -178,8 +182,12 @@ class TestImportTestTileImagesHelpers:
         first = GlazeType.objects.create(user=None, name="Albany Blue Slip")
         second = GlazeType.objects.create(user=None, name="French Green")
         combo = GlazeCombination.objects.create(user=None, name="Test Combo")
-        GlazeCombinationLayer.objects.create(combination=combo, glaze_type=second, order=0)
-        GlazeCombinationLayer.objects.create(combination=combo, glaze_type=first, order=1)
+        GlazeCombinationLayer.objects.create(
+            combination=combo, glaze_type=second, order=0
+        )
+        GlazeCombinationLayer.objects.create(
+            combination=combo, glaze_type=first, order=1
+        )
 
         import_tiles._ensure_combination_layers(combo, [first, second])
 
