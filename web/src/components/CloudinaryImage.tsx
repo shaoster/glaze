@@ -1,10 +1,9 @@
 /**
  * CloudinaryImage — optimized image renderer.
  *
- * When cloud_name and cloudinary_public_id are both provided and non-null,
- * the component uses @cloudinary/url-gen to request a size-appropriate
- * rendition from Cloudinary's image pipeline (auto format, auto quality,
- * fill gravity). Otherwise it falls back to a plain <img> at the original URL.
+ * Renders a standard <img> using the size-appropriate delivery URL computed via
+ * getCloudinaryUrl (backed by Cloudinary transforms if identity is present,
+ * otherwise falling back to standard URLs).
  *
  * Context-specific sizing:
  *   thumbnail — 64×64 fill, used in image lists and history rows
@@ -13,54 +12,15 @@
  *   detail    — fills the local container, for the PieceDetail hero image
  *   preview   — 64×64 fill, used for the upload preview before saving
  */
-import { Cloudinary } from "@cloudinary/url-gen";
-import {
-  crop as cropAction,
-  fill,
-  fit,
-  scale,
-} from "@cloudinary/url-gen/actions/resize";
-import { format, quality } from "@cloudinary/url-gen/actions/delivery";
-import { auto as autoFormat, jpg } from "@cloudinary/url-gen/qualifiers/format";
-import { auto as autoQuality } from "@cloudinary/url-gen/qualifiers/quality";
-import { relative } from "@cloudinary/url-gen/qualifiers/flag";
-import { AdvancedImage } from "@cloudinary/react";
 import { Box, CircularProgress } from "@mui/material";
 import { useEffect, useRef, useState, Suspense } from "react";
 import type { ImageCrop } from "../util/types";
 import { useSuspendedImageLoad } from "../util/imageQueries";
-import { getCloudinaryUrl } from "../util/cloudinary";
+import { getCloudinaryUrl, type CloudinaryImageContext } from "../util/cloudinary";
 
 const THUMBNAIL_SIZE = 64;
-const DEFAULT_VIEWPORT_WIDTH = 1200;
-const DEFAULT_VIEWPORT_HEIGHT = 900;
-const DEFAULT_DEVICE_PIXEL_RATIO = 1;
 
-type ViewportSnapshot = {
-  width: number;
-  height: number;
-  pixelRatio: number;
-};
-
-function getViewportSnapshot(): ViewportSnapshot {
-  return {
-    width: globalThis.window?.innerWidth ?? DEFAULT_VIEWPORT_WIDTH,
-    height: globalThis.window?.innerHeight ?? DEFAULT_VIEWPORT_HEIGHT,
-    pixelRatio:
-      globalThis.window?.devicePixelRatio ?? DEFAULT_DEVICE_PIXEL_RATIO,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
-export type CloudinaryImageContext =
-  | "thumbnail"
-  | "gallery"
-  | "lightbox"
-  | "detail"
-  | "preview";
+export type { CloudinaryImageContext };
 
 export type CloudinaryImageProps = {
   /** Full delivery URL — always required as fallback. */
@@ -82,7 +42,6 @@ export type CloudinaryImageProps = {
   "data-testid"?: string;
 };
 
-
 export default function CloudinaryImage({
   url,
   cloud_name,
@@ -99,7 +58,6 @@ export default function CloudinaryImage({
 }: CloudinaryImageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const advancedImageRef = useRef<AdvancedImage | null>(null);
 
   // Reset loading state when the image source changes. Storing the previous key
   // in state (not a ref) is the React-documented pattern for deriving state from
@@ -115,10 +73,19 @@ export default function CloudinaryImage({
     setIsLoading(true);
   }
 
+  const resolvedUrl = getCloudinaryUrl({
+    url,
+    cloud_name,
+    cloudinary_public_id,
+    context,
+    crop,
+    requestedWidth,
+    requestedHeight,
+  });
+
   useEffect(() => {
     function syncLoadedStateFromDom() {
-      const image =
-        imageRef.current ?? advancedImageRef.current?.imageRef?.current ?? null;
+      const image = imageRef.current;
       if (image?.complete && image.naturalWidth > 0) {
         setIsLoading(false);
       }
@@ -131,7 +98,7 @@ export default function CloudinaryImage({
       window.removeEventListener("pageshow", syncLoadedStateFromDom);
       document.removeEventListener("visibilitychange", syncLoadedStateFromDom);
     };
-  }, [url, cloudinary_public_id, context, cropKey]);
+  }, [resolvedUrl]);
 
   function handleLoad(event: React.SyntheticEvent<HTMLImageElement>) {
     setIsLoading(false);
@@ -189,75 +156,6 @@ export default function CloudinaryImage({
     opacity: isLoading ? 0 : 1,
   };
 
-  const cloudName = cloud_name?.trim() || null;
-  const publicId = cloudinary_public_id?.trim() || null;
-
-  if (cloudName && publicId) {
-    const cld = new Cloudinary({ cloud: { cloudName } });
-    const img = cld.image(publicId);
-
-    // Apply same transformations as the helper
-    if (crop) {
-      img.resize(
-        cropAction()
-          .width(crop.width)
-          .height(crop.height)
-          .x(crop.x)
-          .y(crop.y)
-          .addFlag(relative()),
-      );
-    }
-
-    if (context === "lightbox") {
-      const viewport = getViewportSnapshot();
-      const vw = Math.round(viewport.width * viewport.pixelRatio * 0.9);
-      const vh = Math.round(viewport.height * viewport.pixelRatio * 0.8);
-      img.resize(fit().width(vw).height(vh));
-    } else if (context === "detail") {
-      const viewport = getViewportSnapshot();
-      const vw = Math.round(viewport.width * viewport.pixelRatio);
-      const vh = Math.round(viewport.height * viewport.pixelRatio * 0.65);
-      img.resize(fit().width(vw).height(vh));
-    } else {
-      const targetWidth = Math.round(
-        context === "gallery" ? (requestedWidth ?? 320) : THUMBNAIL_SIZE,
-      );
-
-      if (crop) {
-        img.resize(scale().width(targetWidth));
-      } else {
-        const targetHeight = Math.round(
-          context === "gallery" ? (requestedHeight ?? 240) : THUMBNAIL_SIZE,
-        );
-        img.resize(fill().width(targetWidth).height(targetHeight));
-      }
-    }
-
-    img.delivery(format(context === "lightbox" ? autoFormat() : jpg()));
-    img.delivery(quality(autoQuality()));
-
-    return (
-      <Box style={wrapperStyle}>
-        {isLoading && (
-          <Box style={spinnerStyle}>
-            <CircularProgress size={24} />
-          </Box>
-        )}
-        <AdvancedImage
-          ref={advancedImageRef}
-          cldImg={img}
-          alt={alt}
-          style={imageStyle}
-          className={className}
-          onLoad={handleLoad}
-          onError={handleError}
-          data-testid={testId}
-        />
-      </Box>
-    );
-  }
-
-  // No Cloudinary identity available — plain img fallback.
   return (
     <Box style={wrapperStyle}>
       {isLoading && (
@@ -267,7 +165,7 @@ export default function CloudinaryImage({
       )}
       <img
         ref={imageRef}
-        src={url}
+        src={resolvedUrl}
         alt={alt}
         style={imageStyle}
         className={className}

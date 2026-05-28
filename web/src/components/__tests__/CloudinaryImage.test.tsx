@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { forwardRef, useImperativeHandle, useRef } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CloudinaryImage from "../CloudinaryImage";
 
@@ -7,44 +6,6 @@ const cloudinaryMocks = vi.hoisted(() => ({
   resize: vi.fn(),
   cropAddFlag: vi.fn(),
   fillGravity: vi.fn(), // retained to confirm gravity is never called
-}));
-
-vi.mock("@cloudinary/react", () => ({
-  AdvancedImage: forwardRef(function MockAdvancedImage(
-    {
-      alt,
-      className,
-      "data-testid": testId,
-      onError,
-      onLoad,
-      style,
-    }: {
-      alt?: string;
-      className?: string;
-      "data-testid"?: string;
-      onError?: React.ReactEventHandler<HTMLImageElement>;
-      onLoad?: React.ReactEventHandler<HTMLImageElement>;
-      style?: React.CSSProperties;
-    },
-    ref: React.ForwardedRef<{
-      imageRef: React.RefObject<HTMLImageElement | null>;
-    }>,
-  ) {
-    const imageRef = useRef<HTMLImageElement>(null);
-    useImperativeHandle(ref, () => ({ imageRef }), []);
-
-    return (
-      <img
-        ref={imageRef}
-        alt={alt}
-        className={className}
-        data-testid={testId}
-        onError={onError}
-        onLoad={onLoad}
-        style={style}
-      />
-    );
-  }),
 }));
 
 vi.mock("@cloudinary/url-gen", () => ({
