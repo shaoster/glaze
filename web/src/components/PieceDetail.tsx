@@ -15,9 +15,11 @@ import HistoryIcon from "@mui/icons-material/History";
 import { useBlocker, useLocation, useNavigate } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
 import { formatState, isTerminalState, getCustomFieldDefinitions } from "../util/workflow";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updatePiece, updatePastState, updateCurrentState, moveImage, extractErrorMessage, addPieceState } from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
+import { getCloudinaryUrl } from "../util/cloudinary";
+import { imageLoadQueryOptions } from "../util/imageQueries";
 import NavigationBlocker from "./NavigationBlocker";
 import WorkflowState from "./WorkflowState";
 import TagManager from "./TagManager";
@@ -56,6 +58,7 @@ export default function PieceDetail({
 function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   const [isDirty, setIsDirty] = useState(false);
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
+  const queryClient = useQueryClient();
   const currentState = piece.current_state;
   const isTerminal = isTerminalState(currentState.state);
   const canEdit = piece.can_edit;
@@ -111,10 +114,24 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
       if (i === 0) img.fetchPriority = "high";
       img.src = url;
     });
+
+    // Also prefetch the lightbox-sized Cloudinary queries via TanStack Query
+    galleryImages.forEach((img) => {
+      if (img.url) {
+        const lightboxUrl = getCloudinaryUrl({
+          url: img.url,
+          cloud_name: img.cloud_name,
+          cloudinary_public_id: img.cloudinary_public_id,
+          crop: img.crop,
+          context: "lightbox",
+        });
+        queryClient.prefetchQuery(imageLoadQueryOptions(lightboxUrl));
+      }
+    });
     // galleryImages is recomputed every render but its identity changes with piece,
     // so depend only on piece to avoid re-running on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [piece]);
+  }, [piece, queryClient]);
 
   const { mutate: handleTransition, isPending: transitioning, error: rawTransitionError } = useMutation({
     mutationFn: (nextState: string) =>

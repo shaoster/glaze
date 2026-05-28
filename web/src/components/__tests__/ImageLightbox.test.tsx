@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render as baseRender, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Dialog, Box } from "@mui/material";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // CropOverlay uses useAsync to preload images; skip network in tests.
 vi.mock("../../util/useAsync", () => ({
@@ -9,8 +10,28 @@ vi.mock("../../util/useAsync", () => ({
   useAsyncFn: () => [{ loading: false, error: null }, vi.fn()],
 }));
 
+vi.mock("../../util/imageQueries", () => ({
+  useSuspendedImageLoad: vi.fn(() => ({ data: "mock-url" })),
+  imageLoadQueryOptions: (url: string) => ({ queryKey: ["image-load", url] }),
+}));
+
 import ImageLightbox from "../ImageLightbox";
 import type { CaptionedImage } from "../../util/types";
+import { useSuspendedImageLoad } from "../../util/imageQueries";
+
+function render(ui: React.ReactElement, options?: any) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  return baseRender(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+    options,
+  );
+}
 
 function makeImage(url: string, caption = ""): CaptionedImage {
   return { url, caption, created: new Date("2024-01-15T10:00:00Z") };
@@ -66,6 +87,17 @@ describe("ImageLightbox", () => {
     it("uses fallback alt text when caption is empty", () => {
       renderLightbox(THREE_IMAGES, 2);
       expect(screen.getByRole("img")).toHaveAttribute("alt", "Pottery image");
+    });
+
+    it("renders a skeleton loader when the image query suspends", () => {
+      const mockImageLoad = vi.mocked(useSuspendedImageLoad);
+      mockImageLoad.mockImplementationOnce(() => {
+        throw new Promise(() => {});
+      });
+
+      renderLightbox(ONE_IMAGE, 0);
+
+      expect(screen.getByRole("progressbar")).toBeInTheDocument();
     });
   });
 

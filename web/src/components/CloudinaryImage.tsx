@@ -80,6 +80,7 @@ export type CloudinaryImageProps = {
   "data-testid"?: string;
 };
 
+
 export default function CloudinaryImage({
   url,
   cloud_name,
@@ -188,12 +189,12 @@ export default function CloudinaryImage({
 
   const cloudName = cloud_name?.trim() || null;
   const publicId = cloudinary_public_id?.trim() || null;
-  const viewport = getViewportSnapshot();
 
   if (cloudName && publicId) {
     const cld = new Cloudinary({ cloud: { cloudName } });
     const img = cld.image(publicId);
 
+    // Apply same transformations as the helper
     if (crop) {
       img.resize(
         cropAction()
@@ -206,10 +207,12 @@ export default function CloudinaryImage({
     }
 
     if (context === "lightbox") {
+      const viewport = getViewportSnapshot();
       const vw = Math.round(viewport.width * viewport.pixelRatio * 0.9);
       const vh = Math.round(viewport.height * viewport.pixelRatio * 0.8);
       img.resize(fit().width(vw).height(vh));
     } else if (context === "detail") {
+      const viewport = getViewportSnapshot();
       const vw = Math.round(viewport.width * viewport.pixelRatio);
       const vh = Math.round(viewport.height * viewport.pixelRatio * 0.65);
       img.resize(fit().width(vw).height(vh));
@@ -219,21 +222,15 @@ export default function CloudinaryImage({
       );
 
       if (crop) {
-        // We already cropped perfectly to the subject. Scale the width to match the column,
-        // and let Cloudinary naturally infer the exact height based on the crop's intrinsic ratio.
         img.resize(scale().width(targetWidth));
       } else {
         const targetHeight = Math.round(
           context === "gallery" ? (requestedHeight ?? 240) : THUMBNAIL_SIZE,
         );
-        // Without a subject crop, fill the bounds (may trim edges to fit).
         img.resize(fill().width(targetWidth).height(targetHeight));
       }
     }
 
-    // Thumbnail and preview contexts request JPG explicitly — consistent
-    // format for small fill crops. Lightbox uses auto format so the browser
-    // can receive WebP/AVIF for large images.
     img.delivery(format(context === "lightbox" ? autoFormat() : jpg()));
     img.delivery(quality(autoQuality()));
 

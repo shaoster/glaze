@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import {
   Box,
   CircularProgress,
@@ -10,7 +10,9 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import { useSwipeable } from "react-swipeable";
 import type { CaptionedImage, ImageCrop } from "../util/types";
 import CloudinaryImage from "./CloudinaryImage";
+import { getCloudinaryUrl } from "../util/cloudinary";
 import CropOverlay from "./CropOverlay";
+import { useSuspendedImageLoad } from "../util/imageQueries";
 
 const SWIPE_THRESHOLD = 50;
 
@@ -175,21 +177,7 @@ export default function ImageLightbox({
               }}
             >
               {postCropLoading && pendingCropAspect !== null && (
-                <Box
-                  sx={{
-                    aspectRatio: pendingCropAspect,
-                    maxWidth: "90vw",
-                    maxHeight: "80vh",
-                    width: "90vw",
-                    borderRadius: "4px",
-                    bgcolor: "rgba(255,255,255,0.06)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <CircularProgress sx={{ color: "white" }} />
-                </Box>
+                <LightboxSkeleton crop={image.crop} />
               )}
               <Box
                 sx={postCropLoading ? {
@@ -199,23 +187,15 @@ export default function ImageLightbox({
                   pointerEvents: "none",
                 } : undefined}
               >
-                <CloudinaryImage
-                  url={image.url}
-                  cloud_name={image.cloud_name}
-                  cloudinary_public_id={image.cloudinary_public_id}
-                  crop={image.crop}
-                  alt={image.caption || "Pottery image"}
-                  context="lightbox"
-                  onLoad={() => { setPostCropLoading(false); setPendingCropAspect(null); }}
-                  style={{
-                    maxWidth: "90vw",
-                    maxHeight: "80vh",
-                    objectFit: "contain",
-                    borderRadius: 4,
-                    userSelect: "none",
-                    pointerEvents: "none",
-                  }}
-                />
+                <Suspense
+                  key={index}
+                  fallback={<LightboxSkeleton crop={image.crop} />}
+                >
+                  <SuspendedLightboxImage
+                    image={image}
+                    onLoad={() => { setPostCropLoading(false); setPendingCropAspect(null); }}
+                  />
+                </Suspense>
               </Box>
             </Box>
           </Box>
@@ -288,5 +268,64 @@ export default function ImageLightbox({
         )}
       </Box>
     </Modal>
+  );
+}
+
+function LightboxSkeleton({ crop }: { crop?: ImageCrop | null }) {
+  const aspect = crop ? crop.width / crop.height : 4 / 3;
+  return (
+    <Box
+      sx={{
+        aspectRatio: aspect,
+        maxWidth: "90vw",
+        maxHeight: "80vh",
+        width: "90vw",
+        borderRadius: "4px",
+        bgcolor: "rgba(255,255,255,0.06)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <CircularProgress sx={{ color: "white" }} />
+    </Box>
+  );
+}
+
+function SuspendedLightboxImage({
+  image,
+  onLoad,
+}: {
+  image: CaptionedImage;
+  onLoad?: () => void;
+}) {
+  const url = getCloudinaryUrl({
+    url: image.url,
+    cloud_name: image.cloud_name,
+    cloudinary_public_id: image.cloudinary_public_id,
+    crop: image.crop,
+    context: "lightbox",
+  });
+
+  useSuspendedImageLoad(url);
+
+  return (
+    <CloudinaryImage
+      url={image.url}
+      cloud_name={image.cloud_name}
+      cloudinary_public_id={image.cloudinary_public_id}
+      crop={image.crop}
+      alt={image.caption || "Pottery image"}
+      context="lightbox"
+      onLoad={onLoad}
+      style={{
+        maxWidth: "90vw",
+        maxHeight: "80vh",
+        objectFit: "contain",
+        borderRadius: 4,
+        userSelect: "none",
+        pointerEvents: "none",
+      }}
+    />
   );
 }

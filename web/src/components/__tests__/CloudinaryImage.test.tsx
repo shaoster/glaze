@@ -58,6 +58,9 @@ vi.mock("@cloudinary/url-gen", () => ({
         delivery() {
           return this;
         },
+        toURL() {
+          return `https://res.cloudinary.com/mock/${this.publicId}`;
+        },
       };
     }
   },
