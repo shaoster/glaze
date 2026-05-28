@@ -396,6 +396,7 @@ js_library(
     deps = [
         ":generated_types",
         ":node_modules",
+        ":util_lib",
     ],
 )
 

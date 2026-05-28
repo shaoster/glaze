@@ -26,8 +26,10 @@ import { auto as autoQuality } from "@cloudinary/url-gen/qualifiers/quality";
 import { relative } from "@cloudinary/url-gen/qualifiers/flag";
 import { AdvancedImage } from "@cloudinary/react";
 import { Box, CircularProgress } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import type { ImageCrop } from "../util/types";
+import { useSuspendedImageLoad } from "../util/imageQueries";
+import { getCloudinaryUrl } from "../util/cloudinary";
 
 const THUMBNAIL_SIZE = 64;
 const DEFAULT_VIEWPORT_WIDTH = 1200;
@@ -275,5 +277,110 @@ export default function CloudinaryImage({
         role="img"
       />
     </Box>
+  );
+}
+
+export function ImageSkeleton({
+  context,
+  crop,
+  aspectRatio,
+}: {
+  context: CloudinaryImageContext;
+  crop?: ImageCrop | null;
+  aspectRatio?: number | null;
+}) {
+  const aspect = aspectRatio ?? (crop ? crop.width / crop.height : 4 / 3);
+
+  if (context === "lightbox") {
+    return (
+      <Box
+        sx={{
+          aspectRatio: aspect,
+          maxWidth: "90vw",
+          maxHeight: "80vh",
+          width: "90vw",
+          borderRadius: "4px",
+          bgcolor: "rgba(255,255,255,0.06)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CircularProgress sx={{ color: "white" }} />
+      </Box>
+    );
+  }
+
+  if (context === "detail") {
+    return (
+      <Box
+        sx={{
+          width: "100%",
+          height: "100%",
+          minHeight: { xs: 200, sm: 260 },
+          aspectRatio: { md: "4 / 3" },
+          bgcolor: "rgba(255,255,255,0.06)",
+          borderRadius: "4px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CircularProgress size={24} />
+      </Box>
+    );
+  }
+
+  // Fallback for gallery/thumbnail/preview
+  return (
+    <Box
+      sx={{
+        width: "100%",
+        height: "100%",
+        aspectRatio: aspect,
+        bgcolor: "rgba(255,255,255,0.06)",
+        borderRadius: "4px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <CircularProgress size={16} />
+    </Box>
+  );
+}
+
+function InnerSuspenseCloudinaryImage(props: CloudinaryImageProps) {
+  const url = getCloudinaryUrl({
+    url: props.url,
+    cloud_name: props.cloud_name,
+    cloudinary_public_id: props.cloudinary_public_id,
+    crop: props.crop,
+    context: props.context,
+    requestedWidth: props.requestedWidth,
+    requestedHeight: props.requestedHeight,
+  });
+
+  useSuspendedImageLoad(url);
+
+  return <CloudinaryImage {...props} />;
+}
+
+export type SuspenseCloudinaryImageProps = CloudinaryImageProps & {
+  fallback?: React.ReactNode;
+};
+
+export function SuspenseCloudinaryImage({
+  fallback,
+  ...props
+}: SuspenseCloudinaryImageProps) {
+  const defaultFallback = fallback ?? (
+    <ImageSkeleton context={props.context} crop={props.crop} />
+  );
+
+  return (
+    <Suspense fallback={defaultFallback}>
+      <InnerSuspenseCloudinaryImage {...props} />
+    </Suspense>
   );
 }

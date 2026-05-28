@@ -18,6 +18,9 @@ vi.mock("../CloudinaryImage", () => ({
   default: ({ alt, url }: { alt?: string; url: string }) => (
     <img alt={alt} src={url} />
   ),
+  SuspenseCloudinaryImage: ({ alt, url }: { alt?: string; url: string }) => (
+    <img alt={alt} src={url} />
+  ),
 }));
 
 vi.mock("../../util/imageQueries", () => ({

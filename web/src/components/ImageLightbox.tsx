@@ -1,7 +1,6 @@
-import React, { useState, Suspense } from "react";
+import React, { useState } from "react";
 import {
   Box,
-  CircularProgress,
   IconButton,
   Modal,
   Typography,
@@ -9,10 +8,8 @@ import {
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import { useSwipeable } from "react-swipeable";
 import type { CaptionedImage, ImageCrop } from "../util/types";
-import CloudinaryImage from "./CloudinaryImage";
-import { getCloudinaryUrl } from "../util/cloudinary";
+import { SuspenseCloudinaryImage } from "./CloudinaryImage";
 import CropOverlay from "./CropOverlay";
-import { useSuspendedImageLoad } from "../util/imageQueries";
 
 const SWIPE_THRESHOLD = 50;
 
@@ -47,18 +44,28 @@ export default function ImageLightbox({
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [dragDeltaY, setDragDeltaY] = useState(0);
   const [cropMode, setCropMode] = useState(false);
-  const [postCropLoading, setPostCropLoading] = useState(false);
-  const [pendingCropAspect, setPendingCropAspect] = useState<number | null>(null);
+  const [optimisticCrop, setOptimisticCrop] = useState<ImageCrop | null>(null);
 
+  const image = images[index];
+
+  const currentCrop = image.crop ?? null;
+  const [prevCrop, setPrevCrop] = useState<ImageCrop | null>(currentCrop);
+  const [prevIndex, setPrevIndex] = useState(index);
+
+  if (!isSameCrop(currentCrop, prevCrop) || index !== prevIndex) {
+    setPrevCrop(currentCrop);
+    setPrevIndex(index);
+    setOptimisticCrop(null);
+  }
   function prev() {
     setIndex((i) => {
-      if (i > 0) { setCropMode(false); setPostCropLoading(false); setPendingCropAspect(null); return i - 1; }
+      if (i > 0) { setCropMode(false); return i - 1; }
       return i;
     });
   }
   function next() {
     setIndex((i) => {
-      if (i < images.length - 1) { setCropMode(false); setPostCropLoading(false); setPendingCropAspect(null); return i + 1; }
+      if (i < images.length - 1) { setCropMode(false); return i + 1; }
       return i;
     });
   }
@@ -96,8 +103,6 @@ export default function ImageLightbox({
     delta: 10,
     preventScrollOnSwipe: true,
   });
-
-  const image = images[index];
   const isCurrentThumbnail =
     !!currentThumbnailUrl && image.url === currentThumbnailUrl;
 
@@ -146,7 +151,6 @@ export default function ImageLightbox({
           </Box>
         )}
 
-        {/* Swipeable image area / crop editor */}
         {cropMode && image.cloudinary_public_id && image.cloud_name ? (
           <CropOverlay
             cloudinaryPublicId={image.cloudinary_public_id}
@@ -154,8 +158,7 @@ export default function ImageLightbox({
             initialCrop={image.crop ?? null}
             onSave={async (crop) => {
               await onCropSave?.(image, crop);
-              setPendingCropAspect(crop.width / crop.height);
-              setPostCropLoading(true);
+              setOptimisticCrop(crop);
               setCropMode(false);
             }}
             onCancel={() => setCropMode(false)}
@@ -176,27 +179,23 @@ export default function ImageLightbox({
                 position: "relative",
               }}
             >
-              {postCropLoading && pendingCropAspect !== null && (
-                <LightboxSkeleton aspectRatio={pendingCropAspect} />
-              )}
-              <Box
-                sx={postCropLoading ? {
-                  position: "absolute",
-                  inset: 0,
-                  opacity: 0,
+              <SuspenseCloudinaryImage
+                key={`${index}-${optimisticCrop ? "optimistic" : "real"}`}
+                url={image.url}
+                cloud_name={image.cloud_name}
+                cloudinary_public_id={image.cloudinary_public_id}
+                crop={optimisticCrop !== null ? optimisticCrop : image.crop}
+                alt={image.caption || "Pottery image"}
+                context="lightbox"
+                style={{
+                  maxWidth: "90vw",
+                  maxHeight: "80vh",
+                  objectFit: "contain",
+                  borderRadius: 4,
+                  userSelect: "none",
                   pointerEvents: "none",
-                } : undefined}
-              >
-                <Suspense
-                  key={index}
-                  fallback={<LightboxSkeleton crop={image.crop} />}
-                >
-                  <SuspendedLightboxImage
-                    image={image}
-                    onLoad={() => { setPostCropLoading(false); setPendingCropAspect(null); }}
-                  />
-                </Suspense>
-              </Box>
+                }}
+              />
             </Box>
           </Box>
         )}
@@ -271,67 +270,13 @@ export default function ImageLightbox({
   );
 }
 
-function LightboxSkeleton({
-  crop,
-  aspectRatio,
-}: {
-  crop?: ImageCrop | null;
-  aspectRatio?: number | null;
-}) {
-  const aspect = aspectRatio ?? (crop ? crop.width / crop.height : 4 / 3);
+function isSameCrop(c1: ImageCrop | null, c2: ImageCrop | null): boolean {
+  if (c1 === c2) return true;
+  if (!c1 || !c2) return false;
   return (
-    <Box
-      sx={{
-        aspectRatio: aspect,
-        maxWidth: "90vw",
-        maxHeight: "80vh",
-        width: "90vw",
-        borderRadius: "4px",
-        bgcolor: "rgba(255,255,255,0.06)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <CircularProgress sx={{ color: "white" }} />
-    </Box>
-  );
-}
-
-function SuspendedLightboxImage({
-  image,
-  onLoad,
-}: {
-  image: CaptionedImage;
-  onLoad?: () => void;
-}) {
-  const url = getCloudinaryUrl({
-    url: image.url,
-    cloud_name: image.cloud_name,
-    cloudinary_public_id: image.cloudinary_public_id,
-    crop: image.crop,
-    context: "lightbox",
-  });
-
-  useSuspendedImageLoad(url);
-
-  return (
-    <CloudinaryImage
-      url={image.url}
-      cloud_name={image.cloud_name}
-      cloudinary_public_id={image.cloudinary_public_id}
-      crop={image.crop}
-      alt={image.caption || "Pottery image"}
-      context="lightbox"
-      onLoad={onLoad}
-      style={{
-        maxWidth: "90vw",
-        maxHeight: "80vh",
-        objectFit: "contain",
-        borderRadius: 4,
-        userSelect: "none",
-        pointerEvents: "none",
-      }}
-    />
+    c1.x === c2.x &&
+    c1.y === c2.y &&
+    c1.width === c2.width &&
+    c1.height === c2.height
   );
 }
