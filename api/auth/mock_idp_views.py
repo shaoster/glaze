@@ -9,13 +9,17 @@ Flow:
   POST /api/auth/mock-idp/authorize/  →  302 → /api/auth/mock-idp/complete/?code=<signed>
   GET  /api/auth/mock-idp/complete/   →  creates Django session → 302 → /
 
-Agent headless two-step curl flow (single -L is unreliable — see report-bug skill):
+Agent headless two-step curl flow (single -L is unreliable — see the
+dev-environment skill for the canonical version). redirect_uri must be the
+RELATIVE path /api/auth/mock-idp/complete/ — an absolute http://… URL is
+rejected with 400. The returned Location is also relative, so prefix BASE on
+the complete/ GET:
   BASE=http://localhost:$(cat .dev-pids/backend.port)
-  COMPLETE=$(curl -s -c cookies.txt -b cookies.txt -D - -X POST \\
-    --data "redirect_uri=${BASE}/api/auth/mock-idp/complete/&state=x" \\
+  LOCATION=$(curl -s -c cookies.txt -b cookies.txt -D - -X POST \\
+    --data "redirect_uri=/api/auth/mock-idp/complete/&state=x" \\
     "${BASE}/api/auth/mock-idp/authorize/" \\
     | grep -i "^location:" | sed 's/[Ll]ocation: //' | tr -d '\\r\\n')
-  curl -s -c cookies.txt -b cookies.txt "$COMPLETE" -o /dev/null
+  curl -s -c cookies.txt -b cookies.txt "${BASE}${LOCATION}" -o /dev/null
   # Session cookie is now in cookies.txt
 """
 

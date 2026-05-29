@@ -171,6 +171,92 @@ jobs:
       - if: failure()
         uses: ./.github/actions/collect-failure-diagnostics
 
+  dev-smoke:
+    name: Dev bootstrap smoke (env.sh → gz_start → login → gz_stop)
+    needs: preflight
+    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-bazel-ci
+        with:
+          cache-key-prefix: dev-smoke
+          deps-key: ${{ needs.preflight.outputs.deps_key }}
+          buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
+
+      # Verifies the developer bootstrap end to end: the documented
+      # `source env.sh` → `gz_start` flow must bring up the dev stack on a
+      # clean checkout, a user must be able to sign in via the dev mock-IdP
+      # login flow, the pieces API must return the seeded sample data, and
+      # `gz_stop` must tear the stack back down. The whole sequence runs in one
+      # shell because gz_start registers an EXIT trap that stops the servers
+      # when the step's shell exits (which also cleans up on failure).
+      - name: Bootstrap, log in via mock IdP, verify pieces, stop
+        shell: bash
+        run: |
+          # No `set -u`: env.sh / env-agent.sh are not nounset-safe (they read
+          # $_GLAZE_AGENT_ENV_LOADED before it is set). -e and pipefail are
+          # already applied by the Actions bash wrapper; keep them explicit.
+          set -eo pipefail
+          source env.sh
+
+          fail() {
+            echo "::error::dev-smoke: $1" >&2
+            echo "--- backend log ---" >&2
+            cat .dev-logs/backend.log 2>/dev/null >&2 || true
+            exit 1
+          }
+
+          echo "::group::gz_start"
+          gz_start || fail "gz_start failed to bring up the dev stack"
+          echo "::endgroup::"
+
+          BASE="http://localhost:$(cat .dev-pids/backend.port)"
+          JAR="$(mktemp)"
+
+          # Dev login flow: POST the mock-IdP authorize endpoint (CSRF-exempt),
+          # capture the relative redirect to complete/, then GET it to land the
+          # session cookie. A single `curl -L` is unreliable here because cookies
+          # written at the intermediate hop are not flushed when the final hop
+          # returns a redirect — so we do the two steps explicitly.
+          echo "::group::mock-IdP login"
+          LOCATION=$(curl -fsS --retry 5 --retry-connrefused -c "$JAR" -b "$JAR" -D - -X POST \
+            --data "redirect_uri=/api/auth/mock-idp/complete/&state=ci&login_hint=dev@localhost" \
+            "${BASE}/api/auth/mock-idp/authorize/" \
+            | grep -i '^location:' | sed 's/[Ll]ocation: //' | tr -d '\r\n')
+          [ -n "$LOCATION" ] || fail "mock-IdP authorize did not return a redirect (is DEV_BOOTSTRAP_ENABLED set?)"
+          curl -fsS -c "$JAR" -b "$JAR" "${BASE}${LOCATION}" -o /dev/null
+          echo "::endgroup::"
+
+          # Confirm we have an authenticated session.
+          curl -fsS -b "$JAR" "${BASE}/api/auth/me/" \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("user"), "no authenticated user"; print("authenticated:", d["user"]["openid_subject"][:16])' \
+            || fail "session was not authenticated after mock-IdP login"
+
+          # The freshly bootstrapped dev user is seeded with sample pieces.
+          COUNT=$(curl -fsS -b "$JAR" "${BASE}/api/pieces/" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["count"])') \
+            || fail "could not read /api/pieces/"
+          echo "pieces count: $COUNT"
+          [ "$COUNT" -gt 0 ] || fail "expected seeded pieces after login, got $COUNT"
+
+          echo "::group::gz_stop"
+          gz_stop
+          echo "::endgroup::"
+
+          # gz_stop must actually stop both servers. Match only the affirmative
+          # running state — a plain "running" grep also matches "not running".
+          if gz_status | grep -qE ': running'; then
+            gz_status >&2
+            fail "gz_stop did not stop all servers"
+          fi
+          echo "dev-smoke: passed (pieces=$COUNT)"
+
+      - if: failure()
+        uses: ./.github/actions/collect-failure-diagnostics
+
   image:
     name: Build & smoke-test OCI image
     needs: preflight
@@ -250,8 +336,8 @@ jobs:
 
   record-fingerprint:
     name: Record successful fingerprint
-    needs: [preflight, lint, coverage, image]
-    if: ${{ github.event_name == 'pull_request' && needs.lint.result == 'success' && needs.coverage.result == 'success' && needs.image.result == 'success' }}
+    needs: [preflight, lint, coverage, dev-smoke, image]
+    if: ${{ github.event_name == 'pull_request' && needs.lint.result == 'success' && needs.coverage.result == 'success' && needs.dev-smoke.result == 'success' && needs.image.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Write fingerprint marker

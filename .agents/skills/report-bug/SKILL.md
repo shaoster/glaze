@@ -86,12 +86,15 @@ cp /home/phil/code/glaze/.env.local .env.local
 
 **3c. Start the server**
 
-`cd` into the worktree, source `env.sh` (which sets `GLAZE_ROOT` to the worktree),
-then start the servers in the background and poll for the port file:
+`cd` into the worktree and source `env-agent.sh` — the **agent** bootstrap. It
+sets `GLAZE_ROOT` to the worktree and defines the `gz_*` helpers while keeping
+`GLAZE_AGENT` set. Do **not** source `env.sh`: that is the human entry point and
+unsets `GLAZE_AGENT` (dropping the `rtk` prefix agent sessions rely on). Then
+start the servers in the background and poll for the port file:
 
 ```bash
 cd /path/to/worktree
-source env.sh
+source env-agent.sh
 gz_start &
 for i in $(seq 1 20); do
   port=$(cat .dev-pids/backend.port 2>/dev/null)
@@ -100,9 +103,9 @@ for i in $(seq 1 20); do
 done
 ```
 
-**Critical:** `env.sh` must be sourced from inside the worktree directory.
-Sourcing it from the main checkout sets `GLAZE_ROOT` to the main checkout,
-causing `gz_start` to write pid/port files there instead of the worktree.
+**Critical:** source `env-agent.sh` from inside the worktree directory. Sourcing
+it from the main checkout sets `GLAZE_ROOT` to the main checkout, causing
+`gz_start` to write pid/port files there instead of the worktree.
 
 Confirm the server is up:
 
@@ -111,52 +114,29 @@ BASE=http://localhost:$(cat .dev-pids/backend.port)
 curl -s "${BASE}/api/auth/me/" | python3 -m json.tool   # confirm mockIdpUrl is present
 ```
 
-**3d. Authenticate via mock IdP**
+**3d. Authenticate via the dev login flow**
 
-The mock IdP authorize endpoint is CSRF-exempt. Use a two-step curl flow —
-do not use `curl -L` across the full chain, as curl does not reliably flush
-cookies written at intermediate redirects when the final hop (to `/`) returns
-a non-2xx status from Django's dev server.
+Sign in using the mock-IdP dev login. The canonical two-step curl flow,
+the relative-`redirect_uri` requirement, and the auto-seeded sample pieces
+are documented once in
+[`dev-environment` → Authenticating Against the Local Dev Server](../dev-environment/SKILL.md#authenticating-against-the-local-dev-server-dev-login).
+Follow that flow; first login seeds ~75 pieces for the chosen `login_hint`,
+which is usually enough data to reproduce list/pagination bugs without a prod restore.
 
-**Important:** The POST body contains `&` characters that shells and tool proxies
-interpret as operators. Write the body to a file and use `--data-binary @file`
-instead of inline `-d "..."`:
-
-```bash
-# Step 1: POST to authorize → capture the redirect to complete/
-printf 'redirect_uri=%s/api/auth/mock-idp/complete/&state=repro&login_hint=dev@localhost' \
-  "$BASE" > /tmp/idp-post.txt
-COMPLETE_URL=$(curl -s -c /tmp/glaze-cookies.txt -b /tmp/glaze-cookies.txt \
-  -D - -X POST \
-  --data-binary @/tmp/idp-post.txt \
-  "${BASE}/api/auth/mock-idp/authorize/" \
-  | grep -i "^location:" | sed 's/[Ll]ocation: //' | tr -d '\r\n')
-
-# Step 2: GET complete/ → session cookie is written to the jar
-curl -s -c /tmp/glaze-cookies.txt -b /tmp/glaze-cookies.txt \
-  "$COMPLETE_URL" -o /dev/null -w "%{http_code}\n"   # expect 302
-
-# Verify: user and pieces should now be present
-curl -s -b /tmp/glaze-cookies.txt "${BASE}/api/auth/me/" | python3 -m json.tool
-curl -s -b /tmp/glaze-cookies.txt "${BASE}/api/pieces/" | python3 -c \
-  "import sys,json; d=json.load(sys.stdin); print('pieces:', d['count'])"
-```
-
-For multi-user repro, repeat with a second cookie jar and a different
-`login_hint`:
+**Repro-specific shell-escaping tip:** the POST body contains `&`, which some
+shells and tool proxies interpret as an operator. If inline `--data` misbehaves,
+write the body to a file and use `--data-binary @file`:
 
 ```bash
-COMPLETE_URL=$(curl -s -c /tmp/glaze-cookies-b.txt -b /tmp/glaze-cookies-b.txt \
-  -D - -X POST \
-  -d "redirect_uri=${BASE}/api/auth/mock-idp/complete/&state=repro&login_hint=other@example.com" \
-  "${BASE}/api/auth/mock-idp/authorize/" \
-  | grep -i "^location:" | sed 's/[Ll]ocation: //' | tr -d '\r\n')
-curl -s -c /tmp/glaze-cookies-b.txt -b /tmp/glaze-cookies-b.txt \
-  "$COMPLETE_URL" -o /dev/null
+printf 'redirect_uri=/api/auth/mock-idp/complete/&state=repro&login_hint=dev@localhost' \
+  > /tmp/idp-post.txt
+# ...then --data-binary @/tmp/idp-post.txt in the authorize POST.
 ```
 
-**Guard**: the mock IdP only exists when `DEV_BOOTSTRAP_ENABLED=True` (the
-default in dev). It is absent from production — calls will 403 or 404 there.
+For multi-user repros, repeat the flow with a second cookie jar and a different
+`login_hint`. The guard is the same as documented in the skill: the mock IdP
+exists only when `DEV_BOOTSTRAP_ENABLED=True` (default in dev), and is absent
+from production (403/404 there).
 
 ### 4. Investigate locally
 
