@@ -1,14 +1,37 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
-vi.mock("react-easy-crop", () => ({
-  default: function MockCropper({ onMediaLoaded }: any) {
-    const onMediaLoadedRef = React.useRef(onMediaLoaded);
+// Captures the props the component passes to the cropper so tests can assert on
+// them (e.g. that no fixed aspect ratio is imposed — the #737 regression).
+let lastCropperProps: any = null;
+
+// Fake cropper "ref" handed to onChange. getCoordinates returns a deliberately
+// NON-square region (width !== height) so a fixed aspect ratio would be detectable.
+const fakeCropper = {
+  getCoordinates: () => ({ left: 10, top: 20, width: 30, height: 40 }),
+  getState: () => ({ imageSize: { width: 100, height: 100 } }),
+};
+
+vi.mock("react-advanced-cropper", () => ({
+  Cropper: function MockCropper(props: any) {
+    lastCropperProps = props;
+    const propsRef = React.useRef(props);
+    propsRef.current = props;
     React.useEffect(() => {
-      onMediaLoadedRef.current?.({ naturalWidth: 100, naturalHeight: 100 });
+      propsRef.current.onReady?.(fakeCropper);
+      propsRef.current.onChange?.(fakeCropper);
     }, []);
     return <div data-testid="mock-cropper" />;
+  },
+  RectangleStencil: function MockRectangleStencil() {
+    return null;
+  },
+  ImageRestriction: {
+    fillArea: "fillArea",
+    fitArea: "fitArea",
+    stencil: "stencil",
+    none: "none",
   },
 }));
 
@@ -42,9 +65,23 @@ const DEFAULT_PROPS = {
 };
 
 describe("CropOverlay", () => {
+  beforeEach(() => {
+    lastCropperProps = null;
+  });
+
   it("renders the crop editor", () => {
     render(<CropOverlay {...DEFAULT_PROPS} />);
     expect(screen.getByTestId("mock-cropper")).toBeInTheDocument();
+  });
+
+  // Regression for #737: the crop must be free-form — no fixed aspect ratio
+  // imposed on the stencil.
+  it("uses free-form cropping (no fixed aspect ratio)", () => {
+    render(<CropOverlay {...DEFAULT_PROPS} />);
+    const stencilProps = lastCropperProps?.stencilProps ?? {};
+    expect(stencilProps.aspectRatio).toBeUndefined();
+    expect(stencilProps.minAspectRatio).toBeUndefined();
+    expect(stencilProps.maxAspectRatio).toBeUndefined();
   });
 
   it("Cancel button calls onCancel without calling onSave", async () => {
@@ -58,17 +95,15 @@ describe("CropOverlay", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  it("Save Crop button calls onSave with a valid crop", async () => {
+  it("Save Crop persists the free-form crop with independent width/height", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(<CropOverlay {...DEFAULT_PROPS} onSave={onSave} />);
     fireEvent.click(screen.getByText("Save Crop"));
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
     const [crop] = onSave.mock.calls[0];
-    expect(crop).toMatchObject({
-      x: expect.any(Number),
-      y: expect.any(Number),
-      width: expect.any(Number),
-      height: expect.any(Number),
-    });
+    // fakeCropper: {left:10, top:20, width:30, height:40} over a 100×100 image.
+    expect(crop).toMatchObject({ x: 0.1, y: 0.2, width: 0.3, height: 0.4 });
+    // Crucially, width !== height — a fixed aspect ratio could not produce this.
+    expect(crop.width).not.toBe(crop.height);
   });
 });

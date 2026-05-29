@@ -301,8 +301,8 @@ js_library(
         ":node_modules/masonic",
         ":node_modules/qrcode.react",
         ":node_modules/react",
+        ":node_modules/react-advanced-cropper",
         ":node_modules/react-dom",
-        ":node_modules/react-easy-crop",
         ":node_modules/react-router-dom",
         ":node_modules/react-sketch-canvas",
         ":node_modules/react-swipeable",
@@ -340,7 +340,7 @@ js_library(
     deps = [
         ":generated_types",
         ":node_modules",
-        ":node_modules/react-easy-crop",
+        ":node_modules/react-advanced-cropper",
         ":util_lib",
         "//:workflow_js",
     ],
@@ -414,7 +414,7 @@ js_library(
     srcs = ["src/components/CropOverlay.tsx"],
     deps = [
         ":node_modules",
-        ":node_modules/react-easy-crop",
+        ":node_modules/react-advanced-cropper",
         ":util_lib",
     ],
 )
@@ -745,7 +745,7 @@ js_library(
     deps = [
         ":generated_types",
         ":node_modules",
-        ":node_modules/react-easy-crop",
+        ":node_modules/react-advanced-cropper",
         ":ocr_detection_src",
         ":util_lib",
     ],

@@ -12,8 +12,9 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import Cropper from "react-easy-crop";
-import type { Area } from "react-easy-crop";
+import { Cropper, RectangleStencil, ImageRestriction } from "react-advanced-cropper";
+import type { CropperRef } from "react-advanced-cropper";
+import "react-advanced-cropper/dist/style.css";
 import GlazeImportRecordList from "./GlazeImportRecordList";
 import type { UploadedRecord } from "./glazeImportToolTypes";
 import type { CropSquare } from "../ocrDetection";
@@ -91,12 +92,16 @@ export default function GlazeImportCropStage({
     ? clampCrop(selectedRecord.dimensions, selectedRecord.crop)
     : null;
 
-  function handleCropComplete(_croppedArea: Area, croppedAreaPixels: Area) {
+  function handleCropChange(cropper: CropperRef) {
     if (!selectedRecord) return;
+    const coords = cropper.getCoordinates();
+    if (!coords) return;
+    // The import swatch is square by design (#146): aspectRatio={1} keeps
+    // width === height, so a single `size` captures the crop.
     const crop: CropSquare = {
-      x: croppedAreaPixels.x,
-      y: croppedAreaPixels.y,
-      size: croppedAreaPixels.width,
+      x: coords.left,
+      y: coords.top,
+      size: coords.width,
       rotation: cropEditor.rotation,
     };
     setRecords((current) =>
@@ -222,31 +227,27 @@ export default function GlazeImportCropStage({
                   >
                     <Cropper
                       key={selectedRecord.id}
-                      image={selectedRecord.sourceUrl}
-                      crop={cropEditor.crop}
-                      zoom={cropEditor.zoom}
-                      rotation={cropEditor.rotation}
-                      aspect={1}
-                      initialCroppedAreaPixels={
+                      src={selectedRecord.sourceUrl}
+                      stencilComponent={RectangleStencil}
+                      // Square swatch by design (#146) — keep the 1:1 lock.
+                      stencilProps={{ aspectRatio: 1, grid: true }}
+                      imageRestriction={ImageRestriction.none}
+                      className="cropper"
+                      style={{ width: "100%", height: "100%" }}
+                      defaultSize={
                         selectedCrop
                           ? {
-                              x: selectedCrop.x,
-                              y: selectedCrop.y,
                               width: selectedCrop.size,
                               height: selectedCrop.size,
                             }
                           : undefined
                       }
-                      onCropChange={(crop) =>
-                        dispatchCropEditor({ type: "CROP_CHANGE", crop })
+                      defaultPosition={
+                        selectedCrop
+                          ? { left: selectedCrop.x, top: selectedCrop.y }
+                          : undefined
                       }
-                      onZoomChange={(zoom) =>
-                        dispatchCropEditor({ type: "ZOOM_CHANGE", zoom })
-                      }
-                      onRotationChange={(rotation) =>
-                        dispatchCropEditor({ type: "ROTATION_CHANGE", rotation })
-                      }
-                      onCropComplete={handleCropComplete}
+                      onChange={handleCropChange}
                     />
                   </Box>
                 </Box>
