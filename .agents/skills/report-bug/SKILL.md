@@ -86,12 +86,15 @@ cp /home/phil/code/glaze/.env.local .env.local
 
 **3c. Start the server**
 
-`cd` into the worktree, source `env.sh` (which sets `GLAZE_ROOT` to the worktree),
-then start the servers in the background and poll for the port file:
+`cd` into the worktree and source `env-agent.sh` — the **agent** bootstrap. It
+sets `GLAZE_ROOT` to the worktree and defines the `gz_*` helpers while keeping
+`GLAZE_AGENT` set. Do **not** source `env.sh`: that is the human entry point and
+unsets `GLAZE_AGENT` (dropping the `rtk` prefix agent sessions rely on). Then
+start the servers in the background and poll for the port file:
 
 ```bash
 cd /path/to/worktree
-source env.sh
+source env-agent.sh
 gz_start &
 for i in $(seq 1 20); do
   port=$(cat .dev-pids/backend.port 2>/dev/null)
@@ -100,9 +103,9 @@ for i in $(seq 1 20); do
 done
 ```
 
-**Critical:** `env.sh` must be sourced from inside the worktree directory.
-Sourcing it from the main checkout sets `GLAZE_ROOT` to the main checkout,
-causing `gz_start` to write pid/port files there instead of the worktree.
+**Critical:** source `env-agent.sh` from inside the worktree directory. Sourcing
+it from the main checkout sets `GLAZE_ROOT` to the main checkout, causing
+`gz_start` to write pid/port files there instead of the worktree.
 
 Confirm the server is up:
 
