@@ -146,7 +146,6 @@ export default function CropOverlay({
           // No aspectRatio → free-form, resizable in any direction (#737).
           stencilProps={{ grid: true }}
           imageRestriction={ImageRestriction.fitArea}
-          className="cropper"
           style={{ width: "100%", height: "100%" }}
           defaultSize={({ imageSize }: { imageSize: { width: number; height: number } }) =>
             initialCrop

@@ -1,5 +1,5 @@
 import {
-  useReducer,
+  useState,
   type Dispatch,
   type SetStateAction,
 } from "react";
@@ -17,7 +17,6 @@ import type { CropperRef } from "react-advanced-cropper";
 import "react-advanced-cropper/dist/style.css";
 import GlazeImportRecordList from "./GlazeImportRecordList";
 import type { UploadedRecord } from "./glazeImportToolTypes";
-import type { CropSquare } from "../ocrDetection";
 import {
   clampCrop,
   defaultCrop,
@@ -36,40 +35,6 @@ interface GlazeImportCropStageProps {
   onContinueToOcr: () => void;
 }
 
-type CropEditorState = {
-  crop: { x: number; y: number };
-  zoom: number;
-  rotation: number;
-};
-
-type CropEditorAction =
-  | { type: "CROP_CHANGE"; crop: { x: number; y: number } }
-  | { type: "ZOOM_CHANGE"; zoom: number }
-  | { type: "ROTATION_CHANGE"; rotation: number }
-  | { type: "RECORD_SELECTED"; rotation: number };
-
-function cropEditorReducer(
-  state: CropEditorState,
-  action: CropEditorAction,
-): CropEditorState {
-  switch (action.type) {
-    case "CROP_CHANGE":
-      return { ...state, crop: action.crop };
-    case "ZOOM_CHANGE":
-      return { ...state, zoom: action.zoom };
-    case "ROTATION_CHANGE":
-      return { ...state, rotation: action.rotation };
-    case "RECORD_SELECTED":
-      return { crop: { x: 0, y: 0 }, zoom: 1, rotation: action.rotation };
-  }
-}
-
-const INITIAL_CROP_EDITOR: CropEditorState = {
-  crop: { x: 0, y: 0 },
-  zoom: 1,
-  rotation: 0,
-};
-
 export default function GlazeImportCropStage({
   records,
   selectedRecordId,
@@ -81,10 +46,9 @@ export default function GlazeImportCropStage({
   onDelete,
   onContinueToOcr,
 }: GlazeImportCropStageProps) {
-  const [cropEditor, dispatchCropEditor] = useReducer(
-    cropEditorReducer,
-    INITIAL_CROP_EDITOR,
-  );
+  // Crop rotation is only ever seeded from the selected record; this stage has
+  // no rotation control. The cropper manages its own pan/zoom internally.
+  const [rotation, setRotation] = useState(0);
 
   const selectedRecord =
     records.find((record) => record.id === selectedRecordId) ?? null;
@@ -98,18 +62,30 @@ export default function GlazeImportCropStage({
     if (!coords) return;
     // The import swatch is square by design (#146): aspectRatio={1} keeps
     // width === height, so a single `size` captures the crop.
-    const crop: CropSquare = {
+    const next = clampCrop(selectedRecord.dimensions, {
       x: coords.left,
       y: coords.top,
       size: coords.width,
-      rotation: cropEditor.rotation,
-    };
+      rotation,
+    });
+    // react-advanced-cropper's onChange fires continuously; skip the update
+    // (and the OCR-state reset below) when the clamped crop is unchanged.
+    const prev = selectedRecord.crop;
+    if (
+      prev &&
+      prev.x === next.x &&
+      prev.y === next.y &&
+      prev.size === next.size &&
+      prev.rotation === next.rotation
+    ) {
+      return;
+    }
     setRecords((current) =>
       current.map((record) =>
         record.id === selectedRecord.id
           ? {
               ...record,
-              crop: clampCrop(record.dimensions, crop),
+              crop: next,
               cropped: true,
               ocrSuggestion: null,
               ocrStatus: "idle",
@@ -123,7 +99,7 @@ export default function GlazeImportCropStage({
 
   function handleResetCrop() {
     if (!selectedRecord) return;
-    dispatchCropEditor({ type: "RECORD_SELECTED", rotation: 0 });
+    setRotation(0);
     setRecords((current) =>
       current.map((record) => {
         if (record.id !== selectedRecord.id) return record;
@@ -168,10 +144,7 @@ export default function GlazeImportCropStage({
             selectedId={selectedRecordId}
             onSelect={(id) => {
               const record = records.find((r) => r.id === id);
-              dispatchCropEditor({
-                type: "RECORD_SELECTED",
-                rotation: record?.crop?.rotation ?? 0,
-              });
+              setRotation(record?.crop?.rotation ?? 0);
               setSelectedRecordId(id);
             }}
             onDelete={onDelete}
@@ -232,7 +205,6 @@ export default function GlazeImportCropStage({
                       // Square swatch by design (#146) — keep the 1:1 lock.
                       stencilProps={{ aspectRatio: 1, grid: true }}
                       imageRestriction={ImageRestriction.none}
-                      className="cropper"
                       style={{ width: "100%", height: "100%" }}
                       defaultSize={
                         selectedCrop
