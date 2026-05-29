@@ -1,13 +1,15 @@
 ---
 model: opus
 created: 2026-05-08
-modified: 2026-05-08
-reviewed: 2026-05-08
+modified: 2026-05-28
+reviewed: 2026-05-28
 name: dev-packages
 description: |
-  Adding Python or npm packages to Glaze: pip-compile lock file regeneration,
-  BUILD.bazel requirement() declarations, pnpm import for npm, and commit checklist.
-  Invoke when an issue requires adding, removing, or upgrading a dependency.
+  Adding Python or npm packages to Glaze: lock file regeneration (uv / pnpm),
+  BUILD.bazel dep declarations including adding npm packages to BOTH the dev/build
+  (web_lib, component *_src) and production (web_prod_lib) lib targets, and the
+  commit checklist. Invoke when an issue requires adding, removing, or upgrading a
+  dependency.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 ---
 
@@ -73,14 +75,34 @@ Prefer Python for standalone dev tooling when the dependency graph allows it. Us
 `source env.sh` prepends the repo-local `bin/` directory, so `npm` and `pnpm`
 resolve to the Bazel-aware wrappers by default.
 
-After updating the lockfile, check whether the new package needs to be added to a
-`js_library` `srcs` or `deps` in the relevant `BUILD.bazel`:
+### Wire the package into the Bazel lib targets — **dev and prod, by default**
+
+A new npm package imported by app code must be declared in **both** the production
+bundle and the dev/build + test libraries. Adding it to only one is the most common
+footgun here — `react-easy-crop` shipped broken twice because it was added to one lib
+target and not the other, fixed in two separate commits. Add it to both in the same
+change:
+
+| Target | File | How deps are declared | Action for a new package |
+|---|---|---|---|
+| `web_prod_lib` | `web/BUILD.bazel` | **Enumerates each package** (`:node_modules/<pkg>`) | **Always add** `:node_modules/<pkg>` |
+| `web_lib` (dev/build) | `web/BUILD.bazel` | Broad `:node_modules` + a few explicit entries | **Add** `:node_modules/<pkg>` by default — the broad dep does not reliably resolve every package (e.g. `react-easy-crop` needed an explicit entry) |
+| Component `*_src` libs (tests) | `web/BUILD.bazel` | Broad `:node_modules` | Add `:node_modules/<pkg>` to any `*_src` lib whose component imports it, if its `vitest_test` fails to resolve the module |
+
+Keep `web_prod_lib`'s list alphabetized (it currently is). Inspect a target's current
+deps with:
 
 ```bash
-rtk bazel query 'labels(srcs, <library-target>)'  # inspect what a target currently includes
+rtk bazel query 'labels(deps, //web:web_prod_lib)'
+rtk bazel query 'labels(deps, //web:web_lib)'
 ```
 
-Add the package to the appropriate `BUILD.bazel` entry if Bazel tests fail with a
-missing module error.
+Verify both the dev/build path and the prod bundle resolve the package before committing:
 
-Commit `web/package.json`, `web/package-lock.json`, and `web/pnpm-lock.yaml` together.
+```bash
+rtk bazel build //web:web_lib //web:web_prod_lib
+rtk bazel test //web:web_test          # exercises the component *_src libs
+```
+
+Commit `web/package.json`, `web/package-lock.json`, `web/pnpm-lock.yaml`, and the
+`web/BUILD.bazel` lib-target changes together.

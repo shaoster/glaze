@@ -7,10 +7,13 @@ name: dev-environment
 description: |
   Glaze dev environment setup: shell bootstrap (env.sh / env-agent.sh), VS Code
   terminal profile, Claude Code BASH_ENV, worktree navigation (gz_cd, gz_worktrees),
-  one-terminal-per-worktree rule, environment variables, worktree database isolation
-  (gz_start db resolution, bazel run //:manage footgun), and .env.local copy pitfalls.
-  Invoke when setting up a fresh environment, navigating worktrees, suggesting how to
-  run servers locally, or troubleshooting database/env-var mismatches in a worktree.
+  one-terminal-per-worktree rule, running servers (gz_start/gz_stop), the dev login
+  flow (mock-IdP no-credential sign-in that auto-seeds sample pieces), production
+  backup & local restore (gz_backup / gz_restore), environment variables, worktree
+  database isolation (gz_start db resolution, bazel run //:manage footgun), and
+  .env.local copy pitfalls. Invoke when setting up a fresh environment, navigating
+  worktrees, running servers locally, logging in to the dev server, loading real or
+  sample data, or troubleshooting database/env-var mismatches in a worktree.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, TodoWrite
 ---
 
@@ -28,7 +31,15 @@ cd web
 npm install
 ```
 
-In a new environment, always run `source env.sh` before doing anything else.
+> **Agents: source `env-agent.sh`, never `env.sh`.** `env.sh` is the **human**
+> entry point — it sources `~/.bashrc` and unsets `GLAZE_AGENT`, dropping the
+> `rtk` token-saving prefix that agent sessions rely on. Agents already get
+> `env-agent.sh` automatically via `BASH_ENV` (see Claude Code note below), so
+> normally you don't source anything by hand. If you must bootstrap explicitly,
+> run `source env-agent.sh`. Never run `source env.sh`, and never use helpers
+> that re-source it (e.g. `gz_reload`).
+
+For **humans** in a new interactive shell, run `source env.sh` before doing anything else.
 The bootstrap lazily materializes the minimal local state needed for a healthy shell
 and keeps the repo-local developer environment consistent across worktrees.
 
@@ -36,10 +47,13 @@ and keeps the repo-local developer environment consistent across worktrees.
 
 | Script | Purpose |
 |---|---|
-| `env.sh` | Interactive shells: sources `~/.bashrc`, delegates to `env-agent.sh`, defines all `gz_*` helpers |
-| `env-agent.sh` | Lightweight, silent bootstrap for non-interactive shells: activates `.venv` if present, loads `.env.local` vars, exports `BASH_ENV` |
+| `env.sh` | Interactive shells: sources `~/.bashrc`, then delegates to `env-agent.sh`. Used as `bash --rcfile` by the VS Code profile. Does **not** define helpers itself. |
+| `env-agent.sh` | The authoritative bootstrap: activates `.venv` if present, loads `.env.local` vars, exports `BASH_ENV`, **and defines all `gz_*` helper functions** |
 
-`env.sh` sources `env-agent.sh` — venv activation and env-var loading logic live in one place.
+`env.sh` sources `env-agent.sh` — venv activation, env-var loading, and every `gz_*` helper
+definition live in one place. **To find what a `gz_*` command actually does, read
+`env-agent.sh`, not `env.sh`** (e.g. `gz_backup` at L412, `gz_restore` at L474, the
+`_GZ_SHORTCUTS` catalogue at L1161). `gz_help` prints the full list at runtime.
 
 **VS Code / Cursor:** `.vscode/settings.json` configures a `glaze` terminal profile running
 `bash --rcfile env.sh`. New terminals automatically get the full interactive environment.
@@ -91,6 +105,50 @@ Two worktrees can run full dev stacks simultaneously without port conflicts.
 
 `gz_start` registers a shell `EXIT` trap that calls `gz_stop` automatically when the
 terminal tab closes (best-effort: fires on normal exits, not SIGKILL).
+
+## Authenticating Against the Local Dev Server (dev login)
+
+The dev server ships a **no-credential mock identity provider** so agents and humans
+can sign in without Google OAuth. It is mounted only when `DEV_BOOTSTRAP_ENABLED` is
+true — the default in dev (`DEBUG=True`), and **absent in production** (calls 403/404
+there). The endpoints are `GET/POST /api/auth/mock-idp/authorize/` and
+`GET /api/auth/mock-idp/complete/`.
+
+**First login auto-provisions a usable account:** it creates a superuser for the
+`login_hint` email and seeds ~75 sample pieces (`seed_dev_pieces`), so the account has
+realistic data immediately — no fixture load or prod restore needed for most repros.
+(For *real* prod data, use [`gz_backup` / `gz_restore`](#production-backup--local-repro-from-a-prod-snapshot).)
+
+**Humans:** open the app (`gz_open`), and the dev sign-in page presents an Accept
+button — no password.
+
+**Agents (headless two-step curl flow):** the authorize endpoint is CSRF-exempt.
+`redirect_uri` must be the **relative** path `/api/auth/mock-idp/complete/` (an absolute
+`http://…` URL is rejected with 400). Do the two hops explicitly — a single `curl -L`
+across the chain is unreliable because cookies written at the intermediate hop are not
+flushed when the final hop returns a redirect.
+
+```bash
+BASE="http://localhost:$(cat .dev-pids/backend.port)"
+JAR="$(mktemp)"
+
+# 1. POST authorize → capture the (relative) redirect to complete/?code=…
+LOCATION=$(curl -fsS -c "$JAR" -b "$JAR" -D - -X POST \
+  --data "redirect_uri=/api/auth/mock-idp/complete/&state=x&login_hint=dev@localhost" \
+  "${BASE}/api/auth/mock-idp/authorize/" \
+  | grep -i '^location:' | sed 's/[Ll]ocation: //' | tr -d '\r\n')
+
+# 2. GET complete/ → Django session cookie is written to the jar (302 → /)
+curl -fsS -c "$JAR" -b "$JAR" "${BASE}${LOCATION}" -o /dev/null
+
+# Verify: authenticated, with seeded pieces
+curl -fsS -b "$JAR" "${BASE}/api/auth/me/" | python3 -m json.tool      # user is non-null
+curl -fsS -b "$JAR" "${BASE}/api/pieces/" | python3 -c \
+  "import json,sys; print('pieces:', json.load(sys.stdin)['count'])"   # > 0
+```
+
+`login_hint` selects/creates the account; omit it to default to `dev@localhost`. For
+multi-user repros, repeat with a second cookie jar and a different `login_hint`.
 
 ## Orientation Inside a Worktree
 
@@ -191,3 +249,35 @@ regardless of which worktree you're in (Bazel resolves `BASE_DIR` from its execr
 Use `.manage.venv/bin/python manage.py` with an explicit `DATABASE_URL` for any
 management command that must target a specific worktree database. See the backend
 skill for the full pattern.
+
+## Production Backup & Local Repro From a Prod Snapshot
+
+When a bug only reproduces with realistic data (many pieces, real Cloudinary image
+references — e.g. pagination or image-rendering bugs), **do not hand-roll a data import
+or scrape the live API**. Use the `gz_backup` / `gz_restore` pair. Both are defined in
+`env-agent.sh`.
+
+```bash
+# 1. Stream a prod Postgres dump locally and verify it in a throwaway
+#    postgres:17 container. Requires GLAZE_PROD_HOST in .env.local, Tailscale
+#    connectivity, and a running local Docker daemon. Prod is read-only here
+#    (pg_dump -Fc inside glaze-postgres-0 over ssh + kubectl exec).
+gz_backup                    # writes /tmp/glaze-prod-postgres-XXXXXX.dump, prints the path
+gz_backup /tmp/prod.dump     # or pass an explicit path (refuses to overwrite)
+
+# 2. Restore into LOCAL dev Postgres. If DATABASE_URL is already postgres://, it
+#    restores there; otherwise it starts/reuses a Docker container `glaze-dev-db`
+#    on localhost:5433 and prints the DATABASE_URL to add to .env.local.
+gz_restore /tmp/prod.dump
+```
+
+| Command | Target | Safety |
+|---|---|---|
+| `gz_backup [file]` | prod (read-only `pg_dump`) | safe |
+| `gz_restore <file>` | local dev Postgres | safe — never touches prod |
+| `gz_restore --prod <file>` | **production Postgres** | **destructive & irreversible** — requires typing a random confirmation string; log successful runs in `docs/ops/restore-drill-log.md` |
+
+Local dev historically used SQLite (`db.sqlite3`); the restore path targets Postgres, so a
+`gz_restore` switches your local stack to a Postgres `DATABASE_URL`. Do not try to load a
+`-Fc` Postgres dump into SQLite. Full implementations: `gz_backup` (`env-agent.sh` L412),
+`gz_restore` (L474).

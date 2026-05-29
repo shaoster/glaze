@@ -25,8 +25,15 @@ If you need a production database snapshot for migration work, use `gz_backup`
 to stream a Postgres dump from the droplet and restore it into a disposable
 `postgres:17` container locally to verify the backup contains real data.
 
-See [`env.sh`](../../env.sh) for shell helpers (`gz_start`, `gz_sync`, `gz_reload`, etc.) that wrap these commands.
-In a new environment, run `source env.sh` once so the helpers are available and any missing local bootstrap state is created automatically. After that, `gz_start` will start the dev stack directly.
+All `gz_*` shell helpers (`gz_start`, `gz_sync`, `gz_reload`, `gz_backup`, etc.) are
+**defined in [`env-agent.sh`](../../env-agent.sh)** — read that file for the authoritative
+implementation of any helper. `env.sh` is just the **human** interactive entry point that
+sources `env-agent.sh` (and unsets `GLAZE_AGENT`). **Humans** run `source env.sh` once in a
+new shell so the helpers are available and any missing local bootstrap state is created
+automatically; after that, `gz_start` starts the dev stack directly. **Agents must never
+source `env.sh`** — they get `env-agent.sh` automatically via `BASH_ENV` (see the Claude Code
+section below), or source it explicitly with `source env-agent.sh`. See
+[the helper reference below](#gz_-helper-reference) for the full catalogue.
 
 ---
 
@@ -36,10 +43,10 @@ Two scripts handle environment bootstrap:
 
 | Script                               | Purpose                                                                                                                                                                        |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`env.sh`](../../env.sh)             | Interactive Bash shells: sources `~/.bashrc`, delegates to `env-agent.sh`, then defines all `gz_*` helpers. Used as `bash --rcfile` by the VS Code/Cursor terminal profile. |
-| [`env-agent.sh`](../../env-agent.sh) | Lightweight, silent bootstrap for non-interactive shells: activates `.manage.venv` if present, loads the current checkout's `.env`/`.env.local` vars, exports `BASH_ENV` so child processes inherit the same setup. |
+| [`env.sh`](../../env.sh)             | Interactive Bash shells: sources `~/.bashrc`, then delegates to `env-agent.sh`. Used as `bash --rcfile` by the VS Code/Cursor terminal profile. It does **not** define helpers itself. |
+| [`env-agent.sh`](../../env-agent.sh) | The authoritative bootstrap: activates `.manage.venv` if present, loads the current checkout's `.env`/`.env.local` vars, exports `BASH_ENV` so child processes inherit the same setup, **and defines all `gz_*` helper functions** (`gz_backup` at L412, `gz_restore` at L474, the `_GZ_SHORTCUTS` catalogue at L1161, etc.). |
 
-`env.sh` sources `env-agent.sh` — the venv activation and env-var loading logic live in exactly one place.
+`env.sh` sources `env-agent.sh` — the venv activation, env-var loading, and helper definitions all live in exactly one place. When looking for what a `gz_*` command actually does, grep `env-agent.sh`, not `env.sh`.
 
 For CI/CD workflow details, deployment variables, and GitHub Actions behavior, see [`docs/ci-cd.md`](../ci-cd.md) rather than looking for a `.github/README.md` file.
 
@@ -56,6 +63,66 @@ For CI/CD workflow details, deployment variables, and GitHub Actions behavior, s
 ### Codex and other agents
 
 `env-agent.sh` exports `BASH_ENV` pointing at itself, so any agent process spawned from a shell that has already sourced `env.sh` (e.g. a VS Code terminal) automatically propagates the bootstrap to its own subshells. No per-tool config is needed for Codex or similar CLI agents launched from the integrated terminal.
+
+### `gz_*` helper reference
+
+All of these are defined in [`env-agent.sh`](../../env-agent.sh) and listed at runtime by
+`gz_help`. This table mirrors the `_GZ_SHORTCUTS` array (the single source of truth); if you
+add or change a helper, update both that array and this table.
+
+| Helper | What it does |
+| --- | --- |
+| `gz_help` | Show the list of shortcuts |
+| `gz_reload` | Re-source `env.sh` in the current shell (picks up env/bootstrap edits) |
+| `gz_sync` | Reconcile uv/npm package edits and reload the shell |
+| `gz_install_mcp_tools` | Install MCP tool dependencies (jq, curl, git, gh) |
+| `gz_manage <cmd>` | Run any `manage.py` subcommand |
+| `gz_migrate` / `gz_makemigrations` / `gz_showmigrations` | Migration commands |
+| `gz_shell` / `gz_dbshell` | Django shell / database shell |
+| `gz_dump_public_library` / `gz_load_public_library` | Export / import the public library fixture |
+| `gz_prod <cmd>` | Run a `manage.py` subcommand on production (requires `GLAZE_PROD_HOST`) |
+| `gz_prod_shell` / `gz_prod_dbshell` | Django / database shell on production |
+| **`gz_backup [file]`** | **Back up prod Postgres and verify it in a disposable `postgres:17` container** (see below) |
+| **`gz_restore <file>`** | **Restore a `gz_backup` dump into local dev Postgres** (starts a Docker container if needed) |
+| **`gz_restore --prod <file>`** | **Restore into PRODUCTION Postgres — requires typed confirmation; irreversible** |
+| `gz_test` / `gz_test_common` / `gz_test_backend` / `gz_test_web` | Run tests via Bazel (smart detection on branches; `--all` for everything) |
+| `gz_lint` / `gz_format` | Run affected linters / auto-fix Python with ruff |
+| `gz_gentypes` | Regenerate TypeScript types via Bazel; symlinks into `src/` |
+| `gz_push [--latest]` / `gz_deploy [--no-push]` | Build + push OCI image / push image + deploy to the droplet |
+| `gz_story [port]` | Start Storybook dev server via Bazel (default port 6006) |
+| `gz_start` / `gz_stop` / `gz_open` / `gz_status` / `gz_logs` | Dev server lifecycle (see the worktree sections above) |
+| `gz_worktrees [--purge]` / `gz_cd [pattern]` | List/purge worktrees / cd to a matching worktree and re-source |
+
+#### Production backup and local repro from a prod snapshot
+
+To get a realistic dataset locally (real pieces, real Cloudinary image references) — for
+example to reproduce a pagination or image-rendering bug that only shows up with many pieces —
+use the backup/restore pair rather than hand-rolling a data import:
+
+```bash
+# 1. Stream a production Postgres dump locally and verify it. Writes a -Fc dump
+#    to /tmp/glaze-prod-postgres-XXXXXX.dump (or to the path you pass) and
+#    restores it into a throwaway postgres:17 container to confirm it is readable.
+#    Requires GLAZE_PROD_HOST in .env.local, Tailscale connectivity, and Docker.
+gz_backup                       # prints the saved dump path on success
+gz_backup /tmp/prod.dump        # or choose your own path (refuses to overwrite)
+
+# 2. Restore that dump into local dev Postgres. If DATABASE_URL is already a
+#    postgres:// URL it restores there; otherwise it starts/reuses a persistent
+#    Docker container `glaze-dev-db` on localhost:5433 and prints the
+#    DATABASE_URL to add to .env.local.
+gz_restore /tmp/prod.dump
+```
+
+`gz_backup` runs `pg_dump -Fc` inside `glaze-postgres-0` over `ssh + kubectl exec`, so prod is
+read-only during the operation. `gz_restore` (without `--prod`) only ever touches your local
+database. `gz_restore --prod <file>` overwrites the **production** database and is destructive
+and irreversible — it requires typing a randomly generated confirmation string, and successful
+runs should be recorded in `docs/ops/restore-drill-log.md`.
+
+Note that local dev historically used SQLite (`db.sqlite3`); the restore path targets Postgres,
+so a `gz_restore` of a prod dump switches your local stack to a Postgres `DATABASE_URL`. Do not
+attempt to load a `-Fc` Postgres dump into SQLite directly.
 
 ### Declarative Sources of Truth
 
