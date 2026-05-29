@@ -3,8 +3,9 @@ import { Alert, Box, Button, CircularProgress } from "@mui/material";
 import { Cloudinary } from "@cloudinary/url-gen";
 import { format } from "@cloudinary/url-gen/actions/delivery";
 import { auto as autoFormat } from "@cloudinary/url-gen/qualifiers/format";
-import Cropper from "react-easy-crop";
-import type { Area } from "react-easy-crop";
+import { Cropper, RectangleStencil, ImageRestriction } from "react-advanced-cropper";
+import type { CropperRef } from "react-advanced-cropper";
+import "react-advanced-cropper/dist/style.css";
 import type { ImageCrop } from "../util/types";
 
 interface CropOverlayProps {
@@ -24,19 +25,25 @@ function buildUncroppedUrl(publicId: string, cloudName: string): string {
 
 const DEFAULT_IMAGE_CROP: ImageCrop = { x: 0, y: 0, width: 1, height: 1 };
 
-function toImageCrop(area: Area): ImageCrop {
+/**
+ * Convert a react-advanced-cropper coordinate (image pixels) into the
+ * fraction-based ImageCrop the backend stores. Free-form crops yield
+ * independent width/height fractions.
+ */
+function toImageCrop(
+  coords: { left: number; top: number; width: number; height: number },
+  imageSize: { width: number; height: number },
+): ImageCrop {
   return {
-    x: area.x / 100,
-    y: area.y / 100,
-    width: area.width / 100,
-    height: area.height / 100,
+    x: coords.left / imageSize.width,
+    y: coords.top / imageSize.height,
+    width: coords.width / imageSize.width,
+    height: coords.height / imageSize.height,
   };
 }
 
 type State = {
   imageLoading: boolean;
-  crop: { x: number; y: number };
-  zoom: number;
   committedCrop: ImageCrop;
   saving: boolean;
   saveError: string | null;
@@ -44,9 +51,7 @@ type State = {
 
 type Action =
   | { type: "IMAGE_LOADED" }
-  | { type: "CROP_CHANGE"; crop: { x: number; y: number } }
-  | { type: "ZOOM_CHANGE"; zoom: number }
-  | { type: "CROP_COMPLETE"; area: Area }
+  | { type: "CROP_COMPLETE"; crop: ImageCrop }
   | { type: "SAVE_START" }
   | { type: "SAVE_SUCCESS" }
   | { type: "SAVE_ERROR"; error: string };
@@ -55,12 +60,8 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "IMAGE_LOADED":
       return { ...state, imageLoading: false };
-    case "CROP_CHANGE":
-      return { ...state, crop: action.crop };
-    case "ZOOM_CHANGE":
-      return { ...state, zoom: action.zoom };
     case "CROP_COMPLETE":
-      return { ...state, committedCrop: toImageCrop(action.area) };
+      return { ...state, committedCrop: action.crop };
     case "SAVE_START":
       return { ...state, saving: true, saveError: null };
     case "SAVE_SUCCESS":
@@ -79,8 +80,6 @@ export default function CropOverlay({
 }: CropOverlayProps) {
   const [state, dispatch] = useReducer(reducer, {
     imageLoading: true,
-    crop: { x: 0, y: 0 },
-    zoom: 1,
     committedCrop: initialCrop ?? DEFAULT_IMAGE_CROP,
     saving: false,
     saveError: null,
@@ -90,6 +89,13 @@ export default function CropOverlay({
     () => buildUncroppedUrl(cloudinaryPublicId, cloudName),
     [cloudinaryPublicId, cloudName],
   );
+
+  function handleChange(cropper: CropperRef) {
+    const coords = cropper.getCoordinates();
+    const imageSize = cropper.getState()?.imageSize;
+    if (!coords || !imageSize || !imageSize.width || !imageSize.height) return;
+    dispatch({ type: "CROP_COMPLETE", crop: toImageCrop(coords, imageSize) });
+  }
 
   async function handleSave() {
     dispatch({ type: "SAVE_START" });
@@ -135,25 +141,33 @@ export default function CropOverlay({
           </Box>
         )}
         <Cropper
-          image={url}
-          crop={state.crop}
-          zoom={state.zoom}
-          initialCroppedAreaPercentages={
+          src={url}
+          stencilComponent={RectangleStencil}
+          // No aspectRatio → free-form, resizable in any direction (#737).
+          stencilProps={{ grid: true }}
+          imageRestriction={ImageRestriction.fitArea}
+          style={{ width: "100%", height: "100%" }}
+          defaultSize={({ imageSize }: { imageSize: { width: number; height: number } }) =>
             initialCrop
               ? {
-                  x: initialCrop.x * 100,
-                  y: initialCrop.y * 100,
-                  width: initialCrop.width * 100,
-                  height: initialCrop.height * 100,
+                  width: initialCrop.width * imageSize.width,
+                  height: initialCrop.height * imageSize.height,
                 }
-              : undefined
+              : { width: imageSize.width, height: imageSize.height }
           }
-          onCropChange={(crop) => dispatch({ type: "CROP_CHANGE", crop })}
-          onZoomChange={(zoom) => dispatch({ type: "ZOOM_CHANGE", zoom })}
-          onCropComplete={(croppedArea) =>
-            dispatch({ type: "CROP_COMPLETE", area: croppedArea })
+          defaultPosition={({ imageSize }: { imageSize: { width: number; height: number } }) =>
+            initialCrop
+              ? {
+                  left: initialCrop.x * imageSize.width,
+                  top: initialCrop.y * imageSize.height,
+                }
+              : { left: 0, top: 0 }
           }
-          onMediaLoaded={() => dispatch({ type: "IMAGE_LOADED" })}
+          onChange={handleChange}
+          onReady={(cropper: CropperRef) => {
+            handleChange(cropper);
+            dispatch({ type: "IMAGE_LOADED" });
+          }}
         />
       </Box>
       {state.saveError && (

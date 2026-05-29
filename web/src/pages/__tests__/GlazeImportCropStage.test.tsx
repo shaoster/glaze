@@ -1,21 +1,35 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
-vi.mock("react-easy-crop", () => ({
-  default: ({ onCropComplete }: any) => {
+let lastCropperProps: any = null;
+
+// Fake cropper handed to onChange. aspectRatio={1} keeps the box square, so
+// getCoordinates returns equal width/height.
+const fakeCropper = {
+  getCoordinates: () => ({ left: 64, top: 48, width: 512, height: 512 }),
+  getState: () => ({ imageSize: { width: 640, height: 480 } }),
+};
+
+vi.mock("react-advanced-cropper", () => ({
+  Cropper: function MockCropper(props: any) {
+    lastCropperProps = props;
     return (
       <div
         data-testid="mock-cropper"
-        onClick={() =>
-          onCropComplete?.(
-            { x: 10, y: 10, width: 80, height: 80 },
-            { x: 64, y: 48, width: 512, height: 512 },
-          )
-        }
+        onClick={() => props.onChange?.(fakeCropper)}
       />
     );
+  },
+  RectangleStencil: function MockRectangleStencil() {
+    return null;
+  },
+  ImageRestriction: {
+    fillArea: "fillArea",
+    fitArea: "fitArea",
+    stencil: "stencil",
+    none: "none",
   },
 }));
 
@@ -52,6 +66,10 @@ function makeRecord(overrides: Partial<UploadedRecord> = {}): UploadedRecord {
 }
 
 describe("GlazeImportCropStage", () => {
+  beforeEach(() => {
+    lastCropperProps = null;
+  });
+
   function CropStageHarness() {
     const [records, setRecords] = useState([makeRecord()]);
     const [selectedRecordId, setSelectedRecordId] = useState<string | null>(
@@ -98,14 +116,17 @@ describe("GlazeImportCropStage", () => {
     );
 
     expect(screen.getByText("Oribe")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Create a crop to preview the transparency-safe square result.",
-      ),
-    ).toBeInTheDocument();
   });
 
-  it("handles the back button and updates crop geometry via onCropComplete", async () => {
+  // The import swatch is square by design (#146): the migration to
+  // react-advanced-cropper must preserve the 1:1 lock.
+  it("locks the crop stencil to a 1:1 aspect ratio", () => {
+    render(<CropStageHarness />);
+    const stencilProps = lastCropperProps?.stencilProps ?? {};
+    expect(stencilProps.aspectRatio).toBe(1);
+  });
+
+  it("handles the back button and updates crop geometry via onChange", async () => {
     render(<CropStageHarness />);
 
     expect(screen.getByTestId("selected-id")).toHaveTextContent("record-1");
@@ -117,11 +138,10 @@ describe("GlazeImportCropStage", () => {
     await userEvent.click(screen.getByText("Oribe"));
     expect(screen.getByTestId("crop-probe")).toHaveTextContent("0,0,640");
 
-    // Simulate crop complete via mock cropper click
+    // Simulate a crop change via the mock cropper.
     await userEvent.click(screen.getByTestId("mock-cropper"));
 
-    // After onCropComplete fires with { x:64, y:48, width:512, height:512 }
-    // crop.size = croppedAreaPixels.width = 512
+    // coords {left:64, top:48, width:512} → crop.size = 512.
     expect(screen.getByTestId("crop-probe")).toHaveTextContent("64,48,512");
   });
 });

@@ -5,13 +5,25 @@ import userEvent from "@testing-library/user-event";
 import { Dialog, Box } from "@mui/material";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-vi.mock("react-easy-crop", () => ({
-  default: function MockCropper({ onMediaLoaded }: any) {
-    const onMediaLoadedRef = React.useRef(onMediaLoaded);
+vi.mock("react-advanced-cropper", () => ({
+  Cropper: function MockCropper({ onReady }: any) {
+    const onReadyRef = React.useRef(onReady);
     React.useEffect(() => {
-      onMediaLoadedRef.current?.({ naturalWidth: 100, naturalHeight: 100 });
+      onReadyRef.current?.({
+        getCoordinates: () => ({ left: 0, top: 0, width: 100, height: 100 }),
+        getState: () => ({ imageSize: { width: 100, height: 100 } }),
+      });
     }, []);
     return <div data-testid="mock-cropper" />;
+  },
+  RectangleStencil: function MockRectangleStencil() {
+    return null;
+  },
+  ImageRestriction: {
+    fillArea: "fillArea",
+    fitArea: "fitArea",
+    stencil: "stencil",
+    none: "none",
   },
 }));
 
