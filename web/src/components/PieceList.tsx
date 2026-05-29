@@ -442,8 +442,26 @@ const PieceList = (props: PieceListProps) => {
   }, [onLoadMore]);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+  // Declare masonry geometry here so masonryWidth is in scope for the sentinel
+  // effect below. The positioner useMemo further down still consumes these same
+  // values — nothing else in the component changes.
+  const windowHeight = useWindowHeight();
+  const masonryRef = useRef<HTMLElement | null>(null);
+  const columnWidth = isMobile
+    ? MASONRY_COLUMN_WIDTH_MOBILE
+    : MASONRY_COLUMN_WIDTH_DESKTOP;
+  const { width: masonryWidth, offset: masonryOffset } = useContainerPosition(
+    masonryRef,
+    [isMobile],
+  );
+
   useEffect(() => {
-    if (!hasMore) return;
+    // When masonryWidth is 0 the ResizeObserver hasn't fired yet: the masonry
+    // grid hasn't rendered so the sentinel sits at top≈0. Calling check() at
+    // that point fires onLoadMore before any cards are visible, triggering an
+    // immediate second-page fetch and the resulting flash. Defer until the
+    // container has a real width so the sentinel is at its true position.
+    if (!hasMore || masonryWidth === 0) return;
     function check() {
       const sentinel = sentinelRef.current;
       if (!sentinel) return;
@@ -453,7 +471,7 @@ const PieceList = (props: PieceListProps) => {
     window.addEventListener("scroll", check, { passive: true });
     check();
     return () => window.removeEventListener("scroll", check);
-  }, [hasMore]);
+  }, [hasMore, masonryWidth]);
 
   const availableTags = useMemo(() => {
     const deduped = new Map<string, TagEntry>();
@@ -505,15 +523,6 @@ const PieceList = (props: PieceListProps) => {
   }, [activeFilters, activeTagIds, activeTags]);
 
   const hasActiveFilters = activeFilters.length > 0 || activeTagIds.length > 0;
-  const windowHeight = useWindowHeight();
-  const masonryRef = useRef<HTMLElement | null>(null);
-  const columnWidth = isMobile
-    ? MASONRY_COLUMN_WIDTH_MOBILE
-    : MASONRY_COLUMN_WIDTH_DESKTOP;
-  const { width: masonryWidth, offset: masonryOffset } = useContainerPosition(
-    masonryRef,
-    [isMobile],
-  );
   const positioner = useMemo(() => {
     const [computedColumnWidth, computedColumnCount] = getMasonryColumns(
       masonryWidth,

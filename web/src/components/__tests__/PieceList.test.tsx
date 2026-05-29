@@ -1209,4 +1209,40 @@ describe("PieceList", () => {
       ).toContain("background-color: transparent");
     });
   });
+
+  describe("scroll sentinel", () => {
+    it("does not call onLoadMore while the masonry container width is unmeasured", async () => {
+      // Regression for #734: with the pre-fix code, the sentinel effect fires
+      // check() immediately on mount regardless of masonryWidth. At that moment
+      // masonryWidth=0 (ResizeObserver hasn't fired), the sentinel element sits
+      // at top≈0 in the unmeasured document, and check() calls onLoadMore before
+      // any cards are visible — fetching page 2 prematurely and causing the flash.
+      //
+      // The fix adds masonryWidth to the effect's deps and guards with
+      // `if (masonryWidth === 0) return`, so the effect is a no-op until the
+      // container has been measured.
+      //
+      // We let the event loop run (setTimeout) so React's MessageChannel-based
+      // scheduler has time to fire the mount effect before we assert.
+      mockContainerPosition.width = 0;
+      const onLoadMore = vi.fn();
+      const firstPage = Array.from({ length: 16 }, (_, i) =>
+        makePiece({ id: `piece-${i}` }),
+      );
+      const router = createMemoryRouter(
+        [
+          {
+            path: "/",
+            element: (
+              <PieceList pieces={firstPage} onLoadMore={onLoadMore} hasMore />
+            ),
+          },
+        ],
+        { initialEntries: ["/"] },
+      );
+      render(<RouterProvider router={router} />);
+      await new Promise<void>((resolve) => setTimeout(resolve, 50));
+      expect(onLoadMore).not.toHaveBeenCalled();
+    });
+  });
 });
