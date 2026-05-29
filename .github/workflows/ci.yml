@@ -196,7 +196,10 @@ jobs:
       - name: Bootstrap, log in via mock IdP, verify pieces, stop
         shell: bash
         run: |
-          set -euo pipefail
+          # No `set -u`: env.sh / env-agent.sh are not nounset-safe (they read
+          # $_GLAZE_AGENT_ENV_LOADED before it is set). -e and pipefail are
+          # already applied by the Actions bash wrapper; keep them explicit.
+          set -eo pipefail
           source env.sh
 
           fail() {
