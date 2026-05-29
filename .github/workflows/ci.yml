@@ -246,8 +246,9 @@ jobs:
           gz_stop
           echo "::endgroup::"
 
-          # gz_stop must actually stop both servers.
-          if gz_status | grep -q "running"; then
+          # gz_stop must actually stop both servers. Match only the affirmative
+          # running state — a plain "running" grep also matches "not running".
+          if gz_status | grep -qE ': running'; then
             gz_status >&2
             fail "gz_stop did not stop all servers"
           fi
