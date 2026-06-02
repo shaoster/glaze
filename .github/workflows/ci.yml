@@ -270,41 +270,49 @@ jobs:
           cat > infra/custom/.env << 'EOF'
           POSTGRES_PASSWORD=test_postgres_password
           SECRET_KEY=test_secret_key_django_placeholder
-          DOMAIN=localhost
-          ALLOWED_HOSTS=localhost,127.0.0.1
-          PRODUCTION=
+          DOMAIN=glaze.local
+          ALLOWED_HOSTS=glaze.local,localhost,127.0.0.1
+          PRODUCTION=True
           EOF
+
+      - name: Generate self-signed SSL certificates for Nginx
+        run: |
+          docker compose -f infra/custom/docker-compose.yml -f infra/custom/docker-compose.smoke.yml run --rm --entrypoint "/bin/sh -c" certbot \
+            "mkdir -p /etc/letsencrypt/live/glaze.local && openssl req -x509 -nodes -newkey rsa:2048 -days 1 -keyout /etc/letsencrypt/live/glaze.local/privkey.pem -out /etc/letsencrypt/live/glaze.local/fullchain.pem -subj '/CN=glaze.local'"
 
       - name: Start Docker Compose stack and wait for health
         run: |
-          docker compose -f infra/custom/docker-compose.yml -f infra/custom/docker-compose.smoke.yml up --build -d --wait web
+          docker compose -f infra/custom/docker-compose.yml -f infra/custom/docker-compose.smoke.yml up --build -d --wait nginx certbot
 
       - name: Verify application readiness and data seeding
         shell: bash
         run: |
-          # Verify HTTP 200 on readiness endpoint
-          curl -fsS http://localhost:8000/api/health/ready/ | python3 -m json.tool
+          # 1. Verify HTTP 301 redirect from HTTP to HTTPS
+          curl -I -s -H "Host: glaze.local" http://localhost/ | grep -i "Location: https://glaze.local/"
 
-          # Perform mock-IdP login to verify sessions and database seeding
+          # 2. Verify readiness endpoint through HTTPS proxy
+          curl -k -fsS --resolve glaze.local:443:127.0.0.1 https://glaze.local/api/health/ready/ | python3 -m json.tool
+
+          # 3. Perform mock-IdP login through Nginx HTTPS proxy
           JAR="$(mktemp)"
           
-          # 1. POST authorize -> capture the relative redirect
-          LOCATION=$(curl -fsS -c "$JAR" -b "$JAR" -D - -X POST \
+          # POST authorize -> capture the relative redirect
+          LOCATION=$(curl -k -fsS --resolve glaze.local:443:127.0.0.1 -c "$JAR" -b "$JAR" -D - -X POST \
             --data "redirect_uri=/api/auth/mock-idp/complete/&state=ci&login_hint=compose-smoke@localhost" \
-            "http://localhost:8000/api/auth/mock-idp/authorize/" \
+            "https://glaze.local/api/auth/mock-idp/authorize/" \
             | grep -i '^location:' | sed 's/[Ll]ocation: //' | tr -d '\r\n')
             
           [ -n "$LOCATION" ] || { echo "Error: Mock authorize did not return location header" >&2; exit 1; }
           
-          # 2. GET complete/ to set the cookie
-          curl -fsS -c "$JAR" -b "$JAR" "http://localhost:8000${LOCATION}" -o /dev/null
+          # GET complete/ to set the cookie
+          curl -k -fsS --resolve glaze.local:443:127.0.0.1 -c "$JAR" -b "$JAR" "https://glaze.local${LOCATION}" -o /dev/null
 
-          # 3. Confirm we are logged in
-          curl -fsS -b "$JAR" "http://localhost:8000/api/auth/me/" \
+          # Confirm we are logged in
+          curl -k -fsS --resolve glaze.local:443:127.0.0.1 -b "$JAR" "https://glaze.local/api/auth/me/" \
             | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("user"), "Not authenticated"; print("Authenticated as:", d["user"]["email"])'
 
-          # 4. Verify that seeded pieces exist
-          COUNT=$(curl -fsS -b "$JAR" "http://localhost:8000/api/pieces/" \
+          # Verify that seeded pieces exist
+          COUNT=$(curl -k -fsS --resolve glaze.local:443:127.0.0.1 -b "$JAR" "https://glaze.local/api/pieces/" \
             | python3 -c 'import json,sys; print(json.load(sys.stdin)["count"])')
           echo "Seeded pieces count: $COUNT"
           [ "$COUNT" -gt 0 ] || { echo "Error: Expected seeded pieces, got $COUNT" >&2; exit 1; }
