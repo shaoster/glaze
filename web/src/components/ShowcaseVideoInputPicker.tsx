@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import {
   Box,
-  Checkbox,
   Divider,
+  Checkbox,
   FormControlLabel,
   FormGroup,
   Stack,
@@ -10,6 +10,9 @@ import {
 } from "@mui/material";
 import type { PieceDetail } from "../util/types";
 import { formatState } from "../util/workflow";
+import SelectablePhotoMasonry, {
+  type SelectablePhotoItem,
+} from "./SelectablePhotoMasonry";
 
 export type ShowcaseVideoInputSelection = {
   excludedImageKeys: string[];
@@ -26,6 +29,9 @@ type ShowcaseVideoInputPickerProps = {
 type ShowcaseImageItem = {
   key: string;
   url: string;
+  crop?: PieceDetail["current_state"]["images"][number]["crop"] | null;
+  cloudinary_public_id?: string | null;
+  cloud_name?: string | null;
   stateLabel: string;
   whenLabel: string;
   caption: string;
@@ -61,6 +67,9 @@ function buildImageItems(piece: PieceDetail): ShowcaseImageItem[] {
         image.image_id ?? image.cloudinary_public_id ?? String(index),
       ),
       url: image.url,
+      crop: image.crop ?? null,
+      cloudinary_public_id: image.cloudinary_public_id ?? null,
+      cloud_name: image.cloud_name ?? null,
       stateLabel: formatState(state.state),
       whenLabel: state.created.toLocaleDateString("en-US", {
         month: "short",
@@ -101,6 +110,25 @@ export default function ShowcaseVideoInputPicker({
     (item) => item.required || !selection.excludedImageKeys.includes(item.key),
   ).length;
   const includedNotes = noteItems.length - selection.excludedNoteKeys.length;
+  const selectableImages: SelectablePhotoItem[] = imageItems.map((item) => ({
+    key: item.key,
+    url: item.url,
+    crop: item.crop ?? null,
+    cloudinary_public_id: item.cloudinary_public_id ?? null,
+    cloud_name: item.cloud_name ?? null,
+    stateLabel: item.stateLabel,
+    whenLabel: item.whenLabel,
+    checked: item.required || !selection.excludedImageKeys.includes(item.key),
+    locked: item.required,
+    onToggle: item.required
+      ? undefined
+      : () =>
+          onSelectionChange({
+            excludedImageKeys: toggleValue(selection.excludedImageKeys, item.key),
+            excludedNoteKeys: selection.excludedNoteKeys,
+          }),
+    toggleLabel: item.required ? "Locked as the video cover" : "Include in the video",
+  }));
 
   return (
     <Stack spacing={1.5}>
@@ -149,6 +177,9 @@ export default function ShowcaseVideoInputPicker({
                         })
                       }
                       disabled={disabled}
+                      inputProps={{
+                        "aria-label": `Include note in the video: ${item.stateLabel}`,
+                      }}
                     />
                   }
                   label={
@@ -186,92 +217,11 @@ export default function ShowcaseVideoInputPicker({
           {includedImages} of {imageItems.length} frames will be used
         </Typography>
         <FormGroup>
-          {imageItems.length > 0 ? (
-            imageItems.map((item) => {
-              const checked = item.required || !selection.excludedImageKeys.includes(item.key);
-              return (
-                <FormControlLabel
-                  key={item.key}
-                  sx={{
-                    alignItems: "flex-start",
-                    ml: 0,
-                    mb: 1,
-                    px: 1,
-                    py: 1,
-                    borderRadius: 2,
-                    border: "1px solid",
-                    borderColor: checked ? "primary.main" : "divider",
-                    backgroundColor: checked ? "action.hover" : "background.paper",
-                  }}
-                  control={
-                    <Checkbox
-                      checked={checked}
-                      onChange={
-                        item.required
-                          ? undefined
-                          : () =>
-                              onSelectionChange({
-                                excludedImageKeys: toggleValue(
-                                  selection.excludedImageKeys,
-                                  item.key,
-                                ),
-                                excludedNoteKeys: selection.excludedNoteKeys,
-                              })
-                      }
-                      disabled={disabled || item.required}
-                    />
-                  }
-                  label={
-                    <Stack spacing={0.75} sx={{ py: 0.25, width: "100%" }}>
-                      <Box
-                        sx={{
-                          display: "grid",
-                          gridTemplateColumns: "92px 1fr",
-                          gap: 1,
-                          alignItems: "start",
-                        }}
-                      >
-                        <Box
-                          component="img"
-                          src={item.url}
-                          alt={item.caption}
-                          sx={{
-                            width: 92,
-                            height: 66,
-                            borderRadius: 1.5,
-                            objectFit: "cover",
-                            border: "1px solid",
-                            borderColor: "divider",
-                            backgroundColor: "action.selected",
-                          }}
-                        />
-                        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            {item.stateLabel}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {item.whenLabel}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                            {item.caption}
-                          </Typography>
-                          {item.required ? (
-                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                              Locked as the video cover
-                            </Typography>
-                          ) : null}
-                        </Stack>
-                      </Box>
-                    </Stack>
-                  }
-                />
-              );
-            })
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              No images are available for this piece.
-            </Typography>
-          )}
+          <SelectablePhotoMasonry
+            items={selectableImages}
+            emptyLabel="No images are available for this piece."
+            disabled={disabled}
+          />
         </FormGroup>
       </Box>
 

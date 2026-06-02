@@ -689,7 +689,11 @@ js_library(
 
 js_library(
     name = "showcase_video_input_picker_src",
-    srcs = ["src/components/ShowcaseVideoInputPicker.tsx"],
+    srcs = [
+        "src/components/CloudinaryImage.tsx",
+        "src/components/SelectablePhotoMasonry.tsx",
+        "src/components/ShowcaseVideoInputPicker.tsx",
+    ],
     deps = [
         ":node_modules",
         ":primitive_src",

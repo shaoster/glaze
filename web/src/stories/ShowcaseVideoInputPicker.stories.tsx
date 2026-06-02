@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ShowcaseVideoInputPicker, {
   type ShowcaseVideoInputSelection,
 } from "../components/ShowcaseVideoInputPicker";
@@ -46,16 +47,16 @@ const basePiece: PieceDetail = {
         url: "/thumbnails/bowl.svg",
         caption: "Final glaze pass",
         created: new Date("2026-05-15"),
-        cloudinary_public_id: "final-glaze-pass",
-        cloud_name: "demo",
+        cloudinary_public_id: null,
+        cloud_name: null,
         image_id: "img-current",
       },
       {
         url: "/thumbnails/bowl.svg",
         caption: "Detail of rim sheen",
         created: new Date("2026-05-15"),
-        cloudinary_public_id: "rim-sheen",
-        cloud_name: "demo",
+        cloudinary_public_id: null,
+        cloud_name: null,
         image_id: "img-rim",
       },
     ],
@@ -72,14 +73,14 @@ const basePiece: PieceDetail = {
       created: new Date("2026-05-01"),
       last_modified: new Date("2026-05-01"),
       images: [
-        {
-          url: "/thumbnails/question-mark.svg",
-          caption: "Fresh form",
-          created: new Date("2026-05-01"),
-          cloudinary_public_id: "fresh-form",
-          cloud_name: "demo",
-          image_id: "img-wheel",
-        },
+      {
+        url: "/thumbnails/question-mark.svg",
+        caption: "Fresh form",
+        created: new Date("2026-05-01"),
+        cloudinary_public_id: null,
+        cloud_name: null,
+        image_id: "img-wheel",
+      },
       ],
       previous_state: "designed",
       next_state: "trimmed",
@@ -93,14 +94,14 @@ const basePiece: PieceDetail = {
       created: new Date("2026-05-10"),
       last_modified: new Date("2026-05-10"),
       images: [
-        {
-          url: "/thumbnails/question-mark.svg",
-          caption: "Foot ring after trimming",
-          created: new Date("2026-05-10"),
-          cloudinary_public_id: "trimmed-foot",
-          cloud_name: "demo",
-          image_id: "img-trimmed",
-        },
+      {
+        url: "/thumbnails/question-mark.svg",
+        caption: "Foot ring after trimming",
+        created: new Date("2026-05-10"),
+        cloudinary_public_id: null,
+        cloud_name: null,
+        image_id: "img-trimmed",
+      },
       ],
       previous_state: "wheel_thrown",
       next_state: "glaze_fired",
@@ -114,14 +115,14 @@ const basePiece: PieceDetail = {
       created: new Date("2026-05-15"),
       last_modified: new Date("2026-05-15"),
       images: [
-        {
-          url: "/thumbnails/bowl.svg",
-          caption: "Final glaze pass",
-          created: new Date("2026-05-15"),
-          cloudinary_public_id: "final-glaze-pass",
-          cloud_name: "demo",
-          image_id: "img-current",
-        },
+      {
+        url: "/thumbnails/bowl.svg",
+        caption: "Final glaze pass",
+        created: new Date("2026-05-15"),
+        cloudinary_public_id: null,
+        cloud_name: null,
+        image_id: "img-current",
+      },
       ],
       previous_state: "glaze_fired",
       next_state: null,
@@ -139,13 +140,24 @@ function ShowcaseVideoInputPickerPreview({
   initialSelection: ShowcaseVideoInputSelection;
 }) {
   const [selection, setSelection] = useState(initialSelection);
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      }),
+  );
 
   return (
-    <ShowcaseVideoInputPicker
-      piece={piece}
-      selection={selection}
-      onSelectionChange={setSelection}
-    />
+    <QueryClientProvider client={queryClient}>
+      <ShowcaseVideoInputPicker
+        piece={piece}
+        selection={selection}
+        onSelectionChange={setSelection}
+      />
+    </QueryClientProvider>
   );
 }
 
@@ -187,8 +199,8 @@ export const LockedThumbnail: Story = {
       ...basePiece,
       thumbnail: {
         url: "/thumbnails/bowl.svg",
-        cloudinary_public_id: "final-glaze-pass",
-        cloud_name: "demo",
+        cloudinary_public_id: null,
+        cloud_name: null,
       },
     },
     initialSelection: {

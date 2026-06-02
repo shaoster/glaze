@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import type { ReactElement } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ShowcaseVideoInputPicker, {
   type ShowcaseVideoInputSelection,
 } from "../ShowcaseVideoInputPicker";
@@ -19,6 +21,13 @@ vi.mock("../../util/workflow", () => ({
 beforeEach(() => {
   window.localStorage.clear();
 });
+
+function renderWithClient(ui: ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
 
 function makePiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
   return {
@@ -127,7 +136,7 @@ function makeSelection(
 
 describe("ShowcaseVideoInputPicker", () => {
   it("includes all notes and images by default", () => {
-    render(
+    renderWithClient(
       <ShowcaseVideoInputPicker
         piece={makePiece()}
         selection={makeSelection()}
@@ -137,16 +146,13 @@ describe("ShowcaseVideoInputPicker", () => {
 
     expect(screen.getByText("2 of 2 note entries will be used")).toBeInTheDocument();
     expect(screen.getByText("2 of 2 frames will be used")).toBeInTheDocument();
-    const checkboxes = screen.getAllByRole("checkbox");
-    expect(checkboxes[0]).toBeChecked();
-    expect(checkboxes[1]).toBeChecked();
-    expect(checkboxes[2]).toBeChecked();
-    expect(checkboxes[3]).toBeChecked();
+    expect(screen.getByLabelText(/Include in the video: Throwing/)).toBeChecked();
+    expect(screen.getByLabelText(/Include in the video: Completed/)).toBeChecked();
   });
 
   it("excludes notes and images when toggled", async () => {
     const onSelectionChange = vi.fn();
-    render(
+    renderWithClient(
       <ShowcaseVideoInputPicker
         piece={makePiece()}
         selection={makeSelection()}
@@ -154,15 +160,15 @@ describe("ShowcaseVideoInputPicker", () => {
       />,
     );
 
-    const checkboxes = screen.getAllByRole("checkbox");
-
-    await userEvent.click(checkboxes[0]);
+    await userEvent.click(
+      screen.getByLabelText(/Include note in the video: Throwing/),
+    );
     expect(onSelectionChange).toHaveBeenCalledWith({
       excludedImageKeys: [],
       excludedNoteKeys: ["state-id-throwing"],
     });
 
-    await userEvent.click(checkboxes[2]);
+    await userEvent.click(screen.getByLabelText(/Include in the video: Throwing/));
     expect(onSelectionChange).toHaveBeenLastCalledWith({
       excludedImageKeys: ["state-id-throwing:throwing-image"],
       excludedNoteKeys: [],
@@ -170,7 +176,7 @@ describe("ShowcaseVideoInputPicker", () => {
   });
 
   it("reflects pre-existing exclusions", () => {
-    render(
+    renderWithClient(
       <ShowcaseVideoInputPicker
         piece={makePiece()}
         selection={makeSelection({
@@ -183,14 +189,13 @@ describe("ShowcaseVideoInputPicker", () => {
 
     expect(screen.getByText("1 of 2 note entries will be used")).toBeInTheDocument();
     expect(screen.getByText("1 of 2 frames will be used")).toBeInTheDocument();
-    const checkboxes = screen.getAllByRole("checkbox");
-    expect(checkboxes[0]).not.toBeChecked();
-    expect(checkboxes[2]).not.toBeChecked();
+    expect(screen.getByLabelText(/Include in the video: Throwing/)).not.toBeChecked();
+    expect(screen.getByLabelText(/Include in the video: Completed/)).toBeChecked();
   });
 
   it("locks the piece thumbnail as a required image input", async () => {
     const onSelectionChange = vi.fn();
-    render(
+    renderWithClient(
       <ShowcaseVideoInputPicker
         piece={makePiece({
           thumbnail: {
@@ -206,7 +211,7 @@ describe("ShowcaseVideoInputPicker", () => {
       />,
     );
 
-    const thumbnailCheckbox = screen.getAllByRole("checkbox")[3];
+    const thumbnailCheckbox = screen.getByLabelText(/Locked cover: Completed/);
 
     expect(thumbnailCheckbox).toBeChecked();
     expect(thumbnailCheckbox).toBeDisabled();
