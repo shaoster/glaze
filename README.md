@@ -95,7 +95,11 @@ If you want to contribute code, documentation, or agent workflows to the Glaze c
 
 ### Self-hosting
 
-If you want to run your own instance of PotterDoc for yourself or your studio, you also do not need access to potterdoc.com infrastructure. The codebase is public and the Helm chart deploys to any k3s cluster. See [`docs/ci-cd.md`](docs/ci-cd.md) for deployment details. This is the path if you want full control over your own data and infrastructure.
+If you want to run your own instance of PotterDoc for yourself or your studio, you also do not need access to potterdoc.com infrastructure. The codebase is public. You can deploy it using one of two options:
+- **Docker Compose**: A completely self-contained deployment setup that includes PostgreSQL, Redis, Celery, and Nginx with Let's Encrypt SSL. Perfect for deploying locally or to a standard virtual machine (VM). See the [Docker Compose Deployment Guide](infra/custom/README.md) for step-by-step instructions.
+- **k3s / Kubernetes (Helm)**: Our production deployment configuration, using a Helm chart that deploys to a k3s cluster. See [`docs/ci-cd.md`](docs/ci-cd.md) for cluster deployment details.
+
+This gives you full control over your own data and infrastructure.
 
 ## Architecture and tech stack
 

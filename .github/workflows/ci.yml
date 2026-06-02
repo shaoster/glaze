@@ -257,6 +257,63 @@ jobs:
       - if: failure()
         uses: ./.github/actions/collect-failure-diagnostics
 
+  compose-smoke:
+    name: Docker Compose smoke test
+    needs: preflight
+    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure test environment
+        run: |
+          cat > infra/custom/.env << 'EOF'
+          POSTGRES_PASSWORD=test_postgres_password
+          SECRET_KEY=test_secret_key_django_placeholder
+          DOMAIN=localhost
+          ALLOWED_HOSTS=localhost,127.0.0.1
+          PRODUCTION=
+          EOF
+
+      - name: Start Docker Compose stack and wait for health
+        run: |
+          docker compose -f infra/custom/docker-compose.yml up --build -d --wait web
+
+      - name: Verify application readiness and data seeding
+        shell: bash
+        run: |
+          # Verify HTTP 200 on readiness endpoint
+          curl -fsS http://localhost:8000/api/health/ready/ | python3 -m json.tool
+
+          # Perform mock-IdP login to verify sessions and database seeding
+          JAR="$(mktemp)"
+          
+          # 1. POST authorize -> capture the relative redirect
+          LOCATION=$(curl -fsS -c "$JAR" -b "$JAR" -D - -X POST \
+            --data "redirect_uri=/api/auth/mock-idp/complete/&state=ci&login_hint=compose-smoke@localhost" \
+            "http://localhost:8000/api/auth/mock-idp/authorize/" \
+            | grep -i '^location:' | sed 's/[Ll]ocation: //' | tr -d '\r\n')
+            
+          [ -n "$LOCATION" ] || { echo "Error: Mock authorize did not return location header" >&2; exit 1; }
+          
+          # 2. GET complete/ to set the cookie
+          curl -fsS -c "$JAR" -b "$JAR" "http://localhost:8000${LOCATION}" -o /dev/null
+
+          # 3. Confirm we are logged in
+          curl -fsS -b "$JAR" "http://localhost:8000/api/auth/me/" \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("user"), "Not authenticated"; print("Authenticated as:", d["user"]["email"])'
+
+          # 4. Verify that seeded pieces exist
+          COUNT=$(curl -fsS -b "$JAR" "http://localhost:8000/api/pieces/" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["count"])')
+          echo "Seeded pieces count: $COUNT"
+          [ "$COUNT" -gt 0 ] || { echo "Error: Expected seeded pieces, got $COUNT" >&2; exit 1; }
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          docker compose -f infra/custom/docker-compose.yml logs
+
   image:
     name: Build & smoke-test OCI image
     needs: preflight
@@ -336,8 +393,8 @@ jobs:
 
   record-fingerprint:
     name: Record successful fingerprint
-    needs: [preflight, lint, coverage, dev-smoke, image]
-    if: ${{ github.event_name == 'pull_request' && needs.lint.result == 'success' && needs.coverage.result == 'success' && needs.dev-smoke.result == 'success' && needs.image.result == 'success' }}
+    needs: [preflight, lint, coverage, dev-smoke, image, compose-smoke]
+    if: ${{ github.event_name == 'pull_request' && needs.lint.result == 'success' && needs.coverage.result == 'success' && needs.dev-smoke.result == 'success' && needs.image.result == 'success' && needs.compose-smoke.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Write fingerprint marker
