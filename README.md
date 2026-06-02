@@ -8,6 +8,8 @@ The repository, internal code identifiers, and some contributor documentation st
 
 A pottery workflow tracking application. Log pieces and record state transitions as work moves through throwing, bisque firing, glazing, and finishing.
 
+PotterDoc is **pseudonymous by design**: the only identifier we store is a hashed OpenID from your identity provider — no email, name, or avatar. Even admin email invites are sent without ever persisting the recipient address. See the in-app privacy policy for the full story, including the few honest caveats.
+
 **Try it live: [potterdoc.com](https://potterdoc.com)**
 
 <!-- Illustrative overview of the default workflow. Source of truth is workflow.yml;

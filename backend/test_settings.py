@@ -102,6 +102,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_THROTTLE_RATES": {
+        "invite_send": "60/hour",
+    },
 }
 
 SPECTACULAR_SETTINGS = {

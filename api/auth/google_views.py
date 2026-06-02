@@ -11,7 +11,6 @@ import httpx
 from django.conf import settings
 from django.contrib.auth import get_user_model, login
 from django.db import transaction
-from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -159,9 +158,10 @@ def auth_google_impl(
                     password=None,
                 )
                 UserProfile.objects.create(user=user, openid_subject=hashed_sub)
-                invite_code.used_at = timezone.now()
-                invite_code.used_by = user
-                invite_code.save(update_fields=["used_at", "used_by"])
+                # Delete (not mark) the code on redemption so no code↔account
+                # tuple survives in the database. The row lock above keeps this
+                # single-use under concurrent redemption. See issue #740.
+                invite_code.delete()
         else:
             user = User.objects.create_user(
                 username=hashed_sub,

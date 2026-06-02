@@ -115,6 +115,12 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # Scoped throttle rates. Applied only by views that opt in via a
+    # throttle class with a matching scope (e.g. the email-invite send
+    # endpoint); there is no global default throttle.
+    "DEFAULT_THROTTLE_RATES": {
+        "invite_send": "60/hour",
+    },
 }
 
 SPECTACULAR_SETTINGS = {

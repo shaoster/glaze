@@ -1,15 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import InvitePage from "../InvitePage";
-
-vi.mock("../../util/api", () => ({
-  validateInviteCode: vi.fn(),
-}));
-
-import { validateInviteCode } from "../../util/api";
-
-const mockValidateInviteCode = vi.mocked(validateInviteCode);
 
 function renderWithCode(code: string) {
   render(
@@ -24,47 +16,22 @@ function renderWithCode(code: string) {
 
 describe("InvitePage", () => {
   beforeEach(() => {
-    mockValidateInviteCode.mockReset();
     sessionStorage.clear();
   });
 
-  it("shows success banner and sign-in button on valid code", async () => {
-    mockValidateInviteCode.mockResolvedValue({ valid: true });
-    renderWithCode("valid-uuid");
-    await waitFor(() =>
-      expect(
-        screen.getByText(/your invite code is valid/i),
-      ).toBeInTheDocument(),
-    );
+  it("stashes the code and shows the sign-in prompt (no pre-validation)", () => {
+    renderWithCode("some-uuid");
+    expect(
+      screen.getByText(/you've been invited to potterdoc/i),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /continue to sign in/i }),
     ).toBeInTheDocument();
+    // The code is carried to redemption, which validates it destructively.
+    expect(sessionStorage.getItem("pendingInviteCode")).toBe("some-uuid");
   });
 
-  it("stores the code in sessionStorage on success", async () => {
-    mockValidateInviteCode.mockResolvedValue({ valid: true });
-    renderWithCode("valid-uuid");
-    await waitFor(() =>
-      expect(
-        screen.getByText(/your invite code is valid/i),
-      ).toBeInTheDocument(),
-    );
-    expect(sessionStorage.getItem("pendingInviteCode")).toBe("valid-uuid");
-  });
-
-  it("shows error on invalid or expired code", async () => {
-    mockValidateInviteCode.mockRejectedValue({
-      response: { data: { detail: "Invalid or expired invitation link." } },
-    });
-    renderWithCode("bad-uuid");
-    await waitFor(() =>
-      expect(
-        screen.getByText(/invalid or expired invitation link/i),
-      ).toBeInTheDocument(),
-    );
-  });
-
-  it("shows error when no code in URL", async () => {
+  it("shows an error and stores nothing when no code is in the URL", () => {
     render(
       <MemoryRouter initialEntries={["/invite"]}>
         <Routes>
@@ -72,8 +39,7 @@ describe("InvitePage", () => {
         </Routes>
       </MemoryRouter>,
     );
-    await waitFor(() =>
-      expect(screen.getByText(/no invite code found/i)).toBeInTheDocument(),
-    );
+    expect(screen.getByText(/no invite code found/i)).toBeInTheDocument();
+    expect(sessionStorage.getItem("pendingInviteCode")).toBeNull();
   });
 });

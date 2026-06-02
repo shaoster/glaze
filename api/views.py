@@ -16,8 +16,9 @@ from .auth.views import (
     csrf,
     mock_idp_authorize,
     mock_idp_complete,
+    send_invite,
+    staff_invite_batch,
     staff_invite_code,
-    validate_invite,
 )
 from .cloudinary.admin_views import (
     admin_cloudinary_cleanup,
@@ -81,10 +82,11 @@ __all__ = [
     "piece_past_state",
     "piece_states",
     "pieces",
+    "send_invite",
+    "staff_invite_batch",
     "staff_invite_code",
     "submit_task",
     "task_detail",
     "browser_traces",
-    "validate_invite",
     "workflow_state_schema",
 ]

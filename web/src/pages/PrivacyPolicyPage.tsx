@@ -75,6 +75,18 @@ export default function PrivacyPolicyPage() {
           </Typography>
 
           <Typography variant="body1">
+            Invites work the same pseudonymous way. When an administrator emails
+            you an invite, your email address is used only to send that one
+            message — we never store it. Invite codes carry no email, and the
+            moment you redeem one to create an account, the code is deleted, so
+            there is nothing in our database linking an email, an invite, and an
+            account together. Two honest caveats: our email provider keeps its
+            own delivery logs (which include the recipient address), and a
+            deleted code can linger in the unencrypted backups described below
+            until they roll over. Neither lives in the running database.
+          </Typography>
+
+          <Typography variant="body1">
             You are responsible for deciding what information you choose to
             upload. We do our best to operate the service responsibly, but we
             are not liable for data loss, unauthorized access, leakage,
