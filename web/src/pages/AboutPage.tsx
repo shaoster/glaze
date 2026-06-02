@@ -73,6 +73,16 @@ export default function AboutPage() {
             when the inspiration sounds completely ridiculous.
           </Typography>
 
+          <Typography variant="body1">
+            We also take the dinosaurs&apos; fate as a cautionary tale. If aliens
+            once crossed the galaxy just to harvest glaze recipes, the last thing
+            a working potter needs is to be personally identifiable to them. So
+            PotterDoc is pseudonymous by design: we store only a hashed login
+            identifier — no email, no name, no avatar — and we send invite emails
+            without ever keeping the address. The aliens can keep watching; they
+            still won&apos;t learn who you are.
+          </Typography>
+
           <Box sx={{ pt: 1 }}>
             <Button component={Link} to="/" variant="outlined">
               Back to Login

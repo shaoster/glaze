@@ -22,6 +22,28 @@ The raw `sub` is never written to disk. Django's `username` field and `UserProfi
 
 Access is gated by invite code. New users cannot register without a valid, unused invite.
 
+Crucially, account-existence is never disclosed before the identity-provider challenge is passed. The "already registered → log in" versus "new account → invite required" branch is reached only **after** the Google authorization code is exchanged and the ID token is cryptographically verified. A caller therefore cannot probe whether a given email or OpenID is registered without already controlling that Google account, so the login endpoint cannot be used as a correlation oracle by an attacker who lacks database access.
+
+---
+
+## Invite Codes and Email Invites
+
+Invites are single-use UUID codes (`InviteCode`) with **no email field**. Admins can hand them out two ways: as a link/QR (the staff invite page) or by emailing a recipient directly. The email flow is built to leak no email↔account linkage into the database:
+
+- **The recipient address is never persisted.** It is used only to hand the message to the SMTP relay, then discarded — not stored on the code, on the user (accounts are created with `email=""`), in application logs, or as a telemetry attribute.
+- **Codes are pre-generated in batches.** Because a batch is written in one transaction, a code's `created_at` is uniform across the batch and decoupled from any individual send, defeating creation-time correlation against an external send-time oracle.
+- **Sending only flips a `sent` boolean.** This prevents re-emailing a code. The send-time write leaves a row-version (`xmin`/`ctid`) signal, but only on *unredeemed* codes — which have no associated account yet.
+- **Redemption deletes the code row.** No `used_at`/`used_by` is retained, so once an account exists there is no surviving code↔account tuple in the live database. Single-use is preserved by a `SELECT ... FOR UPDATE` row lock during redemption.
+- **The send endpoint is staff-only and rate-limited** (`IsAdminUser` + a per-admin scoped throttle) and returns `204` regardless of address validity, so it cannot be used to enumerate accounts.
+
+### Residual correlation vectors (accepted)
+
+These live outside the running database and are accepted under the threat model of *an attacker with logical database access*:
+
+- **SMTP provider logs.** The email relay (Resend) retains delivery logs containing recipient addresses paired with the invite link (and thus the code). This is the primary out-of-database email↔code record.
+- **Unencrypted backups.** A deleted code can persist in the unencrypted `pg_dump` backups (see Backups) until they roll over, recoverable only with backup-file access — a stronger capability than logical DB access.
+- **Invite-redemption probe.** There is deliberately **no read-only "validate code" endpoint** — a free validity check would be a polling oracle: anyone holding a code (e.g. from the Resend logs above) could poll it and watch the `valid → invalid` transition to learn when the recipient registered. Codes are checked **only at redemption**, which is authenticated (Google sign-in) and destructive (the row is deleted). The residual is therefore a single, destructive, authenticated probe: an attacker who attempts to redeem a code learns only whether it was already used — and if it was not, they consume it (a noisy, detectable DoS on that one invite that creates an account under *their own* Google identity, revealing nothing about the intended recipient). This is far weaker than a polling oracle: no continuous timing signal, no membership confirmation without destroying the invite.
+
 ---
 
 ## Data Classification
@@ -29,6 +51,7 @@ Access is gated by invite code. New users cannot register without a valid, unuse
 | Category | What we store | Notes |
 |---|---|---|
 | User identity | SHA-256 hash of Google `sub` | Not reversible without the original `sub` |
+| Invite codes | UUID, timestamps, `sent` boolean | No email or redeemer recorded; deleted on redemption |
 | User content | Pottery piece records, workflow states, images | Owned by the authenticated user; isolated by FK |
 | Public library | Shared pieces with `user=NULL` | Admin-managed only; not user-writable |
 | Credentials | Django `SECRET_KEY`, `POSTGRES_PASSWORD`, Cloudinary keys, email relay key, Dropbox tokens | Source of truth: Infisical Cloud; synced into k8s Secrets via External Secrets Operator |
@@ -109,7 +132,9 @@ Pottery piece images are stored in **Cloudinary**. All uploads are signed and sc
 |---|---|---|
 | Credential theft from source control | No secrets in git | Low |
 | Database dump exposing user identity | SHA-256 pseudonymization of `sub` | Attacker needs Google sub values too |
-| Unauthorized account creation | Invite-code gate | Invite codes can be shared |
+| Unauthorized account creation | Invite-code gate; account-existence disclosed only after IdP challenge | Invite codes can be shared |
+| Email↔account correlation (DB snapshot) | No email stored; code deleted on redemption; batch pre-generation decouples `created_at` from send time | `sent`-flip row-version signal on unredeemed (account-less) codes; deleted rows linger in unencrypted backups |
+| Invite-redemption oracle (Resend logs) | No read-only validity check; codes are verified only at authenticated, destructive redemption | A code holder can make a single destructive probe (consuming the invite), learning used/unused but not the OpenID; no polling/timing oracle |
 | Cluster takeover via SSH | Tailnet-only SSH access | Tailscale account compromise |
 | Backup exfiltration | Dropbox account-level access controls | Dropbox account compromise |
 | TLS stripping | HSTS preload, SECURE_SSL_REDIRECT | Preload list propagation delay on new domains |

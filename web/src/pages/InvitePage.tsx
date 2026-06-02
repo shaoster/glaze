@@ -3,40 +3,25 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Alert,
   Button,
-  CircularProgress,
   Container,
   Paper,
   Stack,
   Typography,
 } from "@mui/material";
-import { validateInviteCode } from "../util/api";
 
 export default function InvitePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const code = searchParams.get("code") ?? "";
 
-  const [state, setState] = useState<"loading" | "ready" | "error">(
-    code ? "loading" : "error",
-  );
-  const [errorMessage, setErrorMessage] = useState(
-    code ? "" : "No invite code found in the URL.",
-  );
+  // There is intentionally no pre-flight validity check: a read-only "is this
+  // code valid" endpoint would be a redemption oracle (see docs/security.md).
+  // We stash the code and let sign-in validate it at redemption, where the
+  // check is authenticated and consumes the code.
+  const [state] = useState<"ready" | "error">(code ? "ready" : "error");
 
   useEffect(() => {
-    if (!code) return;
-    validateInviteCode(code)
-      .then(() => {
-        sessionStorage.setItem("pendingInviteCode", code);
-        setState("ready");
-      })
-      .catch((err: unknown) => {
-        const msg =
-          (err as { response?: { data?: { detail?: string } } })?.response?.data
-            ?.detail ?? "Invalid or expired invitation link.";
-        setErrorMessage(msg);
-        setState("error");
-      });
+    if (code) sessionStorage.setItem("pendingInviteCode", code);
   }, [code]);
 
   return (
@@ -58,15 +43,11 @@ export default function InvitePage() {
         }}
       >
         <Stack spacing={2} alignItems="center">
-          {state === "loading" && (
-            <CircularProgress aria-label="Validating invite code" />
-          )}
-
           {state === "ready" && (
             <>
               <Alert severity="success" sx={{ width: "100%" }}>
-                Your invite code is valid! Sign in with Google to create your
-                account.
+                You&apos;ve been invited to PotterDoc. Sign in with Google to
+                create your account.
               </Alert>
               <Typography
                 variant="body2"
@@ -89,7 +70,7 @@ export default function InvitePage() {
           {state === "error" && (
             <>
               <Alert severity="error" sx={{ width: "100%" }}>
-                {errorMessage}
+                No invite code found in the URL.
               </Alert>
               <Button variant="outlined" onClick={() => navigate("/")}>
                 Go to sign in

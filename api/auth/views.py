@@ -21,7 +21,11 @@ from ..serializers import AuthUserSerializer
 from .account_views import delete_account_impl as auth_delete_account
 from .export_views import auth_export
 from .google_views import auth_google
-from .invite_views import staff_invite_code, validate_invite
+from .invite_views import (
+    send_invite,
+    staff_invite_batch,
+    staff_invite_code,
+)
 from .mock_idp_views import mock_idp_authorize, mock_idp_complete
 from .preferences_views import auth_preferences
 
@@ -35,8 +39,9 @@ __all__ = [
     "csrf",
     "mock_idp_authorize",
     "mock_idp_complete",
+    "send_invite",
+    "staff_invite_batch",
     "staff_invite_code",
-    "validate_invite",
 ]
 
 

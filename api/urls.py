@@ -50,12 +50,15 @@ urlpatterns = [
     path("auth/me/", views.auth_me, name="auth-me"),
     path("auth/preferences/", views.auth_preferences, name="auth-preferences"),
     path("auth/google/", views.auth_google, name="auth-google"),
-    path("auth/validate-invite/", views.validate_invite, name="auth-validate-invite"),
     path("auth/export/", views.auth_export, name="auth-export"),
     path("auth/account/", views.auth_delete_account, name="auth-delete-account"),
-    path("auth/mock-idp/authorize/", views.mock_idp_authorize, name="mock-idp-authorize"),
+    path(
+        "auth/mock-idp/authorize/", views.mock_idp_authorize, name="mock-idp-authorize"
+    ),
     path("auth/mock-idp/complete/", views.mock_idp_complete, name="mock-idp-complete"),
     path("staff/invite-code/", views.staff_invite_code, name="staff-invite-code"),
+    path("staff/invite-batch/", views.staff_invite_batch, name="staff-invite-batch"),
+    path("auth/invite/send/", views.send_invite, name="auth-invite-send"),
     path("health/ready/", views.health_ready, name="health-ready"),
     path("tasks/", views.submit_task, name="tasks-submit"),
     path("tasks/<uuid:task_id>/", views.task_detail, name="tasks-detail"),

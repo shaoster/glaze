@@ -340,16 +340,6 @@ export async function deleteAccount(): Promise<void> {
   await client.delete("auth/account/");
 }
 
-export async function validateInviteCode(
-  code: string,
-): Promise<{ valid: true }> {
-  await ensureCsrfCookie();
-  const { data } = await client.post<{ valid: true }>("auth/validate-invite/", {
-    code,
-  });
-  return data;
-}
-
 export type StaffInviteCodeResponse = { code: string; expires_at: string };
 
 export async function getStaffInviteCode(): Promise<StaffInviteCodeResponse> {
@@ -365,6 +355,27 @@ export async function generateStaffInviteCode(): Promise<StaffInviteCodeResponse
     {},
   );
   return data;
+}
+
+export type InviteBatchResponse = { created: number };
+
+export async function generateInviteBatch(
+  count: number,
+): Promise<InviteBatchResponse> {
+  await ensureCsrfCookie();
+  const { data } = await client.post<InviteBatchResponse>(
+    "staff/invite-batch/",
+    { count },
+  );
+  return data;
+}
+
+// Email an invite without ever sending the recipient address back to the
+// client beyond this call. Resolves on 204; rejects on an empty pool (409) or
+// invalid address (400) so the page can surface a message.
+export async function sendEmailInvite(email: string): Promise<void> {
+  await ensureCsrfCookie();
+  await client.post("auth/invite/send/", { email });
 }
 
 export type UserPreferencesResponse = {

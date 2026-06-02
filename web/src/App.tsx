@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { isAxiosError } from "axios";
 import {
   Link,
   Navigate,
@@ -216,8 +217,18 @@ function GoogleSignInButton({
         } else {
           onAuthenticated(user);
         }
-      } catch {
-        setError("Google sign-in failed. Please try again.");
+      } catch (err) {
+        // Invite problems are validated at redemption (there is no pre-check),
+        // so surface the server's reason instead of a generic Google error.
+        const detail = isAxiosError(err)
+          ? (err.response?.data as { detail?: string } | undefined)?.detail
+          : undefined;
+        const status = isAxiosError(err) ? err.response?.status : undefined;
+        setError(
+          status === 403 && detail
+            ? detail
+            : "Google sign-in failed. Please try again.",
+        );
       } finally {
         setSubmitting(false);
       }

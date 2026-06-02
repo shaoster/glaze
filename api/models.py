@@ -76,29 +76,31 @@ def _piece_state_ref_related_name(global_name: str) -> str:
 
 
 class InviteCode(models.Model):
+    # How long a freshly minted invite code stays valid.
+    TTL = timedelta(days=90)
+
     code = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
-    used_at = models.DateTimeField(null=True, blank=True)
-    used_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="redeemed_invite_codes",
-    )
+    # Marks a code that has been handed out via an email invite, so the same
+    # code is never emailed twice. Deliberately a single boolean: the recipient
+    # email is never stored, and the code row is deleted on redemption, so no
+    # email/code/account correlation survives in the database. See issue #740.
+    sent = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-created_at"]
 
     def save(self, *args, **kwargs):
         if self._state.adding and not self.expires_at:
-            self.expires_at = timezone.now() + timedelta(days=90)
+            self.expires_at = timezone.now() + self.TTL
         super().save(*args, **kwargs)
 
     @property
     def is_valid(self) -> bool:
-        return self.used_at is None and self.expires_at > timezone.now()
+        # A code is valid as long as it exists and has not expired. Redemption
+        # deletes the row, so existence alone signals "not yet redeemed".
+        return self.expires_at > timezone.now()
 
     def __str__(self) -> str:
         return str(self.code)

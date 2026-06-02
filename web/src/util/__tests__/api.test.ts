@@ -389,18 +389,6 @@ describe("auth endpoints", () => {
     });
   });
 
-  it("validateInviteCode posts the code and returns valid: true", async () => {
-    const { validateInviteCode } = await loadApiModule();
-    mockClient.post.mockResolvedValue({ data: { valid: true } });
-
-    await expect(validateInviteCode("some-uuid")).resolves.toEqual({
-      valid: true,
-    });
-    expect(mockClient.post).toHaveBeenCalledWith("auth/validate-invite/", {
-      code: "some-uuid",
-    });
-  });
-
   it("getStaffInviteCode calls GET on the staff invite endpoint", async () => {
     const { getStaffInviteCode } = await loadApiModule();
     const response = { code: "abc-uuid", expires_at: "2026-08-01T00:00:00Z" };
@@ -419,6 +407,31 @@ describe("auth endpoints", () => {
     await expect(generateStaffInviteCode()).resolves.toEqual(response);
     expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
     expect(mockClient.post).toHaveBeenCalledWith("staff/invite-code/", {});
+  });
+
+  it("generateInviteBatch fetches CSRF then POSTs the count", async () => {
+    const { generateInviteBatch } = await loadApiModule();
+    mockClient.get.mockResolvedValue({});
+    mockClient.post.mockResolvedValue({ data: { created: 25 } });
+
+    await expect(generateInviteBatch(25)).resolves.toEqual({ created: 25 });
+    expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
+    expect(mockClient.post).toHaveBeenCalledWith("staff/invite-batch/", {
+      count: 25,
+    });
+  });
+
+  it("sendEmailInvite fetches CSRF then POSTs the email", async () => {
+    const { sendEmailInvite } = await loadApiModule();
+    mockClient.get.mockResolvedValue({});
+    mockClient.post.mockResolvedValue({});
+
+    await sendEmailInvite("recipient@example.com");
+
+    expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
+    expect(mockClient.post).toHaveBeenCalledWith("auth/invite/send/", {
+      email: "recipient@example.com",
+    });
   });
 
   it("logoutUser fetches CSRF before posting to logout", async () => {

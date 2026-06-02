@@ -10,7 +10,6 @@ import pytest
 from django.apps import apps as django_apps
 from django.contrib.auth.models import User
 from django.test import Client
-from django.utils import timezone
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory, force_authenticate
 
@@ -425,6 +424,7 @@ class TestAuthMe:
             response.cookies[settings.SESSION_COOKIE_NAME]["domain"] == ".potterdoc.com"
         )
 
+
 @pytest.mark.django_db
 class TestAuthGoogle:
     def test_new_user_created_with_valid_invite(self, db, settings):
@@ -444,8 +444,8 @@ class TestAuthGoogle:
 
         assert response.status_code == 200
         assert User.objects.filter(username=FAKE_HASHED_SUB).exists()
-        invite.refresh_from_db()
-        assert invite.used_at is not None
+        # The code is deleted on redemption so no code↔account tuple survives.
+        assert not InviteCode.objects.filter(pk=invite.pk).exists()
 
     def test_sha256_sub_stored_never_raw_sub(self, db, settings):
         from api.auth.google_views import auth_google_impl
@@ -505,25 +505,43 @@ class TestAuthGoogle:
         assert response.status_code == 403
         assert response.data["code"] == "invite_required"
 
-    def test_used_invite_code_rejected(self, db, settings, user):
+    def test_redeemed_invite_code_rejected(self, db, settings):
         from api.auth.google_views import auth_google_impl
 
         settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
         settings.GOOGLE_OAUTH_CLIENT_SECRET = "test-secret"
 
+        # A redeemed code no longer exists (redemption deletes it), so a second
+        # attempt with the same value must be rejected — single-use semantics.
         invite = InviteCode.objects.create()
-        invite.used_at = timezone.now()
-        invite.used_by = user
-        invite.save(update_fields=["used_at", "used_by"])
+        code_value = str(invite.code)
+        invite.delete()
 
         response = auth_google_impl(
-            _make_auth_google_impl_request(invite_code=str(invite.code)),
+            _make_auth_google_impl_request(invite_code=code_value),
             exchange_auth_code=lambda code, redirect_uri: {"id_token": "fake-id-token"},
             verify_id_token=lambda id_token: FAKE_PAYLOAD,
             login_fn=lambda req, user: None,
         )
 
         assert response.status_code == 403
+
+    def test_malformed_invite_code_rejected_not_500(self, db, settings):
+        from api.auth.google_views import auth_google_impl
+
+        settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
+        settings.GOOGLE_OAUTH_CLIENT_SECRET = "test-secret"
+
+        # A non-UUID code must be treated as invalid, not raise (would be a 500).
+        response = auth_google_impl(
+            _make_auth_google_impl_request(invite_code="not-a-uuid"),
+            exchange_auth_code=lambda code, redirect_uri: {"id_token": "fake-id-token"},
+            verify_id_token=lambda id_token: FAKE_PAYLOAD,
+            login_fn=lambda req, user: None,
+        )
+
+        assert response.status_code == 403
+        assert response.data["code"] == "invite_required"
 
     def test_not_configured_returns_503(self, db, settings):
         from api.auth.google_views import auth_google_impl
@@ -848,7 +866,9 @@ class TestMockIdp:
 
     def test_complete_creates_session(self, db, settings, monkeypatch):
         settings.DEV_BOOTSTRAP_ENABLED = True
-        monkeypatch.setattr("api.auth.mock_idp_views.seed_dev_pieces", lambda u, **kw: None)
+        monkeypatch.setattr(
+            "api.auth.mock_idp_views.seed_dev_pieces", lambda u, **kw: None
+        )
         client = Client()
         # POST authorize to get code
         auth_response = client.post(
@@ -873,7 +893,9 @@ class TestMockIdp:
 
     def test_complete_creates_user_if_missing(self, db, settings, monkeypatch):
         settings.DEV_BOOTSTRAP_ENABLED = True
-        monkeypatch.setattr("api.auth.mock_idp_views.seed_dev_pieces", lambda u, **kw: None)
+        monkeypatch.setattr(
+            "api.auth.mock_idp_views.seed_dev_pieces", lambda u, **kw: None
+        )
         from django.contrib.auth import get_user_model
 
         User = get_user_model()

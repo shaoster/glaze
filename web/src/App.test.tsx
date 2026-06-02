@@ -39,7 +39,6 @@ vi.mock("./util/api", async (importOriginal) => {
       }),
     loginWithGoogle: vi.fn(),
     logoutUser: vi.fn().mockResolvedValue(undefined),
-    validateInviteCode: vi.fn(),
     getStaffInviteCode: vi.fn(),
     generateStaffInviteCode: vi.fn(),
     fetchPieces: vi.fn().mockResolvedValue({ count: 0, results: [] }),
@@ -128,7 +127,6 @@ import {
   fetchPiece,
   loginWithGoogle,
   logoutUser,
-  validateInviteCode,
 } from "./util/api";
 import App from "./App";
 import * as postLoginRedirect from "./util/postLoginRedirect";
@@ -737,14 +735,13 @@ describe("invite page routing", () => {
       adminBaseUrl: null,
       user: MOCK_USER,
     });
-    vi.mocked(validateInviteCode).mockResolvedValue({ valid: true });
     window.history.pushState({}, "", "/invite?code=test-uuid");
 
     render(<App />);
 
     await waitFor(() =>
       expect(
-        screen.getByText(/your invite code is valid/i),
+        screen.getByText(/you've been invited to potterdoc/i),
       ).toBeInTheDocument(),
     );
   });
@@ -755,53 +752,33 @@ describe("invite page routing", () => {
       adminBaseUrl: null,
       user: null,
     });
-    vi.mocked(validateInviteCode).mockResolvedValue({ valid: true });
     window.history.pushState({}, "", "/invite?code=test-uuid");
 
     render(<App />);
 
     await waitFor(() =>
       expect(
-        screen.getByText(/your invite code is valid/i),
+        screen.getByText(/you've been invited to potterdoc/i),
       ).toBeInTheDocument(),
     );
   });
 
-  it("stores invite code in sessionStorage after validation", async () => {
+  it("stores invite code in sessionStorage without a pre-validation call", async () => {
     vi.mocked(fetchAppInit).mockResolvedValue({
       googleOauthClientId: "test-client-id",
       adminBaseUrl: null,
       user: null,
     });
-    vi.mocked(validateInviteCode).mockResolvedValue({ valid: true });
     window.history.pushState({}, "", "/invite?code=my-invite-uuid");
 
     render(<App />);
 
     await waitFor(() =>
       expect(
-        screen.getByText(/your invite code is valid/i),
+        screen.getByText(/you've been invited to potterdoc/i),
       ).toBeInTheDocument(),
     );
 
     expect(sessionStorage.getItem("pendingInviteCode")).toBe("my-invite-uuid");
-  });
-
-  it("shows error for invalid invite code", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({
-      googleOauthClientId: "test-client-id",
-      adminBaseUrl: null,
-      user: null,
-    });
-    vi.mocked(validateInviteCode).mockRejectedValue({
-      response: { data: { detail: "This code has been used." } },
-    });
-    window.history.pushState({}, "", "/invite?code=used-code");
-
-    render(<App />);
-
-    await waitFor(() =>
-      expect(screen.getByText(/this code has been used/i)).toBeInTheDocument(),
-    );
   });
 });
