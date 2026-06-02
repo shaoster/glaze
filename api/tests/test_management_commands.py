@@ -1,5 +1,5 @@
-import importlib
 import argparse
+import importlib
 import sys
 import types
 from io import BytesIO
@@ -192,16 +192,16 @@ class TestImportTestTileImagesHelpers:
         command.add_arguments(parser)
 
         option_strings = {
-            option
-            for action in parser._actions
-            for option in action.option_strings
+            option for action in parser._actions for option in action.option_strings
         }
         assert "--batch-folder" in option_strings
         assert "--inspection-dir" in option_strings
         assert "--crop-dir" in option_strings
         assert "--manifest" in option_strings
 
-    def test_handle_uses_env_batch_folder_when_option_blank(self, monkeypatch, tmp_path):
+    def test_handle_uses_env_batch_folder_when_option_blank(
+        self, monkeypatch, tmp_path
+    ):
         monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo")
         monkeypatch.setenv("CLOUDINARY_API_KEY", "key")
         monkeypatch.setenv("CLOUDINARY_API_SECRET", "secret")
@@ -263,7 +263,9 @@ class TestImportTestTileImagesHelpers:
         monkeypatch.setattr(
             GlazeCombinationLayer.objects,
             "create",
-            lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("should not recreate")),
+            lambda *args, **kwargs: (_ for _ in ()).throw(
+                AssertionError("should not recreate")
+            ),
         )
 
         import_tiles._ensure_combination_layers(combo, [first, second])
@@ -275,7 +277,9 @@ class TestImportTestTileImagesHelpers:
 
             content = b"downloaded"
 
-        monkeypatch.setattr(import_tiles.requests, "get", lambda url, timeout=60: FakeResponse())
+        monkeypatch.setattr(
+            import_tiles.requests, "get", lambda url, timeout=60: FakeResponse()
+        )
         dst = tmp_path / "download.jpg"
 
         import_tiles._download_file("https://example.com/img.jpg", dst)
@@ -305,26 +309,17 @@ class TestRestoreImagesFromBackupHelpers:
 
     def test_parse_cloudinary_url_rejects_invalid_and_non_cloudinary_urls(self):
         assert restore_backup._parse_cloudinary_url("not a url") == (None, None)
-        assert (
-            restore_backup._parse_cloudinary_url(
-                "https://example.com/image/upload/v1/pieces/mug.jpg"
-            )
-            == (None, None)
-        )
-        assert (
-            restore_backup._parse_cloudinary_url(
-                "https://res.cloudinary.com/demo/notimage/upload/v1/pieces/mug.jpg"
-            )
-            == (None, None)
-        )
+        assert restore_backup._parse_cloudinary_url(
+            "https://example.com/image/upload/v1/pieces/mug.jpg"
+        ) == (None, None)
+        assert restore_backup._parse_cloudinary_url(
+            "https://res.cloudinary.com/demo/notimage/upload/v1/pieces/mug.jpg"
+        ) == (None, None)
 
     def test_parse_cloudinary_url_returns_none_public_id_for_empty_tail(self):
-        assert (
-            restore_backup._parse_cloudinary_url(
-                "https://res.cloudinary.com/demo/image/upload/"
-            )
-            == ("demo", None)
-        )
+        assert restore_backup._parse_cloudinary_url(
+            "https://res.cloudinary.com/demo/image/upload/"
+        ) == ("demo", None)
 
     def test_parse_cloudinary_url_strips_transforms_and_extension(self):
         cloud_name, public_id = restore_backup._parse_cloudinary_url(

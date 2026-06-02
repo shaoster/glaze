@@ -39,6 +39,11 @@ COPY --from=schema-builder /app/schema.json /app/schema.json
 # Copy the rest of the web workspace files
 COPY web/ ./
 
+# Copy config YAMLs needed by the frontend from the root build context
+COPY tutorials.yml /app/
+COPY user_preferences.yml /app/
+COPY workflow.yml /app/
+
 # Generate TypeScript types from the local schema.json file
 ENV GLAZE_SCHEMA_SOURCE=/app/schema.json
 RUN npm run generate-types
