@@ -277,7 +277,7 @@ jobs:
 
       - name: Start Docker Compose stack and wait for health
         run: |
-          docker compose -f infra/custom/docker-compose.yml up --build -d --wait web
+          docker compose -f infra/custom/docker-compose.yml -f infra/custom/docker-compose.smoke.yml up --build -d --wait web
 
       - name: Verify application readiness and data seeding
         shell: bash
@@ -312,7 +312,7 @@ jobs:
       - name: Dump logs on failure
         if: failure()
         run: |
-          docker compose -f infra/custom/docker-compose.yml logs
+          docker compose -f infra/custom/docker-compose.yml -f infra/custom/docker-compose.smoke.yml logs
 
   image:
     name: Build & smoke-test OCI image
