@@ -35,7 +35,6 @@ import ShareControls from "./PieceShareControls";
 import SectionCard from "./SectionCard";
 import EditableToggle from "./EditableToggle";
 import PieceNameEditor from "./PieceNameEditor";
-import ShowcaseStoryEditor from "./ShowcaseStoryEditor";
 
 type PieceDetailProps = {
   piece: PieceDetailType;
@@ -388,12 +387,6 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             <ProcessSummary piece={piece} history={piece.history} />
           </SectionCard>
         </Box>
-
-        {isTerminal && canEdit && (
-          <Box sx={{ mb: 2.5 }}>
-            <ShowcaseStoryEditor piece={piece} onPieceUpdated={onPieceUpdated} />
-          </Box>
-        )}
 
         <SectionCard
           title="Timeline"

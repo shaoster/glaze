@@ -666,7 +666,7 @@ js_library(
         "src/components/PieceDetail.tsx",
         "src/components/PieceNameEditor.tsx",
         "src/components/SectionCard.tsx",
-        "src/components/ShowcaseStoryEditor.tsx",
+        "src/components/ShowcaseVideoInputPicker.tsx",
         "src/components/SmallTutorialInlay.tsx",
         "src/components/SmallTutorialInlayConfig.ts",
     ],
@@ -684,6 +684,19 @@ js_library(
         ":tag_manager_src",
         ":util_lib",
         ":workflow_state_src",
+    ],
+)
+
+js_library(
+    name = "showcase_video_input_picker_src",
+    srcs = [
+        "src/components/CloudinaryImage.tsx",
+        "src/components/SelectablePhotoMasonry.tsx",
+        "src/components/ShowcaseVideoInputPicker.tsx",
+    ],
+    deps = [
+        ":node_modules",
+        ":primitive_src",
     ],
 )
 
@@ -1031,6 +1044,20 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_showcase_video_input_picker_test",
+    srcs = [
+        "src/components/__tests__/ShowcaseVideoInputPicker.test.tsx",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":showcase_video_input_picker_src",
+    ],
+    expected_coverage = [
+        "web/src/components/ShowcaseVideoInputPicker*",
+    ],
+)
+
+vitest_test(
     name = "web_workflow_summary_test",
     srcs = [
         "src/components/__tests__/ProcessSummary.test.tsx",
@@ -1074,7 +1101,6 @@ vitest_test(
         "web/src/components/PieceDetail*",
         "web/src/components/PieceNameEditor*",
         "web/src/components/SectionCard*",
-        "web/src/components/ShowcaseStoryEditor*",
     ],
 )
 
