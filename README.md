@@ -112,11 +112,17 @@ Use the package managers you already know to edit dependency manifests, then han
 
 ### Vibe Coding With Agents
 
-Glaze uses a high-level orchestration workflow inspired by the [Get Shit Done (GSD)](https://github.com/gsd-build/get-shit-done) philosophy, but adapted for non-developer QoL and safety with non-frontier models:
+Glaze uses a high-level orchestration workflow inspired by the [Get Shit Done (GSD)](https://github.com/gsd-build/get-shit-done) philosophy, but adapted for non-developer QoL and safety with non-frontier models. (Ah, and about the recent GSD drama — whoops. The good ideas still stand, so we're keeping them.)
 
 1.  **`/dream`**: High-level vision and milestone orchestration. Use this to describe a broad feature or user story. The agent will use Plan Mode to break the vision into logical sub-tasks, create a GitHub Milestone, and spawn sub-agents to author specific specs.
 2.  **`/spec`**: Detail-oriented issue authoring. Each sub-task from the dream is turned into a precise GitHub issue with problem motivation, proposed solution, and acceptance criteria.
 3.  **`/do`**: Execution. When you want an agent to implement an issue or start a PR-sized change, use the explicit issue flow: `/do #292`.
+
+    For bugs, there is a parallel pair that mirrors `/spec` → `/do`:
+
+    - **`/report`** (the bug analog of `/spec`): Interactive evidence gathering, local reproduction, and filing an issue with validated repro steps.
+    - **`/fix`** (the bug analog of `/do`): Takes that reported issue, writes a failing regression test first, implements the minimal fix, verifies, and opens a PR.
+
 4.  **`/deps`**: Bazel dependency audit. Use this when you want an agent to inspect the rules_oci image target plus test and lint graphs for unexpected dependencies before planning cleanup work.
 5.  **`/pm`**: Session-level communication mode. Use this when the main audience is less technical contributors and you want the assistant to explain choices in terms of user value, trade-offs, and constraints instead of file-by-file edits.
 
