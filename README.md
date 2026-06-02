@@ -123,8 +123,19 @@ Glaze uses a high-level orchestration workflow inspired by the [Get Shit Done (G
     - **`/report`** (the bug analog of `/spec`): Interactive evidence gathering, local reproduction, and filing an issue with validated repro steps.
     - **`/fix`** (the bug analog of `/do`): Takes that reported issue, writes a failing regression test first, implements the minimal fix, verifies, and opens a PR.
 
-4.  **`/deps`**: Bazel dependency audit. Use this when you want an agent to inspect the rules_oci image target plus test and lint graphs for unexpected dependencies before planning cleanup work.
-5.  **`/pm`**: Session-level communication mode. Use this when the main audience is less technical contributors and you want the assistant to explain choices in terms of user value, trade-offs, and constraints instead of file-by-file edits.
+4.  **`/pm`**: Session-level communication mode. Use this when the main audience is less technical contributors and you want the assistant to explain choices in terms of user value, trade-offs, and constraints instead of file-by-file edits.
+
+#### Async Code Health Skills
+
+The skills above are about getting *new* work into the repo. A second family runs **asynchronously, in bulk, against the codebase as a whole** — not tied to a single issue or PR. Point them at the repo when you want to step back and assess health rather than ship a feature:
+
+- **`/deps`**: Bazel dependency audit. Inspects the `rules_oci` image target plus the test and lint graphs for unexpected dependencies — image bloat, layering violations, a lint target that secretly pulls in production code.
+- **`/audit`**: Test performance and flakiness audit. Finds slow, flaky, or redundant tests so the suite stays fast and trustworthy.
+- **`/cover`**: Coverage analysis. The point isn't just to chase a higher number — because coverage is computed through Bazel's dependency graph, we can see where coverage is *inappropriate*. A unit test that lights up code it should have mocked is an accidental integration test; a test that mocks the very thing it claims to exercise shows up as a suspicious gap. `/cover` surfaces both, so coverage becomes a signal about *test quality*, not just test quantity.
+- **`/stories`**: Storybook coverage. Sweeps the component tree for UI that lacks `.stories.tsx` coverage and populates it, so the published Storybook stays an honest catalog of what's actually in the app — the visual analog of keeping test coverage meaningful.
+- **`/docs`**: Documentation coverage. Diffs the codebase against the human-facing READMEs since the last sync and applies the updates, so prose doesn't silently drift from what the code actually does.
+
+These compose: `/deps` tells you what a target actually pulls in, and `/cover` cross-checks that against what the tests actually exercise — together they catch the over-mocked unit test and the accidental integration test from opposite directions, while `/audit` keeps whatever you add fast. Run them periodically (or in CI) and file any findings as `/spec` or `/report` issues to feed back into the `/do` and `/fix` loops.
 
 #### Our Architectural Principles for Agent Work:
 
