@@ -526,6 +526,23 @@ class TestAuthGoogle:
 
         assert response.status_code == 403
 
+    def test_malformed_invite_code_rejected_not_500(self, db, settings):
+        from api.auth.google_views import auth_google_impl
+
+        settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
+        settings.GOOGLE_OAUTH_CLIENT_SECRET = "test-secret"
+
+        # A non-UUID code must be treated as invalid, not raise (would be a 500).
+        response = auth_google_impl(
+            _make_auth_google_impl_request(invite_code="not-a-uuid"),
+            exchange_auth_code=lambda code, redirect_uri: {"id_token": "fake-id-token"},
+            verify_id_token=lambda id_token: FAKE_PAYLOAD,
+            login_fn=lambda req, user: None,
+        )
+
+        assert response.status_code == 403
+        assert response.data["code"] == "invite_required"
+
     def test_not_configured_returns_503(self, db, settings):
         from api.auth.google_views import auth_google_impl
 

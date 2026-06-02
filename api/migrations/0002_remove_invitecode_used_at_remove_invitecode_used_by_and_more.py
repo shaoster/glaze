@@ -3,12 +3,22 @@
 from django.db import migrations, models
 
 
+def _delete_redeemed_codes(apps, schema_editor):
+    # Pre-existing rows that were already redeemed carried ``used_at``. The new
+    # model treats existence as validity (redemption now deletes the row), so a
+    # spent-but-unexpired code would become valid again once ``used_at`` is
+    # dropped. Delete those rows before the column goes away. See issue #740.
+    InviteCode = apps.get_model("api", "InviteCode")
+    InviteCode.objects.filter(used_at__isnull=False).delete()
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("api", "0001_initial"),
     ]
 
     operations = [
+        migrations.RunPython(_delete_redeemed_codes, migrations.RunPython.noop),
         migrations.RemoveField(
             model_name="invitecode",
             name="used_at",

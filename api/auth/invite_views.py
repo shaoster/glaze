@@ -36,6 +36,11 @@ class InviteSendRateThrottle(UserRateThrottle):
     """Per-admin throttle for the email-invite send endpoint.
 
     Rate comes from ``REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["invite_send"]``.
+
+    NOTE: DRF throttles count requests in the Django cache. In production this
+    is only effective when a shared cache is configured (``REDIS_CACHE_URL``);
+    with the ``DummyCache`` fallback the counter is never stored and the throttle
+    does not engage. Keep ``REDIS_CACHE_URL`` set wherever this control matters.
     """
 
     scope = "invite_send"

@@ -5,6 +5,8 @@ from datetime import timedelta
 import pytest
 from django.contrib.auth.models import User
 from django.core import mail
+from django.core.cache import cache
+from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
@@ -198,6 +200,37 @@ class TestSendInviteEndpoint:
         response = self._post(user)
         assert response.status_code == 403
         assert len(mail.outbox) == 0
+
+    @override_settings(
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            }
+        },
+    )
+    def test_send_is_rate_limited_per_admin(self, staff_user, monkeypatch):
+        from api.auth.invite_views import InviteSendRateThrottle
+
+        # The throttle counts requests in the cache; the default DummyCache (prod
+        # fallback and test default) stores nothing, so it would silently never
+        # engage. Use a real cache and a 1/min rate to prove the cap triggers.
+        # The rate lives on the throttle class (bound at import), so patch it
+        # there rather than via settings.
+        cache.clear()
+        monkeypatch.setitem(
+            InviteSendRateThrottle.THROTTLE_RATES, "invite_send", "1/min"
+        )
+        InviteCode.objects.create()
+        InviteCode.objects.create()
+
+        first = self._post(staff_user)
+        second = self._post(staff_user)
+
+        assert first.status_code == 204
+        assert second.status_code == 429
+        # The throttled request never reached the body: one mail, one code spent.
+        assert len(mail.outbox) == 1
+        assert InviteCode.objects.filter(sent=True).count() == 1
 
 
 @pytest.mark.django_db

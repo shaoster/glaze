@@ -10,6 +10,7 @@ from typing import Any, cast
 import httpx
 from django.conf import settings
 from django.contrib.auth import get_user_model, login
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -138,7 +139,8 @@ def auth_google_impl(
                     invite_code = InviteCode.objects.select_for_update().get(
                         code=invite_code_value
                     )
-                except InviteCode.DoesNotExist:
+                except (InviteCode.DoesNotExist, ValidationError, ValueError):
+                    # A malformed (non-UUID) code is just an invalid code, not a 500.
                     invite_code = None
 
                 if invite_code is None or not invite_code.is_valid:
