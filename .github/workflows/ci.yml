@@ -273,6 +273,8 @@ jobs:
           DOMAIN=glaze.local
           ALLOWED_HOSTS=glaze.local,localhost,127.0.0.1
           PRODUCTION=True
+          GLAZE_DEV_BOOTSTRAP=force
+          APP_ORIGIN=https://glaze.local
           EOF
 
       - name: Generate self-signed SSL certificates for Nginx
@@ -309,7 +311,7 @@ jobs:
 
           # Confirm we are logged in
           curl -k -fsS --resolve glaze.local:443:127.0.0.1 -b "$JAR" "https://glaze.local/api/auth/me/" \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("user"), "Not authenticated"; print("Authenticated as:", d["user"]["email"])'
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("user"), "Not authenticated"; print("Authenticated as:", d["user"]["openid_subject"][:16])'
 
           # Verify that seeded pieces exist
           COUNT=$(curl -k -fsS --resolve glaze.local:443:127.0.0.1 -b "$JAR" "https://glaze.local/api/pieces/" \

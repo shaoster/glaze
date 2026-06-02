@@ -30,20 +30,14 @@ services:
       retries: 5
 
   deploy_init:
-    build:
-      context: ../..
-      dockerfile: infra/custom/Dockerfile
     image: glaze:latest
     restart: "no"
-    command: >
-      bash -c "
-        python manage.py migrate --no-input &&
-        python manage.py load_public_library --skip-if-missing &&
-        python manage.py clear_stuck_tasks --hours 1
-      "
+    command: python manage.py deploy_init
     environment:
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
       REDIS_CACHE_URL: redis://redis:6379/1
+      GLAZE_DEV_BOOTSTRAP: "${GLAZE_DEV_BOOTSTRAP:-}"
+      APP_ORIGIN: "${APP_ORIGIN:-}"
     depends_on:
       db:
         condition: service_healthy
@@ -69,6 +63,8 @@ services:
       CLOUDINARY_UPLOAD_FOLDER: ${CLOUDINARY_UPLOAD_FOLDER:-glaze}
       CLOUDINARY_PUBLIC_UPLOAD_FOLDER: ${CLOUDINARY_PUBLIC_UPLOAD_FOLDER:-glaze_public}
       GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GLAZE_DEV_BOOTSTRAP: "${GLAZE_DEV_BOOTSTRAP:-}"
+      APP_ORIGIN: "${APP_ORIGIN:-}"
     depends_on:
       db:
         condition: service_healthy
@@ -84,9 +80,6 @@ services:
       start_period: 60s
 
   worker:
-    build:
-      context: ../..
-      dockerfile: infra/custom/Dockerfile
     image: glaze:latest
     restart: unless-stopped
     command: python -m celery -A backend worker -l INFO

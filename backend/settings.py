@@ -278,7 +278,9 @@ GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET", "")
 # Development bootstrap helpers. Enabled by default in DEBUG to make freshly
 # created local worktrees usable immediately after first login, but fully
 # disabled in production.
-DEV_BOOTSTRAP_ENABLED = DEBUG and os.environ.get("GLAZE_DEV_BOOTSTRAP", "1") == "1"
+DEV_BOOTSTRAP_ENABLED = (
+    DEBUG and os.environ.get("GLAZE_DEV_BOOTSTRAP", "1") == "1"
+) or (os.environ.get("GLAZE_DEV_BOOTSTRAP") == "force")
 
 LOGGING = {
     "version": 1,
@@ -335,7 +337,7 @@ if IS_PRODUCTION:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     SECURE_SSL_REDIRECT = True
-    SECURE_REDIRECT_EXEMPT = [r"^api/health/"]
+    SECURE_REDIRECT_EXEMPT = [r"^/api/health/"]
     if _COOKIE_DOMAIN:
         SESSION_COOKIE_DOMAIN = _COOKIE_DOMAIN
 
