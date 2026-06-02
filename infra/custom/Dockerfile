@@ -44,7 +44,7 @@ ENV GLAZE_SCHEMA_SOURCE=/app/schema.json
 RUN npm run generate-types
 
 # Build the frontend production distribution
-RUN npm run build
+RUN npx tsc -p tsconfig.app.json && npx vite build
 
 # Stage 3: Create the Python/Django backend & final runner
 FROM python:3.12-slim

@@ -361,6 +361,7 @@ js_library(
     srcs = [
         "package.json",
         "src/cloudinary-widget.d.ts",
+        "src/scripts.d.ts",
         "src/test-setup.ts",
         "src/yaml.d.ts",
         "tsconfig.app.json",

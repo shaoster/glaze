@@ -9,10 +9,27 @@ vi.mock("better-sqlite3", () => {
       coverageLines: 1,
     };
 
-    sourceFiles = [];
-    sourceLines = [];
-    tests = [];
-    coverageLines = [];
+    sourceFiles: { id: number; path: string }[] = [];
+    sourceLines: {
+      id: number;
+      source_file_id: number;
+      line_number: number;
+      total_hit_count: number;
+      test_count: number;
+    }[] = [];
+    tests: {
+      id: number;
+      name: string;
+      report_path: string;
+      is_integration: boolean;
+      scope: string | null;
+    }[] = [];
+    coverageLines: {
+      id: number;
+      test_id: number;
+      source_line_id: number;
+      hit_count: number;
+    }[] = [];
 
     exec() {}
 
