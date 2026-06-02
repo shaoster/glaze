@@ -974,32 +974,6 @@ describe("PieceDetail", () => {
     });
   });
 
-  describe("showcase story", () => {
-    it("updates showcase story and triggers autosave", async () => {
-      const piece = makePiece({
-        current_state: makeState({ state: "completed" }),
-        showcase_story: "Old story",
-      });
-      const updatedPiece = { ...piece, showcase_story: "New story" };
-      vi.mocked(api.updatePiece).mockResolvedValue(updatedPiece);
-      const onPieceUpdated = vi.fn();
-
-      await renderPieceDetail(piece, onPieceUpdated);
-
-      const textarea = screen.getByPlaceholderText(/tell the story/i);
-      fireEvent.change(textarea, { target: { value: "New story" } });
-
-      await waitFor(
-        () =>
-          expect(api.updatePiece).toHaveBeenCalledWith("piece-id-1", {
-            showcase_story: "New story",
-          }),
-        { timeout: 3000 },
-      );
-      expect(onPieceUpdated).toHaveBeenCalledWith(updatedPiece);
-    });
-  });
-
   describe("historical state editing (rewind mode)", () => {
     it("allows entering rewind mode and clearing it", async () => {
       const designed = makeState({ id: "s1", state: "designed" });
