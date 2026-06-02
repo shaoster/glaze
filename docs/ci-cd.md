@@ -184,3 +184,26 @@ If setting up a fresh droplet:
 2. Install k3s on the host manually (see `infra/k3s/`)
 3. Run `cluster-setup.yml` via `workflow_dispatch` to converge infra
 4. Run `cd.yml` via `workflow_dispatch` to deploy the app
+
+## Dropbox backup setup
+
+The hourly database backup CronJob uses Dropbox as its off-cluster backup store.
+Create a Dropbox app with **scoped access**, **App folder** access, and the
+`files.content.write` and `files.metadata.read` scopes, then create an offline
+refresh token for the app.
+
+```bash
+gh secret set DROPBOX_APP_KEY --env glaze-droplet --body "<dropbox-app-key>"
+gh secret set DROPBOX_APP_SECRET --env glaze-droplet --body "<dropbox-app-secret>"
+gh secret set DROPBOX_REFRESH_TOKEN --env glaze-droplet --body "<dropbox-refresh-token>"
+```
+
+If you are bootstrapping the cluster manually, add the same values to the
+`glaze-secrets` Kubernetes secret:
+
+```bash
+kubectl create secret generic glaze-secrets \
+  --from-literal=DROPBOX_APP_KEY=<dropbox-app-key> \
+  --from-literal=DROPBOX_APP_SECRET=<dropbox-app-secret> \
+  --from-literal=DROPBOX_REFRESH_TOKEN=<dropbox-refresh-token>
+```

@@ -8,31 +8,61 @@ The repository, internal code identifiers, and some contributor documentation st
 
 A pottery workflow tracking application. Log pieces and record state transitions as work moves through throwing, bisque firing, glazing, and finishing.
 
-## Documentation
+**Try it live: [potterdoc.com](https://potterdoc.com)**
 
-- [Backend API (`api/`)](api/README.md) - Django, DRF, public libraries, auth flows, and data isolation.
-- [Frontend Client (`web/`)](web/README.md) - React components, Vite configuration, and frontend conventions.
-- [Common Tests (`tests/`)](tests/README.md) - Structural tests for the workflow state machine.
-- [Declarative Workflow (`workflow/README.md`)](workflow/README.md) - Source of truth for piece states, transitions, globals, and custom fields.
-- [Declarative Preferences (`user_preferences.schema.yml`)](user_preferences.schema.yml) - Schema for user settings.
-- [Declarative Tutorials (`tutorials.schema.yml`)](tutorials.schema.yml) - Schema for tutorial tips and attachment rules.
-- [Tools (`tools/`)](tools/README.md) - Standalone utilities, Modal crop offloading, and Glaze import tool.
-- [Pages (`pages/`)](pages/README.md) - Static published pages.
-- [CI / CD Infrastructure (`docs/`)](docs/ci-cd.md) - GitHub Actions workflows, deployment pipelines, and environment variables.
-- [Agent Development Guide (`docs/agents/`)](docs/agents/dev.md) - Shell bootstrap, worktree navigation, and agent workflow context.
+<!-- Illustrative overview of the default workflow. Source of truth is workflow.yml;
+     regenerate this if states or transitions change. -->
 
-## For new developers
+```mermaid
+stateDiagram-v2
+    direction LR
+    state "Designing" as designed
+    state "Throwing" as wheel_thrown
+    state "Handbuilding" as handbuilt
+    state "Trimming" as trimmed
+    state "Adding Slip" as slip_applied
+    state "Carving" as carved
+    state "Queued for Bisque" as submitted_to_bisque_fire
+    state "Planning Glaze" as bisque_fired
+    state "Waxing" as waxed
+    state "Glazing" as glazed
+    state "Queued for Glaze" as submitted_to_glaze_fire
+    state "Touching Up" as glaze_fired
+    state "Sanding" as sanded
+    state "Completed" as completed
 
-> If you're here to contribute to the codebase or help maintain potterdoc.com, see the [Contributing](#contributing) section first — it explains the three different ways to get involved and which setup path applies to you.
+    [*] --> designed
+    designed --> wheel_thrown
+    designed --> handbuilt
+    wheel_thrown --> trimmed
+    trimmed --> slip_applied
+    trimmed --> carved
+    trimmed --> submitted_to_bisque_fire
+    handbuilt --> slip_applied
+    handbuilt --> carved
+    handbuilt --> submitted_to_bisque_fire
+    slip_applied --> carved
+    slip_applied --> submitted_to_bisque_fire
+    carved --> slip_applied
+    carved --> submitted_to_bisque_fire
+    submitted_to_bisque_fire --> bisque_fired
+    bisque_fired --> waxed
+    bisque_fired --> glazed
+    waxed --> glazed
+    glazed --> submitted_to_glaze_fire
+    submitted_to_glaze_fire --> glaze_fired
+    glaze_fired --> sanded
+    glaze_fired --> completed
+    sanded --> completed
+    completed --> [*]
 
-This guide assumes you already know the tools listed below and are familiar with [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) and [abstraction](<https://en.wikipedia.org/wiki/Abstraction_(computer_science)>) as design principles; if any term is unfamiliar, click the linked docs to catch up quickly.
+    note right of designed
+        Any active state can also be
+        Recycled (a terminal state).
+    end note
+```
 
-- **[Django](https://www.djangoproject.com/)** is the Python web framework that owns the backend (`backend/`, `api/`). [Separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) keeps unrelated responsibilities apart so each layer stays simpler to reason about—for example, [`api/models.py`](api/models.py) defines the data schema, [`api/serializers.py`](api/serializers.py) translates between ORM objects and JSON payloads, and [`api/views.py`](api/views.py) wires those serializers into `/api/...` endpoints that enforce workflow rules from [`workflow.yml`](workflow.yml). That split keeps the REST API (powered by Django REST Framework, DRF) resilient even when one layer needs to change, while returning consistent data/validation to all clients.
-- **[React](https://react.dev/)** (web/src/) renders the SPA (Single Page Application) and consumes shared types/API helpers from [`web/src/util/types.ts`](web/src/util/types.ts) and [`web/src/util/api.ts`](web/src/util/api.ts). React follows a component-based paradigm where functions or classes receive props (inputs) and return HTML that the browser can render.
-- **[Vite](https://vitejs.dev/)** (web tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our web workbench, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
-- **[Material UI](https://mui.com/)** supplies the component library used everywhere in the UI for forms, dialogs, buttons, and layout.
-- **[Axios](https://axios-http.com/)** is the HTTP client library we use in the web to talk to REST APIs; it keeps things simple by handling the details of sending and receiving JSON so the UI code does not have to repeat that work. Benefits of Axios over raw `fetch` include centralized configuration of base URLs and headers, automatic JSON parsing/serialization, and built-in hooks for handling errors, cancellations, and retries. In this project that means [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx) can rely on helpers like `updateCurrentState`/`updatePiece` instead of duplicating URLs or JSON logic, and we have a single place for surfaces errors before they hit the UI.
-- A **[client library](<https://en.wikipedia.org/wiki/Library_(computing)>)** is a reusable set of functions that wraps low-level protocols (like HTTP) so developers can interact with remote services using clean function calls, in their programming language of choice, instead of handling bytes, headers, or parsing manually.
+Pieces don't have to march straight through — you can carve before or after slipping, skip waxing, or recycle a piece at any active stage. The diagram above is illustrative; [`workflow.yml`](workflow.yml) is the source of truth.
 
 ## Motivation
 
@@ -43,7 +73,44 @@ While the UI is similar at a surface level to other craft journaling application
 - Data normalization around every piece's history for richer and more reliable single piece and multi-piece analysis.
 - Systematically answer questions like "How many pieces do I lose in the firing stage by glaze type?" or "How often do I ruin a piece during trimming?"
 
-## Prerequisites
+## Ways to contribute
+
+There are three distinct ways to get involved, and they involve different levels of access and commitment. Pick the one that matches your goal — each points to the setup it needs elsewhere in this README.
+
+### Maintaining potterdoc.com
+
+If you want to help run the live service — monitoring, deployments, responding to issues — you need Tailscale access to the production cluster. Send a note to [admin@potterdoc.com](mailto:admin@potterdoc.com) and request access. Once you've been added to the tailnet and have [installed Tailscale](https://tailscale.com/download) on your machine, run:
+
+```bash
+tools/init_env.sh
+```
+
+This initializes your local `.env.local` with production service credentials pulled directly from the cluster. From there you have everything you need to run the app locally against real credentials, deploy to the cluster, and participate in on-call rotation. This is the path if you care about the pottery community using potterdoc.com specifically and want shared ownership of that instance.
+
+### Contributing to the open source project
+
+If you want to contribute code, documentation, or agent workflows to the Glaze codebase — bug fixes, new features, workflow improvements — you do not need Tailscale access or production credentials. Clone the repo, follow the [Getting started](#getting-started) steps, and open a PR. The local SQLite dev environment is sufficient for most development work. Cloudinary and Google OAuth degrade gracefully when absent (see `.env.example` comments). This is the path if you want to improve the software itself regardless of who hosts it.
+
+### Self-hosting
+
+If you want to run your own instance of PotterDoc for yourself or your studio, you also do not need access to potterdoc.com infrastructure. The codebase is public and the Helm chart deploys to any k3s cluster. See [`docs/ci-cd.md`](docs/ci-cd.md) for deployment details. This is the path if you want full control over your own data and infrastructure.
+
+## Architecture and tech stack
+
+This guide assumes you already know the tools listed below and are familiar with [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) and [abstraction](<https://en.wikipedia.org/wiki/Abstraction_(computer_science)>) as design principles; if any term is unfamiliar, click the linked docs to catch up quickly.
+
+- **[Django](https://www.djangoproject.com/)** is the Python web framework that owns the backend (`backend/`, `api/`). [Separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns) keeps unrelated responsibilities apart so each layer stays simpler to reason about—for example, [`api/models.py`](api/models.py) defines the data schema, [`api/serializers.py`](api/serializers.py) translates between ORM objects and JSON payloads, and [`api/views.py`](api/views.py) wires those serializers into `/api/...` endpoints that enforce workflow rules from [`workflow.yml`](workflow.yml). That split keeps the REST API (powered by Django REST Framework, DRF) resilient even when one layer needs to change, while returning consistent data/validation to all clients.
+- **[React](https://react.dev/)** (web/src/) renders the SPA (Single Page Application) and consumes shared types/API helpers from [`web/src/util/types.ts`](web/src/util/types.ts) and [`web/src/util/api.ts`](web/src/util/api.ts). React follows a component-based paradigm where functions or classes receive props (inputs) and return HTML that the browser can render.
+- **[Vite](https://vitejs.dev/)** (web tooling) bundles the React app. It provides fast dev reloads (hot module replacement) so UI changes appear immediately while you work, runs the local dev server that powers our web workbench, and produces optimized production builds (tree shaking, minification) so the deployed bundle is as small and performant as possible.
+- **[Material UI](https://mui.com/)** supplies the component library used everywhere in the UI for forms, dialogs, buttons, and layout.
+- **[Axios](https://axios-http.com/)** is the HTTP client library we use in the web to talk to REST APIs; it keeps things simple by handling the details of sending and receiving JSON so the UI code does not have to repeat that work. Benefits of Axios over raw `fetch` include centralized configuration of base URLs and headers, automatic JSON parsing/serialization, and built-in hooks for handling errors, cancellations, and retries. In this project that means [`WorkflowState.tsx`](web/src/components/WorkflowState.tsx) can rely on helpers like `updateCurrentState`/`updatePiece` instead of duplicating URLs or JSON logic, and we have a single place for surfaces errors before they hit the UI.
+- A **[client library](<https://en.wikipedia.org/wiki/Library_(computing)>)** is a reusable set of functions that wraps low-level protocols (like HTTP) so developers can interact with remote services using clean function calls, in their programming language of choice, instead of handling bytes, headers, or parsing manually.
+
+See [Project structure](#project-structure) for the directory layout and [Further reading](#further-reading) for the per-subsystem documentation.
+
+## Getting started
+
+### Prerequisites
 
 Before cloning, ensure the following are installed on your system:
 
@@ -60,23 +127,62 @@ Python (3.12) and Node (22) are managed hermetically by Bazel — no manual inst
 
 The devcontainer pre-forwards backend ports `8080–8087` and Vite ports `5173–5180`. These ranges match the authorized origins registered in the Google OAuth client, and support up to 8 simultaneous worktree dev stacks. Running more than 8 concurrent `gz_start` instances inside the container is not supported — use the host environment instead if you need more.
 
-## Quick start
+### Quick start
 
-This section is for folks who just want to fire up the whole stack quickly and start poking around the app.
+This is for folks who just want to fire up the whole stack quickly and start poking around the app.
 
 ```bash
 source env.sh
 gz_start    # starts backend + web via the Bazel-run launcher
 ```
 
-## Development helpers (`env.sh`)
+The rest of the day-to-day commands live under [Development workflow](#development-workflow).
+
+### Local secrets and config (git-safe)
+
+Keep local-only settings in `.env.local` files; they are gitignored by default:
+
+- `.env.local` (repo-wide defaults)
+- `web/.env.local` (web-only overrides)
+
+`source env.sh` automatically loads both (in that order) so you can inject Cloudinary/API config without committing secrets.
+Use the checked-in root template, and create `web/.env.local` manually if you
+need web-only overrides:
+
+```bash
+cp .env.example .env.local
+```
+
+If you have Tailscale access to the production cluster, `tools/init_env.sh` does this and also fills in the service credentials in one step (see [Ways to contribute](#ways-to-contribute)).
+
+Each variable in `.env.example` has an inline comment explaining what it enables and what degrades gracefully when it is absent. Keep those comments current whenever a variable is added, removed, or renamed — the file is the primary reference for onboarding and for debugging "why isn't this feature working in dev."
+
+### Manual setup (without `env.sh`)
+
+If you prefer to install dependencies and run servers yourself, follow these explicit commands instead of relying on the helper script.
+
+```bash
+# Backend
+bazel run @uv//:uv -- sync
+bazel run @uv//:uv -- run python manage.py migrate
+uvicorn backend.asgi:application --port 8080 --reload
+
+# Web (separate terminal)
+cd web
+bazel run @nodejs_linux_amd64//:npm -- install
+bazel run @nodejs_linux_amd64//:npm -- run dev
+```
+
+## Development workflow
+
+The `env.sh` helpers wrap the common CLI sequences so you can focus on implementing features instead of hunting for the right flags.
 
 <figure>
   <img src="docs/diagrams/dev-local-flow.svg" alt="Glaze shell workflow state machine with healthy shell state in the center" width="100%">
   <figcaption>Healthy is the steady state. Fresh and existing checkouts both source <code>env.sh</code>, which lazily bootstraps any missing local shell state on first load. Package edits return to healthy via <code>gz_sync</code>, <code>.env*</code> edits return via <code>gz_reload</code>, and <code>gz_start</code> launches the stack from healthy.</figcaption>
 </figure>
 
-Use these shortcuts once you've sourced `env.sh`; they wrap common CLI sequences so you can focus on implementing features instead of hunting for the right flags. The `env.sh` script sets up Python/Node paths, loads useful aliases (`gz_start`, etc.), and keeps environment-specific tweaks (like log rotation and virtualenv activation) centralized, so every developer runs commands against the same configuration without manually sourcing multiple files. On a fresh checkout, `source env.sh` also materializes any missing local bootstrap state needed for a healthy shell.
+The `env.sh` script sets up Python/Node paths, loads useful aliases (`gz_start`, etc.), and keeps environment-specific tweaks (like log rotation and virtualenv activation) centralized, so every developer runs commands against the same configuration without manually sourcing multiple files. On a fresh checkout, `source env.sh` also materializes any missing local bootstrap state needed for a healthy shell.
 
 Source the file to load all shortcuts into your shell:
 
@@ -84,11 +190,52 @@ Source the file to load all shortcuts into your shell:
 source env.sh
 ```
 
+Run `gz_help` to print the full list of shortcuts at any time.
+
 **VS Code / Cursor:** the repo ships terminal profiles in [`.vscode/settings.json`](.vscode/settings.json) for Linux and macOS that automatically source `env.sh` in every new integrated terminal. Linux uses `bash`; macOS uses `zsh` with a repo-owned [`.vscode/.zshrc`](.vscode/.zshrc). The venv is activated and `gz_*` helpers are available from the moment the terminal opens.
 
 **AI coding agents (Claude Code, Codex, Cursor agent):** a companion script [`env-agent.sh`](env-agent.sh) provides a silent, lightweight bootstrap (venv activation + current-checkout `.env`/`.env.local` loading) for non-interactive shells. Claude Code picks it up via `.claude/settings.json`; Codex and other agents inherit it through `BASH_ENV` when launched from an `env.sh`-sourced terminal. Prefer repo-local worktrees under `.agent-worktrees/...` instead of `/tmp`; the bootstrap detects the active git worktree root automatically and expects the worktree to own its `.env`/`.env.local` files and materialized dependency environment. `env.sh` will lazily create the minimal local bootstrap state needed for a healthy shell on first load, and `gz_reload` refreshes the current shell after shell/bootstrap/env-file edits so the new `PATH` is visible immediately. Keep repo-local Codex-specific config in `.agent-config/codex/` rather than `.codex`, which may be reserved by the local Codex installation. See [`docs/agents/dev.md`](docs/agents/dev.md) for details.
 
-### Managing Package Dependencies
+### Shell sync helpers
+
+| Command     | Description                                                                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gz_sync`   | Reconcile native package-manager edits with the Bazel-aware workflow and refresh the current shell. Use this after `uv` or `npm` dependency changes.     |
+| `gz_reload` | Re-source `env.sh` in the current shell after changing shell bootstrap, env files, or freshly materialized tools that should appear on `PATH` right now. |
+
+### Running servers
+
+| Command                  | Description                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| `gz_start`               | Start backend and web via the Bazel-run launcher. Rotates old logs before starting. |
+| `gz_stop`                | Stop both servers.                                                                  |
+| `gz_status`              | Show whether backend and web are running.                                           |
+| `gz_logs [backend\|web]` | Tail logs. Omit argument to tail both.                                              |
+
+Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`.
+
+### Testing
+
+| Command   | Description                                                                                  |
+| --------- | -------------------------------------------------------------------------------------------- |
+| `gz_test` | Run all tests via Bazel (`bazel test --test_output=errors //...`) — CI-aligned, incremental. |
+
+Use `gz_test` for the full suite. The per-subsystem READMEs in [Further reading](#further-reading) describe each area in more detail.
+
+### Linting and formatting
+
+| Command   | Description                                                                 |
+| --------- | --------------------------------------------------------------------------- |
+| `gz_lint` | Run all linters via Bazel (`bazel build --config=lint //...`) — CI-aligned. |
+
+**Before committing** — auto-fix Python formatting and fixable lint issues:
+
+```bash
+source env.sh && gz_format
+# equivalent to: ruff format . && ruff check --fix .
+```
+
+### Managing package dependencies
 
 Use the package managers you already know to edit dependency manifests, then hand the result back to the repo’s Bazel-aware workflow.
 
@@ -110,7 +257,9 @@ Use the package managers you already know to edit dependency manifests, then han
 - Run `gz_sync` after native `uv` or `npm` dependency changes.
 - Run `gz_reload` when shell bootstrap files or env files changed and you only need the current terminal to pick up the new `PATH` immediately.
 
-### Vibe Coding With Agents
+Standalone dev tooling and the JS tool path (`web/scripts/`, `js_binary` wiring) are documented in [`web/README.md`](web/README.md#javascript-dev-tools). Backend-specific procedures like smoke-testing large download endpoints for memory growth live in [`api/README.md`](api/README.md#smoke-testing-large-downloads).
+
+## Agent workflows
 
 Glaze uses a high-level orchestration workflow inspired by the [Get Shit Done (GSD)](https://github.com/gsd-build/get-shit-done) philosophy, but adapted for non-developer QoL and safety with non-frontier models. (Ah, and about the recent GSD drama — whoops. The good ideas still stand, so we're keeping them.)
 
@@ -125,7 +274,7 @@ Glaze uses a high-level orchestration workflow inspired by the [Get Shit Done (G
 
 4.  **`/pm`**: Session-level communication mode. Use this when the main audience is less technical contributors and you want the assistant to explain choices in terms of user value, trade-offs, and constraints instead of file-by-file edits.
 
-#### Async Code Health Skills
+### Async code health skills
 
 The skills above are about getting *new* work into the repo. A second family runs **asynchronously, in bulk, against the codebase as a whole** — not tied to a single issue or PR. Point them at the repo when you want to step back and assess health rather than ship a feature:
 
@@ -137,10 +286,12 @@ The skills above are about getting *new* work into the repo. A second family run
 
 These compose: `/deps` tells you what a target actually pulls in, and `/cover` cross-checks that against what the tests actually exercise — together they catch the over-mocked unit test and the accidental integration test from opposite directions, while `/audit` keeps whatever you add fast. Run them periodically (or in CI) and file any findings as `/spec` or `/report` issues to feed back into the `/do` and `/fix` loops.
 
-#### Our Architectural Principles for Agent Work:
+### Architectural principles for agent work
 
 - **Normative Content in GitHub**: Unlike some agent-first workflows that store state in local markdown files, Glaze keeps all normative requirements and status in **GitHub Issues, Milestones, and PRs**. This minimizes hallucinations from non-frontier models by using GitHub as the source of truth and ensures that the project remains accessible to human non-developer contributors via the standard GitHub UI.
 - **Flexible Verification**: Verification can happen **synchronously** (as part of the `/do` cycle where the agent runs tests before pushing) or **asynchronously** in bulk using the `/audit` (performance/flakiness), `/cover` (coverage), and `/deps` (Bazel dependency graph audit) skills.
+
+### Worktree lifecycle
 
 When you run `/do #292`, the agent will create a branch like `issue/292-vibe-coding-flow` and a repo-local worktree like `.agent-worktrees/codex/issue-292-vibe-coding-flow` before it analyzes or edits anything.
 The agent should immediately print a copy-friendly line:
@@ -163,158 +314,11 @@ gz_start
 
 Each agent gets its own worktree under `.agent-worktrees/<agent>/...`, and each
 issue gets its own branch. Keep one terminal per worktree so `gz_start`,
-`gz_stop`, logs, and port files stay scoped to the right code checkout.
+`gz_stop`, logs, and port files stay scoped to the right code checkout. After the
+PR is merged or abandoned, stop the servers and remove the worktree and branch —
+the full cleanup sequence and recovery steps are in [`docs/agents/worktrees.md`](docs/agents/worktrees.md).
 
-After the PR is merged or abandoned, stop any servers from that worktree's
-terminal and clean up the local checkout:
-
-```bash
-gz_stop
-git worktree remove .agent-worktrees/codex/issue-292-vibe-coding-flow
-git worktree prune
-git branch -d issue/292-vibe-coding-flow
-```
-
-Use `git branch -D` only for an abandoned unmerged branch after confirming the
-work is no longer needed.
-
-### Local secrets and config (git-safe)
-
-Keep local-only settings in `.env.local` files; they are gitignored by default:
-
-- `.env.local` (repo-wide defaults)
-- `web/.env.local` (web-only overrides)
-
-`source env.sh` automatically loads both (in that order) so you can inject Cloudinary/API config without committing secrets.
-Use the checked-in root template, and create `web/.env.local` manually if you
-need web-only overrides:
-
-```bash
-cp .env.example .env.local
-```
-
-If you have Tailscale access to the production cluster, `tools/init_env.sh` does this and also fills in the service credentials in one step (see [Contributing](#contributing)).
-
-Each variable in `.env.example` has an inline comment explaining what it enables and what degrades gracefully when it is absent. Keep those comments current whenever a variable is added, removed, or renamed — the file is the primary reference for onboarding and for debugging "why isn't this feature working in dev."
-
-### Setup
-
-| Command     | Description                                                                                                                                              |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gz_sync`   | Reconcile native package-manager edits with the Bazel-aware workflow and refresh the current shell. Use this after `uv` or `npm` dependency changes.     |
-| `gz_reload` | Re-source `env.sh` in the current shell after changing shell bootstrap, env files, or freshly materialized tools that should appear on `PATH` right now. |
-
-### Servers
-
-| Command                  | Description                                                                         |
-| ------------------------ | ----------------------------------------------------------------------------------- |
-| `gz_start`               | Start backend and web via the Bazel-run launcher. Rotates old logs before starting. |
-| `gz_stop`                | Stop both servers.                                                                  |
-| `gz_status`              | Show whether backend and web are running.                                           |
-| `gz_logs [backend\|web]` | Tail logs. Omit argument to tail both.                                              |
-
-Logs are written to `.dev-logs/` and rotated with a timestamp on each `gz_start`.
-
-### Smoke-test large downloads with `gz_start`
-
-When changing large download endpoints, run the app locally with `gz_start`,
-trigger the same download three times in the browser, and watch the backend RSS:
-
-```bash
-BACKEND_PID=$(pgrep -f "uvicorn.*$(cat .dev-pids/backend.port)")
-watch -n 1 "ps -o pid,rss,vsz,cmd -p ${BACKEND_PID}"
-```
-
-RSS may stay at a high-water mark after the first run, but repeated same-size
-downloads should plateau rather than ratchet upward. For ASGI production parity,
-repeat the check against Docker/staging and watch the Gunicorn/Uvicorn worker
-RSS; large `StreamingHttpResponse` bodies should use async iterators.
-
-### Testing
-
-| Command   | Description                                                                                  |
-| --------- | -------------------------------------------------------------------------------------------- |
-| `gz_test` | Run all tests via Bazel (`bazel test --test_output=errors //...`) — CI-aligned, incremental. |
-
-### Linting and type-checking
-
-| Command   | Description                                                                 |
-| --------- | --------------------------------------------------------------------------- |
-| `gz_lint` | Run all linters via Bazel (`bazel build --config=lint //...`) — CI-aligned. |
-
-### JavaScript dev tools
-
-Prefer Python for standalone dev tooling when the dependency graph allows it. Use the JS tool path under [`web/scripts/`](web/scripts/) when the tool is naturally coupled to the web dependency graph or when the needed package exists in npm but not pip. Wire those scripts through [`web/BUILD.bazel`](web/BUILD.bazel) with `js_binary` and add a `vitest_test` when you want the tool itself covered by tests. [`web/scripts/generate-types.mjs`](web/scripts/generate-types.mjs) and [`web/scripts/coverage-audit.mjs`](web/scripts/coverage-audit.mjs) are the current examples.
-
-Run `gz_help` to print the full list of shortcuts at any time.
-
-## Manual setup (without `env.sh`)
-
-If you prefer to install dependencies and run servers yourself, follow these explicit commands instead of relying on the helper script.
-
-```bash
-# Backend
-bazel run @uv//:uv -- sync
-bazel run @uv//:uv -- run python manage.py migrate
-uvicorn backend.asgi:application --port 8080 --reload
-
-# Web (separate terminal)
-cd web
-bazel run @nodejs_linux_amd64//:npm -- install
-bazel run @nodejs_linux_amd64//:npm -- run dev
-```
-
-## Testing
-
-Use `gz_test` for the full suite. The package READMEs above describe each area in more detail.
-
-**Before committing** — auto-fix Python formatting and fixable lint issues:
-
-```bash
-source env.sh && gz_format
-# equivalent to: ruff format . && ruff check --fix .
-```
-
-## Contributing
-
-There are three distinct ways to contribute, and they involve different levels of access and commitment:
-
-### Maintaining potterdoc.com
-
-If you want to help run the live service — monitoring, deployments, responding to issues — you need Tailscale access to the production cluster. Send a note to [admin@potterdoc.com](mailto:admin@potterdoc.com) and request access. Once you've been added to the tailnet and have [installed Tailscale](https://tailscale.com/download) on your machine, run:
-
-```bash
-tools/init_env.sh
-```
-
-This initializes your local `.env.local` with production service credentials pulled directly from the cluster. From there you have everything you need to run the app locally against real credentials, deploy to the cluster, and participate in on-call rotation. This is the path if you care about the pottery community using potterdoc.com specifically and want shared ownership of that instance.
-
-### Contributing to the open source project
-
-If you want to contribute code, documentation, or agent workflows to the Glaze codebase — bug fixes, new features, workflow improvements — you do not need Tailscale access or production credentials. Clone the repo, follow the setup steps below, and open a PR. The local SQLite dev environment is sufficient for most development work. Cloudinary and Google OAuth degrade gracefully when absent (see `.env.example` comments). This is the path if you want to improve the software itself regardless of who hosts it.
-
-### Self-hosting
-
-If you want to run your own instance of PotterDoc for yourself or your studio, you also do not need access to potterdoc.com infrastructure. The codebase is public and the Helm chart deploys to any k3s cluster. See [`docs/ci-cd.md`](docs/ci-cd.md) for deployment details. This is the path if you want full control over your own data and infrastructure.
-
----
-
-### Vibe coding / agent workflows
-
-Glaze uses agent workflows for planning, implementation, offline analysis, and documentation. Use the skill that matches the task:
-
-- `/dream`: define a broad feature or product direction and let the agent break it into milestones and sub-issues.
-- `/spec`: turn a specific idea into a focused issue with scope, motivation, and acceptance criteria.
-- `/do #<issue>`: implement a scoped issue on a repo-local worktree and produce the code change.
-- `/audit`: run the performance and flakiness audit workflow for tests.
-- `/cover`: run the coverage audit workflow.
-- `/deps`: inspect Bazel dependency graphs for unexpected or overly broad dependencies.
-- `/docs`: assess and update human-facing READMEs to keep them aligned with the codebase.
-- `/stories`: auto-generate and update Storybook stories for frontend components.
-
-Use `/dream` and `/spec` when the work is still being shaped. Use `/do` when the task is ready to implement. Use the asynchronous audit skills when you want analysis without blocking the main development loop.
-
-## Component Documentation
+## Component documentation
 
 Interactive component stories are published to GitHub Pages via Storybook:
 
@@ -324,31 +328,8 @@ Run locally with `gz_story`. See [`web/README.md`](web/README.md) for details.
 
 ## Deployment and CI/CD
 
-Deployment details, GitHub Actions workflows, and environment variables live in [`docs/ci-cd.md`](docs/ci-cd.md).
+Deployment details, GitHub Actions workflows, environment variables, and the off-cluster Dropbox backup setup live in [`docs/ci-cd.md`](docs/ci-cd.md).
 The longer-term Helm/k3s migration checklist is tracked in [issue #547](https://github.com/shaoster/glaze/issues/547).
-
-### Dropbox backup setup
-
-The hourly database backup CronJob uses Dropbox as its off-cluster backup store.
-Create a Dropbox app with **scoped access**, **App folder** access, and the
-`files.content.write` and `files.metadata.read` scopes, then create an offline
-refresh token for the app.
-
-```bash
-gh secret set DROPBOX_APP_KEY --env glaze-droplet --body "<dropbox-app-key>"
-gh secret set DROPBOX_APP_SECRET --env glaze-droplet --body "<dropbox-app-secret>"
-gh secret set DROPBOX_REFRESH_TOKEN --env glaze-droplet --body "<dropbox-refresh-token>"
-```
-
-If you are bootstrapping the cluster manually, add the same values to the
-`glaze-secrets` Kubernetes secret:
-
-```bash
-kubectl create secret generic glaze-secrets \
-  --from-literal=DROPBOX_APP_KEY=<dropbox-app-key> \
-  --from-literal=DROPBOX_APP_SECRET=<dropbox-app-secret> \
-  --from-literal=DROPBOX_REFRESH_TOKEN=<dropbox-refresh-token>
-```
 
 ## Project structure
 
@@ -372,3 +353,22 @@ docker-entrypoint.sh       Container startup: exec Gunicorn
 tools/ensure_cluster.sh    Cluster infrastructure convergence (k3s, ESO, probe timeouts)
 tools/helm_deploy.sh       Helm upgrade with retry and failure diagnostics
 ```
+
+## Further reading
+
+Per-subsystem documentation:
+
+- [Backend API (`api/`)](api/README.md) - Django, DRF, public libraries, auth flows, and data isolation.
+- [Frontend Client (`web/`)](web/README.md) - React components, Vite configuration, and frontend conventions.
+- [Common Tests (`tests/`)](tests/README.md) - Structural tests for the workflow state machine.
+- [Declarative Workflow (`workflow/README.md`)](workflow/README.md) - Source of truth for piece states, transitions, globals, and custom fields.
+- [Declarative Preferences (`user_preferences.schema.yml`)](user_preferences.schema.yml) - Schema for user settings.
+- [Declarative Tutorials (`tutorials.schema.yml`)](tutorials.schema.yml) - Schema for tutorial tips and attachment rules.
+- [Tools (`tools/`)](tools/README.md) - Standalone utilities, Modal crop offloading, and Glaze import tool.
+- [Pages (`pages/`)](pages/README.md) - Static published pages.
+- [CI / CD Infrastructure (`docs/`)](docs/ci-cd.md) - GitHub Actions workflows, deployment pipelines, and environment variables.
+- [Agent Development Guide (`docs/agents/`)](docs/agents/dev.md) - Shell bootstrap, worktree navigation, and agent workflow context.
+
+## License
+
+PotterDoc is released under the [MIT License](LICENSE).

@@ -229,7 +229,7 @@ When a piece reaches a terminal state (`completed` or `recycled`), the owner can
 
 ## JavaScript dev tools
 
-Prefer Python for standalone dev tooling when the dependency graph allows it. Use the JS tool path under `scripts/` when the tool is naturally coupled to the web dependency graph or when the needed package exists in npm but not pip.
+Prefer Python for standalone dev tooling when the dependency graph allows it. Use the JS tool path under [`scripts/`](scripts/) when the tool is naturally coupled to the web dependency graph or when the needed package exists in npm but not pip. Wire those scripts through [`BUILD.bazel`](BUILD.bazel) with `js_binary` and add a `vitest_test` when you want the tool itself covered by tests. [`scripts/generate-types.mjs`](scripts/generate-types.mjs) and [`scripts/coverage-audit.mjs`](scripts/coverage-audit.mjs) are the current examples.
 
 ## Swagger UI and API exploration
 
