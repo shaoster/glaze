@@ -25,6 +25,7 @@ import yaml
 from ..models import Piece
 from ..utils import image_to_dict
 from ..workflow import get_state_friendly_name
+from .music import resolve_track_id
 
 # ── Versions (consumed by the input-hash layer, issue #747) ───────────────────
 # Bump STORYBOARD_VERSION when the Storyboard data shape changes; bump
@@ -157,6 +158,9 @@ def build_keepsake_storyboard(
     the frontend ``ShowcaseVideoInputPicker`` so the potter's exclusions apply
     directly. The piece's thumbnail is the locked cover and cannot be excluded.
     """
+    # Apply the deterministic default so a track is always present in the hashed
+    # storyboard inputs; an unknown non-null id is rejected here.
+    music_track_id = resolve_track_id(music_track_id)
     excluded_images = set(excluded_image_keys)
     excluded_notes = set(excluded_note_keys)
     thumb_pid = _thumbnail_public_id(piece)

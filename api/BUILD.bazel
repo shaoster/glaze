@@ -57,6 +57,7 @@ py_library(
         "serializer_registry.py",
         "serializers.py",
         "showcase/__init__.py",
+        "showcase/music.py",
         "showcase/storyboard.py",
         "tasks.py",
         "task_views.py",
@@ -65,7 +66,10 @@ py_library(
         "views.py",
         "workflow_views.py",
     ],
-    data = ["//:storyboard_files"],
+    data = [
+        "//:music_catalog_files",
+        "//:storyboard_files",
+    ],
     deps = [
         ":api_workflow_lib",
         "//backend:backend_lib",
@@ -193,6 +197,7 @@ filegroup(
         "serializer_registry.py",
         "serializers.py",
         "showcase/__init__.py",
+        "showcase/music.py",
         "showcase/storyboard.py",
         "task_views.py",
         "telemetry_views.py",
@@ -222,6 +227,7 @@ _PYTEST_DEPS = [
 _TEST_DATA = [
     "//:workflow_files",
     "//:storyboard_files",
+    "//:music_catalog_files",
     "//:fixtures",
     "//:pytest_ini",
     "//backend:backend_test_settings",
@@ -328,6 +334,7 @@ pytest_test(
     srcs = _CONFTEST + [
         "tests/test_analysis.py",
         "tests/test_keepsake_storyboard.py",
+        "tests/test_music_catalog.py",
         "tests/test_patch_current_state.py",
         "tests/test_piece_detail.py",
         "tests/test_piece_showcase_validation.py",
@@ -350,6 +357,7 @@ pytest_test(
         "api/tests/test_sealed_state.py",
         "api/tests/test_analysis.py",
         "api/tests/test_keepsake_storyboard.py",
+        "api/tests/test_music_catalog.py",
         "api/tests/test_piece_showcase_validation.py",
         "api/tests/test_piece_state_admin_relational.py",
         "api/tests/test_editable_mode.py",

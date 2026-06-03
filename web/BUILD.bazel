@@ -231,6 +231,7 @@ js_library(
         "src/util/optionalValues.ts",
         "src/util/postLoginRedirect.ts",
         "src/util/preferences.ts",
+        "src/util/music.ts",
         "src/util/queryKeys.ts",
         "src/util/telemetry.ts",
         "src/util/workflow.ts",
@@ -247,6 +248,7 @@ js_library(
         ":node_modules/@opentelemetry/sdk-trace-web",
         ":node_modules/@opentelemetry/semantic-conventions",
         ":generated_types",
+        "//:music_catalog_js",
         "//:tutorials_js",
         "//:user_preferences_js",
         "//:workflow_js",
@@ -698,6 +700,7 @@ js_library(
     deps = [
         ":node_modules",
         ":primitive_src",
+        ":util_lib",
     ],
 )
 

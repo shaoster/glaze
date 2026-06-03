@@ -5,6 +5,7 @@ import ShowcaseVideoInputPicker, {
   type ShowcaseVideoInputSelection,
 } from "../components/ShowcaseVideoInputPicker";
 import type { PieceDetail } from "../util/types";
+import { DEFAULT_TRACK_ID } from "../util/music";
 
 /**
  * ShowcaseVideoInputPicker lets a potter exclude individual images and notes
@@ -177,6 +178,7 @@ export const Default: Story = {
     initialSelection: {
       excludedImageKeys: [],
       excludedNoteKeys: [],
+      musicTrackId: DEFAULT_TRACK_ID,
     },
   },
   render: (args) => <ShowcaseVideoInputPickerPreview {...args} />,
@@ -188,6 +190,7 @@ export const WithExclusions: Story = {
     initialSelection: {
       excludedImageKeys: ["s1:img-wheel"],
       excludedNoteKeys: ["s1"],
+      musicTrackId: DEFAULT_TRACK_ID,
     },
   },
   render: (args) => <ShowcaseVideoInputPickerPreview {...args} />,
@@ -206,6 +209,7 @@ export const LockedThumbnail: Story = {
     initialSelection: {
       excludedImageKeys: ["s3:img-current"],
       excludedNoteKeys: [],
+      musicTrackId: DEFAULT_TRACK_ID,
     },
   },
   render: (args) => <ShowcaseVideoInputPickerPreview {...args} />,
@@ -225,6 +229,7 @@ export const EmptyHistory: Story = {
     initialSelection: {
       excludedImageKeys: [],
       excludedNoteKeys: [],
+      musicTrackId: DEFAULT_TRACK_ID,
     },
   },
   render: (args) => <ShowcaseVideoInputPickerPreview {...args} />,

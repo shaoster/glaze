@@ -93,6 +93,21 @@ js_library(
     visibility = ["//visibility:public"],
 )
 
+filegroup(
+    name = "music_catalog_files",
+    srcs = [
+        "music_catalog.schema.yml",
+        "music_catalog.yml",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+js_library(
+    name = "music_catalog_js",
+    srcs = ["music_catalog.yml"],
+    visibility = ["//visibility:public"],
+)
+
 # ── Fixture data ──────────────────────────────────────────────────────────────
 
 filegroup(
@@ -183,9 +198,15 @@ pkg_tar(
         "tutorials.yml",
         "tutorials.schema.yml",
         "storyboard.schema.yml",
+        "music_catalog.yml",
+        "music_catalog.schema.yml",
         "docker-entrypoint.sh",
         "//api:api_runtime_files",
         "//backend:backend_runtime_files",
+        # Audio assets are stored via git-LFS and not included here; the renderer
+        # resolves audio.url at runtime from the LFS-populated working tree or a
+        # hosted location. Add them to this tar if the image ever needs to serve
+        # audio directly.
     ] + glob(["fixtures/**"], allow_empty = True),
     strip_prefix = ".",
     package_dir = "/app",
