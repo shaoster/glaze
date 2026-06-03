@@ -744,7 +744,6 @@ def is_showcase_video_cloudinary_enabled() -> bool:
             os.environ.get("CLOUDINARY_API_KEY", "").strip(),
             os.environ.get("CLOUDINARY_API_SECRET", "").strip(),
             _cloudinary_video_folder(),
-            os.environ.get("CLOUDINARY_VIDEO_UPLOAD_PRESET", "").strip(),
         ]
     )
 
@@ -783,9 +782,6 @@ def upload_storyboard_video_to_cloudinary(
         "resource_type": "video",
         "format": SHOWCASE_VIDEO_FORMAT,
     }
-    upload_kwargs["upload_preset"] = os.environ.get(
-        "CLOUDINARY_VIDEO_UPLOAD_PRESET", ""
-    ).strip()
 
     result = cloudinary.uploader.upload(str(video_path), **upload_kwargs)
     return {
