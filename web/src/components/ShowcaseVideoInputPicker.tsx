@@ -3,13 +3,18 @@ import {
   Box,
   Divider,
   Checkbox,
+  FormControl,
   FormControlLabel,
   FormGroup,
+  Link,
+  MenuItem,
+  Select,
   Stack,
   Typography,
 } from "@mui/material";
 import type { PieceDetail } from "../util/types";
 import { formatState } from "../util/workflow";
+import { DEFAULT_TRACK_ID, MUSIC_CATALOG, getTrack } from "../util/music";
 import SelectablePhotoMasonry, {
   type SelectablePhotoItem,
 } from "./SelectablePhotoMasonry";
@@ -17,6 +22,7 @@ import SelectablePhotoMasonry, {
 export type ShowcaseVideoInputSelection = {
   excludedImageKeys: string[];
   excludedNoteKeys: string[];
+  musicTrackId: string;
 };
 
 type ShowcaseVideoInputPickerProps = {
@@ -124,11 +130,16 @@ export default function ShowcaseVideoInputPicker({
       ? undefined
       : () =>
           onSelectionChange({
+            ...selection,
             excludedImageKeys: toggleValue(selection.excludedImageKeys, item.key),
-            excludedNoteKeys: selection.excludedNoteKeys,
           }),
     toggleLabel: item.required ? "Locked as the video cover" : "Include in the video",
   }));
+
+  const selectedTrackId = getTrack(selection.musicTrackId)
+    ? selection.musicTrackId
+    : DEFAULT_TRACK_ID;
+  const selectedTrack = getTrack(selectedTrackId);
 
   return (
     <Stack spacing={1.5}>
@@ -169,7 +180,7 @@ export default function ShowcaseVideoInputPicker({
                       checked={checked}
                       onChange={() =>
                         onSelectionChange({
-                          excludedImageKeys: selection.excludedImageKeys,
+                          ...selection,
                           excludedNoteKeys: toggleValue(
                             selection.excludedNoteKeys,
                             item.key,
@@ -223,6 +234,73 @@ export default function ShowcaseVideoInputPicker({
             disabled={disabled}
           />
         </FormGroup>
+      </Box>
+
+      <Box
+        sx={(theme) => ({
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 2,
+          p: 1.5,
+          backgroundColor: theme.palette.background.paper,
+        })}
+      >
+        <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
+          Music
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+          Pick a royalty-free background track for the Keepsake video.
+        </Typography>
+        <FormControl fullWidth size="small">
+          <Select
+            value={selectedTrackId}
+            disabled={disabled}
+            onChange={(event) =>
+              onSelectionChange({
+                ...selection,
+                musicTrackId: event.target.value,
+              })
+            }
+            inputProps={{ "aria-label": "Background music track" }}
+          >
+            {MUSIC_CATALOG.map((track) => (
+              <MenuItem key={track.id} value={track.id}>
+                {track.title} — {track.artist}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        {selectedTrack && (
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+              {selectedTrack.license}
+              {selectedTrack.license_url && (
+                <>
+                  {" · "}
+                  <Link
+                    href={selectedTrack.license_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    License
+                  </Link>
+                </>
+              )}
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              component="pre"
+              sx={{
+                mt: 0.5,
+                whiteSpace: "pre-wrap",
+                fontFamily: "inherit",
+              }}
+            >
+              {selectedTrack.attribution}
+            </Typography>
+          </Box>
+        )}
       </Box>
 
       <Divider />

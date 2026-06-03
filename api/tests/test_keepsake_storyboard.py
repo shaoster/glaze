@@ -7,17 +7,23 @@ from jsonschema import Draft202012Validator
 from api.models import ENTRY_STATE, Image, Piece, PieceState, PieceStateImage
 from api.showcase import (
     COVER_SLIDE_MS,
+    DEFAULT_TRACK_ID,
     KEEPSAKE_STYLE,
     NOTE_SLIDE_MS,
     STORYBOARD_SCHEMA,
     Storyboard,
     build_keepsake_storyboard,
+    get_catalog,
     validate_storyboard,
 )
 from api.showcase.storyboard import IMAGE_SLIDE_MS
 from api.workflow import get_state_friendly_name
 
 SECOND_STATE = "wheel_thrown"
+
+# Two distinct real catalog track ids for hash-sensitivity assertions.
+A_TRACK = DEFAULT_TRACK_ID
+B_TRACK = next(t.track_id for t in get_catalog() if t.track_id != DEFAULT_TRACK_ID)
 
 
 def _add_image(state, *, url, order, public_id=None, caption="", crop=None):
@@ -161,10 +167,10 @@ def test_single_image_no_notes_is_degraded_but_valid(user, db):
 
 @pytest.mark.django_db
 def test_identical_inputs_produce_identical_storyboard(rich_piece):
-    a = build_keepsake_storyboard(rich_piece, music_track_id="track-1").to_dict()
-    b = build_keepsake_storyboard(rich_piece, music_track_id="track-1").to_dict()
+    a = build_keepsake_storyboard(rich_piece, music_track_id=A_TRACK).to_dict()
+    b = build_keepsake_storyboard(rich_piece, music_track_id=A_TRACK).to_dict()
     assert a == b
-    assert a["music_track_id"] == "track-1"
+    assert a["music_track_id"] == A_TRACK
 
 
 @pytest.mark.django_db
@@ -194,7 +200,7 @@ def test_slide_order_follows_state_order_not_creation_order(user, db):
 def test_every_storyboard_validates_against_schema(rich_piece, user):
     cases = [
         build_keepsake_storyboard(rich_piece),
-        build_keepsake_storyboard(rich_piece, music_track_id="track-9"),
+        build_keepsake_storyboard(rich_piece, music_track_id=A_TRACK),
         build_keepsake_storyboard(
             rich_piece, excluded_image_keys=["nope"], excluded_note_keys=["nope"]
         ),
@@ -214,3 +220,27 @@ def test_schema_document_is_valid_draft_2020_12():
 def test_validate_storyboard_rejects_malformed():
     with pytest.raises(jsonschema.ValidationError):
         validate_storyboard({"storyboard_version": "1"})
+
+
+@pytest.mark.django_db
+def test_music_default_applied_when_omitted(rich_piece):
+    sb = build_keepsake_storyboard(rich_piece)
+    assert sb.music_track_id == DEFAULT_TRACK_ID
+    assert sb.to_dict()["music_track_id"] == DEFAULT_TRACK_ID
+
+
+@pytest.mark.django_db
+def test_music_track_change_changes_storyboard(rich_piece):
+    a = build_keepsake_storyboard(rich_piece, music_track_id=A_TRACK).to_dict()
+    b = build_keepsake_storyboard(rich_piece, music_track_id=B_TRACK).to_dict()
+    # Only the track differs; the hashed storyboard dict must differ with it.
+    assert A_TRACK != B_TRACK
+    assert a["music_track_id"] == A_TRACK
+    assert b["music_track_id"] == B_TRACK
+    assert a != b
+
+
+@pytest.mark.django_db
+def test_music_unknown_track_rejected(rich_piece):
+    with pytest.raises(ValueError):
+        build_keepsake_storyboard(rich_piece, music_track_id="not-a-real-track")

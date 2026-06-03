@@ -1,0 +1,102 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: PotterDoc Showcase Music Catalog
+description: >-
+  Curated royalty-free music catalog for Piece Showcase (Keepsake) videos. Each
+  track has a stable identifier, the metadata the wizard and renderer need, and
+  the verbatim attribution required by its license. This document is the
+  authoritative contract; the backend loader and the frontend selector both
+  consume it. `default_track_id` MUST be a key present in `tracks` — JSON Schema
+  cannot cross-reference keys, so the loader enforces this invariant.
+type: object
+required: [version, default_track_id, tracks]
+additionalProperties: false
+
+properties:
+  version:
+    type: string
+    description: Semantic version of this catalog definition.
+    pattern: '^\d+\.\d+(\.\d+)?$'
+
+  default_track_id:
+    type: string
+    description: >-
+      Track id applied when the potter has not selected one. Must be a key in
+      `tracks`. Keeps storyboard generation deterministic.
+
+  tracks:
+    type: object
+    description: Map of stable track id to track definition.
+    minProperties: 1
+    propertyNames:
+      pattern: "^[a-z][a-z0-9-]*$"
+    additionalProperties:
+      $ref: "#/$defs/track"
+
+$defs:
+  track:
+    type: object
+    required:
+      - title
+      - artist
+      - genre
+      - mood
+      - license
+      - license_url
+      - artist_url
+      - source_url
+      - download_url
+      - attribution
+      - audio
+    additionalProperties: false
+    properties:
+      title:
+        type: string
+        description: Track title (e.g. "Adventures").
+      artist:
+        type: string
+        description: Performing artist credited for the track.
+      genre:
+        type: string
+        description: Genre label from the source listing.
+      mood:
+        type: string
+        description: Mood label from the source listing.
+      license:
+        type: string
+        description: >-
+          Short license name (e.g. "CC BY 3.0"), or a free-text term such as
+          "Free with attribution" when no formal license is published.
+      license_url:
+        type: [string, "null"]
+        description: Canonical license URL, or null when the license has no URL.
+      artist_url:
+        type: string
+        description: Primary artist link used for credit (e.g. SoundCloud).
+      source_url:
+        type: string
+        description: The Audio Library video the track was curated from.
+      download_url:
+        type: string
+        description: Free-download/stream page for the track.
+      attribution:
+        type: string
+        description: >-
+          The exact copy-and-paste attribution block required by the track's
+          license, stored verbatim. Surfaced in the wizard and intended for the
+          published video credits.
+      audio:
+        type: object
+        required: [format, url]
+        additionalProperties: false
+        properties:
+          format:
+            type: string
+            enum: [flac, wav]
+            description: >-
+              Lossless audio container. mp3 is intentionally disallowed because
+              its encoder/decoder delay causes video-alignment drift.
+          url:
+            type: string
+            description: >-
+              Pointer to the lossless audio asset the renderer consumes. Hosting
+              of the actual file is handled by the render pipeline.

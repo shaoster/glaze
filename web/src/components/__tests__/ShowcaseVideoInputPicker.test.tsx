@@ -7,6 +7,7 @@ import ShowcaseVideoInputPicker, {
   type ShowcaseVideoInputSelection,
 } from "../ShowcaseVideoInputPicker";
 import type { PieceDetail } from "../../util/types";
+import { DEFAULT_TRACK_ID, MUSIC_CATALOG } from "../../util/music";
 
 vi.mock("../../util/workflow", () => ({
   formatState: (state: string) =>
@@ -130,6 +131,7 @@ function makeSelection(
   return {
     excludedImageKeys: [],
     excludedNoteKeys: [],
+    musicTrackId: DEFAULT_TRACK_ID,
     ...overrides,
   };
 }
@@ -166,12 +168,14 @@ describe("ShowcaseVideoInputPicker", () => {
     expect(onSelectionChange).toHaveBeenCalledWith({
       excludedImageKeys: [],
       excludedNoteKeys: ["state-id-throwing"],
+      musicTrackId: DEFAULT_TRACK_ID,
     });
 
     await userEvent.click(screen.getByLabelText(/Include in the video: Throwing/));
     expect(onSelectionChange).toHaveBeenLastCalledWith({
       excludedImageKeys: ["state-id-throwing:throwing-image"],
       excludedNoteKeys: [],
+      musicTrackId: DEFAULT_TRACK_ID,
     });
   });
 
@@ -220,5 +224,48 @@ describe("ShowcaseVideoInputPicker", () => {
     fireEvent.click(thumbnailCheckbox);
     expect(onSelectionChange).not.toHaveBeenCalled();
     expect(screen.getByText("2 of 2 frames will be used")).toBeInTheDocument();
+  });
+
+  it("lists catalog tracks and shows the selected track's attribution", () => {
+    const defaultTrack = MUSIC_CATALOG.find((t) => t.id === DEFAULT_TRACK_ID)!;
+    renderWithClient(
+      <ShowcaseVideoInputPicker
+        piece={makePiece()}
+        selection={makeSelection()}
+        onSelectionChange={vi.fn()}
+      />,
+    );
+
+    const select = screen.getByLabelText("Background music track");
+    expect(select).toHaveTextContent(
+      `${defaultTrack.title} — ${defaultTrack.artist}`,
+    );
+    // The verbatim attribution block is surfaced for the selected track.
+    expect(
+      screen.getByText(defaultTrack.attribution.split("\n")[0], { exact: false }),
+    ).toBeInTheDocument();
+  });
+
+  it("emits the chosen music track id", async () => {
+    const onSelectionChange = vi.fn();
+    const other = MUSIC_CATALOG.find((t) => t.id !== DEFAULT_TRACK_ID)!;
+    renderWithClient(
+      <ShowcaseVideoInputPicker
+        piece={makePiece()}
+        selection={makeSelection()}
+        onSelectionChange={onSelectionChange}
+      />,
+    );
+
+    await userEvent.click(screen.getByLabelText("Background music track"));
+    await userEvent.click(
+      screen.getByRole("option", { name: `${other.title} — ${other.artist}` }),
+    );
+
+    expect(onSelectionChange).toHaveBeenLastCalledWith({
+      excludedImageKeys: [],
+      excludedNoteKeys: [],
+      musicTrackId: other.id,
+    });
   });
 });
