@@ -1042,6 +1042,7 @@ function AppContent() {
         <ContactSupportDialog
           open={contactOpen}
           authenticated={Boolean(init?.user)}
+          userId={init?.user?.id ?? null}
           onClose={handleCloseContact}
         />
       </ThemeProvider>

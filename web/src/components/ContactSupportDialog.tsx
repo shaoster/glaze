@@ -25,10 +25,13 @@ import {
 interface ContactSupportDialogProps {
   open: boolean;
   authenticated: boolean;
+  userId: number | null;
   onClose: () => void;
 }
 
-const SUPPORT_THREAD_QUERY_KEY = ["support-thread"];
+function supportThreadQueryKey(userId: number | null) {
+  return ["support-thread", userId] as const;
+}
 
 function formatTimestamp(value: string | Date): string {
   const date = value instanceof Date ? value : new Date(value);
@@ -70,6 +73,7 @@ function MessageBubble({
 export default function ContactSupportDialog({
   open,
   authenticated,
+  userId,
   onClose,
 }: ContactSupportDialogProps) {
   const queryClient = useQueryClient();
@@ -80,7 +84,7 @@ export default function ContactSupportDialog({
     isLoading,
     isError,
   } = useQuery({
-    queryKey: SUPPORT_THREAD_QUERY_KEY,
+    queryKey: supportThreadQueryKey(userId),
     queryFn: fetchSupportThread,
     enabled: open && authenticated,
   });
@@ -88,7 +92,7 @@ export default function ContactSupportDialog({
   const { mutate: submitMessage, isPending } = useMutation({
     mutationFn: sendSupportMessage,
     onSuccess: (updatedThread) => {
-      queryClient.setQueryData(SUPPORT_THREAD_QUERY_KEY, updatedThread);
+      queryClient.setQueryData(supportThreadQueryKey(userId), updatedThread);
       setBody("");
     },
   });
