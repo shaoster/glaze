@@ -6,6 +6,7 @@ while the actual implementations live in focused feature submodules.
 
 from django.conf import settings
 from django.contrib.auth import logout
+from django.http import HttpResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers as drf_serializers
@@ -18,7 +19,7 @@ from rest_framework.response import Response
 from backend.otel import traced
 
 from ..serializers import AuthUserSerializer
-from .account_views import delete_account_impl as auth_delete_account
+from .account_views import delete_account_impl
 from .export_views import auth_export
 from .google_views import auth_google
 from .invite_views import (
@@ -71,6 +72,19 @@ def auth_logout(request: Request) -> Response:
     """Log the current user out of the active session."""
     logout(request)
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(
+    request=None,
+    responses={204: None},
+    description="Delete the current user account and all owned content.",
+)
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+@traced
+def auth_delete_account(request: Request) -> HttpResponse:
+    """Delete the current user account after cleaning up protected refs."""
+    return delete_account_impl(request, logout_fn=logout)
 
 
 @extend_schema(
