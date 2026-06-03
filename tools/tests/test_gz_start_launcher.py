@@ -208,10 +208,12 @@ def test_start_stack_waits_for_backend_before_web(monkeypatch, tmp_path: Path) -
 
 def test_wait_for_web_waits_until_port_accepts_connections(monkeypatch) -> None:
     sleep_calls: list[float] = []
+    addresses: list[tuple[str, int]] = []
     times = iter([0.0, 0.1, 0.2])
     attempts = iter([OSError("not ready"), object()])
 
     def fake_create_connection(address, timeout):
+        addresses.append(address)
         result = next(attempts)
         if isinstance(result, Exception):
             raise result
@@ -231,6 +233,7 @@ def test_wait_for_web_waits_until_port_accepts_connections(monkeypatch) -> None:
     launcher.wait_for_web(5173, timeout_seconds=1.0)
 
     assert sleep_calls == [0.5]
+    assert addresses == [("localhost", 5173), ("localhost", 5173)]
 
 
 def test_terminate_process_group_stops_gracefully(monkeypatch) -> None:
@@ -279,6 +282,20 @@ def test_terminate_process_group_escalates_after_timeout(monkeypatch) -> None:
     launcher.terminate_process_group(1234, timeout_seconds=0.0)
 
     assert signals == [0, signal.SIGTERM, signal.SIGKILL, 0]
+
+
+def test_terminate_process_group_ignores_permission_error(monkeypatch) -> None:
+    if launcher.os.name == "nt":
+        return
+
+    def fake_killpg(pgid: int, sig: int) -> None:
+        if sig != 0:
+            raise PermissionError
+
+    monkeypatch.setattr(launcher.os, "killpg", fake_killpg)
+    monkeypatch.setattr(launcher.time, "monotonic", lambda: 0.0)
+
+    launcher.terminate_process_group(1234)
 
 
 def test_start_web_sets_bazel_bindir_only_on_linux(monkeypatch, tmp_path: Path) -> None:

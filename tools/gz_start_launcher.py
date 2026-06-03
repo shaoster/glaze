@@ -318,7 +318,11 @@ def wait_for_web(port: int, timeout_seconds: float = 60.0) -> None:
     sys.stdout.flush()
     while True:
         try:
-            with socket.create_connection(("127.0.0.1", port), timeout=1):
+            # Match the browser URL (`http://localhost:<port>`) instead of
+            # probing IPv4 only. GitHub-hosted runners can expose the dev
+            # server on an IPv6 loopback address even when the browser works
+            # fine via `localhost`.
+            with socket.create_connection(("localhost", port), timeout=1):
                 sys.stdout.write(" ready.\n")
                 sys.stdout.flush()
                 return
@@ -403,7 +407,7 @@ def terminate_process_group(pid: int, timeout_seconds: float = 3.0) -> None:
         return
     try:
         os.killpg(pid, signal.SIGTERM)
-    except ProcessLookupError:
+    except (ProcessLookupError, PermissionError):
         return
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
@@ -412,7 +416,7 @@ def terminate_process_group(pid: int, timeout_seconds: float = 3.0) -> None:
         time.sleep(0.1)
     try:
         os.killpg(pid, signal.SIGKILL)
-    except ProcessLookupError:
+    except (ProcessLookupError, PermissionError):
         return
     deadline = time.monotonic() + 1.0
     while time.monotonic() < deadline:
