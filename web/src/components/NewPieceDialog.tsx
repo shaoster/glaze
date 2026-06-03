@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useBlocker } from "react-router-dom";
 import {
   Box,
   Button,
@@ -38,6 +39,22 @@ export default function NewPieceDialog({
   const [location, setLocation] = useState("");
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
+  const isProgrammaticCloseRef = useRef(false);
+
+  const isDirty =
+    name.trim() !== "" ||
+    notes !== "" ||
+    selectedThumbnail !== DEFAULT_THUMBNAIL;
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) => {
+      if (isProgrammaticCloseRef.current) {
+        return false;
+      }
+      return isDirty && open && currentLocation.pathname !== nextLocation.pathname;
+    }
+  );
+
   function resetState() {
     setName("");
     setNotes("");
@@ -47,23 +64,53 @@ export default function NewPieceDialog({
     setConfirmDiscard(false);
   }
 
-  const isDirty =
-    name.trim() !== "" ||
-    notes !== "" ||
-    selectedThumbnail !== DEFAULT_THUMBNAIL;
+  useEffect(() => {
+    if (!open) {
+      resetState();
+      isProgrammaticCloseRef.current = false;
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !isDirty) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [open, isDirty]);
 
   function handleAttemptClose() {
     if (isDirty) {
       setConfirmDiscard(true);
     } else {
+      isProgrammaticCloseRef.current = true;
       resetState();
       onClose();
     }
   }
 
   function handleConfirmDiscard() {
-    resetState();
-    onClose();
+    if (blocker.state === "blocked") {
+      blocker.proceed();
+    } else {
+      isProgrammaticCloseRef.current = true;
+      resetState();
+      onClose();
+    }
+  }
+
+  function handleCancelDiscard() {
+    if (blocker.state === "blocked") {
+      blocker.reset();
+    } else {
+      setConfirmDiscard(false);
+    }
   }
 
   async function handleSave() {
@@ -76,6 +123,7 @@ export default function NewPieceDialog({
         notes: notes || undefined,
         current_location: undefinedIfBlank(location),
       });
+      isProgrammaticCloseRef.current = true;
       resetState();
       onClose();
       onCreated(piece);
@@ -86,6 +134,7 @@ export default function NewPieceDialog({
 
   const nameIsInvalid = name !== "" && name.trim() === "";
   const canSave = name.trim() !== "" && !saving;
+  const showDiscard = confirmDiscard || blocker.state === "blocked";
 
   return (
     <>
@@ -167,7 +216,7 @@ export default function NewPieceDialog({
         </DialogActions>
       </Dialog>
 
-      <Dialog open={confirmDiscard} onClose={() => setConfirmDiscard(false)}>
+      <Dialog open={showDiscard} onClose={handleCancelDiscard}>
         <DialogTitle>Discard new piece?</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -176,7 +225,7 @@ export default function NewPieceDialog({
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmDiscard(false)}>Keep editing</Button>
+          <Button onClick={handleCancelDiscard}>Keep editing</Button>
           <Button
             onClick={handleConfirmDiscard}
             color="error"
