@@ -184,11 +184,28 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
+      - name: Create isolated worktree
+        id: worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          worktree="$RUNNER_TEMP/glaze-dev-smoke-${GITHUB_RUN_ID}-${GITHUB_JOB}"
+          git worktree add --detach "$worktree" HEAD
+          echo "path=$worktree" >> "$GITHUB_OUTPUT"
       - uses: ./.github/actions/setup-bazel-ci
         with:
           cache-key-prefix: dev-smoke
           deps-key: ${{ needs.preflight.outputs.deps_key }}
           buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
+          workdir: ${{ steps.worktree.outputs.path }}
+      - name: Install web dependencies for browser clickthrough
+        shell: bash
+        working-directory: ${{ steps.worktree.outputs.path }}
+        run: |
+          source env.sh
+          cd web
+          corepack prepare pnpm@10.34.1 --activate
+          corepack pnpm install --frozen-lockfile
 
       # Verifies the developer bootstrap end to end: the documented
       # `source env.sh` → `gz_start` flow must bring up the dev stack on a
@@ -199,6 +216,7 @@ jobs:
       # when the step's shell exits (which also cleans up on failure).
       - name: Bootstrap, log in via mock IdP, verify pieces, stop
         shell: bash
+        working-directory: ${{ steps.worktree.outputs.path }}
         run: |
           # No `set -u`: env.sh / env-agent.sh are not nounset-safe (they read
           # $_GLAZE_AGENT_ENV_LOADED before it is set). -e and pipefail are
@@ -246,6 +264,144 @@ jobs:
           echo "pieces count: $COUNT"
           [ "$COUNT" -gt 0 ] || fail "expected seeded pieces after login, got $COUNT"
 
+          FIRST_ID=$(curl -fsS -b "$JAR" "${BASE}/api/pieces/" \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["results"][0]["id"] if d["results"] else "")') \
+            || fail "could not determine the first piece id"
+          [ -n "$FIRST_ID" ] || fail "expected at least one seeded piece"
+
+          SESSION_COOKIE=$(awk -F $'\t' '$6=="sessionid"{print $7; exit}' "$JAR")
+          [ -n "$SESSION_COOKIE" ] || fail "mock-IdP login did not set a session cookie"
+
+          WEB_URL="http://localhost:$(cat .dev-pids/web.port)"
+          echo "::group::piece detail clickthrough"
+          (
+            cd web
+            corepack pnpm exec playwright install chromium
+            node scripts/dev-smoke-piece-detail-clickthrough.mjs \
+              --web-url "$WEB_URL" \
+              --piece-id "$FIRST_ID" \
+              --session-cookie "$SESSION_COOKIE"
+          )
+          echo "::endgroup::"
+
+          echo "::group::gz_stop"
+          gz_stop
+          echo "::endgroup::"
+
+      - if: failure()
+        uses: ./.github/actions/collect-failure-diagnostics
+
+      - name: Remove isolated worktree
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git worktree remove --force "${{ steps.worktree.outputs.path }}"
+
+  dev-smoke-macos:
+    name: Dev bootstrap smoke on macOS (env.sh → gz_start → login → gz_stop)
+    needs: preflight
+    if: ${{ github.event_name == 'pull_request' || needs.preflight.outputs.skip_main != 'true' }}
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Create isolated worktree
+        id: worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          worktree="$RUNNER_TEMP/glaze-dev-smoke-${GITHUB_RUN_ID}-${GITHUB_JOB}"
+          git worktree add --detach "$worktree" HEAD
+          echo "path=$worktree" >> "$GITHUB_OUTPUT"
+      - uses: ./.github/actions/setup-bazel-ci
+        with:
+          cache-key-prefix: dev-smoke-macos
+          deps-key: ${{ needs.preflight.outputs.deps_key }}
+          buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
+          workdir: ${{ steps.worktree.outputs.path }}
+      - name: Install web dependencies for browser clickthrough
+        shell: bash
+        working-directory: ${{ steps.worktree.outputs.path }}
+        run: |
+          source env.sh
+          cd web
+          corepack prepare pnpm@10.34.1 --activate
+          corepack pnpm install --frozen-lockfile
+
+      # Mirrors the Linux bootstrap smoke test on macOS so the documented
+      # developer workflow stays covered on both supported local platforms.
+      - name: Bootstrap, log in via mock IdP, verify pieces, stop
+        shell: bash
+        working-directory: ${{ steps.worktree.outputs.path }}
+        run: |
+          # No `set -u`: env.sh / env-agent.sh are not nounset-safe (they read
+          # $_GLAZE_AGENT_ENV_LOADED before it is set). -e and pipefail are
+          # already applied by the Actions bash wrapper; keep them explicit.
+          set -eo pipefail
+          source env.sh
+
+          fail() {
+            echo "::error::dev-smoke-macos: $1" >&2
+            echo "--- backend log ---" >&2
+            cat .dev-logs/backend.log 2>/dev/null >&2 || true
+            exit 1
+          }
+
+          echo "::group::gz_start"
+          gz_start || fail "gz_start failed to bring up the dev stack"
+          echo "::endgroup::"
+
+          BASE="http://localhost:$(cat .dev-pids/backend.port)"
+          JAR="$(mktemp)"
+
+          # Dev login flow: POST the mock-IdP authorize endpoint (CSRF-exempt),
+          # capture the relative redirect to complete/, then GET it to land the
+          # session cookie. A single `curl -L` is unreliable here because cookies
+          # written at the intermediate hop are not flushed when the final hop
+          # returns a redirect — so we do the two steps explicitly.
+          echo "::group::mock-IdP login"
+          LOCATION=$(curl -fsS --retry 5 --retry-connrefused -c "$JAR" -b "$JAR" -D - -X POST \
+            --data "redirect_uri=/api/auth/mock-idp/complete/&state=ci&login_hint=dev@localhost" \
+            "${BASE}/api/auth/mock-idp/authorize/" \
+            | grep -i '^location:' | sed 's/[Ll]ocation: //' | tr -d '\r\n')
+          [ -n "$LOCATION" ] || fail "mock-IdP authorize did not return a redirect (is DEV_BOOTSTRAP_ENABLED set?)"
+          curl -fsS -c "$JAR" -b "$JAR" "${BASE}${LOCATION}" -o /dev/null
+          echo "::endgroup::"
+
+          # Confirm we have an authenticated session.
+          curl -fsS -b "$JAR" "${BASE}/api/auth/me/" \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("user"), "no authenticated user"; print("authenticated:", d["user"]["openid_subject"][:16])' \
+            || fail "session was not authenticated after mock-IdP login"
+
+          # The freshly bootstrapped dev user is seeded with sample pieces.
+          COUNT=$(curl -fsS -b "$JAR" "${BASE}/api/pieces/" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["count"])') \
+            || fail "could not read /api/pieces/"
+          echo "pieces count: $COUNT"
+          [ "$COUNT" -gt 0 ] || fail "expected seeded pieces after login, got $COUNT"
+
+          FIRST_ID=$(curl -fsS -b "$JAR" "${BASE}/api/pieces/" \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["results"][0]["id"] if d["results"] else "")') \
+            || fail "could not determine the first piece id"
+          [ -n "$FIRST_ID" ] || fail "expected at least one seeded piece"
+
+          SESSION_COOKIE=$(awk -F $'\t' '$6=="sessionid"{print $7; exit}' "$JAR")
+          [ -n "$SESSION_COOKIE" ] || fail "mock-IdP login did not set a session cookie"
+
+          WEB_URL="http://localhost:$(cat .dev-pids/web.port)"
+          echo "::group::piece detail clickthrough"
+          (
+            cd web
+            corepack pnpm exec playwright install chromium
+            node scripts/dev-smoke-piece-detail-clickthrough.mjs \
+              --web-url "$WEB_URL" \
+              --piece-id "$FIRST_ID" \
+              --session-cookie "$SESSION_COOKIE"
+          )
+          echo "::endgroup::"
+
           echo "::group::gz_stop"
           gz_stop
           echo "::endgroup::"
@@ -260,6 +416,13 @@ jobs:
 
       - if: failure()
         uses: ./.github/actions/collect-failure-diagnostics
+
+      - name: Remove isolated worktree
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git worktree remove --force "${{ steps.worktree.outputs.path }}"
 
   compose-smoke:
     name: Docker Compose smoke test

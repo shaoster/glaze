@@ -250,6 +250,30 @@ def ensure_local_web_node_modules(roots: Roots) -> None:
     subprocess.run(["npm", "install"], cwd=str(roots.workspace / "web"), check=True)
 
 
+def sync_generated_types(roots: Roots, env: dict[str, str]) -> None:
+    print("web: regenerating TypeScript types...")
+    generated_types_env = env.copy()
+    if not generated_types_env.get("BAZEL_BINDIR"):
+        generated_types_env["BAZEL_BINDIR"] = "."
+    subprocess.run(
+        ["bazel", "build", "//web:generated_types"],
+        cwd=str(roots.workspace),
+        env=generated_types_env,
+        check=True,
+    )
+
+    source_dir = roots.workspace / "web" / "src" / "util"
+    source_dir.mkdir(parents=True, exist_ok=True)
+    generated_dir = roots.workspace / "bazel-bin" / "web" / "src" / "util"
+    for filename in ("generated-types.ts", "types.ts"):
+        source_path = source_dir / filename
+        target_path = generated_dir / filename
+        if source_path.exists() or source_path.is_symlink():
+            source_path.unlink()
+        source_path.symlink_to(target_path)
+        print(f"Generated: {source_path} -> {target_path}")
+
+
 def backend_ready_payload(port: int) -> dict[str, object]:
     url = f"http://127.0.0.1:{port}/api/health/ready/"
     try:
@@ -312,6 +336,35 @@ def wait_for_backend(port: int, timeout_seconds: float = 60.0) -> None:
         time.sleep(0.5)
 
 
+def wait_for_web(port: int, timeout_seconds: float = 60.0) -> None:
+    deadline = time.monotonic() + timeout_seconds
+    loopback_hosts = ("localhost", "127.0.0.1", "::1")
+    sys.stdout.write("Waiting for web to be ready")
+    sys.stdout.flush()
+    while True:
+        for host in loopback_hosts:
+            try:
+                # Match the browser URL (`http://localhost:<port>`) while also
+                # trying the explicit loopback addresses. GitHub-hosted runners
+                # can expose the dev server on a different loopback family than
+                # the one the browser prefers.
+                with socket.create_connection((host, port), timeout=1):
+                    sys.stdout.write(" ready.\n")
+                    sys.stdout.flush()
+                    return
+            except Exception:
+                pass
+
+        if time.monotonic() >= deadline:
+            sys.stdout.write(" timed out!\n")
+            sys.stdout.flush()
+            raise TimeoutError(f"web did not become ready on port {port}")
+
+        sys.stdout.write(".")
+        sys.stdout.flush()
+        time.sleep(0.5)
+
+
 def open_browser(url: str) -> None:
     if os.environ.get("CI") == "1" or os.environ.get("GLAZE_NO_BROWSER") == "1":
         return
@@ -341,6 +394,18 @@ def open_browser(url: str) -> None:
             return
         except FileNotFoundError:
             continue
+
+
+def dump_log_tail(log_path: Path, *, label: str, max_lines: int = 80) -> None:
+    if not log_path.is_file():
+        print(f"{label}: log file missing: {log_path}")
+        return
+
+    lines = log_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    tail = lines[-max_lines:]
+    print(f"{label}: showing last {len(tail)} lines from {log_path}")
+    for line in tail:
+        print(f"{label}: {line}")
 
 
 def shutil_which(command: str) -> str | None:
@@ -380,7 +445,7 @@ def terminate_process_group(pid: int, timeout_seconds: float = 3.0) -> None:
         return
     try:
         os.killpg(pid, signal.SIGTERM)
-    except ProcessLookupError:
+    except (ProcessLookupError, PermissionError):
         return
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
@@ -389,7 +454,7 @@ def terminate_process_group(pid: int, timeout_seconds: float = 3.0) -> None:
         time.sleep(0.1)
     try:
         os.killpg(pid, signal.SIGKILL)
-    except ProcessLookupError:
+    except (ProcessLookupError, PermissionError):
         return
     deadline = time.monotonic() + 1.0
     while time.monotonic() < deadline:
@@ -539,10 +604,12 @@ def start_web(
     web_env = env.copy()
     web_env["BACKEND_PORT"] = str(backend_port)
 
-    # Behavioral: aspect_rules_js[js_binary] FATAL error occurs on Linux if BAZEL_BINDIR is unset
-    # when running as a non-build action. We provide a fallback to '.' to suppress this.
-    if sys.platform.startswith("linux"):
-        web_env.setdefault("BAZEL_BINDIR", ".")
+    # `bazel run` sets BAZEL_BINDIR, but `gz_start` launches the web `js_binary`
+    # from the execroot after the launcher has exited. Make the environment look
+    # like a non-build action so aspect_rules_js can resolve paths consistently
+    # on both Linux and macOS runners.
+    if not web_env.get("BAZEL_BINDIR"):
+        web_env["BAZEL_BINDIR"] = "."
 
     # Worktrees must keep their own npm install so Vite/Babel resolve package
     # paths against the active checkout rather than borrowing another worktree's
@@ -611,6 +678,10 @@ def start_stack(no_browser: bool = False) -> int:
                 or backend_port
             )
 
+        wait_for_backend(backend_port)
+
+        sync_generated_types(roots, env)
+
         pid, running = ensure_running(web_pidfile)
         if not (running and pid is not None):
             start_web(
@@ -627,7 +698,11 @@ def start_stack(no_browser: bool = False) -> int:
             print(f"web: already running (PID {pid})")
             web_port = read_int_file(web_portfile) or port_from_log(web_log) or web_port
 
-        wait_for_backend(backend_port)
+        try:
+            wait_for_web(web_port)
+        except Exception:
+            dump_log_tail(web_log, label="web")
+            raise
 
         url = f"http://localhost:{web_port}"
         if not no_browser:

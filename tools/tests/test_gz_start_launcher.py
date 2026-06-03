@@ -173,6 +173,84 @@ def test_backend_is_ready_uses_health_checks(monkeypatch) -> None:
     assert launcher.backend_is_ready(8080) is True
 
 
+def test_start_stack_waits_for_backend_before_web(monkeypatch, tmp_path: Path) -> None:
+    roots = launcher.Roots(workspace=tmp_path, shared=tmp_path)
+    events: list[str] = []
+
+    monkeypatch.setattr(launcher, "detect_roots", lambda: roots)
+    monkeypatch.setattr(launcher, "load_repo_env", lambda _roots: {})
+    monkeypatch.setattr(launcher, "choose_port", lambda _path, start: start)
+    monkeypatch.setattr(launcher, "ensure_running", lambda _pidfile: (None, False))
+    monkeypatch.setattr(
+        launcher,
+        "start_backend",
+        lambda *args, **kwargs: events.append("start_backend"),
+    )
+    monkeypatch.setattr(
+        launcher,
+        "wait_for_backend",
+        lambda port, timeout_seconds=60.0: events.append("wait_for_backend"),
+    )
+    monkeypatch.setattr(
+        launcher,
+        "sync_generated_types",
+        lambda *args, **kwargs: events.append("sync_generated_types"),
+    )
+    monkeypatch.setattr(
+        launcher,
+        "start_web",
+        lambda *args, **kwargs: events.append("start_web"),
+    )
+    monkeypatch.setattr(
+        launcher,
+        "wait_for_web",
+        lambda port, timeout_seconds=60.0: events.append("wait_for_web"),
+    )
+
+    assert launcher.start_stack(no_browser=True) == 0
+    assert events == [
+        "start_backend",
+        "wait_for_backend",
+        "sync_generated_types",
+        "start_web",
+        "wait_for_web",
+    ]
+
+
+def test_wait_for_web_waits_until_port_accepts_connections(monkeypatch) -> None:
+    sleep_calls: list[float] = []
+    addresses: list[tuple[str, int]] = []
+    times = iter([0.0, 0.1, 0.2, 0.3])
+    attempts = iter([OSError("not ready"), OSError("not ready"), object()])
+
+    def fake_create_connection(address, timeout):
+        addresses.append(address)
+        result = next(attempts)
+        if isinstance(result, Exception):
+            raise result
+        class MockSocket:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return None
+
+        return MockSocket()
+
+    monkeypatch.setattr(launcher.socket, "create_connection", fake_create_connection)
+    monkeypatch.setattr(launcher.time, "monotonic", lambda: next(times))
+    monkeypatch.setattr(launcher.time, "sleep", lambda seconds: sleep_calls.append(seconds))
+
+    launcher.wait_for_web(5173, timeout_seconds=1.0)
+
+    assert sleep_calls == []
+    assert addresses == [
+        ("localhost", 5173),
+        ("127.0.0.1", 5173),
+        ("::1", 5173),
+    ]
+
+
 def test_terminate_process_group_stops_gracefully(monkeypatch) -> None:
     if launcher.os.name == "nt":
         return
@@ -221,7 +299,23 @@ def test_terminate_process_group_escalates_after_timeout(monkeypatch) -> None:
     assert signals == [0, signal.SIGTERM, signal.SIGKILL, 0]
 
 
-def test_start_web_sets_bazel_bindir_only_on_linux(monkeypatch, tmp_path: Path) -> None:
+def test_terminate_process_group_ignores_permission_error(monkeypatch) -> None:
+    if launcher.os.name == "nt":
+        return
+
+    def fake_killpg(pgid: int, sig: int) -> None:
+        if sig != 0:
+            raise PermissionError
+
+    monkeypatch.setattr(launcher.os, "killpg", fake_killpg)
+    monkeypatch.setattr(launcher.time, "monotonic", lambda: 0.0)
+
+    launcher.terminate_process_group(1234)
+
+
+def test_start_web_sets_bazel_bindir_for_all_platforms(
+    monkeypatch, tmp_path: Path
+) -> None:
     roots = launcher.Roots(workspace=tmp_path, shared=tmp_path)
     pidfile = tmp_path / "web.pid"
     portfile = tmp_path / "web.port"
@@ -279,7 +373,19 @@ def test_start_web_sets_bazel_bindir_only_on_linux(monkeypatch, tmp_path: Path) 
         captured_env_linux_existing.get("BAZEL_BINDIR") == "bazel-out/k8-fastbuild/bin"
     ), "BAZEL_BINDIR should be respected if already provided by the environment."
 
-    # 2. Test Mac behavior: BAZEL_BINDIR should NOT be set (not required)
+    captured_env_linux_empty: dict[str, str] = {}
+
+    def fake_launch_child_linux_empty(argv, cwd, env, log_path):
+        nonlocal captured_env_linux_empty
+        captured_env_linux_empty = env
+        return MockPopen()
+
+    monkeypatch.setattr(launcher, "launch_child", fake_launch_child_linux_empty)
+    launcher.start_web(roots, {"BAZEL_BINDIR": ""}, pidfile, portfile, log_path, 8080, 5173)
+
+    assert captured_env_linux_empty.get("BAZEL_BINDIR") == "."
+
+    # 2. Test Mac behavior: BAZEL_BINDIR should also be set if missing.
     monkeypatch.setattr(launcher.sys, "platform", "darwin")
     captured_env_mac: dict[str, str] = {}
 
@@ -291,9 +397,19 @@ def test_start_web_sets_bazel_bindir_only_on_linux(monkeypatch, tmp_path: Path) 
     monkeypatch.setattr(launcher, "launch_child", fake_launch_child_mac)
     launcher.start_web(roots, {}, pidfile, portfile, log_path, 8080, 5173)
 
-    assert "BAZEL_BINDIR" not in captured_env_mac, (
-        "BAZEL_BINDIR should not be set on macOS as it is not required by aspect_rules_js."
-    )
+    assert captured_env_mac.get("BAZEL_BINDIR") == "."
+
+    captured_env_mac_empty: dict[str, str] = {}
+
+    def fake_launch_child_mac_empty(argv, cwd, env, log_path):
+        nonlocal captured_env_mac_empty
+        captured_env_mac_empty = env
+        return MockPopen()
+
+    monkeypatch.setattr(launcher, "launch_child", fake_launch_child_mac_empty)
+    launcher.start_web(roots, {"BAZEL_BINDIR": ""}, pidfile, portfile, log_path, 8080, 5173)
+
+    assert captured_env_mac_empty.get("BAZEL_BINDIR") == "."
 
 
 def test_ensure_local_web_node_modules_replaces_shared_symlink(
