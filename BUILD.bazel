@@ -76,6 +76,17 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+# Schema-only filegroup: the storyboard schema is read at import time by
+# api/showcase/storyboard.py (there is no companion .yml config — storyboards
+# are produced in code).
+filegroup(
+    name = "storyboard_files",
+    srcs = [
+        "storyboard.schema.yml",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 js_library(
     name = "tutorials_js",
     srcs = ["tutorials.yml"],
@@ -171,6 +182,7 @@ pkg_tar(
         "user_preferences.schema.yml",
         "tutorials.yml",
         "tutorials.schema.yml",
+        "storyboard.schema.yml",
         "docker-entrypoint.sh",
         "//api:api_runtime_files",
         "//backend:backend_runtime_files",

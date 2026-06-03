@@ -56,6 +56,8 @@ py_library(
         "serializer_factories.py",
         "serializer_registry.py",
         "serializers.py",
+        "showcase/__init__.py",
+        "showcase/storyboard.py",
         "tasks.py",
         "task_views.py",
         "telemetry_views.py",
@@ -63,6 +65,7 @@ py_library(
         "views.py",
         "workflow_views.py",
     ],
+    data = ["//:storyboard_files"],
     deps = [
         ":api_workflow_lib",
         "//backend:backend_lib",
@@ -189,6 +192,8 @@ filegroup(
         "serializer_factories.py",
         "serializer_registry.py",
         "serializers.py",
+        "showcase/__init__.py",
+        "showcase/storyboard.py",
         "task_views.py",
         "telemetry_views.py",
         "tasks.py",
@@ -216,6 +221,7 @@ _PYTEST_DEPS = [
 
 _TEST_DATA = [
     "//:workflow_files",
+    "//:storyboard_files",
     "//:fixtures",
     "//:pytest_ini",
     "//backend:backend_test_settings",
@@ -321,6 +327,7 @@ pytest_test(
     size = "medium",
     srcs = _CONFTEST + [
         "tests/test_analysis.py",
+        "tests/test_keepsake_storyboard.py",
         "tests/test_patch_current_state.py",
         "tests/test_piece_detail.py",
         "tests/test_piece_showcase_validation.py",
@@ -342,6 +349,7 @@ pytest_test(
         "api/tests/test_patch_current_state.py",
         "api/tests/test_sealed_state.py",
         "api/tests/test_analysis.py",
+        "api/tests/test_keepsake_storyboard.py",
         "api/tests/test_piece_showcase_validation.py",
         "api/tests/test_piece_state_admin_relational.py",
         "api/tests/test_editable_mode.py",
@@ -353,7 +361,12 @@ pytest_test(
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = [":api_schema_lib", ":api_admin_lib"] + _PYTEST_DEPS,
-    expected_coverage = ["api/piece/views.py", "api/analysis_views.py", "api/workflow_views.py"],
+    expected_coverage = [
+        "api/piece/views.py",
+        "api/analysis_views.py",
+        "api/workflow_views.py",
+        "api/showcase/storyboard.py",
+    ],
 )
 
 pytest_test(
