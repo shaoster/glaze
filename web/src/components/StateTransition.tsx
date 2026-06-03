@@ -170,7 +170,7 @@ export default function StateTransition({
 
   return (
     <>
-      <Box aria-label="State flow" role="group" sx={{ mb: 0.75 }}>
+      <Box aria-label="State flow" role="group" data-testid="state-transition-group" sx={{ mb: 0.75 }}>
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Box
             sx={{

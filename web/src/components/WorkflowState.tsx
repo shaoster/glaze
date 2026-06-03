@@ -257,30 +257,31 @@ export default function WorkflowState({
             }
             if (field.isGlobalRef && field.globalName) {
               return (
-                <GlobalEntryField
-                  key={field.name}
-                  globalName={field.globalName}
-                  label={label}
-                  value={value}
-                  onSelect={(entry) => {
-                    if (readOnly) return;
-                    handleFieldChange(field.name, entryNameOrEmpty(entry));
-                    dispatch({
-                      type: "set_global_ref_pks",
-                      globalRefPks: entry
-                        ? { ...globalRefPks, [field.name]: entry.id }
-                        : Object.fromEntries(
-                            Object.entries(globalRefPks).filter(
-                              ([key]) => key !== field.name,
+                <Box key={field.name} data-testid={`global-entry-field-${field.globalName}`}>
+                  <GlobalEntryField
+                    globalName={field.globalName}
+                    label={label}
+                    value={value}
+                    onSelect={(entry) => {
+                      if (readOnly) return;
+                      handleFieldChange(field.name, entryNameOrEmpty(entry));
+                      dispatch({
+                        type: "set_global_ref_pks",
+                        globalRefPks: entry
+                          ? { ...globalRefPks, [field.name]: entry.id }
+                          : Object.fromEntries(
+                              Object.entries(globalRefPks).filter(
+                                ([key]) => key !== field.name,
+                              ),
                             ),
-                          ),
-                    });
-                  }}
-                  canCreate={Boolean(field.canCreate)}
-                  disabled={readOnly}
-                  helperText={helperText}
-                  required={field.required}
-                />
+                      });
+                    }}
+                    canCreate={Boolean(field.canCreate)}
+                    disabled={readOnly}
+                    helperText={helperText}
+                    required={field.required}
+                  />
+                </Box>
               );
             }
             if (field.enum?.length) {

@@ -31,3 +31,72 @@ tutorials:
       action:
         type: "open-preferences"
         section: "identity"
+
+  create_piece_step_1:
+    preference:
+      label: "Show step 1: create your first piece"
+      hint: "Points to the New Piece button on the piece list."
+    inlay:
+      label: "Start here — create your first piece."
+      dismiss_label: "Dismiss create-piece step 1"
+    attachment:
+      selector: '[data-testid="new-piece-button"]'
+      placement: "right"
+      action:
+        type: "dismiss-only"
+
+  create_piece_step_2:
+    depends_on: [create_piece_step_1]
+    preference:
+      label: "Show step 2: name your piece"
+      hint: "Points to the name field in the New Piece dialog."
+    inlay:
+      label: "Give your piece a name."
+      dismiss_label: "Dismiss create-piece step 2"
+    attachment:
+      selector: '[data-testid="name-input"]'
+      placement: "right"
+      action:
+        type: "dismiss-only"
+
+  create_piece_step_3:
+    depends_on: [create_piece_step_2]
+    preference:
+      label: "Show step 3: advance to your first making step"
+      hint: "Points to the state transition controls on the piece detail page."
+    inlay:
+      label: "Advance to your first making step — wheel thrown or handbuilt."
+      dismiss_label: "Dismiss create-piece step 3"
+    attachment:
+      selector: '[data-testid="state-transition-group"]'
+      placement: "top"
+      action:
+        type: "dismiss-only"
+
+  create_piece_step_4:
+    depends_on: [create_piece_step_3]
+    preference:
+      label: "Show step 4: fill in the details"
+      hint: "Points to the Clay Body field on the piece detail page."
+    inlay:
+      label: "Fill in the details as you work."
+      dismiss_label: "Dismiss create-piece step 4"
+    attachment:
+      selector: '[data-testid="global-entry-field-clay_body"]'
+      placement: "right"
+      action:
+        type: "dismiss-only"
+
+  create_piece_step_5:
+    depends_on: [create_piece_step_4]
+    preference:
+      label: "Show step 5: completion tip"
+      hint: "Completion message shown on the piece detail page."
+    inlay:
+      label: "You're tracking your first piece!"
+      dismiss_label: "Dismiss create-piece step 5"
+    attachment:
+      selector: '[data-testid="piece-title"]'
+      placement: "top"
+      action:
+        type: "dismiss-only"

@@ -899,6 +899,7 @@ const PieceList = (props: PieceListProps) => {
               <Box
                 component="button"
                 type="button"
+                data-testid="new-piece-button"
                 onClick={onNewPiece}
                 sx={{
                   display: "inline-flex",

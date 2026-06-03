@@ -130,6 +130,7 @@ export default function PieceNameEditor({
           <Typography
             variant="h3"
             component="h2"
+            data-testid="piece-title"
             sx={{
               fontSize: { xs: "2rem", sm: "2.6rem", md: "2rem" },
               lineHeight: 1.05,
