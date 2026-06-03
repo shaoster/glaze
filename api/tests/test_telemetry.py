@@ -2,6 +2,7 @@ from unittest.mock import Mock
 
 import httpx
 import pytest
+from django.test import RequestFactory
 
 
 @pytest.mark.django_db
@@ -44,4 +45,29 @@ class TestTelemetryProxy:
             content_type="application/x-protobuf",
         )
 
+        assert response.status_code == 400
+
+    def test_browser_traces_survives_pre_consumed_body(self, monkeypatch):
+        # Regression for #759: RawPostDataException when request stream is read
+        # before the view runs.
+        from api.telemetry_views import browser_traces
+
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otelcol:4317")
+        response_mock = httpx.Response(
+            202,
+            content=b"",
+            headers={"content-type": "text/plain"},
+        )
+        monkeypatch.setattr(
+            "api.telemetry_views.httpx.post", Mock(return_value=response_mock)
+        )
+
+        raw = RequestFactory().post(
+            "/api/telemetry/traces/",
+            data=b"trace-bytes",
+            content_type="application/x-protobuf",
+        )
+        raw.read()  # consume the stream before the view runs
+
+        response = browser_traces(raw)
         assert response.status_code == 400

@@ -6,7 +6,7 @@ import os
 from urllib.parse import urlparse, urlunparse
 
 import httpx
-from django.http import HttpResponse
+from django.http import HttpResponse, RawPostDataException
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -52,7 +52,13 @@ def _collector_traces_endpoint() -> str:
 @traced("telemetry.browser_traces")
 def browser_traces(request: Request) -> HttpResponse:
     """Forward a browser OTLP/HTTP trace payload to the collector."""
-    if not request.body:
+    # Cache body locally; guard against RawPostDataException if the stream was
+    # already consumed upstream (e.g. by middleware or DRF content negotiation).
+    try:
+        body = request.body
+    except RawPostDataException:
+        return HttpResponse(status=400)
+    if not body:
         return HttpResponse(status=400)
 
     collector_endpoint = _collector_traces_endpoint()
@@ -65,7 +71,7 @@ def browser_traces(request: Request) -> HttpResponse:
     try:
         response = httpx.post(
             collector_endpoint,
-            content=request.body,
+            content=body,
             headers=forward_headers,
             timeout=10.0,
         )
