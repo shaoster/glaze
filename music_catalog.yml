@@ -6,10 +6,11 @@
 # attribution text exactly as published by the source — it is a licensing
 # obligation, not editorial copy.
 #
-# `audio.format` is the target lossless container the renderer must supply.
-# `audio.url` points to the hosted lossless asset once it exists; it is null
-# until the render pipeline hosts one. It is intentionally distinct from
-# `download_url` (the source page, which may only offer mp3).
+# `audio.format` is the lossless container the renderer consumes. `audio.url` is
+# the committed lossless asset (a repo-relative path under assets/showcase_music/,
+# stored via git-LFS), kept intentionally distinct from `download_url` (the human
+# source page, which may only offer mp3). See assets/showcase_music/CREDITS.md for
+# how the files were produced and their attribution.
 #
 version: "1.0"
 default_track_id: adventures-a-himitsu
@@ -32,7 +33,7 @@ tracks:
       Music promoted by Audio Library https://youtu.be/MkNeIUgNPQ8
     audio:
       format: flac
-      url: null
+      url: assets/showcase_music/adventures-a-himitsu.flac
 
   good-for-you-thbd:
     title: Good For You
@@ -51,7 +52,7 @@ tracks:
       Music promoted by Audio Library https://youtu.be/-K_YSjqKgvQ
     audio:
       format: flac
-      url: null
+      url: assets/showcase_music/good-for-you-thbd.flac
 
   we-are-one-vexento:
     title: We Are One
@@ -70,4 +71,4 @@ tracks:
       Music promoted by Audio Library https://youtu.be/Ssvu2yncgWU
     audio:
       format: flac
-      url: null
+      url: assets/showcase_music/we-are-one-vexento.flac
