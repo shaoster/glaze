@@ -20,6 +20,7 @@ COPY user_preferences.yml ./
 COPY workflow.yml ./
 COPY music_catalog.yml ./
 COPY music_catalog.schema.yml ./
+COPY assets/showcase_music/ ./assets/showcase_music/
 
 # Generate the OpenAPI schema.json
 RUN python manage.py spectacular --file schema.json --format openapi-json
@@ -90,6 +91,7 @@ COPY user_preferences.yml ./
 COPY workflow.yml ./
 COPY music_catalog.yml ./
 COPY music_catalog.schema.yml ./
+COPY assets/showcase_music/ ./assets/showcase_music/
 
 # Make the entrypoint executable
 RUN chmod +x docker-entrypoint.sh
