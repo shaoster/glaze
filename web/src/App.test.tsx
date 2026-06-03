@@ -67,7 +67,11 @@ vi.mock("./components/NewPieceDialog", () => ({
 vi.mock("./components/PieceList", () => ({
   default: ({ onNewPiece }: { onNewPiece?: () => void }) => (
     <div>
-      {onNewPiece && <button onClick={onNewPiece}>New Piece</button>}
+      {onNewPiece && (
+        <button data-testid="new-piece-button" onClick={onNewPiece}>
+          New Piece
+        </button>
+      )}
       <div>Piece List Content</div>
     </div>
   ),
@@ -613,6 +617,28 @@ describe("App auth flow", () => {
       expect(screen.getByText("Active Section: identity")).toBeInTheDocument();
       expect(window.location.pathname).toBe("/preferences/identity");
     });
+  });
+
+  it("shows the create-piece tutorial inlay on the desktop New Piece button", async () => {
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /new piece/i }),
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByRole("button", {
+        name: "Start here — create your first piece.",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("opens the identity preferences route directly", async () => {

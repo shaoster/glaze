@@ -685,6 +685,36 @@ const PieceList = (props: PieceListProps) => {
           </Box>
         </Box>
 
+        {!isMobile && onNewPiece && (
+          <Box
+            component="button"
+            type="button"
+            data-testid="new-piece-button"
+            onClick={onNewPiece}
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.5,
+              mt: 1,
+              px: 1.5,
+              py: 0.75,
+              alignSelf: "flex-start",
+              borderRadius: 1.5,
+              bgcolor: "primary.main",
+              color: "primary.contrastText",
+              border: "none",
+              fontSize: "0.8125rem",
+              fontWeight: 600,
+              fontFamily: "inherit",
+              cursor: "pointer",
+              "&:hover": { filter: "brightness(1.1)" },
+            }}
+          >
+            <AddIcon sx={{ fontSize: 16 }} />
+            New Piece
+          </Box>
+        )}
+
         {/* Absolutely positioned so the panel overlays the masonry without
             pushing it down or triggering a page scroll. */}
         {filterOpen && (
@@ -895,34 +925,6 @@ const PieceList = (props: PieceListProps) => {
             )}
 
             {/* New Piece button (desktop only) */}
-            {!isMobile && onNewPiece && (
-              <Box
-                component="button"
-                type="button"
-                data-testid="new-piece-button"
-                onClick={onNewPiece}
-                sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  px: 1.5,
-                  py: 0.75,
-                  alignSelf: "flex-start",
-                  borderRadius: 1.5,
-                  bgcolor: "primary.main",
-                  color: "primary.contrastText",
-                  border: "none",
-                  fontSize: "0.8125rem",
-                  fontWeight: 600,
-                  fontFamily: "inherit",
-                  cursor: "pointer",
-                  "&:hover": { filter: "brightness(1.1)" },
-                }}
-              >
-                <AddIcon sx={{ fontSize: 16 }} />
-                New Piece
-              </Box>
-            )}
           </Box>
         )}
       </Box>
