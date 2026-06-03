@@ -1,6 +1,7 @@
-import { Component } from "react";
+import React, { Component } from "react";
 import type { ReactNode } from "react";
 import { Typography } from "@mui/material";
+import { reportFrontendError } from "../util/telemetry";
 
 interface Props {
   children: ReactNode;
@@ -27,6 +28,13 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(): State {
     return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo): void {
+    reportFrontendError(error, {
+      "error.source": "ErrorBoundary",
+      "react.component_stack": info.componentStack ?? "",
+    });
   }
 
   render() {
