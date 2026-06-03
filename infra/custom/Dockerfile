@@ -47,6 +47,7 @@ COPY web/ ./
 COPY tutorials.yml /app/
 COPY user_preferences.yml /app/
 COPY workflow.yml /app/
+COPY music_catalog.yml /app/
 
 # Generate TypeScript types from the local schema.json file
 ENV GLAZE_SCHEMA_SOURCE=/app/schema.json
