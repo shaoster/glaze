@@ -18,10 +18,10 @@ from backend.otel import traced
 
 from ..models import AsyncTask, Piece
 from ..showcase import (
+    SHOWCASE_VIDEO_RENDER_VERSION,
     build_keepsake_storyboard,
     compute_storyboard_hash,
     is_showcase_video_cloudinary_enabled,
-    SHOWCASE_VIDEO_RENDER_VERSION,
 )
 from ..showcase.render import SHOWCASE_VIDEO_TASK_TYPE
 from ..tasks import get_task_interface
@@ -68,6 +68,7 @@ class ShowcaseVideoStatusSerializer(drf_serializers.Serializer):
     storyboard = drf_serializers.JSONField(allow_null=True, required=False)
     artifact = ShowcaseVideoArtifactSerializer(allow_null=True, required=False)
     error = drf_serializers.CharField(allow_null=True, required=False)
+    progress = drf_serializers.IntegerField(required=False, default=0)
 
 
 def _piece_with_showcase_prefetch(request: Request, piece_id: str) -> Piece:
@@ -149,9 +150,7 @@ def _status_payload(
             is_stale = stored_input_hash != current_input_hash
             if is_stale:
                 status_label = "stale-needs-regeneration"
-                stale_reason = (
-                    "The piece has changed since this video was rendered."
-                )
+                stale_reason = "The piece has changed since this video was rendered."
 
         if task.status == AsyncTask.Status.SUCCESS:
             result = task.result if isinstance(task.result, dict) else {}
@@ -181,6 +180,7 @@ def _status_payload(
         "storyboard": storyboard,
         "artifact": artifact,
         "error": error,
+        "progress": task.progress if task is not None else 0,
     }
 
 
@@ -238,11 +238,7 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
 
     if not is_showcase_video_cloudinary_enabled():
         return Response(
-            {
-                "detail": (
-                    "Cloudinary showcase video uploads are not configured."
-                )
-            },
+            {"detail": ("Cloudinary showcase video uploads are not configured.")},
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 

@@ -1008,6 +1008,7 @@ class AsyncTaskSerializer(serializers.ModelSerializer):
             "input_params",
             "result",
             "error",
+            "progress",
             "created",
             "last_modified",
         ]

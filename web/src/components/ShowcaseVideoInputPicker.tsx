@@ -133,7 +133,6 @@ export default function ShowcaseVideoInputPicker({
             ...selection,
             excludedImageKeys: toggleValue(selection.excludedImageKeys, item.key),
           }),
-    toggleLabel: item.required ? "Locked as the video cover" : "Include in the video",
   }));
 
   const selectedTrackId = getTrack(selection.musicTrackId)
@@ -287,18 +286,30 @@ export default function ShowcaseVideoInputPicker({
                 </>
               )}
             </Typography>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              component="pre"
-              sx={{
-                mt: 0.5,
-                whiteSpace: "pre-wrap",
-                fontFamily: "inherit",
-              }}
-            >
-              {selectedTrack.attribution}
-            </Typography>
+            <Box sx={{ mt: 0.5, display: "flex", flexDirection: "column", gap: 0.25 }}>
+              <Typography variant="caption" color="text.secondary">
+                {"Platform: "}
+                <Link href={selectedTrack.source_url} target="_blank" rel="noopener noreferrer">
+                  Audio Library
+                </Link>
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {"Artist: "}
+                <Link href={selectedTrack.artist_url} target="_blank" rel="noopener noreferrer">
+                  {selectedTrack.artist}
+                </Link>
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {"Song: "}
+                <Link
+                  href={selectedTrack.download_url || selectedTrack.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {selectedTrack.title}
+                </Link>
+              </Typography>
+            </Box>
           </Box>
         )}
       </Box>
