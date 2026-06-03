@@ -48,6 +48,8 @@ vi.mock("./util/api", async (importOriginal) => {
     addPieceState: vi.fn(),
     updateCurrentState: vi.fn(),
     updatePiece: vi.fn(),
+    fetchSupportThread: vi.fn().mockResolvedValue(null),
+    sendSupportMessage: vi.fn().mockResolvedValue(null),
     fetchGlobalEntries: vi.fn().mockResolvedValue([]),
     createGlobalEntry: vi.fn(),
     hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
@@ -127,6 +129,8 @@ import {
   fetchPiece,
   loginWithGoogle,
   logoutUser,
+  fetchSupportThread,
+  sendSupportMessage,
 } from "./util/api";
 import App from "./App";
 import * as postLoginRedirect from "./util/postLoginRedirect";
@@ -275,6 +279,27 @@ describe("App auth flow", () => {
     });
   });
 
+  it("opens the contact dialog from the unauthenticated footer", async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Contact Us" }),
+      ).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Contact Us" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "Contact Us" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/sign in first, and this panel becomes your in-app support inbox/i),
+      ).toBeInTheDocument();
+    });
+  });
+
   it("logs in with Google and shows piece list view with user chip", async () => {
     vi.mocked(loginWithGoogle).mockResolvedValue(MOCK_USER);
 
@@ -308,6 +333,45 @@ describe("App auth flow", () => {
       "aria-selected",
       "false",
     );
+  });
+
+  it("opens the contact dialog for authenticated users and sends a message", async () => {
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
+    vi.mocked(fetchSupportThread).mockResolvedValue(null);
+    vi.mocked(sendSupportMessage).mockResolvedValue(null);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /new piece/i }),
+      ).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Contact Us" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "Contact Us" }),
+      ).toBeInTheDocument();
+    });
+
+    await userEvent.type(
+      screen.getByLabelText("Your message"),
+      "Need help with a firing schedule.",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => {
+      expect(sendSupportMessage).toHaveBeenCalled();
+      expect(vi.mocked(sendSupportMessage).mock.calls[0][0]).toBe(
+        "Need help with a firing schedule.",
+      );
+    });
   });
 
   it("passes pending invite code from sessionStorage to loginWithGoogle", async () => {

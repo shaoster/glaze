@@ -251,6 +251,45 @@ function normalizeAuthUser(raw: AuthUser): AuthUser {
   };
 }
 
+export type SupportMessage = {
+  id: string;
+  sender: "user" | "admin";
+  body: string;
+  created: Date;
+};
+
+export type SupportThread = {
+  id: string;
+  subject: string;
+  is_closed: boolean;
+  created: Date;
+  last_message_at: Date;
+  messages: SupportMessage[];
+};
+
+type WireSupportMessage = Wire<SupportMessage>;
+type WireSupportThread = Wire<SupportThread>;
+
+function mapSupportMessage(raw: WireSupportMessage): SupportMessage {
+  return {
+    id: raw.id,
+    sender: raw.sender,
+    body: raw.body,
+    created: new Date(raw.created ?? ""),
+  };
+}
+
+function mapSupportThread(raw: WireSupportThread): SupportThread {
+  return {
+    id: raw.id,
+    subject: raw.subject,
+    is_closed: raw.is_closed,
+    created: new Date(raw.created ?? ""),
+    last_message_at: new Date(raw.last_message_at ?? ""),
+    messages: raw.messages.map(mapSupportMessage),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // API calls
 // ---------------------------------------------------------------------------
@@ -338,6 +377,29 @@ export function downloadUserData(): void {
 export async function deleteAccount(): Promise<void> {
   await ensureCsrfCookie();
   await client.delete("auth/account/");
+}
+
+export type SupportContactResponse = {
+  thread: SupportThread | null;
+};
+
+type WireSupportContactResponse = {
+  thread: WireSupportThread | null;
+};
+
+export async function fetchSupportThread(): Promise<SupportThread | null> {
+  const { data } = await client.get<WireSupportContactResponse>("support/contact/");
+  return data.thread ? mapSupportThread(data.thread) : null;
+}
+
+export async function sendSupportMessage(
+  body: string,
+): Promise<SupportThread | null> {
+  await ensureCsrfCookie();
+  const { data } = await client.post<WireSupportContactResponse>("support/contact/", {
+    body,
+  });
+  return data.thread ? mapSupportThread(data.thread) : null;
 }
 
 export type StaffInviteCodeResponse = { code: string; expires_at: string };

@@ -63,6 +63,8 @@ import { initializeFrontendTelemetry } from "./util/telemetry";
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
 import ErrorBoundary from "./components/ErrorBoundary";
+import AppFooterLinks from "./components/AppFooterLinks";
+import ContactSupportDialog from "./components/ContactSupportDialog";
 import PublicPieceShell from "./components/PublicPieceShell";
 import UserPreferencesDialog from "./components/UserPreferencesDialog";
 import TutorialManager from "./components/TutorialManager";
@@ -265,11 +267,13 @@ function AuthLanding({
   redirectTo,
   googleOauthClientId,
   mockIdpUrl,
+  onContactUs,
 }: {
   onAuthenticated: (user: AuthUser) => void;
   redirectTo: string | null;
   googleOauthClientId: string;
   mockIdpUrl: string | null;
+  onContactUs: () => void;
 }) {
   return (
     <Container
@@ -337,49 +341,7 @@ function AuthLanding({
             </Button>
           )}
 
-          <Box component="footer" sx={{ pt: 1 }}>
-            <Stack
-              direction="row"
-              spacing={1}
-              justifyContent="center"
-              alignItems="center"
-              flexWrap="wrap"
-            >
-              <Button
-                component={Link}
-                to="/about"
-                variant="text"
-                size="small"
-                sx={{ minWidth: 0, px: 0.5 }}
-              >
-                About Us
-              </Button>
-              <Typography variant="body2" color="text.secondary">
-                •
-              </Typography>
-              <Button
-                component={Link}
-                to="/privacy-policy"
-                variant="text"
-                size="small"
-                sx={{ minWidth: 0, px: 0.5 }}
-              >
-                Privacy Policy
-              </Button>
-              <Typography variant="body2" color="text.secondary">
-                •
-              </Typography>
-              <Button
-                component={Link}
-                to="/terms-of-service"
-                variant="text"
-                size="small"
-                sx={{ minWidth: 0, px: 0.5 }}
-              >
-                Terms of Service
-              </Button>
-            </Stack>
-          </Box>
+          <AppFooterLinks onContactUs={onContactUs} />
         </Stack>
       </Paper>
     </Container>
@@ -391,11 +353,13 @@ function AppShell({
   adminBaseUrl,
   onLogout,
   onCurrentUserUpdated,
+  onContactUs,
 }: {
   currentUser: AuthUser;
   adminBaseUrl: string | null;
   onLogout: () => void;
   onCurrentUserUpdated: (user: AuthUser) => void;
+  onContactUs: () => void;
 }) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -700,6 +664,7 @@ function AppShell({
             onClose={closePreferencesDialog}
             onSectionChange={switchPreferencesSection}
           />
+          <AppFooterLinks onContactUs={onContactUs} sticky />
         </Container>
       </PreferencesDialogProvider>
     </CurrentUserProvider>
@@ -711,11 +676,13 @@ function UnauthenticatedApp({
   redirectTo,
   googleOauthClientId,
   mockIdpUrl,
+  onContactUs,
 }: {
   onAuthenticated: (user: AuthUser) => void;
   redirectTo: string | null;
   googleOauthClientId: string;
   mockIdpUrl: string | null;
+  onContactUs: () => void;
 }) {
   const router = useMemo(
     () =>
@@ -730,6 +697,7 @@ function UnauthenticatedApp({
                   redirectTo={redirectTo}
                   googleOauthClientId={googleOauthClientId}
                   mockIdpUrl={mockIdpUrl}
+                  onContactUs={onContactUs}
                 />
               }
             />
@@ -835,7 +803,7 @@ function UnauthenticatedApp({
           </>,
         ),
       ),
-    [onAuthenticated, redirectTo, googleOauthClientId, mockIdpUrl],
+    [onAuthenticated, redirectTo, googleOauthClientId, mockIdpUrl, onContactUs],
   );
 
   return <RouterProvider router={router} />;
@@ -846,11 +814,13 @@ function AuthenticatedApp({
   adminBaseUrl,
   onLogout,
   onCurrentUserUpdated,
+  onContactUs,
 }: {
   currentUser: AuthUser;
   adminBaseUrl: string | null;
   onLogout: () => void;
   onCurrentUserUpdated: (user: AuthUser) => void;
+  onContactUs: () => void;
 }) {
   const router = useMemo(
     () =>
@@ -863,6 +833,7 @@ function AuthenticatedApp({
                 adminBaseUrl={adminBaseUrl}
                 onLogout={onLogout}
                 onCurrentUserUpdated={onCurrentUserUpdated}
+                onContactUs={onContactUs}
               />
             }
           >
@@ -952,7 +923,7 @@ function AuthenticatedApp({
           </Route>,
         ),
       ),
-    [adminBaseUrl, currentUser, onLogout, onCurrentUserUpdated],
+    [adminBaseUrl, currentUser, onLogout, onCurrentUserUpdated, onContactUs],
   );
 
   return <RouterProvider router={router} />;
@@ -986,6 +957,7 @@ export default function App() {
 
 function AppContent() {
   const queryClient = useQueryClient();
+  const [contactOpen, setContactOpen] = useState(false);
   useState(() => {
     initializeFrontendTelemetry();
     return null;
@@ -1018,6 +990,12 @@ function AppContent() {
     await logoutUser();
     queryClient.setQueryData(["appInit"], (prev: typeof init) => ({ ...prev!, user: null }));
   }, [queryClient]);
+  const handleOpenContact = useCallback(() => {
+    setContactOpen(true);
+  }, []);
+  const handleCloseContact = useCallback(() => {
+    setContactOpen(false);
+  }, []);
 
   useEffect(() => {
     if (postLoginRedirect && init?.user) {
@@ -1050,6 +1028,7 @@ function AppContent() {
             adminBaseUrl={init.adminBaseUrl}
             onLogout={handleLogout}
             onCurrentUserUpdated={handleCurrentUserUpdated}
+            onContactUs={handleOpenContact}
           />
         ) : (
           <UnauthenticatedApp
@@ -1057,8 +1036,14 @@ function AppContent() {
             redirectTo={postLoginRedirect}
             googleOauthClientId={init?.googleOauthClientId ?? ""}
             mockIdpUrl={init?.mockIdpUrl ?? null}
+            onContactUs={handleOpenContact}
           />
         )}
+        <ContactSupportDialog
+          open={contactOpen}
+          authenticated={Boolean(init?.user)}
+          onClose={handleCloseContact}
+        />
       </ThemeProvider>
     </GoogleOAuthProvider>
   );
