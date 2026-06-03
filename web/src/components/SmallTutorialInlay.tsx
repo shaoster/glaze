@@ -142,9 +142,10 @@ export default function SmallTutorialInlay({
           position: "relative",
           display: "inline-flex",
           alignItems: "center",
-          gap: 0.75,
-          py: 0.8,
-          px: 1.25,
+          gap: 0.5,
+          py: 0.5,
+          pl: 1,
+          pr: 0.875,
           borderRadius: 2,
           borderColor: "primary.light",
           bgcolor: "rgba(201, 122, 77, 0.24)",
@@ -192,7 +193,10 @@ export default function SmallTutorialInlay({
             boxShadow: "0 0 10px rgba(201, 122, 77, 0.55)",
           }}
         />
-        <Typography variant="caption" sx={{ color: "text.secondary" }}>
+        <Typography
+          variant="caption"
+          sx={{ color: "text.secondary", lineHeight: 1.15 }}
+        >
           {label}
         </Typography>
         <IconButton
@@ -203,7 +207,7 @@ export default function SmallTutorialInlay({
             dismissMutate();
           }}
           disabled={openPending || dismissPending}
-          sx={{ ml: "auto" }}
+          sx={{ p: 0.375 }}
         >
           <CloseIcon fontSize="small" />
         </IconButton>

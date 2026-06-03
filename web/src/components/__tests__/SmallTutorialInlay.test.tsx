@@ -125,9 +125,16 @@ describe("SmallTutorialInlay", () => {
       name: "Customize this summary!",
     });
     const popper = button.closest("[data-popper-placement]");
+    const dismissButton = screen.getByRole("button", {
+      name: "Dismiss summary customization tip",
+    });
 
     expect(popper).toHaveAttribute("data-popper-placement", placement);
     expect(window.getComputedStyle(popper ?? button).zIndex).toBe("auto");
+    expect(window.getComputedStyle(button).paddingTop).toBe("4px");
+    expect(window.getComputedStyle(button).paddingBottom).toBe("4px");
+    expect(window.getComputedStyle(button).paddingRight).toBe("7px");
+    expect(window.getComputedStyle(dismissButton).paddingTop).toBe("3px");
 
     anchor.remove();
   });
