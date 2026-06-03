@@ -18,13 +18,13 @@ import tempfile
 import textwrap
 import unicodedata
 from fractions import Fraction
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import av
 import numpy as np
 import requests
-from functools import lru_cache
 from av.audio.resampler import AudioResampler
 from PIL import Image as PILImage
 from PIL import ImageDraw, ImageFont, ImageOps
@@ -678,7 +678,7 @@ def render_storyboard_to_mp4(storyboard: dict) -> Path:
     transition_seconds = min(
         SHOWCASE_VIDEO_FADE_SECONDS,
         *(duration / 2 for duration in durations),
-    ) if len(durations) > 1 else 0.0
+    )
     fade_seconds = min(SHOWCASE_VIDEO_FADE_SECONDS, durations[-1] / 2)
 
     slide_canvases = _render_slide_canvases(storyboard)
@@ -699,6 +699,9 @@ def render_storyboard_to_mp4(storyboard: dict) -> Path:
             fade_seconds,
         )
 
+        # AAC encoders emit a few priming frames with negative DTS before the
+        # first real sample, which breaks muxing.  Compute the shift needed to
+        # bring the earliest timestamp to zero, then apply it to all packets.
         audio_offset = 0
         for packet in audio_packets:
             timestamp = packet.dts if packet.dts is not None else packet.pts

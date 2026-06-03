@@ -219,6 +219,9 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
                 storyboard = cast(dict[str, Any], storyboard_candidate)
             else:
                 storyboard = _requested_storyboard(piece, task_input)
+            # `storyboard` is the snapshot that was submitted with the task
+            # (what was rendered).  `current_input_hash` reflects the piece as
+            # it stands today.  Comparing them is how stale detection works.
             current_storyboard = _requested_storyboard(piece, task_input)
             current_input_hash = compute_storyboard_hash(current_storyboard)
         payload = _status_payload(

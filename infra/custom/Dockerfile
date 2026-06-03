@@ -3,7 +3,7 @@ FROM python:3.12-slim AS schema-builder
 WORKDIR /app
 
 # Install uv for high-speed package management
-RUN python -m pip install --no-cache-dir uv
+RUN python -m pip install --no-cache-dir "uv==0.11.18"
 
 # Copy python dependencies
 COPY pyproject.toml uv.lock ./
@@ -67,7 +67,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Install uv for high-speed package management
-RUN python -m pip install --no-cache-dir uv
+RUN python -m pip install --no-cache-dir "uv==0.11.18"
 
 # Copy python dependencies
 COPY pyproject.toml uv.lock ./
