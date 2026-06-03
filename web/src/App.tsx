@@ -868,6 +868,7 @@ function AuthenticatedApp({
           >
             <Route path="/" element={<LandingPage />}>
               <Route index element={<PieceListPage />} />
+              <Route path="new" element={<PieceListPage />} />
               <Route path="analyze/*" element={<AnalyzePage />} />
             </Route>
             <Route path="/pieces/:id/*" element={<PieceDetailPage />} />

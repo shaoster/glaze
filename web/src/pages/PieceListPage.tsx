@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import {
   Box,
@@ -38,7 +38,35 @@ export default function PieceListPage() {
     sortFromUrl && PIECE_SORT_OPTIONS.some((o) => o.value === sortFromUrl)
       ? sortFromUrl
       : DEFAULT_PIECE_SORT;
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const match = useMatch("/new");
+  const dialogOpen = match !== null;
+
+  const handleOpenDialog = useCallback(() => {
+    navigate(
+      {
+        pathname: "/new",
+        search: searchParams.toString(),
+      },
+      { state: { fromApp: true } }
+    );
+  }, [navigate, searchParams]);
+
+  const handleCloseDialog = useCallback(() => {
+    if (location.state?.fromApp) {
+      navigate(-1);
+    } else {
+      navigate(
+        {
+          pathname: "/",
+          search: searchParams.toString(),
+        },
+        { replace: true }
+      );
+    }
+  }, [navigate, location.state, searchParams]);
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -147,7 +175,7 @@ export default function PieceListPage() {
         <Fab
           color="primary"
           aria-label="New Piece"
-          onClick={() => setDialogOpen(true)}
+          onClick={handleOpenDialog}
           sx={{
             position: "fixed",
             right: 16,
@@ -175,7 +203,7 @@ export default function PieceListPage() {
       {!loading && !error && (
         <PieceList
           pieces={pieces}
-          onNewPiece={() => setDialogOpen(true)}
+          onNewPiece={handleOpenDialog}
           sortOrder={sortOrder}
           onSortChange={handleSortChange}
           onLoadMore={handleLoadMore}
@@ -186,7 +214,7 @@ export default function PieceListPage() {
       )}
       <NewPieceDialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={handleCloseDialog}
         onCreated={handleCreated}
       />
     </>
