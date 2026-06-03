@@ -193,6 +193,11 @@ def test_start_stack_waits_for_backend_before_web(monkeypatch, tmp_path: Path) -
     )
     monkeypatch.setattr(
         launcher,
+        "sync_generated_types",
+        lambda *args, **kwargs: events.append("sync_generated_types"),
+    )
+    monkeypatch.setattr(
+        launcher,
         "start_web",
         lambda *args, **kwargs: events.append("start_web"),
     )
@@ -203,7 +208,13 @@ def test_start_stack_waits_for_backend_before_web(monkeypatch, tmp_path: Path) -
     )
 
     assert launcher.start_stack(no_browser=True) == 0
-    assert events == ["start_backend", "wait_for_backend", "start_web", "wait_for_web"]
+    assert events == [
+        "start_backend",
+        "wait_for_backend",
+        "sync_generated_types",
+        "start_web",
+        "wait_for_web",
+    ]
 
 
 def test_wait_for_web_waits_until_port_accepts_connections(monkeypatch) -> None:

@@ -250,6 +250,27 @@ def ensure_local_web_node_modules(roots: Roots) -> None:
     subprocess.run(["npm", "install"], cwd=str(roots.workspace / "web"), check=True)
 
 
+def sync_generated_types(roots: Roots, env: dict[str, str]) -> None:
+    print("web: regenerating TypeScript types...")
+    subprocess.run(
+        ["bazel", "build", "//web:generated_types"],
+        cwd=str(roots.workspace),
+        env=env,
+        check=True,
+    )
+
+    source_dir = roots.workspace / "web" / "src" / "util"
+    source_dir.mkdir(parents=True, exist_ok=True)
+    generated_dir = roots.workspace / "bazel-bin" / "web" / "src" / "util"
+    for filename in ("generated-types.ts", "types.ts"):
+        source_path = source_dir / filename
+        target_path = generated_dir / filename
+        if source_path.exists() or source_path.is_symlink():
+            source_path.unlink()
+        source_path.symlink_to(target_path)
+        print(f"Generated: {source_path} -> {target_path}")
+
+
 def backend_ready_payload(port: int) -> dict[str, object]:
     url = f"http://127.0.0.1:{port}/api/health/ready/"
     try:
@@ -639,6 +660,8 @@ def start_stack(no_browser: bool = False) -> int:
             )
 
         wait_for_backend(backend_port)
+
+        sync_generated_types(roots, env)
 
         pid, running = ensure_running(web_pidfile)
         if not (running and pid is not None):
