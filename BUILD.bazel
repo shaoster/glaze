@@ -26,6 +26,7 @@ exports_files([
     "mypy.ini",
     "tutorials.yml",
     "tutorials.schema.yml",
+    "env-agent.sh",
 ])
 
 config_setting(

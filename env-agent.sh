@@ -1229,8 +1229,12 @@ _gz_cd_complete() {
 _gz_get_all_sources() {
     local profile="$PWD/bazel_query_profile.json"
     echo "DEBUG: Starting ALL_SOURCES query at $(date +%s)"
+    local tmp_err
+    tmp_err=$(mktemp)
     local sources
-    sources=$(${GLAZE_AGENT:+rtk }bazel query --profile="$profile" --output=label 'kind("source file", //...:* )' 2> >(tee -a /dev/stderr) | sed 's|^//||; s|:|/|')
+    sources=$(${GLAZE_AGENT:+rtk }bazel query --profile="$profile" --output=label 'kind("source file", //...:* )' 2> "$tmp_err" | sed 's|^//||; s|:|/|')
+    cat "$tmp_err" >&2
+    rm -f "$tmp_err"
     echo "DEBUG: Finished ALL_SOURCES query at $(date +%s). Sources found: $(echo "$sources" | wc -l)"
     echo "$sources"
 }

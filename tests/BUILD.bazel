@@ -11,6 +11,7 @@ pytest_test(
         "//:workflow_files",
         "//:pytest_ini",
         "//backend:backend_test_settings",
+        "//:env-agent.sh",
     ],
     deps = [
         "@pypi//pytest_env",
