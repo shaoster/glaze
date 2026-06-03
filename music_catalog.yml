@@ -6,8 +6,10 @@
 # attribution text exactly as published by the source — it is a licensing
 # obligation, not editorial copy.
 #
-# `audio.url` is a pointer to a lossless asset the renderer consumes; the actual
-# files are hosted by the render pipeline, not committed here.
+# `audio.format` is the target lossless container the renderer must supply.
+# `audio.url` points to the hosted lossless asset once it exists; it is null
+# until the render pipeline hosts one. It is intentionally distinct from
+# `download_url` (the source page, which may only offer mp3).
 #
 version: "1.0"
 default_track_id: adventures-a-himitsu
@@ -30,7 +32,7 @@ tracks:
       Music promoted by Audio Library https://youtu.be/MkNeIUgNPQ8
     audio:
       format: flac
-      url: https://www.audiolibrary.com.co/a-himitsu/adventures
+      url: null
 
   good-for-you-thbd:
     title: Good For You
@@ -49,7 +51,7 @@ tracks:
       Music promoted by Audio Library https://youtu.be/-K_YSjqKgvQ
     audio:
       format: flac
-      url: https://www.audiolibrary.com.co/thbd/good-for-you
+      url: null
 
   we-are-one-vexento:
     title: We Are One
@@ -68,4 +70,4 @@ tracks:
       Music promoted by Audio Library https://youtu.be/Ssvu2yncgWU
     audio:
       format: flac
-      url: https://www.audiolibrary.com.co/vexento/we-are-one
+      url: null

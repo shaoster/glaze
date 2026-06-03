@@ -93,10 +93,14 @@ $defs:
             type: string
             enum: [flac, wav]
             description: >-
-              Lossless audio container. mp3 is intentionally disallowed because
-              its encoder/decoder delay causes video-alignment drift.
+              Target lossless audio container the render pipeline must supply.
+              mp3 is intentionally disallowed because its encoder/decoder delay
+              causes video-alignment drift.
           url:
-            type: string
+            type: [string, "null"]
             description: >-
-              Pointer to the lossless audio asset the renderer consumes. Hosting
-              of the actual file is handled by the render pipeline.
+              Pointer to the hosted lossless asset (matching `format`) the
+              renderer consumes, or null while the asset has not been hosted yet.
+              This is deliberately distinct from the human-facing `download_url`:
+              `download_url` is the source page (which may only offer mp3),
+              whereas this must resolve to an actual lossless file once hosted.

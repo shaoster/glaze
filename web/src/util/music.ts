@@ -10,8 +10,10 @@
 import catalog from "../../../music_catalog.yml";
 
 export interface MusicTrackAudio {
+  /** Target lossless container the render pipeline must supply. */
   format: "flac" | "wav";
-  url: string;
+  /** Hosted lossless asset URL, or null until one has been hosted. */
+  url: string | null;
 }
 
 export interface MusicTrack {

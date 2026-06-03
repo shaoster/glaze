@@ -30,11 +30,10 @@ _RAW_CATALOG: dict = yaml.safe_load((_REPO_ROOT / "music_catalog.yml").read_text
 
 @dataclass(frozen=True)
 class MusicAudio:
+    # ``format`` is the target lossless container; ``url`` is the hosted asset,
+    # or None until the render pipeline hosts one.
     format: str
-    url: str
-
-    def to_dict(self) -> dict:
-        return asdict(self)
+    url: str | None
 
 
 @dataclass(frozen=True)
@@ -53,9 +52,7 @@ class MusicTrack:
     audio: MusicAudio
 
     def to_dict(self) -> dict:
-        data = asdict(self)
-        # asdict already recurses into MusicAudio; keep id first for readability.
-        return data
+        return asdict(self)
 
 
 def _build_catalog() -> dict[str, MusicTrack]:
@@ -111,6 +108,11 @@ def resolve_track_id(track_id: str | None) -> str:
     ``None`` resolves to :data:`DEFAULT_TRACK_ID` (the deterministic default). A
     non-null id that is not in the catalog is a programming/data error and
     raises :class:`ValueError`.
+
+    This is intentionally strict: an unknown id reaching here means the storyboard
+    inputs are inconsistent, and silently defaulting would hide that. Validate a
+    potter-supplied selection at the API/serializer boundary (where it can be
+    surfaced as a 400) rather than relying on this to coerce bad input.
     """
     if track_id is None:
         return DEFAULT_TRACK_ID
