@@ -434,6 +434,79 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   );
 }
 
+type ArtifactActionsProps = {
+  artifact: { url: string; download_url: string; filename: string };
+  pieceName: string;
+};
+
+function ArtifactActions({ artifact, pieceName }: ArtifactActionsProps) {
+  const [sharing, setSharing] = useState(false);
+  const canShare =
+    typeof navigator.share === "function" &&
+    typeof navigator.canShare === "function";
+
+  async function handleShare() {
+    setSharing(true);
+    try {
+      try {
+        const response = await fetch(artifact.download_url);
+        const blob = await response.blob();
+        const file = new File([blob], artifact.filename, { type: "video/mp4" });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: pieceName });
+          return;
+        }
+      } catch {
+        // Fall through to URL share if file share fails or is unsupported.
+      }
+      try {
+        await navigator.share({ url: artifact.url, title: pieceName });
+      } catch {
+        // User dismissed — ignore.
+      }
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  return (
+    <Stack spacing={1}>
+      <Box
+        component="video"
+        src={artifact.url}
+        controls
+        playsInline
+        sx={{
+          width: "100%",
+          borderRadius: 1,
+          display: "block",
+          backgroundColor: "black",
+        }}
+      />
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+        <Button
+          component="a"
+          href={artifact.download_url}
+          download={artifact.filename}
+          variant="outlined"
+        >
+          Download MP4
+        </Button>
+        {canShare && (
+          <Button
+            variant="outlined"
+            onClick={handleShare}
+            disabled={sharing}
+            startIcon={sharing ? <CircularProgress size={16} /> : undefined}
+          >
+            Share video
+          </Button>
+        )}
+      </Stack>
+    </Stack>
+  );
+}
+
 function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
   const queryClient = useQueryClient();
   const [selection, setSelection] = useState<ShowcaseVideoInputSelection>({
@@ -557,25 +630,7 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
               </Typography>
             ) : null}
             {artifact ? (
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                <Button
-                  component="a"
-                  href={artifact.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  variant="outlined"
-                >
-                  Open video
-                </Button>
-                <Button
-                  component="a"
-                  href={artifact.download_url}
-                  download={artifact.filename}
-                  variant="outlined"
-                >
-                  Download MP4
-                </Button>
-              </Stack>
+              <ArtifactActions artifact={artifact} pieceName={piece.name} />
             ) : null}
             <Stack
               direction={{ xs: "column", sm: "row" }}
