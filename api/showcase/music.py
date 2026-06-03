@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Literal
 
 import jsonschema
 import yaml
@@ -32,7 +33,7 @@ _RAW_CATALOG: dict = yaml.safe_load((_REPO_ROOT / "music_catalog.yml").read_text
 class MusicAudio:
     # ``format`` is the target lossless container; ``url`` is the hosted asset,
     # or None until the render pipeline hosts one.
-    format: str
+    format: Literal["flac", "wav"]
     url: str | None
 
 
@@ -69,6 +70,17 @@ def _build_catalog() -> dict[str, MusicTrack]:
     tracks: dict[str, MusicTrack] = {}
     for track_id, raw in raw_tracks.items():
         audio = raw["audio"]
+        audio_url: str | None = audio["url"]
+        if audio_url is not None and not audio_url.startswith(("http://", "https://")):
+            # Repo-relative path: verify the file actually exists so a typo
+            # surfaces at startup rather than silently at render time.
+            resolved = _REPO_ROOT / audio_url
+            if not resolved.exists():
+                raise FileNotFoundError(
+                    f"audio.url for track {track_id!r} points at {audio_url!r} "
+                    f"but {resolved} does not exist. "
+                    "Check that git-LFS objects are fetched."
+                )
         tracks[track_id] = MusicTrack(
             track_id=track_id,
             title=raw["title"],
@@ -81,7 +93,7 @@ def _build_catalog() -> dict[str, MusicTrack]:
             source_url=raw["source_url"],
             download_url=raw["download_url"],
             attribution=raw["attribution"],
-            audio=MusicAudio(format=audio["format"], url=audio["url"]),
+            audio=MusicAudio(format=audio["format"], url=audio_url),
         )
     return tracks
 

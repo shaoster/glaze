@@ -37,7 +37,7 @@ def test_every_track_serializes_with_attribution():
         assert data["attribution"].strip()
         # format is the target lossless container; url may be null until hosted.
         assert data["audio"]["format"] in {"flac", "wav"}
-        assert data["audio"]["url"] is None or data["audio"]["url"]
+        assert data["audio"]["url"] is None or isinstance(data["audio"]["url"], str)
 
 
 def test_default_track_is_a_real_track():

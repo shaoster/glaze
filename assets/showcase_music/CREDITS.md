@@ -9,6 +9,7 @@ references (stored via git-LFS).
 **Adventures — A Himitsu** (`adventures-a-himitsu.flac`) — CC BY 3.0
 > Adventures by A Himitsu https://soundcloud.com/a-himitsu
 > Creative Commons — Attribution 3.0 Unported — CC BY 3.0
+> Free Download / Stream: http://bit.ly/2Pj0MtT
 > Music released by Argofox https://www.audiolibrary.com.co/a-himitsu/adventures
 > Music promoted by Audio Library https://youtu.be/MkNeIUgNPQ8
 
