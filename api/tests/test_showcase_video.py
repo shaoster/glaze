@@ -11,13 +11,13 @@ from api.models import AsyncTask, Image, Piece, PieceState, PieceStateImage
 from api.showcase.render import (
     _BACKGROUND,
     _BRAND_LOCKUP_SCALE,
-    _ascii_text,
     _apply_audio_fade,
+    _ascii_text,
     _brand_lockup_layout,
     _fade_background_frame,
     _load_image,
-    _render_image_frame,
     _render_closing_frame,
+    _render_image_frame,
 )
 from api.showcase.storyboard import build_keepsake_storyboard
 from api.tasks import _execute_task
@@ -132,7 +132,9 @@ class TestShowcaseVideoApi:
     def test_render_closing_frame_keeps_brand_lockup_separated(self):
         frame = _render_closing_frame()
         layout = _brand_lockup_layout(_BRAND_LOCKUP_SCALE)
-        gap_mid_x = ((layout["icon_x"] + layout["icon_size"] + layout["text_x"]) // 2) // _BRAND_LOCKUP_SCALE
+        gap_mid_x = (
+            (layout["icon_x"] + layout["icon_size"] + layout["text_x"]) // 2
+        ) // _BRAND_LOCKUP_SCALE
         gap_mid_y = layout["center_y"] // _BRAND_LOCKUP_SCALE
 
         assert frame.getpixel((gap_mid_x, gap_mid_y)) == (0, 0, 0)
@@ -156,7 +158,9 @@ class TestShowcaseVideoApi:
 
     def test_thumbnail_fallback_preserves_crop(self, user):
         piece = Piece.objects.create(user=user, name="Thumbnail Crop")
-        state = PieceState.objects.create(piece=piece, user=user, state=sorted(TERMINAL_STATES)[0])
+        state = PieceState.objects.create(
+            piece=piece, user=user, state=sorted(TERMINAL_STATES)[0]
+        )
         image = Image.objects.create(
             user=user,
             url="https://example.com/thumb.jpg",
@@ -203,8 +207,8 @@ class TestShowcaseVideoApi:
             caption="Detail",
         )
 
-        from api.showcase.storyboard import build_keepsake_storyboard
         from api.showcase.render import render_storyboard_to_mp4
+        from api.showcase.storyboard import build_keepsake_storyboard
 
         storyboard = build_keepsake_storyboard(piece)
         output_path = render_storyboard_to_mp4(storyboard.to_dict())
@@ -213,9 +217,7 @@ class TestShowcaseVideoApi:
             assert any(stream.type == "video" for stream in container.streams)
             duration = container.duration / 1_000_000 if container.duration else 0.0
 
-        assert duration > (
-            storyboard.total_duration_ms / 1000.0
-        )
+        assert duration > (storyboard.total_duration_ms / 1000.0)
 
     def test_submit_enqueues_async_task_and_streams_artifact(
         self, client, user, tmp_path, monkeypatch
@@ -237,19 +239,22 @@ class TestShowcaseVideoApi:
         client.force_authenticate(user=user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
 
-        with patch(
-            "api.tasks.InMemoryTaskInterface.submit",
-            autospec=True,
-            side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
-        ), patch(
-            "api.showcase.upload_storyboard_video_to_cloudinary",
-            autospec=True,
-            return_value={
-                "cloud_name": "demo-cloud",
-                "public_id": "video-hash",
-                "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
-                "resource_type": "video",
-            },
+        with (
+            patch(
+                "api.tasks.InMemoryTaskInterface.submit",
+                autospec=True,
+                side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
+            ),
+            patch(
+                "api.showcase.upload_storyboard_video_to_cloudinary",
+                autospec=True,
+                return_value={
+                    "cloud_name": "demo-cloud",
+                    "public_id": "video-hash",
+                    "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
+                    "resource_type": "video",
+                },
+            ),
         ):
             response = client.post(url, {}, format="json")
 
@@ -300,19 +305,22 @@ class TestShowcaseVideoApi:
         def _capture_submit(self_obj, task_obj):
             submitted.append(task_obj)
 
-        with patch(
-            "api.tasks.InMemoryTaskInterface.submit",
-            autospec=True,
-            side_effect=_capture_submit,
-        ), patch(
-            "api.showcase.upload_storyboard_video_to_cloudinary",
-            autospec=True,
-            return_value={
-                "cloud_name": "demo-cloud",
-                "public_id": "video-hash",
-                "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
-                "resource_type": "video",
-            },
+        with (
+            patch(
+                "api.tasks.InMemoryTaskInterface.submit",
+                autospec=True,
+                side_effect=_capture_submit,
+            ),
+            patch(
+                "api.showcase.upload_storyboard_video_to_cloudinary",
+                autospec=True,
+                return_value={
+                    "cloud_name": "demo-cloud",
+                    "public_id": "video-hash",
+                    "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
+                    "resource_type": "video",
+                },
+            ),
         ):
             response = client.post(url, {}, format="json")
 
@@ -359,19 +367,22 @@ class TestShowcaseVideoApi:
         client.force_authenticate(user=user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
 
-        with patch(
-            "api.tasks.InMemoryTaskInterface.submit",
-            autospec=True,
-            side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
-        ), patch(
-            "api.showcase.upload_storyboard_video_to_cloudinary",
-            autospec=True,
-            return_value={
-                "cloud_name": "demo-cloud",
-                "public_id": "video-hash",
-                "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
-                "resource_type": "video",
-            },
+        with (
+            patch(
+                "api.tasks.InMemoryTaskInterface.submit",
+                autospec=True,
+                side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
+            ),
+            patch(
+                "api.showcase.upload_storyboard_video_to_cloudinary",
+                autospec=True,
+                return_value={
+                    "cloud_name": "demo-cloud",
+                    "public_id": "video-hash",
+                    "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
+                    "resource_type": "video",
+                },
+            ),
         ):
             response = client.post(url, {}, format="json")
 
@@ -389,7 +400,9 @@ class TestShowcaseVideoApi:
         assert body["is_stale"] is True
         assert body["stored_input_hash"] != body["current_input_hash"]
 
-    def test_other_user_cannot_access_piece_showcase_video(self, client, user, other_user):
+    def test_other_user_cannot_access_piece_showcase_video(
+        self, client, user, other_user
+    ):
         piece = _make_piece_with_terminal_state(user)
         client.force_authenticate(user=other_user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
@@ -418,28 +431,32 @@ class TestShowcaseVideoApi:
         client.force_authenticate(user=user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
 
-        with patch(
-            "api.tasks.InMemoryTaskInterface.submit",
-            autospec=True,
-            side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
-        ), patch(
-            "api.showcase.upload_storyboard_video_to_cloudinary",
-            autospec=True,
-            return_value={
-                "cloud_name": "demo-cloud",
-                "public_id": "video-hash",
-                "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
-                "resource_type": "video",
-            },
-        ) as upload_mock:
+        with (
+            patch(
+                "api.tasks.InMemoryTaskInterface.submit",
+                autospec=True,
+                side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
+            ),
+            patch(
+                "api.showcase.upload_storyboard_video_to_cloudinary",
+                autospec=True,
+                return_value={
+                    "cloud_name": "demo-cloud",
+                    "public_id": "video-hash",
+                    "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
+                    "resource_type": "video",
+                },
+            ) as upload_mock,
+        ):
             response = client.post(url, {}, format="json")
 
         assert response.status_code == 202
         task_id = response.json()["task_id"]
         upload_mock.assert_called_once()
-        assert upload_mock.call_args.kwargs["input_hash"] == AsyncTask.objects.get(
-            id=task_id
-        ).input_params["input_hash"]
+        assert (
+            upload_mock.call_args.kwargs["input_hash"]
+            == AsyncTask.objects.get(id=task_id).input_params["input_hash"]
+        )
 
         status_response = client.get(url)
         assert status_response.status_code == 200
