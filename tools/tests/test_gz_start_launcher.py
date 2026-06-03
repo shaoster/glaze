@@ -220,8 +220,8 @@ def test_start_stack_waits_for_backend_before_web(monkeypatch, tmp_path: Path) -
 def test_wait_for_web_waits_until_port_accepts_connections(monkeypatch) -> None:
     sleep_calls: list[float] = []
     addresses: list[tuple[str, int]] = []
-    times = iter([0.0, 0.1, 0.2])
-    attempts = iter([OSError("not ready"), object()])
+    times = iter([0.0, 0.1, 0.2, 0.3])
+    attempts = iter([OSError("not ready"), OSError("not ready"), object()])
 
     def fake_create_connection(address, timeout):
         addresses.append(address)
@@ -243,8 +243,12 @@ def test_wait_for_web_waits_until_port_accepts_connections(monkeypatch) -> None:
 
     launcher.wait_for_web(5173, timeout_seconds=1.0)
 
-    assert sleep_calls == [0.5]
-    assert addresses == [("localhost", 5173), ("localhost", 5173)]
+    assert sleep_calls == []
+    assert addresses == [
+        ("localhost", 5173),
+        ("127.0.0.1", 5173),
+        ("::1", 5173),
+    ]
 
 
 def test_terminate_process_group_stops_gracefully(monkeypatch) -> None:

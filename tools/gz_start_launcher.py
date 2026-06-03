@@ -335,20 +335,22 @@ def wait_for_backend(port: int, timeout_seconds: float = 60.0) -> None:
 
 def wait_for_web(port: int, timeout_seconds: float = 60.0) -> None:
     deadline = time.monotonic() + timeout_seconds
+    loopback_hosts = ("localhost", "127.0.0.1", "::1")
     sys.stdout.write("Waiting for web to be ready")
     sys.stdout.flush()
     while True:
-        try:
-            # Match the browser URL (`http://localhost:<port>`) instead of
-            # probing IPv4 only. GitHub-hosted runners can expose the dev
-            # server on an IPv6 loopback address even when the browser works
-            # fine via `localhost`.
-            with socket.create_connection(("localhost", port), timeout=1):
-                sys.stdout.write(" ready.\n")
-                sys.stdout.flush()
-                return
-        except Exception:
-            pass
+        for host in loopback_hosts:
+            try:
+                # Match the browser URL (`http://localhost:<port>`) while also
+                # trying the explicit loopback addresses. GitHub-hosted runners
+                # can expose the dev server on a different loopback family than
+                # the one the browser prefers.
+                with socket.create_connection((host, port), timeout=1):
+                    sys.stdout.write(" ready.\n")
+                    sys.stdout.flush()
+                    return
+            except Exception:
+                pass
 
         if time.monotonic() >= deadline:
             sys.stdout.write(" timed out!\n")
