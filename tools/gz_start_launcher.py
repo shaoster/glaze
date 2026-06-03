@@ -603,10 +603,11 @@ def start_web(
     web_env = env.copy()
     web_env["BACKEND_PORT"] = str(backend_port)
 
-    # Behavioral: aspect_rules_js[js_binary] FATAL error occurs on Linux if BAZEL_BINDIR is unset
-    # when running as a non-build action. We provide a fallback to '.' to suppress this.
-    if sys.platform.startswith("linux"):
-        web_env.setdefault("BAZEL_BINDIR", ".")
+    # `bazel run` sets BAZEL_BINDIR, but `gz_start` launches the web `js_binary`
+    # from the execroot after the launcher has exited. Make the environment look
+    # like a non-build action so aspect_rules_js can resolve paths consistently
+    # on both Linux and macOS runners.
+    web_env.setdefault("BAZEL_BINDIR", ".")
 
     # Worktrees must keep their own npm install so Vite/Babel resolve package
     # paths against the active checkout rather than borrowing another worktree's

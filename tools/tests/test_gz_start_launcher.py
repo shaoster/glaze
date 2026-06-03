@@ -313,7 +313,9 @@ def test_terminate_process_group_ignores_permission_error(monkeypatch) -> None:
     launcher.terminate_process_group(1234)
 
 
-def test_start_web_sets_bazel_bindir_only_on_linux(monkeypatch, tmp_path: Path) -> None:
+def test_start_web_sets_bazel_bindir_for_all_platforms(
+    monkeypatch, tmp_path: Path
+) -> None:
     roots = launcher.Roots(workspace=tmp_path, shared=tmp_path)
     pidfile = tmp_path / "web.pid"
     portfile = tmp_path / "web.port"
@@ -371,7 +373,7 @@ def test_start_web_sets_bazel_bindir_only_on_linux(monkeypatch, tmp_path: Path) 
         captured_env_linux_existing.get("BAZEL_BINDIR") == "bazel-out/k8-fastbuild/bin"
     ), "BAZEL_BINDIR should be respected if already provided by the environment."
 
-    # 2. Test Mac behavior: BAZEL_BINDIR should NOT be set (not required)
+    # 2. Test Mac behavior: BAZEL_BINDIR should also be set if missing.
     monkeypatch.setattr(launcher.sys, "platform", "darwin")
     captured_env_mac: dict[str, str] = {}
 
@@ -383,9 +385,7 @@ def test_start_web_sets_bazel_bindir_only_on_linux(monkeypatch, tmp_path: Path) 
     monkeypatch.setattr(launcher, "launch_child", fake_launch_child_mac)
     launcher.start_web(roots, {}, pidfile, portfile, log_path, 8080, 5173)
 
-    assert "BAZEL_BINDIR" not in captured_env_mac, (
-        "BAZEL_BINDIR should not be set on macOS as it is not required by aspect_rules_js."
-    )
+    assert captured_env_mac.get("BAZEL_BINDIR") == "."
 
 
 def test_ensure_local_web_node_modules_replaces_shared_symlink(
