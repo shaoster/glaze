@@ -176,9 +176,17 @@ function makePiece(overrides: Partial<PieceSummary> = {}): PieceSummary {
   };
 }
 
-function renderPieceList(pieces: PieceSummary[]) {
+function renderPieceList(
+  pieces: PieceSummary[],
+  onNewPiece?: () => void,
+) {
   const router = createMemoryRouter(
-    [{ path: "/", element: <PieceList pieces={pieces} /> }],
+    [
+      {
+        path: "/",
+        element: <PieceList pieces={pieces} onNewPiece={onNewPiece} />,
+      },
+    ],
     { initialEntries: ["/"] },
   );
   return render(<RouterProvider router={router} />);
@@ -220,6 +228,13 @@ describe("PieceList", () => {
   });
 
   describe("MasonryScroller container-width guard", () => {
+    it("shows the desktop New Piece button before filters are expanded", () => {
+      renderPieceList([makePiece()], vi.fn());
+      expect(
+        screen.getByRole("button", { name: /new piece/i }),
+      ).toBeInTheDocument();
+    });
+
     it("does not render the masonry grid when container width is zero", () => {
       // Root cause of the prod-only initial-overlap bug: useContainerPosition
       // returns width=0 on the first React commit. If MasonryScroller renders
