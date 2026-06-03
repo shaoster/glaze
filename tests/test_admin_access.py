@@ -40,3 +40,12 @@ def test_public_admin_ingress_remains_explicitly_public():
         "default-{{ $fullName }}-tailscale-only@kubernetescrd"
         not in admin_public_ingress
     )
+
+
+def test_security_headers_allow_cloudinary_video_media():
+    repo_root = Path(__file__).resolve().parents[1]
+    security_headers = (
+        repo_root / "chart/glaze/templates/middleware-security-headers.yaml"
+    ).read_text()
+
+    assert "media-src 'self' https://res.cloudinary.com;" in security_headers
