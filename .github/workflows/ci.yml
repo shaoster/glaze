@@ -362,7 +362,7 @@ jobs:
         run: |
           docker run --rm \
             -e SECRET_KEY=ci-check-placeholder \
-            ghcr.io/shaoster/glaze:ci \
+            ghcr.io/shaoster/glaze:latest \
             python manage.py check
 
       - name: Lint and validate Helm chart
