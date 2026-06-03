@@ -181,6 +181,15 @@ js_binary(
     visibility = ["//visibility:public"],
 )
 
+js_binary(
+    name = "dev_smoke_piece_detail_clickthrough",
+    data = [
+        ":node_modules/playwright",
+    ],
+    entry_point = "scripts/dev-smoke-piece-detail-clickthrough.mjs",
+    visibility = ["//visibility:public"],
+)
+
 js_library(
     name = "coverage_audit_src",
     srcs = ["scripts/coverage-audit.mjs"],

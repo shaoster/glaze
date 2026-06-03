@@ -11,6 +11,10 @@ inputs:
   buildbuddy-api-key:
     description: BuildBuddy remote API key. The caller must read this from secrets and pass it explicitly — composite actions cannot access secrets directly.
     required: true
+  workdir:
+    description: Directory where repo-local files should be updated. Defaults to the current workspace root.
+    required: false
+    default: .
 
 runs:
   using: composite
@@ -33,6 +37,7 @@ runs:
 
     - name: Inject BuildBuddy API key into .bazelrc
       shell: bash
+      working-directory: ${{ inputs.workdir }}
       run: |
         echo "" >> .bazelrc
         echo "common:ci --remote_header=x-buildbuddy-api-key=${{ inputs.buildbuddy-api-key }}" >> .bazelrc
