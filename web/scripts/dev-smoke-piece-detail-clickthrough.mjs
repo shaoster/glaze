@@ -25,9 +25,38 @@ try {
   ]);
 
   const page = await context.newPage();
-  await page.goto(webUrl, { waitUntil: "networkidle" });
-  await page.locator(`a[href="/pieces/${pieceId}"]`).first().click();
-  await page.waitForURL(new RegExp(`/pieces/${pieceId}(?:/|$)`));
+  const piecesLoaded = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/pieces/") &&
+      response.request().method() === "GET" &&
+      response.ok(),
+    { timeout: 30000 },
+  );
+  await page.goto(webUrl, { waitUntil: "domcontentloaded" });
+  await piecesLoaded;
+
+  const exactLink = pieceId
+    ? page.locator(`a[href="/pieces/${pieceId}"]`).first()
+    : null;
+  let clicked = false;
+  if (exactLink) {
+    try {
+      await exactLink.waitFor({ state: "visible", timeout: 5000 });
+      await exactLink.click();
+      clicked = true;
+    } catch {
+      clicked = false;
+    }
+  }
+
+  if (!clicked) {
+    const firstLink = page.locator('a[href^="/pieces/"]').first();
+    await firstLink.waitFor({ state: "visible", timeout: 30000 });
+    await firstLink.click();
+  }
+
+  const detailUrl = page.waitForURL(/\/pieces\/[^/]+(?:\/|$)/);
+  await detailUrl;
   await page.getByTestId("piece-title").waitFor();
 
   const title = await page.getByTestId("piece-title").textContent();

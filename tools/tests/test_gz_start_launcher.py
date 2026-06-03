@@ -173,6 +173,37 @@ def test_backend_is_ready_uses_health_checks(monkeypatch) -> None:
     assert launcher.backend_is_ready(8080) is True
 
 
+def test_wait_for_web_waits_until_root_is_serving(monkeypatch) -> None:
+    attempts = iter(
+        [
+            OSError("not ready"),
+            type(
+                "MockResponse",
+                (),
+                {
+                    "status": 200,
+                    "__enter__": lambda self: self,
+                    "__exit__": lambda self, exc_type, exc, tb: None,
+                },
+            )(),
+        ]
+    )
+    sleep_calls: list[float] = []
+    times = iter([0.0, 0.1, 0.2])
+
+    monkeypatch.setattr(
+        launcher.urllib.request,
+        "urlopen",
+        lambda url, timeout: next(attempts),
+    )
+    monkeypatch.setattr(launcher.time, "monotonic", lambda: next(times))
+    monkeypatch.setattr(launcher.time, "sleep", lambda seconds: sleep_calls.append(seconds))
+
+    launcher.wait_for_web(5173, timeout_seconds=1.0)
+
+    assert sleep_calls == [0.5]
+
+
 def test_terminate_process_group_stops_gracefully(monkeypatch) -> None:
     if launcher.os.name == "nt":
         return
