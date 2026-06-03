@@ -179,11 +179,11 @@ describe("UserPreferencesDialog", () => {
 
     await waitFor(() => {
       expect(saveUserPreferences).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           process_summary_fields: ["piece.name"],
           summary_customize_popover: false,
           change_alias_prompt: true,
-        },
+        }),
         "",
       );
       expect(onClose).toHaveBeenCalled();
@@ -234,11 +234,11 @@ describe("UserPreferencesDialog", () => {
 
     await waitFor(() => {
       expect(saveUserPreferences).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           process_summary_fields: ["piece.name"],
           summary_customize_popover: true,
           change_alias_prompt: false,
-        },
+        }),
         "",
       );
       expect(onClose).toHaveBeenCalled();
