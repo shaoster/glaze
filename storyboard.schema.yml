@@ -1,0 +1,143 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: PotterDoc Showcase Video Storyboard
+description: >-
+  Render-ready, style-agnostic description of a showcase slideshow video.
+  A Storyboard is produced deterministically from a piece's effective inputs by a
+  style builder (the first style is "keepsake"). The same effective inputs always
+  produce the same Storyboard. This document is the authoritative contract; the
+  renderer and the input-hash layer both consume it.
+type: object
+additionalProperties: false
+required:
+  - storyboard_version
+  - style
+  - style_version
+  - piece_id
+  - eligible
+  - ineligible_reason
+  - music_track_id
+  - total_duration_ms
+  - slide_count
+  - slides
+
+properties:
+  storyboard_version:
+    type: string
+    description: Version of the Storyboard data shape (style-agnostic).
+    pattern: '^\d+$'
+  style:
+    type: string
+    description: Identifier of the style that produced this Storyboard.
+    enum: [keepsake]
+  style_version:
+    type: string
+    description: Version of the style builder logic that produced this Storyboard.
+    pattern: '^\d+$'
+  piece_id:
+    type: string
+    description: UUID of the piece this Storyboard was built from.
+  eligible:
+    type: boolean
+    description: >-
+      Whether the piece had enough usable content to produce a playable video.
+      When false, `slides` is empty and `ineligible_reason` explains why.
+  ineligible_reason:
+    type: [string, "null"]
+    description: Human-readable reason the piece is ineligible, or null when eligible.
+  music_track_id:
+    type: [string, "null"]
+    description: >-
+      Selected royalty-free music track identifier, passed through to the
+      renderer. Null when no track is selected. The catalog is defined elsewhere.
+  total_duration_ms:
+    type: integer
+    minimum: 0
+    description: Sum of all slide durations in milliseconds.
+  slide_count:
+    type: integer
+    minimum: 0
+    description: Number of slides. Equals the length of `slides`.
+  slides:
+    type: array
+    description: Ordered list of slides, played front to back.
+    items:
+      $ref: "#/$defs/slide"
+
+$defs:
+  slide:
+    type: object
+    additionalProperties: false
+    required:
+      - kind
+      - key
+      - duration_ms
+      - state_label
+      - image
+      - heading
+      - caption
+      - text
+    properties:
+      kind:
+        type: string
+        description: >-
+          Slide role. "cover" is the locked thumbnail title slide, "image" is a
+          piece photo, "note" is a text-only slide carrying a state note.
+        enum: [cover, image, note]
+      key:
+        type: string
+        description: >-
+          Stable source key. For image slides this matches the picker's image key
+          scheme (`<state_id>:<image_id|cloudinary_public_id|index>`); for note
+          slides it is the source state id.
+      duration_ms:
+        type: integer
+        minimum: 1
+        description: How long the slide is shown, in milliseconds.
+      state_label:
+        type: string
+        description: >-
+          Friendly workflow state label this slide came from, derived from the
+          workflow definition (never a hardcoded state name).
+      image:
+        description: Image to display, or null for text-only slides.
+        oneOf:
+          - type: "null"
+          - $ref: "#/$defs/image"
+      heading:
+        type: [string, "null"]
+        description: Optional primary text overlay (e.g. piece name on the cover).
+      caption:
+        type: [string, "null"]
+        description: Optional image caption overlay.
+      text:
+        type: [string, "null"]
+        description: Optional body text (e.g. the note content on a note slide).
+
+  image:
+    type: object
+    additionalProperties: false
+    required:
+      - url
+      - image_id
+      - cloudinary_public_id
+      - cloud_name
+      - crop
+      - fit
+    properties:
+      url:
+        type: string
+        description: Source image URL.
+      image_id:
+        type: [string, "null"]
+        description: Image model UUID when available.
+      cloudinary_public_id:
+        type: [string, "null"]
+      cloud_name:
+        type: [string, "null"]
+      crop:
+        description: Crop rectangle when one is stored, otherwise null.
+        type: [object, "null"]
+      fit:
+        type: string
+        description: Deterministic fitting instruction for the renderer.
+        enum: [cover]
