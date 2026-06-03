@@ -279,44 +279,12 @@ jobs:
 
       - name: Generate self-signed SSL certificates for Nginx
         run: |
-          retry() {
-            local attempts="$1"
-            shift
-            local delay=5
-            local attempt=1
-            until "$@"; do
-              if [ "$attempt" -ge "$attempts" ]; then
-                return 1
-              fi
-              echo "::warning::Compose command failed on attempt $attempt/$attempts; retrying in ${delay}s..."
-              sleep "$delay"
-              attempt=$((attempt + 1))
-              delay=$((delay * 2))
-            done
-          }
-
-          retry 3 docker compose -f infra/custom/docker-compose.yml -f infra/custom/docker-compose.smoke.yml run --rm --entrypoint "/bin/sh -c" certbot \
+          docker compose -f infra/custom/docker-compose.yml -f infra/custom/docker-compose.smoke.yml run --rm --entrypoint "/bin/sh -c" certbot \
             "mkdir -p /etc/letsencrypt/live/glaze.local && openssl req -x509 -nodes -newkey rsa:2048 -days 1 -keyout /etc/letsencrypt/live/glaze.local/privkey.pem -out /etc/letsencrypt/live/glaze.local/fullchain.pem -subj '/CN=glaze.local'"
 
       - name: Start Docker Compose stack and wait for health
         run: |
-          retry() {
-            local attempts="$1"
-            shift
-            local delay=5
-            local attempt=1
-            until "$@"; do
-              if [ "$attempt" -ge "$attempts" ]; then
-                return 1
-              fi
-              echo "::warning::Compose command failed on attempt $attempt/$attempts; retrying in ${delay}s..."
-              sleep "$delay"
-              attempt=$((attempt + 1))
-              delay=$((delay * 2))
-            done
-          }
-
-          retry 3 docker compose -f infra/custom/docker-compose.yml -f infra/custom/docker-compose.smoke.yml up --build -d --wait nginx certbot
+          docker compose -f infra/custom/docker-compose.yml -f infra/custom/docker-compose.smoke.yml up --build -d --wait nginx certbot
 
       - name: Verify application readiness and data seeding
         shell: bash
