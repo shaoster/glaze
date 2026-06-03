@@ -393,6 +393,18 @@ def open_browser(url: str) -> None:
             continue
 
 
+def dump_log_tail(log_path: Path, *, label: str, max_lines: int = 80) -> None:
+    if not log_path.is_file():
+        print(f"{label}: log file missing: {log_path}")
+        return
+
+    lines = log_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    tail = lines[-max_lines:]
+    print(f"{label}: showing last {len(tail)} lines from {log_path}")
+    for line in tail:
+        print(f"{label}: {line}")
+
+
 def shutil_which(command: str) -> str | None:
     from shutil import which
 
@@ -681,7 +693,11 @@ def start_stack(no_browser: bool = False) -> int:
             print(f"web: already running (PID {pid})")
             web_port = read_int_file(web_portfile) or port_from_log(web_log) or web_port
 
-        wait_for_web(web_port)
+        try:
+            wait_for_web(web_port)
+        except Exception:
+            dump_log_tail(web_log, label="web")
+            raise
 
         url = f"http://localhost:{web_port}"
         if not no_browser:
