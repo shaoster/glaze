@@ -3,7 +3,7 @@ FROM python:3.12-slim AS schema-builder
 WORKDIR /app
 
 # Install uv for high-speed package management
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN python -m pip install --no-cache-dir "uv==0.11.18"
 
 # Copy python dependencies
 COPY pyproject.toml uv.lock ./
@@ -18,6 +18,10 @@ COPY manage.py ./
 COPY tutorials.yml ./
 COPY user_preferences.yml ./
 COPY workflow.yml ./
+COPY storyboard.schema.yml ./
+COPY music_catalog.yml ./
+COPY music_catalog.schema.yml ./
+COPY assets/showcase_music/ ./assets/showcase_music/
 
 # Generate the OpenAPI schema.json
 RUN python manage.py spectacular --file schema.json --format openapi-json
@@ -43,6 +47,7 @@ COPY web/ ./
 COPY tutorials.yml /app/
 COPY user_preferences.yml /app/
 COPY workflow.yml /app/
+COPY music_catalog.yml /app/
 
 # Generate TypeScript types from the local schema.json file
 ENV GLAZE_SCHEMA_SOURCE=/app/schema.json
@@ -62,7 +67,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Install uv for high-speed package management
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN python -m pip install --no-cache-dir "uv==0.11.18"
 
 # Copy python dependencies
 COPY pyproject.toml uv.lock ./
@@ -86,6 +91,10 @@ COPY docker-entrypoint.sh ./
 COPY tutorials.yml ./
 COPY user_preferences.yml ./
 COPY workflow.yml ./
+COPY storyboard.schema.yml ./
+COPY music_catalog.yml ./
+COPY music_catalog.schema.yml ./
+COPY assets/showcase_music/ ./assets/showcase_music/
 
 # Make the entrypoint executable
 RUN chmod +x docker-entrypoint.sh

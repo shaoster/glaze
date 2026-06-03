@@ -82,6 +82,11 @@ urlpatterns = [
         name="piece-current-state",
     ),
     path(
+        "pieces/<uuid:piece_id>/showcase-video/",
+        views.piece_showcase_video,
+        name="piece-showcase-video",
+    ),
+    path(
         "uploads/cloudinary/widget-config/",
         views.cloudinary_widget_config,
         name="cloudinary-widget-config",

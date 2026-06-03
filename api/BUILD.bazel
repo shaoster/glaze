@@ -38,6 +38,7 @@ py_library(
         "piece/views.py",
         "piece/helpers.py",
         "piece/image_views.py",
+        "piece/showcase_views.py",
         "cloudinary/__init__.py",
         "cloudinary/views.py",
         "cloudinary/admin_views.py",
@@ -58,6 +59,7 @@ py_library(
         "serializers.py",
         "showcase/__init__.py",
         "showcase/music.py",
+        "showcase/render.py",
         "showcase/storyboard.py",
         "tasks.py",
         "task_views.py",
@@ -73,6 +75,10 @@ py_library(
     deps = [
         ":api_workflow_lib",
         "//backend:backend_lib",
+        "@pypi//cloudinary",
+        "@pypi//av",
+        "@pypi//numpy",
+        "@pypi//pillow_heif",
     ],
 )
 
@@ -335,6 +341,7 @@ pytest_test(
         "tests/test_analysis.py",
         "tests/test_keepsake_storyboard.py",
         "tests/test_music_catalog.py",
+        "tests/test_showcase_video.py",
         "tests/test_patch_current_state.py",
         "tests/test_piece_detail.py",
         "tests/test_piece_showcase_validation.py",
@@ -358,6 +365,7 @@ pytest_test(
         "api/tests/test_analysis.py",
         "api/tests/test_keepsake_storyboard.py",
         "api/tests/test_music_catalog.py",
+        "api/tests/test_showcase_video.py",
         "api/tests/test_piece_showcase_validation.py",
         "api/tests/test_piece_state_admin_relational.py",
         "api/tests/test_editable_mode.py",
@@ -371,9 +379,12 @@ pytest_test(
     deps = [":api_schema_lib", ":api_admin_lib"] + _PYTEST_DEPS,
     expected_coverage = [
         "api/piece/views.py",
+        "api/piece/showcase_views.py",
         "api/analysis_views.py",
         "api/workflow_views.py",
         "api/showcase/storyboard.py",
+        "api/showcase/render.py",
+        "api/tasks.py",
     ],
 )
 

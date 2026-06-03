@@ -27,6 +27,17 @@ from .storyboard import (
     build_keepsake_storyboard,
     validate_storyboard,
 )
+from .render import (
+    SHOWCASE_VIDEO_CANVAS_SIZE,
+    SHOWCASE_VIDEO_FORMAT,
+    SHOWCASE_VIDEO_FPS,
+    SHOWCASE_VIDEO_RENDER_VERSION,
+    SHOWCASE_VIDEO_TASK_TYPE,
+    compute_storyboard_hash,
+    is_showcase_video_cloudinary_enabled,
+    render_storyboard_to_mp4,
+    upload_storyboard_video_to_cloudinary,
+)
 
 __all__ = [
     "COVER_SLIDE_MS",
@@ -38,13 +49,22 @@ __all__ = [
     "MusicAudio",
     "MusicTrack",
     "NOTE_SLIDE_MS",
+    "SHOWCASE_VIDEO_CANVAS_SIZE",
+    "SHOWCASE_VIDEO_FORMAT",
+    "SHOWCASE_VIDEO_FPS",
+    "SHOWCASE_VIDEO_RENDER_VERSION",
+    "SHOWCASE_VIDEO_TASK_TYPE",
     "STORYBOARD_SCHEMA",
     "STORYBOARD_VERSION",
     "Storyboard",
     "StoryboardSlide",
     "build_keepsake_storyboard",
+    "compute_storyboard_hash",
+    "is_showcase_video_cloudinary_enabled",
     "get_catalog",
     "get_track",
     "resolve_track_id",
+    "render_storyboard_to_mp4",
+    "upload_storyboard_video_to_cloudinary",
     "validate_storyboard",
 ]

@@ -8,14 +8,27 @@ import {
   Box,
   Chip,
   Divider,
+  Button,
+  CircularProgress,
+  Stack,
   Typography,
 } from "@mui/material";
 import HistoryIcon from "@mui/icons-material/History";
 import { useBlocker, useLocation, useNavigate } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
+import { DEFAULT_TRACK_ID } from "../util/music";
 import { formatState, isTerminalState, getCustomFieldDefinitions } from "../util/workflow";
-import { useMutation } from "@tanstack/react-query";
-import { updatePiece, updatePastState, updateCurrentState, moveImage, extractErrorMessage, addPieceState } from "../util/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  fetchPieceShowcaseVideo,
+  requestPieceShowcaseVideo,
+  updatePiece,
+  updatePastState,
+  updateCurrentState,
+  moveImage,
+  extractErrorMessage,
+  addPieceState,
+} from "../util/api";
 import CloudinaryImage from "./CloudinaryImage";
 
 import NavigationBlocker from "./NavigationBlocker";
@@ -29,6 +42,9 @@ import PiecePhotoGallery, {
   PiecePhotoGalleryButton,
   type PiecePhotoGalleryImage,
 } from "./PiecePhotoGallery";
+import ShowcaseVideoInputPicker, {
+  type ShowcaseVideoInputSelection,
+} from "./ShowcaseVideoInputPicker";
 import { PieceDetailSaveStatusProvider } from "./PieceDetailSaveStatusContext";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
 import ShareControls from "./PieceShareControls";
@@ -218,6 +234,11 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             {canEdit && isTerminal && (
               <Box sx={{ mb: 1.5 }}>
                 <ShareControls piece={piece} onPieceUpdated={onPieceUpdated} />
+              </Box>
+            )}
+            {canEdit && isTerminal && (
+              <Box sx={{ mb: 1.5 }}>
+                <ShowcaseVideoPanel piece={piece} />
               </Box>
             )}
             {canEdit && (
@@ -410,5 +431,181 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
         />
       )}
     </Box>
+  );
+}
+
+function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
+  const queryClient = useQueryClient();
+  const [selection, setSelection] = useState<ShowcaseVideoInputSelection>({
+    excludedImageKeys: [],
+    excludedNoteKeys: [],
+    musicTrackId: DEFAULT_TRACK_ID,
+  });
+
+  const {
+    data: showcaseVideo,
+    error: rawStatusError,
+    isLoading,
+  } = useQuery({
+    queryKey: ["showcase-video", piece.id],
+    queryFn: () => fetchPieceShowcaseVideo(piece.id),
+    refetchInterval: (query) =>
+      query.state.data?.status === "pending" ||
+      query.state.data?.status === "running"
+        ? 2500
+        : false,
+  });
+
+  const {
+    mutate: generateVideo,
+    isPending: generating,
+    error: rawGenerateError,
+  } = useMutation({
+    mutationFn: () => requestPieceShowcaseVideo(piece.id, selection),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["showcase-video", piece.id], updated);
+    },
+  });
+
+  const currentStatus = showcaseVideo?.status ?? "idle";
+  const canGenerate =
+    !generating &&
+    (showcaseVideo?.enabled ?? true) &&
+    currentStatus !== "pending" &&
+    currentStatus !== "running" &&
+    (showcaseVideo?.eligible ?? true);
+  const statusLabel =
+    currentStatus === "idle"
+      ? "No render has been requested yet."
+      : currentStatus === "disabled"
+        ? "Showcase video generation is unavailable."
+      : currentStatus === "pending"
+        ? "Queued for rendering."
+        : currentStatus === "running"
+          ? "Rendering in the background."
+          : currentStatus === "failed"
+            ? "The latest render failed."
+            : currentStatus === "stale-needs-regeneration"
+              ? "The latest render is stale."
+              : "The latest render is ready.";
+
+  const artifact = showcaseVideo?.artifact ?? null;
+  const errorMessage = rawGenerateError
+    ? extractErrorMessage(
+        rawGenerateError,
+        "Failed to request a video render. Please try again.",
+      )
+    : rawStatusError
+      ? extractErrorMessage(
+          rawStatusError,
+          "Failed to load showcase video status.",
+        )
+      : null;
+
+  return (
+    <SectionCard
+      title="Showcase Video"
+      subtitle="Render a deterministic Keepsake slideshow from the piece history."
+    >
+      <Stack spacing={2}>
+        <ShowcaseVideoInputPicker
+          piece={piece}
+          selection={selection}
+          onSelectionChange={setSelection}
+          disabled={generating || currentStatus === "pending" || currentStatus === "running"}
+        />
+
+        <Box
+          sx={(theme) => ({
+            borderRadius: 2,
+            border: "1px solid",
+            borderColor: "divider",
+            backgroundColor: theme.palette.background.paper,
+            p: 1.5,
+          })}
+        >
+          <Stack spacing={1.25}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {statusLabel}
+            </Typography>
+            {isLoading && !showcaseVideo ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <CircularProgress size={16} />
+                <Typography variant="body2" color="text.secondary">
+                  Checking for the latest render...
+                </Typography>
+              </Box>
+            ) : null}
+            {showcaseVideo?.stale_reason ? (
+              <Alert severity="warning" variant="outlined">
+                {showcaseVideo.stale_reason}
+              </Alert>
+            ) : null}
+            {showcaseVideo?.disabled_reason ? (
+              <Alert severity="info" variant="outlined">
+                {showcaseVideo.disabled_reason}
+              </Alert>
+            ) : null}
+            {showcaseVideo?.error ? (
+              <Alert severity="error" variant="outlined">
+                {showcaseVideo.error}
+              </Alert>
+            ) : null}
+            {errorMessage ? (
+              <Typography variant="body2" color="error">
+                {errorMessage}
+              </Typography>
+            ) : null}
+            {artifact ? (
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                <Button
+                  component="a"
+                  href={artifact.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  variant="outlined"
+                >
+                  Open video
+                </Button>
+                <Button
+                  component="a"
+                  href={artifact.download_url}
+                  download={artifact.filename}
+                  variant="outlined"
+                >
+                  Download MP4
+                </Button>
+              </Stack>
+            ) : null}
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              alignItems={{ xs: "stretch", sm: "center" }}
+            >
+                <Button
+                  variant="contained"
+                  onClick={() => generateVideo()}
+                  disabled={!canGenerate}
+                  startIcon={generating ? <CircularProgress size={16} /> : undefined}
+                >
+                  {currentStatus === "succeeded" ||
+                  currentStatus === "stale-needs-regeneration"
+                    ? "Render again"
+                    : currentStatus === "disabled"
+                      ? "Unavailable"
+                      : "Generate video"}
+                </Button>
+                <Typography variant="caption" color="text.secondary">
+                {showcaseVideo?.enabled === false
+                  ? "Set CLOUDINARY_VIDEO_UPLOAD_FOLDER and CLOUDINARY_VIDEO_UPLOAD_PRESET to enable showcase videos."
+                  : showcaseVideo?.eligible === false
+                  ? "This piece is not eligible for video generation yet."
+                  : "The request is queued immediately and continues in the background."}
+                </Typography>
+            </Stack>
+          </Stack>
+        </Box>
+      </Stack>
+    </SectionCard>
   );
 }

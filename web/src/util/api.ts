@@ -452,6 +452,69 @@ export async function addPieceState(
   return mapPieceDetail(data);
 }
 
+export type ShowcaseVideoArtifact = {
+  url: string;
+  download_url: string;
+  filename: string;
+  content_type: string;
+};
+
+export type ShowcaseVideoStatus = {
+  piece_id: string;
+  task_id: string | null;
+  status:
+    | "idle"
+    | "disabled"
+    | "pending"
+    | "running"
+    | "succeeded"
+    | "failed"
+    | "stale-needs-regeneration";
+  task_status: "pending" | "running" | "success" | "failure" | null;
+  enabled: boolean;
+  disabled_reason: string | null;
+  eligible: boolean;
+  current_input_hash: string | null;
+  stored_input_hash: string | null;
+  is_stale: boolean;
+  stale_reason: string | null;
+  music_track_id: string | null;
+  storyboard: Record<string, unknown> | null;
+  artifact: ShowcaseVideoArtifact | null;
+  error: string | null;
+};
+
+export type ShowcaseVideoRequestPayload = {
+  excludedImageKeys?: string[];
+  excludedNoteKeys?: string[];
+  musicTrackId?: string | null;
+};
+
+export async function fetchPieceShowcaseVideo(
+  pieceId: string,
+): Promise<ShowcaseVideoStatus> {
+  const { data } = await client.get<ShowcaseVideoStatus>(
+    `pieces/${pieceId}/showcase-video/`,
+  );
+  return data;
+}
+
+export async function requestPieceShowcaseVideo(
+  pieceId: string,
+  payload: ShowcaseVideoRequestPayload = {},
+): Promise<ShowcaseVideoStatus> {
+  await ensureCsrfCookie();
+  const { data } = await client.post<ShowcaseVideoStatus>(
+    `pieces/${pieceId}/showcase-video/`,
+    {
+      excluded_image_keys: payload.excludedImageKeys ?? [],
+      excluded_note_keys: payload.excludedNoteKeys ?? [],
+      music_track_id: payload.musicTrackId ?? null,
+    },
+  );
+  return data;
+}
+
 export type UpdateStatePayload = {
   notes?: string;
   created?: string;
