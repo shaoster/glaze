@@ -12,6 +12,7 @@ spec:
       script-src 'self' https://accounts.google.com https://apis.google.com https://upload-widget.cloudinary.com;
       style-src 'self' 'unsafe-inline' https://accounts.google.com https://fonts.googleapis.com;
       img-src 'self' data: https://res.cloudinary.com;
+      media-src 'self' https://res.cloudinary.com;
       connect-src 'self' https://api.cloudinary.com;
       font-src 'self' https://fonts.gstatic.com;
       frame-src https://accounts.google.com https://widget.cloudinary.com https://upload-widget.cloudinary.com;
