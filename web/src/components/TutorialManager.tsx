@@ -9,6 +9,7 @@ import SmallTutorialInlay from "./SmallTutorialInlay";
 import { type SmallTutorialInlayPlacement } from "./SmallTutorialInlayConfig";
 
 export interface TutorialDefinition {
+  depends_on?: string[];
   preference: {
     label: string;
     hint?: string;
@@ -72,7 +73,10 @@ export default function TutorialManager() {
       {Object.entries(config.tutorials).map(([key, tutorial]) => {
         const element = elements[key];
         const isDismissed = currentUser.preferences[key] === false;
-        if (!element || isDismissed) return null;
+        const dependenciesNotMet = (tutorial.depends_on ?? []).some(
+          (dep) => currentUser.preferences[dep] !== false,
+        );
+        if (!element || isDismissed || dependenciesNotMet) return null;
 
         const handleAction = () => {
           if (

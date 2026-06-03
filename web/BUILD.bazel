@@ -651,6 +651,15 @@ js_library(
 )
 
 js_library(
+    name = "tutorial_manager_src",
+    srcs = ["src/components/TutorialManager.tsx"],
+    deps = [
+        ":piece_detail_src",
+        ":process_summary_src",
+    ],
+)
+
+js_library(
     name = "public_piece_shell_src",
     srcs = ["src/components/PublicPieceShell.tsx"],
     deps = [
@@ -1078,6 +1087,14 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_tutorial_manager_test",
+    srcs = ["src/components/__tests__/TutorialManager.test.tsx"],
+    tags = ["ibazel_notify_changes"],
+    deps = [":tutorial_manager_src"],
+    expected_coverage = ["web/src/components/TutorialManager*"],
+)
+
+vitest_test(
     name = "web_public_piece_shell_test",
     srcs = [
         "src/components/__tests__/PublicPieceShell.test.tsx",
@@ -1412,6 +1429,7 @@ test_suite(
         ":web_generate_types_test",
         ":web_telemetry_test",
         ":web_workflow_state_test",
+        ":web_tutorial_manager_test",
         ":web_workflow_summary_test",
         ":workflow_test",
     ],

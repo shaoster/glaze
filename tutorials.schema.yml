@@ -24,6 +24,12 @@ $defs:
     required: [preference, inlay, attachment]
     additionalProperties: false
     properties:
+      depends_on:
+        type: array
+        items:
+          type: string
+          pattern: "^[a-z][a-z0-9_]*$"
+        description: Tutorial IDs that must be dismissed before this tutorial is shown.
       preference:
         type: object
         required: [label, hint]
@@ -65,7 +71,7 @@ $defs:
             properties:
               type:
                 type: string
-                enum: [open-preferences]
+                enum: [open-preferences, dismiss-only]
               section:
                 type: string
                 description: The preference section ID to open when the tutorial is clicked.
