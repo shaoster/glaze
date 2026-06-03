@@ -358,6 +358,13 @@ jobs:
       - name: Build OCI image and load into docker
         run: bazel run --config=ci --stamp //:load
 
+      - name: Verify image starts cleanly (django check)
+        run: |
+          docker run --rm \
+            -e SECRET_KEY=ci-check-placeholder \
+            ghcr.io/shaoster/glaze:latest \
+            python manage.py check
+
       - name: Lint and validate Helm chart
         run: |
           helm lint chart/glaze/ \
