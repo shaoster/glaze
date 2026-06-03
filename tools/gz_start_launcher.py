@@ -252,10 +252,12 @@ def ensure_local_web_node_modules(roots: Roots) -> None:
 
 def sync_generated_types(roots: Roots, env: dict[str, str]) -> None:
     print("web: regenerating TypeScript types...")
+    generated_types_env = env.copy()
+    generated_types_env.setdefault("BAZEL_BINDIR", ".")
     subprocess.run(
         ["bazel", "build", "//web:generated_types"],
         cwd=str(roots.workspace),
-        env=env,
+        env=generated_types_env,
         check=True,
     )
 
