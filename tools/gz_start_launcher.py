@@ -235,6 +235,21 @@ def web_executable_path(roots: Roots) -> Path:
     return bazel_binary_path(roots, "web/dev_server_/dev_server")
 
 
+def ensure_local_web_node_modules(roots: Roots) -> None:
+    if roots.workspace == roots.shared:
+        return
+
+    worktree_nm = roots.workspace / "web" / "node_modules"
+    if worktree_nm.is_symlink():
+        worktree_nm.unlink()
+
+    if worktree_nm.exists():
+        return
+
+    print("web: installing local node_modules via npm install...")
+    subprocess.run(["npm", "install"], cwd=str(roots.workspace / "web"), check=True)
+
+
 def backend_ready_payload(port: int) -> dict[str, object]:
     url = f"http://127.0.0.1:{port}/api/health/ready/"
     try:
@@ -529,21 +544,10 @@ def start_web(
     if sys.platform.startswith("linux"):
         web_env.setdefault("BAZEL_BINDIR", ".")
 
-    # The js_binary wrapper does `cd web` relative to roots.workspace before starting
-    # Vite. Vite writes a temp .mjs file there to load vite.config.ts, and Node
-    # resolves imports (including 'vite' itself) from that directory. In a worktree
-    # web/node_modules doesn't exist, so we symlink it from the shared checkout so
-    # Node can find packages without a full reinstall.
-    if roots.workspace != roots.shared:
-        worktree_nm = roots.workspace / "web" / "node_modules"
-        shared_nm = roots.shared / "web" / "node_modules"
-        if (
-            not worktree_nm.exists()
-            and not worktree_nm.is_symlink()
-            and shared_nm.exists()
-        ):
-            worktree_nm.symlink_to(shared_nm)
-            print(f"web: symlinked node_modules from {shared_nm}")
+    # Worktrees must keep their own npm install so Vite/Babel resolve package
+    # paths against the active checkout rather than borrowing another worktree's
+    # node_modules tree through a symlink.
+    ensure_local_web_node_modules(roots)
 
     print(f"web: starting on :{web_port} ...")
     web_binary = web_executable_path(roots)

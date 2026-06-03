@@ -294,3 +294,34 @@ def test_start_web_sets_bazel_bindir_only_on_linux(monkeypatch, tmp_path: Path) 
     assert "BAZEL_BINDIR" not in captured_env_mac, (
         "BAZEL_BINDIR should not be set on macOS as it is not required by aspect_rules_js."
     )
+
+
+def test_ensure_local_web_node_modules_replaces_shared_symlink(
+    monkeypatch, tmp_path: Path
+) -> None:
+    shared = tmp_path / "shared"
+    workspace = tmp_path / "worktree"
+    shared_web = shared / "web"
+    local_web = workspace / "web"
+    shared_nm = shared_web / "node_modules"
+    local_nm = local_web / "node_modules"
+
+    shared_nm.mkdir(parents=True)
+    local_web.mkdir(parents=True)
+    local_nm.symlink_to(shared_nm)
+
+    roots = launcher.Roots(workspace=workspace, shared=shared)
+    install_calls: list[tuple[list[str], str]] = []
+
+    def fake_run(args, cwd, check):
+        install_calls.append((args, cwd))
+        (workspace / "web" / "node_modules").mkdir(exist_ok=True)
+        return object()
+
+    monkeypatch.setattr(launcher.subprocess, "run", fake_run)
+
+    launcher.ensure_local_web_node_modules(roots)
+
+    assert not local_nm.is_symlink()
+    assert local_nm.exists()
+    assert install_calls == [(["npm", "install"], str(local_web))]
