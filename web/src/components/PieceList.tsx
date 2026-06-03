@@ -602,118 +602,120 @@ const PieceList = (props: PieceListProps) => {
           borderColor: "divider",
         }}
       >
-        <Box
-          component="button"
-          type="button"
-          onClick={() => setFilterOpen((o) => !o)}
-          aria-expanded={filterOpen}
-          aria-label="Toggle filters"
-          sx={{
-            width: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 1,
-            px: 1.5,
-            py: 1,
-            borderRadius: 2,
-            bgcolor: alpha("#181210", 0.95),
-            border: "1px solid",
-            borderColor: "divider",
-            color: "text.secondary",
-            fontFamily: "inherit",
-            cursor: "pointer",
-            textAlign: "left",
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              overflow: "hidden",
-            }}
-          >
-            <FilterListIcon
-              sx={{ fontSize: 15, flexShrink: 0, color: "text.disabled" }}
-            />
-            <Typography
-              component="span"
-              sx={{
-                fontSize: "0.8125rem",
-                fontWeight: hasActiveFilters ? 600 : 400,
-                color: hasActiveFilters ? "text.primary" : "text.secondary",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {activeFilterLabel}
-            </Typography>
-            <Typography
-              component="span"
-              sx={{
-                fontSize: "0.6875rem",
-                color: "text.disabled",
-                fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
-                flexShrink: 0,
-              }}
-            >
-              · {filteredPieces.length}
-              {hasMore ? "+" : ""} pieces
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 0.5,
-              flexShrink: 0,
-            }}
-          >
-            <SortIcon sx={{ fontSize: 13, color: "text.disabled" }} />
-            <Typography
-              component="span"
-              sx={{
-                fontSize: "0.6875rem",
-                color: "text.disabled",
-                fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
-              }}
-            >
-              {sortLabel}
-            </Typography>
-          </Box>
-        </Box>
-
-        {!isMobile && onNewPiece && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Box
             component="button"
             type="button"
-            data-testid="new-piece-button"
-            onClick={onNewPiece}
+            onClick={() => setFilterOpen((o) => !o)}
+            aria-expanded={filterOpen}
+            aria-label="Toggle filters"
             sx={{
-              display: "inline-flex",
+              flex: "1 1 auto",
+              minWidth: 0,
+              display: "flex",
               alignItems: "center",
-              gap: 0.5,
-              mt: 1,
+              justifyContent: "space-between",
+              gap: 1,
               px: 1.5,
-              py: 0.75,
-              alignSelf: "flex-start",
-              borderRadius: 1.5,
-              bgcolor: "primary.main",
-              color: "primary.contrastText",
-              border: "none",
-              fontSize: "0.8125rem",
-              fontWeight: 600,
+              py: 1,
+              borderRadius: 2,
+              bgcolor: alpha("#181210", 0.95),
+              border: "1px solid",
+              borderColor: "divider",
+              color: "text.secondary",
               fontFamily: "inherit",
               cursor: "pointer",
-              "&:hover": { filter: "brightness(1.1)" },
+              textAlign: "left",
             }}
           >
-            <AddIcon sx={{ fontSize: 16 }} />
-            New Piece
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                overflow: "hidden",
+              }}
+            >
+              <FilterListIcon
+                sx={{ fontSize: 15, flexShrink: 0, color: "text.disabled" }}
+              />
+              <Typography
+                component="span"
+                sx={{
+                  fontSize: "0.8125rem",
+                  fontWeight: hasActiveFilters ? 600 : 400,
+                  color: hasActiveFilters ? "text.primary" : "text.secondary",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {activeFilterLabel}
+              </Typography>
+              <Typography
+                component="span"
+                sx={{
+                  fontSize: "0.6875rem",
+                  color: "text.disabled",
+                  fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+                  flexShrink: 0,
+                }}
+              >
+                · {filteredPieces.length}
+                {hasMore ? "+" : ""} pieces
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.5,
+                flexShrink: 0,
+              }}
+            >
+              <SortIcon sx={{ fontSize: 13, color: "text.disabled" }} />
+              <Typography
+                component="span"
+                sx={{
+                  fontSize: "0.6875rem",
+                  color: "text.disabled",
+                  fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+                }}
+              >
+                {sortLabel}
+              </Typography>
+            </Box>
           </Box>
-        )}
+
+          {!isMobile && onNewPiece && (
+            <Box
+              component="button"
+              type="button"
+              data-testid="new-piece-button"
+              onClick={onNewPiece}
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 0.5,
+                px: 1.5,
+                py: 0.75,
+                flexShrink: 0,
+                borderRadius: 1.5,
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
+                border: "none",
+                fontSize: "0.8125rem",
+                fontWeight: 600,
+                fontFamily: "inherit",
+                cursor: "pointer",
+                "&:hover": { filter: "brightness(1.1)" },
+              }}
+            >
+              <AddIcon sx={{ fontSize: 16 }} />
+              New Piece
+            </Box>
+          )}
+        </Box>
 
         {/* Absolutely positioned so the panel overlays the masonry without
             pushing it down or triggering a page scroll. */}
@@ -923,8 +925,6 @@ const PieceList = (props: PieceListProps) => {
                 </Select>
               </Box>
             )}
-
-            {/* New Piece button (desktop only) */}
           </Box>
         )}
       </Box>
