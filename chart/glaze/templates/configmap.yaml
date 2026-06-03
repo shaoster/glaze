@@ -76,6 +76,12 @@ data:
   CLOUDINARY_UPLOAD_FOLDER: {{ .Values.appConfig.cloudinaryUploadFolder | quote }}
   CLOUDINARY_UPLOAD_PRESET: {{ .Values.appConfig.cloudinaryUploadPreset | quote }}
   CLOUDINARY_PUBLIC_UPLOAD_FOLDER: {{ .Values.appConfig.cloudinaryPublicUploadFolder | quote }}
+  {{- with .Values.appConfig.cloudinaryVideoUploadPreset }}
+  CLOUDINARY_VIDEO_UPLOAD_PRESET: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.appConfig.cloudinaryVideoUploadFolder }}
+  CLOUDINARY_VIDEO_UPLOAD_FOLDER: {{ . | quote }}
+  {{- end }}
   {{- with .Values.appConfig.emailHost }}
   EMAIL_HOST: {{ . | quote }}
   {{- end }}

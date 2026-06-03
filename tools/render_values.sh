@@ -5,6 +5,7 @@
 # Required env: IMAGE_TAG, INFISICAL_PROJECT_SLUG, ALLOWED_HOST, APP_ORIGIN,
 #   GOOGLE_OAUTH_CLIENT_ID, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_FOLDER,
 #   CLOUDINARY_UPLOAD_PRESET, CLOUDINARY_PUBLIC_UPLOAD_FOLDER
+# Optional env: CLOUDINARY_VIDEO_UPLOAD_PRESET, CLOUDINARY_VIDEO_UPLOAD_FOLDER
 set -euo pipefail
 
 : "${IMAGE_TAG:?IMAGE_TAG must be set}"
@@ -30,6 +31,8 @@ appConfig:
   cloudinaryUploadFolder: "${CLOUDINARY_UPLOAD_FOLDER}"
   cloudinaryUploadPreset: "${CLOUDINARY_UPLOAD_PRESET}"
   cloudinaryPublicUploadFolder: "${CLOUDINARY_PUBLIC_UPLOAD_FOLDER}"
+$([ -n "${CLOUDINARY_VIDEO_UPLOAD_PRESET:-}" ] && echo "  cloudinaryVideoUploadPreset: \"${CLOUDINARY_VIDEO_UPLOAD_PRESET}\"")
+$([ -n "${CLOUDINARY_VIDEO_UPLOAD_FOLDER:-}" ] && echo "  cloudinaryVideoUploadFolder: \"${CLOUDINARY_VIDEO_UPLOAD_FOLDER}\"")
 ingress:
   hosts:
     - host: "${ALLOWED_HOST}"
