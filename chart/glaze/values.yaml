@@ -96,10 +96,10 @@ worker:
     repository: ghcr.io/shaoster/glaze-worker
   resources:
     requests:
-      memory: "64Mi"
+      memory: "128Mi"
       cpu: "50m"
     limits:
-      memory: "128Mi"
+      memory: "256Mi"
 
 otelcol:
   enabled: true
