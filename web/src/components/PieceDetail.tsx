@@ -465,29 +465,34 @@ function ArtifactActions({ artifact, pieceName }: ArtifactActionsProps) {
   }
 
   return (
-    <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-      <Button
-        component="a"
-        href={artifact.url}
-        target="_blank"
-        rel="noreferrer"
-        variant="outlined"
-      >
-        Open video
-      </Button>
-      <Button
-        component="a"
-        href={artifact.download_url}
-        download={artifact.filename}
-        variant="outlined"
-      >
-        Download MP4
-      </Button>
-      {canShare && (
-        <Button variant="outlined" onClick={handleShare}>
-          Share video
+    <Stack spacing={1}>
+      <Box
+        component="video"
+        src={artifact.url}
+        controls
+        playsInline
+        sx={{
+          width: "100%",
+          borderRadius: 1,
+          display: "block",
+          backgroundColor: "black",
+        }}
+      />
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+        <Button
+          component="a"
+          href={artifact.download_url}
+          download={artifact.filename}
+          variant="outlined"
+        >
+          Download MP4
         </Button>
-      )}
+        {canShare && (
+          <Button variant="outlined" onClick={handleShare}>
+            Share video
+          </Button>
+        )}
+      </Stack>
     </Stack>
   );
 }
