@@ -218,6 +218,7 @@ def build_keepsake_storyboard(
         )
     elif piece.thumbnail_id:
         thumb = image_to_dict(piece.thumbnail) or {}
+        thumb["crop"] = piece.get_thumbnail_crop()
         cover_key = "cover:thumbnail"
         cover_slide = StoryboardSlide(
             kind="cover",

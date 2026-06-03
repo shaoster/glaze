@@ -679,6 +679,7 @@ js_library(
         "src/components/PieceNameEditor.tsx",
         "src/components/SectionCard.tsx",
         "src/components/ShowcaseVideoInputPicker.tsx",
+        "src/components/SelectablePhotoMasonry.tsx",
         "src/components/SmallTutorialInlay.tsx",
         "src/components/SmallTutorialInlayConfig.ts",
     ],

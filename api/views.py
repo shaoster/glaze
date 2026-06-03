@@ -38,6 +38,9 @@ from .health_views import (
 )
 from .import_views import admin_manual_square_crop_import
 from .piece.image_views import patch_image_crop, piece_image_detail
+from .piece.showcase_views import (
+    piece_showcase_video,
+)
 from .piece.views import (
     piece_current_state,
     piece_current_state_detail,
@@ -80,6 +83,7 @@ __all__ = [
     "piece_detail",
     "piece_image_detail",
     "piece_past_state",
+    "piece_showcase_video",
     "piece_states",
     "pieces",
     "send_invite",

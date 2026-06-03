@@ -13,7 +13,7 @@
 # how the files were produced and their attribution.
 #
 version: "1.0"
-default_track_id: adventures-a-himitsu
+default_track_id: we-are-one-vexento
 tracks:
   adventures-a-himitsu:
     title: Adventures

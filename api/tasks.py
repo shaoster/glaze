@@ -292,6 +292,74 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     }
 
 
+@TaskRegistry.register("generate_showcase_video")
+def generate_showcase_video(task: AsyncTask) -> dict:
+    """Render a deterministic Keepsake showcase video from a storyboard snapshot."""
+    from .showcase import (
+        SHOWCASE_VIDEO_RENDER_VERSION,
+        compute_storyboard_hash,
+        is_showcase_video_cloudinary_enabled,
+        render_storyboard_to_mp4,
+        upload_storyboard_video_to_cloudinary,
+        validate_storyboard,
+    )
+
+    params = task.input_params or {}
+    if not isinstance(params, dict):
+        raise ValueError("Missing task input params")
+
+    storyboard = params.get("storyboard")
+    if not isinstance(storyboard, dict):
+        raise ValueError("Missing storyboard snapshot in task params")
+
+    validate_storyboard(storyboard)
+
+    input_hash = compute_storyboard_hash(storyboard)
+    stored_hash = params.get("input_hash")
+    if stored_hash and str(stored_hash) != input_hash:
+        raise ValueError("Storyboard snapshot hash does not match task input hash")
+
+    if not is_showcase_video_cloudinary_enabled():
+        raise ValueError(
+            "Cloudinary showcase video upload is not configured."
+        )
+
+    output_path = render_storyboard_to_mp4(storyboard)
+    try:
+        cloudinary_asset = upload_storyboard_video_to_cloudinary(
+            output_path,
+            input_hash=input_hash,
+        )
+        if not cloudinary_asset:
+            raise ValueError("Cloudinary showcase video upload failed.")
+    except Exception:
+        logger.exception(
+            f"Cloudinary upload failed for showcase video task {task.id}; "
+            "marking the task as failed."
+        )
+        raise
+    finally:
+        try:
+            output_path.unlink(missing_ok=True)
+        except OSError:
+            logger.warning(
+                "Could not remove temporary showcase video file for task %s",
+                task.id,
+            )
+
+    return {
+        "status": "success",
+        "render_version": SHOWCASE_VIDEO_RENDER_VERSION,
+        "input_hash": input_hash,
+        "artifact_filename": f"{input_hash}.mp4",
+        "artifact_url": cloudinary_asset["secure_url"],
+        "download_url": cloudinary_asset["secure_url"],
+        "content_type": "video/mp4",
+        "cloudinary_asset": cloudinary_asset,
+        "storyboard": storyboard,
+    }
+
+
 def fail_stuck_tasks(hours: int = 1) -> int:
     """Find and fail tasks stuck in RUNNING or PENDING for too long."""
     from datetime import timedelta

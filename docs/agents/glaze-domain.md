@@ -305,6 +305,8 @@ All API endpoints are registered in `backend/urls.py`.
 | `GOOGLE_OAUTH_CLIENT_ID`                           | `GOOGLE_OAUTH_CLIENT_ID`      | Empty string — Google sign-in disabled      | Set to enable Google OAuth JWT verification                       |
 | `CLOUDINARY_CLOUD_NAME` / `API_KEY` / `API_SECRET` | _(same names)_                | Empty — widget-config returns 503           | Set to enable Cloudinary uploads                                  |
 | `CLOUDINARY_UPLOAD_FOLDER`                         | `CLOUDINARY_UPLOAD_FOLDER`    | Not set                                     | Optional subfolder for uploaded images                            |
+| `CLOUDINARY_VIDEO_UPLOAD_FOLDER`                   | `CLOUDINARY_VIDEO_UPLOAD_FOLDER` | Not set                                  | Required subfolder for generated showcase videos; disables the feature when absent |
+| `CLOUDINARY_VIDEO_UPLOAD_PRESET`                   | `CLOUDINARY_VIDEO_UPLOAD_PRESET` | Not set                                  | Required upload preset for generated showcase videos; disables the feature when absent |
 
 **Image FK normalization (`ImageForeignKey` / `ImageForwardDescriptor`):** `type: image` fields on global models are stored as FKs to the `api.Image` table, not as raw JSON. `ImageForeignKey` (defined in `api/model_factories.py`) swaps in `ImageForwardDescriptor` as its accessor, which intercepts every assignment and calls `normalize_image_payload` when the incoming value is a `str` or `dict`:
 
@@ -359,6 +361,9 @@ Name uniqueness for public globals is enforced with two conditional DB constrain
 - `POST /api/pieces/<id>/states/` → record a new state transition
 - `PATCH /api/pieces/<id>/` → update piece-level editable fields (currently location)
 - `PATCH /api/pieces/<id>/state/` → update current state's editable fields
+- `GET /api/pieces/<id>/showcase-video/` → latest showcase video task status, stale detection, and artifact metadata
+- `POST /api/pieces/<id>/showcase-video/` → enqueue a deterministic Keepsake slideshow render for a terminal piece
+- `Showcase video artifacts are served directly from Cloudinary once upload succeeds; there is no local fallback artifact route.`
 
 **Piece vs. current-state access pattern:**
 
