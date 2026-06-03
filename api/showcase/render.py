@@ -62,7 +62,7 @@ def _canonical_json(data: Any) -> str:
 
 
 @lru_cache(maxsize=None)
-def _load_font(size: int) -> ImageFont.ImageFont:
+def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     if _FONT_PATH.exists():
         return ImageFont.truetype(str(_FONT_PATH), size=size)
     return ImageFont.load_default()
@@ -170,7 +170,7 @@ def _draw_text_block(
     *,
     box: tuple[int, int, int, int],
     fill: tuple[int, int, int] = _INK,
-    font: ImageFont.ImageFont,
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
     line_spacing: int = 8,
     stroke_width: int = 0,
     stroke_fill: tuple[int, int, int] | None = None,
@@ -180,6 +180,12 @@ def _draw_text_block(
     lines = _wrap_text(text, width=max_chars)
     y = top
     for line in lines:
+        bbox = draw.textbbox(
+            (left, y),
+            line,
+            font=font,
+            stroke_width=stroke_width,
+        )
         draw.text(
             (left, y),
             line,
@@ -188,7 +194,7 @@ def _draw_text_block(
             stroke_width=stroke_width,
             stroke_fill=stroke_fill,
         )
-        y += font.size + line_spacing
+        y = int(bbox[3]) + line_spacing
         if y > bottom:
             break
 
@@ -265,7 +271,7 @@ def _brand_lockup_layout(scale: int) -> dict[str, int]:
 
     text = "PotterDoc"
     text_bbox = measurement_draw.textbbox((0, 0), text, font=title_font)
-    text_width = text_bbox[2] - text_bbox[0]
+    text_width = int(text_bbox[2] - text_bbox[0])
 
     icon_size = int(96 * scale)
     gap = int(30 * scale)
@@ -275,7 +281,7 @@ def _brand_lockup_layout(scale: int) -> dict[str, int]:
     left_x = center_x - total_width // 2
     icon_y = center_y - icon_size // 2
     text_x = left_x + icon_size + gap
-    text_y = center_y - (text_bbox[1] + text_bbox[3]) // 2
+    text_y = int(center_y - ((text_bbox[1] + text_bbox[3]) / 2))
     return {
         "icon_size": icon_size,
         "gap": gap,

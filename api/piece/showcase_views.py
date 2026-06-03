@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
+from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers as drf_serializers
@@ -210,9 +213,11 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
             storyboard = _requested_storyboard(piece, None)
             current_input_hash = compute_storyboard_hash(storyboard)
         else:
-            task_input = task.input_params if isinstance(task.input_params, dict) else {}
-            storyboard = task_input.get("storyboard")
-            if not isinstance(storyboard, dict):
+            task_input = cast(dict[str, Any], task.input_params or {})
+            storyboard_candidate = task_input.get("storyboard")
+            if isinstance(storyboard_candidate, dict):
+                storyboard = cast(dict[str, Any], storyboard_candidate)
+            else:
                 storyboard = _requested_storyboard(piece, task_input)
             current_storyboard = _requested_storyboard(piece, task_input)
             current_input_hash = compute_storyboard_hash(current_storyboard)
@@ -263,7 +268,7 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
     storyboard = storyboard_obj.to_dict()
     input_hash = compute_storyboard_hash(storyboard)
     task = AsyncTask.objects.create(
-        user=request.user,
+        user=cast(User, request.user),
         task_type=SHOWCASE_VIDEO_TASK_TYPE,
         input_params={
             "piece_id": str(piece.id),
