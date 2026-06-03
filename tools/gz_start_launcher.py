@@ -312,7 +312,7 @@ def wait_for_backend(port: int, timeout_seconds: float = 60.0) -> None:
         time.sleep(0.5)
 
 
-def wait_for_web(port: int, timeout_seconds: float = 60.0) -> None:
+def wait_for_web(port: int, timeout_seconds: float = 180.0) -> None:
     deadline = time.monotonic() + timeout_seconds
     url = f"http://127.0.0.1:{port}/"
     sys.stdout.write("Waiting for web to be ready")
@@ -636,6 +636,8 @@ def start_stack(no_browser: bool = False) -> int:
                 or backend_port
             )
 
+        wait_for_backend(backend_port)
+
         pid, running = ensure_running(web_pidfile)
         if not (running and pid is not None):
             start_web(
@@ -652,7 +654,6 @@ def start_stack(no_browser: bool = False) -> int:
             print(f"web: already running (PID {pid})")
             web_port = read_int_file(web_portfile) or port_from_log(web_log) or web_port
 
-        wait_for_backend(backend_port)
         wait_for_web(web_port)
 
         url = f"http://localhost:{web_port}"

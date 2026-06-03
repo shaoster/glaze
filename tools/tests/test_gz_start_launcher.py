@@ -173,6 +173,39 @@ def test_backend_is_ready_uses_health_checks(monkeypatch) -> None:
     assert launcher.backend_is_ready(8080) is True
 
 
+def test_start_stack_waits_for_backend_before_web(monkeypatch, tmp_path: Path) -> None:
+    roots = launcher.Roots(workspace=tmp_path, shared=tmp_path)
+    events: list[str] = []
+
+    monkeypatch.setattr(launcher, "detect_roots", lambda: roots)
+    monkeypatch.setattr(launcher, "load_repo_env", lambda _roots: {})
+    monkeypatch.setattr(launcher, "choose_port", lambda _path, start: start)
+    monkeypatch.setattr(launcher, "ensure_running", lambda _pidfile: (None, False))
+    monkeypatch.setattr(
+        launcher,
+        "start_backend",
+        lambda *args, **kwargs: events.append("start_backend"),
+    )
+    monkeypatch.setattr(
+        launcher,
+        "wait_for_backend",
+        lambda port, timeout_seconds=60.0: events.append("wait_for_backend"),
+    )
+    monkeypatch.setattr(
+        launcher,
+        "start_web",
+        lambda *args, **kwargs: events.append("start_web"),
+    )
+    monkeypatch.setattr(
+        launcher,
+        "wait_for_web",
+        lambda port, timeout_seconds=180.0: events.append("wait_for_web"),
+    )
+
+    assert launcher.start_stack(no_browser=True) == 0
+    assert events == ["start_backend", "wait_for_backend", "start_web", "wait_for_web"]
+
+
 def test_wait_for_web_waits_until_root_is_serving(monkeypatch) -> None:
     attempts = iter(
         [
