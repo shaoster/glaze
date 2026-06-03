@@ -57,6 +57,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 1
+          lfs: true
 
       - id: fingerprint
         name: Compute CI fingerprint
@@ -130,6 +131,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          lfs: true
       - uses: ./.github/actions/setup-bazel-ci
         with:
           cache-key-prefix: lint
@@ -152,6 +154,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          lfs: true
       - uses: ./.github/actions/setup-bazel-ci
         with:
           cache-key-prefix: coverage
@@ -180,6 +183,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          lfs: true
       - uses: ./.github/actions/setup-bazel-ci
         with:
           cache-key-prefix: dev-smoke
@@ -264,6 +268,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          lfs: true
 
       - name: Configure test environment
         run: |
@@ -337,6 +343,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          lfs: true
           # Pin to the exact SHA on main so the image build uses the same
           # commit that lint/coverage validated. Omit on PRs — the default
           # merge-commit ref is fine there and avoids replication-race failures.

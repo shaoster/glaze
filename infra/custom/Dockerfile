@@ -18,6 +18,7 @@ COPY manage.py ./
 COPY tutorials.yml ./
 COPY user_preferences.yml ./
 COPY workflow.yml ./
+COPY storyboard.schema.yml ./
 COPY music_catalog.yml ./
 COPY music_catalog.schema.yml ./
 COPY assets/showcase_music/ ./assets/showcase_music/
@@ -89,6 +90,7 @@ COPY docker-entrypoint.sh ./
 COPY tutorials.yml ./
 COPY user_preferences.yml ./
 COPY workflow.yml ./
+COPY storyboard.schema.yml ./
 COPY music_catalog.yml ./
 COPY music_catalog.schema.yml ./
 COPY assets/showcase_music/ ./assets/showcase_music/
