@@ -224,7 +224,6 @@ class TestShowcaseVideoApi:
         monkeypatch.setenv("CLOUDINARY_API_KEY", "public-api-key")
         monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
         monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_FOLDER", "showcase-videos")
-        monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_PRESET", "glaze_video_signed")
 
         piece = _make_piece_with_terminal_state(user)
         cover_path = tmp_path / "cover.png"
@@ -283,7 +282,6 @@ class TestShowcaseVideoApi:
         monkeypatch.setenv("CLOUDINARY_API_KEY", "public-api-key")
         monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
         monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_FOLDER", "showcase-videos")
-        monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_PRESET", "glaze_video_signed")
 
         piece = _make_piece_with_terminal_state(user, name="Original Name")
         cover_path = tmp_path / "cover.png"
@@ -348,7 +346,6 @@ class TestShowcaseVideoApi:
         monkeypatch.setenv("CLOUDINARY_API_KEY", "public-api-key")
         monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
         monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_FOLDER", "showcase-videos")
-        monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_PRESET", "glaze_video_signed")
 
         piece = _make_piece_with_terminal_state(user, name="Stable")
         cover_path = tmp_path / "cover.png"
@@ -417,7 +414,6 @@ class TestShowcaseVideoApi:
         monkeypatch.setenv("CLOUDINARY_API_KEY", "public-api-key")
         monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
         monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_FOLDER", "showcase-videos")
-        monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_PRESET", "glaze_video_signed")
 
         client.force_authenticate(user=user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
@@ -472,7 +468,6 @@ class TestShowcaseVideoApi:
         piece.save()
 
         monkeypatch.delenv("CLOUDINARY_VIDEO_UPLOAD_FOLDER", raising=False)
-        monkeypatch.delenv("CLOUDINARY_VIDEO_UPLOAD_PRESET", raising=False)
 
         client.force_authenticate(user=user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})

@@ -306,7 +306,6 @@ All API endpoints are registered in `backend/urls.py`.
 | `CLOUDINARY_CLOUD_NAME` / `API_KEY` / `API_SECRET` | _(same names)_                | Empty — widget-config returns 503           | Set to enable Cloudinary uploads                                  |
 | `CLOUDINARY_UPLOAD_FOLDER`                         | `CLOUDINARY_UPLOAD_FOLDER`    | Not set                                     | Optional subfolder for uploaded images                            |
 | `CLOUDINARY_VIDEO_UPLOAD_FOLDER`                   | `CLOUDINARY_VIDEO_UPLOAD_FOLDER` | Not set                                  | Required subfolder for generated showcase videos; disables the feature when absent |
-| `CLOUDINARY_VIDEO_UPLOAD_PRESET`                   | `CLOUDINARY_VIDEO_UPLOAD_PRESET` | Not set                                  | Required upload preset for generated showcase videos; disables the feature when absent |
 
 **Image FK normalization (`ImageForeignKey` / `ImageForwardDescriptor`):** `type: image` fields on global models are stored as FKs to the `api.Image` table, not as raw JSON. `ImageForeignKey` (defined in `api/model_factories.py`) swaps in `ImageForwardDescriptor` as its accessor, which intercepts every assignment and calls `normalize_image_payload` when the incoming value is a `str` or `dict`:
 

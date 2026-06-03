@@ -652,7 +652,7 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
                 </Button>
                 <Typography variant="caption" color="text.secondary">
                 {showcaseVideo?.enabled === false
-                  ? "Set CLOUDINARY_VIDEO_UPLOAD_FOLDER and CLOUDINARY_VIDEO_UPLOAD_PRESET to enable showcase videos."
+                  ? "Set CLOUDINARY_VIDEO_UPLOAD_FOLDER to enable showcase videos."
                   : showcaseVideo?.eligible === false
                   ? "This piece is not eligible for video generation yet."
                   : "The request is queued immediately and continues in the background."}
