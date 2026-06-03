@@ -98,20 +98,27 @@ def _build_catalog() -> dict[str, MusicTrack]:
     return tracks
 
 
-_CATALOG: dict[str, MusicTrack] = _build_catalog()
+_CATALOG: dict[str, MusicTrack] | None = None
 DEFAULT_TRACK_ID: str = _RAW_CATALOG["default_track_id"]
+
+
+def _catalog() -> dict[str, MusicTrack]:
+    global _CATALOG
+    if _CATALOG is None:
+        _CATALOG = _build_catalog()
+    return _CATALOG
 
 
 def get_catalog() -> list[MusicTrack]:
     """Return all tracks in catalog (declaration) order."""
-    return list(_CATALOG.values())
+    return list(_catalog().values())
 
 
 def get_track(track_id: str | None) -> MusicTrack | None:
     """Return the track for ``track_id``, or ``None`` if it is unknown/None."""
     if track_id is None:
         return None
-    return _CATALOG.get(track_id)
+    return _catalog().get(track_id)
 
 
 def resolve_track_id(track_id: str | None) -> str:
