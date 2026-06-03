@@ -64,12 +64,11 @@ All scoped to the `glaze-droplet` environment in **Settings → Environments**.
 | `CLOUDINARY_UPLOAD_FOLDER` | Variable | Cloudinary folder for user-uploaded images |
 | `CLOUDINARY_UPLOAD_PRESET` | Variable | Cloudinary upload preset |
 | `CLOUDINARY_VIDEO_UPLOAD_FOLDER` | Variable | Cloudinary folder for generated showcase videos |
-| `CLOUDINARY_VIDEO_UPLOAD_PRESET` | Variable | Cloudinary upload preset for generated showcase videos |
 | `CLOUDINARY_PUBLIC_UPLOAD_FOLDER` | Variable | Cloudinary folder for public library images |
 
 All other app secrets (Django `SECRET_KEY`, Postgres password, Cloudinary API key/secret, Grafana OTLP token) are managed in Infisical and synced into the cluster by ESO — CD does not need them directly.
 
-Showcase video generation stays disabled until both `CLOUDINARY_VIDEO_UPLOAD_FOLDER` and `CLOUDINARY_VIDEO_UPLOAD_PRESET` are set.
+Showcase video generation stays disabled until `CLOUDINARY_VIDEO_UPLOAD_FOLDER` is set.
 
 ---
 

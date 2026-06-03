@@ -32,7 +32,6 @@ appConfig:
   cloudinaryUploadFolder: ""
   cloudinaryUploadPreset: ""
   cloudinaryPublicUploadFolder: ""
-  cloudinaryVideoUploadPreset: ""
   cloudinaryVideoUploadFolder: ""
   emailHost: ""
   emailPort: ""
