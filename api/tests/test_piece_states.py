@@ -4,9 +4,9 @@ import pytest
 from rest_framework.exceptions import ValidationError
 
 from api.models import (
+    _MISSING,
     ENTRY_STATE,
     SUCCESSORS,
-    _MISSING,
     ClayBody,
     GlazeCombination,
     GlazeType,
@@ -403,7 +403,10 @@ class TestPieceStateSerializerNavigation:
     def test_workflow_version_matches_piece(self, user):
         piece = Piece.objects.create(user=user, name="Workflow Version Test")
 
-        assert PieceState(piece=piece, state="designed").workflow_version == piece.workflow_version
+        assert (
+            PieceState(piece=piece, state="designed").workflow_version
+            == piece.workflow_version
+        )
 
     def test_piece_sort_key_orders_unordered_states_last(self, user):
         piece = Piece.objects.create(user=user, name="Sort Key Test")
@@ -437,7 +440,9 @@ class TestPieceStateSerializerNavigation:
         PieceState.objects.create(piece=piece, state="glazed", order=3)
 
         serializer = PieceStateCreateSerializer(context={"piece": piece})
-        state = serializer.create({"state": "trimmed", "custom_fields": {}, "images": []})
+        state = serializer.create(
+            {"state": "trimmed", "custom_fields": {}, "images": []}
+        )
 
         assert state.order == 2
         assert list(piece.states.order_by("order").values_list("state", flat=True)) == [

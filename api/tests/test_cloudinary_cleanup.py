@@ -8,13 +8,13 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIRequestFactory, force_authenticate
 
+from api.cloudinary.views import admin_cloudinary_cleanup
 from api.cloudinary_cleanup import (
     REFERENCED_BREAKDOWN_WORKFLOW_IMAGE_PATHS,
     CloudinaryCleanupAsset,
     stream_cloudinary_cleanup_archive,
     summarize_referenced_public_ids,
 )
-from api.cloudinary.views import admin_cloudinary_cleanup
 from api.models import GlazeCombination, GlazeType, Image
 from api.workflow import _workflow
 
@@ -74,9 +74,7 @@ class TestCloudinaryCleanup:
 
         assert response.status_code == 403
 
-    def test_get_returns_unused_assets_summary(
-        self, user, monkeypatch, cloudinary_env
-    ):
+    def test_get_returns_unused_assets_summary(self, user, monkeypatch, cloudinary_env):
         factory = APIRequestFactory()
         admin = User.objects.create(
             username="admin@example.com",
@@ -365,9 +363,7 @@ class TestCloudinaryCleanup:
 
         assert image_paths == REFERENCED_BREAKDOWN_WORKFLOW_IMAGE_PATHS
 
-    def test_delete_rejects_referenced_assets(
-        self, user, monkeypatch, cloudinary_env
-    ):
+    def test_delete_rejects_referenced_assets(self, user, monkeypatch, cloudinary_env):
         factory = APIRequestFactory()
         admin = User.objects.create(
             username="admin@example.com",
@@ -444,9 +440,7 @@ class TestCloudinaryCleanup:
         assert response.status_code == 200
         assert response.data == {"deleted": {"piece/orphan": "deleted"}}
 
-    def test_delete_cloudinary_error_returns_503(
-        self, monkeypatch, cloudinary_env
-    ):
+    def test_delete_cloudinary_error_returns_503(self, monkeypatch, cloudinary_env):
         factory = APIRequestFactory()
         admin = User.objects.create(
             username="admin@example.com",

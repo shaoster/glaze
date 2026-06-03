@@ -14,7 +14,7 @@ import openapiTS, { astToString } from "openapi-typescript";
 import ts from "typescript";
 import { resolve } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, lstatSync, unlinkSync } from "fs";
 
 // Bazel passes paths as positional args relative to execroot/_main.
 // BAZEL_BINDIR is always set in Bazel actions; use it to anchor back to execroot.
@@ -74,20 +74,36 @@ async function loadOpenApiDocument(schema) {
   return response.json();
 }
 
+function safeWrite(path, content) {
+  try {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) {
+      unlinkSync(path);
+    }
+  } catch (e) {
+    // Ignore error if file doesn't exist
+  }
+  writeFileSync(path, content);
+}
+
 export async function main(argv = process.argv) {
   const [, , argSchema, argOutput, argTypesOutput] = argv;
   const schemaSource = argSchema ?? process.env.GLAZE_SCHEMA_SOURCE;
   const schema = schemaSource
     ? pathToFileURL(resolvePath(schemaSource))
     : new URL("http://localhost:8080/api/schema/?format=json");
-  const outputPath =
-    resolvePath(argOutput) ??
+  
+  const rawOutputPath =
+    argOutput ??
     process.env.GLAZE_OUTPUT_PATH ??
     "src/util/generated-types.ts";
-  const typesOutputPath =
-    resolvePath(argTypesOutput) ??
+  const outputPath = resolvePath(rawOutputPath);
+
+  const rawTypesOutputPath =
+    argTypesOutput ??
     process.env.GLAZE_TYPES_OUTPUT_PATH ??
     "src/util/types.ts";
+  const typesOutputPath = resolvePath(rawTypesOutputPath);
 
   const DATE_NODE = ts.factory.createTypeReferenceNode(
     ts.factory.createIdentifier("Date"),
@@ -101,11 +117,11 @@ export async function main(argv = process.argv) {
     },
   });
 
-  writeFileSync(outputPath, HEADER + astToString(ast));
+  safeWrite(outputPath, HEADER + astToString(ast));
   console.log(`✔ Generated ${outputPath}`);
 
   const openApiSchema = await loadOpenApiDocument(schema);
-  writeFileSync(typesOutputPath, renderSchemaAliasModule(openApiSchema));
+  safeWrite(typesOutputPath, renderSchemaAliasModule(openApiSchema));
   console.log(`✔ Generated ${typesOutputPath}`);
 }
 

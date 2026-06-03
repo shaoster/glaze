@@ -89,6 +89,7 @@
     "vitest": "^4.1.4"
   },
   "overrides": {
+    "vite": "$vite",
     "follow-redirects": "^1.16.0",
     "glob": "^13"
   },

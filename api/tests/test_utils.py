@@ -100,6 +100,7 @@ class TestCloudinaryCropParsing:
         assert fetch_cloudinary_auto_crop("demo", "") is None
         assert calls == []
 
+
 @pytest.mark.django_db
 class TestSyncGlazeTypeSingletonCombination:
     def test_creates_singleton_combination_for_public_glaze_type(self):

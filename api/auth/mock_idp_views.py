@@ -48,7 +48,9 @@ def _find_or_create_user(email: str):
     User = get_user_model()
     subject = _mock_subject(email)
     profile = (
-        UserProfile.objects.filter(openid_subject=subject).select_related("user").first()
+        UserProfile.objects.filter(openid_subject=subject)
+        .select_related("user")
+        .first()
     )
     if profile:
         return profile.user
@@ -76,7 +78,9 @@ def mock_idp_authorize(request: HttpRequest) -> HttpResponse:
     if (err := _guard(request)) is not None:
         return err
 
-    redirect_uri = request.GET.get("redirect_uri") or request.POST.get("redirect_uri", "")
+    redirect_uri = request.GET.get("redirect_uri") or request.POST.get(
+        "redirect_uri", ""
+    )
     state = request.GET.get("state") or request.POST.get("state", "")
     # Optional: agents can pass login_hint=email to select a specific user.
     login_hint = (

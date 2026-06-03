@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 
 from api.admin import (
-    CloudinaryImageWidget,
     CloudinaryImageFormField,
+    CloudinaryImageWidget,
     _admin_image_preview,
     _cloudinary_lightbox_url,
     _cloudinary_preview_url,
@@ -74,9 +74,10 @@ class TestImageUrl:
 
     def test_falls_back_to_dict_url_when_image_to_dict_returns_none(self, monkeypatch):
         monkeypatch.setattr("api.admin.image_to_dict", lambda value: None)
-        assert _image_url(
-            {"url": "https://example.com/fallback.jpg"}
-        ) == "https://example.com/fallback.jpg"
+        assert (
+            _image_url({"url": "https://example.com/fallback.jpg"})
+            == "https://example.com/fallback.jpg"
+        )
 
     def test_image_cloud_name_falls_back_to_env_for_dict_without_cloud_name(
         self, monkeypatch
@@ -194,9 +195,10 @@ class TestCloudinaryLightboxUrl:
 
     def test_returns_original_when_public_id_cannot_be_resolved(self, monkeypatch):
         monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
-        assert _cloudinary_lightbox_url(
-            "https://example.com/does-not-have-a-public-id"
-        ) == "https://example.com/does-not-have-a-public-id"
+        assert (
+            _cloudinary_lightbox_url("https://example.com/does-not-have-a-public-id")
+            == "https://example.com/does-not-have-a-public-id"
+        )
 
 
 class TestCloudinaryImageWidgetFormatValue:
