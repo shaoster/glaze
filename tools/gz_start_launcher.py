@@ -253,7 +253,8 @@ def ensure_local_web_node_modules(roots: Roots) -> None:
 def sync_generated_types(roots: Roots, env: dict[str, str]) -> None:
     print("web: regenerating TypeScript types...")
     generated_types_env = env.copy()
-    generated_types_env.setdefault("BAZEL_BINDIR", ".")
+    if not generated_types_env.get("BAZEL_BINDIR"):
+        generated_types_env["BAZEL_BINDIR"] = "."
     subprocess.run(
         ["bazel", "build", "//web:generated_types"],
         cwd=str(roots.workspace),
@@ -607,7 +608,8 @@ def start_web(
     # from the execroot after the launcher has exited. Make the environment look
     # like a non-build action so aspect_rules_js can resolve paths consistently
     # on both Linux and macOS runners.
-    web_env.setdefault("BAZEL_BINDIR", ".")
+    if not web_env.get("BAZEL_BINDIR"):
+        web_env["BAZEL_BINDIR"] = "."
 
     # Worktrees must keep their own npm install so Vite/Babel resolve package
     # paths against the active checkout rather than borrowing another worktree's

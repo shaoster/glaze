@@ -373,6 +373,18 @@ def test_start_web_sets_bazel_bindir_for_all_platforms(
         captured_env_linux_existing.get("BAZEL_BINDIR") == "bazel-out/k8-fastbuild/bin"
     ), "BAZEL_BINDIR should be respected if already provided by the environment."
 
+    captured_env_linux_empty: dict[str, str] = {}
+
+    def fake_launch_child_linux_empty(argv, cwd, env, log_path):
+        nonlocal captured_env_linux_empty
+        captured_env_linux_empty = env
+        return MockPopen()
+
+    monkeypatch.setattr(launcher, "launch_child", fake_launch_child_linux_empty)
+    launcher.start_web(roots, {"BAZEL_BINDIR": ""}, pidfile, portfile, log_path, 8080, 5173)
+
+    assert captured_env_linux_empty.get("BAZEL_BINDIR") == "."
+
     # 2. Test Mac behavior: BAZEL_BINDIR should also be set if missing.
     monkeypatch.setattr(launcher.sys, "platform", "darwin")
     captured_env_mac: dict[str, str] = {}
@@ -386,6 +398,18 @@ def test_start_web_sets_bazel_bindir_for_all_platforms(
     launcher.start_web(roots, {}, pidfile, portfile, log_path, 8080, 5173)
 
     assert captured_env_mac.get("BAZEL_BINDIR") == "."
+
+    captured_env_mac_empty: dict[str, str] = {}
+
+    def fake_launch_child_mac_empty(argv, cwd, env, log_path):
+        nonlocal captured_env_mac_empty
+        captured_env_mac_empty = env
+        return MockPopen()
+
+    monkeypatch.setattr(launcher, "launch_child", fake_launch_child_mac_empty)
+    launcher.start_web(roots, {"BAZEL_BINDIR": ""}, pidfile, portfile, log_path, 8080, 5173)
+
+    assert captured_env_mac_empty.get("BAZEL_BINDIR") == "."
 
 
 def test_ensure_local_web_node_modules_replaces_shared_symlink(
