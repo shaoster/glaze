@@ -135,6 +135,6 @@ def resolve_track_id(track_id: str | None) -> str:
     """
     if track_id is None:
         return DEFAULT_TRACK_ID
-    if track_id not in _CATALOG:
+    if track_id not in _catalog():
         raise ValueError(f"Unknown music track id: {track_id!r}")
     return track_id
