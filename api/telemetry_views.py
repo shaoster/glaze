@@ -8,7 +8,11 @@ from urllib.parse import urlparse, urlunparse
 import httpx
 from django.http import HttpResponse
 from drf_spectacular.utils import extend_schema
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 
@@ -48,11 +52,13 @@ def _collector_traces_endpoint() -> str:
     ),
 )
 @api_view(["POST"])
+@authentication_classes([])
 @permission_classes([AllowAny])
 @traced("telemetry.browser_traces")
 def browser_traces(request: Request) -> HttpResponse:
     """Forward a browser OTLP/HTTP trace payload to the collector."""
-    if not request.body:
+    body = request.body
+    if not body:
         return HttpResponse(status=400)
 
     collector_endpoint = _collector_traces_endpoint()
@@ -65,7 +71,7 @@ def browser_traces(request: Request) -> HttpResponse:
     try:
         response = httpx.post(
             collector_endpoint,
-            content=request.body,
+            content=body,
             headers=forward_headers,
             timeout=10.0,
         )

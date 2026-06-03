@@ -1,3 +1,4 @@
+import { trace, SpanStatusCode } from "@opentelemetry/api";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
@@ -9,6 +10,34 @@ import { XMLHttpRequestInstrumentation } from "@opentelemetry/instrumentation-xm
 
 const TRACE_EXPORT_URL = "/api/telemetry/traces/";
 const SERVICE_NAME = "glaze-web";
+
+const _tracer = trace.getTracer(SERVICE_NAME);
+
+/**
+ * Record an error as an OTel error span so it appears in Grafana Tempo.
+ * Safe to call before telemetry is initialized — spans will be no-ops.
+ */
+export function reportFrontendError(
+  error: unknown,
+  context?: Record<string, string>,
+): void {
+  const span = _tracer.startSpan("frontend.error");
+  try {
+    if (error instanceof Error) {
+      span.recordException(error);
+    } else {
+      span.recordException(String(error));
+    }
+    span.setStatus({ code: SpanStatusCode.ERROR });
+    if (context) {
+      for (const [key, value] of Object.entries(context)) {
+        span.setAttribute(key, value);
+      }
+    }
+  } finally {
+    span.end();
+  }
+}
 
 let frontendTelemetryInitialized = false;
 
@@ -56,6 +85,18 @@ export function initializeFrontendTelemetry(): void {
       }),
       new UserInteractionInstrumentation(),
     ],
+  });
+
+  window.addEventListener("error", (event) => {
+    if (event.error) {
+      reportFrontendError(event.error, { "error.source": "window.onerror" });
+    }
+  });
+
+  window.addEventListener("unhandledrejection", (event) => {
+    reportFrontendError(event.reason, {
+      "error.source": "unhandledrejection",
+    });
   });
 
   frontendTelemetryInitialized = true;
