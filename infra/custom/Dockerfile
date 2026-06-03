@@ -18,6 +18,7 @@ COPY manage.py ./
 COPY tutorials.yml ./
 COPY user_preferences.yml ./
 COPY workflow.yml ./
+COPY music_catalog.yml ./
 COPY music_catalog.schema.yml ./
 
 # Generate the OpenAPI schema.json
@@ -87,6 +88,7 @@ COPY docker-entrypoint.sh ./
 COPY tutorials.yml ./
 COPY user_preferences.yml ./
 COPY workflow.yml ./
+COPY music_catalog.yml ./
 COPY music_catalog.schema.yml ./
 
 # Make the entrypoint executable
