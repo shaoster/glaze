@@ -199,42 +199,28 @@ def test_start_stack_waits_for_backend_before_web(monkeypatch, tmp_path: Path) -
     monkeypatch.setattr(
         launcher,
         "wait_for_web",
-        lambda port, timeout_seconds=180.0: events.append("wait_for_web"),
+        lambda log_path, port, timeout_seconds=60.0: events.append("wait_for_web"),
     )
 
     assert launcher.start_stack(no_browser=True) == 0
     assert events == ["start_backend", "wait_for_backend", "start_web", "wait_for_web"]
 
 
-def test_wait_for_web_waits_until_root_is_serving(monkeypatch) -> None:
-    attempts = iter(
-        [
-            OSError("not ready"),
-            type(
-                "MockResponse",
-                (),
-                {
-                    "status": 200,
-                    "__enter__": lambda self: self,
-                    "__exit__": lambda self, exc_type, exc, tb: None,
-                },
-            )(),
-        ]
-    )
+def test_wait_for_web_waits_until_log_reports_port(
+    monkeypatch, tmp_path: Path
+) -> None:
+    log_path = tmp_path / "web.log"
+    log_path.write_text("", encoding="utf-8")
     sleep_calls: list[float] = []
     times = iter([0.0, 0.1, 0.2])
 
-    monkeypatch.setattr(
-        launcher.urllib.request,
-        "urlopen",
-        lambda url, timeout: next(attempts),
-    )
+    monkeypatch.setattr(launcher, "port_from_log", lambda path: 5173)
     monkeypatch.setattr(launcher.time, "monotonic", lambda: next(times))
     monkeypatch.setattr(launcher.time, "sleep", lambda seconds: sleep_calls.append(seconds))
 
-    launcher.wait_for_web(5173, timeout_seconds=1.0)
+    launcher.wait_for_web(log_path, 5173, timeout_seconds=1.0)
 
-    assert sleep_calls == [0.5]
+    assert sleep_calls == []
 
 
 def test_terminate_process_group_stops_gracefully(monkeypatch) -> None:
