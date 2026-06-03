@@ -13,7 +13,16 @@ from django.test import Client
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from api.models import Image, InviteCode, Piece, UserProfile
+from api.models import (
+    ENTRY_STATE,
+    CropRun,
+    Image,
+    InviteCode,
+    Piece,
+    PieceState,
+    PieceStateImage,
+    UserProfile,
+)
 
 FAKE_SUB = "google-subject-12345"
 FAKE_HASHED_SUB = hashlib.sha256(FAKE_SUB.encode()).hexdigest()
@@ -765,6 +774,71 @@ class TestAuthDeleteAccount:
 
         assert response.status_code == 204
         assert not User.objects.filter(id=user_id).exists()
+
+    def test_delete_account_removes_user_with_protected_image_refs(self, user):
+        from rest_framework.test import APIClient
+
+        piece = Piece.objects.create(user=user, name="Protected Bowl")
+        state = PieceState.objects.create(piece=piece, state=ENTRY_STATE, order=0)
+        image = Image.objects.create(
+            user=user,
+            url="https://example.com/protected.jpg",
+        )
+        piece_state_image = PieceStateImage.objects.create(
+            piece_state=state,
+            image=image,
+            order=0,
+        )
+        CropRun.objects.create(
+            image=image,
+            piece_state_image=piece_state_image,
+            source={
+                "type": "automated",
+                "backend": "test",
+                "deployment": "local",
+                "version": "1",
+            },
+            status=CropRun.Status.SUCCESS,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        response = client.delete("/api/auth/account/")
+
+        assert response.status_code == 204
+        assert not User.objects.filter(id=user.id).exists()
+        assert not Piece.objects.filter(id=piece.id).exists()
+        assert not Image.objects.filter(id=image.id).exists()
+        assert not PieceStateImage.objects.filter(id=piece_state_image.id).exists()
+        assert not CropRun.objects.filter(image=image).exists()
+
+    def test_delete_account_removes_piece_state_images_for_owned_images(
+        self, user, other_user
+    ):
+        from rest_framework.test import APIClient
+
+        piece = Piece.objects.create(user=other_user, name="Other Bowl")
+        state = PieceState.objects.create(piece=piece, state=ENTRY_STATE, order=0)
+        image = Image.objects.create(
+            user=user,
+            url="https://example.com/shared.jpg",
+        )
+        piece_state_image = PieceStateImage.objects.create(
+            piece_state=state,
+            image=image,
+            order=0,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        response = client.delete("/api/auth/account/")
+
+        assert response.status_code == 204
+        assert not User.objects.filter(id=user.id).exists()
+        assert not Image.objects.filter(id=image.id).exists()
+        assert not PieceStateImage.objects.filter(id=piece_state_image.id).exists()
 
     def test_delete_account_invalidates_session_before_deletion(self, user):
         from api.auth.account_views import delete_account_impl
