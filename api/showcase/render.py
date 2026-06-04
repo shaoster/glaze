@@ -676,10 +676,14 @@ def _music_audio_path(storyboard: dict):
     if audio_url.startswith(("http://", "https://")):
         audio_bytes = _fetch_remote_audio(audio_url)
         suffix = Path(audio_url.split("?")[0]).suffix or ".flac"
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=True) as tmp:
+        tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+        try:
             tmp.write(audio_bytes)
             tmp.flush()
+            tmp.close()
             yield Path(tmp.name)
+        finally:
+            Path(tmp.name).unlink(missing_ok=True)
     else:
         audio_path = Path(audio_url)
         if not audio_path.is_absolute():
