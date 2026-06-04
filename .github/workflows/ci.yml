@@ -434,6 +434,12 @@ jobs:
         with:
           lfs: true
 
+      - uses: ./.github/actions/setup-bazel-ci
+        with:
+          cache-key-prefix: compose-smoke
+          deps-key: ${{ needs.preflight.outputs.deps_key }}
+          buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
+
       - name: Configure test environment
         run: |
           cat > infra/custom/.env << 'EOF'
@@ -447,7 +453,7 @@ jobs:
           EOF
 
       - name: Build and load OCI image into Docker
-        run: bazel run //:load
+        run: bazel run --config=ci --stamp //:load
 
       - name: Generate self-signed SSL certificates for Nginx
         run: |
