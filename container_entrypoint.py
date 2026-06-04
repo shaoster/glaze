@@ -31,11 +31,16 @@ _GUNICORN_ARGS = [
 def main() -> None:
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
     if len(sys.argv) > 1:
-        if sys.argv[1] == "celery":
+        if sys.argv[1] in {"python", "python3", "/usr/bin/python", "/usr/bin/python3"}:
+            sys.argv = [sys.argv[0], *sys.argv[2:]]
+        if len(sys.argv) > 1 and sys.argv[1] == "manage.py":
+            sys.argv = [sys.argv[0], *sys.argv[2:]]
+        if len(sys.argv) > 1 and sys.argv[1] == "celery":
             sys.argv = ["celery", *sys.argv[2:]]
             celery_main()
             return
-        execute_from_command_line(["manage.py", *sys.argv[1:]])
+        if len(sys.argv) > 1:
+            execute_from_command_line(["manage.py", *sys.argv[1:]])
         return
     sys.argv = _GUNICORN_ARGS
     gunicorn_run()
