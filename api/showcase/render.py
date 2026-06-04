@@ -16,7 +16,9 @@ import os
 import re
 import tempfile
 import textwrap
+import time
 import unicodedata
+from collections.abc import Callable
 from fractions import Fraction
 from functools import lru_cache
 from pathlib import Path
@@ -117,7 +119,9 @@ def _fit_image(
         left = max(0, min(image.width - 1, round(image.width * crop_x)))
         top = max(0, min(image.height - 1, round(image.height * crop_y)))
         right = max(left + 1, min(image.width, round(image.width * (crop_x + crop_w))))
-        bottom = max(top + 1, min(image.height, round(image.height * (crop_y + crop_h))))
+        bottom = max(
+            top + 1, min(image.height, round(image.height * (crop_y + crop_h)))
+        )
         image = image.crop((left, top, right, bottom))
     if preserve_aspect:
         canvas = PILImage.new("RGB", (width, height), _BACKGROUND)
@@ -160,7 +164,11 @@ def _ascii_text(text: str | None) -> str:
         .replace("—", "-")
         .replace("–", "-")
     )
-    ascii_text = unicodedata.normalize("NFKD", normalized).encode("ascii", "ignore").decode("ascii")
+    ascii_text = (
+        unicodedata.normalize("NFKD", normalized)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
     return re.sub(r"\s+", " ", ascii_text).strip()
 
 
@@ -311,7 +319,9 @@ def _render_closing_frame() -> PILImage.Image:
         font=title_font,
     )
 
-    return work.resize((width, height), resample=PILImage.Resampling.LANCZOS).convert("RGB")
+    return work.resize((width, height), resample=PILImage.Resampling.LANCZOS).convert(
+        "RGB"
+    )
 
 
 def _fade_background_frame(frame: PILImage.Image, alpha: float) -> PILImage.Image:
@@ -338,12 +348,19 @@ def _render_cover_frame(storyboard: dict, slide: dict) -> PILImage.Image:
             (0, 440, SHOWCASE_VIDEO_CANVAS_SIZE[0], SHOWCASE_VIDEO_CANVAS_SIZE[1]),
             fill=(0, 0, 0, 120),
         )
-        canvas = PILImage.alpha_composite(canvas.convert("RGBA"), overlay).convert("RGB")
+        canvas = PILImage.alpha_composite(canvas.convert("RGBA"), overlay).convert(
+            "RGB"
+        )
     draw = ImageDraw.Draw(canvas)
     title_font = _load_font(42)
     body_font = _load_font(28)
     draw.rounded_rectangle((72, 540, 1208, 648), radius=24, fill=_WHITE)
-    draw.text((110, 572), slide.get("heading") or "Untitled piece", fill=_ACCENT, font=title_font)
+    draw.text(
+        (110, 572),
+        slide.get("heading") or "Untitled piece",
+        fill=_ACCENT,
+        font=title_font,
+    )
     story = (slide.get("text") or "").strip()
     if story:
         _draw_text_block(
@@ -424,7 +441,9 @@ def _slide_duration_seconds(slide: dict) -> float:
 def _resolve_music_audio_path(storyboard: dict) -> Path:
     track = get_track(storyboard.get("music_track_id"))
     if track is None:
-        raise ValueError(f"Unknown music track id: {storyboard.get('music_track_id')!r}")
+        raise ValueError(
+            f"Unknown music track id: {storyboard.get('music_track_id')!r}"
+        )
     audio_url = track.audio.url
     if not audio_url:
         raise ValueError(f"Track {track.track_id!r} does not have a local audio asset.")
@@ -436,7 +455,9 @@ def _resolve_music_audio_path(storyboard: dict) -> Path:
     return audio_path
 
 
-def _slide_start_times(durations: list[float], transition_seconds: float) -> list[float]:
+def _slide_start_times(
+    durations: list[float], transition_seconds: float
+) -> list[float]:
     starts = [0.0]
     for duration in durations[:-1]:
         starts.append(starts[-1] + duration - transition_seconds)
@@ -473,7 +494,9 @@ def _iter_video_frames(
             t = index / SHOWCASE_VIDEO_FPS
             yield _fade_background_frame(
                 slide_canvases[0],
-                _fade_alpha(t=t, total_duration=total_duration, fade_seconds=fade_seconds),
+                _fade_alpha(
+                    t=t, total_duration=total_duration, fade_seconds=fade_seconds
+                ),
             )
         return
 
@@ -526,6 +549,7 @@ def _write_video_stream(
     durations: list[float],
     transition_seconds: float,
     fade_seconds: float,
+    on_progress: Callable[[int], None] | None = None,
 ) -> tuple[list[Any], float]:
     video_stream = container.add_stream("libx264", rate=SHOWCASE_VIDEO_FPS)
     video_stream.width = SHOWCASE_VIDEO_CANVAS_SIZE[0]
@@ -533,8 +557,17 @@ def _write_video_stream(
     video_stream.pix_fmt = "yuv420p"
     video_stream.time_base = Fraction(1, SHOWCASE_VIDEO_FPS)
 
+    # Mirror _iter_video_frames frame-count logic so total_frames is accurate.
+    if len(slide_canvases) == 1:
+        total_frames = max(1, math.ceil(durations[0] * SHOWCASE_VIDEO_FPS))
+    else:
+        starts = _slide_start_times(durations, transition_seconds)
+        effective_duration = starts[-1] + durations[-1]
+        total_frames = max(1, math.ceil(effective_duration * SHOWCASE_VIDEO_FPS))
+
     packets: list[Any] = []
     frame_count = 0
+    last_reported = time.monotonic()
     for frame in _iter_video_frames(
         slide_canvases,
         durations,
@@ -547,6 +580,11 @@ def _write_video_stream(
         for packet in video_stream.encode(video_frame):
             packets.append(packet)
         frame_count += 1
+        if on_progress is not None:
+            now = time.monotonic()
+            if now - last_reported >= 1.0:
+                on_progress(min(100, round(frame_count / total_frames * 100)))
+                last_reported = now
 
     for packet in video_stream.encode():
         packets.append(packet)
@@ -657,7 +695,10 @@ def _apply_audio_fade(
     return samples * gain[np.newaxis, :]
 
 
-def render_storyboard_to_mp4(storyboard: dict) -> Path:
+def render_storyboard_to_mp4(
+    storyboard: dict,
+    on_progress: Callable[[int], None] | None = None,
+) -> Path:
     """Render a storyboard snapshot to a deterministic MP4 file."""
     validate_storyboard(storyboard)
     input_hash = compute_storyboard_hash(storyboard)
@@ -690,6 +731,7 @@ def render_storyboard_to_mp4(storyboard: dict) -> Path:
             durations,
             transition_seconds,
             fade_seconds,
+            on_progress=on_progress,
         )
         audio_path = _resolve_music_audio_path(storyboard)
         audio_packets = _write_audio_stream(

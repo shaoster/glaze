@@ -648,6 +648,7 @@ class AsyncTask(models.Model):
     input_params = models.JSONField(default=dict, blank=True)
     result = models.JSONField(null=True, blank=True)
     error = models.TextField(null=True, blank=True)
+    progress = models.IntegerField(default=0)
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
 

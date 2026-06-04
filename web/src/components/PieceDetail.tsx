@@ -10,6 +10,7 @@ import {
   Divider,
   Button,
   CircularProgress,
+  LinearProgress,
   Stack,
   Typography,
 } from "@mui/material";
@@ -552,15 +553,16 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
       ? "No render has been requested yet."
       : currentStatus === "disabled"
         ? "Showcase video generation is unavailable."
-      : currentStatus === "pending"
-        ? "Queued for rendering."
-        : currentStatus === "running"
-          ? "Rendering in the background."
-          : currentStatus === "failed"
-            ? "The latest render failed."
-            : currentStatus === "stale-needs-regeneration"
-              ? "The latest render is stale."
-              : "The latest render is ready.";
+        : currentStatus === "failed"
+          ? "The latest render failed."
+          : currentStatus === "stale-needs-regeneration"
+            ? "The latest render is stale."
+            : "The latest render is ready.";
+
+  const isActive =
+    currentStatus === "pending" || currentStatus === "running";
+  const activeProgress =
+    currentStatus === "running" ? (showcaseVideo?.progress ?? 0) : null;
 
   const artifact = showcaseVideo?.artifact ?? null;
   const errorMessage = rawGenerateError
@@ -598,9 +600,30 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
           })}
         >
           <Stack spacing={1.25}>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {statusLabel}
-            </Typography>
+            {isActive ? (
+              currentStatus === "pending" ? (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <CircularProgress size={16} />
+                  <Typography variant="body2" color="text.secondary">
+                    Queued — you can safely navigate away.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
+                    Rendering in the background…
+                  </Typography>
+                  <LinearProgress
+                    variant={activeProgress ? "determinate" : "indeterminate"}
+                    value={activeProgress ?? undefined}
+                  />
+                </Box>
+              )
+            ) : (
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {statusLabel}
+              </Typography>
+            )}
             {isLoading && !showcaseVideo ? (
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <CircularProgress size={16} />
@@ -650,13 +673,15 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
                       ? "Unavailable"
                       : "Generate video"}
                 </Button>
-                <Typography variant="caption" color="text.secondary">
-                {showcaseVideo?.enabled === false
-                  ? "Set CLOUDINARY_VIDEO_UPLOAD_FOLDER to enable showcase videos."
-                  : showcaseVideo?.eligible === false
-                  ? "This piece is not eligible for video generation yet."
-                  : "The request is queued immediately and continues in the background."}
-                </Typography>
+                {!isActive && (
+                  <Typography variant="caption" color="text.secondary">
+                    {showcaseVideo?.enabled === false
+                      ? "Set CLOUDINARY_VIDEO_UPLOAD_FOLDER to enable showcase videos."
+                      : showcaseVideo?.eligible === false
+                      ? "This piece is not eligible for video generation yet."
+                      : "Renders asynchronously — you can navigate away."}
+                  </Typography>
+                )}
             </Stack>
           </Stack>
         </Box>
