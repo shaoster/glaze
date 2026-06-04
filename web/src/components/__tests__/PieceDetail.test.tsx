@@ -148,6 +148,8 @@ vi.mock("../../util/api", () => ({
   toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),
   hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
   uploadImageToCloudinary: vi.fn(),
+  fetchPieceShowcaseVideo: vi.fn().mockResolvedValue(null),
+  requestPieceShowcaseVideo: vi.fn(),
   extractErrorMessage: vi.fn((err) => {
     if (err && typeof err === "object" && "response" in err) {
       const data = (err as any).response?.data;
@@ -427,6 +429,25 @@ describe("PieceDetail", () => {
     );
 
     expect(screen.getByRole("button", { name: "Share" })).toBeInTheDocument();
+  });
+
+  it("renders ShowcaseVideoPanel after the header grid, not inside the info column", async () => {
+    await renderPieceDetail(
+      makePiece({
+        current_state: makeState({ state: "completed" }),
+        history: [makeState({ state: "completed" })],
+      }),
+    );
+
+    // The terminal-state alert lives in the post-grid flow (after the two-column grid).
+    // ShowcaseVideoPanel must appear AFTER it in the DOM, proving it is outside the
+    // narrow info column.
+    const alert = screen.getByText(/terminal state/i).closest("[role='alert']")!;
+    const showcaseHeading = screen.getByText("Showcase Video");
+    expect(
+      alert.compareDocumentPosition(showcaseHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("shares an editable terminal piece through the PieceDetail API interaction", async () => {

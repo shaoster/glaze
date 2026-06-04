@@ -237,11 +237,6 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
                 <ShareControls piece={piece} onPieceUpdated={onPieceUpdated} />
               </Box>
             )}
-            {canEdit && isTerminal && (
-              <Box sx={{ mb: 1.5 }}>
-                <ShowcaseVideoPanel piece={piece} />
-              </Box>
-            )}
             {canEdit && (
               <Box sx={{ mb: 1.5 }}>
                 <EditableToggle piece={piece} onPieceUpdated={onPieceUpdated} />
@@ -399,6 +394,12 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             <strong>{formatState(currentState.state)}</strong>). No further
             transitions are possible.
           </Alert>
+        )}
+
+        {canEdit && isTerminal && (
+          <Box sx={{ mb: 2.5 }}>
+            <ShowcaseVideoPanel piece={piece} />
+          </Box>
         )}
 
         <Box sx={{ mb: 2.5 }}>
