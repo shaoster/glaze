@@ -16,7 +16,9 @@ import os
 import re
 import tempfile
 import textwrap
+import time
 import unicodedata
+from collections.abc import Callable
 from fractions import Fraction
 from functools import lru_cache
 from pathlib import Path
@@ -547,6 +549,7 @@ def _write_video_stream(
     durations: list[float],
     transition_seconds: float,
     fade_seconds: float,
+    on_progress: Callable[[int], None] | None = None,
 ) -> tuple[list[Any], float]:
     video_stream = container.add_stream("libx264", rate=SHOWCASE_VIDEO_FPS)
     video_stream.width = SHOWCASE_VIDEO_CANVAS_SIZE[0]
@@ -554,8 +557,17 @@ def _write_video_stream(
     video_stream.pix_fmt = "yuv420p"
     video_stream.time_base = Fraction(1, SHOWCASE_VIDEO_FPS)
 
+    # Mirror _iter_video_frames frame-count logic so total_frames is accurate.
+    if len(slide_canvases) == 1:
+        total_frames = max(1, math.ceil(durations[0] * SHOWCASE_VIDEO_FPS))
+    else:
+        starts = _slide_start_times(durations, transition_seconds)
+        effective_duration = starts[-1] + durations[-1]
+        total_frames = max(1, math.ceil(effective_duration * SHOWCASE_VIDEO_FPS))
+
     packets: list[Any] = []
     frame_count = 0
+    last_reported = time.monotonic()
     for frame in _iter_video_frames(
         slide_canvases,
         durations,
@@ -568,6 +580,11 @@ def _write_video_stream(
         for packet in video_stream.encode(video_frame):
             packets.append(packet)
         frame_count += 1
+        if on_progress is not None:
+            now = time.monotonic()
+            if now - last_reported >= 1.0:
+                on_progress(min(100, round(frame_count / total_frames * 100)))
+                last_reported = now
 
     for packet in video_stream.encode():
         packets.append(packet)
@@ -678,7 +695,10 @@ def _apply_audio_fade(
     return samples * gain[np.newaxis, :]
 
 
-def render_storyboard_to_mp4(storyboard: dict) -> Path:
+def render_storyboard_to_mp4(
+    storyboard: dict,
+    on_progress: Callable[[int], None] | None = None,
+) -> Path:
     """Render a storyboard snapshot to a deterministic MP4 file."""
     validate_storyboard(storyboard)
     input_hash = compute_storyboard_hash(storyboard)
@@ -711,6 +731,7 @@ def render_storyboard_to_mp4(storyboard: dict) -> Path:
             durations,
             transition_seconds,
             fade_seconds,
+            on_progress=on_progress,
         )
         audio_path = _resolve_music_audio_path(storyboard)
         audio_packets = _write_audio_stream(

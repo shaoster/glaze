@@ -482,6 +482,7 @@ export type ShowcaseVideoStatus = {
   storyboard: Record<string, unknown> | null;
   artifact: ShowcaseVideoArtifact | null;
   error: string | null;
+  progress?: number;
 };
 
 export type ShowcaseVideoRequestPayload = {

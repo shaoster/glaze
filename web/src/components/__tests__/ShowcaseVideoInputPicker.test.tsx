@@ -219,7 +219,7 @@ describe("ShowcaseVideoInputPicker", () => {
 
     expect(thumbnailCheckbox).toBeChecked();
     expect(thumbnailCheckbox).toBeDisabled();
-    expect(screen.getByText(/Locked as the video cover/)).toBeInTheDocument();
+    expect(screen.getByText("Cover")).toBeInTheDocument();
 
     fireEvent.click(thumbnailCheckbox);
     expect(onSelectionChange).not.toHaveBeenCalled();
@@ -240,10 +240,20 @@ describe("ShowcaseVideoInputPicker", () => {
     expect(select).toHaveTextContent(
       `${defaultTrack.title} — ${defaultTrack.artist}`,
     );
-    // The verbatim attribution block is surfaced for the selected track.
-    expect(
-      screen.getByText(defaultTrack.attribution.split("\n")[0], { exact: false }),
-    ).toBeInTheDocument();
+    // Attribution is shown as structured labeled rows with links.
+    expect(screen.getByText("Platform:")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Audio Library" })).toHaveAttribute(
+      "href",
+      defaultTrack.source_url,
+    );
+    expect(screen.getByRole("link", { name: defaultTrack.artist })).toHaveAttribute(
+      "href",
+      defaultTrack.artist_url,
+    );
+    expect(screen.getByRole("link", { name: defaultTrack.title })).toHaveAttribute(
+      "href",
+      defaultTrack.download_url || defaultTrack.source_url,
+    );
   });
 
   it("emits the chosen music track id", async () => {

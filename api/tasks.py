@@ -320,11 +320,16 @@ def generate_showcase_video(task: AsyncTask) -> dict:
         raise ValueError("Storyboard snapshot hash does not match task input hash")
 
     if not is_showcase_video_cloudinary_enabled():
-        raise ValueError(
-            "Cloudinary showcase video upload is not configured."
-        )
+        raise ValueError("Cloudinary showcase video upload is not configured.")
 
-    output_path = render_storyboard_to_mp4(storyboard)
+    task.progress = 0
+    task.save(update_fields=["progress", "last_modified"])
+
+    def _report_progress(pct: int) -> None:
+        task.progress = pct
+        task.save(update_fields=["progress", "last_modified"])
+
+    output_path = render_storyboard_to_mp4(storyboard, on_progress=_report_progress)
     try:
         cloudinary_asset = upload_storyboard_video_to_cloudinary(
             output_path,

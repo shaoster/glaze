@@ -1,8 +1,6 @@
 import {
   Box,
   Checkbox,
-  FormControlLabel,
-  Stack,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -19,7 +17,6 @@ export type SelectablePhotoItem = {
   checked: boolean;
   locked?: boolean;
   onToggle?: () => void;
-  toggleLabel: string;
 };
 
 type SelectablePhotoMasonryProps = {
@@ -69,6 +66,7 @@ export default function SelectablePhotoMasonry({
               display: "block",
             }}
           />
+          {/* Top-left: cover badge for locked items */}
           {item.locked ? (
             <Box
               sx={{
@@ -87,6 +85,29 @@ export default function SelectablePhotoMasonry({
               Cover
             </Box>
           ) : null}
+          {/* Top-right: checkbox */}
+          <Box sx={{ position: "absolute", top: 4, right: 4, zIndex: 1 }}>
+            <Tooltip title={item.locked ? "Cannot exclude the video cover" : ""}>
+              <span>
+                <Checkbox
+                  checked={item.checked}
+                  onChange={item.locked ? undefined : item.onToggle}
+                  disabled={disabled || item.locked}
+                  size="small"
+                  sx={{
+                    p: 0.5,
+                    bgcolor: "rgba(255,255,255,0.85)",
+                    borderRadius: 1,
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.95)" },
+                  }}
+                  inputProps={{
+                    "aria-label": `${item.locked ? "Locked cover" : "Include in the video"}: ${item.stateLabel}`,
+                  }}
+                />
+              </span>
+            </Tooltip>
+          </Box>
+          {/* Bottom-left: state + date chip */}
           <Box
             sx={{
               position: "absolute",
@@ -113,30 +134,6 @@ export default function SelectablePhotoMasonry({
               {item.stateLabel} · {item.whenLabel}
             </Box>
           </Box>
-        </Box>
-        <Box sx={{ p: 1 }}>
-          <FormControlLabel
-            sx={{ alignItems: "center", mx: 0, width: "100%" }}
-            control={
-              <Tooltip title={item.locked ? "Cannot exclude the video cover" : ""}>
-                <span>
-                  <Checkbox
-                    checked={item.checked}
-                    onChange={item.locked ? undefined : item.onToggle}
-                    disabled={disabled || item.locked}
-                    inputProps={{
-                      "aria-label": `${item.locked ? "Locked cover" : "Include in the video"}: ${item.stateLabel}`,
-                    }}
-                  />
-                </span>
-              </Tooltip>
-            }
-            label={
-              <Stack spacing={0.25} sx={{ py: 0.25, minWidth: 0, ml: 0.5 }}>
-                <Typography variant="body2">{item.toggleLabel}</Typography>
-              </Stack>
-            }
-          />
         </Box>
       </Box>
     );
