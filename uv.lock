@@ -427,7 +427,7 @@ dependencies = [
     { name = "django" },
 ]
 wheels = [
-    { url = "https://raw.githubusercontent.com/shaoster/glaze/issue/772-contact-us-section-visible/third_party/python/django_bootstrap4_form-4.0.2-py3-none-any.whl", hash = "sha256:ed4bcfc1246e449d61b6d946c8c918e48b6d239c504fcf03cd711108c20c5555", size = 7071 },
+    { url = "https://raw.githubusercontent.com/shaoster/glaze/7e899ff1c76a1aa07855ea94ed560f90e1b55f36/third_party/python/django_bootstrap4_form-4.0.2-py3-none-any.whl", hash = "sha256:ed4bcfc1246e449d61b6d946c8c918e48b6d239c504fcf03cd711108c20c5555", size = 7071 },
 ]
 
 [[package]]
