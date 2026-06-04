@@ -292,8 +292,8 @@ $SSH "${DEPLOY_HOST}" '
 
     mem_limit=$(kubectl get deployment coredns -n kube-system -o jsonpath="{.spec.template.spec.containers[0].resources.limits.memory}" 2>/dev/null || echo "")
     if [ "$mem_limit" != "64Mi" ]; then
-      echo "Patching coredns memory limit from ${mem_limit:-unset} to 64Mi..."
-      kubectl patch deployment coredns -n kube-system --type="json" -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/resources/limits/memory\", \"value\": \"64Mi\"}]"
+      echo "Patching coredns memory request/limit from ${mem_limit:-unset} to 64Mi..."
+      kubectl patch deployment coredns -n kube-system --type="json" -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/resources/requests/memory\", \"value\": \"32Mi\"}, {\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/resources/limits/memory\", \"value\": \"64Mi\"}]"
     else
       echo "coredns memory limit is already 64Mi."
     fi
