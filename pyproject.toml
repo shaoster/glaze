@@ -26,6 +26,7 @@ dependencies = [
     "django==6.0.4",
     "django-admin-sortable2==2.3.1",
     "django-cors-headers==4.9.0",
+    "django-bootstrap4-form==4.0.2",
     "django-helpdesk>=2.1.1",
     "django-import-export==4.3.9",
     "django-meta==2.5.1",
@@ -104,8 +105,8 @@ dependencies = [
     "whitenoise==6.9.0",
 ]
 
+[tool.uv]
+find-links = ["third_party/python"]
+
 [tool.uv.workspace]
 members = ["tools"]
-
-[dependency-groups]
-dev = []
