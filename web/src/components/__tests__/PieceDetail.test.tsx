@@ -274,6 +274,7 @@ beforeEach(() => {
   vi.useRealTimers();
   vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
   vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([]);
+  vi.mocked(api.fetchPieceShowcaseVideo).mockResolvedValue(null);
 });
 
 describe("PieceDetail", () => {
@@ -448,6 +449,49 @@ describe("PieceDetail", () => {
       alert.compareDocumentPosition(showcaseHeading) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it("collapses ShowcaseVideoPanel by default when a video artifact exists", async () => {
+    vi.mocked(api.fetchPieceShowcaseVideo).mockResolvedValue({
+      piece_id: "piece-id-1",
+      task_id: null,
+      status: "succeeded",
+      task_status: "success",
+      enabled: true,
+      disabled_reason: null,
+      eligible: true,
+      current_input_hash: "abc",
+      stored_input_hash: "abc",
+      is_stale: false,
+      stale_reason: null,
+      music_track_id: null,
+      storyboard: null,
+      artifact: {
+        url: "https://example.com/video.mp4",
+        download_url: "https://example.com/video.mp4?dl=1",
+        filename: "showcase.mp4",
+        content_type: "video/mp4",
+      },
+      error: null,
+    });
+    await renderPieceDetail(
+      makePiece({
+        current_state: makeState({ state: "completed" }),
+        history: [makeState({ state: "completed" })],
+      }),
+    );
+
+    // Panel header visible, but body content collapsed
+    expect(screen.getByText("Showcase Video")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Generate video" }),
+      ).not.toBeInTheDocument(),
+    );
+    // Expand button present
+    expect(
+      screen.getByRole("button", { name: "Expand showcase video" }),
+    ).toBeInTheDocument();
   });
 
   it("shares an editable terminal piece through the PieceDetail API interaction", async () => {

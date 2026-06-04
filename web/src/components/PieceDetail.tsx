@@ -7,14 +7,17 @@ import {
   alpha,
   Box,
   Chip,
+  Collapse,
   Divider,
   Button,
   CircularProgress,
+  IconButton,
   LinearProgress,
   Stack,
   Typography,
 } from "@mui/material";
 import HistoryIcon from "@mui/icons-material/History";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useBlocker, useLocation, useNavigate } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
 import { DEFAULT_TRACK_ID } from "../util/music";
@@ -511,6 +514,7 @@ function ArtifactActions({ artifact, pieceName }: ArtifactActionsProps) {
 
 function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
   const queryClient = useQueryClient();
+  const [userExpanded, setUserExpanded] = useState<boolean | null>(null);
   const [selection, setSelection] = useState<ShowcaseVideoInputSelection>({
     excludedImageKeys: [],
     excludedNoteKeys: [],
@@ -566,6 +570,9 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
     currentStatus === "running" ? (showcaseVideo?.progress ?? 0) : null;
 
   const artifact = showcaseVideo?.artifact ?? null;
+  // Default: expanded when no artifact exists (needs action), collapsed when one does.
+  // userExpanded overrides once the user manually toggles.
+  const expanded = userExpanded ?? (artifact === null);
   const errorMessage = rawGenerateError
     ? extractErrorMessage(
         rawGenerateError,
@@ -582,7 +589,18 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
     <SectionCard
       title="Showcase Video"
       subtitle="Render a deterministic Keepsake slideshow from the piece history."
+      titleAdornment={
+        <IconButton
+          size="small"
+          onClick={() => setUserExpanded(!expanded)}
+          aria-label={expanded ? "Collapse showcase video" : "Expand showcase video"}
+          sx={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+        >
+          <ExpandMoreIcon fontSize="small" />
+        </IconButton>
+      }
     >
+      <Collapse in={expanded} unmountOnExit>
       <Stack spacing={2}>
         <ShowcaseVideoInputPicker
           piece={piece}
@@ -687,6 +705,7 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
           </Stack>
         </Box>
       </Stack>
+      </Collapse>
     </SectionCard>
   );
 }
