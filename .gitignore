@@ -257,3 +257,6 @@ db.bak.*.sqlite3
 
 # Agent / Tool temporary files
 .antigravitycli/
+
+# Showcase music assets (hosted on Cloudinary, not stored in git)
+assets/showcase_music/*.flac

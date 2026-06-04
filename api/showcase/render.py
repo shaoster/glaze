@@ -18,6 +18,7 @@ import tempfile
 import time
 import unicodedata
 from collections.abc import Callable
+from contextlib import contextmanager
 from fractions import Fraction
 from functools import lru_cache
 from pathlib import Path
@@ -642,7 +643,27 @@ def _slide_duration_seconds(slide: dict) -> float:
     return max(0.1, duration_ms / 1000.0)
 
 
-def _resolve_music_audio_path(storyboard: dict) -> Path:
+# 7-day TTL — assets are static; long TTL avoids re-downloading on every render job.
+_AUDIO_CACHE_TTL = 60 * 60 * 24 * 7
+
+
+def _fetch_remote_audio(url: str) -> bytes:
+    """Return audio bytes for a remote URL, using Django's cache to avoid re-downloads."""
+    from django.core.cache import cache
+
+    cache_key = f"music_audio:{hashlib.sha256(url.encode()).hexdigest()}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    response = requests.get(url, timeout=60)
+    response.raise_for_status()
+    cache.set(cache_key, response.content, timeout=_AUDIO_CACHE_TTL)
+    return response.content
+
+
+@contextmanager
+def _music_audio_path(storyboard: dict):
+    """Yield a Path to the audio asset, downloading it first if the URL is remote."""
     track = get_track(storyboard.get("music_track_id"))
     if track is None:
         raise ValueError(
@@ -650,13 +671,22 @@ def _resolve_music_audio_path(storyboard: dict) -> Path:
         )
     audio_url = track.audio.url
     if not audio_url:
-        raise ValueError(f"Track {track.track_id!r} does not have a local audio asset.")
-    audio_path = Path(audio_url)
-    if not audio_path.is_absolute():
-        audio_path = _REPO_ROOT / audio_path
-    if not audio_path.exists():
-        raise FileNotFoundError(f"Music asset not found: {audio_path}")
-    return audio_path
+        raise ValueError(f"Track {track.track_id!r} does not have an audio asset.")
+
+    if audio_url.startswith(("http://", "https://")):
+        audio_bytes = _fetch_remote_audio(audio_url)
+        suffix = Path(audio_url.split("?")[0]).suffix or ".flac"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audio_file = Path(tmpdir) / f"audio{suffix}"
+            audio_file.write_bytes(audio_bytes)
+            yield audio_file
+    else:
+        audio_path = Path(audio_url)
+        if not audio_path.is_absolute():
+            audio_path = _REPO_ROOT / audio_path
+        if not audio_path.exists():
+            raise FileNotFoundError(f"Music asset not found: {audio_path}")
+        yield audio_path
 
 
 def _slide_start_times(
@@ -937,13 +967,13 @@ def render_storyboard_to_mp4(
             fade_seconds,
             on_progress=on_progress,
         )
-        audio_path = _resolve_music_audio_path(storyboard)
-        audio_packets = _write_audio_stream(
-            container,
-            audio_path,
-            video_duration_seconds,
-            fade_seconds,
-        )
+        with _music_audio_path(storyboard) as audio_path:
+            audio_packets = _write_audio_stream(
+                container,
+                audio_path,
+                video_duration_seconds,
+                fade_seconds,
+            )
 
         # AAC encoders emit a few priming frames with negative DTS before the
         # first real sample, which breaks muxing.  Compute the shift needed to
