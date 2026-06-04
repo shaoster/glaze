@@ -274,8 +274,10 @@ $SSH "${DEPLOY_HOST}" '
   done
 '
 
-# ── Tune component probe timeouts ────────────────────────────────────────────
-echo "==> Tuning CoreDNS probe timeouts..."
+# ── Tune component probe timeouts and memory limits ──────────────────────────
+# coredns limits and probe timeouts are k3s-managed defaults; patch them here
+# so they persist across cluster-setup runs.
+echo "==> Tuning CoreDNS probe timeouts and memory limit..."
 $SSH "${DEPLOY_HOST}" '
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   if kubectl get deployment coredns -n kube-system &>/dev/null; then
@@ -286,6 +288,14 @@ $SSH "${DEPLOY_HOST}" '
       kubectl patch deployment coredns -n kube-system --type="json" -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/livenessProbe/timeoutSeconds\", \"value\": 5}, {\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/readinessProbe/timeoutSeconds\", \"value\": 5}]"
     else
       echo "coredns probe timeouts are already 5s."
+    fi
+
+    mem_limit=$(kubectl get deployment coredns -n kube-system -o jsonpath="{.spec.template.spec.containers[0].resources.limits.memory}" 2>/dev/null || echo "")
+    if [ "$mem_limit" != "64Mi" ]; then
+      echo "Patching coredns memory limit from ${mem_limit:-unset} to 64Mi..."
+      kubectl patch deployment coredns -n kube-system --type="json" -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/resources/limits/memory\", \"value\": \"64Mi\"}]"
+    else
+      echo "coredns memory limit is already 64Mi."
     fi
   fi
 '
