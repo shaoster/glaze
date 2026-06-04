@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useLocation, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import {
@@ -9,6 +9,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { keepPreviousData, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
   DEFAULT_PIECE_SORT,
   PIECE_SORT_OPTIONS,
@@ -18,37 +19,59 @@ import {
 import type { PieceSortOrder } from "../util/api";
 import NewPieceDialog from "../components/NewPieceDialog";
 import PieceList from "../components/PieceList";
-import type { PieceDetail, PieceSummary } from "../util/types";
+
 
 export default function PieceListPage() {
-  // `pieces` is the committed list shown in the masonry grid.
-  // `pendingPieces` holds newly fetched items that are buffered while
-  // loadingMore is true, then flushed in one DOM update when loading finishes
-  // to avoid mid-scroll masonry reflow.
-  const [pieces, setPieces] = useState<PieceSummary[]>([]);
-  const pendingRef = useRef<PieceSummary[] | null>(null);
-  const [count, setCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const sortFromUrl = searchParams.get("sort") as PieceSortOrder | null;
   const sortOrder: PieceSortOrder =
     sortFromUrl && PIECE_SORT_OPTIONS.some((o) => o.value === sortFromUrl)
       ? sortFromUrl
       : DEFAULT_PIECE_SORT;
+
   const navigate = useNavigate();
   const location = useLocation();
   const match = useMatch("/new");
   const dialogOpen = match !== null;
 
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const queryClient = useQueryClient();
+
+  const {
+    data,
+    isFetching,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    isError,
+    isLoading,
+  } = useInfiniteQuery({
+    queryKey: ["pieces", sortOrder],
+    queryFn: ({ pageParam }: { pageParam: number }) =>
+      fetchPieces({ ordering: sortOrder, limit: PIECES_PAGE_SIZE, offset: pageParam }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      const fetched = allPages.reduce((n, p) => n + p.results.length, 0);
+      return fetched < lastPage.count ? fetched : undefined;
+    },
+    // Show previous sort's data while the new sort loads to avoid a flash of
+    // the spinner every time the user changes sort order.
+    placeholderData: keepPreviousData,
+  });
+
+  // useInfiniteQuery adds pages atomically on resolution (no mid-scroll trickle),
+  // so data.pages can be flattened directly without a manual double-buffer.
+  const pieces = useMemo(
+    () => data?.pages.flatMap((p) => p.results) ?? [],
+    [data?.pages],
+  );
+  const count = data?.pages[0]?.count ?? 0;
+
   const handleOpenDialog = useCallback(() => {
     navigate(
-      {
-        pathname: "/new",
-        search: searchParams.toString(),
-      },
+      { pathname: "/new", search: searchParams.toString() },
       { state: { fromApp: true } }
     );
   }, [navigate, searchParams]);
@@ -58,88 +81,11 @@ export default function PieceListPage() {
       navigate(-1);
     } else {
       navigate(
-        {
-          pathname: "/",
-          search: searchParams.toString(),
-        },
+        { pathname: "/", search: searchParams.toString() },
         { replace: true }
       );
     }
   }, [navigate, location.state, searchParams]);
-
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
-  const offsetRef = useRef(0);
-  const piecesRef = useRef<PieceSummary[]>([]);
-  const sortOrderRef = useRef(sortOrder);
-  // Synchronous guard — React state updates are batched and arrive too late
-  // to prevent double-firing from rapid scroll events.
-  const loadingMoreRef = useRef(false);
-
-  const loadPage = useCallback(
-    async (ordering: PieceSortOrder, offset: number, replace: boolean) => {
-      if (replace) {
-        if (piecesRef.current.length === 0) {
-          setLoading(true);
-        } else {
-          setRefreshing(true);
-        }
-      } else {
-        setLoadingMore(true);
-        loadingMoreRef.current = true;
-      }
-      setError(null);
-      try {
-        const page = await fetchPieces({
-          ordering,
-          limit: PIECES_PAGE_SIZE,
-          offset,
-        });
-        if (sortOrderRef.current !== ordering) return;
-        setCount(page.count);
-        if (replace) {
-          pendingRef.current = null;
-          setPieces(page.results);
-        } else {
-          // Buffer the new items; flush them when we clear loadingMore so
-          // the masonry grid updates in one frame instead of reshuffling
-          // mid-scroll as items trickle in.
-          pendingRef.current = page.results;
-        }
-        offsetRef.current = offset + page.results.length;
-      } catch {
-        setError("Failed to load pieces.");
-      } finally {
-        if (replace) {
-          setLoading(false);
-          setRefreshing(false);
-        } else {
-          // Flush buffered items and clear the loading flag atomically
-          const pending = pendingRef.current;
-          pendingRef.current = null;
-          if (pending) setPieces((prev) => [...prev, ...pending]);
-          setLoadingMore(false);
-          loadingMoreRef.current = false;
-        }
-      }
-    },
-    [],
-  );
-
-  // Keep the latest rendered list available so replace fetches can
-  // distinguish first-load empty state from re-sorting an existing list.
-  useEffect(() => {
-    piecesRef.current = pieces;
-  }, [pieces]);
-
-  useEffect(() => {
-    sortOrderRef.current = sortOrder;
-    offsetRef.current = 0;
-    loadingMoreRef.current = false;
-    pendingRef.current = null;
-    loadPage(sortOrder, 0, true);
-  }, [sortOrder, loadPage]);
 
   function handleSortChange(order: PieceSortOrder) {
     setSearchParams(
@@ -157,17 +103,16 @@ export default function PieceListPage() {
   }
 
   const handleLoadMore = useCallback(() => {
-    if (loadingMoreRef.current || loading || refreshing) return;
-    const currentOffset = offsetRef.current;
-    loadPage(sortOrder, currentOffset, false);
-  }, [loading, refreshing, sortOrder, loadPage]);
+    if (hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  function handleCreated(piece: PieceDetail) {
-    setPieces((prev) => [piece, ...prev]);
-    setCount((c) => c + 1);
+  function handleCreated() {
+    void queryClient.invalidateQueries({ queryKey: ["pieces", sortOrder] });
   }
 
-  const hasMore = pieces.length < count;
+  const refreshing = isFetching && !isFetchingNextPage && !isLoading;
 
   return (
     <>
@@ -194,22 +139,22 @@ export default function PieceListPage() {
           <AddIcon />
         </Fab>
       )}
-      {loading && (
+      {isLoading && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
           <CircularProgress />
         </Box>
       )}
-      {error && <Typography color="error">{error}</Typography>}
-      {!loading && !error && (
+      {isError && <Typography color="error">Failed to load pieces.</Typography>}
+      {!isLoading && !isError && (
         <PieceList
           pieces={pieces}
           onNewPiece={handleOpenDialog}
           sortOrder={sortOrder}
           onSortChange={handleSortChange}
           onLoadMore={handleLoadMore}
-          hasMore={hasMore}
+          hasMore={hasNextPage ?? pieces.length < count}
           loading={refreshing}
-          loadingMore={loadingMore}
+          loadingMore={isFetchingNextPage}
         />
       )}
       <NewPieceDialog
