@@ -14,7 +14,6 @@ This directory contains configuration files and instructions to deploy a self-ho
 
 All configuration files are organized inside this directory:
 - [docker-compose.yml](file:///home/phil/code/glaze/infra/custom/docker-compose.yml): Services definition.
-- [Dockerfile](file:///home/phil/code/glaze/infra/custom/Dockerfile): Multi-stage container build definition.
 - [nginx/templates/glaze.conf.template](file:///home/phil/code/glaze/infra/custom/nginx/templates/glaze.conf.template): Reverse proxy config template with TLS.
 - [scripts/init-letsencrypt.sh](file:///home/phil/code/glaze/infra/custom/scripts/init-letsencrypt.sh): SSL certificates initialization helper.
 
@@ -50,11 +49,17 @@ DOMAIN=localhost
 PRODUCTION=
 ```
 
-### Step 2: Build and Start the Stack
-From this directory (`infra/custom/`), run:
+### Step 2: Load the App Image and Start the Stack
+From this directory (`infra/custom/`), first load the Bazel-built app image into Docker:
 
 ```bash
-docker compose up --build -d
+bazel run //:load
+```
+
+Then start the stack:
+
+```bash
+docker compose up -d
 ```
 
 ### Step 3: Access the Application

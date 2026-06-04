@@ -49,6 +49,7 @@ py_binary(
         "@pypi//pyyaml",
         "@pypi//google_auth",
         "@pypi//requests",
+        "@pypi//setuptools",
     ],
     visibility = ["//visibility:public"],
 )

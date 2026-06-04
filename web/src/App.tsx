@@ -41,6 +41,7 @@ import {
 } from "@mui/material";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import DownloadIcon from "@mui/icons-material/Download";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
 import CropFreeIcon from "@mui/icons-material/CropFree";
@@ -63,6 +64,7 @@ import { initializeFrontendTelemetry } from "./util/telemetry";
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
 import ErrorBoundary from "./components/ErrorBoundary";
+import AppFooterLinks from "./components/AppFooterLinks";
 import PublicPieceShell from "./components/PublicPieceShell";
 import UserPreferencesDialog from "./components/UserPreferencesDialog";
 import TutorialManager from "./components/TutorialManager";
@@ -337,49 +339,7 @@ function AuthLanding({
             </Button>
           )}
 
-          <Box component="footer" sx={{ pt: 1 }}>
-            <Stack
-              direction="row"
-              spacing={1}
-              justifyContent="center"
-              alignItems="center"
-              flexWrap="wrap"
-            >
-              <Button
-                component={Link}
-                to="/about"
-                variant="text"
-                size="small"
-                sx={{ minWidth: 0, px: 0.5 }}
-              >
-                About Us
-              </Button>
-              <Typography variant="body2" color="text.secondary">
-                •
-              </Typography>
-              <Button
-                component={Link}
-                to="/privacy-policy"
-                variant="text"
-                size="small"
-                sx={{ minWidth: 0, px: 0.5 }}
-              >
-                Privacy Policy
-              </Button>
-              <Typography variant="body2" color="text.secondary">
-                •
-              </Typography>
-              <Button
-                component={Link}
-                to="/terms-of-service"
-                variant="text"
-                size="small"
-                sx={{ minWidth: 0, px: 0.5 }}
-              >
-                Terms of Service
-              </Button>
-            </Stack>
-          </Box>
+          <AppFooterLinks />
         </Stack>
       </Paper>
     </Container>
@@ -524,6 +484,29 @@ function AppShell({
               anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
               transformOrigin={{ vertical: "top", horizontal: "right" }}
             >
+              {currentUser.is_staff ? (
+                <MenuItem
+                  component="a"
+                  href="/support/dashboard/"
+                  onClick={() => setMenuAnchor(null)}
+                >
+                  <ListItemIcon>
+                    <HelpOutlineIcon fontSize="small" />
+                  </ListItemIcon>
+                  Support Desk
+                </MenuItem>
+              ) : (
+                <MenuItem
+                  component="a"
+                  href="/support/tickets/my-tickets/"
+                  onClick={() => setMenuAnchor(null)}
+                >
+                  <ListItemIcon>
+                    <HelpOutlineIcon fontSize="small" />
+                  </ListItemIcon>
+                  My Support Tickets
+                </MenuItem>
+              )}
               <MenuItem
                 onClick={() => {
                   setMenuAnchor(null);
@@ -700,6 +683,7 @@ function AppShell({
             onClose={closePreferencesDialog}
             onSectionChange={switchPreferencesSection}
           />
+          <AppFooterLinks sticky />
         </Container>
       </PreferencesDialogProvider>
     </CurrentUserProvider>

@@ -310,6 +310,54 @@ describe("App auth flow", () => {
     );
   });
 
+  it("shows my support tickets for non-staff users", async () => {
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /new piece/i }),
+      ).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: MOCK_DISPLAY_NAME }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("menuitem", { name: "My Support Tickets" }),
+      ).toHaveAttribute("href", "/support/tickets/my-tickets/");
+    });
+  });
+
+  it("shows the support desk link for staff users", async () => {
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_ADMIN_USER,
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /new piece/i }),
+      ).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: MOCK_DISPLAY_NAME }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("menuitem", { name: "Support Desk" }),
+      ).toHaveAttribute("href", "/support/dashboard/");
+    });
+  });
+
   it("passes pending invite code from sessionStorage to loginWithGoogle", async () => {
     sessionStorage.setItem("pendingInviteCode", "test-invite-uuid");
     vi.mocked(loginWithGoogle).mockResolvedValue(MOCK_USER);

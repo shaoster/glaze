@@ -32,6 +32,7 @@ py_library(
         "@pypi//psycopg2_binary",
         "@pypi//django_import_export",
         "@pypi//django_meta",
+        "@pypi//django_helpdesk",
         "@pypi//aiofiles",
         "@pypi//opentelemetry_api",
         "@pypi//opentelemetry_sdk",
