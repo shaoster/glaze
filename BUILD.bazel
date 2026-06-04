@@ -1,5 +1,5 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
-load("@aspect_rules_py//py:defs.bzl", "py_binary")
+load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_image_layer")
 load("@rules_distroless//distroless:defs.bzl", "group", "passwd")
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
@@ -144,88 +144,63 @@ alias(
 # bazel build //:image        — assemble the OCI image locally
 # bazel run   //:push         — push to ghcr.io/shaoster/glaze:<tag>
 #
-# Image layout (all under /app):
-#   /app/                      Django project root (manage.py, backend/, api/, etc.)
-#   /app/web/dist/             Vite-built SPA (served by WhiteNoise at URL root)
-#   /app/site-packages/        uv-synced runtime deps (added to PYTHONPATH)
-#   /app/staticfiles/          collected static assets (built by staticfiles_tar genrule)
+# Image layout:
+#   /appcontainer_entrypoint   Bazel launcher for the runtime image
+#   /appcontainer_entrypoint.runfiles/_main
+#                              Django project root plus repo-owned assets
+#   /appcontainer_entrypoint.runfiles/.../site-packages
+#                              uv-synced runtime deps
+#   /app/version.txt           Build metadata read by backend.otel
+#   /appcontainer_entrypoint.runfiles/_main/staticfiles
+#                              collected static assets (built by staticfiles_tar)
 
-# Dependency layer — sync runtime deps into a temp venv, then flatten its
-# site-packages into /app/site-packages. Tagged no-sandbox because uv needs
-# network access to download wheels.
-genrule(
-    name = "python_layer_tar",
+py_binary(
+    name = "container_entrypoint",
     srcs = [
-        "//:pyproject.toml",
-        "//:uv.lock",
-        "//:third_party_python_files",
-    ],
-    tools = ["@uv//:uv"],
-    outs = ["python_layer.tar"],
-    cmd = """
-        set -e
-        export HOME=$$(mktemp -d)
-        UV="$$PWD/$(location @uv//:uv)"
-        PYTHON3_ABS="$$PWD/$(PYTHON3)"
-        OUT_TAR="$$PWD/$@"
-
-        work=$$(mktemp -d)
-        dest=$$(mktemp -d)
-        cp $(location //:pyproject.toml) "$$work/pyproject.toml"
-        cp $(location //:uv.lock) "$$work/uv.lock"
-        mkdir -p "$$work/third_party/python"
-        cp $(locations //:third_party_python_files) "$$work/third_party/python/"
-
-        # Sync only the locked runtime dependencies into an isolated venv.
-        cd "$$work"
-        $$UV sync \
-            --frozen \
-            --no-dev \
-            --no-install-project \
-            --no-editable \
-            --python "$$PYTHON3_ABS"
-
-        # Flatten site-packages to /app/site-packages in the tarball.
-        sp=$$(find "$$work/.venv" -type d -name site-packages | head -1)
-        mkdir -p "$$dest/app"
-        mv "$$sp" "$$dest/app/site-packages"
-        tar -C "$$dest" -cf "$$OUT_TAR" app/site-packages
-        rm -rf "$$dest" "$$work" "$$HOME"
-    """,
-    toolchains = ["@rules_python//python:current_py_toolchain"],
-    tags = ["no-sandbox"],
-)
-
-# Django source layer — everything the app needs at runtime except deps and dist.
-pkg_tar(
-    name = "app_src_tar",
-    srcs = [
+        "container_entrypoint.py",
         "manage.py",
-        "workflow.yml",
-        "workflow.schema.yml",
-        "user_preferences.yml",
-        "user_preferences.schema.yml",
-        "tutorials.yml",
-        "tutorials.schema.yml",
-        "storyboard.schema.yml",
-        "music_catalog.yml",
-        "music_catalog.schema.yml",
-        "docker-entrypoint.sh",
-        "//api:api_runtime_files",
-        "//backend:backend_runtime_files",
-    ] + glob(["fixtures/**"], allow_empty = True)
-      + glob(["assets/showcase_music/**"], allow_empty = True)
-      + glob(["assets/fonts/**"], allow_empty = False),
-    strip_prefix = ".",
-    package_dir = "/app",
+    ],
+    data = [
+        ":container_runtime_files",
+        "//:tutorials_files",
+        "//:user_preferences_files",
+        "//web:web_build",
+    ],
+    main = "container_entrypoint.py",
+    deps = [
+        "//api:api_lib",
+        "//backend:backend_lib",
+        "@pypi//gunicorn",
+        "@pypi//uvicorn",
+    ],
 )
 
-# Vite frontend layer — web/dist produced by the Bazel vite build.
-pkg_tar(
-    name = "web_dist_tar",
-    srcs = ["//web:web_build"],
-    strip_prefix = "web/dist",
-    package_dir = "/app/web/dist",
+filegroup(
+    name = "container_runtime_files",
+    srcs = [
+        "docker-entrypoint.sh",
+    ] + glob(
+        ["fixtures/**"],
+        allow_empty = True,
+    ) + glob(
+        ["assets/showcase_music/**"],
+        allow_empty = True,
+    ) + glob(
+        ["assets/fonts/**"],
+        allow_empty = False,
+    ),
+    visibility = ["//visibility:public"],
+)
+
+# Layer the Django runtime directly from the py_binary runfiles. This keeps the
+# OCI image hermetic and avoids any host-python dependency from rules_pkg.
+py_image_layer(
+    name = "image_layers",
+    binary = ":container_entrypoint",
+    layer_groups = {
+        "web": ".*web/dist/.*",
+    },
+    root = "/app",
 )
 
 # Static files layer — run collectstatic at build time so container startup
@@ -233,28 +208,23 @@ pkg_tar(
 genrule(
     name = "staticfiles_tar",
     srcs = [
-        ":python_layer_tar",
-        ":app_src_tar",
-        ":web_dist_tar",
+        ":image_layers",
     ],
     outs = ["staticfiles.tar"],
     cmd = """
         set -e
         tmp=$$(mktemp -d)
-        tar -xf $(location :python_layer_tar) -C "$$tmp"
-        tar -xf $(location :app_src_tar) -C "$$tmp"
-        tar -xf $(location :web_dist_tar) -C "$$tmp"
-        PYTHON3="$$PWD/$(PYTHON3)"
+        for layer in $(locations :image_layers); do
+            tar -xf "$$layer" -C "$$tmp"
+        done
+        entrypoint="$$tmp/appcontainer_entrypoint"
         OUT_TAR="$$PWD/$@"
-        export PYTHONPATH="$$tmp/app:$$tmp/app/site-packages"
         export DJANGO_SETTINGS_MODULE=backend.settings
         export SECRET_KEY=buildtime-placeholder
-        cd "$$tmp/app"
-        "$$PYTHON3" manage.py collectstatic --no-input
-        tar -C "$$tmp" -cf "$$OUT_TAR" app/staticfiles
+        "$$entrypoint" collectstatic --no-input
+        tar -C "$$tmp" -cf "$$OUT_TAR" appcontainer_entrypoint.runfiles/_main/staticfiles
         rm -rf "$$tmp"
     """,
-    toolchains = ["@rules_python//python:current_py_toolchain"],
     tags = ["no-sandbox"],
 )
 
@@ -276,12 +246,9 @@ pkg_tar(
 oci_image(
     name = "image",
     base = "@python312_slim",
-    tars = [
-        ":python_layer_tar",
-        ":app_src_tar",
-        ":web_dist_tar",
-        ":staticfiles_tar",
-        ":version_tar",
+    entrypoint = [
+        "/bin/bash",
+        "/appcontainer_entrypoint.runfiles/_main/docker-entrypoint.sh",
     ],
     env = {
         "PYTHONPATH": "/app:/app/site-packages",
@@ -294,9 +261,13 @@ oci_image(
         "ONNXRUNTIME_INTER_OP_NUM_THREADS": "1",
         "ONNXRUNTIME_INTRA_OP_NUM_THREADS": "1",
     },
-    workdir = "/app",
-    entrypoint = ["/bin/bash", "/app/docker-entrypoint.sh"],
     exposed_ports = ["8000/tcp"],
+    tars = [
+        ":image_layers",
+        ":staticfiles_tar",
+        ":version_tar",
+    ],
+    workdir = "/appcontainer_entrypoint.runfiles/_main",
 )
 
 oci_push(
@@ -337,16 +308,28 @@ group(
 oci_image(
     name = "celery_worker_image",
     base = ":image",
-    tars = [":celery_passwd", ":celery_group"],
+    entrypoint = [
+        "/appcontainer_entrypoint",
+        "celery",
+        "-A",
+        "backend",
+        "worker",
+        "-l",
+        "INFO",
+    ],
+    tars = [
+        ":celery_passwd",
+        ":celery_group",
+    ],
     user = "celery",
-    entrypoint = ["python", "-m", "celery", "-A", "backend", "worker", "-l", "INFO"],
 )
 
 oci_push(
     name = "push_worker",
     image = ":celery_worker_image",
     repository = "ghcr.io/shaoster/glaze-worker",
-)# Load the freshly-built image into the local docker daemon so CI (and devs)
+)  # Load the freshly-built image into the local docker daemon so CI (and devs)
+
 # can `docker compose up` against it without a registry round-trip.
 # `bazel run //:load` tags it as ghcr.io/shaoster/glaze:latest, matching the
 # image reference in docker-compose.yml.
