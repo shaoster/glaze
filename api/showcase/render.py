@@ -35,13 +35,13 @@ from .music import get_track
 from .storyboard import validate_storyboard
 
 SHOWCASE_VIDEO_TASK_TYPE = "generate_showcase_video"
-SHOWCASE_VIDEO_RENDER_VERSION = "4"
+SHOWCASE_VIDEO_RENDER_VERSION = "5"
 SHOWCASE_VIDEO_FORMAT = "mp4"
 SHOWCASE_VIDEO_CANVAS_SIZE = (1280, 720)
 SHOWCASE_VIDEO_FPS = 24
 SHOWCASE_VIDEO_FADE_SECONDS = 0.75
 SHOWCASE_VIDEO_CLOSING_SECONDS = 3.0
-_BRAND_LOCKUP_SCALE = 4
+_SLIDE_RENDER_SCALE = 4
 _BRAND_ICON_VIEWBOX = 128
 _BRAND_ICON_FILL = "#C66A3D"
 _BRAND_ICON_STROKE = "#8A3F1D"
@@ -67,6 +67,195 @@ def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     if _FONT_PATH.exists():
         return ImageFont.truetype(str(_FONT_PATH), size=size)
     return ImageFont.load_default()
+
+
+class _SlideCanvas:
+    """Super-sampled drawing surface for a single video slide.
+
+    Callers work entirely in *logical* canvas units (the 1280×720
+    coordinate space).  Internally every coordinate and font size is
+    scaled by ``_SLIDE_RENDER_SCALE`` so the surface is rendered at a
+    higher physical resolution; ``finish()`` downsamples back to
+    ``SHOWCASE_VIDEO_CANVAS_SIZE`` with LANCZOS resampling, producing
+    smoother edges than direct 1× rendering.
+
+    Precondition (inputs):  every value passed to draw methods — x, y,
+        width, height, radius, stroke_width, font logical size — is in
+        *logical* canvas units.
+    Postcondition (``finish()``):  returns an RGB ``PIL.Image`` at
+        exactly ``SHOWCASE_VIDEO_CANVAS_SIZE``.
+    Internal invariant:  ``_image`` always lives in physical pixel space
+        (logical value × scale).  No code outside this class should
+        reference the physical size directly.
+    """
+
+    def __init__(
+        self,
+        scale: int,
+        *,
+        background: tuple[int, int, int] | str = _BACKGROUND,
+    ) -> None:
+        w, h = SHOWCASE_VIDEO_CANVAS_SIZE
+        self._scale = scale
+        self._image = PILImage.new("RGBA", (w * scale, h * scale), background)
+        self._draw = ImageDraw.Draw(self._image)
+
+    # ------------------------------------------------------------------ fonts
+
+    def font(self, logical_size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+        """Return a font whose rendered height equals *logical_size* pt
+        at output resolution."""
+        return _load_font(logical_size * self._scale)
+
+    # -------------------------------------------------------- drawing methods
+    # All (x, y, w, h, radius, stroke_width) parameters are in logical units.
+
+    def rectangle(self, box: tuple[float, float, float, float], **kwargs: Any) -> None:
+        self._draw.rectangle(self._phys_box(box), **kwargs)
+
+    def rounded_rectangle(
+        self,
+        box: tuple[float, float, float, float],
+        *,
+        radius: float = 0,
+        **kwargs: Any,
+    ) -> None:
+        self._draw.rounded_rectangle(
+            self._phys_box(box), radius=self._p(radius), **kwargs
+        )
+
+    def text(
+        self,
+        xy: tuple[float, float],
+        string: str,
+        *,
+        font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+        stroke_width: int = 0,
+        **kwargs: Any,
+    ) -> None:
+        x, y = xy
+        self._draw.text(
+            (self._p(x), self._p(y)),
+            string,
+            font=font,
+            stroke_width=self._p(stroke_width),
+            **kwargs,
+        )
+
+    def textbbox(
+        self,
+        xy: tuple[float, float],
+        string: str,
+        *,
+        font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+        stroke_width: int = 0,
+        **kwargs: Any,
+    ) -> tuple[float, float, float, float]:
+        """Bounding box of *string* in *logical* units."""
+        x, y = xy
+        raw = self._draw.textbbox(
+            (self._p(x), self._p(y)),
+            string,
+            font=font,
+            stroke_width=self._p(stroke_width),
+            **kwargs,
+        )
+        s = self._scale
+        return (raw[0] / s, raw[1] / s, raw[2] / s, raw[3] / s)
+
+    def textlength(
+        self,
+        string: str,
+        *,
+        font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    ) -> float:
+        """Advance width of *string* in *logical* units."""
+        return self._draw.textlength(string, font=font) / self._scale
+
+    # ------------------------------------------------------- image compositing
+
+    def paste_image(
+        self,
+        image: PILImage.Image,
+        *,
+        crop: dict | None = None,
+        preserve_aspect: bool = False,
+    ) -> None:
+        """Fit *image* to the physical canvas size and paste at (0, 0).
+
+        Precondition:  *image* is a PIL image of any size and mode.
+        Postcondition: the canvas background is filled with the fitted,
+            cropped image rendered at physical resolution.
+        """
+        w, h = SHOWCASE_VIDEO_CANVAS_SIZE
+        fitted = _fit_image(
+            image,
+            target_size=(w * self._scale, h * self._scale),
+            crop=crop,
+            preserve_aspect=preserve_aspect,
+        )
+        self._image.paste(fitted.convert("RGBA"), (0, 0))
+
+    def overlay_rgba(self, rgba_image: PILImage.Image) -> None:
+        """Alpha-composite a *logical*-resolution RGBA image over the canvas.
+
+        Precondition:  *rgba_image* is RGBA at ``SHOWCASE_VIDEO_CANVAS_SIZE``.
+        Postcondition: *rgba_image* is scaled to physical resolution and
+            composited over the canvas.
+        """
+        w, h = rgba_image.size
+        physical = rgba_image.resize(
+            (w * self._scale, h * self._scale),
+            resample=PILImage.Resampling.LANCZOS,
+        )
+        self._image.alpha_composite(physical)
+
+    def paste_physical_rgba(
+        self,
+        image: PILImage.Image,
+        xy: tuple[int, int],
+    ) -> None:
+        """Alpha-composite a *physical*-resolution RGBA image at logical *xy*.
+
+        Precondition:  *image* is already at physical pixel resolution
+            (logical size × ``_SLIDE_RENDER_SCALE``).  Use this only for
+            assets rendered at physical resolution by helper functions
+            (e.g. ``_render_potterdoc_icon``).
+        """
+        self._image.alpha_composite(image, (self._p(xy[0]), self._p(xy[1])))
+
+    def physical(self, logical_value: int) -> int:
+        """Convert a *logical* size to physical pixels.
+
+        Use only when calling helpers that require a physical pixel size
+        (e.g. ``_render_potterdoc_icon``).  All ``_SlideCanvas`` draw
+        methods accept logical values automatically.
+        """
+        return logical_value * self._scale
+
+    # ----------------------------------------------------------------- output
+
+    def finish(self) -> PILImage.Image:
+        """Downsample to ``SHOWCASE_VIDEO_CANVAS_SIZE`` and return RGB.
+
+        Postcondition: result.size == SHOWCASE_VIDEO_CANVAS_SIZE,
+                       result.mode == "RGB".
+        """
+        w, h = SHOWCASE_VIDEO_CANVAS_SIZE
+        return self._image.resize((w, h), resample=PILImage.Resampling.LANCZOS).convert(
+            "RGB"
+        )
+
+    # --------------------------------------------------------------- internal
+
+    def _p(self, v: float) -> int:
+        return round(v * self._scale)
+
+    def _phys_box(
+        self, box: tuple[float, float, float, float]
+    ) -> tuple[int, int, int, int]:
+        x0, y0, x1, y1 = box
+        return (self._p(x0), self._p(y0), self._p(x1), self._p(y1))
 
 
 def compute_storyboard_hash(storyboard: dict) -> str:
@@ -102,10 +291,11 @@ def _load_image(image_dict: dict | None) -> PILImage.Image | None:
 def _fit_image(
     image: PILImage.Image,
     *,
+    target_size: tuple[int, int] | None = None,
     crop: dict | None = None,
     preserve_aspect: bool = False,
 ) -> PILImage.Image:
-    width, height = SHOWCASE_VIDEO_CANVAS_SIZE
+    width, height = target_size or SHOWCASE_VIDEO_CANVAS_SIZE
     if crop:
         try:
             crop_x = float(crop.get("x", 0.0))
@@ -142,12 +332,18 @@ def _fit_image(
 
 
 def _wrap_text_pixels(
-    draw: ImageDraw.ImageDraw,
+    canvas: _SlideCanvas,
     text: str,
     *,
     font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
-    max_width: int,
+    max_width: float,
 ) -> list[str]:
+    """Wrap *text* so each line fits within *max_width* logical units.
+
+    Precondition:  *max_width* is in logical canvas units.
+    Postcondition: every returned line renders within *max_width* when
+        measured via *canvas*.textlength.
+    """
     if not text:
         return []
     lines: list[str] = []
@@ -159,7 +355,7 @@ def _wrap_text_pixels(
         current: list[str] = []
         for word in words:
             candidate = " ".join([*current, word])
-            if draw.textlength(candidate, font=font) <= max_width:
+            if canvas.textlength(candidate, font=font) <= max_width:
                 current.append(word)
             else:
                 if current:
@@ -189,7 +385,7 @@ def _ascii_text(text: str | None) -> str:
 
 
 def _draw_text_block(
-    draw: ImageDraw.ImageDraw,
+    canvas: _SlideCanvas,
     text: str,
     *,
     box: tuple[int, int, int, int],
@@ -199,17 +395,22 @@ def _draw_text_block(
     stroke_width: int = 0,
     stroke_fill: tuple[int, int, int] | None = None,
 ) -> None:
+    """Draw *text* into *box*, wrapping at pixel boundaries.
+
+    Precondition:  *box* coordinates and *line_spacing* are in logical
+        canvas units; *stroke_width* is in logical units.
+    """
     left, top, right, bottom = box
-    lines = _wrap_text_pixels(draw, text, font=font, max_width=right - left)
-    y = top
+    lines = _wrap_text_pixels(canvas, text, font=font, max_width=right - left)
+    y: float = top
     for line in lines:
-        bbox = draw.textbbox(
+        bbox = canvas.textbbox(
             (left, y),
             line,
             font=font,
             stroke_width=stroke_width,
         )
-        draw.text(
+        canvas.text(
             (left, y),
             line,
             fill=fill,
@@ -217,20 +418,24 @@ def _draw_text_block(
             stroke_width=stroke_width,
             stroke_fill=stroke_fill,
         )
-        y = int(bbox[3]) + line_spacing
+        y = bbox[3] + line_spacing
         if y > bottom:
             break
 
 
-def _placeholder_canvas() -> PILImage.Image:
-    width, height = SHOWCASE_VIDEO_CANVAS_SIZE
-    canvas = PILImage.new("RGB", (width, height), _BACKGROUND)
-    draw = ImageDraw.Draw(canvas)
-    font = _load_font(48)
-    draw.rectangle((0, 0, width, height), fill=_BACKGROUND)
-    draw.rounded_rectangle((32, 32, width - 32, height - 32), radius=24, fill=_WHITE)
-    draw.text((80, 80), "PotterDoc", fill=_ACCENT, font=font)
-    return canvas
+def _draw_background(sc: _SlideCanvas) -> None:
+    """Draw the fallback card background onto *sc*.
+
+    Fills the canvas with the brand placeholder (cream rounded card on
+    black).  Called before pasting a photo; the photo then covers it.
+    If no photo is available the placeholder remains visible.
+
+    Precondition:  *sc* is a freshly created ``_SlideCanvas``.
+    """
+    w, h = SHOWCASE_VIDEO_CANVAS_SIZE
+    sc.rectangle((0, 0, w, h), fill=_BACKGROUND)
+    sc.rounded_rectangle((32, 32, w - 32, h - 32), radius=24, fill=_WHITE)
+    sc.text((80, 80), "PotterDoc", font=sc.font(48), fill=_ACCENT)
 
 
 def _render_potterdoc_icon(size: int) -> PILImage.Image:
@@ -284,59 +489,48 @@ def _render_potterdoc_icon(size: int) -> PILImage.Image:
     return canvas
 
 
-def _brand_lockup_layout(scale: int) -> dict[str, int]:
-    width, height = SHOWCASE_VIDEO_CANVAS_SIZE
-    work_width = width * scale
-    work_height = height * scale
-    title_font = _load_font(80 * scale)
-    measurement_canvas = PILImage.new("RGBA", (1, 1), (0, 0, 0, 0))
-    measurement_draw = ImageDraw.Draw(measurement_canvas)
+def _brand_lockup_layout(sc: _SlideCanvas) -> dict[str, int]:
+    """Compute the closing-frame brand lockup positions in *logical* units.
 
-    text = "PotterDoc"
-    text_bbox = measurement_draw.textbbox((0, 0), text, font=title_font)
-    text_width = int(text_bbox[2] - text_bbox[0])
+    Precondition:  *sc* is the ``_SlideCanvas`` that will be drawn on.
+    Postcondition: all returned values are in logical canvas units.
+    """
+    w, h = SHOWCASE_VIDEO_CANVAS_SIZE
+    font = sc.font(80)
+    label = "PotterDoc"
+    text_width = sc.textlength(label, font=font)
+    text_bbox = sc.textbbox((0, 0), label, font=font)
 
-    icon_size = int(160 * scale)
-    gap = int(30 * scale)
+    icon_size = 160
+    gap = 40
     total_width = icon_size + gap + text_width
-    center_x = work_width // 2
-    center_y = work_height // 2
-    left_x = center_x - total_width // 2
+    center_x = w // 2
+    center_y = h // 2
+    left_x = round(center_x - total_width / 2)
     icon_y = center_y - icon_size // 2
     text_x = left_x + icon_size + gap
-    text_y = int(center_y - ((text_bbox[1] + text_bbox[3]) / 2))
+    text_y = round(center_y - (text_bbox[1] + text_bbox[3]) / 2)
     return {
         "icon_size": icon_size,
-        "gap": gap,
         "icon_x": left_x,
         "icon_y": icon_y,
         "text_x": text_x,
         "text_y": text_y,
-        "center_y": center_y,
     }
 
 
 def _render_closing_frame() -> PILImage.Image:
-    width, height = SHOWCASE_VIDEO_CANVAS_SIZE
-    scale = _BRAND_LOCKUP_SCALE
-    work = PILImage.new("RGBA", (width * scale, height * scale), "#000000")
-    draw = ImageDraw.Draw(work)
-
-    title_font = _load_font(80 * scale)
-    text = "PotterDoc"
-    layout = _brand_lockup_layout(scale)
-    icon = _render_potterdoc_icon(layout["icon_size"])
-    work.alpha_composite(icon, (layout["icon_x"], layout["icon_y"]))
-    draw.text(
+    sc = _SlideCanvas(_SLIDE_RENDER_SCALE, background="#000000")
+    layout = _brand_lockup_layout(sc)
+    icon = _render_potterdoc_icon(sc.physical(layout["icon_size"]))
+    sc.paste_physical_rgba(icon, (layout["icon_x"], layout["icon_y"]))
+    sc.text(
         (layout["text_x"], layout["text_y"]),
-        text,
+        "PotterDoc",
+        font=sc.font(80),
         fill="#F1E4D2",
-        font=title_font,
     )
-
-    return work.resize((width, height), resample=PILImage.Resampling.LANCZOS).convert(
-        "RGB"
-    )
+    return sc.finish()
 
 
 def _fade_background_frame(frame: PILImage.Image, alpha: float) -> PILImage.Image:
@@ -348,98 +542,96 @@ def _fade_background_frame(frame: PILImage.Image, alpha: float) -> PILImage.Imag
 
 
 def _render_cover_frame(storyboard: dict, slide: dict) -> PILImage.Image:
-    canvas = _placeholder_canvas()
+    sc = _SlideCanvas(_SLIDE_RENDER_SCALE)
+    _draw_background(sc)
     source = _load_image(slide.get("image"))
     if source is not None:
-        source = _fit_image(
+        sc.paste_image(
             source,
             crop=slide.get("image", {}).get("crop"),
             preserve_aspect=bool(slide.get("image", {}).get("crop")),
         )
-        canvas.paste(source, (0, 0))
-    title_font = _load_font(60)
-    body_font = _load_font(40)
-    card = PILImage.new("RGBA", SHOWCASE_VIDEO_CANVAS_SIZE, (0, 0, 0, 0))
-    card_draw = ImageDraw.Draw(card)
-    card_draw.rounded_rectangle((40, 500, 1240, 680), radius=24, fill=(*_WHITE, 160))
-    canvas = PILImage.alpha_composite(canvas.convert("RGBA"), card).convert("RGB")
-    draw = ImageDraw.Draw(canvas)
-    draw.text(
+    w, h = SHOWCASE_VIDEO_CANVAS_SIZE
+    card = PILImage.new("RGBA", (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(card).rounded_rectangle(
+        (40, 500, w - 40, h - 40), radius=24, fill=(*_WHITE, 160)
+    )
+    sc.overlay_rgba(card)
+    title_font = sc.font(60)
+    body_font = sc.font(40)
+    sc.text(
         (80, 520),
         slide.get("heading") or "Untitled piece",
-        fill=_ACCENT,
         font=title_font,
+        fill=_ACCENT,
     )
     story = (slide.get("text") or "").strip()
     if story:
         _draw_text_block(
-            draw,
-            story,
-            box=(80, 590, 1200, 670),
-            fill=_MUTED,
-            font=body_font,
+            sc, story, box=(80, 595, w - 80, h - 55), fill=_MUTED, font=body_font
         )
-    return canvas
+    return sc.finish()
 
 
 def _render_image_frame(slide: dict) -> PILImage.Image:
-    canvas = _placeholder_canvas()
+    sc = _SlideCanvas(_SLIDE_RENDER_SCALE)
+    _draw_background(sc)
     source = _load_image(slide.get("image"))
     if source is not None:
-        source = _fit_image(
+        sc.paste_image(
             source,
             crop=slide.get("image", {}).get("crop"),
             preserve_aspect=bool(slide.get("image", {}).get("crop")),
         )
-        canvas.paste(source, (0, 0))
-    draw = ImageDraw.Draw(canvas)
-    header_font = _load_font(44)
-    body_font = _load_font(36)
-    draw.text(
+    w, h = SHOWCASE_VIDEO_CANVAS_SIZE
+    header_font = sc.font(44)
+    body_font = sc.font(36)
+    sc.text(
         (48, 32),
         _ascii_text(slide.get("state_label") or "State"),
-        fill=_WHITE,
         font=header_font,
+        fill=_WHITE,
         stroke_width=3,
         stroke_fill=_INK,
     )
     caption = _ascii_text((slide.get("caption") or "").strip())
     if caption:
         _draw_text_block(
-            draw,
+            sc,
             caption,
-            box=(48, 580, 1232, 690),
+            box=(48, 580, w - 48, h - 30),
             fill=_WHITE,
             font=body_font,
             stroke_width=2,
             stroke_fill=_INK,
         )
-    return canvas
+    return sc.finish()
 
 
 def _render_note_frame(slide: dict) -> PILImage.Image:
-    canvas = _placeholder_canvas()
-    draw = ImageDraw.Draw(canvas)
-    title_font = _load_font(52)
-    body_font = _load_font(40)
-    draw.rounded_rectangle((32, 32, 1248, 688), radius=24, fill=_WHITE)
-    draw.text(
+    sc = _SlideCanvas(_SLIDE_RENDER_SCALE)
+    _draw_background(sc)
+    w, h = SHOWCASE_VIDEO_CANVAS_SIZE
+    sc.rounded_rectangle((32, 32, w - 32, h - 32), radius=24, fill=_WHITE)
+    title_font = sc.font(52)
+    body_font = sc.font(40)
+    sc.text(
         (72, 64),
         _ascii_text(slide.get("state_label") or "Note"),
-        fill=_ACCENT,
         font=title_font,
+        fill=_ACCENT,
     )
     note = _ascii_text((slide.get("text") or "").strip())
     if note:
         _draw_text_block(
-            draw,
+            sc,
             note,
-            box=(72, 140, 1176, 660),
+            box=(72, 140, w - 104, h - 60),
             fill=_INK,
             font=body_font,
             line_spacing=12,
         )
-    return canvas
+    return sc.finish()
 
 
 def _slide_duration_seconds(slide: dict) -> float:
