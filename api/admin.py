@@ -31,8 +31,6 @@ from .models import (
     Piece,
     PieceState,
     PieceStateImage,
-    SupportMessage,
-    SupportThread,
     UserProfile,
 )
 from .serializers import PieceStateSerializer
@@ -141,37 +139,6 @@ admin.site.__class__ = GlazeAdminSite
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "openid_subject")
     search_fields = ("user__username", "user__email", "openid_subject")
-
-
-@admin.register(SupportThread)
-class SupportThreadAdmin(admin.ModelAdmin):
-    list_display = ("subject", "user", "is_closed", "created", "last_message_at")
-    list_filter = ("is_closed", "created", "last_message_at")
-    search_fields = ("subject", "user__username", "user__email")
-    readonly_fields = ("created", "last_message_at")
-    date_hierarchy = "last_message_at"
-
-
-@admin.register(SupportMessage)
-class SupportMessageAdmin(admin.ModelAdmin):
-    list_display = ("thread", "author", "sender_role", "created")
-    list_filter = ("created",)
-    search_fields = (
-        "thread__subject",
-        "body",
-        "author__username",
-        "author__email",
-    )
-    readonly_fields = ("author", "created")
-    autocomplete_fields = ("thread",)
-
-    @admin.display(description="Sender")
-    def sender_role(self, obj: SupportMessage) -> str:
-        return "Admin" if obj.author.is_staff else "User"
-
-    def save_model(self, request, obj, form, change):
-        obj.author = request.user
-        super().save_model(request, obj, form, change)
 
 
 def _make_public_library_form(model_cls):

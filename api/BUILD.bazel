@@ -39,9 +39,6 @@ py_library(
         "piece/helpers.py",
         "piece/image_views.py",
         "piece/showcase_views.py",
-        "support/__init__.py",
-        "support/serializers.py",
-        "support/views.py",
         "cloudinary/__init__.py",
         "cloudinary/views.py",
         "cloudinary/admin_views.py",
@@ -187,9 +184,6 @@ filegroup(
         "piece/helpers.py",
         "piece/image_views.py",
         "piece/showcase_views.py",
-        "support/__init__.py",
-        "support/serializers.py",
-        "support/views.py",
         "cloudinary/__init__.py",
         "cloudinary/views.py",
         "cloudinary/admin_views.py",
@@ -412,25 +406,6 @@ pytest_test(
 )
 
 pytest_test(
-    name = "api_support_test",
-    tags = ["integration"],
-    size = "small",
-    srcs = _CONFTEST + [
-        "tests/test_support.py",
-    ],
-    args = ["api/tests/test_support.py"],
-    data = _TEST_DATA,
-    env = _TEST_ENV,
-    main = "//tools:pytest_main.py",
-    deps = [":api_schema_lib", ":api_admin_lib"] + _PYTEST_DEPS,
-    expected_coverage = [
-        "api/models.py",
-        "api/support/views.py",
-        "api/admin.py",
-    ],
-)
-
-pytest_test(
     name = "api_health_test",
     tags = ["integration"],
     size = "small",
@@ -600,7 +575,6 @@ test_suite(
         ":api_model_test",
         ":api_otel_test",
         ":api_piece_test",
-        ":api_support_test",
         ":api_preferences_test",
         ":api_workflow_test",
     ],

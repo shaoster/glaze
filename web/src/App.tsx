@@ -41,6 +41,7 @@ import {
 } from "@mui/material";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import DownloadIcon from "@mui/icons-material/Download";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
 import CropFreeIcon from "@mui/icons-material/CropFree";
@@ -64,7 +65,6 @@ import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tan
 import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AppFooterLinks from "./components/AppFooterLinks";
-import ContactSupportDialog from "./components/ContactSupportDialog";
 import PublicPieceShell from "./components/PublicPieceShell";
 import UserPreferencesDialog from "./components/UserPreferencesDialog";
 import TutorialManager from "./components/TutorialManager";
@@ -267,13 +267,11 @@ function AuthLanding({
   redirectTo,
   googleOauthClientId,
   mockIdpUrl,
-  onContactUs,
 }: {
   onAuthenticated: (user: AuthUser) => void;
   redirectTo: string | null;
   googleOauthClientId: string;
   mockIdpUrl: string | null;
-  onContactUs: () => void;
 }) {
   return (
     <Container
@@ -341,7 +339,7 @@ function AuthLanding({
             </Button>
           )}
 
-          <AppFooterLinks onContactUs={onContactUs} />
+          <AppFooterLinks />
         </Stack>
       </Paper>
     </Container>
@@ -353,13 +351,11 @@ function AppShell({
   adminBaseUrl,
   onLogout,
   onCurrentUserUpdated,
-  onContactUs,
 }: {
   currentUser: AuthUser;
   adminBaseUrl: string | null;
   onLogout: () => void;
   onCurrentUserUpdated: (user: AuthUser) => void;
-  onContactUs: () => void;
 }) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -488,6 +484,28 @@ function AppShell({
               anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
               transformOrigin={{ vertical: "top", horizontal: "right" }}
             >
+              <MenuItem
+                component="a"
+                href="/support/tickets/my-tickets/"
+                onClick={() => setMenuAnchor(null)}
+              >
+                <ListItemIcon>
+                  <HelpOutlineIcon fontSize="small" />
+                </ListItemIcon>
+                Support Tickets
+              </MenuItem>
+              {currentUser.is_staff ? (
+                <MenuItem
+                  component="a"
+                  href="/support/dashboard/"
+                  onClick={() => setMenuAnchor(null)}
+                >
+                  <ListItemIcon>
+                    <HelpOutlineIcon fontSize="small" />
+                  </ListItemIcon>
+                  Support Desk
+                </MenuItem>
+              ) : null}
               <MenuItem
                 onClick={() => {
                   setMenuAnchor(null);
@@ -664,7 +682,7 @@ function AppShell({
             onClose={closePreferencesDialog}
             onSectionChange={switchPreferencesSection}
           />
-          <AppFooterLinks onContactUs={onContactUs} sticky />
+          <AppFooterLinks sticky />
         </Container>
       </PreferencesDialogProvider>
     </CurrentUserProvider>
@@ -676,13 +694,11 @@ function UnauthenticatedApp({
   redirectTo,
   googleOauthClientId,
   mockIdpUrl,
-  onContactUs,
 }: {
   onAuthenticated: (user: AuthUser) => void;
   redirectTo: string | null;
   googleOauthClientId: string;
   mockIdpUrl: string | null;
-  onContactUs: () => void;
 }) {
   const router = useMemo(
     () =>
@@ -697,7 +713,6 @@ function UnauthenticatedApp({
                   redirectTo={redirectTo}
                   googleOauthClientId={googleOauthClientId}
                   mockIdpUrl={mockIdpUrl}
-                  onContactUs={onContactUs}
                 />
               }
             />
@@ -803,7 +818,7 @@ function UnauthenticatedApp({
           </>,
         ),
       ),
-    [onAuthenticated, redirectTo, googleOauthClientId, mockIdpUrl, onContactUs],
+    [onAuthenticated, redirectTo, googleOauthClientId, mockIdpUrl],
   );
 
   return <RouterProvider router={router} />;
@@ -814,13 +829,11 @@ function AuthenticatedApp({
   adminBaseUrl,
   onLogout,
   onCurrentUserUpdated,
-  onContactUs,
 }: {
   currentUser: AuthUser;
   adminBaseUrl: string | null;
   onLogout: () => void;
   onCurrentUserUpdated: (user: AuthUser) => void;
-  onContactUs: () => void;
 }) {
   const router = useMemo(
     () =>
@@ -833,7 +846,6 @@ function AuthenticatedApp({
                 adminBaseUrl={adminBaseUrl}
                 onLogout={onLogout}
                 onCurrentUserUpdated={onCurrentUserUpdated}
-                onContactUs={onContactUs}
               />
             }
           >
@@ -923,7 +935,7 @@ function AuthenticatedApp({
           </Route>,
         ),
       ),
-    [adminBaseUrl, currentUser, onLogout, onCurrentUserUpdated, onContactUs],
+    [adminBaseUrl, currentUser, onLogout, onCurrentUserUpdated],
   );
 
   return <RouterProvider router={router} />;
@@ -957,7 +969,6 @@ export default function App() {
 
 function AppContent() {
   const queryClient = useQueryClient();
-  const [contactOpen, setContactOpen] = useState(false);
   useState(() => {
     initializeFrontendTelemetry();
     return null;
@@ -990,12 +1001,6 @@ function AppContent() {
     await logoutUser();
     queryClient.setQueryData(["appInit"], (prev: typeof init) => ({ ...prev!, user: null }));
   }, [queryClient]);
-  const handleOpenContact = useCallback(() => {
-    setContactOpen(true);
-  }, []);
-  const handleCloseContact = useCallback(() => {
-    setContactOpen(false);
-  }, []);
 
   useEffect(() => {
     if (postLoginRedirect && init?.user) {
@@ -1028,7 +1033,6 @@ function AppContent() {
             adminBaseUrl={init.adminBaseUrl}
             onLogout={handleLogout}
             onCurrentUserUpdated={handleCurrentUserUpdated}
-            onContactUs={handleOpenContact}
           />
         ) : (
           <UnauthenticatedApp
@@ -1036,15 +1040,8 @@ function AppContent() {
             redirectTo={postLoginRedirect}
             googleOauthClientId={init?.googleOauthClientId ?? ""}
             mockIdpUrl={init?.mockIdpUrl ?? null}
-            onContactUs={handleOpenContact}
           />
         )}
-        <ContactSupportDialog
-          open={contactOpen}
-          authenticated={Boolean(init?.user)}
-          userId={init?.user?.id ?? null}
-          onClose={handleCloseContact}
-        />
       </ThemeProvider>
     </GoogleOAuthProvider>
   );

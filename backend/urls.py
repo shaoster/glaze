@@ -107,6 +107,7 @@ def _piece_spa(request: HttpRequest, piece_id) -> HttpResponse | HttpResponseNot
 urlpatterns = [
     path(f"{settings.ADMIN_URL}/", admin.site.urls),
     path("api/", include("api.urls")),
+    path("support/", include("helpdesk.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/schema/swagger/",

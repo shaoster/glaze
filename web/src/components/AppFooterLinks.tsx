@@ -2,12 +2,10 @@ import { Box, Button, Stack, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
 
 interface AppFooterLinksProps {
-  onContactUs: () => void;
   sticky?: boolean;
 }
 
 export default function AppFooterLinks({
-  onContactUs,
   sticky = false,
 }: AppFooterLinksProps) {
   return (
@@ -65,18 +63,6 @@ export default function AppFooterLinks({
           sx={{ minWidth: 0, px: 0.5 }}
         >
           Terms of Service
-        </Button>
-        <Typography variant="body2" color="text.secondary">
-          •
-        </Typography>
-        <Button
-          type="button"
-          onClick={onContactUs}
-          variant="text"
-          size="small"
-          sx={{ minWidth: 0, px: 0.5 }}
-        >
-          Contact Us
         </Button>
       </Stack>
     </Box>

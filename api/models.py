@@ -729,61 +729,6 @@ class UserProfile(models.Model):
         return f"Profile({self.user})"
 
 
-class SupportThread(models.Model):
-    """A single support conversation between a user and maintainers."""
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="support_threads",
-    )
-    subject = models.CharField(max_length=255)
-    is_closed = models.BooleanField(default=False)
-    created = models.DateTimeField(auto_now_add=True)
-    last_message_at = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        ordering = ["-last_message_at", "-created"]
-
-    def __str__(self) -> str:
-        return self.subject
-
-
-class SupportMessage(models.Model):
-    """A message within a support thread.
-
-    User and staff replies share the same table so the app can render the
-    conversation without any email transport in the middle.
-    """
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    thread = models.ForeignKey(
-        SupportThread,
-        on_delete=models.CASCADE,
-        related_name="messages",
-    )
-    author = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="support_messages",
-    )
-    body = models.TextField()
-    created = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["created", "id"]
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        SupportThread.objects.filter(pk=self.thread_id).update(
-            last_message_at=self.created or timezone.now()
-        )
-
-    def __str__(self) -> str:
-        return f"{self.thread} / {self.author}"
-
-
 # These names are injected into the module namespace by _register_globals().
 # Typed as Any so mypy allows arbitrary attribute access and type annotation use.
 if TYPE_CHECKING:

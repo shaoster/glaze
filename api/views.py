@@ -49,7 +49,6 @@ from .piece.views import (
     piece_states,
     pieces,
 )
-from .support.views import support_contact
 from .task_views import submit_task, task_detail
 from .telemetry_views import browser_traces
 from .workflow_views import workflow_state_schema
@@ -93,6 +92,5 @@ __all__ = [
     "submit_task",
     "task_detail",
     "browser_traces",
-    "support_contact",
     "workflow_state_schema",
 ]

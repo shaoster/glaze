@@ -26,6 +26,7 @@ dependencies = [
     "django==6.0.4",
     "django-admin-sortable2==2.3.1",
     "django-cors-headers==4.9.0",
+    "django-helpdesk>=2.1.1",
     "django-import-export==4.3.9",
     "django-meta==2.5.1",
     "django-redis>=6.0.0",
@@ -105,3 +106,6 @@ dependencies = [
 
 [tool.uv.workspace]
 members = ["tools"]
+
+[dependency-groups]
+dev = []

@@ -77,28 +77,6 @@ const wirePieceDetail = {
   history: [wirePieceState],
 };
 
-const wireSupportThread = {
-  id: "thread-1",
-  subject: "Need help",
-  is_closed: false,
-  created: "2024-01-03T00:00:00Z",
-  last_message_at: "2024-01-04T00:00:00Z",
-  messages: [
-    {
-      id: "message-1",
-      sender: "user",
-      body: "I need help.",
-      created: "2024-01-03T00:00:00Z",
-    },
-    {
-      id: "message-2",
-      sender: "admin",
-      body: "We can help.",
-      created: "2024-01-04T00:00:00Z",
-    },
-  ],
-};
-
 beforeEach(() => {
   vi.clearAllMocks();
   mockClient.get.mockReset();
@@ -351,38 +329,6 @@ describe("piece endpoints", () => {
       "pieces/piece-1/states/state-1/",
     );
     expect(result.id).toBe("piece-1");
-  });
-});
-
-describe("support endpoints", () => {
-  it("fetchSupportThread maps thread and message dates", async () => {
-    const { fetchSupportThread } = await loadApiModule();
-    mockClient.get.mockResolvedValue({
-      data: { thread: wireSupportThread },
-    });
-
-    const result = await fetchSupportThread();
-
-    expect(mockClient.get).toHaveBeenCalledWith("support/contact/");
-    expect(result?.created).toBeInstanceOf(Date);
-    expect(result?.last_message_at).toBeInstanceOf(Date);
-    expect(result?.messages[0].created).toBeInstanceOf(Date);
-    expect(result?.messages[1].sender).toBe("admin");
-  });
-
-  it("sendSupportMessage posts the message body and maps the response", async () => {
-    const { sendSupportMessage } = await loadApiModule();
-    mockClient.post.mockResolvedValue({
-      data: { thread: wireSupportThread },
-    });
-
-    const result = await sendSupportMessage("Help me please");
-
-    expect(mockClient.post).toHaveBeenCalledWith("support/contact/", {
-      body: "Help me please",
-    });
-    expect(result?.subject).toBe("Need help");
-    expect(result?.messages).toHaveLength(2);
   });
 });
 

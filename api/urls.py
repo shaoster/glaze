@@ -52,7 +52,6 @@ urlpatterns = [
     path("auth/google/", views.auth_google, name="auth-google"),
     path("auth/export/", views.auth_export, name="auth-export"),
     path("auth/account/", views.auth_delete_account, name="auth-delete-account"),
-    path("support/contact/", views.support_contact, name="support-contact"),
     path(
         "auth/mock-idp/authorize/", views.mock_idp_authorize, name="mock-idp-authorize"
     ),
