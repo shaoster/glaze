@@ -10,7 +10,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("api", "0002_remove_invitecode_used_at_remove_invitecode_used_by_and_more"),
+        ("api", "0003_asynctask_progress"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
