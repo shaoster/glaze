@@ -11,7 +11,7 @@ services:
       deploy_init:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-f", "-H", "X-Forwarded-Proto: https", "http://localhost:8000/api/health/ready/"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://localhost:8000/api/health/ready/', headers={'X-Forwarded-Proto': 'https'}))"]
       interval: 5s
       timeout: 2s
       retries: 6
