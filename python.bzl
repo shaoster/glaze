@@ -18,7 +18,6 @@ def pytest_test(name, srcs, deps, cov_src = None, expected_coverage = [], **kwar
         **kwargs: Forwarded to py_test (including args, main, data, env, size, tags, etc.)
     """
     args = kwargs.pop("args", [])
-    package_collisions = kwargs.pop("package_collisions", "warning")
     if cov_src == None:
         cov_src = native.package_name()
 
@@ -29,7 +28,6 @@ def pytest_test(name, srcs, deps, cov_src = None, expected_coverage = [], **kwar
     py_test(
         name = name,
         srcs = srcs,
-        package_collisions = package_collisions,
         deps = deps + ["@pypi//pytest", "@pypi//coverage"],
         args = select({
             "//:is_coverage_build": args + ["--cov=" + cov_src] + scope_args + integration_args,
