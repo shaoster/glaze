@@ -67,6 +67,24 @@ def test_backend_production_settings_enable_hsts_preload(monkeypatch):
     assert settings.SECURE_SSL_REDIRECT is True
 
 
+@pytest.mark.parametrize(
+    "module_name",
+    [
+        "backend.settings",
+        "backend.test_settings",
+    ],
+)
+def test_helpdesk_dashboard_tag_library_is_installed(monkeypatch, module_name):
+    if module_name == "backend.settings":
+        monkeypatch.setenv("PRODUCTION", "1")
+        monkeypatch.setenv("SECRET_KEY", "test-secret")
+        monkeypatch.setenv("DATABASE_URL", "sqlite:///db.sqlite3")
+
+    settings = _reload_settings_module(module_name)
+
+    assert "django.contrib.humanize" in settings.INSTALLED_APPS
+
+
 def test_backend_test_settings_includes_admin_ingress_host(monkeypatch):
     monkeypatch.setenv("ALLOWED_HOST", "potterdoc.com")
     monkeypatch.setenv("ADMIN_INGRESS_HOST", "admin.potterdoc.com")
