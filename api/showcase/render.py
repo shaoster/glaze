@@ -63,10 +63,13 @@ def _canonical_json(data: Any) -> str:
 
 
 @lru_cache(maxsize=None)
-def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    if _FONT_PATH.exists():
-        return ImageFont.truetype(str(_FONT_PATH), size=size)
-    return ImageFont.load_default()
+def _load_font(size: int) -> ImageFont.FreeTypeFont:
+    if not _FONT_PATH.exists():
+        raise RuntimeError(
+            f"Required font not found: {_FONT_PATH}. "
+            "Install fonts-dejavu-core (apt) or equivalent."
+        )
+    return ImageFont.truetype(str(_FONT_PATH), size=size)
 
 
 class _SlideCanvas:
