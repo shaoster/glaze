@@ -17,14 +17,14 @@ spec:
         cpu: "10m"
         memory: "32Mi"
       limits:
-        memory: "128Mi"
+        memory: "64Mi"
     cainjector:
       resources:
         requests:
           cpu: "10m"
           memory: "32Mi"
         limits:
-          memory: "128Mi"
+          memory: "64Mi"
     webhook:
       livenessProbe:
         timeoutSeconds: 5

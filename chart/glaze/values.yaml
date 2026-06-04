@@ -75,7 +75,7 @@ backup:
       memory: "64Mi"
       cpu: "25m"
     limits:
-      memory: "384Mi"
+      memory: "96Mi"
 
 redis:
   image: redis:7-alpine
