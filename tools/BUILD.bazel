@@ -40,7 +40,6 @@ py_binary(
     name = "generate_schema",
     srcs = ["generate_schema.py"],
     data = ["//:workflow_files"],
-    package_collisions = "warning",
     deps = [
         "//api:api_lib",
         "//backend:backend_lib",

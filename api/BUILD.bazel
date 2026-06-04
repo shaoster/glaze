@@ -264,7 +264,6 @@ pytest_test(
     name = "api_workflow_test",
     tags = ["integration"],
     size = "medium",
-    package_collisions = "warning",
     srcs = _CONFTEST + [
         "tests/test_custom_fields.py",
         "tests/test_workflow_globals.py",
@@ -286,7 +285,6 @@ pytest_test(
     name = "api_model_test",
     tags = ["integration"],
     size = "medium",
-    package_collisions = "warning",
     srcs = _CONFTEST + [
         "tests/test_async_maintenance.py",
         "tests/test_async_tasks.py",
@@ -322,7 +320,6 @@ pytest_test(
     name = "api_otel_test",
     tags = ["integration"],
     size = "small",
-    package_collisions = "warning",
     srcs = _CONFTEST + [
         "tests/test_otel.py",
         "tests/test_telemetry.py",
@@ -342,7 +339,6 @@ pytest_test(
     name = "api_piece_test",
     tags = ["integration"],
     size = "medium",
-    package_collisions = "warning",
     srcs = _CONFTEST + [
         "tests/test_analysis.py",
         "tests/test_keepsake_storyboard.py",
@@ -398,7 +394,6 @@ pytest_test(
     name = "api_auth_test",
     tags = ["integration"],
     size = "medium",
-    package_collisions = "warning",
     srcs = _CONFTEST + [
         "tests/test_auth.py",
     ],
@@ -414,7 +409,6 @@ pytest_test(
     name = "api_health_test",
     tags = ["integration"],
     size = "small",
-    package_collisions = "warning",
     srcs = _CONFTEST + [
         "tests/test_health.py",
     ],
@@ -430,7 +424,6 @@ pytest_test(
     name = "api_invitation_test",
     tags = ["integration"],
     size = "medium",
-    package_collisions = "warning",
     srcs = _CONFTEST + [
         "tests/test_invitations.py",
     ],
@@ -446,7 +439,6 @@ pytest_test(
     name = "api_glaze_test",
     tags = ["integration"],
     size = "medium",
-    package_collisions = "warning",
     srcs = _CONFTEST + [
         "tests/test_glaze_combination.py",
         "tests/test_glaze_combination_admin.py",
@@ -474,7 +466,6 @@ pytest_test(
     name = "api_admin_test",
     tags = ["integration"],
     size = "medium",
-    package_collisions = "warning",
     srcs = _CONFTEST + [
         "tests/test_admin_exports.py",
         "tests/test_admin_scope.py",
@@ -507,7 +498,6 @@ pytest_test(
     name = "api_preferences_test",
     tags = ["integration"],
     size = "small",
-    package_collisions = "warning",
     srcs = _CONFTEST + [
         "tests/test_preferences.py",
     ],
@@ -558,7 +548,6 @@ pytest_test(
     name = "api_migration_test",
     tags = ["integration"],
     size = "small",
-    package_collisions = "warning",
     srcs = _CONFTEST + [
         "tests/test_migrations_completeness.py",
     ],

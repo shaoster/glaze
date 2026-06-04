@@ -27,7 +27,7 @@ dependencies = [
     "django-admin-sortable2==2.3.1",
     "django-cors-headers==4.9.0",
     "django-bootstrap4-form==4.0.2",
-    "django-helpdesk[teams]>=2.1.1",
+    "django-helpdesk>=2.1.1",
     "django-import-export==4.3.9",
     "django-meta==2.5.1",
     "django-redis>=6.0.0",

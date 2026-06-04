@@ -14,7 +14,6 @@ py_binary(
     srcs = ["manage.py"],
     main = "manage.py",
     visibility = ["//visibility:public"],
-    package_collisions = "warning",
     deps = [
         "//api:api_lib",
         "//backend:backend_lib",

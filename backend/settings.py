@@ -99,18 +99,17 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "account",
     "adminsortable2",
     "import_export",
     "meta",
     "rest_framework",
     "corsheaders",
     "drf_spectacular",
-    "pinax.invitations.apps.AppConfig",
-    "pinax.teams.apps.AppConfig",
     "helpdesk.apps.HelpdeskConfig",
     "api",
 ]
+
+HELPDESK_TEAMS_MODE_ENABLED = False
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",

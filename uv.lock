@@ -408,18 +408,6 @@ wheels = [
 ]
 
 [[package]]
-name = "django-appconf"
-version = "1.2.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/a2/e58bec8d7941b914af52a67c35b5709eceed2caa2848f28437f1666ed668/django_appconf-1.2.0.tar.gz", hash = "sha256:15a88d60dd942d6059f467412fe4581db632ef03018a3c183fb415d6fc9e5cec", size = 16127, upload-time = "2025-11-08T15:46:27.304Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e8/e6/4c34d94dfb74bbcbc489606e61f1924933de30d22c593dd1f429f35fbd7f/django_appconf-1.2.0-py3-none-any.whl", hash = "sha256:b81bce5ef0ceb9d84df48dfb623a32235d941c78cc5e45dbb6947f154ea277f4", size = 6500, upload-time = "2025-11-08T15:46:25.957Z" },
-]
-
-[[package]]
 name = "django-bootstrap4-form"
 version = "4.0.2"
 source = { registry = "third_party/python" }
@@ -479,11 +467,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b5/6c/7f9ce5ab5a5ccfb188109d74248a50d5bfdc54d6518d6aa7d3dc0b85ab67/django_helpdesk-2.1.1-py3-none-any.whl", hash = "sha256:ab4863357b12c5c330e3c18076ff35e9780bf349475a43c72044f86c7b545d13", size = 9009247, upload-time = "2026-02-12T21:54:56.226Z" },
 ]
 
-[package.optional-dependencies]
-teams = [
-    { name = "pinax-teams" },
-]
-
 [[package]]
 name = "django-import-export"
 version = "4.3.9"
@@ -533,18 +516,6 @@ wheels = [
 ]
 
 [[package]]
-name = "django-reversion"
-version = "6.2.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/59/46/fe593a8fc15693b9017d3a0a6906cd5bd7347b8b269aaad66eebc4e8f06c/django_reversion-6.2.0.tar.gz", hash = "sha256:dadcb852c2577d3f6856bb1a1a0b1640a1f7df0718e2e832d51e3b61f053e8d8", size = 77528, upload-time = "2026-05-12T20:49:53.231Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/09/a9/d6d8c0db9b8410d01fe9036232f32ba1d1a114a3aac3129f3c821e5891c6/django_reversion-6.2.0-py3-none-any.whl", hash = "sha256:42f4076c0b3f361d1b9735fedc79860ecb9961130d05fb72b69b47c2538191f3", size = 86527, upload-time = "2026-05-12T20:49:51.776Z" },
-]
-
-[[package]]
 name = "django-stubs"
 version = "6.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -575,20 +546,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/52/e0/f2e6caf627d176a51fba1ca9c34082c7ea10d3f521ff2c828532ca99fa91/django_stubs_ext-6.0.2.tar.gz", hash = "sha256:70b7b7ae837e7a6036e2facb64435550bf7cf8143c1a6e802864d4824ce6058c", size = 6751, upload-time = "2026-04-01T08:27:01.987Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2b/d2/9cb93cd1ef94ddc97c26c902ff75a859f5f154051fec98cf8242649b26ce/django_stubs_ext-6.0.2-py3-none-any.whl", hash = "sha256:b35bdec1995bf49765cc39fa89aa7c23f120a23d0cb0152ab7fb4e48ff7d667b", size = 10446, upload-time = "2026-04-01T08:27:00.847Z" },
-]
-
-[[package]]
-name = "django-user-accounts"
-version = "3.3.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-    { name = "django-appconf" },
-    { name = "pytz" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/1d/89/ebedd37cfb42cfc4a028f956b725e91085b4d0ad5cea17cc723058d95139/django-user-accounts-3.3.2.tar.gz", hash = "sha256:aeeab93b5715f950f9c1edbc03b41438d0927b68232c40ba1f19538d6eb3fb59", size = 86783, upload-time = "2023-10-06T22:09:11.566Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/43/69/235943fea6a87e2d50b6a3a63447818aefa38fed0b5cd19f4d3fd16cb80f/django_user_accounts-3.3.2-py3-none-any.whl", hash = "sha256:c4f2bf5baf098a28cd8924a8984c88ba257d75219197794494daf9b6467905f0", size = 113956, upload-time = "2023-10-06T22:09:09.457Z" },
 ]
 
 [[package]]
@@ -700,7 +657,7 @@ dependencies = [
     { name = "django-admin-sortable2" },
     { name = "django-bootstrap4-form" },
     { name = "django-cors-headers" },
-    { name = "django-helpdesk", extra = ["teams"] },
+    { name = "django-helpdesk" },
     { name = "django-import-export" },
     { name = "django-meta" },
     { name = "django-redis" },
@@ -803,7 +760,7 @@ requires-dist = [
     { name = "django-admin-sortable2", specifier = "==2.3.1" },
     { name = "django-bootstrap4-form", specifier = "==4.0.2" },
     { name = "django-cors-headers", specifier = "==4.9.0" },
-    { name = "django-helpdesk", extras = ["teams"], specifier = ">=2.1.1" },
+    { name = "django-helpdesk", specifier = ">=2.1.1" },
     { name = "django-import-export", specifier = "==4.3.9" },
     { name = "django-meta", specifier = "==2.5.1" },
     { name = "django-redis", specifier = ">=6.0.0" },
@@ -1586,37 +1543,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pinax-invitations"
-version = "8.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-    { name = "django-appconf" },
-    { name = "django-user-accounts" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/39/6a/b4b42f9bb11c3de44a0f1175ef30ead1e25cb08858aadf451717cab9da7f/pinax-invitations-8.0.0.tar.gz", hash = "sha256:0902d88370b9ee007aae7c389006d4a73f0788cba8ee6c9c7ace145fd48ddcda", size = 14610, upload-time = "2023-04-14T23:57:42.421Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/14/e0dc06ca80838b28787d90b61298f4062c4d91d5a95d92a667df677d0756/pinax_invitations-8.0.0-py3-none-any.whl", hash = "sha256:6529ae6a1b4399d451b3b52c6a527a3722554ef31e984b0f52f9cc2221c16cd6", size = 15614, upload-time = "2023-04-14T23:57:40.551Z" },
-]
-
-[[package]]
-name = "pinax-teams"
-version = "3.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-    { name = "django-reversion" },
-    { name = "django-user-accounts" },
-    { name = "pillow" },
-    { name = "pinax-invitations" },
-    { name = "python-slugify" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a9/71/45965bd5f044fb3e5a0f5faacf7d88fb41def8a90b99e9c815499edd1e2d/pinax-teams-3.0.0.tar.gz", hash = "sha256:4620218c58d21b8b9f6ccc51e1f311f67755bc3939c70d6e92dfbc299ae4f4b2", size = 22697, upload-time = "2023-04-16T15:10:43.568Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/93/ed4dffa9bc89cf5a250dc3da0bd079d23c3c165bceba06671887067bdccc/pinax_teams-3.0.0-py3-none-any.whl", hash = "sha256:686f1cbc5525c3e9c1ec933e61d50c48838783d7c07703e699ddad410a4902e3", size = 24419, upload-time = "2023-04-16T15:10:40.82Z" },
-]
-
-[[package]]
 name = "platformdirs"
 version = "4.9.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1880,18 +1806,6 @@ wheels = [
 ]
 
 [[package]]
-name = "python-slugify"
-version = "8.0.4"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "text-unidecode" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/87/c7/5e1547c44e31da50a460df93af11a535ace568ef89d7a811069ead340c4a/python-slugify-8.0.4.tar.gz", hash = "sha256:59202371d1d05b54a9e7720c5e038f928f45daaffe41dd10822f3907b937c856", size = 10921, upload-time = "2024-02-08T18:32:45.488Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a4/62/02da182e544a51a5c3ccf4b03ab79df279f9c60c5e82d5e8bec7ca26ac11/python_slugify-8.0.4-py2.py3-none-any.whl", hash = "sha256:276540b79961052b66b7d116620b36518847f52d5fd9e3a70164fc8c50faa6b8", size = 10051, upload-time = "2024-02-08T18:32:43.911Z" },
-]
-
-[[package]]
 name = "pytz"
 version = "2026.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2144,15 +2058,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/11/00/416d2ba54d7d58a7f7c61bf62dfeb48fd553cf49614daf83312f2d2c156e/tablib-3.9.0.tar.gz", hash = "sha256:1b6abd8edb0f35601e04c6161d79660fdcde4abb4a54f66cc9f9054bd55d5fe2", size = 125565, upload-time = "2025-10-15T18:21:56.263Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/66/6b/32e51d847148b299088fc42d3d896845fd09c5247190133ea69dbe71ba51/tablib-3.9.0-py3-none-any.whl", hash = "sha256:eda17cd0d4dda614efc0e710227654c60ddbeb1ca92cdcfc5c3bd1fc5f5a6e4a", size = 49580, upload-time = "2025-10-15T18:21:44.185Z" },
-]
-
-[[package]]
-name = "text-unidecode"
-version = "1.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ab/e2/e9a00f0ccb71718418230718b3d900e71a5d16e701a3dae079a21e9cd8f8/text-unidecode-1.3.tar.gz", hash = "sha256:bad6603bb14d279193107714b288be206cac565dfa49aa5b105294dd5c4aab93", size = 76885, upload-time = "2019-08-30T21:36:45.405Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a6/a5/c0b6468d3824fe3fde30dbb5e1f687b291608f9473681bbf7dabbf5a87d7/text_unidecode-1.3-py2.py3-none-any.whl", hash = "sha256:1311f10e8b895935241623731c2ba64f4c455287888b18189350b67134a822e8", size = 78154, upload-time = "2019-08-30T21:37:03.543Z" },
 ]
 
 [[package]]
