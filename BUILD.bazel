@@ -14,6 +14,7 @@ py_binary(
     srcs = ["manage.py"],
     main = "manage.py",
     visibility = ["//visibility:public"],
+    package_collisions = "warning",
     deps = [
         "//api:api_lib",
         "//backend:backend_lib",
@@ -44,6 +45,12 @@ filegroup(
         "workflow.schema.yml",
         "workflow.yml",
     ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "third_party_python_files",
+    srcs = glob(["third_party/python/**"]),
     visibility = ["//visibility:public"],
 )
 
@@ -152,6 +159,7 @@ genrule(
     srcs = [
         "//:pyproject.toml",
         "//:uv.lock",
+        "//:third_party_python_files",
     ],
     tools = ["@uv//:uv"],
     outs = ["python_layer.tar"],
@@ -166,6 +174,8 @@ genrule(
         dest=$$(mktemp -d)
         cp $(location //:pyproject.toml) "$$work/pyproject.toml"
         cp $(location //:uv.lock) "$$work/uv.lock"
+        mkdir -p "$$work/third_party/python"
+        cp $(locations //:third_party_python_files) "$$work/third_party/python/"
 
         # Sync only the locked runtime dependencies into an isolated venv.
         cd "$$work"

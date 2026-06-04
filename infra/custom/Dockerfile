@@ -1,5 +1,5 @@
-# Stage 1: Build the backend schema
-FROM python:3.12-slim AS schema-builder
+# Stage 1: Install the shared Python dependencies once.
+FROM python:3.12-slim AS python-deps
 WORKDIR /app
 
 # Install uv for high-speed package management
@@ -7,9 +7,13 @@ RUN python -m pip install --no-cache-dir "uv==0.11.18"
 
 # Copy python dependencies
 COPY pyproject.toml uv.lock ./
+COPY third_party/python ./third_party/python
 
 # Install python dependencies system-wide
 RUN uv pip install --system --no-cache -r pyproject.toml
+
+# Stage 2: Build the backend schema
+FROM python-deps AS schema-builder
 
 # Copy Django code needed for schema generation
 COPY api/ ./api/
@@ -26,7 +30,7 @@ COPY assets/showcase_music/ ./assets/showcase_music/
 # Generate the OpenAPI schema.json
 RUN python manage.py spectacular --file schema.json --format openapi-json
 
-# Stage 2: Build the React frontend
+# Stage 3: Build the React frontend
 FROM node:22-slim AS web-builder
 WORKDIR /app/web
 
@@ -56,8 +60,8 @@ RUN npm run generate-types
 # Build the frontend production distribution
 RUN npx tsc -p tsconfig.app.json && npx vite build
 
-# Stage 3: Create the Python/Django backend & final runner
-FROM python:3.12-slim
+# Stage 4: Create the Python/Django backend & final runner
+FROM python-deps
 
 # Install system utilities (curl for health check probes)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -65,15 +69,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
-# Install uv for high-speed package management
-RUN python -m pip install --no-cache-dir "uv==0.11.18"
-
-# Copy python dependencies
-COPY pyproject.toml uv.lock ./
-
-# Install python dependencies system-wide
-RUN uv pip install --system --no-cache -r pyproject.toml
 
 # Copy built frontend assets from web-builder
 COPY --from=web-builder /app/web/dist ./web/dist
