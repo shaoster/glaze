@@ -15,7 +15,6 @@ import math
 import os
 import re
 import tempfile
-import textwrap
 import time
 import unicodedata
 from collections.abc import Callable
@@ -142,7 +141,13 @@ def _fit_image(
     )
 
 
-def _wrap_text(text: str, *, width: int) -> list[str]:
+def _wrap_text_pixels(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    *,
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    max_width: int,
+) -> list[str]:
     if not text:
         return []
     lines: list[str] = []
@@ -150,7 +155,18 @@ def _wrap_text(text: str, *, width: int) -> list[str]:
         if not paragraph.strip():
             lines.append("")
             continue
-        lines.extend(textwrap.wrap(paragraph, width=width))
+        words = paragraph.split()
+        current: list[str] = []
+        for word in words:
+            candidate = " ".join([*current, word])
+            if draw.textlength(candidate, font=font) <= max_width:
+                current.append(word)
+            else:
+                if current:
+                    lines.append(" ".join(current))
+                current = [word]
+        if current:
+            lines.append(" ".join(current))
     return lines or [text]
 
 
@@ -184,8 +200,7 @@ def _draw_text_block(
     stroke_fill: tuple[int, int, int] | None = None,
 ) -> None:
     left, top, right, bottom = box
-    max_chars = max(10, (right - left) // 18)
-    lines = _wrap_text(text, width=max_chars)
+    lines = _wrap_text_pixels(draw, text, font=font, max_width=right - left)
     y = top
     for line in lines:
         bbox = draw.textbbox(
@@ -211,10 +226,10 @@ def _placeholder_canvas() -> PILImage.Image:
     width, height = SHOWCASE_VIDEO_CANVAS_SIZE
     canvas = PILImage.new("RGB", (width, height), _BACKGROUND)
     draw = ImageDraw.Draw(canvas)
-    font = _load_font(36)
+    font = _load_font(48)
     draw.rectangle((0, 0, width, height), fill=_BACKGROUND)
-    draw.rounded_rectangle((72, 72, width - 72, height - 72), radius=32, fill=_WHITE)
-    draw.text((112, 112), "PotterDoc", fill=_ACCENT, font=font)
+    draw.rounded_rectangle((32, 32, width - 32, height - 32), radius=24, fill=_WHITE)
+    draw.text((80, 80), "PotterDoc", fill=_ACCENT, font=font)
     return canvas
 
 
@@ -273,7 +288,7 @@ def _brand_lockup_layout(scale: int) -> dict[str, int]:
     width, height = SHOWCASE_VIDEO_CANVAS_SIZE
     work_width = width * scale
     work_height = height * scale
-    title_font = _load_font(56 * scale)
+    title_font = _load_font(80 * scale)
     measurement_canvas = PILImage.new("RGBA", (1, 1), (0, 0, 0, 0))
     measurement_draw = ImageDraw.Draw(measurement_canvas)
 
@@ -281,7 +296,7 @@ def _brand_lockup_layout(scale: int) -> dict[str, int]:
     text_bbox = measurement_draw.textbbox((0, 0), text, font=title_font)
     text_width = int(text_bbox[2] - text_bbox[0])
 
-    icon_size = int(96 * scale)
+    icon_size = int(160 * scale)
     gap = int(30 * scale)
     total_width = icon_size + gap + text_width
     center_x = work_width // 2
@@ -307,7 +322,7 @@ def _render_closing_frame() -> PILImage.Image:
     work = PILImage.new("RGBA", (width * scale, height * scale), "#000000")
     draw = ImageDraw.Draw(work)
 
-    title_font = _load_font(56 * scale)
+    title_font = _load_font(80 * scale)
     text = "PotterDoc"
     layout = _brand_lockup_layout(scale)
     icon = _render_potterdoc_icon(layout["icon_size"])
@@ -342,21 +357,15 @@ def _render_cover_frame(storyboard: dict, slide: dict) -> PILImage.Image:
             preserve_aspect=bool(slide.get("image", {}).get("crop")),
         )
         canvas.paste(source, (0, 0))
-        overlay = PILImage.new("RGBA", SHOWCASE_VIDEO_CANVAS_SIZE, (0, 0, 0, 0))
-        overlay_draw = ImageDraw.Draw(overlay)
-        overlay_draw.rectangle(
-            (0, 440, SHOWCASE_VIDEO_CANVAS_SIZE[0], SHOWCASE_VIDEO_CANVAS_SIZE[1]),
-            fill=(0, 0, 0, 120),
-        )
-        canvas = PILImage.alpha_composite(canvas.convert("RGBA"), overlay).convert(
-            "RGB"
-        )
+    title_font = _load_font(60)
+    body_font = _load_font(40)
+    card = PILImage.new("RGBA", SHOWCASE_VIDEO_CANVAS_SIZE, (0, 0, 0, 0))
+    card_draw = ImageDraw.Draw(card)
+    card_draw.rounded_rectangle((40, 500, 1240, 680), radius=24, fill=(*_WHITE, 160))
+    canvas = PILImage.alpha_composite(canvas.convert("RGBA"), card).convert("RGB")
     draw = ImageDraw.Draw(canvas)
-    title_font = _load_font(42)
-    body_font = _load_font(28)
-    draw.rounded_rectangle((72, 540, 1208, 648), radius=24, fill=_WHITE)
     draw.text(
-        (110, 572),
+        (80, 520),
         slide.get("heading") or "Untitled piece",
         fill=_ACCENT,
         font=title_font,
@@ -366,7 +375,7 @@ def _render_cover_frame(storyboard: dict, slide: dict) -> PILImage.Image:
         _draw_text_block(
             draw,
             story,
-            box=(110, 606, 1120, 640),
+            box=(80, 590, 1200, 670),
             fill=_MUTED,
             font=body_font,
         )
@@ -384,10 +393,10 @@ def _render_image_frame(slide: dict) -> PILImage.Image:
         )
         canvas.paste(source, (0, 0))
     draw = ImageDraw.Draw(canvas)
-    header_font = _load_font(30)
-    body_font = _load_font(28)
+    header_font = _load_font(44)
+    body_font = _load_font(36)
     draw.text(
-        (72, 44),
+        (48, 32),
         _ascii_text(slide.get("state_label") or "State"),
         fill=_WHITE,
         font=header_font,
@@ -399,7 +408,7 @@ def _render_image_frame(slide: dict) -> PILImage.Image:
         _draw_text_block(
             draw,
             caption,
-            box=(72, 594, 1208, 680),
+            box=(48, 580, 1232, 690),
             fill=_WHITE,
             font=body_font,
             stroke_width=2,
@@ -411,11 +420,11 @@ def _render_image_frame(slide: dict) -> PILImage.Image:
 def _render_note_frame(slide: dict) -> PILImage.Image:
     canvas = _placeholder_canvas()
     draw = ImageDraw.Draw(canvas)
-    title_font = _load_font(36)
-    body_font = _load_font(28)
-    draw.rounded_rectangle((72, 72, 1208, 648), radius=32, fill=_WHITE)
+    title_font = _load_font(52)
+    body_font = _load_font(40)
+    draw.rounded_rectangle((32, 32, 1248, 688), radius=24, fill=_WHITE)
     draw.text(
-        (112, 120),
+        (72, 64),
         _ascii_text(slide.get("state_label") or "Note"),
         fill=_ACCENT,
         font=title_font,
@@ -425,10 +434,10 @@ def _render_note_frame(slide: dict) -> PILImage.Image:
         _draw_text_block(
             draw,
             note,
-            box=(112, 180, 1140, 612),
+            box=(72, 140, 1176, 660),
             fill=_INK,
             font=body_font,
-            line_spacing=10,
+            line_spacing=12,
         )
     return canvas
 
