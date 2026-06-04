@@ -59,10 +59,9 @@ RUN npx tsc -p tsconfig.app.json && npx vite build
 # Stage 3: Create the Python/Django backend & final runner
 FROM python:3.12-slim
 
-# Install system utilities and fonts required for video rendering
+# Install system utilities (curl for health check probes)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
