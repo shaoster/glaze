@@ -10,7 +10,7 @@ from PIL import Image as PILImage
 from api.models import AsyncTask, Image, Piece, PieceState, PieceStateImage
 from api.showcase.render import (
     _BACKGROUND,
-    _BRAND_LOCKUP_SCALE,
+    _SLIDE_RENDER_SCALE,
     _apply_audio_fade,
     _ascii_text,
     _brand_lockup_layout,
@@ -18,6 +18,7 @@ from api.showcase.render import (
     _load_image,
     _render_closing_frame,
     _render_image_frame,
+    _SlideCanvas,
 )
 from api.showcase.storyboard import build_keepsake_storyboard
 from api.tasks import _execute_task
@@ -131,11 +132,12 @@ class TestShowcaseVideoApi:
 
     def test_render_closing_frame_keeps_brand_lockup_separated(self):
         frame = _render_closing_frame()
-        layout = _brand_lockup_layout(_BRAND_LOCKUP_SCALE)
-        gap_mid_x = (
-            (layout["icon_x"] + layout["icon_size"] + layout["text_x"]) // 2
-        ) // _BRAND_LOCKUP_SCALE
-        gap_mid_y = layout["center_y"] // _BRAND_LOCKUP_SCALE
+        sc = _SlideCanvas(_SLIDE_RENDER_SCALE, background="#000000")
+        layout = _brand_lockup_layout(sc)
+        # layout values are in logical units; gap midpoint between icon and text
+        gap_mid_x = (layout["icon_x"] + layout["icon_size"] + layout["text_x"]) // 2
+        _, h = frame.size
+        gap_mid_y = h // 2
 
         assert frame.getpixel((gap_mid_x, gap_mid_y)) == (0, 0, 0)
 
