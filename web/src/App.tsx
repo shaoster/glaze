@@ -484,16 +484,6 @@ function AppShell({
               anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
               transformOrigin={{ vertical: "top", horizontal: "right" }}
             >
-              <MenuItem
-                component="a"
-                href="/support/tickets/my-tickets/"
-                onClick={() => setMenuAnchor(null)}
-              >
-                <ListItemIcon>
-                  <HelpOutlineIcon fontSize="small" />
-                </ListItemIcon>
-                Support Tickets
-              </MenuItem>
               {currentUser.is_staff ? (
                 <MenuItem
                   component="a"
@@ -505,7 +495,18 @@ function AppShell({
                   </ListItemIcon>
                   Support Desk
                 </MenuItem>
-              ) : null}
+              ) : (
+                <MenuItem
+                  component="a"
+                  href="/support/tickets/my-tickets/"
+                  onClick={() => setMenuAnchor(null)}
+                >
+                  <ListItemIcon>
+                    <HelpOutlineIcon fontSize="small" />
+                  </ListItemIcon>
+                  My Support Tickets
+                </MenuItem>
+              )}
               <MenuItem
                 onClick={() => {
                   setMenuAnchor(null);

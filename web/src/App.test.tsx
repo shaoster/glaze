@@ -310,7 +310,7 @@ describe("App auth flow", () => {
     );
   });
 
-  it("opens the support tickets page from the authenticated user menu", async () => {
+  it("shows my support tickets for non-staff users", async () => {
     vi.mocked(fetchAppInit).mockResolvedValue({
       googleOauthClientId: "test-client-id",
       adminBaseUrl: null,
@@ -329,7 +329,7 @@ describe("App auth flow", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("menuitem", { name: "Support Tickets" }),
+        screen.getByRole("menuitem", { name: "My Support Tickets" }),
       ).toHaveAttribute("href", "/support/tickets/my-tickets/");
     });
   });
