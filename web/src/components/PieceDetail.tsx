@@ -614,7 +614,7 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
                     Rendering in the background…
                   </Typography>
                   <LinearProgress
-                    variant={activeProgress ? "determinate" : "indeterminate"}
+                    variant={activeProgress !== null ? "determinate" : "indeterminate"}
                     value={activeProgress ?? undefined}
                   />
                 </Box>
