@@ -205,7 +205,8 @@ pkg_tar(
         "//api:api_runtime_files",
         "//backend:backend_runtime_files",
     ] + glob(["fixtures/**"], allow_empty = True)
-      + glob(["assets/showcase_music/**"], allow_empty = True),
+      + glob(["assets/showcase_music/**"], allow_empty = True)
+      + glob(["assets/fonts/**"], allow_empty = False),
     strip_prefix = ".",
     package_dir = "/app",
 )

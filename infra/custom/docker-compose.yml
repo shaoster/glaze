@@ -30,7 +30,7 @@ services:
       retries: 5
 
   deploy_init:
-    image: glaze:latest
+    image: ghcr.io/shaoster/glaze:latest
     restart: "no"
     command: python manage.py deploy_init
     environment:
@@ -43,10 +43,7 @@ services:
         condition: service_healthy
 
   web:
-    build:
-      context: ../..
-      dockerfile: infra/custom/Dockerfile
-    image: glaze:latest
+    image: ghcr.io/shaoster/glaze:latest
     restart: unless-stopped
     ports:
       - "127.0.0.1:8000:8000"  # Exposed locally for HTTP access without Nginx
@@ -73,14 +70,14 @@ services:
       deploy_init:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/ready/"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/ready/')"]
       interval: 30s
       timeout: 5s
       retries: 5
       start_period: 60s
 
   worker:
-    image: glaze:latest
+    image: ghcr.io/shaoster/glaze:latest
     restart: unless-stopped
     command: python -m celery -A backend worker -l INFO
     environment:
