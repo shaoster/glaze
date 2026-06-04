@@ -502,15 +502,24 @@ class TestShowcaseVideoApi:
         assert status_response.json()["enabled"] is False
 
     def test_progress_field_in_status_response(self, client, user):
+        from api.showcase import compute_storyboard_hash
+        from api.showcase.storyboard import build_keepsake_storyboard
+
         piece = _make_piece_with_terminal_state(user)
         client.force_authenticate(user=user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
 
+        storyboard = build_keepsake_storyboard(piece).to_dict()
+        input_hash = compute_storyboard_hash(storyboard)
         task = AsyncTask.objects.create(
             user=user,
             task_type="generate_showcase_video",
             status=AsyncTask.Status.RUNNING,
-            input_params={"piece_id": str(piece.id)},
+            input_params={
+                "piece_id": str(piece.id),
+                "storyboard": storyboard,
+                "input_hash": input_hash,
+            },
             progress=42,
         )
 

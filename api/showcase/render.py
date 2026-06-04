@@ -557,8 +557,13 @@ def _write_video_stream(
     video_stream.pix_fmt = "yuv420p"
     video_stream.time_base = Fraction(1, SHOWCASE_VIDEO_FPS)
 
-    total_duration = sum(durations)
-    total_frames = max(1, math.ceil(total_duration * SHOWCASE_VIDEO_FPS))
+    # Mirror _iter_video_frames frame-count logic so total_frames is accurate.
+    if len(slide_canvases) == 1:
+        total_frames = max(1, math.ceil(durations[0] * SHOWCASE_VIDEO_FPS))
+    else:
+        starts = _slide_start_times(durations, transition_seconds)
+        effective_duration = starts[-1] + durations[-1]
+        total_frames = max(1, math.ceil(effective_duration * SHOWCASE_VIDEO_FPS))
 
     packets: list[Any] = []
     frame_count = 0
@@ -578,7 +583,7 @@ def _write_video_stream(
         if on_progress is not None:
             now = time.monotonic()
             if now - last_reported >= 1.0:
-                on_progress(round(frame_count / total_frames * 100))
+                on_progress(min(100, round(frame_count / total_frames * 100)))
                 last_reported = now
 
     for packet in video_stream.encode():
