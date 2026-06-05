@@ -107,6 +107,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # No proxy in front of the test server; use 0 so throttle keys are keyed
+    # from REMOTE_ADDR directly and X-Forwarded-For is ignored entirely.
+    "NUM_PROXIES": 0,
     "DEFAULT_THROTTLE_RATES": {
         "invite_send": "60/hour",
         "browser_traces": "100/min",

@@ -120,6 +120,10 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # One nginx reverse proxy sits in front of the app; tell DRF to trust
+    # exactly one layer of X-Forwarded-For so throttle keys use the real
+    # client IP rather than the proxy's address or a spoofed header value.
+    "NUM_PROXIES": 1,
     # Scoped throttle rates. Applied only by views that opt in via a
     # throttle class with a matching scope (e.g. the email-invite send
     # endpoint); there is no global default throttle.

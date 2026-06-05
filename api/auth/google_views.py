@@ -18,7 +18,7 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import SimpleRateThrottle
 
 from backend.otel import traced
 
@@ -27,8 +27,12 @@ from ..models import InviteCode, UserProfile
 from ..serializers import AuthUserSerializer, GoogleAuthSerializer
 
 
-class GoogleAuthThrottle(AnonRateThrottle):
-    """Per-IP anonymous throttle for the Google OAuth login endpoint.
+class GoogleAuthThrottle(SimpleRateThrottle):
+    """Per-IP throttle for the Google OAuth login endpoint, applied to all callers.
+
+    Uses ``SimpleRateThrottle`` (not ``AnonRateThrottle``) so the limit is
+    enforced even when an authenticated session cookie is present.  The key is
+    always the client IP resolved via NUM_PROXIES-aware ``get_ident()``.
 
     Rate comes from ``REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["google_auth"]``.
     Requires a shared cache (``REDIS_CACHE_URL`` in production); the counter is
@@ -36,6 +40,10 @@ class GoogleAuthThrottle(AnonRateThrottle):
     """
 
     scope = "google_auth"
+
+    def get_cache_key(self, request, view):
+        ident = self.get_ident(request)
+        return self.cache_format % {"scope": self.scope, "ident": ident}
 
 
 def _exchange_google_auth_code(code: str, redirect_uri: str) -> dict:

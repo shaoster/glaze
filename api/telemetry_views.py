@@ -16,7 +16,7 @@ from rest_framework.decorators import (
 )
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import SimpleRateThrottle
 
 from backend.otel import traced
 
@@ -31,8 +31,12 @@ _ALLOWED_CONTENT_TYPES = frozenset(
 )
 
 
-class BrowserTracesThrottle(AnonRateThrottle):
-    """Per-IP anonymous throttle for the browser telemetry proxy.
+class BrowserTracesThrottle(SimpleRateThrottle):
+    """Per-IP throttle for the browser telemetry proxy, applied to all callers.
+
+    Uses ``SimpleRateThrottle`` (not ``AnonRateThrottle``) so the limit is
+    enforced even when an authenticated session cookie is present.  The key is
+    always the client IP resolved via NUM_PROXIES-aware ``get_ident()``.
 
     Rate comes from ``REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["browser_traces"]``.
     Requires a shared cache (``REDIS_CACHE_URL`` in production); the counter is
@@ -40,6 +44,10 @@ class BrowserTracesThrottle(AnonRateThrottle):
     """
 
     scope = "browser_traces"
+
+    def get_cache_key(self, request, view):
+        ident = self.get_ident(request)
+        return self.cache_format % {"scope": self.scope, "ident": ident}
 
 
 def _collector_traces_endpoint() -> str:
@@ -67,11 +75,12 @@ def _collector_traces_endpoint() -> str:
 
 @extend_schema(
     request=None,
-    responses={200: None, 202: None, 400: None, 413: None, 415: None, 502: None},
+    responses={200: None, 202: None, 400: None, 411: None, 413: None, 415: None, 502: None},
     description=(
         "Proxy browser OTLP/HTTP trace uploads to the local collector. "
         "The browser sends the request with the normal session/CSRF flow; "
         "the backend forwards the raw OTLP payload to the collector. "
+        "Requests without Content-Length are rejected (411). "
         "Payloads larger than 512 KB are rejected (413). "
         "Only application/x-protobuf, application/json, and application/x-ndjson "
         "content types are accepted (415)."
@@ -88,19 +97,24 @@ def browser_traces(request: Request) -> HttpResponse:
     if content_type not in _ALLOWED_CONTENT_TYPES:
         return HttpResponse(status=415)
 
-    # Reject oversized payloads before reading the full body into memory.
-    content_length = request.headers.get("content-length")
-    if content_length is not None:
-        try:
-            if int(content_length) > _MAX_TRACE_BODY_BYTES:
-                return HttpResponse(status=413)
-        except ValueError:
-            return HttpResponse(status=400)
+    # Require Content-Length so we can enforce the cap before reading the body.
+    # Chunked or unknown-length uploads are rejected here (411 Length Required).
+    content_length_raw = request.headers.get("content-length")
+    if content_length_raw is None:
+        return HttpResponse(status=411)
+    try:
+        content_length = int(content_length_raw)
+    except ValueError:
+        return HttpResponse(status=400)
+    if content_length > _MAX_TRACE_BODY_BYTES:
+        return HttpResponse(status=413)
 
     body = request.body
     if not body:
         return HttpResponse(status=400)
 
+    # Belt-and-suspenders: also cap the actual buffered length in case the
+    # Content-Length header was understated.
     if len(body) > _MAX_TRACE_BODY_BYTES:
         return HttpResponse(status=413)
 

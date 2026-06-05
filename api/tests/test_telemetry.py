@@ -38,7 +38,9 @@ class TestTelemetryProxy:
         )
         assert _collector_traces_endpoint() == "http://otelcol:4318/v1/traces"
 
-    def test_browser_traces_rejects_empty_payloads(self, client, monkeypatch):
+    def test_browser_traces_rejects_missing_content_length(self, client, monkeypatch):
+        # Django's test client does not send Content-Length for empty bodies,
+        # so a POST with no body exercises the 411 Length Required guard.
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otelcol:4317")
 
         response = client.post(
@@ -47,7 +49,7 @@ class TestTelemetryProxy:
             content_type="application/x-protobuf",
         )
 
-        assert response.status_code == 400
+        assert response.status_code == 411
 
     def test_browser_traces_succeeds_for_authenticated_users(self, client, monkeypatch):
         # Regression for #759: SessionAuthentication.enforce_csrf() accessed
