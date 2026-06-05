@@ -144,29 +144,14 @@ alias(
 # bazel build //:image        — assemble the OCI image locally
 # bazel run   //:push         — push to ghcr.io/shaoster/glaze:<tag>
 #
-# Image layout:
-#   /appcontainer_entrypoint   Bazel launcher for the runtime image
-#   /appcontainer_entrypoint.runfiles/_main
-#                              Django project root plus repo-owned assets
-#   /appcontainer_entrypoint.runfiles/.../site-packages
-#                              uv-synced runtime deps
-#   /app/version.txt           Build metadata read by backend.otel
-#   /appcontainer_entrypoint.runfiles/_main/staticfiles
-#                              collected static assets (built by staticfiles_tar)
+# The runtime image stays conventional (`/app/...` plus a shell entrypoint).
+# We keep the hermetic dependency layer from py_image_layer, and if startup
+# logic ever gets interesting again we can swap back to a Python launcher.
 
 py_binary(
-    name = "container_entrypoint",
-    srcs = [
-        "container_entrypoint.py",
-        "manage.py",
-    ],
-    data = [
-        ":container_runtime_files",
-        "//:tutorials_files",
-        "//:user_preferences_files",
-        "//web:web_build",
-    ],
-    main = "container_entrypoint.py",
+    name = "runtime_deps",
+    srcs = ["manage.py"],
+    main = "manage.py",
     deps = [
         "//api:api_lib",
         "//backend:backend_lib",
@@ -175,32 +160,71 @@ py_binary(
     ],
 )
 
-filegroup(
-    name = "container_runtime_files",
-    srcs = [
-        "docker-entrypoint.sh",
-    ] + glob(
-        ["fixtures/**"],
-        allow_empty = True,
-    ) + glob(
-        ["assets/showcase_music/**"],
-        allow_empty = True,
-    ) + glob(
-        ["assets/fonts/**"],
-        allow_empty = False,
-    ),
-    visibility = ["//visibility:public"],
+py_image_layer(
+    name = "python_layer",
+    binary = ":runtime_deps",
+    root = "/app",
 )
 
-# Layer the Django runtime directly from the py_binary runfiles. This keeps the
-# OCI image hermetic and avoids any host-python dependency from rules_pkg.
-py_image_layer(
-    name = "image_layers",
-    binary = ":container_entrypoint",
-    layer_groups = {
-        "web": ".*web/dist/.*",
-    },
-    root = "/app",
+pkg_tar(
+    name = "app_src_tar",
+    srcs = [
+        "manage.py",
+        "workflow.yml",
+        "workflow.schema.yml",
+        "user_preferences.yml",
+        "user_preferences.schema.yml",
+        "tutorials.yml",
+        "tutorials.schema.yml",
+        "storyboard.schema.yml",
+        "music_catalog.yml",
+        "music_catalog.schema.yml",
+        "docker-entrypoint.sh",
+        "//api:api_runtime_files",
+        "//backend:backend_runtime_files",
+    ] + glob(["fixtures/**"], allow_empty = True)
+      + glob(["assets/showcase_music/**"], allow_empty = True)
+      + glob(["assets/fonts/**"], allow_empty = False),
+    strip_prefix = ".",
+    package_dir = "/app",
+)
+
+pkg_tar(
+    name = "web_dist_tar",
+    srcs = ["//web:web_build"],
+    strip_prefix = "web/dist",
+    package_dir = "/app/web/dist",
+)
+
+# Repackage the hermetic site-packages tree from py_image_layer into a plain
+# /app/site-packages layer so the runtime image does not expose Bazel runfiles.
+genrule(
+    name = "python_layer_tar",
+    srcs = [
+        ":python_layer",
+    ],
+    outs = ["python_layer.tar"],
+    cmd = """
+        set -e
+        tmp=$$(mktemp -d)
+        dest=$$(mktemp -d)
+        for layer in $(locations :python_layer); do
+            case "$$layer" in
+                *packages.tar.gz)
+                    tar -xf "$$layer" -C "$$tmp"
+                    ;;
+            esac
+        done
+        mkdir -p "$$dest/app"
+        mkdir -p "$$dest/app/site-packages"
+        find "$$tmp" -type d -path '*/install/lib/python3.12/site-packages' | while read -r site_packages; do
+            cp -a "$$site_packages"/. "$$dest/app/site-packages"/
+        done
+        OUT_TAR="$$PWD/$@"
+        tar -C "$$dest" -cf "$$OUT_TAR" app/site-packages
+        rm -rf "$$tmp" "$$dest"
+    """,
+    tags = ["no-sandbox"],
 )
 
 # Static files layer — run collectstatic at build time so container startup
@@ -208,23 +232,28 @@ py_image_layer(
 genrule(
     name = "staticfiles_tar",
     srcs = [
-        ":image_layers",
+        ":python_layer_tar",
+        ":app_src_tar",
+        ":web_dist_tar",
     ],
     outs = ["staticfiles.tar"],
     cmd = """
         set -e
         tmp=$$(mktemp -d)
-        for layer in $(locations :image_layers); do
-            tar -xf "$$layer" -C "$$tmp"
-        done
-        entrypoint="$$tmp/appcontainer_entrypoint"
+        tar -xf $(location :python_layer_tar) -C "$$tmp"
+        tar -xf $(location :app_src_tar) -C "$$tmp"
+        tar -xf $(location :web_dist_tar) -C "$$tmp"
+        PYTHON3="$$PWD/$(PYTHON3)"
         OUT_TAR="$$PWD/$@"
+        export PYTHONPATH="$$tmp/app:$$tmp/app/site-packages"
         export DJANGO_SETTINGS_MODULE=backend.settings
         export SECRET_KEY=buildtime-placeholder
-        "$$entrypoint" collectstatic --no-input
-        tar -C "$$tmp" -cf "$$OUT_TAR" appcontainer_entrypoint.runfiles/_main/staticfiles
+        cd "$$tmp/app"
+        "$$PYTHON3" manage.py collectstatic --no-input
+        tar -C "$$tmp" -cf "$$OUT_TAR" app/staticfiles
         rm -rf "$$tmp"
     """,
+    toolchains = ["@rules_python//python:current_py_toolchain"],
     tags = ["no-sandbox"],
 )
 
@@ -248,7 +277,7 @@ oci_image(
     base = "@python312_slim",
     entrypoint = [
         "/bin/bash",
-        "/appcontainer_entrypoint.runfiles/_main/docker-entrypoint.sh",
+        "/app/docker-entrypoint.sh",
     ],
     env = {
         "PYTHONPATH": "/app:/app/site-packages",
@@ -263,11 +292,13 @@ oci_image(
     },
     exposed_ports = ["8000/tcp"],
     tars = [
-        ":image_layers",
+        ":python_layer_tar",
+        ":app_src_tar",
+        ":web_dist_tar",
         ":staticfiles_tar",
         ":version_tar",
     ],
-    workdir = "/appcontainer_entrypoint.runfiles/_main",
+    workdir = "/app",
 )
 
 oci_push(
@@ -309,7 +340,8 @@ oci_image(
     name = "celery_worker_image",
     base = ":image",
     entrypoint = [
-        "/appcontainer_entrypoint",
+        "/bin/bash",
+        "/app/docker-entrypoint.sh",
         "celery",
         "-A",
         "backend",
