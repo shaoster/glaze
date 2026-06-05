@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy-config
+  namespace: monitoring
+data:
+  config.alloy: |
+    // Node metrics via kubelet cadvisor API
+    prometheus.scrape "cadvisor" {
+      targets = [{
+        __address__ = env("NODE_IP") + ":10250",
+        __scheme__  = "https",
+      }]
+      bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+      tls_config {
+        insecure_skip_verify = true
+      }
+      metrics_path     = "/metrics/cadvisor"
+      scrape_interval  = "60s"
+      forward_to       = [prometheus.remote_write.grafana_cloud.receiver]
+    }
+
+    // Node metrics via kubelet summary API (CPU, memory, disk, network)
+    prometheus.scrape "kubelet" {
+      targets = [{
+        __address__ = env("NODE_IP") + ":10250",
+        __scheme__  = "https",
+      }]
+      bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+      tls_config {
+        insecure_skip_verify = true
+      }
+      metrics_path     = "/metrics"
+      scrape_interval  = "60s"
+      forward_to       = [prometheus.remote_write.grafana_cloud.receiver]
+    }
+
+    prometheus.remote_write "grafana_cloud" {
+      endpoint {
+        url = env("GRAFANA_CLOUD_PROM_URL")
+        basic_auth {
+          username = env("GRAFANA_CLOUD_PROM_USERNAME")
+          password = env("GRAFANA_CLOUD_PROM_PASSWORD")
+        }
+      }
+    }
+
+    // Pod log collection — scrapes container stdout/stderr via k8s API.
+    // No overlap with OTEL Collector, which receives OTLP-pushed structured app logs only.
+    discovery.kubernetes "pods" {
+      role = "pod"
+    }
+
+    loki.source.kubernetes "pods" {
+      targets    = discovery.kubernetes.pods.targets
+      forward_to = [loki.write.grafana_cloud.receiver]
+    }
+
+    loki.write "grafana_cloud" {
+      endpoint {
+        url = env("GRAFANA_CLOUD_LOKI_URL")
+        basic_auth {
+          username = env("GRAFANA_CLOUD_LOKI_USERNAME")
+          password = env("GRAFANA_CLOUD_LOKI_PASSWORD")
+        }
+      }
+    }
