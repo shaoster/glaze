@@ -42,7 +42,7 @@ spec:
         tailscale:
           type: "LoadBalancer"
           annotations:
-            external-dns.alpha.kubernetes.io/hostname: "admin.potterdoc.com,headlamp.potterdoc.com"
+            external-dns.alpha.kubernetes.io/hostname: "admin.potterdoc.com"
             tailscale.com/proxy-class: "default"
           spec:
             loadBalancerClass: "tailscale"
