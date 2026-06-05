@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useLocation, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import {
@@ -102,11 +102,20 @@ export default function PieceListPage() {
     );
   }
 
+  // Synchronous guard — isFetching is React state and arrives too late to block
+  // a second fetchNextPage triggered by a rapid scroll event before re-render.
+  const fetchingRef = useRef(false);
+
   const handleLoadMore = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      void fetchNextPage();
+    // isFetching covers both isFetchingNextPage and an in-progress sort refetch
+    // (keepPreviousData leaves hasNextPage true while the new first page loads).
+    if (hasNextPage && !isFetching && !fetchingRef.current) {
+      fetchingRef.current = true;
+      void fetchNextPage().finally(() => {
+        fetchingRef.current = false;
+      });
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetching, fetchNextPage]);
 
   function handleCreated() {
     void queryClient.invalidateQueries({ queryKey: ["pieces", sortOrder] });
