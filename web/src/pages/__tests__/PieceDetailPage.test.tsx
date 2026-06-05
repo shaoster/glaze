@@ -46,14 +46,15 @@ function renderPage({
   fromGallery = false,
   id = "piece-1",
   showBackToPieces,
+  queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  }),
 }: {
   fromGallery?: boolean;
   id?: string;
   showBackToPieces?: boolean;
+  queryClient?: QueryClient;
 } = {}) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
   const router = createMemoryRouter(
     [
       {
@@ -151,21 +152,31 @@ describe("PieceDetailPage", () => {
     );
   });
 
-  it("invalidates appInit when loading fails so an expired session triggers re-login", async () => {
-    // Regression test for #807: PieceDetailPage always renders inside AuthenticatedApp
-    // so currentUser is non-null even after iOS Safari silently drops the session cookie.
-    // On error we invalidate appInit; if the session is gone, appInit refetches as
-    // user: null and the app switches to UnauthenticatedApp (login screen).
-    vi.mocked(api.fetchPiece).mockRejectedValue(new Error("Not Found"));
+  it("redirects home and clears the cached piece when the piece load returns 404", async () => {
+    // Regression test for #807: a stale session returns 404 from fetchPiece, but
+    // the authenticated route should not keep rendering the private piece shell.
+    vi.mocked(api.fetchPiece).mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 404 },
+    });
 
-    const { queryClient } = renderPage();
-    vi.spyOn(queryClient, "invalidateQueries");
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const removeQueriesSpy = vi.spyOn(queryClient, "removeQueries");
+    const invalidateQueriesSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    renderPage({ queryClient });
 
     await waitFor(() =>
-      expect(screen.getByText("Failed to load piece.")).toBeInTheDocument(),
+      expect(screen.getByTestId("pieces-page")).toBeInTheDocument(),
     );
 
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith(
+    expect(screen.queryByText("Failed to load piece.")).not.toBeInTheDocument();
+    expect(removeQueriesSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["piece", "piece-1"] }),
+    );
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ["appInit"] }),
     );
   });

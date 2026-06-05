@@ -1,5 +1,11 @@
 import { useEffect } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { isAxiosError } from "axios";
+import {
+  Navigate,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchPiece } from "../util/api";
@@ -34,14 +40,19 @@ export default function PieceDetailPage({
     queryFn: () => fetchPiece(id!),
   });
 
-  // When the piece fails to load, re-check auth state. If the session expired
-  // (iOS Safari ITP / backgrounding), appInit will return user: null and the
-  // app will switch to UnauthenticatedApp, naturally redirecting to login.
+  const pieceLoadNeedsLogin =
+    isAxiosError(error) && error.response?.status === 404;
+
   useEffect(() => {
-    if (error) {
+    if (pieceLoadNeedsLogin) {
+      queryClient.removeQueries({ queryKey: ["piece", id] });
       queryClient.invalidateQueries({ queryKey: ["appInit"] });
     }
-  }, [error, queryClient]);
+  }, [id, pieceLoadNeedsLogin, queryClient]);
+
+  if (pieceLoadNeedsLogin) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <>
