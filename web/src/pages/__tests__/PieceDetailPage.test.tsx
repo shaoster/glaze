@@ -10,8 +10,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import PieceDetailPage from "../PieceDetailPage";
 import * as api from "../../util/api";
 import type { PieceDetail } from "../../util/types";
-import type { AuthUser } from "../../util/api";
-import { CurrentUserProvider } from "../../components/CurrentUserContext";
 
 vi.mock("../../util/api", () => ({
   fetchPiece: vi.fn(),
@@ -22,14 +20,6 @@ vi.mock("../../components/PieceDetail", () => ({
     <div data-testid="piece-detail-component">{piece.name}</div>
   ),
 }));
-
-const MOCK_USER: AuthUser = {
-  id: 1,
-  is_staff: false,
-  openid_subject: "sub|test",
-  alias: "Test User",
-  preferences: {},
-} as unknown as AuthUser;
 
 const MOCK_PIECE: PieceDetail = {
   id: "piece-1",
@@ -56,12 +46,10 @@ function renderPage({
   fromGallery = false,
   id = "piece-1",
   showBackToPieces,
-  currentUser = MOCK_USER,
 }: {
   fromGallery?: boolean;
   id?: string;
   showBackToPieces?: boolean;
-  currentUser?: AuthUser | null;
 } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -84,13 +72,11 @@ function renderPage({
       ],
     },
   );
-  return render(
-    <CurrentUserProvider currentUser={currentUser}>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </CurrentUserProvider>,
-  );
+  return { queryClient, ...render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  )};
 }
 
 describe("PieceDetailPage", () => {
@@ -155,7 +141,7 @@ describe("PieceDetailPage", () => {
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
-  it("shows an error message when loading fails for an authenticated user", async () => {
+  it("shows an error message when loading fails", async () => {
     vi.mocked(api.fetchPiece).mockRejectedValue(new Error("Network error"));
 
     renderPage();
@@ -165,16 +151,22 @@ describe("PieceDetailPage", () => {
     );
   });
 
-  it("redirects to home when loading fails and the user is unauthenticated", async () => {
-    // Regression test for #807: an owner whose session expired on mobile gets a
-    // 404 back from piece_detail. The client should redirect to home (login) rather
-    // than showing a confusing "Failed to load piece" error.
+  it("invalidates appInit when loading fails so an expired session triggers re-login", async () => {
+    // Regression test for #807: PieceDetailPage always renders inside AuthenticatedApp
+    // so currentUser is non-null even after iOS Safari silently drops the session cookie.
+    // On error we invalidate appInit; if the session is gone, appInit refetches as
+    // user: null and the app switches to UnauthenticatedApp (login screen).
     vi.mocked(api.fetchPiece).mockRejectedValue(new Error("Not Found"));
 
-    renderPage({ currentUser: null });
+    const { queryClient } = renderPage();
+    vi.spyOn(queryClient, "invalidateQueries");
 
     await waitFor(() =>
-      expect(screen.getByTestId("pieces-page")).toBeInTheDocument(),
+      expect(screen.getByText("Failed to load piece.")).toBeInTheDocument(),
+    );
+
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["appInit"] }),
     );
   });
 

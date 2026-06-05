@@ -1,10 +1,10 @@
-import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useEffect } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchPiece } from "../util/api";
 import PieceDetailComponent from "../components/PieceDetail";
 import { type PieceDetail } from "../util/types";
-import { useCurrentUser } from "../components/CurrentUserContext";
 
 interface PieceDetailPageProps {
   showBackToPieces?: boolean;
@@ -26,7 +26,6 @@ export default function PieceDetailPage({
   const fromGallery = state?.fromGallery === true;
   const returnTo = state?.returnTo ?? null;
   const showBackButton = fromGallery || showBackToPieces;
-  const currentUser = useCurrentUser();
   const queryClient = useQueryClient();
   const pieceQueryKey = ["piece", id] as const;
   // id is always defined — this component is only rendered via the /pieces/:id route
@@ -34,6 +33,15 @@ export default function PieceDetailPage({
     queryKey: pieceQueryKey,
     queryFn: () => fetchPiece(id!),
   });
+
+  // When the piece fails to load, re-check auth state. If the session expired
+  // (iOS Safari ITP / backgrounding), appInit will return user: null and the
+  // app will switch to UnauthenticatedApp, naturally redirecting to login.
+  useEffect(() => {
+    if (error) {
+      queryClient.invalidateQueries({ queryKey: ["appInit"] });
+    }
+  }, [error, queryClient]);
 
   return (
     <>
@@ -62,10 +70,7 @@ export default function PieceDetailPage({
           <CircularProgress />
         </Box>
       )}
-      {error && (currentUser === null
-        ? <Navigate to="/" replace />
-        : <Typography color="error">Failed to load piece.</Typography>
-      )}
+      {error && <Typography color="error">Failed to load piece.</Typography>}
       {piece && (
         <PieceDetailComponent
           piece={piece}
