@@ -5,7 +5,7 @@
 #   1. /etc/k3s-resolv.conf exists with the two unique DO nameservers
 #   2. k3s is running with the config declared in infra/k3s/config.yaml
 #   3. All k3s auto-deploy manifests (ESO HelmChart, HelmChartConfig overrides,
-#      cert-manager, headlamp, etc.) are present on the node
+#      cert-manager, Alloy DaemonSet, etc.) are present on the node
 #   4. External Secrets Operator is installed and its deployment is rollout-ready
 #   5. The Infisical machine identity is present as the infisical-auth Secret
 #   6. glaze-secrets exists in the default namespace (ESO has synced from Infisical)
@@ -135,16 +135,36 @@ $SSH "${DEPLOY_HOST}" '
   kubectl delete helmchartconfig cert-manager coredns -n kube-system --ignore-not-found
 '
 
+# Headlamp was removed from the repo; delete the stale manifest and all
+# associated resources so k3s stops reconciling the old HelmChart.
+echo "==> Removing stale Headlamp manifest and resources..."
+$SSH "${DEPLOY_HOST}" '
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+  rm -f /var/lib/rancher/k3s/server/manifests/headlamp.yaml
+  kubectl delete helmchart headlamp -n kube-system --ignore-not-found
+  kubectl delete clusterrolebinding headlamp-admin --ignore-not-found
+  kubectl delete secret headlamp-token headlamp-tls -n kube-system --ignore-not-found
+  kubectl delete ingress headlamp -n kube-system --ignore-not-found
+'
+
 # ── k3s auto-deploy manifests ────────────────────────────────────────────────
 echo "==> Syncing k3s manifests..."
 manifest_apply_args=""
 for f in infra/k3s/*.yaml; do
   # config.yaml is a k3s server config, not a Kubernetes manifest.
   [ "$(basename "$f")" = "config.yaml" ] && continue
+  # alloy-externalsecret.yaml requires ESO CRDs; applied explicitly after ESO is ready.
+  [ "$(basename "$f")" = "alloy-externalsecret.yaml" ] && continue
   dest="/var/lib/rancher/k3s/server/manifests/$(basename "$f")"
   $SCP "$f" "${DEPLOY_HOST}:${dest}"
   manifest_apply_args="${manifest_apply_args} -f ${dest}"
 done
+
+# Ensure monitoring namespace exists before Alloy resources (alphabetical glob
+# ordering would apply alloy-*.yaml before monitoring-namespace.yaml).
+$SCP infra/k3s/monitoring-namespace.yaml "${DEPLOY_HOST}:/var/lib/rancher/k3s/server/manifests/monitoring-namespace.yaml"
+$SSH "${DEPLOY_HOST}" "KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl apply -f /var/lib/rancher/k3s/server/manifests/monitoring-namespace.yaml"
+
 # kubectl apply in addition to SCP so HelmChart resources converge immediately
 # regardless of whether the k3s file watcher fires.
 # shellcheck disable=SC2086
@@ -226,6 +246,14 @@ $SSH "${DEPLOY_HOST}" '
   set -e
   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   kubectl apply -f /var/lib/rancher/k3s/server/manifests/secretstore.yaml
+'
+
+# Apply the Alloy ExternalSecret now that ESO CRDs are present.
+$SCP infra/k3s/alloy-externalsecret.yaml "${DEPLOY_HOST}:/var/lib/rancher/k3s/server/manifests/alloy-externalsecret.yaml"
+$SSH "${DEPLOY_HOST}" '
+  set -e
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+  kubectl apply -f /var/lib/rancher/k3s/server/manifests/alloy-externalsecret.yaml
 '
 
 # ── Wait for glaze-secrets (contract item 6) ─────────────────────────────────

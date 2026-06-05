@@ -8,7 +8,7 @@ data:
     // Node metrics via kubelet cadvisor API
     prometheus.scrape "cadvisor" {
       targets = [{
-        __address__ = env("NODE_IP") + ":10250",
+        __address__ = sys.env("NODE_IP") + ":10250",
         __scheme__  = "https",
       }]
       bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -23,7 +23,7 @@ data:
     // Node metrics via kubelet summary API (CPU, memory, disk, network)
     prometheus.scrape "kubelet" {
       targets = [{
-        __address__ = env("NODE_IP") + ":10250",
+        __address__ = sys.env("NODE_IP") + ":10250",
         __scheme__  = "https",
       }]
       bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -37,31 +37,42 @@ data:
 
     prometheus.remote_write "grafana_cloud" {
       endpoint {
-        url = env("GRAFANA_CLOUD_PROM_URL")
+        url = sys.env("GRAFANA_CLOUD_PROM_URL")
         basic_auth {
-          username = env("GRAFANA_CLOUD_PROM_USERNAME")
-          password = env("GRAFANA_CLOUD_PROM_PASSWORD")
+          username = sys.env("GRAFANA_CLOUD_PROM_USERNAME")
+          password = sys.env("GRAFANA_CLOUD_PROM_PASSWORD")
         }
       }
     }
 
     // Pod log collection — scrapes container stdout/stderr via k8s API.
     // No overlap with OTEL Collector, which receives OTLP-pushed structured app logs only.
+    // Node filter prevents duplicate log shipping when multiple DaemonSet pods run on
+    // different nodes — each Alloy pod only tails pods scheduled on its own node.
     discovery.kubernetes "pods" {
       role = "pod"
     }
 
+    discovery.relabel "pods_on_this_node" {
+      targets = discovery.kubernetes.pods.targets
+      rule {
+        source_labels = ["__meta_kubernetes_pod_node_name"]
+        regex         = sys.env("NODE_NAME")
+        action        = "keep"
+      }
+    }
+
     loki.source.kubernetes "pods" {
-      targets    = discovery.kubernetes.pods.targets
+      targets    = discovery.relabel.pods_on_this_node.output
       forward_to = [loki.write.grafana_cloud.receiver]
     }
 
     loki.write "grafana_cloud" {
       endpoint {
-        url = env("GRAFANA_CLOUD_LOKI_URL")
+        url = sys.env("GRAFANA_CLOUD_LOKI_URL")
         basic_auth {
-          username = env("GRAFANA_CLOUD_LOKI_USERNAME")
-          password = env("GRAFANA_CLOUD_LOKI_PASSWORD")
+          username = sys.env("GRAFANA_CLOUD_LOKI_USERNAME")
+          password = sys.env("GRAFANA_CLOUD_LOKI_PASSWORD")
         }
       }
     }
