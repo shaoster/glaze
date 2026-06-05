@@ -1,5 +1,5 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
-load("@aspect_rules_py//py:defs.bzl", "py_binary")
+load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_image_layer")
 load("@rules_distroless//distroless:defs.bzl", "group", "passwd")
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
@@ -144,59 +144,28 @@ alias(
 # bazel build //:image        — assemble the OCI image locally
 # bazel run   //:push         — push to ghcr.io/shaoster/glaze:<tag>
 #
-# Image layout (all under /app):
-#   /app/                      Django project root (manage.py, backend/, api/, etc.)
-#   /app/web/dist/             Vite-built SPA (served by WhiteNoise at URL root)
-#   /app/site-packages/        uv-synced runtime deps (added to PYTHONPATH)
-#   /app/staticfiles/          collected static assets (built by staticfiles_tar genrule)
+# The runtime image stays conventional (`/app/...` plus a shell entrypoint).
+# We keep the hermetic dependency layer from py_image_layer, and if startup
+# logic ever gets interesting again we can swap back to a Python launcher.
 
-# Dependency layer — sync runtime deps into a temp venv, then flatten its
-# site-packages into /app/site-packages. Tagged no-sandbox because uv needs
-# network access to download wheels.
-genrule(
-    name = "python_layer_tar",
-    srcs = [
-        "//:pyproject.toml",
-        "//:uv.lock",
-        "//:third_party_python_files",
+py_binary(
+    name = "runtime_deps",
+    srcs = ["manage.py"],
+    main = "manage.py",
+    deps = [
+        "//api:api_lib",
+        "//backend:backend_lib",
+        "@pypi//gunicorn",
+        "@pypi//uvicorn",
     ],
-    tools = ["@uv//:uv"],
-    outs = ["python_layer.tar"],
-    cmd = """
-        set -e
-        export HOME=$$(mktemp -d)
-        UV="$$PWD/$(location @uv//:uv)"
-        PYTHON3_ABS="$$PWD/$(PYTHON3)"
-        OUT_TAR="$$PWD/$@"
-
-        work=$$(mktemp -d)
-        dest=$$(mktemp -d)
-        cp $(location //:pyproject.toml) "$$work/pyproject.toml"
-        cp $(location //:uv.lock) "$$work/uv.lock"
-        mkdir -p "$$work/third_party/python"
-        cp $(locations //:third_party_python_files) "$$work/third_party/python/"
-
-        # Sync only the locked runtime dependencies into an isolated venv.
-        cd "$$work"
-        $$UV sync \
-            --frozen \
-            --no-dev \
-            --no-install-project \
-            --no-editable \
-            --python "$$PYTHON3_ABS"
-
-        # Flatten site-packages to /app/site-packages in the tarball.
-        sp=$$(find "$$work/.venv" -type d -name site-packages | head -1)
-        mkdir -p "$$dest/app"
-        mv "$$sp" "$$dest/app/site-packages"
-        tar -C "$$dest" -cf "$$OUT_TAR" app/site-packages
-        rm -rf "$$dest" "$$work" "$$HOME"
-    """,
-    toolchains = ["@rules_python//python:current_py_toolchain"],
-    tags = ["no-sandbox"],
 )
 
-# Django source layer — everything the app needs at runtime except deps and dist.
+py_image_layer(
+    name = "python_layer",
+    binary = ":runtime_deps",
+    root = "/app",
+)
+
 pkg_tar(
     name = "app_src_tar",
     srcs = [
@@ -220,12 +189,46 @@ pkg_tar(
     package_dir = "/app",
 )
 
-# Vite frontend layer — web/dist produced by the Bazel vite build.
 pkg_tar(
     name = "web_dist_tar",
     srcs = ["//web:web_build"],
     strip_prefix = "web/dist",
     package_dir = "/app/web/dist",
+)
+
+# Repackage the hermetic site-packages tree from py_image_layer into a plain
+# /app/site-packages layer so the runtime image does not expose Bazel runfiles.
+# If startup ever needs to become more sophisticated, we can swap back to a
+# Python launcher without changing the dependency layer.
+genrule(
+    name = "python_layer_tar",
+    srcs = [
+        ":python_layer",
+    ],
+    outs = ["python_layer.tar"],
+    cmd = """
+        set -e
+        tmp=$$(mktemp -d)
+        dest=$$(mktemp -d)
+        for layer in $(locations :python_layer); do
+            tar -xf "$$layer" -C "$$tmp"
+        done
+        mkdir -p "$$dest/app/site-packages"
+        copied=0
+        while IFS= read -r site_packages; do
+            cp -a "$$site_packages"/. "$$dest/app/site-packages"/
+            copied=1
+        done < <(find "$$tmp" -type d -path '*/site-packages' | sort)
+        if [ "$$copied" -ne 1 ]; then
+            echo "No site-packages directories were found in the py_image_layer output" >&2
+            rm -rf "$$tmp" "$$dest"
+            exit 1
+        fi
+        OUT_TAR="$$PWD/$@"
+        tar -C "$$dest" -cf "$$OUT_TAR" app/site-packages
+        rm -rf "$$tmp" "$$dest"
+    """,
+    tags = ["no-sandbox"],
 )
 
 # Static files layer — run collectstatic at build time so container startup
@@ -276,12 +279,9 @@ pkg_tar(
 oci_image(
     name = "image",
     base = "@python312_slim",
-    tars = [
-        ":python_layer_tar",
-        ":app_src_tar",
-        ":web_dist_tar",
-        ":staticfiles_tar",
-        ":version_tar",
+    entrypoint = [
+        "/bin/bash",
+        "/app/docker-entrypoint.sh",
     ],
     env = {
         "PYTHONPATH": "/app:/app/site-packages",
@@ -294,9 +294,15 @@ oci_image(
         "ONNXRUNTIME_INTER_OP_NUM_THREADS": "1",
         "ONNXRUNTIME_INTRA_OP_NUM_THREADS": "1",
     },
-    workdir = "/app",
-    entrypoint = ["/bin/bash", "/app/docker-entrypoint.sh"],
     exposed_ports = ["8000/tcp"],
+    tars = [
+        ":python_layer_tar",
+        ":app_src_tar",
+        ":web_dist_tar",
+        ":staticfiles_tar",
+        ":version_tar",
+    ],
+    workdir = "/app",
 )
 
 oci_push(
@@ -337,16 +343,29 @@ group(
 oci_image(
     name = "celery_worker_image",
     base = ":image",
-    tars = [":celery_passwd", ":celery_group"],
+    entrypoint = [
+        "/bin/bash",
+        "/app/docker-entrypoint.sh",
+        "celery",
+        "-A",
+        "backend",
+        "worker",
+        "-l",
+        "INFO",
+    ],
+    tars = [
+        ":celery_passwd",
+        ":celery_group",
+    ],
     user = "celery",
-    entrypoint = ["python", "-m", "celery", "-A", "backend", "worker", "-l", "INFO"],
 )
 
 oci_push(
     name = "push_worker",
     image = ":celery_worker_image",
     repository = "ghcr.io/shaoster/glaze-worker",
-)# Load the freshly-built image into the local docker daemon so CI (and devs)
+)  # Load the freshly-built image into the local docker daemon so CI (and devs)
+
 # can `docker compose up` against it without a registry round-trip.
 # `bazel run //:load` tags it as ghcr.io/shaoster/glaze:latest, matching the
 # image reference in docker-compose.yml.

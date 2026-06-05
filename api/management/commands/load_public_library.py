@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+from django.db import connection
 
 from api.models import PublicLibraryVersion
 from api.utils import normalize_image_payload
@@ -88,15 +89,19 @@ class Command(BaseCommand):
 
         raw_bytes = fixture_path.read_bytes()
         fixture_hash = hashlib.sha256(raw_bytes).hexdigest()
+        version_table_exists = (
+            PublicLibraryVersion._meta.db_table in connection.introspection.table_names()
+        )
 
-        version, _ = PublicLibraryVersion.objects.get_or_create(pk=1)
-        if version.fixture_hash == fixture_hash:
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"Public library fixture unchanged (sha256={fixture_hash[:12]}…) — skipping import."
+        if version_table_exists:
+            version, _ = PublicLibraryVersion.objects.get_or_create(pk=1)
+            if version.fixture_hash == fixture_hash:
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"Public library fixture unchanged (sha256={fixture_hash[:12]}…) — skipping import."
+                    )
                 )
-            )
-            return
+                return
 
         try:
             records = json.loads(raw_bytes.decode())
@@ -155,7 +160,8 @@ class Command(BaseCommand):
             else:
                 updated_count += 1
 
-        PublicLibraryVersion.objects.filter(pk=1).update(fixture_hash=fixture_hash)
+        if version_table_exists:
+            PublicLibraryVersion.objects.filter(pk=1).update(fixture_hash=fixture_hash)
 
         self.stdout.write(
             self.style.SUCCESS(
