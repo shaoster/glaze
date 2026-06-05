@@ -9,7 +9,9 @@ from zipfile import ZipFile
 import pytest
 from django.apps import apps as django_apps
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import Client
+from django.test.utils import override_settings
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory, force_authenticate
 
@@ -596,6 +598,39 @@ class TestAuthGoogle:
 
         assert response.status_code == 200
         assert login_calls and login_calls[0].username == FAKE_HASHED_SUB
+
+    @override_settings(
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            }
+        },
+    )
+    def test_google_auth_endpoint_is_rate_limited(self, monkeypatch):
+        from api.auth.google_views import GoogleAuthThrottle, auth_google
+
+        cache.clear()
+        monkeypatch.setitem(GoogleAuthThrottle.THROTTLE_RATES, "google_auth", "1/min")
+
+        factory = APIRequestFactory()
+        first_request = factory.post(
+            "/api/auth/google/",
+            {"code": "c1", "redirect_uri": "http://localhost", "invite_code": ""},
+            format="json",
+        )
+        second_request = factory.post(
+            "/api/auth/google/",
+            {"code": "c2", "redirect_uri": "http://localhost", "invite_code": ""},
+            format="json",
+        )
+
+        first = auth_google(first_request)
+        second = auth_google(second_request)
+
+        # First request is processed (may fail for other reasons — no Google creds);
+        # second must be throttled regardless of outcome.
+        assert first.status_code != 429
+        assert second.status_code == 429
 
 
 async def _collect_async_bytes(chunks: AsyncIterable[bytes]) -> bytes:

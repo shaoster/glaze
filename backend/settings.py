@@ -120,11 +120,21 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # One nginx reverse proxy sits in front of the app; tell DRF to trust
+    # exactly one layer of X-Forwarded-For so throttle keys use the real
+    # client IP rather than the proxy's address or a spoofed header value.
+    "NUM_PROXIES": 1,
     # Scoped throttle rates. Applied only by views that opt in via a
     # throttle class with a matching scope (e.g. the email-invite send
     # endpoint); there is no global default throttle.
     "DEFAULT_THROTTLE_RATES": {
         "invite_send": "60/hour",
+        # Anonymous write proxy — 100 bursts per minute per IP is generous for
+        # legitimate SDK usage while still blocking trivial flood attacks.
+        "browser_traces": "100/min",
+        # Google OAuth initiation — keeps bot-driven sign-in floods cheap to
+        # block without impacting normal login UX (users rarely retry > once).
+        "google_auth": "10/min",
     },
 }
 
