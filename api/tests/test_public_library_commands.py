@@ -2,13 +2,21 @@
 
 import json
 from io import StringIO
+from types import SimpleNamespace
 
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from api.management.commands.load_public_library import _extract_cloud_name
-from api.models import COMPOSITE_NAME_SEPARATOR, ClayBody, GlazeCombination, GlazeType
+from api.management.commands import load_public_library as load_public_library_command
+from api.models import (
+    COMPOSITE_NAME_SEPARATOR,
+    ClayBody,
+    GlazeCombination,
+    GlazeType,
+    PublicLibraryVersion,
+)
 from api.utils import bootstrap_dev_user
 
 
@@ -280,6 +288,59 @@ class TestLoadPublicLibrary:
             stdout=out,
         )
         assert "skipping" in out.getvalue().lower()
+
+    def test_recreates_missing_version_table(self, tmp_path):
+        fixture = self._write_fixture(
+            tmp_path,
+            [
+                {
+                    "model": "api.claybody",
+                    "fields": {"name": "Stoneware", "short_description": "A body"},
+                }
+            ],
+        )
+
+        created_models: list[type] = []
+
+        class _DummySchemaEditor:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def create_model(self, model):
+                created_models.append(model)
+
+        monkeypatch = pytest.MonkeyPatch()
+        monkeypatch.setattr(
+            load_public_library_command.connection.introspection,
+            "table_names",
+            lambda: [],
+        )
+        monkeypatch.setattr(
+            load_public_library_command.connection,
+            "schema_editor",
+            lambda: _DummySchemaEditor(),
+        )
+        monkeypatch.setattr(
+            load_public_library_command.PublicLibraryVersion.objects,
+            "get_or_create",
+            lambda pk: (SimpleNamespace(fixture_hash=""), True),
+        )
+        monkeypatch.setattr(
+            load_public_library_command.PublicLibraryVersion.objects,
+            "filter",
+            lambda **kwargs: SimpleNamespace(update=lambda **kwargs: None),
+        )
+
+        try:
+            call_command("load_public_library", fixture=str(fixture))
+        finally:
+            monkeypatch.undo()
+
+        assert created_models == [PublicLibraryVersion]
+        assert ClayBody.objects.filter(user=None, name="Stoneware").exists()
 
     def test_raises_for_invalid_json(self, tmp_path):
         bad = tmp_path / "bad.json"

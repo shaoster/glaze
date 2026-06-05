@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+from django.db import connection
 
 from api.models import PublicLibraryVersion
 from api.utils import normalize_image_payload
@@ -44,6 +45,22 @@ def _normalize_image_field(value: object) -> object:
     if "cloud_name" not in value:
         value = {**value, "cloud_name": _extract_cloud_name(value.get("url", "") or "")}
     return value
+
+
+def _ensure_public_library_version_table() -> None:
+    """Create the version table on demand if a stale schema is missing it.
+
+    Deploy/bootstrap commands are expected to run against a freshly migrated
+    database, but the compose smoke test can occasionally reuse a schema state
+    where the sentinel table is absent. The import itself only needs this table
+    for the fixture hash cache, so we can safely create it lazily.
+    """
+    table_name = PublicLibraryVersion._meta.db_table
+    if table_name in connection.introspection.table_names():
+        return
+
+    with connection.schema_editor() as schema_editor:
+        schema_editor.create_model(PublicLibraryVersion)
 
 
 _DEFAULT_FIXTURE = Path(settings.BASE_DIR) / "fixtures" / "public_library.json"
@@ -88,6 +105,8 @@ class Command(BaseCommand):
 
         raw_bytes = fixture_path.read_bytes()
         fixture_hash = hashlib.sha256(raw_bytes).hexdigest()
+
+        _ensure_public_library_version_table()
 
         version, _ = PublicLibraryVersion.objects.get_or_create(pk=1)
         if version.fixture_hash == fixture_hash:
