@@ -26,6 +26,8 @@ import { format, quality } from "@cloudinary/url-gen/actions/delivery";
 import { auto as autoFormat, jpg } from "@cloudinary/url-gen/qualifiers/format";
 import { auto as autoQuality } from "@cloudinary/url-gen/qualifiers/quality";
 import { relative } from "@cloudinary/url-gen/qualifiers/flag";
+import { compass } from "@cloudinary/url-gen/qualifiers/gravity";
+import { northWest } from "@cloudinary/url-gen/qualifiers/compass";
 import type { ImageCrop } from "../util/types";
 
 const THUMBNAIL_SIZE = 64;
@@ -87,6 +89,7 @@ function getCloudinaryUrl({
           .height(crop.height)
           .x(crop.x)
           .y(crop.y)
+          .gravity(compass(northWest()))
           .addFlag(relative()),
       );
     }

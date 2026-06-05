@@ -27,6 +27,7 @@ function render(ui: React.ReactElement, options?: any) {
 const cloudinaryMocks = vi.hoisted(() => ({
   resize: vi.fn(),
   cropAddFlag: vi.fn(),
+  cropGravity: vi.fn(),
   fillGravity: vi.fn(), // retained to confirm gravity is never called
 }));
 
@@ -71,6 +72,9 @@ vi.mock("@cloudinary/url-gen/actions/resize", () => ({
     y() {
       return this;
     },
+    gravity: cloudinaryMocks.cropGravity.mockImplementation(function gravity() {
+      return this;
+    }),
     addFlag: cloudinaryMocks.cropAddFlag.mockImplementation(function addFlag() {
       return this;
     }),
@@ -114,10 +118,19 @@ vi.mock("@cloudinary/url-gen/qualifiers/flag", () => ({
   relative: () => "relative",
 }));
 
+vi.mock("@cloudinary/url-gen/qualifiers/gravity", () => ({
+  compass: vi.fn((val) => val),
+}));
+
+vi.mock("@cloudinary/url-gen/qualifiers/compass", () => ({
+  northWest: vi.fn(() => "north_west"),
+}));
+
 describe("CloudinaryImage", () => {
   beforeEach(() => {
     cloudinaryMocks.resize.mockClear();
     cloudinaryMocks.cropAddFlag.mockClear();
+    cloudinaryMocks.cropGravity.mockClear();
     cloudinaryMocks.fillGravity.mockClear();
   });
 
@@ -193,6 +206,7 @@ describe("CloudinaryImage", () => {
     );
 
     expect(cloudinaryMocks.cropAddFlag).toHaveBeenCalledWith("relative");
+    expect(cloudinaryMocks.cropGravity).toHaveBeenCalledWith("north_west");
     expect(cloudinaryMocks.resize).toHaveBeenCalledTimes(4);
   });
 
