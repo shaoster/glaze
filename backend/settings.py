@@ -335,6 +335,11 @@ SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 CSRF_COOKIE_NAME = "potterdoc_csrftoken"
 
+# Keep sessions alive for 30 days and refresh the expiry on every request so
+# that active mobile users (iOS Safari) don't get silently logged out.
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 days
+SESSION_SAVE_EVERY_REQUEST = True
+
 if IS_PRODUCTION:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
