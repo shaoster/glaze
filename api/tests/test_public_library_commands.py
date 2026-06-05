@@ -6,15 +6,15 @@ from io import StringIO
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import connection
 
-from api.management.commands.load_public_library import _extract_cloud_name
 from api.management.commands import load_public_library as load_public_library_command
+from api.management.commands.load_public_library import _extract_cloud_name
 from api.models import (
     COMPOSITE_NAME_SEPARATOR,
     ClayBody,
     GlazeCombination,
     GlazeType,
-    PublicLibraryVersion,
 )
 from api.utils import bootstrap_dev_user
 
@@ -248,6 +248,37 @@ class TestLoadPublicLibrary:
 
         assert ClayBody.objects.filter(user=None, name="Porcelain").count() == 1
 
+    def test_skips_version_cache_when_table_missing(self, tmp_path, monkeypatch):
+        fixture = self._write_fixture(
+            tmp_path,
+            [
+                {
+                    "model": "api.claybody",
+                    "fields": {"name": "Stoneware", "short_description": "A body"},
+                },
+            ],
+        )
+
+        monkeypatch.setattr(
+            connection.introspection,
+            "table_names",
+            lambda: [],
+        )
+        monkeypatch.setattr(
+            load_public_library_command.PublicLibraryVersion.objects,
+            "get_or_create",
+            lambda *args, **kwargs: pytest.fail("get_or_create should not run"),
+        )
+        monkeypatch.setattr(
+            load_public_library_command.PublicLibraryVersion.objects,
+            "filter",
+            lambda *args, **kwargs: pytest.fail("filter should not run"),
+        )
+
+        call_command("load_public_library", fixture=str(fixture))
+
+        assert ClayBody.objects.filter(user=None, name="Stoneware").exists()
+
     def test_does_not_touch_private_objects(self, tmp_path, django_user_model):
         user = django_user_model.objects.create(username="owner@example.com")
         private = ClayBody.objects.create(
@@ -300,7 +331,7 @@ class TestLoadPublicLibrary:
         )
 
         monkeypatch.setattr(
-            load_public_library_command.connection.introspection,
+            connection.introspection,
             "table_names",
             lambda: [],
         )

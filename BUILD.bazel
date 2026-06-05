@@ -198,6 +198,8 @@ pkg_tar(
 
 # Repackage the hermetic site-packages tree from py_image_layer into a plain
 # /app/site-packages layer so the runtime image does not expose Bazel runfiles.
+# If startup ever needs to become more sophisticated, we can swap back to a
+# Python launcher without changing the dependency layer.
 genrule(
     name = "python_layer_tar",
     srcs = [
@@ -212,9 +214,16 @@ genrule(
             tar -xf "$$layer" -C "$$tmp"
         done
         mkdir -p "$$dest/app/site-packages"
-        find "$$tmp" -type d -path '*/install/lib/python3.12/site-packages' | while read -r site_packages; do
+        copied=0
+        while IFS= read -r site_packages; do
             cp -a "$$site_packages"/. "$$dest/app/site-packages"/
-        done
+            copied=1
+        done < <(find "$$tmp" -type d -path '*/site-packages' | sort)
+        if [ "$$copied" -ne 1 ]; then
+            echo "No site-packages directories were found in the py_image_layer output" >&2
+            rm -rf "$$tmp" "$$dest"
+            exit 1
+        fi
         OUT_TAR="$$PWD/$@"
         tar -C "$$dest" -cf "$$OUT_TAR" app/site-packages
         rm -rf "$$tmp" "$$dest"

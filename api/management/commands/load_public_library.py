@@ -16,6 +16,7 @@ from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
+
 from api.models import PublicLibraryVersion
 from api.utils import normalize_image_payload
 
