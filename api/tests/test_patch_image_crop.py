@@ -148,7 +148,7 @@ class TestPatchImageCrop:
             VALID_CROP,
             format="json",
         )
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_invalid_crop_missing_field_returns_400(
         self, client, image_in_editable_piece

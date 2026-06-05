@@ -4,6 +4,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { isAxiosError } from "axios";
@@ -55,7 +56,9 @@ import {
   deleteAccount,
   downloadUserData,
   fetchAppInit,
+  issueAuthTokens,
   loginWithGoogle,
+  refreshAuthToken,
   logoutUser,
   updateUserPreferences,
   type UserPreferences,
@@ -63,6 +66,7 @@ import {
 import { initializeFrontendTelemetry } from "./util/telemetry";
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
+import { AuthTokenProvider, useAuthToken } from "./components/AuthTokenContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AppFooterLinks from "./components/AppFooterLinks";
 import PublicPieceShell from "./components/PublicPieceShell";
@@ -963,13 +967,18 @@ const appQueryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={appQueryClient}>
-      <AppContent />
+      <AuthTokenProvider>
+        <AppContent />
+      </AuthTokenProvider>
     </QueryClientProvider>
   );
 }
 
 function AppContent() {
   const queryClient = useQueryClient();
+  const accessToken = useAuthToken();
+  const refreshSuppressed = useRef(false);
+  const refreshAttempted = useRef(false);
   useState(() => {
     initializeFrontendTelemetry();
     return null;
@@ -989,8 +998,14 @@ function AppContent() {
   });
 
   const handleAuthenticated = useCallback(
-    (user: AuthUser) =>
-      queryClient.setQueryData(["appInit"], (prev: typeof init) => ({ ...prev!, user })),
+    (user: AuthUser) => {
+      refreshSuppressed.current = false;
+      refreshAttempted.current = false;
+      queryClient.setQueryData(["appInit"], (prev: typeof init) => ({
+        ...prev!,
+        user,
+      }));
+    },
     [queryClient],
   );
   const handleCurrentUserUpdated = useCallback(
@@ -999,6 +1014,8 @@ function AppContent() {
     [queryClient],
   );
   const handleLogout = useCallback(async () => {
+    refreshSuppressed.current = true;
+    refreshAttempted.current = false;
     await logoutUser();
     queryClient.setQueryData(["appInit"], (prev: typeof init) => ({ ...prev!, user: null }));
   }, [queryClient]);
@@ -1008,6 +1025,39 @@ function AppContent() {
       window.location.replace(postLoginRedirect);
     }
   }, [init?.user, postLoginRedirect]);
+
+  useEffect(() => {
+    if (loading || error) return;
+
+    if (init?.user) {
+      refreshSuppressed.current = false;
+      refreshAttempted.current = false;
+      if (!accessToken) {
+        void issueAuthTokens().catch(() => {
+          // If token bootstrap fails, the app still works via session auth.
+        });
+      }
+      return;
+    }
+
+    if (refreshSuppressed.current || refreshAttempted.current) return;
+
+    refreshAttempted.current = true;
+    void refreshAuthToken()
+      .then((token) => {
+        if (token) {
+          queryClient.invalidateQueries({ queryKey: ["appInit"] });
+        } else {
+          refreshSuppressed.current = true;
+        }
+      });
+  }, [
+    accessToken,
+    error,
+    init?.user,
+    loading,
+    queryClient,
+  ]);
 
   return (
     <GoogleOAuthProvider clientId={init?.googleOauthClientId ?? ""}>

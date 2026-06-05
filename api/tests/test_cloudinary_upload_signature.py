@@ -22,7 +22,7 @@ class TestCloudinaryWidgetConfig:
         client.force_authenticate(user=None)
         response = client.get("/api/uploads/cloudinary/widget-config/")
 
-        assert response.status_code == 403
+        assert response.status_code == 401
         assert (
             response.json()["detail"] == "Authentication credentials were not provided."
         )
@@ -99,7 +99,7 @@ class TestCloudinaryWidgetSign:
             format="json",
         )
 
-        assert response.status_code == 403
+        assert response.status_code == 401
         assert (
             response.json()["detail"] == "Authentication credentials were not provided."
         )

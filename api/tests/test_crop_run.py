@@ -237,7 +237,7 @@ class TestCropRunViewSet:
 
         client = APIClient()
         response = client.get("/api/crop-runs/")
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db

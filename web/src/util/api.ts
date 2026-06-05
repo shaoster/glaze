@@ -14,6 +14,8 @@
  * this module.
  */
 import axios from "axios";
+import { AxiosHeaders } from "axios";
+import type { AxiosRequestConfig } from "axios";
 import type {
   CaptionedImage,
   CropRun,
@@ -30,6 +32,11 @@ import type {
   TagEntry,
   Thumbnail,
 } from "./types";
+import {
+  clearAccessToken,
+  getAccessToken,
+  setAccessToken,
+} from "./authTokenStore";
 
 /**
  * JSON Schema property shape returned by the workflow-schema endpoint.
@@ -95,6 +102,90 @@ const expoBaseUrl = (
 if (expoBaseUrl) {
   client.defaults.baseURL = expoBaseUrl;
 }
+
+client.interceptors.request.use((config) => {
+  const accessToken = getAccessToken();
+  if (!accessToken) return config;
+
+  const headers = AxiosHeaders.from(config.headers as never);
+  headers.set("Authorization", `Bearer ${accessToken}`);
+  config.headers = headers;
+  return config;
+});
+
+type AuthTokenResponse = {
+  accessToken: string;
+};
+
+let refreshInFlight: Promise<string | null> | null = null;
+
+function requestConfigWithBearer(
+  config: AxiosRequestConfig,
+  accessToken: string,
+): AxiosRequestConfig {
+  const headers = AxiosHeaders.from(config.headers as never);
+  headers.set("Authorization", `Bearer ${accessToken}`);
+  return {
+    ...config,
+    headers,
+  };
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      await ensureCsrfCookie();
+      const { data } = await client.post<AuthTokenResponse>(
+        "auth/token/refresh/",
+        {},
+      );
+      setAccessToken(data.accessToken);
+      return data.accessToken;
+    })()
+      .catch(() => {
+        clearAccessToken();
+        return null;
+      })
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+
+  return refreshInFlight;
+}
+
+function isAuthEndpoint(url: string | undefined): boolean {
+  return Boolean(url && /^auth\//.test(url));
+}
+
+client.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (!axios.isAxiosError(error) || error.response?.status !== 401) {
+      return Promise.reject(error);
+    }
+
+    const originalConfig = error.config as AxiosRequestConfig & {
+      _retry?: boolean;
+    } | undefined;
+    if (!originalConfig || originalConfig._retry) {
+      return Promise.reject(error);
+    }
+    if (isAuthEndpoint(originalConfig.url)) {
+      return Promise.reject(error);
+    }
+
+    originalConfig._retry = true;
+    const newAccessToken = await refreshAccessToken();
+    if (!newAccessToken) {
+      clearAccessToken();
+      window.location.replace("/");
+      return Promise.reject(error);
+    }
+
+    return client.request(requestConfigWithBearer(originalConfig, newAccessToken));
+  },
+);
 
 export type CloudinaryWidgetConfig = {
   cloud_name: string;
@@ -326,7 +417,9 @@ export async function loginWithGoogle(
 
 export async function logoutUser(): Promise<void> {
   await ensureCsrfCookie();
+  await client.post("auth/token/revoke/", {});
   await client.post("auth/logout/", {});
+  clearAccessToken();
 }
 
 export function downloadUserData(): void {
@@ -337,7 +430,26 @@ export function downloadUserData(): void {
 
 export async function deleteAccount(): Promise<void> {
   await ensureCsrfCookie();
+  await client.post("auth/token/revoke/", {});
   await client.delete("auth/account/");
+  clearAccessToken();
+}
+
+export async function issueAuthTokens(): Promise<AuthTokenResponse> {
+  await ensureCsrfCookie();
+  const { data } = await client.post<AuthTokenResponse>("auth/token/", {});
+  setAccessToken(data.accessToken);
+  return data;
+}
+
+export async function refreshAuthToken(): Promise<string | null> {
+  return refreshAccessToken();
+}
+
+export async function revokeAuthToken(): Promise<void> {
+  await ensureCsrfCookie();
+  await client.post("auth/token/revoke/", {});
+  clearAccessToken();
 }
 
 export type StaffInviteCodeResponse = { code: string; expires_at: string };

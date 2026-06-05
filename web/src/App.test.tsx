@@ -38,6 +38,12 @@ vi.mock("./util/api", async (importOriginal) => {
         user: null,
       }),
     loginWithGoogle: vi.fn(),
+    issueAuthTokens: vi.fn(async () => {
+      const { setAccessToken } = await import("./util/authTokenStore");
+      setAccessToken("test-access-token");
+      return { accessToken: "test-access-token" };
+    }),
+    refreshAuthToken: vi.fn(async () => null),
     logoutUser: vi.fn().mockResolvedValue(undefined),
     getStaffInviteCode: vi.fn(),
     generateStaffInviteCode: vi.fn(),
@@ -125,9 +131,12 @@ vi.mock("./util/telemetry", () => ({
 import {
   fetchAppInit,
   fetchPiece,
+  issueAuthTokens,
   loginWithGoogle,
+  refreshAuthToken,
   logoutUser,
 } from "./util/api";
+import { clearAccessToken } from "./util/authTokenStore";
 import App from "./App";
 import * as postLoginRedirect from "./util/postLoginRedirect";
 
@@ -160,6 +169,7 @@ describe("App auth flow", () => {
     _googleOnSuccess = undefined;
     _googleOnError = undefined;
     window.history.pushState({}, "", "/");
+    clearAccessToken();
     vi.mocked(fetchAppInit).mockResolvedValue({
       googleOauthClientId: "test-client-id",
       adminBaseUrl: null,
@@ -296,6 +306,9 @@ describe("App auth flow", () => {
       },
       { timeout: 5000 },
     );
+    await waitFor(() => {
+      expect(issueAuthTokens).toHaveBeenCalled();
+    });
 
     expect(
       screen.getByRole("img", { name: "PotterDoc app icon" }),
@@ -331,6 +344,30 @@ describe("App auth flow", () => {
       expect(
         screen.getByRole("menuitem", { name: "My Support Tickets" }),
       ).toHaveAttribute("href", "/support/tickets/my-tickets/");
+    });
+  });
+
+  it("silently refreshes from the refresh cookie when the session is gone", async () => {
+    vi.mocked(fetchAppInit)
+      .mockResolvedValueOnce({
+        googleOauthClientId: "test-client-id",
+        adminBaseUrl: null,
+        user: null,
+      })
+      .mockResolvedValueOnce({
+        googleOauthClientId: "test-client-id",
+        adminBaseUrl: null,
+        user: MOCK_USER,
+      });
+    vi.mocked(refreshAuthToken).mockResolvedValueOnce("test-access-token");
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(refreshAuthToken).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(screen.getByText(MOCK_DISPLAY_NAME)).toBeInTheDocument();
     });
   });
 
