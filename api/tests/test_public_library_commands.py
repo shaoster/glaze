@@ -2,7 +2,6 @@
 
 import json
 from io import StringIO
-from types import SimpleNamespace
 
 import pytest
 from django.core.management import call_command
@@ -289,7 +288,7 @@ class TestLoadPublicLibrary:
         )
         assert "skipping" in out.getvalue().lower()
 
-    def test_recreates_missing_version_table(self, tmp_path):
+    def test_skips_version_cache_when_table_missing(self, tmp_path, monkeypatch):
         fixture = self._write_fixture(
             tmp_path,
             [
@@ -300,46 +299,23 @@ class TestLoadPublicLibrary:
             ],
         )
 
-        created_models: list[type] = []
-
-        class _DummySchemaEditor:
-            def __enter__(self):
-                return self
-
-            def __exit__(self, exc_type, exc, tb):
-                return False
-
-            def create_model(self, model):
-                created_models.append(model)
-
-        monkeypatch = pytest.MonkeyPatch()
         monkeypatch.setattr(
             load_public_library_command.connection.introspection,
             "table_names",
             lambda: [],
         )
         monkeypatch.setattr(
-            load_public_library_command.connection,
-            "schema_editor",
-            lambda: _DummySchemaEditor(),
-        )
-        monkeypatch.setattr(
             load_public_library_command.PublicLibraryVersion.objects,
             "get_or_create",
-            lambda pk: (SimpleNamespace(fixture_hash=""), True),
+            lambda *args, **kwargs: pytest.fail("get_or_create should not run"),
         )
         monkeypatch.setattr(
             load_public_library_command.PublicLibraryVersion.objects,
             "filter",
-            lambda **kwargs: SimpleNamespace(update=lambda **kwargs: None),
+            lambda *args, **kwargs: pytest.fail("filter should not run"),
         )
 
-        try:
-            call_command("load_public_library", fixture=str(fixture))
-        finally:
-            monkeypatch.undo()
-
-        assert created_models == [PublicLibraryVersion]
+        call_command("load_public_library", fixture=str(fixture))
         assert ClayBody.objects.filter(user=None, name="Stoneware").exists()
 
     def test_raises_for_invalid_json(self, tmp_path):

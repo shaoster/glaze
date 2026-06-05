@@ -7,20 +7,17 @@ set -e
 if [ $# -gt 0 ]; then
     case "$1" in
         python|python3|/usr/bin/python|/usr/bin/python3)
-            shift
-            ;;
-    esac
-
-    case "${1:-}" in
-        manage.py)
-            shift
-            exec python manage.py "$@"
-            ;;
-        -m)
-            exec python "$@"
+            case "${2:-}" in
+                manage.py)
+                    shift 2
+                    exec python manage.py "$@"
+                    ;;
+                *)
+                    exec "$@"
+                    ;;
+            esac
             ;;
         celery)
-            shift
             exec python -m celery "$@"
             ;;
         *)

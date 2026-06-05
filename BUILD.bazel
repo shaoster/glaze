@@ -209,13 +209,8 @@ genrule(
         tmp=$$(mktemp -d)
         dest=$$(mktemp -d)
         for layer in $(locations :python_layer); do
-            case "$$layer" in
-                *packages.tar.gz)
-                    tar -xf "$$layer" -C "$$tmp"
-                    ;;
-            esac
+            tar -xf "$$layer" -C "$$tmp"
         done
-        mkdir -p "$$dest/app"
         mkdir -p "$$dest/app/site-packages"
         find "$$tmp" -type d -path '*/install/lib/python3.12/site-packages' | while read -r site_packages; do
             cp -a "$$site_packages"/. "$$dest/app/site-packages"/
