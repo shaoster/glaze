@@ -125,6 +125,12 @@ REST_FRAMEWORK = {
     # endpoint); there is no global default throttle.
     "DEFAULT_THROTTLE_RATES": {
         "invite_send": "60/hour",
+        # Anonymous write proxy — 100 bursts per minute per IP is generous for
+        # legitimate SDK usage while still blocking trivial flood attacks.
+        "browser_traces": "100/min",
+        # Google OAuth initiation — keeps bot-driven sign-in floods cheap to
+        # block without impacting normal login UX (users rarely retry > once).
+        "google_auth": "10/min",
     },
 }
 

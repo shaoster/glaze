@@ -109,6 +109,8 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_THROTTLE_RATES": {
         "invite_send": "60/hour",
+        "browser_traces": "100/min",
+        "google_auth": "10/min",
     },
 }
 

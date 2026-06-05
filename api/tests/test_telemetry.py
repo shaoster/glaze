@@ -3,6 +3,8 @@ from unittest.mock import Mock
 import httpx
 import pytest
 from django.contrib.auth.models import User
+from django.core.cache import cache
+from django.test.utils import override_settings
 
 
 @pytest.mark.django_db
@@ -77,3 +79,85 @@ class TestTelemetryProxy:
             headers={"content-type": "application/x-protobuf"},
             timeout=10.0,
         )
+
+    def test_unsupported_content_type_returns_415(self, client):
+        response = client.post(
+            "/api/telemetry/traces/",
+            data=b"trace-bytes",
+            content_type="text/plain",
+        )
+        assert response.status_code == 415
+
+    def test_oversized_body_returns_413(self, client):
+        from api.telemetry_views import _MAX_TRACE_BODY_BYTES
+
+        response = client.post(
+            "/api/telemetry/traces/",
+            data=b"x" * (_MAX_TRACE_BODY_BYTES + 1),
+            content_type="application/x-protobuf",
+        )
+        assert response.status_code == 413
+
+    def test_oversized_content_length_header_returns_413_early(self, client):
+        from api.telemetry_views import _MAX_TRACE_BODY_BYTES
+
+        # A large Content-Length header is rejected before the body is read.
+        response = client.post(
+            "/api/telemetry/traces/",
+            data=b"\x00",
+            content_type="application/x-protobuf",
+            CONTENT_LENGTH=str(_MAX_TRACE_BODY_BYTES + 1),
+        )
+        assert response.status_code == 413
+
+    def test_json_content_type_is_accepted(self, client, monkeypatch):
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otelcol:4317")
+        response_mock = httpx.Response(
+            200, content=b"", headers={"content-type": "application/json"}
+        )
+        monkeypatch.setattr(
+            "api.telemetry_views.httpx.post", Mock(return_value=response_mock)
+        )
+        response = client.post(
+            "/api/telemetry/traces/",
+            data=b"{}",
+            content_type="application/json",
+        )
+        assert response.status_code == 200
+
+    @override_settings(
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            }
+        },
+    )
+    def test_anonymous_requests_are_rate_limited(self, monkeypatch):
+        from api.telemetry_views import BrowserTracesThrottle
+
+        cache.clear()
+        monkeypatch.setitem(
+            BrowserTracesThrottle.THROTTLE_RATES, "browser_traces", "1/min"
+        )
+        response_mock = httpx.Response(
+            200, content=b"", headers={"content-type": "application/json"}
+        )
+        monkeypatch.setattr(
+            "api.telemetry_views.httpx.post", Mock(return_value=response_mock)
+        )
+
+        from django.test import Client as DjangoClient
+
+        anon = DjangoClient()
+        first = anon.post(
+            "/api/telemetry/traces/",
+            data=b"\x00",
+            content_type="application/x-protobuf",
+        )
+        second = anon.post(
+            "/api/telemetry/traces/",
+            data=b"\x00",
+            content_type="application/x-protobuf",
+        )
+        assert first.status_code == 200
+        assert second.status_code == 429

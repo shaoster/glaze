@@ -12,11 +12,34 @@ from rest_framework.decorators import (
     api_view,
     authentication_classes,
     permission_classes,
+    throttle_classes,
 )
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
+from rest_framework.throttling import AnonRateThrottle
 
 from backend.otel import traced
+
+_MAX_TRACE_BODY_BYTES = 512 * 1024  # 512 KB
+
+_ALLOWED_CONTENT_TYPES = frozenset(
+    [
+        "application/x-protobuf",
+        "application/json",
+        "application/x-ndjson",
+    ]
+)
+
+
+class BrowserTracesThrottle(AnonRateThrottle):
+    """Per-IP anonymous throttle for the browser telemetry proxy.
+
+    Rate comes from ``REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["browser_traces"]``.
+    Requires a shared cache (``REDIS_CACHE_URL`` in production); the counter is
+    not persisted with ``DummyCache``.
+    """
+
+    scope = "browser_traces"
 
 
 def _collector_traces_endpoint() -> str:
@@ -44,22 +67,42 @@ def _collector_traces_endpoint() -> str:
 
 @extend_schema(
     request=None,
-    responses={200: None, 202: None, 400: None, 502: None},
+    responses={200: None, 202: None, 400: None, 413: None, 415: None, 502: None},
     description=(
         "Proxy browser OTLP/HTTP trace uploads to the local collector. "
         "The browser sends the request with the normal session/CSRF flow; "
-        "the backend forwards the raw OTLP payload to the collector."
+        "the backend forwards the raw OTLP payload to the collector. "
+        "Payloads larger than 512 KB are rejected (413). "
+        "Only application/x-protobuf, application/json, and application/x-ndjson "
+        "content types are accepted (415)."
     ),
 )
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@throttle_classes([BrowserTracesThrottle])
 @traced("telemetry.browser_traces")
 def browser_traces(request: Request) -> HttpResponse:
     """Forward a browser OTLP/HTTP trace payload to the collector."""
+    content_type = (request.headers.get("content-type") or "").split(";")[0].strip()
+    if content_type not in _ALLOWED_CONTENT_TYPES:
+        return HttpResponse(status=415)
+
+    # Reject oversized payloads before reading the full body into memory.
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            if int(content_length) > _MAX_TRACE_BODY_BYTES:
+                return HttpResponse(status=413)
+        except ValueError:
+            return HttpResponse(status=400)
+
     body = request.body
     if not body:
         return HttpResponse(status=400)
+
+    if len(body) > _MAX_TRACE_BODY_BYTES:
+        return HttpResponse(status=413)
 
     collector_endpoint = _collector_traces_endpoint()
     forward_headers = {}

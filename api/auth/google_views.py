@@ -14,16 +14,28 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 
 from backend.otel import traced
 
 from ..dev.bootstrap import bootstrap_dev_user
 from ..models import InviteCode, UserProfile
 from ..serializers import AuthUserSerializer, GoogleAuthSerializer
+
+
+class GoogleAuthThrottle(AnonRateThrottle):
+    """Per-IP anonymous throttle for the Google OAuth login endpoint.
+
+    Rate comes from ``REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["google_auth"]``.
+    Requires a shared cache (``REDIS_CACHE_URL`` in production); the counter is
+    not persisted with ``DummyCache``.
+    """
+
+    scope = "google_auth"
 
 
 def _exchange_google_auth_code(code: str, redirect_uri: str) -> dict:
@@ -190,6 +202,7 @@ def auth_google_impl(
 )
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([GoogleAuthThrottle])
 @traced
 def auth_google(request: Request) -> Response:
     """Exchange a Google OAuth code and log the user in."""
