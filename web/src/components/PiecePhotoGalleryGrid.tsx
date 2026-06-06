@@ -21,6 +21,17 @@ type PiecePhotoGalleryGridImage = {
   editableCurrentStateIndex: number | null;
 };
 
+// Extends the image with pre-computed per-tile context so MasonryTile can be
+// defined at module scope (stable reference) rather than inside the component.
+// Masonic remounts all tiles when the render prop identity changes, which
+// causes use-resize-observer to crash with a WeakMap error on unmount.
+type MasonryTileData = PiecePhotoGalleryGridImage & {
+  canDelete: boolean;
+  isThumbnail: boolean;
+  onOpen: () => void;
+  onDelete: () => void;
+};
+
 type PiecePhotoGalleryGridProps = {
   images: PiecePhotoGalleryGridImage[];
   canDeleteImages: boolean;
@@ -29,6 +40,107 @@ type PiecePhotoGalleryGridProps = {
   onOpenImage: (index: number) => void;
   onRequestDelete: (index: number) => void;
 };
+
+function MasonryTile({
+  data: image,
+  index,
+  width,
+}: {
+  data: MasonryTileData;
+  index: number;
+  width: number;
+}) {
+  return (
+    <Box
+      sx={{
+        position: "relative",
+        border: "1px solid",
+        borderColor: "divider",
+        borderRadius: "8px",
+        overflow: "hidden",
+      }}
+    >
+      <Box
+        component="button"
+        type="button"
+        onClick={image.onOpen}
+        aria-label={`Open piece photo ${index + 1}`}
+        sx={{
+          p: 0,
+          border: "none",
+          width: "100%",
+          background: "transparent",
+          display: "block",
+          lineHeight: 0,
+          cursor: "pointer",
+        }}
+      >
+        <Box sx={{ position: "relative", width: "100%" }}>
+          <CloudinaryImage
+            url={image.url}
+            cloud_name={image.cloud_name}
+            cloudinary_public_id={image.cloudinary_public_id}
+            crop={image.crop}
+            alt={image.caption || "Piece photo"}
+            context="gallery"
+            requestedWidth={Math.round(
+              width * (globalThis.window?.devicePixelRatio ?? 1),
+            )}
+            style={{
+              width: "100%",
+              height: "auto",
+              objectFit: "contain",
+              display: "block",
+            }}
+          />
+        </Box>
+      </Box>
+      {image.canDelete && (
+        <Tooltip
+          title={
+            image.isThumbnail
+              ? "Cannot delete the current piece thumbnail"
+              : "Delete photo"
+          }
+        >
+          <span>
+            <IconButton
+              aria-label={`Delete piece photo ${index + 1}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                image.onDelete();
+              }}
+              disabled={image.isThumbnail}
+              size="small"
+              sx={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                width: 28,
+                height: 28,
+                color: "common.white",
+                backgroundColor: image.isThumbnail
+                  ? "rgba(0,0,0,0.24)"
+                  : "rgba(0,0,0,0.52)",
+                backdropFilter: "blur(6px)",
+                "&:hover": {
+                  backgroundColor: image.isThumbnail
+                    ? "rgba(0,0,0,0.24)"
+                    : "rgba(0,0,0,0.68)",
+                },
+                "&.Mui-disabled": {
+                  color: "rgba(255,255,255,0.45)",
+                },
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
+      )}
+    </Box>
+  );
+}
 
 export default function PiecePhotoGalleryGrid({
   images,
@@ -49,112 +161,20 @@ export default function PiecePhotoGalleryGrid({
     );
   }
 
-  const MasonryTile = ({
-    data: image,
-    index,
-    width,
-  }: {
-    data: PiecePhotoGalleryGridImage;
-    index: number;
-    width: number;
-  }) => {
-    const isThumbnail = image.url === currentThumbnailUrl;
-
-    return (
-      <Box
-        sx={{
-          position: "relative",
-          border: "1px solid",
-          borderColor: "divider",
-          borderRadius: "8px",
-          overflow: "hidden",
-        }}
-      >
-        <Box
-          component="button"
-          type="button"
-          onClick={() => onOpenImage(index)}
-          aria-label={`Open piece photo ${index + 1}`}
-          sx={{
-            p: 0,
-            border: "none",
-            width: "100%",
-            background: "transparent",
-            display: "block",
-            lineHeight: 0,
-            cursor: "pointer",
-          }}
-        >
-          <Box sx={{ position: "relative", width: "100%" }}>
-            <CloudinaryImage
-              url={image.url}
-              cloud_name={image.cloud_name}
-              cloudinary_public_id={image.cloudinary_public_id}
-              crop={image.crop}
-              alt={image.caption || "Piece photo"}
-              context="gallery"
-              requestedWidth={Math.round(
-                width * (globalThis.window?.devicePixelRatio ?? 1),
-              )}
-              style={{
-                width: "100%",
-                height: "auto",
-                objectFit: "contain",
-                display: "block",
-              }}
-            />
-          </Box>
-        </Box>
-        {(image.editableCurrentStateIndex !== null ? canDeleteImages : canDeletePastImages) && (
-          <Tooltip
-            title={
-              isThumbnail
-                ? "Cannot delete the current piece thumbnail"
-                : "Delete photo"
-            }
-          >
-            <span>
-              <IconButton
-                aria-label={`Delete piece photo ${index + 1}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRequestDelete(index);
-                }}
-                disabled={isThumbnail}
-                size="small"
-                sx={{
-                  position: "absolute",
-                  top: 8,
-                  right: 8,
-                  width: 28,
-                  height: 28,
-                  color: "common.white",
-                  backgroundColor: isThumbnail
-                    ? "rgba(0,0,0,0.24)"
-                    : "rgba(0,0,0,0.52)",
-                  backdropFilter: "blur(6px)",
-                  "&:hover": {
-                    backgroundColor: isThumbnail
-                      ? "rgba(0,0,0,0.24)"
-                      : "rgba(0,0,0,0.68)",
-                  },
-                  "&.Mui-disabled": {
-                    color: "rgba(255,255,255,0.45)",
-                  },
-                }}
-              >
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-        )}
-      </Box>
-    );
-  };
+  const tileData: MasonryTileData[] = images.map((image, idx) => ({
+    ...image,
+    canDelete:
+      image.editableCurrentStateIndex !== null
+        ? canDeleteImages
+        : canDeletePastImages,
+    isThumbnail: image.url === currentThumbnailUrl,
+    onOpen: () => onOpenImage(idx),
+    onDelete: () => onRequestDelete(idx),
+  }));
 
   return (
     <Masonry
-      items={images}
+      items={tileData}
       render={MasonryTile}
       columnCount={isMobile ? 2 : 3}
       columnGutter={6}
