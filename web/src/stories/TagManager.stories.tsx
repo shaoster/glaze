@@ -39,6 +39,9 @@ export const Default: Story = {
     pieceId: "p1",
     initialTags: [mockTags[0]],
     onSaved: fn(),
+    tagDialogOpen: false,
+    onOpenTagDialog: fn(),
+    onCloseTagDialog: fn(),
   },
   parameters: {
     msw: {

@@ -253,7 +253,7 @@ export default function GlazeCombinationGallery() {
             combo={combo}
             pieces={pieces}
             onTileClick={handleTileClick}
-            onPieceImageClick={(images, idx) =>
+            onPieceImageClick={(_images, idx) =>
               onPieceImageClick(combo.id, idx)
             }
           />

@@ -438,7 +438,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             piece={piece}
             onPieceUpdated={onPieceUpdated}
             rewindedStateId={rewindedStateId}
-            onRewind={historyRouting.onRewind}
+            onRewind={(id) => id && historyRouting.onRewind(id)}
           />
         </SectionCard>
       </Box>

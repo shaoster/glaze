@@ -289,6 +289,7 @@ WEB_APP_SRCS = glob(
         "src/assets/**/*",
         "src/components/**/*",
         "src/pages/**/*",
+        "src/routing/**/*",
         "*.json",
         "public/**/*",
     ],
