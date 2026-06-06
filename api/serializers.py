@@ -538,10 +538,16 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         if not (obj.shared and not obj.is_editable):
             return None
         from .piece.showcase_views import _latest_showcase_task
+        from .showcase import build_keepsake_storyboard, compute_storyboard_hash
 
         task = _latest_showcase_task(obj)
         if task is None or task.status != AsyncTask.Status.SUCCESS:
             return None
+        stored_hash = (task.input_params or {}).get("input_hash")
+        if stored_hash:
+            current_hash = compute_storyboard_hash(build_keepsake_storyboard(obj))
+            if stored_hash != current_hash:
+                return None
         result = task.result if isinstance(task.result, dict) else {}
         return result.get("artifact_url")
 

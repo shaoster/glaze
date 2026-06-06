@@ -134,7 +134,7 @@ describe("ShowcasePage", () => {
     await screen.findByText("Beautiful Bowl");
     const loginBtn = screen.getByRole("link", { name: "Log in" });
     expect(loginBtn).toBeInTheDocument();
-    expect(loginBtn).toHaveAttribute("href", "/?next=/pieces/piece-1/showcase");
+    expect(loginBtn).toHaveAttribute("href", "/?next=%2Fpieces%2Fpiece-1%2Fshowcase");
   });
 
   it("shows Edit button for authenticated owner", async () => {

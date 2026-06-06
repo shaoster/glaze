@@ -94,8 +94,8 @@ function ShowcaseHeader({ piece, isAuthenticated }: { piece: PieceDetail; isAuth
         <Typography variant="h6" component="p">PotterDoc</Typography>
       </Box>
       <Button
-        component={RouterLink}
-        to={`/?next=/pieces/${id}/showcase`}
+        component="a"
+        href={`/?next=${encodeURIComponent(`/pieces/${id}/showcase`)}`}
         variant="outlined"
         size="small"
       >
