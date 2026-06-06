@@ -107,6 +107,7 @@ ts_project(
             "src/components/**/*.tsx",
             "src/pages/**/*.ts",
             "src/pages/**/*.tsx",
+            "src/routing/**/*.ts",
             "src/util/*.ts",
         ],
         exclude = [
@@ -350,6 +351,7 @@ js_library(
             "src/assets/**/*",
             "src/components/**/*",
             "src/pages/**/*",
+            "src/routing/**/*",
             "*.json",
             "*.config.*",
             "public/**/*",
