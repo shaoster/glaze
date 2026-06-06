@@ -35,7 +35,8 @@ export default function GlobalEntryField({
   routing,
 }: GlobalEntryFieldProps) {
   const [localOpen, setLocalOpen] = useState(false);
-  const open = routing?.open ?? localOpen;
+  // Disabled fields never open the picker, even when the URL targets this field.
+  const open = !disabled && (routing?.open ?? localOpen);
   const onOpen = routing?.onOpen ?? (() => setLocalOpen(true));
   const onClose = routing?.onClose ?? (() => setLocalOpen(false));
   const showAction = !disabled || !hideActionWhenDisabled;

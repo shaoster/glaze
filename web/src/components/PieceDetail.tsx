@@ -123,13 +123,23 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     },
   );
 
-  // Only block navigation that leaves this piece's subtree entirely.
-  // Sub-route changes within /pieces/:id (history, video, tags, fields) are
-  // in-page state and must not trigger the unsaved-changes prompt.
+  // Block navigation away from the dirty form, but allow routing-hook sub-routes
+  // that are pure in-page UI and do not mutate piece state.
+  // /photos is intentionally excluded: the gallery can write back to the current
+  // state using the last-saved prop values, which would silently drop dirty edits.
   const blocker = useBlocker(
     useCallback(
-      ({ nextLocation }: { nextLocation: { pathname: string } }) =>
-        canEdit && isDirty && !nextLocation.pathname.startsWith(`/pieces/${piece.id}`),
+      ({ nextLocation }: { nextLocation: { pathname: string } }) => {
+        if (!canEdit || !isDirty) return false;
+        const next = nextLocation.pathname;
+        const base = `/pieces/${piece.id}`;
+        if (next === base) return false;
+        if (next.startsWith(`${base}/history/`)) return false;
+        if (next === `${base}/video`) return false;
+        if (next === `${base}/tags/new`) return false;
+        if (next.startsWith(`${base}/state/fields/`)) return false;
+        return true;
+      },
       [canEdit, isDirty, piece.id],
     ),
   );
