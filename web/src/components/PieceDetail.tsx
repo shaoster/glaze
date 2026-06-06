@@ -450,6 +450,17 @@ function ArtifactActions({ artifact, pieceName }: ArtifactActionsProps) {
     typeof navigator.share === "function" &&
     typeof navigator.canShare === "function";
 
+  async function handleDownload() {
+    const response = await fetch(artifact.download_url);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = artifact.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleShare() {
     setSharing(true);
     try {
@@ -490,10 +501,8 @@ function ArtifactActions({ artifact, pieceName }: ArtifactActionsProps) {
       />
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
         <Button
-          component="a"
-          href={artifact.download_url}
-          download={artifact.filename}
           variant="outlined"
+          onClick={handleDownload}
         >
           Download MP4
         </Button>
