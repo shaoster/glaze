@@ -115,6 +115,7 @@ urlpatterns = [
         name="swagger",
     ),
     path("pieces/<uuid:piece_id>", _piece_spa),
+    path("pieces/<uuid:piece_id>/showcase", _piece_spa),
     # Catch-all: serve the React SPA for client routes only. File-like URLs
     # (for example Vite chunk files) must fall through so static handling can
     # return the real asset or a 404 instead of HTML.

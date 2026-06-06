@@ -479,7 +479,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
     @classmethod
     def prepare_global_entry_queryset(cls, qs, display_field):
         return (
-            qs.select_related("current_location", "thumbnail")
+            qs.select_related("current_location", "thumbnail", "user__profile")
             .prefetch_related("states__image_links__image", "tag_links__tag")
             .order_by(display_field)
         )
@@ -529,14 +529,19 @@ class PieceSummarySerializer(serializers.ModelSerializer):
             total += len(links)
         return total
 
-
 @traced_class
 class PieceDetailSerializer(PieceSummarySerializer):
     current_state = serializers.SerializerMethodField()
     history = serializers.SerializerMethodField()
+    showcase_video_url = serializers.SerializerMethodField()
+    owner_alias = serializers.SerializerMethodField()
 
     class Meta(PieceSummarySerializer.Meta):
-        fields = PieceSummarySerializer.Meta.fields + ["history"]
+        fields = PieceSummarySerializer.Meta.fields + [
+            "history",
+            "showcase_video_url",
+            "owner_alias",
+        ]
 
     @extend_schema_field(_relation_schema("PieceState", shape="detail"))
     def get_current_state(self, obj: Piece) -> dict:
@@ -549,6 +554,50 @@ class PieceDetailSerializer(PieceSummarySerializer):
         return list(
             PieceStateSerializer(obj.states.all(), many=True, context=self.context).data
         )
+
+    @extend_schema_field(serializers.CharField(allow_null=True, required=False))
+    def get_showcase_video_url(self, obj: Piece) -> str | None:
+        if not (obj.shared and not obj.is_editable):
+            return None
+        from .piece.showcase_views import SHOWCASE_VIDEO_TASK_TYPE
+        from .showcase import build_keepsake_storyboard, compute_storyboard_hash
+
+        # Use the latest succeeded task so an in-progress retry does not hide
+        # an existing artifact while it runs (or if it fails).
+        task = (
+            AsyncTask.objects.filter(
+                user=obj.user,
+                task_type=SHOWCASE_VIDEO_TASK_TYPE,
+                input_params__piece_id=str(obj.id),
+                status=AsyncTask.Status.SUCCESS,
+            )
+            .order_by("-created")
+            .first()
+        )
+        if task is None:
+            return None
+        input_params = task.input_params if isinstance(task.input_params, dict) else {}
+        stored_hash = input_params.get("input_hash")
+        if stored_hash:
+            # Rebuild the storyboard with the same exclusions used when
+            # rendering so custom renders are not incorrectly flagged stale.
+            storyboard = build_keepsake_storyboard(
+                obj,
+                excluded_image_keys=input_params.get("excluded_image_keys") or [],
+                excluded_note_keys=input_params.get("excluded_note_keys") or [],
+                music_track_id=input_params.get("music_track_id"),
+            )
+            if stored_hash != compute_storyboard_hash(storyboard.to_dict()):
+                return None
+        result = task.result if isinstance(task.result, dict) else {}
+        return result.get("artifact_url")
+
+    @extend_schema_field(serializers.CharField(allow_null=True, required=False))
+    def get_owner_alias(self, obj: Piece) -> str | None:
+        try:
+            return obj.user.profile.alias or None
+        except Exception:
+            return None
 
 
 @traced_class

@@ -1,20 +1,19 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link as RouterLink } from "react-router-dom";
 import {
   Box,
+  Button,
   Container,
   Typography,
   alpha,
   Divider,
 } from "@mui/material";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { formatValue } from "../util/format";
 import { fetchPiece } from "../util/api";
 import { type PieceDetail } from "../util/types";
-import { formatWorkflowFieldLabel } from "../util/workflow";
 import CloudinaryImage from "./CloudinaryImage";
 import ProcessSummary from "./ProcessSummary";
 
-export default function PublicPieceShell() {
+export function ShowcasePage({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const { id } = useParams<{ id: string }>();
   const { data: piece } = useSuspenseQuery<PieceDetail>({
     queryKey: ["piece", id],
@@ -41,42 +40,84 @@ export default function PublicPieceShell() {
         },
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
-        <Box
-          component="img"
-          src="/favicon.svg"
-          alt="PotterDoc app icon"
-          sx={{ width: 22, height: 22, flexShrink: 0, display: "block" }}
-        />
-        <Typography variant="h6" component="p" color="text.primary">
-          PotterDoc
-        </Typography>
-      </Box>
-
-      <ShowcaseView piece={piece} />
+      <ShowcaseHeader piece={piece} isAuthenticated={isAuthenticated} />
+      <ShowcaseView piece={piece} isAuthenticated={isAuthenticated} />
     </Container>
   );
 }
 
-function ShowcaseView({ piece }: { piece: PieceDetail }) {
-  const showcaseFields = piece.showcase_fields ?? [];
-  const resolvedFields = showcaseFields
-    .map((ref) => {
-      const [stateId, fieldName] = ref.split(".", 2);
-      const state = [...piece.history]
-        .reverse()
-        .find((s) => s.state === stateId);
-      const rawValue = state?.custom_fields?.[fieldName];
-      const value = formatValue(rawValue);
-      return {
-        label: formatWorkflowFieldLabel(fieldName),
-        value,
-      };
-    })
-    .filter((f) => !!f.value);
+export default ShowcasePage;
 
+function ShowcaseHeader({ piece, isAuthenticated }: { piece: PieceDetail; isAuthenticated: boolean }) {
+  const { id } = useParams<{ id: string }>();
+
+  if (isAuthenticated && piece.can_edit) {
+    // Owner
+    return (
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box component="img" src="/favicon.svg" alt="PotterDoc" sx={{ width: 22, height: 22 }} />
+          <Typography variant="h6" component="p">PotterDoc</Typography>
+        </Box>
+        <Button component={RouterLink} to={`/pieces/${id}`} variant="outlined" size="small">
+          Edit
+        </Button>
+      </Box>
+    );
+  }
+
+  if (isAuthenticated && !piece.can_edit) {
+    // Authenticated non-owner
+    return (
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box component="img" src="/favicon.svg" alt="PotterDoc" sx={{ width: 22, height: 22 }} />
+          <Typography variant="h6" component="p">PotterDoc</Typography>
+        </Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            {piece.owner_alias ? `Viewing ${piece.owner_alias}'s piece` : "Viewing a shared piece"}
+          </Typography>
+          <Button component={RouterLink} to="/" variant="text" size="small">
+            My pieces
+          </Button>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Unauthenticated visitor
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
+      <Box component={RouterLink} to="/" sx={{ display: "flex", alignItems: "center", gap: 1, textDecoration: "none", color: "inherit" }}>
+        <Box component="img" src="/favicon.svg" alt="PotterDoc" sx={{ width: 22, height: 22 }} />
+        <Typography variant="h6" component="p">PotterDoc</Typography>
+      </Box>
+      <Button
+        component="a"
+        href={`/?next=${encodeURIComponent(`/pieces/${id}/showcase`)}`}
+        variant="outlined"
+        size="small"
+      >
+        Log in
+      </Button>
+    </Box>
+  );
+}
+
+function ShowcaseView({ piece }: { piece: PieceDetail; isAuthenticated: boolean }) {
   return (
     <Box sx={{ mx: "auto", maxWidth: 800, mt: 4 }}>
+      {piece.showcase_video_url && (
+        <Box
+          component="video"
+          src={piece.showcase_video_url}
+          controls
+          playsInline
+          sx={{ width: "100%", borderRadius: 1, display: "block", backgroundColor: "black", mb: 3 }}
+        />
+      )}
+
       <Box
         sx={(theme) => ({
           position: "relative",
@@ -128,47 +169,6 @@ function ShowcaseView({ piece }: { piece: PieceDetail }) {
           >
             {piece.showcase_story}
           </Typography>
-        </Box>
-      )}
-
-      {resolvedFields.length > 0 && (
-        <Box sx={{ mb: 6 }}>
-          <Typography
-            variant="subtitle2"
-            sx={{
-              mb: 2,
-              color: "text.secondary",
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-            }}
-          >
-            Details
-          </Typography>
-          <Box
-            sx={{
-              display: "grid",
-              gap: 3,
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            }}
-          >
-            {resolvedFields.map((field) => (
-              <Box
-                key={field.label}
-                sx={{ borderTop: "1px solid", borderColor: "divider", pt: 1.5 }}
-              >
-                <Typography
-                  variant="caption"
-                  sx={{ color: "text.secondary", display: "block", mb: 0.5 }}
-                >
-                  {field.label}
-                </Typography>
-                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {field.value}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
         </Box>
       )}
 

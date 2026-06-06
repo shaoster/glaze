@@ -18,7 +18,7 @@ import {
 } from "@mui/material";
 import HistoryIcon from "@mui/icons-material/History";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import { useBlocker, useLocation, useNavigate } from "react-router-dom";
+import { useBlocker, useLocation, useNavigate, Link as RouterLink } from "react-router-dom";
 import type { PieceDetail as PieceDetailType } from "../util/types";
 import { DEFAULT_TRACK_ID } from "../util/music";
 import { formatState, isTerminalState, getCustomFieldDefinitions } from "../util/workflow";
@@ -238,6 +238,18 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             {canEdit && isTerminal && (
               <Box sx={{ mb: 1.5 }}>
                 <ShareControls piece={piece} onPieceUpdated={onPieceUpdated} />
+              </Box>
+            )}
+            {piece.can_edit && (
+              <Box sx={{ mb: 1.5 }}>
+                <Button
+                  component={RouterLink}
+                  to={`/pieces/${piece.id}/showcase`}
+                  variant="outlined"
+                  size="small"
+                >
+                  Preview showcase
+                </Button>
               </Box>
             )}
             {canEdit && (

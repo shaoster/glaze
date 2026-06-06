@@ -318,6 +318,8 @@ function mapPieceDetail(raw: Wire<PieceDetail>): PieceDetail {
     ...mapPieceSummary(raw),
     current_state: mapPieceState(raw.current_state),
     history: raw.history.map(mapPieceState),
+    showcase_video_url: raw.showcase_video_url ?? null,
+    owner_alias: raw.owner_alias ?? null,
   };
 }
 

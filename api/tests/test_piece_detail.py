@@ -739,3 +739,85 @@ class TestPieceCurrentStateDetail:
         PieceState.objects.create(piece=foreign_piece, state=ENTRY_STATE)
         response = client.get(f"/api/pieces/{foreign_piece.id}/current_state/")
         assert response.status_code == 404
+
+
+@pytest.mark.django_db
+class TestPieceSummaryShowcaseVideoUrl:
+    """Test showcase_video_url and owner_alias on PieceSummarySerializer."""
+
+    def _make_public_terminal_piece(self, user):
+        from api.models import Piece, PieceState
+        from api.workflow import TERMINAL_STATES
+
+        piece = Piece.objects.create(user=user, name="Public Bowl")
+        terminal_state = sorted(TERMINAL_STATES)[0]
+        PieceState.objects.create(piece=piece, user=user, state=terminal_state)
+        piece.shared = True
+        piece.is_editable = False
+        piece.save()
+        return piece
+
+    def _make_succeeded_task(self, user, piece, artifact_url):
+        from api.models import AsyncTask
+        from api.showcase.render import SHOWCASE_VIDEO_TASK_TYPE
+
+        return AsyncTask.objects.create(
+            user=user,
+            task_type=SHOWCASE_VIDEO_TASK_TYPE,
+            status=AsyncTask.Status.SUCCESS,
+            input_params={"piece_id": str(piece.id)},
+            result={"artifact_url": artifact_url},
+        )
+
+    def test_public_piece_with_succeeded_task_returns_artifact_url(self, client, user):
+        piece = self._make_public_terminal_piece(user)
+        artifact_url = "https://res.cloudinary.com/demo/video/upload/showcase.mp4"
+        self._make_succeeded_task(user, piece, artifact_url)
+
+        response = client.get(f"/api/pieces/{piece.id}/")
+        assert response.status_code == 200
+        assert response.json()["showcase_video_url"] == artifact_url
+
+    def test_public_piece_with_no_task_returns_null(self, client, user):
+        piece = self._make_public_terminal_piece(user)
+
+        response = client.get(f"/api/pieces/{piece.id}/")
+        assert response.status_code == 200
+        assert response.json()["showcase_video_url"] is None
+
+    def test_private_piece_with_succeeded_task_returns_null(self, client, user):
+        from api.models import Piece, PieceState
+        from api.workflow import TERMINAL_STATES
+
+        piece = Piece.objects.create(user=user, name="Private Bowl")
+        terminal_state = sorted(TERMINAL_STATES)[0]
+        PieceState.objects.create(piece=piece, user=user, state=terminal_state)
+        # piece.shared defaults to False
+        artifact_url = "https://res.cloudinary.com/demo/video/upload/showcase.mp4"
+        self._make_succeeded_task(user, piece, artifact_url)
+
+        response = client.get(f"/api/pieces/{piece.id}/")
+        assert response.status_code == 200
+        assert response.json()["showcase_video_url"] is None
+
+    def test_owner_alias_returned_when_profile_has_alias(self, client, user):
+        from api.models import UserProfile
+
+        piece = self._make_public_terminal_piece(user)
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.alias = "PotterJane"
+        profile.save()
+
+        response = client.get(f"/api/pieces/{piece.id}/")
+        assert response.status_code == 200
+        assert response.json()["owner_alias"] == "PotterJane"
+
+    def test_owner_alias_null_when_profile_has_no_alias(self, client, user):
+        from api.models import UserProfile
+
+        piece = self._make_public_terminal_piece(user)
+        UserProfile.objects.filter(user=user).delete()
+
+        response = client.get(f"/api/pieces/{piece.id}/")
+        assert response.status_code == 200
+        assert response.json()["owner_alias"] is None

@@ -212,6 +212,7 @@ class TestGlobalEntries:
                 "is_editable": False,
                 "showcase_story": "",
                 "showcase_fields": [],
+
                 "photo_count": 0,
                 "can_edit": True,
                 "current_state": {"state": "designed"},

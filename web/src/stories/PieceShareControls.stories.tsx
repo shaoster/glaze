@@ -12,6 +12,8 @@ const basePiece: PieceDetail = {
   tags: [],
   showcase_fields: [],
   showcase_story: "",
+  showcase_video_url: null,
+  owner_alias: null,
   photo_count: 0,
   thumbnail: null,
   current_location: null,

@@ -83,6 +83,8 @@ const mockPiece: PieceDetail = {
   current_location: "Studio",
   showcase_story: "",
   showcase_fields: [],
+  showcase_video_url: null,
+  owner_alias: null,
   current_state: mockPastHistory[2],
   history: mockPastHistory,
 };

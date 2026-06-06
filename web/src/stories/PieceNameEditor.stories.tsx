@@ -46,6 +46,8 @@ const basePiece: PieceDetail = {
   current_location: "",
   showcase_story: "",
   showcase_fields: [],
+  showcase_video_url: null,
+  owner_alias: null,
   current_state: {
     id: "s1",
     state: "trimmed",

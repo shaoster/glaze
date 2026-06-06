@@ -3,13 +3,10 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import CircularProgress from "@mui/material/CircularProgress";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import PublicPieceShell from "../PublicPieceShell";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { ShowcasePage } from "../PublicPieceShell";
 import ErrorBoundary from "../ErrorBoundary";
 import * as api from "../../util/api";
-
-vi.mock("react-router-dom", () => ({
-  useParams: () => ({ id: "piece-1" }),
-}));
 
 vi.mock("../../util/api", () => ({
   fetchPiece: vi.fn(),
@@ -31,19 +28,45 @@ vi.mock("../../../workflow.yml", () => ({
   },
 }));
 
-function renderShell(queryClient: QueryClient) {
+const BASE_PIECE = {
+  id: "piece-1",
+  name: "Beautiful Bowl",
+  showcase_story: "This is a hand-crafted bowl.",
+  showcase_fields: [],
+  showcase_video_url: null,
+  owner_alias: null,
+  thumbnail: null,
+  can_edit: false,
+  history: [
+    {
+      state: "state1",
+      custom_fields: {},
+    },
+  ],
+} as any;
+
+function renderShell(queryClient: QueryClient, isAuthenticated = false, pieceId = "piece-1") {
   return render(
     <QueryClientProvider client={queryClient}>
-      <ErrorBoundary>
-        <Suspense fallback={<CircularProgress />}>
-          <PublicPieceShell />
-        </Suspense>
-      </ErrorBoundary>
+      <MemoryRouter initialEntries={[`/pieces/${pieceId}/showcase`]}>
+        <Routes>
+          <Route
+            path="/pieces/:id/showcase"
+            element={
+              <ErrorBoundary>
+                <Suspense fallback={<CircularProgress />}>
+                  <ShowcasePage isAuthenticated={isAuthenticated} />
+                </Suspense>
+              </ErrorBoundary>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-describe("PublicPieceShell", () => {
+describe("ShowcasePage", () => {
   it("renders a loading indicator while fetching", () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -55,43 +78,96 @@ describe("PublicPieceShell", () => {
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
-  it("renders piece content with showcase story and custom fields when loaded", async () => {
+  it("renders piece name and story when loaded", async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    vi.mocked(api.fetchPiece).mockResolvedValue({
-      id: "piece-1",
-      name: "Beautiful Bowl",
-      showcase_story: "This is a hand-crafted bowl.",
-      showcase_fields: [
-        "state1.material",
-        "state1.emptyField",
-        "state1.validBool",
-      ],
-      thumbnail: null,
-      history: [
-        {
-          state: "state1",
-          custom_fields: {
-            material: "Clay",
-            emptyField: "",
-            validBool: true,
-          },
-        },
-      ],
-    } as any);
+    vi.mocked(api.fetchPiece).mockResolvedValue(BASE_PIECE);
 
     renderShell(queryClient);
 
     expect(await screen.findByText("Beautiful Bowl")).toBeInTheDocument();
-    expect(
-      screen.getByText("This is a hand-crafted bowl."),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Details")).toBeInTheDocument();
+    expect(screen.getByText("This is a hand-crafted bowl.")).toBeInTheDocument();
+  });
 
-    expect(screen.getByText("Clay")).toBeInTheDocument();
-    expect(screen.getByText("Yes")).toBeInTheDocument();
+  it("renders video element when showcase_video_url is present", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const videoUrl = "https://res.cloudinary.com/demo/video/upload/showcase.mp4";
+    vi.mocked(api.fetchPiece).mockResolvedValue({
+      ...BASE_PIECE,
+      showcase_video_url: videoUrl,
+    });
 
-    expect(screen.queryByText("EmptyField")).not.toBeInTheDocument();
+    renderShell(queryClient);
+
+    await screen.findByText("Beautiful Bowl");
+    const video = document.querySelector("video");
+    expect(video).not.toBeNull();
+    expect(video?.src).toBe(videoUrl);
+  });
+
+  it("does not render video element when showcase_video_url is null", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.mocked(api.fetchPiece).mockResolvedValue({
+      ...BASE_PIECE,
+      showcase_video_url: null,
+    });
+
+    renderShell(queryClient);
+
+    await screen.findByText("Beautiful Bowl");
+    expect(document.querySelector("video")).toBeNull();
+  });
+
+  it("shows Log in button for unauthenticated visitor", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.mocked(api.fetchPiece).mockResolvedValue(BASE_PIECE);
+
+    renderShell(queryClient, false);
+
+    await screen.findByText("Beautiful Bowl");
+    const loginBtn = screen.getByRole("link", { name: "Log in" });
+    expect(loginBtn).toBeInTheDocument();
+    expect(loginBtn).toHaveAttribute("href", "/?next=%2Fpieces%2Fpiece-1%2Fshowcase");
+  });
+
+  it("shows Edit button for authenticated owner", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.mocked(api.fetchPiece).mockResolvedValue({
+      ...BASE_PIECE,
+      can_edit: true,
+    });
+
+    renderShell(queryClient, true);
+
+    await screen.findByText("Beautiful Bowl");
+    const editBtn = screen.getByRole("link", { name: "Edit" });
+    expect(editBtn).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
+  });
+
+  it("shows owner alias context for authenticated non-owner", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.mocked(api.fetchPiece).mockResolvedValue({
+      ...BASE_PIECE,
+      can_edit: false,
+      owner_alias: "Alice",
+    });
+
+    renderShell(queryClient, true);
+
+    await screen.findByText("Beautiful Bowl");
+    expect(screen.getByText("Viewing Alice's piece")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
   });
 });

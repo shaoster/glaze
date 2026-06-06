@@ -541,7 +541,7 @@ describe("PieceDetail", () => {
 
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(
-        "http://localhost:3000/pieces/piece-id-1",
+        "http://localhost:3000/pieces/piece-id-1/showcase",
       ),
     );
   });
@@ -566,7 +566,7 @@ describe("PieceDetail", () => {
       expect(share).toHaveBeenCalledWith({
         text: "Powered by PotterDoc",
         title: "Test Bowl — Completed",
-        url: "http://localhost:3000/pieces/piece-id-1",
+        url: "http://localhost:3000/pieces/piece-id-1/showcase",
       }),
     );
   });
