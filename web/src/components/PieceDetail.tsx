@@ -543,6 +543,7 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
     mutationFn: () => requestPieceShowcaseVideo(piece.id, selection),
     onSuccess: (updated) => {
       queryClient.setQueryData(["showcase-video", piece.id], updated);
+      setUserExpanded(true);
     },
   });
 
@@ -570,8 +571,8 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
     currentStatus === "running" ? (showcaseVideo?.progress ?? 0) : null;
 
   const artifact = showcaseVideo?.artifact ?? null;
-  // Default: expanded when no artifact exists (needs action), collapsed when one does.
-  // userExpanded overrides once the user manually toggles.
+  // Pinned open after the user generates a video in this session; otherwise
+  // defaults to open when no artifact exists yet, closed when one already does.
   const expanded = userExpanded ?? (artifact === null);
   const errorMessage = rawGenerateError
     ? extractErrorMessage(
