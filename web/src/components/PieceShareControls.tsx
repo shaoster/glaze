@@ -36,7 +36,7 @@ function buildThumbnailShareUrl(thumbnail: Thumbnail): string {
 }
 
 function publicPieceUrl(pieceId: string): string {
-  return `${window.location.origin}/pieces/${pieceId}`;
+  return `${window.location.origin}/pieces/${pieceId}/showcase`;
 }
 
 function buildShareText(piece: PieceDetail): string {

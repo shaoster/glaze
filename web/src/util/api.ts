@@ -310,6 +310,8 @@ function mapPieceSummary(raw: Wire<PieceSummary>): PieceSummary {
     tags: (raw.tags ?? []).map(mapTagEntry),
     showcase_story: raw.showcase_story ?? "",
     showcase_fields: (raw.showcase_fields as string[]) ?? [],
+    showcase_video_url: raw.showcase_video_url ?? null,
+    owner_alias: raw.owner_alias ?? null,
   };
 }
 

@@ -69,7 +69,7 @@ import { getPostLoginRedirectTarget } from "./util/postLoginRedirect";
 import { AuthTokenProvider, useAuthToken } from "./components/AuthTokenContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AppFooterLinks from "./components/AppFooterLinks";
-import PublicPieceShell from "./components/PublicPieceShell";
+import PublicPieceShell, { ShowcasePage } from "./components/PublicPieceShell";
 import UserPreferencesDialog from "./components/UserPreferencesDialog";
 import TutorialManager from "./components/TutorialManager";
 import {
@@ -788,6 +788,16 @@ function UnauthenticatedApp({
               }
             />
             <Route
+              path="/pieces/:id/showcase"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <ShowcasePage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
               path="/pieces/:id/*"
               element={
                 <ErrorBoundary>
@@ -859,6 +869,16 @@ function AuthenticatedApp({
               <Route path="new" element={<PieceListPage />} />
               <Route path="analyze/*" element={<AnalyzePage />} />
             </Route>
+            <Route
+              path="/pieces/:id/showcase"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <ShowcasePage isAuthenticated />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
             <Route path="/pieces/:id/*" element={<PieceDetailPage />} />
             <Route
               path="/tools/glaze-import"

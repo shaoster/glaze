@@ -57,7 +57,7 @@ def piece_queryset(request: Request):
     user_id = request.user.id
     assert user_id is not None
     return (
-        Piece.objects.select_related("current_location", "thumbnail")
+        Piece.objects.select_related("current_location", "thumbnail", "user__profile")
         .annotate(thumbnail_crop=_thumbnail_crop_subquery())
         .prefetch_related("states", "tag_links__tag")
         .filter(user_id=user_id)
@@ -68,7 +68,7 @@ def piece_queryset(request: Request):
 def piece_read_queryset(request: Request):
     """Return the queryset for pieces visible to the current request."""
     qs = (
-        Piece.objects.select_related("current_location", "thumbnail")
+        Piece.objects.select_related("current_location", "thumbnail", "user__profile")
         .annotate(thumbnail_crop=_thumbnail_crop_subquery())
         .prefetch_related("states", "tag_links__tag")
     )

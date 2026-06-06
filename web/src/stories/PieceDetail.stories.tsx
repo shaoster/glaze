@@ -49,6 +49,8 @@ const mockPiece: PieceDetailType = {
   current_location: "Studio Shelf A",
   showcase_story: "",
   showcase_fields: [],
+  showcase_video_url: null,
+  owner_alias: null,
   current_state: {
     id: "s2",
     state: "trimmed",

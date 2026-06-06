@@ -58,6 +58,8 @@ const piece = {
   tags: [],
   showcase_story: "",
   showcase_fields: [],
+  showcase_video_url: null,
+  owner_alias: null,
   history,
 } satisfies PieceDetail;
 

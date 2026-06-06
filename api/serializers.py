@@ -457,6 +457,8 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         read_only=True,
     )
     last_modified = serializers.DateTimeField(read_only=True)
+    showcase_video_url = serializers.SerializerMethodField()
+    owner_alias = serializers.SerializerMethodField()
 
     class Meta:
         model = Piece
@@ -471,6 +473,8 @@ class PieceSummarySerializer(serializers.ModelSerializer):
             "is_editable",
             "showcase_story",
             "showcase_fields",
+            "showcase_video_url",
+            "owner_alias",
             "can_edit",
             "current_state",
             "current_location",
@@ -479,7 +483,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
     @classmethod
     def prepare_global_entry_queryset(cls, qs, display_field):
         return (
-            qs.select_related("current_location", "thumbnail")
+            qs.select_related("current_location", "thumbnail", "user__profile")
             .prefetch_related("states__image_links__image", "tag_links__tag")
             .order_by(display_field)
         )
@@ -528,6 +532,25 @@ class PieceSummarySerializer(serializers.ModelSerializer):
                 links = state.image_links.all()
             total += len(links)
         return total
+
+    @extend_schema_field(serializers.CharField(allow_null=True, required=False))
+    def get_showcase_video_url(self, obj: Piece) -> str | None:
+        if not (obj.shared and not obj.is_editable):
+            return None
+        from .piece.showcase_views import _latest_showcase_task
+
+        task = _latest_showcase_task(obj)
+        if task is None or task.status != AsyncTask.Status.SUCCESS:
+            return None
+        result = task.result if isinstance(task.result, dict) else {}
+        return result.get("artifact_url")
+
+    @extend_schema_field(serializers.CharField(allow_null=True, required=False))
+    def get_owner_alias(self, obj: Piece) -> str | None:
+        try:
+            return obj.user.profile.alias or None
+        except Exception:
+            return None
 
 
 @traced_class
