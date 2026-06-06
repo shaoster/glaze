@@ -1,5 +1,6 @@
 import {
   type ComponentProps,
+  useCallback,
   useState,
 } from "react";
 import {
@@ -122,7 +123,16 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     },
   );
 
-  const blocker = useBlocker(canEdit && isDirty);
+  // Only block navigation that leaves this piece's subtree entirely.
+  // Sub-route changes within /pieces/:id (history, video, tags, fields) are
+  // in-page state and must not trigger the unsaved-changes prompt.
+  const blocker = useBlocker(
+    useCallback(
+      ({ nextLocation }: { nextLocation: { pathname: string } }) =>
+        canEdit && isDirty && !nextLocation.pathname.startsWith(`/pieces/${piece.id}`),
+      [canEdit, isDirty, piece.id],
+    ),
+  );
 
 
 
@@ -438,7 +448,9 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             piece={piece}
             onPieceUpdated={onPieceUpdated}
             rewindedStateId={rewindedStateId}
-            onRewind={(id) => id && historyRouting.onRewind(id)}
+            onRewind={(id) =>
+              id ? historyRouting.onRewind(id) : historyRouting.onClearRewind()
+            }
           />
         </SectionCard>
       </Box>

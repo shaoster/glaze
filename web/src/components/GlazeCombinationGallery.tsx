@@ -213,8 +213,12 @@ export default function GlazeCombinationGallery() {
   // Tile lightboxes are local (ephemeral, not shareable).
   const [tileBox, setTileBox] = useState<LightboxState | null>(null);
   const navigate = useNavigate();
-  const { pieceLightbox, onPieceImageClick, onClosePieceLightbox } =
-    useCombinationGalleryRouting(entries);
+  const {
+    pieceLightbox,
+    onPieceImageClick,
+    onPieceLightboxIndexChange,
+    onClosePieceLightbox,
+  } = useCombinationGalleryRouting(entries);
   const lightbox = pieceLightbox ?? tileBox;
 
   if (entries.length === 0) {
@@ -263,6 +267,7 @@ export default function GlazeCombinationGallery() {
         <ImageLightbox
           images={lightbox.images}
           initialIndex={lightbox.initialIndex}
+          onIndexChange={pieceLightbox ? onPieceLightboxIndexChange : undefined}
           onClose={() => {
             if (pieceLightbox) {
               onClosePieceLightbox();

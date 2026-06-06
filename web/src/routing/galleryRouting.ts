@@ -23,6 +23,7 @@ export interface PieceLightboxState {
 export interface CombinationGalleryRouting {
   pieceLightbox: PieceLightboxState | null;
   onPieceImageClick: (comboId: string, idx: number) => void;
+  onPieceLightboxIndexChange: (idx: number) => void;
   onClosePieceLightbox: () => void;
 }
 
@@ -51,10 +52,15 @@ export function useCombinationGalleryRouting(
     return { kind: "piece", images, initialIndex: idx };
   }, [searchParams, entries]);
 
+  const comboParam = searchParams.get("combo");
+
   return {
     pieceLightbox,
     onPieceImageClick: (comboId, idx) =>
       setSearchParams({ combo: comboId, image: String(idx) }),
+    onPieceLightboxIndexChange: (idx) => {
+      if (comboParam) setSearchParams({ combo: comboParam, image: String(idx) });
+    },
     onClosePieceLightbox: () => setSearchParams({}),
   };
 }

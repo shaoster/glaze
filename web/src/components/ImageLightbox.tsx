@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
   IconButton,
@@ -17,6 +17,7 @@ type ImageLightboxProps = {
   images: CaptionedImage[];
   initialIndex: number;
   onClose: () => void;
+  onIndexChange?: (index: number) => void;
   currentThumbnailUrl?: string;
   onSetAsThumbnail?: (image: CaptionedImage) => Promise<void>;
   onCropSave?: (image: CaptionedImage, crop: ImageCrop) => Promise<void>;
@@ -34,6 +35,7 @@ export default function ImageLightbox({
   images,
   initialIndex,
   onClose,
+  onIndexChange,
   currentThumbnailUrl,
   onSetAsThumbnail,
   onCropSave,
@@ -41,6 +43,16 @@ export default function ImageLightbox({
   footerActions,
 }: ImageLightboxProps) {
   const [index, setIndex] = useState(initialIndex);
+
+  // Notify caller when index changes due to navigation (swipe, arrow, thumbnail).
+  // Use a ref so the effect dep list stays stable and doesn't fire on mount.
+  const onIndexChangeRef = useRef(onIndexChange);
+  onIndexChangeRef.current = onIndexChange;
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) { mountedRef.current = true; return; }
+    onIndexChangeRef.current?.(index);
+  }, [index]);
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [dragDeltaY, setDragDeltaY] = useState(0);
   const [cropMode, setCropMode] = useState(false);

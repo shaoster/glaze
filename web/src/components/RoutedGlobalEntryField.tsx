@@ -1,3 +1,4 @@
+import { useInRouterContext } from "react-router-dom";
 import { useGlobalFieldRouting } from "../routing/pieceRouting";
 import GlobalEntryField, { type GlobalEntryFieldProps } from "./GlobalEntryField";
 
@@ -10,7 +11,8 @@ interface RoutedGlobalEntryFieldProps extends Omit<GlobalEntryFieldProps, "routi
   fieldName?: string;
 }
 
-export default function RoutedGlobalEntryField({
+// Inner component so useGlobalFieldRouting is always called unconditionally.
+function RoutedGlobalEntryFieldInner({
   pieceId,
   fieldName,
   globalName,
@@ -18,4 +20,18 @@ export default function RoutedGlobalEntryField({
 }: RoutedGlobalEntryFieldProps) {
   const routing = useGlobalFieldRouting(pieceId, fieldName ?? globalName);
   return <GlobalEntryField {...props} globalName={globalName} routing={routing} />;
+}
+
+// When rendered outside a Router context (e.g. Django admin), fall back to
+// the unrouted GlobalEntryField so admin forms still work.
+export default function RoutedGlobalEntryField({
+  pieceId,
+  fieldName,
+  ...rest
+}: RoutedGlobalEntryFieldProps) {
+  const inRouter = useInRouterContext();
+  if (!inRouter) {
+    return <GlobalEntryField {...rest} />;
+  }
+  return <RoutedGlobalEntryFieldInner pieceId={pieceId} fieldName={fieldName} {...rest} />;
 }
