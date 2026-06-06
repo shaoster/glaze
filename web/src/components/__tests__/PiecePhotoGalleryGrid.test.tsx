@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { render, screen } from "@testing-library/react";
+import { Masonry } from "masonic";
 import { describe, expect, it, vi } from "vitest";
 import PiecePhotoGalleryGrid from "../PiecePhotoGalleryGrid";
 
@@ -16,20 +17,22 @@ vi.mock("../CloudinaryImage", () => ({
 }));
 
 vi.mock("masonic", () => ({
-  Masonry: ({
-    items,
-    render: RenderComponent,
-  }: {
-    items: any[];
-    render: React.ComponentType<{ data: any; index: number; width: number }>;
-  }) => (
-    <div data-testid="masonry-grid">
-      {items.map((item, index) => (
-        <div key={index}>
-          <RenderComponent data={item} index={index} width={320} />
-        </div>
-      ))}
-    </div>
+  Masonry: vi.fn(
+    ({
+      items,
+      render: RenderComponent,
+    }: {
+      items: any[];
+      render: React.ComponentType<{ data: any; index: number; width: number }>;
+    }) => (
+      <div data-testid="masonry-grid">
+        {items.map((item, index) => (
+          <div key={index}>
+            <RenderComponent data={item} index={index} width={320} />
+          </div>
+        ))}
+      </div>
+    ),
   ),
 }));
 
@@ -111,5 +114,50 @@ describe("PiecePhotoGalleryGrid", () => {
 
     // Second button (other) should be enabled
     expect(deleteButtons[1]).not.toBeDisabled();
+  });
+
+  it("passes a stable render function reference to Masonry across re-renders", () => {
+    const capturedRenders: React.ComponentType<unknown>[] = [];
+    vi.mocked(Masonry).mockImplementation(
+      ({ render: renderProp }: { render: React.ComponentType<unknown> }) => {
+        capturedRenders.push(renderProp);
+        return null;
+      },
+    );
+
+    const image1 = {
+      url: "https://example.com/a.jpg",
+      caption: "A",
+      stateLabel: "Throwing",
+      editableCurrentStateIndex: 0,
+    };
+    const image2 = {
+      url: "https://example.com/b.jpg",
+      caption: "B",
+      stateLabel: "Throwing",
+      editableCurrentStateIndex: 1,
+    };
+
+    const { rerender } = render(
+      <PiecePhotoGalleryGrid
+        images={[image1, image2]}
+        canDeleteImages
+        onOpenImage={vi.fn()}
+        onRequestDelete={vi.fn()}
+      />,
+    );
+    rerender(
+      <PiecePhotoGalleryGrid
+        images={[image1]}
+        canDeleteImages
+        onOpenImage={vi.fn()}
+        onRequestDelete={vi.fn()}
+      />,
+    );
+
+    expect(capturedRenders).toHaveLength(2);
+    // render prop must be the same reference across re-renders; a new reference
+    // causes masonic to remount all tiles, triggering the WeakMap crash on unmount
+    expect(capturedRenders[0]).toBe(capturedRenders[1]);
   });
 });
