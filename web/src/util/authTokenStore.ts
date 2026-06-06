@@ -1,13 +1,24 @@
 type Listener = () => void;
+type AccessTokenMessage = { type: "clear" };
 
 let accessToken: string | null = null;
 const listeners = new Set<Listener>();
+const broadcastChannel =
+  typeof globalThis.BroadcastChannel === "function"
+    ? new globalThis.BroadcastChannel("potterdoc-auth-token")
+    : null;
 
-export function getAccessToken(): string | null {
-  return accessToken;
+if (broadcastChannel) {
+  broadcastChannel.onmessage = (
+    event: MessageEvent<AccessTokenMessage>,
+  ): void => {
+    if (event.data?.type === "clear") {
+      notifyAccessTokenChange(null);
+    }
+  };
 }
 
-export function setAccessToken(token: string | null): void {
+function notifyAccessTokenChange(token: string | null): void {
   if (accessToken === token) return;
   accessToken = token;
   for (const listener of listeners) {
@@ -15,8 +26,17 @@ export function setAccessToken(token: string | null): void {
   }
 }
 
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
+export function setAccessToken(token: string | null): void {
+  notifyAccessTokenChange(token);
+}
+
 export function clearAccessToken(): void {
-  setAccessToken(null);
+  notifyAccessTokenChange(null);
+  broadcastChannel?.postMessage({ type: "clear" } satisfies AccessTokenMessage);
 }
 
 export function subscribeAccessToken(listener: Listener): () => void {

@@ -84,11 +84,17 @@ class TestAuthEndpointsMocked:
         followup = session_client.post("/api/auth/logout/")
         assert followup.status_code == 401, followup.content
 
-    def test_auth_token_issues_bearer_and_refresh_cookie(self, user):
+    def test_auth_token_issues_bearer_and_refresh_cookie(self):
         from rest_framework.test import APIClient
+        from django.contrib.auth.models import User
 
         token_client = APIClient()
-        token_client.force_authenticate(user=user)
+        user = User.objects.create_user(
+            username="token-test@example.com",
+            email="token-test@example.com",
+            password="password123",
+        )
+        assert token_client.login(username=user.username, password="password123")
 
         response = token_client.post("/api/auth/token/")
 
@@ -96,6 +102,21 @@ class TestAuthEndpointsMocked:
         assert response.json()["accessToken"]
         assert REFRESH_COOKIE_NAME in response.cookies
         assert response.cookies[REFRESH_COOKIE_NAME]["path"] == "/api/auth/"
+
+    def test_auth_token_rejects_bearer_authentication(self, user):
+        from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        bearer_client = APIClient()
+        bearer_token = str(RefreshToken.for_user(user).access_token)
+        bearer_client.credentials(HTTP_AUTHORIZATION=f"Bearer {bearer_token}")
+
+        response = bearer_client.post("/api/auth/token/")
+
+        assert response.status_code == 403
+        assert response.json()["detail"] == (
+            "Refresh tokens can only be issued from a browser session."
+        )
 
     def test_refresh_cookie_exchanges_for_access_token(self, settings):
         from rest_framework.test import APIClient
@@ -108,7 +129,9 @@ class TestAuthEndpointsMocked:
             password="password123",
         )
         session_client = APIClient()
-        session_client.force_authenticate(user=login_user)
+        assert session_client.login(
+            username=login_user.username, password="password123"
+        )
         issue_response = session_client.post("/api/auth/token/")
 
         refresh_client = APIClient()
@@ -128,17 +151,24 @@ class TestAuthEndpointsMocked:
         assert bearer_response.status_code == 200
         assert bearer_response.json()["user"]["id"] == login_user.id
 
-    def test_auth_token_revoke_clears_refresh_cookie(self):
+    def test_auth_token_revoke_clears_refresh_cookie(self, user):
         from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
 
+        issued_refresh_token = str(RefreshToken.for_user(user))
         client = APIClient()
-        client.cookies[REFRESH_COOKIE_NAME] = "refresh-token-value"
+        client.cookies[REFRESH_COOKIE_NAME] = issued_refresh_token
 
         response = client.post("/api/auth/token/revoke/")
 
         assert response.status_code == 204
         assert REFRESH_COOKIE_NAME in response.cookies
         assert response.cookies[REFRESH_COOKIE_NAME].value == ""
+
+        refresh_client = APIClient()
+        refresh_client.cookies[REFRESH_COOKIE_NAME] = issued_refresh_token
+        refresh_response = refresh_client.post("/api/auth/token/refresh/")
+        assert refresh_response.status_code == 401
 
     def test_csrf_view(self):
         from api.auth.views import csrf

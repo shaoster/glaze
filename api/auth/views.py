@@ -32,6 +32,7 @@ from .token_views import (
     auth_token,
     auth_token_refresh,
     auth_token_revoke,
+    _blacklist_refresh_cookie,
     clear_refresh_cookie,
 )
 from .preferences_views import auth_preferences
@@ -79,6 +80,7 @@ def csrf(request: Request) -> Response:
 @traced
 def auth_logout(request: Request) -> Response:
     """Log the current user out of the active session."""
+    _blacklist_refresh_cookie(request)
     logout(request)
     response = Response(status=status.HTTP_204_NO_CONTENT)
     clear_refresh_cookie(response)
@@ -97,6 +99,7 @@ def auth_delete_account(request: Request) -> HttpResponse:
     """Delete the current user account after cleaning up protected refs."""
     response = delete_account_impl(request, logout_fn=logout)
     if response.status_code == status.HTTP_204_NO_CONTENT:
+        _blacklist_refresh_cookie(request)
         clear_refresh_cookie(response)
     return response
 

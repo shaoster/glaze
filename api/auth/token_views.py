@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.http import HttpResponseBase
 from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework.authentication import SessionAuthentication
 from rest_framework import serializers as drf_serializers
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -75,6 +76,28 @@ def _issue_access_token_response(refresh_token: RefreshToken) -> Response:
     )
 
 
+def _refresh_cookie_token(request: Request) -> RefreshToken | None:
+    raw_refresh_token = request.COOKIES.get(_REFRESH_COOKIE_NAME)
+    if not raw_refresh_token:
+        return None
+
+    try:
+        return RefreshToken(raw_refresh_token)  # type: ignore[arg-type]
+    except TokenError:
+        return None
+
+
+def _blacklist_refresh_cookie(request: Request) -> None:
+    refresh_token = _refresh_cookie_token(request)
+    if refresh_token is None:
+        return
+
+    try:
+        refresh_token.blacklist()
+    except TokenError:
+        return
+
+
 @extend_schema(
     request=None,
     responses={
@@ -95,6 +118,14 @@ def _issue_access_token_response(refresh_token: RefreshToken) -> Response:
 @traced
 def auth_token(request: Request) -> Response:
     """Issue a fresh access token for the authenticated user."""
+    if not isinstance(
+        getattr(request, "successful_authenticator", None), SessionAuthentication
+    ):
+        return Response(
+            {"detail": "Refresh tokens can only be issued from a browser session."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
     refresh_token = RefreshToken.for_user(cast(User, request.user))
     response = _issue_access_token_response(refresh_token)
     set_refresh_cookie(response, refresh_token)
@@ -147,6 +178,7 @@ def auth_token_refresh(request: Request) -> Response:
 @traced
 def auth_token_revoke(request: Request) -> Response:
     """Clear the refresh cookie used for silent re-authentication."""
+    _blacklist_refresh_cookie(request)
     response = Response(status=status.HTTP_204_NO_CONTENT)
     _clear_refresh_cookie(response)
     return response
