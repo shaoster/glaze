@@ -488,26 +488,16 @@ function ArtifactActions({ artifact, pieceName }: ArtifactActionsProps) {
           backgroundColor: "black",
         }}
       />
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+      {canShare && (
         <Button
-          component="a"
-          href={artifact.download_url}
-          download={artifact.filename}
           variant="outlined"
+          onClick={handleShare}
+          disabled={sharing}
+          startIcon={sharing ? <CircularProgress size={16} /> : undefined}
         >
-          Download MP4
+          Share video
         </Button>
-        {canShare && (
-          <Button
-            variant="outlined"
-            onClick={handleShare}
-            disabled={sharing}
-            startIcon={sharing ? <CircularProgress size={16} /> : undefined}
-          >
-            Share video
-          </Button>
-        )}
-      </Stack>
+      )}
     </Stack>
   );
 }
