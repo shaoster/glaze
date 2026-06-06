@@ -104,6 +104,7 @@ dependencies = [
     "urllib3==2.7.0",
     "uvicorn==0.46.0",
     "whitenoise==6.9.0",
+    "djangorestframework-simplejwt>=5.5.1",
 ]
 
 [tool.uv]

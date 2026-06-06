@@ -21,6 +21,7 @@ py_library(
     srcs = [
         "__init__.py",
         "auth/__init__.py",
+        "auth/jwt_auth.py",
         "auth/views.py",
         "auth/account_views.py",
         "auth/export_archive.py",
@@ -29,6 +30,7 @@ py_library(
         "auth/google_views.py",
         "auth/invite_views.py",
         "auth/mock_idp_views.py",
+        "auth/token_views.py",
         "auth/preferences_views.py",
         "dev/__init__.py",
         "dev/bootstrap.py",
@@ -79,6 +81,7 @@ py_library(
         "@pypi//av",
         "@pypi//numpy",
         "@pypi//pillow_heif",
+        "@pypi//djangorestframework_simplejwt",
     ],
 )
 
@@ -168,6 +171,7 @@ filegroup(
         "analysis_views.py",
         "apps.py",
         "auth/__init__.py",
+        "auth/jwt_auth.py",
         "auth/views.py",
         "auth/account_views.py",
         "auth/export_archive.py",
@@ -176,6 +180,7 @@ filegroup(
         "auth/google_views.py",
         "auth/invite_views.py",
         "auth/mock_idp_views.py",
+        "auth/token_views.py",
         "auth/preferences_views.py",
         "dev/__init__.py",
         "dev/bootstrap.py",

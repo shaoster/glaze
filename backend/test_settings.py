@@ -6,6 +6,7 @@ tests do not inherit production-only branches by accident.
 
 import os
 from pathlib import Path
+from datetime import timedelta
 
 import dj_database_url
 
@@ -90,6 +91,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_spectacular",
     "helpdesk.apps.HelpdeskConfig",
+    "rest_framework_simplejwt.token_blacklist",
     "api",
 ]
 
@@ -102,6 +104,7 @@ PASSWORD_HASHERS = [
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "api.auth.jwt_auth.JWTCookieAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
@@ -117,18 +120,24 @@ REST_FRAMEWORK = {
     },
 }
 
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+    "SIGNING_KEY": SECRET_KEY,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "PotterDoc API",
     "DESCRIPTION": (
         "Pottery workflow tracking API.\n\n"
-        "**Authentication:** All endpoints (except auth and public piece reads) "
-        "require a session cookie. To authenticate in this UI, click **Authorize** "
-        "and paste the value of your `sessionid` cookie. You can obtain it by "
-        "logging in through the web app and copying the cookie from your browser's "
-        "DevTools (Application → Cookies → `sessionid`)."
+        "**Authentication:** Protected endpoints accept either a session cookie or "
+        "a Bearer access token. To authenticate in this UI, click **Authorize** and "
+        "paste the value of your `sessionid` cookie or an `accessToken` returned by "
+        "`POST /api/auth/token/`."
     ),
     "VERSION": "0.0.1",
-    "SECURITY": [{"cookieAuth": []}],
+    "SECURITY": [{"cookieAuth": []}, {"bearerAuth": []}],
     "COMPONENTS": {
         "securitySchemes": {
             "cookieAuth": {
@@ -139,7 +148,16 @@ SPECTACULAR_SETTINGS = {
                     "Django session cookie. Log in via the web UI, then copy the "
                     "`sessionid` value from DevTools → Application → Cookies."
                 ),
-            }
+            },
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": (
+                    "Bearer access token returned by `POST /api/auth/token/` or "
+                    "`POST /api/auth/token/refresh/`."
+                ),
+            },
         }
     },
 }

@@ -36,6 +36,8 @@ FAKE_PAYLOAD = {
     "exp": 9999999999,
 }
 
+REFRESH_COOKIE_NAME = "potterdoc_refresh"
+
 
 def _make_auth_google_request(
     code="authcode", redirect_uri="http://localhost", invite_code=""
@@ -80,7 +82,93 @@ class TestAuthEndpointsMocked:
         assert session_client.session.get("_auth_user_id") is None
 
         followup = session_client.post("/api/auth/logout/")
-        assert followup.status_code == 403, followup.content
+        assert followup.status_code == 401, followup.content
+
+    def test_auth_token_issues_bearer_and_refresh_cookie(self):
+        from rest_framework.test import APIClient
+        from django.contrib.auth.models import User
+
+        token_client = APIClient()
+        user = User.objects.create_user(
+            username="token-test@example.com",
+            email="token-test@example.com",
+            password="password123",
+        )
+        assert token_client.login(username=user.username, password="password123")
+
+        response = token_client.post("/api/auth/token/")
+
+        assert response.status_code == 200
+        assert response.json()["accessToken"]
+        assert REFRESH_COOKIE_NAME in response.cookies
+        assert response.cookies[REFRESH_COOKIE_NAME]["path"] == "/api/auth/"
+
+    def test_auth_token_rejects_bearer_authentication(self, user):
+        from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        bearer_client = APIClient()
+        bearer_token = str(RefreshToken.for_user(user).access_token)
+        bearer_client.credentials(HTTP_AUTHORIZATION=f"Bearer {bearer_token}")
+
+        response = bearer_client.post("/api/auth/token/")
+
+        assert response.status_code == 403
+        assert response.json()["detail"] == (
+            "Refresh tokens can only be issued from a browser session."
+        )
+
+    def test_refresh_cookie_exchanges_for_access_token(self, settings):
+        from rest_framework.test import APIClient
+
+        settings.GOOGLE_OAUTH_CLIENT_ID = "test-client-id"
+
+        login_user = User.objects.create_user(
+            username="refresh-test@example.com",
+            email="refresh-test@example.com",
+            password="password123",
+        )
+        session_client = APIClient()
+        assert session_client.login(
+            username=login_user.username, password="password123"
+        )
+        issue_response = session_client.post("/api/auth/token/")
+
+        refresh_client = APIClient()
+        refresh_client.cookies[REFRESH_COOKIE_NAME] = issue_response.cookies[
+            REFRESH_COOKIE_NAME
+        ].value
+
+        refresh_response = refresh_client.post("/api/auth/token/refresh/")
+        assert refresh_response.status_code == 200
+        assert refresh_response.json()["accessToken"]
+
+        bearer_client = APIClient()
+        bearer_response = bearer_client.get(
+            "/api/auth/me/",
+            HTTP_AUTHORIZATION=f"Bearer {refresh_response.json()['accessToken']}",
+        )
+        assert bearer_response.status_code == 200
+        assert bearer_response.json()["user"]["id"] == login_user.id
+
+    def test_auth_token_revoke_clears_refresh_cookie(self, user):
+        from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        issued_refresh_token = str(RefreshToken.for_user(user))
+        client = APIClient()
+        client.cookies[REFRESH_COOKIE_NAME] = issued_refresh_token
+
+        response = client.post("/api/auth/token/revoke/")
+
+        assert response.status_code == 204
+        assert REFRESH_COOKIE_NAME in response.cookies
+        assert response.cookies[REFRESH_COOKIE_NAME].value == ""
+
+        refresh_client = APIClient()
+        refresh_client.cookies[REFRESH_COOKIE_NAME] = issued_refresh_token
+        refresh_response = refresh_client.post("/api/auth/token/refresh/")
+        assert refresh_response.status_code == 401
 
     def test_csrf_view(self):
         from api.auth.views import csrf
@@ -645,7 +733,7 @@ class TestAuthExport:
         factory = APIRequestFactory()
         request = factory.get("/api/auth/export/")
         response = auth_export(request)
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_export_returns_zip_with_pieces_json(self, user, piece):
         from api.auth.views import auth_export
@@ -795,7 +883,7 @@ class TestAuthDeleteAccount:
         factory = APIRequestFactory()
         request = factory.delete("/api/auth/account/")
         response = auth_delete_account(request)
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_delete_account_removes_user_and_returns_204(self, user):
         from api.auth.account_views import delete_account_impl

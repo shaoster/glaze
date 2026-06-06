@@ -234,6 +234,7 @@ js_library(
     srcs = [
         "src/cloudinary-widget.d.ts",
         "src/util/api.ts",
+        "src/util/authTokenStore.ts",
         "src/util/cloudinaryUpload.ts",
         "src/util/format.ts",
         "src/util/normalizeWorkflowFields.ts",
@@ -1232,6 +1233,7 @@ vitest_test(
 vitest_test(
     name = "web_api_test",
     srcs = [
+        "src/util/__tests__/authTokenStore.test.ts",
         "src/util/__tests__/api.test.ts",
     ],
     tags = ["ibazel_notify_changes"],
@@ -1239,6 +1241,7 @@ vitest_test(
         ":util_lib",
     ],
     expected_coverage = [
+        "web/src/util/authTokenStore*",
         "web/src/util/api.ts",
     ],
 )

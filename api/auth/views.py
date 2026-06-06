@@ -28,6 +28,13 @@ from .invite_views import (
     staff_invite_code,
 )
 from .mock_idp_views import mock_idp_authorize, mock_idp_complete
+from .token_views import (
+    auth_token,
+    auth_token_refresh,
+    auth_token_revoke,
+    _blacklist_refresh_cookie,
+    clear_refresh_cookie,
+)
 from .preferences_views import auth_preferences
 
 __all__ = [
@@ -37,6 +44,9 @@ __all__ = [
     "auth_logout",
     "auth_me",
     "auth_preferences",
+    "auth_token",
+    "auth_token_refresh",
+    "auth_token_revoke",
     "csrf",
     "mock_idp_authorize",
     "mock_idp_complete",
@@ -70,8 +80,11 @@ def csrf(request: Request) -> Response:
 @traced
 def auth_logout(request: Request) -> Response:
     """Log the current user out of the active session."""
+    _blacklist_refresh_cookie(request)
     logout(request)
-    return Response(status=status.HTTP_204_NO_CONTENT)
+    response = Response(status=status.HTTP_204_NO_CONTENT)
+    clear_refresh_cookie(response)
+    return response
 
 
 @extend_schema(
@@ -84,7 +97,11 @@ def auth_logout(request: Request) -> Response:
 @traced
 def auth_delete_account(request: Request) -> HttpResponse:
     """Delete the current user account after cleaning up protected refs."""
-    return delete_account_impl(request, logout_fn=logout)
+    response = delete_account_impl(request, logout_fn=logout)
+    if response.status_code == status.HTTP_204_NO_CONTENT:
+        _blacklist_refresh_cookie(request)
+        clear_refresh_cookie(response)
+    return response
 
 
 @extend_schema(

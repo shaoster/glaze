@@ -1,11 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { clearAccessToken } from "../authTokenStore";
 
 const mockClient = {
   get: vi.fn(),
   post: vi.fn(),
   patch: vi.fn(),
   delete: vi.fn(),
+  request: vi.fn(),
   defaults: {} as Record<string, unknown>,
+  interceptors: {
+    request: {
+      use: vi.fn(),
+    },
+    response: {
+      use: vi.fn(),
+    },
+  },
 };
 
 const mockCreate = vi.fn(() => mockClient);
@@ -18,12 +28,18 @@ const mockIsAxiosError = vi.fn((error: unknown) => {
   );
 });
 
-vi.mock("axios", () => ({
-  default: {
-    create: mockCreate,
-    isAxiosError: mockIsAxiosError,
-  },
-}));
+vi.mock("axios", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("axios")>();
+  return {
+    ...actual,
+    AxiosHeaders: actual.AxiosHeaders,
+    default: {
+      ...actual.default,
+      create: mockCreate,
+      isAxiosError: mockIsAxiosError,
+    },
+  };
+});
 
 async function loadApiModule(options?: { expoBaseUrl?: string }) {
   vi.resetModules();
@@ -79,10 +95,14 @@ const wirePieceDetail = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  clearAccessToken();
   mockClient.get.mockReset();
   mockClient.post.mockReset();
   mockClient.patch.mockReset();
   mockClient.delete.mockReset();
+  mockClient.request.mockReset();
+  mockClient.interceptors.request.use.mockReset();
+  mockClient.interceptors.response.use.mockReset();
   mockClient.defaults = {};
   delete process.env.EXPO_PUBLIC_API_BASE_URL;
   vi.unstubAllGlobals();
@@ -109,6 +129,68 @@ describe("client setup", () => {
     await loadApiModule({ expoBaseUrl: "https://api.example.com" });
 
     expect(mockClient.defaults.baseURL).toBe("https://api.example.com");
+  });
+});
+
+describe("auth token wiring", () => {
+  it("attaches the access token to outgoing requests", async () => {
+    await loadApiModule();
+    const { setAccessToken: setLoadedAccessToken } = await import(
+      "../authTokenStore"
+    );
+    setLoadedAccessToken("test-access-token");
+
+    const requestUse = mockClient.interceptors.request.use.mock.calls[0]?.[0];
+    expect(requestUse).toBeInstanceOf(Function);
+
+    const result = requestUse?.({
+      headers: { "X-Request-ID": "abc123" },
+    });
+
+    expect(result).toMatchObject({
+      headers: {
+        "X-Request-ID": "abc123",
+        Authorization: "Bearer test-access-token",
+      },
+    });
+  });
+
+  it("refreshes a 401 once and retries the original request", async () => {
+    const { ensureCsrfCookie } = await loadApiModule();
+    const responseUse = mockClient.interceptors.response.use.mock.calls[0]?.[1];
+    expect(responseUse).toBeInstanceOf(Function);
+
+    mockClient.get.mockResolvedValueOnce({ data: undefined });
+    mockClient.post.mockResolvedValueOnce({
+      data: { accessToken: "fresh-access-token" },
+    });
+    mockClient.request.mockResolvedValueOnce({ data: "retried" });
+
+    const retryConfig = {
+      url: "pieces/piece-1/",
+      headers: { "X-Request-ID": "abc123" },
+    };
+    const error = {
+      isAxiosError: true,
+      response: { status: 401 },
+      config: retryConfig,
+    };
+
+    const result = await responseUse?.(error);
+
+    expect(ensureCsrfCookie).toBeDefined();
+    expect(mockClient.get).toHaveBeenCalledWith("auth/csrf/");
+    expect(mockClient.post).toHaveBeenCalledWith("auth/token/refresh/", {});
+    const retriedConfig = mockClient.request.mock.calls[0]?.[0];
+    expect(retriedConfig).toMatchObject({
+      url: "pieces/piece-1/",
+      _retry: true,
+    });
+    expect(retriedConfig.headers.get("Authorization")).toBe(
+      "Bearer fresh-access-token",
+    );
+    expect(retriedConfig.headers.get("X-Request-ID")).toBe("abc123");
+    expect(result).toEqual({ data: "retried" });
   });
 });
 
