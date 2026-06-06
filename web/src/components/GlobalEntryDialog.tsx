@@ -47,6 +47,9 @@ export interface GlobalEntryDialogProps {
   onClose: () => void;
   onSelect: (entry: { id: string; name: string }) => void;
   canCreate?: boolean;
+  // When provided, makes the tab fully controlled (routing-driven).
+  tab?: "browse" | "create";
+  onTabChange?: (tab: "browse" | "create") => void;
 }
 
 interface NamedRef {
@@ -140,6 +143,8 @@ export default function GlobalEntryDialog({
   onClose,
   onSelect,
   canCreate = false,
+  tab: tabProp,
+  onTabChange,
 }: GlobalEntryDialogProps) {
   const boolFilterableFields = useMemo(
     () => getFilterableFields(globalName),
@@ -166,7 +171,17 @@ export default function GlobalEntryDialog({
   const composeFieldName = composeEntry?.[0] ?? null;
   const composeFieldConfig = composeEntry?.[1] ?? null;
   const createWithLayers = composeFieldConfig !== null;
-  const [tab, setTab] = useState<"browse" | "create">("browse");
+  const [internalTab, setInternalTab] = useState<"browse" | "create">("browse");
+  // Controlled when the parent passes tab+onTabChange (routing-driven);
+  // uncontrolled otherwise (local state).
+  const tab = tabProp ?? internalTab;
+  const setTab = (newTab: "browse" | "create") => {
+    if (onTabChange) {
+      onTabChange(newTab);
+    } else {
+      setInternalTab(newTab);
+    }
+  };
   const [filters, setFilters] = useState<FilterState>(() =>
     makeEmptyFilters(boolFieldNames, relatedFilterDefs),
   );
@@ -259,7 +274,7 @@ export default function GlobalEntryDialog({
 
   function handleClose() {
     setFilters(makeEmptyFilters(boolFieldNames, relatedFilterDefs));
-    setTab("browse");
+    setInternalTab("browse"); // reset local state; controlled tab is owned by parent
     resetCreateState();
     onClose();
   }

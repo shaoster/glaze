@@ -7,6 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import TagManager from "../TagManager";
@@ -67,17 +68,34 @@ function makePiece(overrides = {}): PieceDetail {
   };
 }
 
+// Stateful wrapper so tagDialogOpen mirrors what the parent would do in prod.
+function ControlledTagManager({
+  initialTags = [] as TagEntry[],
+  onSaved = vi.fn(),
+}: {
+  initialTags?: TagEntry[];
+  onSaved?: (updated: PieceDetail) => void;
+}) {
+  const [tagDialogOpen, setTagDialogOpen] = useState(false);
+  return (
+    <TagManager
+      pieceId="piece-id-1"
+      initialTags={initialTags}
+      onSaved={onSaved}
+      tagDialogOpen={tagDialogOpen}
+      onOpenTagDialog={() => setTagDialogOpen(true)}
+      onCloseTagDialog={() => setTagDialogOpen(false)}
+    />
+  );
+}
+
 function renderTagManager(initialTags: TagEntry[] = [], onSaved = vi.fn()) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <TagManager
-        pieceId="piece-id-1"
-        initialTags={initialTags}
-        onSaved={onSaved}
-      />
+      <ControlledTagManager initialTags={initialTags} onSaved={onSaved} />
     </QueryClientProvider>,
   );
 }

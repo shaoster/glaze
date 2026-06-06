@@ -15,6 +15,26 @@ React, TypeScript (strict), Vite, Material UI (MUI), Axios
 
 This is a Single Page Application (SPA). Routing is handled client-side via React Router (`RouterProvider` with a data router) mounted in the top-level `App` component. There is no server-side rendering.
 
+## Routing Convention
+
+Non-transient UI state — anything the user would bookmark, share, or restore on reload — must live in the URL. Prefer hierarchical routes that mirror the data model. Use query params only when state is orthogonal to the URL hierarchy.
+
+**Routing hook pattern**: URL parsing lives in dedicated hooks (`web/src/routing/`). Route-aware parents call the hook and inject the parsed result as props into child components. Children have no URL dependencies and require no Router wrapper in tests.
+
+```ts
+// ✅ Route-aware parent injects props
+const historyRouting = usePieceHistoryRouting(piece.id);
+<ChildComponent rewindedStateId={historyRouting.rewindedStateId}
+                onRewind={historyRouting.onRewind} />
+
+// ✅ Child is pure props-in/render-out — no routing hooks inside
+function ChildComponent({ rewindedStateId, onRewind }) { ... }
+```
+
+**Routed dialog pattern**: where a dialog is the target URL itself (e.g. `/new`, `/preferences/:sectionId`), use `useMatch` in the parent and pass `open` as a prop. Where a dialog is a sub-route of a resource, use a routing hook.
+
+**Acceptable transient-only state**: confirmation dialogs, menu anchors, drag gestures, save-in-progress flags, inline draft text fields.
+
 ## TypeScript
 
 - Strict mode is on. Beyond `strict: true`, also enforce `noUnusedLocals`, `noUnusedParameters`, and `noFallthroughCasesInSwitch` — remove unused variables and parameters rather than suppressing errors.

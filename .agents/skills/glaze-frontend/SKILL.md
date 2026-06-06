@@ -212,6 +212,42 @@ Glaze uses YAML-driven UI generation to maintain consistency with the backend.
 - Authenticated non-owners: can open shared pieces read-only; API returns `can_edit: false`
 - Do not introduce a separate public piece detail page — canonical URL is `/pieces/:id`
 
+## Routing Contract
+
+Any non-transient UI state — one the user would bookmark, share, or restore on reload — must live in the URL. Prefer hierarchical routes that mirror the data model. Use query params only when the state is orthogonal to the route hierarchy (e.g. lightbox index in a flat gallery).
+
+**Routed piece detail hierarchy:**
+```
+/pieces/:id                              — piece detail
+/pieces/:id/history/:stateId             — historical state view
+/pieces/:id/video                        — showcase video panel
+/pieces/:id/photos                       — photo gallery
+/pieces/:id/photos/:index                — photo lightbox (existing)
+/pieces/:id/tags/new                     — tag creation dialog
+/pieces/:id/state/fields/:fieldName      — global entry browse dialog
+/pieces/:id/state/fields/:fieldName/new  — global entry create dialog
+```
+`/analyze/glaze-combinations?combo=<id>&image=<idx>` — combination gallery lightbox (query params because the gallery is a flat list).
+
+**Routing hook pattern** — all URL parsing lives in `web/src/routing/pieceRouting.ts` and `web/src/routing/galleryRouting.ts`. Route-aware parents call the hook and inject the result as props; components themselves have no URL dependencies:
+
+```ts
+// In PieceDetailContent (the route-aware parent):
+const historyRouting = usePieceHistoryRouting(piece.id);
+<PieceHistory rewindedStateId={historyRouting.rewindedStateId}
+              onRewind={historyRouting.onRewind} />
+
+// In WorkflowState (uses RoutedGlobalEntryField wrapper):
+<RoutedGlobalEntryField pieceId={pieceId} fieldName={field.name}
+                        globalName={field.globalName} ... />
+```
+
+Components receive routing props and can be tested without any Router wrapper. `RoutedGlobalEntryField` is the HOC that injects routing into `GlobalEntryField`; use bare `GlobalEntryField` in unrouted contexts (e.g. `NewPieceDialog`).
+
+**Acceptable transient-only state** (do not route): state transition confirmation dialogs, photo deletion confirmations, menu anchors, drag gestures, save-in-progress flags.
+
+`GlobalEntryDialog` internal filter state is intentionally transient — it resets on close and need not survive a reload.
+
 ## Cloudinary Image Upload Flow
 
 - `WorkflowState` calls `GET /api/uploads/cloudinary/widget-config/` → opens Cloudinary Upload Widget → widget calls `POST /api/uploads/cloudinary/widget-signature/` for signing → on success stores `secure_url` + `public_id` → `PATCH /api/pieces/<id>/state/` persists the array

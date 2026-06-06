@@ -7,6 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 function render(ui: ReactElement) {
@@ -14,7 +15,9 @@ function render(ui: ReactElement) {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const wrap = (node: ReactElement) => (
-    <QueryClientProvider client={queryClient}>{node}</QueryClientProvider>
+    <MemoryRouter initialEntries={["/pieces/piece-1"]}>
+      <QueryClientProvider client={queryClient}>{node}</QueryClientProvider>
+    </MemoryRouter>
   );
   const result = baseRender(wrap(ui));
   return {
