@@ -90,8 +90,6 @@ function makePiece(overrides: Partial<PieceSummary>): PieceSummary {
     is_editable: false,
     can_edit: true,
     showcase_fields: [],
-    showcase_video_url: null,
-    owner_alias: null,
     ...overrides,
   };
 }
