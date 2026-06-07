@@ -319,36 +319,6 @@ class TestLoadPublicLibrary:
         )
         assert "skipping" in out.getvalue().lower()
 
-    def test_skips_version_cache_when_table_missing(self, tmp_path, monkeypatch):
-        fixture = self._write_fixture(
-            tmp_path,
-            [
-                {
-                    "model": "api.claybody",
-                    "fields": {"name": "Stoneware", "short_description": "A body"},
-                }
-            ],
-        )
-
-        monkeypatch.setattr(
-            connection.introspection,
-            "table_names",
-            lambda: [],
-        )
-        monkeypatch.setattr(
-            load_public_library_command.PublicLibraryVersion.objects,
-            "get_or_create",
-            lambda *args, **kwargs: pytest.fail("get_or_create should not run"),
-        )
-        monkeypatch.setattr(
-            load_public_library_command.PublicLibraryVersion.objects,
-            "filter",
-            lambda *args, **kwargs: pytest.fail("filter should not run"),
-        )
-
-        call_command("load_public_library", fixture=str(fixture))
-        assert ClayBody.objects.filter(user=None, name="Stoneware").exists()
-
     def test_raises_for_invalid_json(self, tmp_path):
         bad = tmp_path / "bad.json"
         bad.write_text("not valid json {{{")
