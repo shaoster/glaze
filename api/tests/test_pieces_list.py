@@ -11,6 +11,7 @@ from api.models import (
     PieceStateImage,
     Tag,
 )
+from api.piece.helpers import piece_queryset
 from api.workflow import SUCCESSORS
 
 # ---------------------------------------------------------------------------
@@ -20,6 +21,19 @@ from api.workflow import SUCCESSORS
 
 @pytest.mark.django_db
 class TestPiecesList:
+    def test_piece_queryset_always_annotates_computed_last_modified(self, rf, user):
+        """piece_queryset must annotate computed_last_modified so the serializer
+        can use it directly without a redundant Python-level max() call."""
+        Piece.objects.create(user=user, name="Test")
+        request = rf.get("/api/pieces/")
+        request.user = user
+        piece = piece_queryset(request).first()
+        assert hasattr(piece, "computed_last_modified"), (
+            "computed_last_modified annotation missing from piece_queryset; "
+            "serializer falls back to Python property instead of DB value"
+        )
+        assert piece.computed_last_modified is not None
+
     def test_list_uses_a_small_number_of_queries(self, client, user):
         location = Location.objects.create(user=user, name="Bench")
         pieces = []

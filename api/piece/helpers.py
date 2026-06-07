@@ -60,12 +60,30 @@ def _base_piece_queryset():
     )
 
 
+def _latest_state_lm_subquery():
+    return Subquery(
+        PieceState.objects.filter(piece=OuterRef("pk"))
+        .order_by("-last_modified")
+        .values("last_modified")[:1],
+        output_field=DateTimeField(),
+    )
+
+
 @traced
 def piece_queryset(request: Request):
     """Return the authenticated user's piece queryset."""
     user_id = request.user.id
     assert user_id is not None
-    return _base_piece_queryset().filter(user_id=user_id)
+    return (
+        _base_piece_queryset()
+        .annotate(
+            computed_last_modified=Greatest(
+                "fields_last_modified",
+                Coalesce(_latest_state_lm_subquery(), "fields_last_modified"),
+            ),
+        )
+        .filter(user_id=user_id)
+    )
 
 
 @traced
@@ -125,21 +143,6 @@ def apply_piece_ordering(qs, ordering_param: str):
     db_ordering = _PIECE_ORDERING_MAP.get(
         ordering_param, _PIECE_ORDERING_MAP[_DEFAULT_ORDERING]
     )
-    if "computed_last_modified" in db_ordering:
-        latest_state_lm = (
-            PieceState.objects.filter(piece=OuterRef("pk"))
-            .order_by("-last_modified")
-            .values("last_modified")[:1]
-        )
-        qs = qs.annotate(
-            computed_last_modified=Greatest(
-                "fields_last_modified",
-                Coalesce(
-                    Subquery(latest_state_lm, output_field=DateTimeField()),
-                    "fields_last_modified",
-                ),
-            )
-        )
     return qs.order_by(db_ordering)
 
 

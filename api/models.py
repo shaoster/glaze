@@ -387,6 +387,11 @@ class PieceState(models.Model):
 
     class Meta:
         ordering = ["order", "created"]
+        indexes = [
+            models.Index(
+                fields=["piece", "-last_modified"], name="piecestate_piece_lm_idx"
+            )
+        ]
 
     def __init__(self, *args, **kwargs):
         self._pending_images = kwargs.pop("images", None)

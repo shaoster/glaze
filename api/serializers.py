@@ -41,6 +41,8 @@ choices worth knowing about:
 from typing import Any
 
 from django.apps import apps
+from django.db.models import DateTimeField, OuterRef, Subquery
+from django.db.models.functions import Coalesce, Greatest
 from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
@@ -454,7 +456,9 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         child=serializers.CharField(),
         read_only=True,
     )
-    last_modified = serializers.DateTimeField(read_only=True)
+    last_modified = serializers.DateTimeField(
+        source="computed_last_modified", read_only=True
+    )
 
     class Meta:
         model = Piece
@@ -476,8 +480,20 @@ class PieceSummarySerializer(serializers.ModelSerializer):
 
     @classmethod
     def prepare_global_entry_queryset(cls, qs, display_field):
+        latest_state_lm = Subquery(
+            PieceState.objects.filter(piece=OuterRef("pk"))
+            .order_by("-last_modified")
+            .values("last_modified")[:1],
+            output_field=DateTimeField(),
+        )
         return (
             qs.select_related("current_location", "thumbnail", "user__profile")
+            .annotate(
+                computed_last_modified=Greatest(
+                    "fields_last_modified",
+                    Coalesce(latest_state_lm, "fields_last_modified"),
+                )
+            )
             .prefetch_related("states__image_links__image", "tag_links__tag")
             .order_by(display_field)
         )
