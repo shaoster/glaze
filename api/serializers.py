@@ -83,6 +83,11 @@ from .workflow import (
 GLAZE_NORMALIZER_EXTENSION = "x-glaze-normalizer"
 GLAZE_RELATION_EXTENSION = "x-glaze-relation"
 
+# Sentinel: distinguishes "annotation present but NULL" from "annotation absent".
+# Used in get_thumbnail so we never fall back to get_thumbnail_crop() when the
+# thumbnail_crop annotation was evaluated by the DB (even if it returned NULL).
+_NOT_ANNOTATED = object()
+
 
 def _schema_ref(component_name: str, **extensions: Any) -> dict[str, Any]:
     return {
@@ -456,9 +461,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         child=serializers.CharField(),
         read_only=True,
     )
-    last_modified = serializers.DateTimeField(
-        source="computed_last_modified", read_only=True
-    )
+    last_modified = serializers.SerializerMethodField()
 
     class Meta:
         model = Piece
@@ -498,8 +501,18 @@ class PieceSummarySerializer(serializers.ModelSerializer):
             .order_by(display_field)
         )
 
+    @extend_schema_field(serializers.DateTimeField())
+    def get_last_modified(self, obj: Piece):
+        clm = getattr(obj, "computed_last_modified", None)
+        if clm is not None:
+            return clm
+        return obj.last_modified
+
     @extend_schema_field(_state_summary_relation_schema())
     def get_current_state(self, obj: Piece) -> dict:
+        name = getattr(obj, "current_state_name", None)
+        if name is not None:
+            return {"state": name}
         cs = obj.current_state
         assert cs is not None, f"Piece {obj.id} has no states"
         return {"state": cs.state}
@@ -520,8 +533,8 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         thumbnail = image_to_dict(obj.thumbnail)
         if thumbnail is None:
             return None
-        crop = getattr(obj, "thumbnail_crop", None)
-        if crop is None:
+        crop = getattr(obj, "thumbnail_crop", _NOT_ANNOTATED)
+        if crop is _NOT_ANNOTATED:
             crop = obj.get_thumbnail_crop()
         return {**thumbnail, "crop": crop}
 

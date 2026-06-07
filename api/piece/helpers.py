@@ -4,6 +4,7 @@ from uuid import UUID
 
 from django.apps import apps
 from django.db.models import (
+    CharField,
     Count,
     DateTimeField,
     JSONField,
@@ -18,7 +19,7 @@ from rest_framework.request import Request
 
 from backend.otel import traced
 
-from ..models import Piece, PieceState, PieceStateImage
+from ..models import CURRENT_STATE_ORDERING, Piece, PieceState, PieceStateImage
 from ..serializers import PieceDetailSerializer, PieceSummarySerializer
 from ..workflow import get_global_config, get_state_global_ref_map
 
@@ -60,10 +61,21 @@ def _base_piece_queryset():
     )
 
 
-def _latest_state_lm_subquery():
+def _current_state_name_subquery():
     return Subquery(
         PieceState.objects.filter(piece=OuterRef("pk"))
-        .order_by("-last_modified")
+        .order_by(*CURRENT_STATE_ORDERING)
+        .values("state")[:1],
+        output_field=CharField(),
+    )
+
+
+def _latest_state_lm_subquery():
+    # Uses CURRENT_STATE_ORDERING so the result matches Piece.last_modified
+    # (current-state timestamp only, not the max across all states).
+    return Subquery(
+        PieceState.objects.filter(piece=OuterRef("pk"))
+        .order_by(*CURRENT_STATE_ORDERING)
         .values("last_modified")[:1],
         output_field=DateTimeField(),
     )
@@ -74,14 +86,19 @@ def piece_queryset(request: Request):
     """Return the authenticated user's piece queryset."""
     user_id = request.user.id
     assert user_id is not None
+    # Annotate current_state_name and computed_last_modified in the SELECT so the
+    # list serializer doesn't need the full states prefetch (drops one round-trip).
     return (
-        _base_piece_queryset()
+        Piece.objects.select_related("current_location", "thumbnail", "user__profile")
         .annotate(
+            thumbnail_crop=_thumbnail_crop_subquery(),
             computed_last_modified=Greatest(
                 "fields_last_modified",
                 Coalesce(_latest_state_lm_subquery(), "fields_last_modified"),
             ),
+            current_state_name=_current_state_name_subquery(),
         )
+        .prefetch_related("tag_links__tag")
         .filter(user_id=user_id)
     )
 

@@ -34,6 +34,19 @@ class TestPiecesList:
         )
         assert piece.computed_last_modified is not None
 
+    def test_piece_queryset_annotates_current_state_name(self, rf, user):
+        """piece_queryset must annotate current_state_name so the list view
+        does not need to prefetch all states just to render one field."""
+        piece = Piece.objects.create(user=user, name="Test")
+        PieceState.objects.create(piece=piece, state=ENTRY_STATE, user=user)
+        request = rf.get("/api/pieces/")
+        request.user = user
+        result = piece_queryset(request).first()
+        assert hasattr(result, "current_state_name"), (
+            "current_state_name annotation missing; states prefetch would be needed"
+        )
+        assert result.current_state_name == ENTRY_STATE
+
     def test_list_uses_a_small_number_of_queries(self, client, user):
         location = Location.objects.create(user=user, name="Bench")
         pieces = []
@@ -57,7 +70,7 @@ class TestPiecesList:
             response = client.get("/api/pieces/")
 
         assert response.status_code == 200
-        assert len(ctx) <= 5
+        assert len(ctx) <= 4
 
     def test_empty(self, client):
         response = client.get("/api/pieces/")
