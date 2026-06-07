@@ -198,6 +198,12 @@ jobs:
           deps-key: ${{ needs.preflight.outputs.deps_key }}
           buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
           workdir: ${{ steps.worktree.outputs.path }}
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+          restore-keys: playwright-${{ runner.os }}-
       - name: Install web dependencies for browser clickthrough
         shell: bash
         working-directory: ${{ steps.worktree.outputs.path }}
@@ -321,6 +327,17 @@ jobs:
           deps-key: ${{ needs.preflight.outputs.deps_key }}
           buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
           workdir: ${{ steps.worktree.outputs.path }}
+      - name: Apply macOS Bazel resource limits
+        shell: bash
+        working-directory: ${{ steps.worktree.outputs.path }}
+        run: |
+          printf '\n# macOS runner overrides\nbuild --jobs=4\nbuild --local_resources=cpu=HOST_CPUS*0.75\nbuild --local_resources=memory=HOST_RAM*0.6\n' >> .bazelrc
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+          restore-keys: playwright-${{ runner.os }}-
       - name: Install web dependencies for browser clickthrough
         shell: bash
         working-directory: ${{ steps.worktree.outputs.path }}

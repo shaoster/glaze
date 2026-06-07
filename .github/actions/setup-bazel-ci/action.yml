@@ -19,6 +19,15 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Cache pnpm store
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.local/share/pnpm/store
+          ~/Library/Caches/pnpm/store
+        key: pnpm-store-${{ runner.os }}-${{ inputs.deps-key }}
+        restore-keys: pnpm-store-${{ runner.os }}-
+
     - name: Cache Bazel Repository
       uses: actions/cache@v4
       with:
