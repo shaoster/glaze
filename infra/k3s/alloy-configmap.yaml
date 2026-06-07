@@ -15,9 +15,26 @@ data:
       tls_config {
         insecure_skip_verify = true
       }
-      metrics_path     = "/metrics/cadvisor"
-      scrape_interval  = "60s"
-      forward_to       = [prometheus.remote_write.grafana_cloud.receiver]
+      metrics_path    = "/metrics/cadvisor"
+      scrape_interval = "60s"
+      forward_to      = [prometheus.relabel.cadvisor.receiver]
+    }
+
+    // Keep only the root-cgroup and machine-level metrics needed for the dashboard.
+    // The full cadvisor scrape produces ~2000 series which exhausts the Grafana Cloud
+    // free-tier limit (15k) when combined with other sources.
+    prometheus.relabel "cadvisor" {
+      rule {
+        source_labels = ["__name__"]
+        regex         = "container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_memory_swap|machine_memory_bytes|machine_swap_bytes"
+        action        = "keep"
+      }
+      // Drop per-machine UUID labels that Grafana Cloud rejects as high-cardinality identifiers.
+      rule {
+        regex  = "boot_id|machine_id|system_uuid"
+        action = "labeldrop"
+      }
+      forward_to = [prometheus.remote_write.grafana_cloud.receiver]
     }
 
     // Node metrics via kubelet summary API (CPU, memory, disk, network)
@@ -30,9 +47,20 @@ data:
       tls_config {
         insecure_skip_verify = true
       }
-      metrics_path     = "/metrics"
-      scrape_interval  = "60s"
-      forward_to       = [prometheus.remote_write.grafana_cloud.receiver]
+      metrics_path    = "/metrics"
+      scrape_interval = "60s"
+      forward_to      = [prometheus.relabel.kubelet.receiver]
+    }
+
+    // Drop k3s API server metrics — these are control-plane internals that push
+    // the Grafana Cloud free-tier series limit (15k) when mixed with cadvisor.
+    prometheus.relabel "kubelet" {
+      rule {
+        source_labels = ["__name__"]
+        regex         = "apiserver_.*"
+        action        = "drop"
+      }
+      forward_to = [prometheus.remote_write.grafana_cloud.receiver]
     }
 
     prometheus.remote_write "grafana_cloud" {
