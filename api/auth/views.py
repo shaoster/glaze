@@ -28,14 +28,14 @@ from .invite_views import (
     staff_invite_code,
 )
 from .mock_idp_views import mock_idp_authorize, mock_idp_complete
+from .preferences_views import auth_preferences
 from .token_views import (
+    _blacklist_refresh_cookie,
     auth_token,
     auth_token_refresh,
     auth_token_revoke,
-    _blacklist_refresh_cookie,
     clear_refresh_cookie,
 )
-from .preferences_views import auth_preferences
 
 __all__ = [
     "auth_delete_account",

@@ -106,6 +106,27 @@ nameserver 67.207.67.2
 nameserver 67.207.67.3
 EOF'
 
+# ── host ZRAM setup ──────────────────────────────────────────────────────────
+# Enable compressed swap in RAM to eliminate SSD write bottlenecks and expand capacity.
+echo "==> Converging host ZRAM configuration..."
+$SSH "${DEPLOY_HOST}" '
+  set -euo pipefail
+  if ! lsmod | grep -q zram; then
+    if ! modprobe zram 2>/dev/null; then
+      echo "Installing linux-modules-extra package for zram support..."
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update
+      apt-get install -y "linux-modules-extra-\$(uname -r)"
+      modprobe zram
+    fi
+  fi
+  if ! command -v zramctl >/dev/null 2>&1; then
+    echo "Installing zram-config..."
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get install -y zram-config
+  fi
+'
+
 # ── k3s server config ────────────────────────────────────────────────────────
 echo "==> Syncing k3s server config..."
 $SCP infra/k3s/config.yaml "${DEPLOY_HOST}":/tmp/k3s-config-new.yaml
@@ -124,6 +145,28 @@ $SSH "${DEPLOY_HOST}" '
     echo "k3s restarted and ready."
   else
     echo "k3s config unchanged — skipping restart."
+  fi
+'
+
+# ── k3s service env config ───────────────────────────────────────────────────
+# Sync GOGC and GOMEMLIMIT environment variables for the main k3s server.
+echo "==> Syncing k3s service env..."
+$SCP infra/k3s/k3s.service.env "${DEPLOY_HOST}":/tmp/k3s-service-env-new
+$SSH "${DEPLOY_HOST}" '
+  set -e
+  if ! cmp -s /tmp/k3s-service-env-new /etc/systemd/system/k3s.service.env; then
+    echo "k3s service env changed — applying and restarting k3s..."
+    cp /tmp/k3s-service-env-new /etc/systemd/system/k3s.service.env
+    systemctl restart k3s
+    echo "Waiting for k3s API to come back..."
+    for i in $(seq 1 30); do
+      KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get nodes &>/dev/null && break
+      [ $i -eq 30 ] && echo "ERROR: k3s did not recover after restart" && exit 1
+      sleep 5
+    done
+    echo "k3s restarted and ready."
+  else
+    echo "k3s service env unchanged — skipping restart."
   fi
 '
 

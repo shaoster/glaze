@@ -12,6 +12,11 @@ spec:
   valuesContent: |-
     crds:
       enabled: true
+    extraEnv:
+      - name: GOGC
+        value: "25"
+      - name: GOMEMLIMIT
+        value: "45MiB"
     resources:
       requests:
         cpu: "10m"
@@ -19,6 +24,11 @@ spec:
       limits:
         memory: "64Mi"
     cainjector:
+      extraEnv:
+        - name: GOGC
+          value: "25"
+        - name: GOMEMLIMIT
+          value: "45MiB"
       resources:
         requests:
           cpu: "10m"
@@ -26,6 +36,11 @@ spec:
         limits:
           memory: "64Mi"
     webhook:
+      extraEnv:
+        - name: GOGC
+          value: "25"
+        - name: GOMEMLIMIT
+          value: "45MiB"
       livenessProbe:
         timeoutSeconds: 5
       readinessProbe:

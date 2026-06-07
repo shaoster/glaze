@@ -85,8 +85,8 @@ class TestAuthEndpointsMocked:
         assert followup.status_code == 401, followup.content
 
     def test_auth_token_issues_bearer_and_refresh_cookie(self):
-        from rest_framework.test import APIClient
         from django.contrib.auth.models import User
+        from rest_framework.test import APIClient
 
         token_client = APIClient()
         user = User.objects.create_user(
