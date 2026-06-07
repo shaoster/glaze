@@ -1087,7 +1087,7 @@ function AppContent() {
           <FullscreenCenter>
             <CircularProgress />
           </FullscreenCenter>
-        ) : error ? (
+        ) : error && !init ? (
           <FullscreenCenter>
             <Alert severity="error">
               All identity providers are misconfigured. The developer has been
