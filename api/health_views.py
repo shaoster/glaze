@@ -54,6 +54,14 @@ _READINESS_CHECKS: tuple[str, ...] = ("database", "migrations", "async_tasks")
 @extend_schema(exclude=True)
 @api_view(["GET"])
 @permission_classes([AllowAny])
+def health_live(request: Request) -> Response:
+    """Liveness probe: confirms the ASGI process is alive and can handle requests."""
+    return Response({"status": "ok"})
+
+
+@extend_schema(exclude=True)
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @traced
 def health_ready(request: Request) -> Response:
     """Return readiness status for database, migrations, and async tasks."""

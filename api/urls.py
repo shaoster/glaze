@@ -62,6 +62,7 @@ urlpatterns = [
     path("staff/invite-code/", views.staff_invite_code, name="staff-invite-code"),
     path("staff/invite-batch/", views.staff_invite_batch, name="staff-invite-batch"),
     path("auth/invite/send/", views.send_invite, name="auth-invite-send"),
+    path("health/live/", views.health_live, name="health-live"),
     path("health/ready/", views.health_ready, name="health-ready"),
     path("tasks/", views.submit_task, name="tasks-submit"),
     path("tasks/<uuid:task_id>/", views.task_detail, name="tasks-detail"),

@@ -26,7 +26,7 @@ spec:
               protocol: TCP
           startupProbe:
             httpGet:
-              path: /api/health/ready/
+              path: /api/health/live/
               port: 8000
               httpHeaders:
                 - name: Host
@@ -37,7 +37,7 @@ spec:
             timeoutSeconds: 10
           livenessProbe:
             httpGet:
-              path: /api/health/ready/
+              path: /api/health/live/
               port: 8000
               httpHeaders:
                 - name: Host
