@@ -234,12 +234,13 @@ USE_X_FORWARDED_HOST = False
 if IS_PRODUCTION:
     DATABASES = {
         "default": dj_database_url.config(
-            conn_max_age=0,
+            conn_max_age=600,
             conn_health_checks=True,
         )
     }
+    DATABASES["default"].setdefault("OPTIONS", {})["options"] = "-c timezone=UTC"
 elif os.environ.get("DATABASE_URL"):
-    DATABASES = {"default": dj_database_url.config(conn_max_age=0)}
+    DATABASES = {"default": dj_database_url.config(conn_max_age=60)}
 else:
     DATABASES = {
         "default": {
@@ -423,6 +424,9 @@ else:
             "BACKEND": "django.core.cache.backends.dummy.DummyCache",
         }
     }
+
+if REDIS_CACHE_URL:
+    SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
 
 
 # Celery and Async Task Backend
