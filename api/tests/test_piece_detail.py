@@ -102,9 +102,8 @@ class TestPieceDetail:
         per_state_queries = [
             q
             for q in ctx.captured_queries
-            if "api_piecestateimage" in q["sql"]
-            and "piece_state_id" in q["sql"]
-            and '"piece_state_id" =' in q["sql"]
+            if q["sql"].startswith('SELECT "api_piecestateimage"')
+            and '"piece_state_id" IN' not in q["sql"]
         ]
         assert len(per_state_queries) == 0, (
             f"Expected 0 per-state image queries but got {len(per_state_queries)}: "
