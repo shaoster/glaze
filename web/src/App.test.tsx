@@ -180,6 +180,11 @@ describe("App auth flow", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    // Restore document.visibilityState to jsdom's default in case a test modified it.
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
   });
 
   it("shows error when /api/auth/me/ returns a server error", async () => {
@@ -190,6 +195,50 @@ describe("App auth flow", () => {
         screen.getByText(/All identity providers are misconfigured/),
       ).toBeInTheDocument();
     });
+  });
+
+  it("does not show error screen on transient refetch failure when stale session data exists", async () => {
+    // First load succeeds with a logged-in user
+    vi.mocked(fetchAppInit)
+      .mockResolvedValueOnce({
+        googleOauthClientId: "test-client-id",
+        adminBaseUrl: null,
+        user: MOCK_USER,
+      })
+      // Transient failure on the window-focus refetch
+      .mockRejectedValueOnce(new Error("503 transient"));
+
+    render(<App />);
+
+    // App renders authenticated view
+    await waitFor(() => {
+      expect(screen.getByText("Piece List Content")).toBeInTheDocument();
+    });
+
+    // Simulate tab hide → show, which triggers TanStack Query's refetchOnWindowFocus.
+    // TQ v5's FocusManager listens on window for both 'focus' and 'visibilitychange'.
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "hidden",
+    });
+    window.dispatchEvent(new Event("visibilitychange"));
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
+    window.dispatchEvent(new Event("visibilitychange"));
+
+    // Confirm the refetch actually fired
+    await waitFor(() => {
+      expect(fetchAppInit).toHaveBeenCalledTimes(2);
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/All identity providers are misconfigured/),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("Piece List Content")).toBeInTheDocument();
   });
 
   it("shows landing form when not authenticated", async () => {
