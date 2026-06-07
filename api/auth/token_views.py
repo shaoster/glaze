@@ -20,6 +20,7 @@ from typing import cast
 from backend.otel import traced
 
 _AUTH_TOKEN_NAME = "AuthToken"
+_AUTH_TOKEN_REFRESH_NAME = "AuthTokenRefresh"
 _REFRESH_COOKIE_NAME = "potterdoc_refresh"
 _REFRESH_COOKIE_MAX_AGE = int(timedelta(days=30).total_seconds())
 
@@ -136,7 +137,7 @@ def auth_token(request: Request) -> Response:
     request=None,
     responses={
         200: inline_serializer(
-            _AUTH_TOKEN_NAME,
+            _AUTH_TOKEN_REFRESH_NAME,
             fields={
                 "accessToken": drf_serializers.CharField(),
             },

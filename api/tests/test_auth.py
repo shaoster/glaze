@@ -1145,3 +1145,17 @@ class TestMockIdp:
         response = client.get("/api/auth/me/")
         assert response.status_code == 200
         assert response.json()["mockIdpUrl"] is None
+
+
+class TestOpenApiSchemaWarnings:
+    def test_jwt_cookie_authentication_extension_registered(self):
+        # Before fix: JWTCookieAuthenticationExtension does not exist → ImportError
+        from api.auth.jwt_auth import JWTCookieAuthenticationExtension  # noqa: F401
+
+        assert JWTCookieAuthenticationExtension.name == "bearerAuth"
+
+    def test_auth_token_refresh_uses_distinct_serializer_name(self):
+        # Before fix: _AUTH_TOKEN_REFRESH_NAME does not exist → ImportError
+        from api.auth.token_views import _AUTH_TOKEN_NAME, _AUTH_TOKEN_REFRESH_NAME
+
+        assert _AUTH_TOKEN_NAME != _AUTH_TOKEN_REFRESH_NAME
