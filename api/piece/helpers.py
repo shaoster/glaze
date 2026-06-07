@@ -51,27 +51,27 @@ class PieceImageMoveSerializer(drf_serializers.Serializer):
     piece_state_id = drf_serializers.UUIDField(required=False)
 
 
+def _base_piece_queryset():
+    """Shared ORM base for all piece querysets: joins, annotation, and prefetches."""
+    return (
+        Piece.objects.select_related("current_location", "thumbnail", "user__profile")
+        .annotate(thumbnail_crop=_thumbnail_crop_subquery())
+        .prefetch_related("states", "tag_links__tag")
+    )
+
+
 @traced
 def piece_queryset(request: Request):
     """Return the authenticated user's piece queryset."""
     user_id = request.user.id
     assert user_id is not None
-    return (
-        Piece.objects.select_related("current_location", "thumbnail", "user__profile")
-        .annotate(thumbnail_crop=_thumbnail_crop_subquery())
-        .prefetch_related("states", "tag_links__tag")
-        .filter(user_id=user_id)
-    )
+    return _base_piece_queryset().filter(user_id=user_id)
 
 
 @traced
 def piece_read_queryset(request: Request):
     """Return the queryset for pieces visible to the current request."""
-    qs = (
-        Piece.objects.select_related("current_location", "thumbnail", "user__profile")
-        .annotate(thumbnail_crop=_thumbnail_crop_subquery())
-        .prefetch_related("states", "tag_links__tag")
-    )
+    qs = _base_piece_queryset()
     if request.user.is_authenticated:
         # Editable pieces are inaccessible to non-owners even when shared=True,
         # without altering the shared flag itself.

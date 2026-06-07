@@ -158,6 +158,38 @@ class TestPieceDetail:
             "Stoneware"
         )
 
+    def test_detail_serializer_many_true_does_not_corrupt_history(self, user, db):
+        """Regression: _states_data_cache must be keyed by piece pk.
+
+        When PieceDetailSerializer is used with many=True (e.g. data export),
+        DRF reuses the same child serializer instance for every piece. Without
+        keying by pk, the first piece's states bleed into subsequent pieces.
+        """
+        from api.models import ENTRY_STATE, Piece, PieceState
+        from api.serializers import PieceDetailSerializer
+        from rest_framework.test import APIRequestFactory
+
+        piece_a = Piece.objects.create(user=user, name="Bowl A")
+        PieceState.objects.create(piece=piece_a, user=user, state=ENTRY_STATE, order=1)
+        PieceState.objects.create(
+            piece=piece_a, user=user, state="handbuilt", order=2
+        )
+
+        piece_b = Piece.objects.create(user=user, name="Bowl B")
+        PieceState.objects.create(piece=piece_b, user=user, state=ENTRY_STATE, order=1)
+
+        request = APIRequestFactory().get("/")
+        request.user = user
+
+        data = PieceDetailSerializer(
+            [piece_a, piece_b], many=True, context={"request": request}
+        ).data
+
+        history_a = data[0]["history"]
+        history_b = data[1]["history"]
+        assert len(history_a) == 2, f"Bowl A should have 2 states, got {len(history_a)}"
+        assert len(history_b) == 1, f"Bowl B should have 1 state, got {len(history_b)}"
+
     def test_current_state_not_serialized_twice(self, client, piece, user):
         from collections import Counter
         from unittest.mock import patch
