@@ -20,4 +20,4 @@ jobs:
         with:
           python-version: "3.12"
       - name: Validate Grafana dashboard config
-        run: python tools/grafana_dashboard.py validate grafana/dashboards/glaze-app-summary.snapshot.json
+        run: python tools/grafana_dashboard.py validate grafana/dashboards/glaze-app-summary.yaml

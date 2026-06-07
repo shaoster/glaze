@@ -42,4 +42,4 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         env:
           GRAFANA_SERVICE_ACCOUNT_TOKEN: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
-        run: python tools/grafana_dashboard.py publish grafana/dashboards/glaze-app-summary.snapshot.json
+        run: python tools/grafana_dashboard.py publish grafana/dashboards/glaze-app-summary.yaml

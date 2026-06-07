@@ -67,6 +67,21 @@ py_binary(
     visibility = ["//visibility:public"],
 )
 
+pytest_test(
+    name = "test_grafana_dashboard",
+    srcs = [
+        "grafana_dashboard.py",
+        "tests/test_grafana_dashboard.py",
+        "//tools:pytest_main.py",
+    ],
+    main = "//tools:pytest_main.py",
+    args = ["tools/tests/test_grafana_dashboard.py"],
+    data = ["//:grafana_dashboard_files"],
+    deps = ["@pypi//pyyaml"],
+    expected_coverage = ["tools/grafana_dashboard.py"],
+    visibility = ["//visibility:public"],
+)
+
 # ── Glaze dev-stack launcher ────────────────────────────────────────────────
 # Single hermetic entry point for `gz_start`. It starts backend + web,
 # writes pid/port metadata, and exits so Bazel can release its lock.

@@ -5,7 +5,7 @@ description: Validate Glaze dashboard configs locally, test PromQL/TraceQL formu
 
 # Grafana Dashboard Pipeline
 
-Use this skill when editing `grafana/dashboards/*.snapshot.json`, the Grafana dashboard workflow, or any dashboard query that needs local validation before merge.
+Use this skill when editing `grafana/dashboards/*.yaml`, the Grafana dashboard workflow, or any dashboard query that needs local validation before merge.
 
 ## Repo Pattern
 
@@ -17,7 +17,7 @@ Use this skill when editing `grafana/dashboards/*.snapshot.json`, the Grafana da
 ## Local Validation
 
 1. Validate the dashboard file structure:
-   `python tools/grafana_dashboard.py validate grafana/dashboards/glaze-app-summary.snapshot.json`
+   `python tools/grafana_dashboard.py validate grafana/dashboards/glaze-app-summary.yaml`
 2. Inspect the saved queries and panel datasources:
    `mcp__grafana.get_dashboard_panel_queries`
 3. Test PromQL against the live datasource before merging:

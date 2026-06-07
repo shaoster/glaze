@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Validate and publish Glaze Grafana dashboard configs.
 
-This script treats `grafana/dashboards/*.snapshot.json` files as overlays
-rather than full Grafana exports. The publish path merges the overlay into the
-live dashboard fetched from Grafana, which keeps untouched panel settings
-intact while still versioning the query definitions and layout fields we care
-about in git.
+This script treats `grafana/dashboards/*.yaml` files as overlays rather than
+full Grafana exports. The publish path merges the overlay into the live
+dashboard fetched from Grafana, which keeps untouched panel settings intact
+while still versioning the query definitions and layout fields we care about in
+git.
 """
 
 from __future__ import annotations
@@ -20,6 +20,8 @@ import urllib.error
 import urllib.request
 from collections.abc import Iterable, Mapping
 from typing import Any
+
+import yaml
 
 DEFAULT_GRAFANA_URL = "https://shaoster.grafana.net"
 DEFAULT_FOLDER_UID = "general"
@@ -341,11 +343,11 @@ class ValidationError(RuntimeError):
 def load_dashboard(path: pathlib.Path) -> dict[str, Any]:
     try:
         with path.open("r", encoding="utf-8") as handle:
-            data = json.load(handle)
+            data = yaml.safe_load(handle)
     except FileNotFoundError as exc:
         raise ValidationError(f"{path}: file not found") from exc
-    except json.JSONDecodeError as exc:
-        raise ValidationError(f"{path}: invalid JSON: {exc}") from exc
+    except yaml.YAMLError as exc:
+        raise ValidationError(f"{path}: invalid YAML: {exc}") from exc
     if not isinstance(data, dict):
         raise ValidationError(f"{path}: dashboard root must be an object")
     return data
@@ -539,10 +541,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    validate_parser = subparsers.add_parser("validate", help="Validate one or more dashboard snapshot files")
+    validate_parser = subparsers.add_parser("validate", help="Validate one or more dashboard config files")
     validate_parser.add_argument("paths", nargs="+", type=pathlib.Path)
 
-    publish_parser = subparsers.add_parser("publish", help="Publish a dashboard snapshot to Grafana")
+    publish_parser = subparsers.add_parser("publish", help="Publish a dashboard config to Grafana")
     publish_parser.add_argument("path", type=pathlib.Path)
     publish_parser.add_argument("--grafana-url", default=os.environ.get("GRAFANA_URL", DEFAULT_GRAFANA_URL))
     publish_parser.add_argument(

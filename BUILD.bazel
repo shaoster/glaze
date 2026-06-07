@@ -48,6 +48,14 @@ filegroup(
 )
 
 filegroup(
+    name = "grafana_dashboard_files",
+    srcs = [
+        "grafana/dashboards/glaze-app-summary.yaml",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
     name = "third_party_python_files",
     srcs = glob(["third_party/python/**"]),
     visibility = ["//visibility:public"],
