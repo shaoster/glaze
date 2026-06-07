@@ -545,7 +545,10 @@ def build_parser() -> argparse.ArgumentParser:
     publish_parser = subparsers.add_parser("publish", help="Publish a dashboard snapshot to Grafana")
     publish_parser.add_argument("path", type=pathlib.Path)
     publish_parser.add_argument("--grafana-url", default=os.environ.get("GRAFANA_URL", DEFAULT_GRAFANA_URL))
-    publish_parser.add_argument("--api-token", default=os.environ.get("GRAFANA_API_TOKEN"))
+    publish_parser.add_argument(
+        "--api-token",
+        default=os.environ.get("GRAFANA_SERVICE_ACCOUNT_TOKEN") or os.environ.get("GRAFANA_API_TOKEN"),
+    )
 
     return parser
 
@@ -561,7 +564,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "publish":
             if not args.api_token:
                 raise RuntimeError(
-                    "GRAFANA_API_TOKEN is required; set it as an environment variable or pass --api-token"
+                    "GRAFANA_SERVICE_ACCOUNT_TOKEN is required; set it as an environment variable or pass --api-token"
                 )
             publish_dashboard(args.path, args.grafana_url, args.api_token)
         else:

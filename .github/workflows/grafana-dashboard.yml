@@ -60,5 +60,5 @@ jobs:
       - name: Publish dashboard snapshot
         if: steps.changes.outputs.changed == 'true'
         env:
-          GRAFANA_API_TOKEN: ${{ secrets.GRAFANA_API_TOKEN }}
+          GRAFANA_SERVICE_ACCOUNT_TOKEN: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
         run: python tools/grafana_dashboard.py publish grafana/dashboards/glaze-app-summary.snapshot.json

@@ -47,5 +47,4 @@ Use this skill when editing `grafana/dashboards/*.snapshot.json`, the Grafana da
 - The publish workflow should:
   - run after CI success on `main`
   - skip non-dashboard commits
-  - use `GRAFANA_API_TOKEN` only at publish time
-
+  - use `GRAFANA_SERVICE_ACCOUNT_TOKEN` only at publish time

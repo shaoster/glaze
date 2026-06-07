@@ -53,6 +53,7 @@ All scoped to the `glaze-droplet` environment in **Settings → Environments**.
 | `TAILSCALE_AUTH_KEY` | Secret | Ephemeral auth key for Tailscale GitHub Action |
 | `INFISICAL_CLIENT_ID` | Secret | Infisical machine identity (ESO authentication) |
 | `INFISICAL_CLIENT_SECRET` | Secret | Infisical machine identity secret |
+| `GRAFANA_SERVICE_ACCOUNT_TOKEN` | Secret | Grafana Cloud service account token used only by the dashboard publish job |
 | `MODAL_TOKEN_ID` | Secret | Modal authentication token ID |
 | `MODAL_TOKEN_SECRET` | Secret | Modal authentication token secret |
 | `DEPLOY_HOST_TAILSCALE` | Variable | Tailscale MagicDNS hostname of the droplet |
@@ -66,7 +67,7 @@ All scoped to the `glaze-droplet` environment in **Settings → Environments**.
 | `CLOUDINARY_VIDEO_UPLOAD_FOLDER` | Variable | Cloudinary folder for generated showcase videos |
 | `CLOUDINARY_PUBLIC_UPLOAD_FOLDER` | Variable | Cloudinary folder for public library images |
 
-All other app secrets (Django `SECRET_KEY`, Postgres password, Cloudinary API key/secret, Grafana OTLP token) are managed in Infisical and synced into the cluster by ESO — CD does not need them directly.
+All other app secrets (Django `SECRET_KEY`, Postgres password, Cloudinary API key/secret, Grafana OTLP token) are managed in Infisical and synced into the cluster by ESO — CD does not need them directly. The Grafana dashboard publish token is different: the GitHub Actions workflow needs direct access to `GRAFANA_SERVICE_ACCOUNT_TOKEN` so it can call the Grafana dashboard HTTP API after main merges.
 
 Showcase video generation stays disabled until `CLOUDINARY_VIDEO_UPLOAD_FOLDER` is set.
 
