@@ -56,3 +56,12 @@ build:ci --discard_analysis_cache
 # Optimize for GitHub Actions (network-limited, CPU-limited)
 # 1. Use a local disk cache (backed by actions/cache) to bypass network latency for hits.
 build:ci --disk_cache=~/.cache/bazel-disk-cache
+
+# ── macOS CI ──────────────────────────────────────────────────────────────────
+# macOS GitHub Actions runners are slower than Linux: Gatekeeper/XPC overhead
+# on every binary exec makes high parallelism counterproductive. Cap jobs and
+# reduce memory pressure relative to the base ci config.
+build:ci-macos --config=ci
+build:ci-macos --jobs=4
+build:ci-macos --local_resources=memory=HOST_RAM*0.6
+build:ci-macos --local_resources=cpu=HOST_CPUS*0.75
