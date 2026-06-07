@@ -783,6 +783,29 @@ describe("App auth flow", () => {
     expect(window.location.pathname).toBe("/pieces/piece-1");
   });
 
+  it("logo link navigates to home from a non-root route", async () => {
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
+    window.history.pushState({}, "", "/analyze");
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Glaze Combinations")).toBeInTheDocument();
+    });
+
+    const logoLink = screen.getByRole("link", { name: "Go to home" });
+    expect(logoLink).toBeInTheDocument();
+    await userEvent.click(logoLink);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/");
+    });
+  });
+
   it("activates the analyze tab on direct navigation to /analyze", async () => {
     vi.mocked(fetchAppInit).mockResolvedValue({
       googleOauthClientId: "test-client-id",

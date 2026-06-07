@@ -445,7 +445,18 @@ function AppShell({
               flexWrap: "nowrap",
             }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Link
+              to="/"
+              aria-label="Go to home"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                textDecoration: "none",
+                color: "inherit",
+                cursor: "pointer",
+              }}
+            >
               <Box
                 component="img"
                 src="/favicon.svg"
@@ -465,7 +476,7 @@ function AppShell({
               >
                 PotterDoc
               </Typography>
-            </Box>
+            </Link>
             <Chip
               id="user-chip"
               label={displayName}
