@@ -61,10 +61,17 @@ export default function ImageLightbox({
   const image = images[index];
 
   const [prevIndex, setPrevIndex] = useState(index);
+  const [prevInitialIndex, setPrevInitialIndex] = useState(initialIndex);
 
   if (index !== prevIndex) {
     setPrevIndex(index);
     setOptimisticCrop(null);
+  }
+
+  // Sync to URL-driven index changes (e.g. browser Back while lightbox is open).
+  if (initialIndex !== prevInitialIndex) {
+    setPrevInitialIndex(initialIndex);
+    setIndex(initialIndex);
   }
   function prev() {
     setIndex((i) => {

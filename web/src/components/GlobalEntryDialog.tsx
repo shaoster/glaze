@@ -272,10 +272,18 @@ export default function GlobalEntryDialog({
     setNextLayerKey(1);
   }
 
+  // Reset ephemeral dialog state whenever it closes, whether via the close
+  // button/cancel (handleClose) or browser Back changing the URL (open flips
+  // false without handleClose running). Idempotent — double-reset is safe.
+  useEffect(() => {
+    if (!open) {
+      setFilters(makeEmptyFilters(boolFieldNames, relatedFilterDefs));
+      setInternalTab("browse");
+      resetCreateState();
+    }
+  }, [open, boolFieldNames, relatedFilterDefs]);
+
   function handleClose() {
-    setFilters(makeEmptyFilters(boolFieldNames, relatedFilterDefs));
-    setInternalTab("browse"); // reset local state; controlled tab is owned by parent
-    resetCreateState();
     onClose();
   }
 
