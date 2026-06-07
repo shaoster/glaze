@@ -20,4 +20,4 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Validate Grafana dashboard config
-        run: source env.sh && rtk bazel test //tools:test_grafana_dashboard --test_output=errors
+        run: source env.sh && bazel test //tools:test_grafana_dashboard --test_output=errors

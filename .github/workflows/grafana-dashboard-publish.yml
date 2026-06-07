@@ -39,4 +39,4 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         env:
           GRAFANA_SERVICE_ACCOUNT_TOKEN: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
-        run: source env.sh && rtk bazel run //tools:grafana_dashboard -- publish
+        run: source env.sh && bazel run //tools:grafana_dashboard -- publish
