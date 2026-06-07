@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          changed="$(git show --name-only --format='' HEAD)"
+          changed="$(git diff --name-only HEAD^1 HEAD)"
           if grep -q '^tools/grafana_dashboard.py$' <<<"$changed"; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else

@@ -198,6 +198,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
                 "parser": "backend",
                 "root_selector": "storage",
                 "columns": [{"selector": "credits_usage", "text": "storage_cr", "type": "number"}],
+                "cache_timeout_in_seconds": 3600,
             },
             {
                 "refId": "B",
@@ -209,6 +210,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
                 "parser": "backend",
                 "root_selector": "bandwidth",
                 "columns": [{"selector": "credits_usage", "text": "bandwidth_cr", "type": "number"}],
+                "cache_timeout_in_seconds": 3600,
             },
             {
                 "refId": "C",
@@ -220,6 +222,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
                 "parser": "backend",
                 "root_selector": "transformations",
                 "columns": [{"selector": "credits_usage", "text": "transform_cr", "type": "number"}],
+                "cache_timeout_in_seconds": 3600,
             },
             {
                 "refId": "D",
@@ -232,6 +235,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
                 "root_selector": "credits",
                 "columns": [],
                 "computed_columns": [{"selector": "limit - usage", "text": "remaining", "type": "number"}],
+                "cache_timeout_in_seconds": 3600,
             },
         ],
         "transformations": [
