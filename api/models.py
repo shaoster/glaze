@@ -542,17 +542,20 @@ class PieceState(models.Model):
                 return None
 
             state_id, field_name = ref.split(".", 1)
-            # Find the state in history.
+            # Find the state in history, preferring the prefetch cache.
             if state_id == self.state:
                 val = self.resolve_custom_field(field_name)
             else:
-                ancestor = (
-                    self.piece.states.filter(state=state_id)
-                    .order_by("-created")
-                    .first()
-                )
+                ancestor = self.piece._prefetched_state(state_id)
+                if ancestor is _MISSING:
+                    ancestor = (
+                        self.piece.states.filter(state=state_id)
+                        .order_by("-created")
+                        .first()
+                    )
                 if not ancestor:
                     return None
+                assert isinstance(ancestor, PieceState)
                 val = ancestor.resolve_custom_field(field_name)
 
             try:

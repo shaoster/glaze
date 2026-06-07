@@ -3,6 +3,8 @@ from unittest.mock import patch
 
 import pytest
 from django.contrib.auth.models import User
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
 import api.workflow as workflow_module
 from api.models import Piece, PieceState
@@ -362,3 +364,43 @@ class TestCalculatedFields:
             ],
         }
         assert state._evaluate_compute(node) == 500.0
+
+    def test_cross_state_field_reference_uses_prefetch_cache(self, piece):
+        """_evaluate_compute must not query the DB when states are prefetched."""
+        earlier = PieceState.objects.create(
+            user=piece.user,
+            piece=piece,
+            state="glaze_fired",
+            order=2,
+            custom_fields={"length_in": 7, "width_in": 4},
+        )
+        later = PieceState.objects.create(
+            user=piece.user,
+            piece=piece,
+            state="completed",
+            order=3,
+        )
+
+        # Simulate the prefetch that piece_detail_queryset performs.
+        from django.db.models import Prefetch
+
+        piece_qs = Piece.objects.prefetch_related(
+            Prefetch("states", queryset=PieceState.objects.order_by("order"))
+        ).filter(pk=piece.pk)
+        prefetched_piece = piece_qs.get()
+        prefetched_later = next(
+            s
+            for s in prefetched_piece._prefetched_objects_cache["states"]
+            if s.pk == later.pk
+        )
+
+        # Cross-state compute: references glaze_fired.length_in from completed state.
+        node = {"field": "glaze_fired.length_in", "return_type": "number"}
+
+        with CaptureQueriesContext(connection) as ctx:
+            result = prefetched_later._evaluate_compute(node)
+
+        assert result == 7.0
+        assert len(ctx) == 0, (
+            f"Expected 0 DB queries but got {len(ctx)}: {[q['sql'][:100] for q in ctx]}"
+        )
