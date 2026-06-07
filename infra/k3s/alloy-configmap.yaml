@@ -33,6 +33,12 @@ data:
       metrics_path     = "/metrics"
       scrape_interval  = "60s"
       forward_to       = [prometheus.remote_write.grafana_cloud.receiver]
+
+      rule {
+        source_labels = ["__name__"]
+        regex         = "apiserver_.*"
+        action        = "drop"
+      }
     }
 
     prometheus.remote_write "grafana_cloud" {
