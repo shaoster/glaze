@@ -76,6 +76,20 @@ The dashboard publish workflow uses a separate GitHub environment, `glaze-grafan
 |---|---|---|
 | `GRAFANA_SERVICE_ACCOUNT_TOKEN` | Secret | Grafana Cloud service account token used only by the dashboard publish job |
 
+#### Local dashboard validation
+
+Use the Bazel-backed helper target when you want the dashboard validator to run with the same controlled Python dependency set that CI uses:
+
+```bash
+rtk bazel test //tools:test_grafana_dashboard --test_output=errors
+```
+
+That target exercises `tools/grafana_dashboard.py` and keeps the validation path hermetic. If you only need a quick ad hoc check, the script also supports direct validation:
+
+```bash
+python tools/grafana_dashboard.py validate grafana/dashboards/glaze-app-summary.yaml
+```
+
 Showcase video generation stays disabled until `CLOUDINARY_VIDEO_UPLOAD_FOLDER` is set.
 
 ---

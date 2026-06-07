@@ -16,13 +16,15 @@ Use this skill when editing `grafana/dashboards/*.yaml`, the Grafana dashboard w
 
 ## Local Validation
 
-1. Validate the dashboard file structure:
+1. Run the Bazel-backed validator so the helper uses the same controlled Python deps as CI:
+   `rtk bazel test //tools:test_grafana_dashboard --test_output=errors`
+2. Validate the dashboard file directly when you only want a quick structure check:
    `python tools/grafana_dashboard.py validate grafana/dashboards/glaze-app-summary.yaml`
-2. Inspect the saved queries and panel datasources:
+3. Inspect the saved queries and panel datasources:
    `mcp__grafana.get_dashboard_panel_queries`
-3. Test PromQL against the live datasource before merging:
+4. Test PromQL against the live datasource before merging:
    `mcp__grafana.query_prometheus`
-4. Test TraceQL against Tempo for trace panels:
+5. Test TraceQL against Tempo for trace panels:
    `mcp__grafana.tempo_traceql_search`
 
 ## Formula Best Practices
