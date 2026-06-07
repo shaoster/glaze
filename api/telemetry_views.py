@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import os
 import threading
-from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse, urlunparse
 
 import httpx
@@ -36,18 +35,13 @@ _ALLOWED_CONTENT_TYPES = frozenset(
     ]
 )
 
-# Cap in-flight + queued forwards so a slow/unreachable collector cannot grow
-# memory without bound. Uploads beyond this limit are dropped silently — this
-# endpoint is best-effort telemetry. The executor itself is not given an atexit
-# hook: Python's ThreadPoolExecutor registers its own internal cleanup (via
-# weakref.finalize) that runs before user atexit callbacks and joins workers
-# with wait=True, so a user-registered wait=False hook would never execute.
-# With _MAX_PENDING_FORWARDS bounded and a 5s per-request timeout, worst-case
-# drain on process exit is bounded to ceil(_MAX_PENDING_FORWARDS / max_workers)
-# × 5s = ~25s, within the pod's 30s termination grace period.
+# Daemon threads are abandoned at interpreter exit, so in-flight collector
+# calls never delay pod shutdown regardless of httpx timeout or collector state.
+# The semaphore bounds concurrent threads so a slow/unreachable collector cannot
+# grow memory without bound; uploads beyond _MAX_PENDING_FORWARDS are dropped
+# silently — this endpoint is best-effort telemetry.
 _MAX_PENDING_FORWARDS = 20
 _forward_semaphore = threading.BoundedSemaphore(_MAX_PENDING_FORWARDS)
-_forward_executor = ThreadPoolExecutor(max_workers=4)
 
 
 class BrowserTracesThrottle(SimpleRateThrottle):
@@ -177,5 +171,5 @@ def browser_traces(request: Request) -> HttpResponse:
             otel_context.detach(token)
             _forward_semaphore.release()
 
-    _forward_executor.submit(_forward)
+    threading.Thread(target=_forward, daemon=True).start()
     return HttpResponse(status=200)
