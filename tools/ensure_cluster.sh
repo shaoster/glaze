@@ -120,7 +120,7 @@ $SSH "${DEPLOY_HOST}" '
       modprobe zram
     fi
   fi
-  if ! command -v zramctl >/dev/null 2>&1; then
+  if ! dpkg -s zram-config >/dev/null 2>&1; then
     echo "Installing zram-config..."
     export DEBIAN_FRONTEND=noninteractive
     apt-get install -y zram-config
@@ -150,13 +150,36 @@ $SSH "${DEPLOY_HOST}" '
 
 # ── k3s service env config ───────────────────────────────────────────────────
 # Sync GOGC and GOMEMLIMIT environment variables for the main k3s server.
+# Merges values to preserve other host-specific environment variables.
 echo "==> Syncing k3s service env..."
 $SCP infra/k3s/k3s.service.env "${DEPLOY_HOST}":/tmp/k3s-service-env-new
 $SSH "${DEPLOY_HOST}" '
   set -e
-  if ! cmp -s /tmp/k3s-service-env-new /etc/systemd/system/k3s.service.env; then
+  touch /etc/systemd/system/k3s.service.env
+  python3 -c '\''
+import os
+env_path = "/etc/systemd/system/k3s.service.env"
+new_path = "/tmp/k3s-service-env-new"
+temp_path = "/tmp/k3s-service-env-merged"
+lines = []
+if os.path.exists(env_path):
+    with open(env_path, "r") as f:
+        lines = f.readlines()
+# Remove existing GOGC/GOMEMLIMIT lines
+lines = [l for l in lines if not l.strip().startswith("GOGC=") and not l.strip().startswith("GOMEMLIMIT=")]
+if lines and not lines[-1].endswith("\n"):
+    lines[-1] += "\n"
+with open(new_path, "r") as f:
+    new_lines = f.readlines()
+# Filter out comments/empty lines from new lines
+new_lines = [nl for nl in new_lines if nl.strip() and not nl.strip().startswith("#")]
+lines.extend(new_lines)
+with open(temp_path, "w") as f:
+    f.writelines(lines)
+'\''
+  if ! cmp -s /tmp/k3s-service-env-merged /etc/systemd/system/k3s.service.env; then
     echo "k3s service env changed — applying and restarting k3s..."
-    cp /tmp/k3s-service-env-new /etc/systemd/system/k3s.service.env
+    cp /tmp/k3s-service-env-merged /etc/systemd/system/k3s.service.env
     systemctl restart k3s
     echo "Waiting for k3s API to come back..."
     for i in $(seq 1 30); do
