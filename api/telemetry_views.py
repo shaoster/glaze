@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import atexit
+import logging
 import os
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse, urlunparse
 
@@ -23,6 +24,8 @@ from rest_framework.throttling import SimpleRateThrottle
 
 from backend.otel import traced
 
+logger = logging.getLogger(__name__)
+
 _MAX_TRACE_BODY_BYTES = 512 * 1024  # 512 KB
 
 _ALLOWED_CONTENT_TYPES = frozenset(
@@ -33,8 +36,18 @@ _ALLOWED_CONTENT_TYPES = frozenset(
     ]
 )
 
+# Cap in-flight + queued forwards so a slow/unreachable collector cannot grow
+# memory without bound. Uploads beyond this limit are dropped silently — this
+# endpoint is best-effort telemetry. The executor itself is not given an atexit
+# hook: Python's ThreadPoolExecutor registers its own internal cleanup (via
+# weakref.finalize) that runs before user atexit callbacks and joins workers
+# with wait=True, so a user-registered wait=False hook would never execute.
+# With _MAX_PENDING_FORWARDS bounded and a 5s per-request timeout, worst-case
+# drain on process exit is bounded to ceil(_MAX_PENDING_FORWARDS / max_workers)
+# × 5s = ~25s, within the pod's 30s termination grace period.
+_MAX_PENDING_FORWARDS = 20
+_forward_semaphore = threading.BoundedSemaphore(_MAX_PENDING_FORWARDS)
 _forward_executor = ThreadPoolExecutor(max_workers=4)
-atexit.register(_forward_executor.shutdown, wait=False)
 
 
 class BrowserTracesThrottle(SimpleRateThrottle):
@@ -81,11 +94,11 @@ def _collector_traces_endpoint() -> str:
 
 @extend_schema(
     request=None,
-    responses={202: None, 400: None, 411: None, 413: None, 415: None},
+    responses={200: None, 400: None, 411: None, 413: None, 415: None},
     description=(
         "Proxy browser OTLP/HTTP trace uploads to the local collector. "
         "The backend buffers and validates the payload, then forwards it "
-        "asynchronously — the response is returned immediately (202) without "
+        "asynchronously — the response is returned immediately (200 OK) without "
         "waiting for the collector. "
         "Requests without Content-Length are rejected (411). "
         "Payloads larger than 512 KB are rejected (413). "
@@ -132,6 +145,11 @@ def browser_traces(request: Request) -> HttpResponse:
         if header_value:
             forward_headers[header_name] = header_value
 
+    # Drop when the queue is full so a slow collector cannot grow memory without
+    # bound. The semaphore is released inside _forward's finally block.
+    if not _forward_semaphore.acquire(blocking=False):
+        return HttpResponse(status=200)
+
     # Capture the current OTel context so the background span remains correlated
     # with this request's trace ID. ThreadPoolExecutor workers are reused across
     # submissions and do not inherit context automatically.
@@ -142,16 +160,22 @@ def browser_traces(request: Request) -> HttpResponse:
         try:
             with traced("telemetry.collector_forward"):
                 try:
-                    httpx.post(
+                    response = httpx.post(
                         collector_endpoint,
                         content=body,
                         headers=forward_headers,
-                        timeout=10.0,
+                        timeout=5.0,
                     )
-                except httpx.RequestError:
-                    pass  # best-effort; browser already received 202
+                    if response.is_error:
+                        logger.warning(
+                            "collector rejected browser traces: HTTP %d",
+                            response.status_code,
+                        )
+                except httpx.RequestError as exc:
+                    logger.warning("failed to forward browser traces: %s", exc)
         finally:
             otel_context.detach(token)
+            _forward_semaphore.release()
 
     _forward_executor.submit(_forward)
-    return HttpResponse(status=202)
+    return HttpResponse(status=200)
