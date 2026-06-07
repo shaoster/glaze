@@ -158,6 +158,29 @@ class TestPieceDetail:
             "Stoneware"
         )
 
+    def test_current_state_not_serialized_twice(self, client, piece, user):
+        from collections import Counter
+        from unittest.mock import patch
+
+        from api.serializers import PieceStateSerializer
+
+        PieceState.objects.create(piece=piece, user=user, state="handbuilt", order=2)
+
+        serialize_calls = []
+        _original = PieceStateSerializer.to_representation
+
+        def tracking(self_inner, instance):
+            serialize_calls.append(instance.pk)
+            return _original(self_inner, instance)
+
+        with patch.object(PieceStateSerializer, "to_representation", tracking):
+            response = client.get(f"/api/pieces/{piece.id}/")
+
+        assert response.status_code == 200
+        counts = Counter(serialize_calls)
+        duplicates = {pk: count for pk, count in counts.items() if count > 1}
+        assert not duplicates, f"States serialized more than once: {duplicates}"
+
     def test_get(self, client, piece):
         response = client.get(f"/api/pieces/{piece.id}/")
         assert response.status_code == 200
@@ -852,3 +875,32 @@ class TestPieceSummaryShowcaseVideoUrl:
         response = client.get(f"/api/pieces/{piece.id}/")
         assert response.status_code == 200
         assert response.json()["owner_alias"] is None
+
+    def test_showcase_video_url_returns_url_even_when_input_hash_is_stale(
+        self, client, user
+    ):
+        """Regression: piece-detail must not rebuild the storyboard to check staleness.
+
+        Old code re-computed the storyboard hash on every GET and returned None if
+        the stored hash didn't match. New code omits the staleness check entirely;
+        the dedicated showcase-video endpoint owns that logic.
+        """
+        from api.models import AsyncTask
+        from api.showcase.render import SHOWCASE_VIDEO_TASK_TYPE
+
+        piece = self._make_public_terminal_piece(user)
+        artifact_url = "https://res.cloudinary.com/demo/video/upload/showcase.mp4"
+        AsyncTask.objects.create(
+            user=user,
+            task_type=SHOWCASE_VIDEO_TASK_TYPE,
+            status=AsyncTask.Status.SUCCESS,
+            input_params={
+                "piece_id": str(piece.id),
+                "input_hash": "deliberately-stale-hash-that-cannot-match",
+            },
+            result={"artifact_url": artifact_url},
+        )
+
+        response = client.get(f"/api/pieces/{piece.id}/")
+        assert response.status_code == 200
+        assert response.json()["showcase_video_url"] == artifact_url

@@ -544,27 +544,37 @@ class PieceDetailSerializer(PieceSummarySerializer):
             "owner_alias",
         ]
 
+    def _get_all_states_data(self, obj: Piece) -> list:
+        """Serialize all piece states exactly once and cache on this serializer instance."""
+        if not hasattr(self, "_states_data_cache"):
+            self._states_data_cache = list(
+                PieceStateSerializer(
+                    obj.states.all(), many=True, context=self.context
+                ).data
+            )
+        return self._states_data_cache
+
     @extend_schema_field(_relation_schema("PieceState", shape="detail"))
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
         assert cs is not None, f"Piece {obj.id} has no states"
-        return PieceStateSerializer(cs, context=self.context).data
+        return next(s for s in self._get_all_states_data(obj) if s["id"] == str(cs.pk))
 
     @extend_schema_field(_relation_array_schema("PieceState", shape="history"))
     def get_history(self, obj: Piece) -> list:
-        return list(
-            PieceStateSerializer(obj.states.all(), many=True, context=self.context).data
-        )
+        return self._get_all_states_data(obj)
 
     @extend_schema_field(serializers.CharField(allow_null=True, required=False))
     def get_showcase_video_url(self, obj: Piece) -> str | None:
         if not (obj.shared and not obj.is_editable):
             return None
         from .piece.showcase_views import SHOWCASE_VIDEO_TASK_TYPE
-        from .showcase import build_keepsake_storyboard, compute_storyboard_hash
 
         # Use the latest succeeded task so an in-progress retry does not hide
         # an existing artifact while it runs (or if it fails).
+        # Staleness detection is intentionally omitted here — rebuilding the full
+        # storyboard on every piece-detail GET is O(states × images) CPU overhead.
+        # The dedicated GET /api/pieces/{id}/showcase-video/ endpoint owns that logic.
         task = (
             AsyncTask.objects.filter(
                 user=obj.user,
@@ -577,19 +587,6 @@ class PieceDetailSerializer(PieceSummarySerializer):
         )
         if task is None:
             return None
-        input_params = task.input_params if isinstance(task.input_params, dict) else {}
-        stored_hash = input_params.get("input_hash")
-        if stored_hash:
-            # Rebuild the storyboard with the same exclusions used when
-            # rendering so custom renders are not incorrectly flagged stale.
-            storyboard = build_keepsake_storyboard(
-                obj,
-                excluded_image_keys=input_params.get("excluded_image_keys") or [],
-                excluded_note_keys=input_params.get("excluded_note_keys") or [],
-                music_track_id=input_params.get("music_track_id"),
-            )
-            if stored_hash != compute_storyboard_hash(storyboard.to_dict()):
-                return None
         result = task.result if isinstance(task.result, dict) else {}
         return result.get("artifact_url")
 
