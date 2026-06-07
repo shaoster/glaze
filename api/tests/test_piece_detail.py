@@ -82,6 +82,38 @@ class TestPieceDetail:
         assert response.status_code == 200
         assert len(ctx) <= 7
 
+    def test_images_query_count_does_not_grow_with_state_count(
+        self, client, piece, user
+    ):
+        from api.models import Image, PieceStateImage
+
+        for state_name in ["handbuilt", "submitted_to_bisque_fire", "bisque_fired"]:
+            state = PieceState.objects.create(piece=piece, user=user, state=state_name)
+            for i in range(3):
+                img = Image.objects.create(
+                    user=user, url=f"https://ex.com/{state_name}-{i}.jpg"
+                )
+                PieceStateImage.objects.create(piece_state=state, image=img, order=i)
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = client.get(f"/api/pieces/{piece.id}/")
+
+        assert response.status_code == 200
+        per_state_queries = [
+            q
+            for q in ctx.captured_queries
+            if "api_piecestateimage" in q["sql"]
+            and "piece_state_id" in q["sql"]
+            and '"piece_state_id" =' in q["sql"]
+        ]
+        assert len(per_state_queries) == 0, (
+            f"Expected 0 per-state image queries but got {len(per_state_queries)}: "
+            f"{[q['sql'][:120] for q in per_state_queries]}"
+        )
+        history = response.json()["history"]
+        states_with_images = [s for s in history if s["images"]]
+        assert len(states_with_images) == 3
+
     def test_get_prefetches_state_global_refs(self, client, piece, user):
         clay_body = ClayBody.objects.create(user=user, name="Stoneware")
         kiln_location = Location.objects.create(user=user, name="Kiln Shelf")
