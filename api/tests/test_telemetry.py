@@ -9,38 +9,30 @@ from django.core.cache import cache
 from django.test.utils import override_settings
 
 
-def _signalling_mock(event: threading.Event, response: httpx.Response) -> Mock:
-    """Return a Mock for httpx.post that sets *event* when called."""
-    mock = Mock()
-
-    def side_effect(*args, **kwargs):
-        result = response
-        mock.call_args_list.append(mock.call(*args, **kwargs))
-        event.set()
-        return result
-
-    mock.side_effect = side_effect
-    return mock
-
-
 @pytest.mark.django_db
 class TestTelemetryProxy:
     def test_browser_traces_does_not_block_on_collector(self, client, monkeypatch):
-        """Response arrives before the slow collector round-trip completes.
+        """Response arrives before the collector httpx.post call completes.
 
-        The collector mock sleeps for 2s. The view must return well under 1s —
-        a threshold that safely absorbs Django/OTel request overhead (~200ms)
-        while still proving the view did not wait for the collector.
+        The mock blocks on permit_return until the test explicitly releases it.
+        In the blocking (pre-fix) code path the view calls httpx.post()
+        synchronously, so client.post() cannot return until the mock does — but
+        the mock waits for permit_return which is only set after client.post()
+        returns, so the mock times out after 30s and elapsed >> 5s.
+        With fire-and-forget (correct behavior) the view submits to the
+        executor and returns immediately; we then set permit_return so the
+        background thread can complete without delay.
         """
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otelcol:4317")
+        permit_return = threading.Event()
         collector_called = threading.Event()
 
-        def slow_post(*args, **kwargs):
-            time.sleep(2.0)
+        def gated_post(*args, **kwargs):
             collector_called.set()
+            permit_return.wait(timeout=30.0)
             return httpx.Response(202, content=b"", headers={})
 
-        monkeypatch.setattr("api.telemetry_views.httpx.post", slow_post)
+        monkeypatch.setattr("api.telemetry_views.httpx.post", gated_post)
         t0 = time.monotonic()
         response = client.post(
             "/api/telemetry/traces/",
@@ -48,9 +40,10 @@ class TestTelemetryProxy:
             content_type="application/x-protobuf",
         )
         elapsed = time.monotonic() - t0
+        permit_return.set()  # release the background thread immediately
 
         assert response.status_code == 202
-        assert elapsed < 1.0, f"view blocked for {elapsed:.3f}s waiting for collector"
+        assert elapsed < 5.0, f"view blocked for {elapsed:.3f}s — should return before collector"
         assert collector_called.wait(timeout=5.0), "collector was never called"
 
     def test_browser_traces_proxies_raw_otlp_payload(self, client, monkeypatch):
@@ -62,9 +55,8 @@ class TestTelemetryProxy:
         post_mock = Mock(return_value=httpx.Response(202, content=b"", headers={}))
 
         def side_effect(*args, **kwargs):
-            result = post_mock.return_value
             called.set()
-            return result
+            return post_mock.return_value
 
         post_mock.side_effect = side_effect
         monkeypatch.setattr("api.telemetry_views.httpx.post", post_mock)
@@ -76,7 +68,7 @@ class TestTelemetryProxy:
         )
 
         assert response.status_code == 202
-        assert called.wait(timeout=2.0), "httpx.post was never called"
+        assert called.wait(timeout=5.0), "httpx.post was never called"
         post_mock.assert_called_once_with(
             "http://otelcol:4318/v1/traces",
             content=b"trace-bytes",
@@ -109,9 +101,8 @@ class TestTelemetryProxy:
         post_mock = Mock(return_value=httpx.Response(202, content=b"", headers={}))
 
         def side_effect(*args, **kwargs):
-            result = post_mock.return_value
             called.set()
-            return result
+            return post_mock.return_value
 
         post_mock.side_effect = side_effect
         monkeypatch.setattr("api.telemetry_views.httpx.post", post_mock)
@@ -126,7 +117,7 @@ class TestTelemetryProxy:
         )
 
         assert response.status_code == 202
-        assert called.wait(timeout=2.0), "httpx.post was never called"
+        assert called.wait(timeout=5.0), "httpx.post was never called"
         post_mock.assert_called_once_with(
             "http://otelcol:4318/v1/traces",
             content=b"trace-bytes",
@@ -180,7 +171,7 @@ class TestTelemetryProxy:
             content_type="application/json",
         )
         assert response.status_code == 202
-        assert called.wait(timeout=2.0), "httpx.post was never called"
+        assert called.wait(timeout=5.0), "httpx.post was never called"
 
     @override_settings(
         CACHES={
@@ -220,4 +211,4 @@ class TestTelemetryProxy:
         )
         assert first.status_code == 202
         assert second.status_code == 429
-        assert called.wait(timeout=2.0), "httpx.post was never called"
+        assert called.wait(timeout=5.0), "httpx.post was never called"
