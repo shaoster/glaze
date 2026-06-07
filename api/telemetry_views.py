@@ -171,5 +171,9 @@ def browser_traces(request: Request) -> HttpResponse:
             otel_context.detach(token)
             _forward_semaphore.release()
 
-    threading.Thread(target=_forward, daemon=True).start()
+    try:
+        threading.Thread(target=_forward, daemon=True).start()
+    except Exception:
+        _forward_semaphore.release()
+        logger.warning("failed to start collector forward thread; dropping upload")
     return HttpResponse(status=200)

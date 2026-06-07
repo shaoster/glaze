@@ -173,49 +173,67 @@ class TestTelemetryProxy:
         assert response.status_code == 200
         assert called.wait(timeout=5.0), "httpx.post was never called"
 
-    def test_collector_error_response_is_logged(self, client, monkeypatch, caplog):
-        import logging
+    def test_collector_error_response_is_logged(self, client, monkeypatch):
+        import logging as _logging
 
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otelcol:4317")
-        called = threading.Event()
+        # LOGGING["loggers"]["api"]["propagate"] = False, so caplog (root logger)
+        # never sees records from api.telemetry_views. Attach a handler directly.
+        logged = threading.Event()
 
-        def error_post(*args, **kwargs):
-            called.set()
-            return httpx.Response(503, content=b"", headers={})
+        class _Capture(_logging.Handler):
+            def emit(self, record):
+                if "503" in record.getMessage():
+                    logged.set()
 
-        monkeypatch.setattr("api.telemetry_views.httpx.post", error_post)
-        with caplog.at_level(logging.WARNING, logger="api.telemetry_views"):
+        tv_logger = _logging.getLogger("api.telemetry_views")
+        handler = _Capture()
+        tv_logger.addHandler(handler)
+        try:
+            monkeypatch.setattr(
+                "api.telemetry_views.httpx.post",
+                lambda *a, **kw: httpx.Response(503, content=b"", headers={}),
+            )
             response = client.post(
                 "/api/telemetry/traces/",
                 data=b"trace-payload",
                 content_type="application/x-protobuf",
             )
-            assert called.wait(timeout=5.0)
+            assert logged.wait(timeout=5.0), "warning for 503 was never logged"
+        finally:
+            tv_logger.removeHandler(handler)
 
         assert response.status_code == 200
-        assert any("503" in r.message for r in caplog.records)
 
-    def test_collector_connection_error_is_logged(self, client, monkeypatch, caplog):
-        import logging
+    def test_collector_connection_error_is_logged(self, client, monkeypatch):
+        import logging as _logging
 
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otelcol:4317")
-        called = threading.Event()
+        logged = threading.Event()
 
-        def failing_post(*args, **kwargs):
-            called.set()
-            raise httpx.ConnectError("refused")
+        class _Capture(_logging.Handler):
+            def emit(self, record):
+                if "refused" in record.getMessage():
+                    logged.set()
 
-        monkeypatch.setattr("api.telemetry_views.httpx.post", failing_post)
-        with caplog.at_level(logging.WARNING, logger="api.telemetry_views"):
+        tv_logger = _logging.getLogger("api.telemetry_views")
+        handler = _Capture()
+        tv_logger.addHandler(handler)
+        try:
+            monkeypatch.setattr(
+                "api.telemetry_views.httpx.post",
+                lambda *a, **kw: (_ for _ in ()).throw(httpx.ConnectError("refused")),
+            )
             response = client.post(
                 "/api/telemetry/traces/",
                 data=b"trace-payload",
                 content_type="application/x-protobuf",
             )
-            assert called.wait(timeout=5.0)
+            assert logged.wait(timeout=5.0), "warning for connection error was never logged"
+        finally:
+            tv_logger.removeHandler(handler)
 
         assert response.status_code == 200
-        assert any("refused" in r.message for r in caplog.records)
 
     def test_saturated_queue_still_returns_200(self, client, monkeypatch):
         """When the semaphore is exhausted the view drops the upload but still returns 200."""
