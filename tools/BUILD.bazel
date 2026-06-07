@@ -67,6 +67,13 @@ py_binary(
     visibility = ["//visibility:public"],
 )
 
+py_binary(
+    name = "grafana_dashboard",
+    srcs = ["grafana_dashboard.py"],
+    deps = ["@pypi//grafana_foundation_sdk"],
+    visibility = ["//visibility:public"],
+)
+
 pytest_test(
     name = "test_grafana_dashboard",
     srcs = [
@@ -76,8 +83,7 @@ pytest_test(
     ],
     main = "//tools:pytest_main.py",
     args = ["tools/tests/test_grafana_dashboard.py"],
-    data = ["//:grafana_dashboard_files"],
-    deps = ["@pypi//pyyaml"],
+    deps = ["@pypi//grafana_foundation_sdk"],
     expected_coverage = ["tools/grafana_dashboard.py"],
     visibility = ["//visibility:public"],
 )

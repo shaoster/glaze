@@ -3,84 +3,63 @@ from __future__ import annotations
 import io
 import json
 from copy import deepcopy
-from pathlib import Path
 from typing import Any
 from urllib.request import Request
 
 import pytest
-import yaml
 
 from tools import grafana_dashboard as dashboard
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[2]
+def _panel_map(payload: dict[str, Any]) -> dict[int, dict[str, Any]]:
+    panels = payload["panels"]
+    assert isinstance(panels, list)
+    return {panel["id"]: panel for panel in panels}
 
 
-def _dashboard_path() -> Path:
-    return _repo_root() / "grafana/dashboards/glaze-app-summary.yaml"
+def test_validate_dashboard_builds_expected_dashboard() -> None:
+    dashboard.validate_dashboard()
 
 
-def test_load_dashboard_accepts_comments(tmp_path: Path) -> None:
-    source = _dashboard_path().read_text(encoding="utf-8")
-    path = tmp_path / "glaze-app-summary.yaml"
-    path.write_text("# extra comment\n" + source, encoding="utf-8")
+def test_dashboard_json_contains_expected_sdk_fields() -> None:
+    payload = dashboard.dashboard_json()
+    panels = _panel_map(payload)
 
-    loaded = dashboard.load_dashboard(path)
+    assert payload["title"] == "Glaze Application Observability"
+    assert payload["uid"] == "glaze-app-summary"
+    assert payload["tags"] == ["glaze", "production"]
+    assert payload["refresh"] == "10s"
+    assert payload["timezone"] == "browser"
+    assert payload["time"] == {"from": "now-1h", "to": "now"}
 
-    assert loaded["title"] == "Glaze Application Observability"
-    assert loaded["panels"][0]["title"] == "Total Requests (1h)"
+    assert panels[1]["title"] == "Total Requests (1h)"
+    assert panels[1]["targets"][0]["expr"] == (
+        'sum(increase(http_server_duration_milliseconds_count{service_name="glaze"}[$__range]))'
+    )
+    assert panels[1]["targets"][0]["instant"] is True
 
+    assert panels[5]["type"] == "timeseries"
+    assert panels[5]["targets"][0]["range"] is True
 
-def test_load_dashboard_rejects_invalid_yaml(tmp_path: Path) -> None:
-    path = tmp_path / "broken.yaml"
-    path.write_text("title: [unterminated\n", encoding="utf-8")
+    assert panels[7]["targets"][0]["queryType"] == "range"
+    assert panels[8]["targets"][0]["queryType"] == "traceql"
+    assert panels[8]["targets"][0]["limit"] == 30
+    assert panels[8]["targets"][0]["query"] == '{resource.service.name="glaze" && (duration > 500ms || status=error)}'
 
-    with pytest.raises(dashboard.ValidationError, match="invalid YAML"):
-        dashboard.load_dashboard(path)
-
-
-def test_validate_dashboard_accepts_repo_config() -> None:
-    dashboard.validate_dashboard(_dashboard_path())
-
-
-def test_validate_dashboard_rejects_secret_markers(tmp_path: Path) -> None:
-    config = yaml.safe_load(_dashboard_path().read_text(encoding="utf-8"))
-    config["panels"][0]["description"] = "Bearer token leaked"
-    path = tmp_path / "broken.yaml"
-    path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
-
-    with pytest.raises(dashboard.ValidationError, match="secret-bearing string detected"):
-        dashboard.validate_dashboard(path)
+    assert panels[13]["transformations"][0]["id"] == "filterFieldsByName"
+    assert panels[13]["transformations"][1]["options"]["renameByName"]["remaining"] == "Headroom"
 
 
-def test_publish_dashboard_merges_overlay_and_uses_live_folder_uid(
+def test_publish_dashboard_uses_generated_dashboard_and_live_metadata(
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
 ) -> None:
-    config = yaml.safe_load(_dashboard_path().read_text(encoding="utf-8"))
-    config["description"] = "Updated dashboard description"
-    config["panels"][0]["description"] = "Updated request volume description"
-    overlay_path = tmp_path / "overlay.yaml"
-    overlay_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
-
-    live_dashboard: dict[str, Any] = {
-        "id": 123,
-        "uid": "glaze-app-summary",
-        "title": "Old title",
-        "editable": False,
-        "panels": [
-            {
-                "id": 1,
-                "title": "Old panel title",
-                "type": "stat",
-                "fieldConfig": {"defaults": {"unit": "short"}},
-                "targets": [],
-            }
-        ],
-    }
     live_payload = {
-        "dashboard": live_dashboard,
+        "dashboard": {
+            "id": 123,
+            "editable": False,
+            "schemaVersion": 42,
+            "version": 17,
+        },
         "meta": {"folderUid": "custom-folder"},
     }
 
@@ -106,7 +85,7 @@ def test_publish_dashboard_merges_overlay_and_uses_live_folder_uid(
     monkeypatch.setattr(dashboard, "fetch_dashboard", fake_fetch_dashboard)
     monkeypatch.setattr(dashboard.urllib.request, "urlopen", fake_urlopen)
 
-    dashboard.publish_dashboard(overlay_path, dashboard.DEFAULT_GRAFANA_URL, "secret-token")
+    dashboard.publish_dashboard(dashboard.DEFAULT_GRAFANA_URL, "secret-token")
 
     assert len(requests) == 1
     body = json.loads(requests[0].data.decode("utf-8"))
@@ -114,15 +93,19 @@ def test_publish_dashboard_merges_overlay_and_uses_live_folder_uid(
 
     assert body["folderUid"] == "custom-folder"
     assert body["overwrite"] is True
+    assert body["message"] == "Publish glaze-app-summary dashboard"
     assert published["id"] == 123
-    assert published["description"] == "Updated dashboard description"
     assert published["editable"] is False
-    assert published["panels"][0]["description"] == "Updated request volume description"
-    assert published["panels"][0]["fieldConfig"]["defaults"]["unit"] == "short"
+    assert published["schemaVersion"] == 42
+    assert published["version"] == 17
+    assert published["title"] == "Glaze Application Observability"
+    assert published["uid"] == "glaze-app-summary"
+    published_panels = _panel_map(published)
+    assert published_panels[13]["transformations"][1]["options"]["renameByName"]["remaining"] == "Headroom"
 
 
 def test_main_validate_prints_ok(capsys: pytest.CaptureFixture[str]) -> None:
-    exit_code = dashboard.main(["validate", str(_dashboard_path())])
+    exit_code = dashboard.main(["validate"])
 
     assert exit_code == 0
-    assert capsys.readouterr().out.strip() == f"{_dashboard_path()}: OK"
+    assert capsys.readouterr().out.strip() == "Grafana dashboard: OK"

@@ -24,18 +24,13 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 2
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install dashboard publisher dependency
-        run: python -m pip install pyyaml
       - name: Check whether the dashboard changed
         id: changes
         shell: bash
         run: |
           set -euo pipefail
           changed="$(git show --name-only --format='' HEAD)"
-          if grep -q '^grafana/dashboards/' <<<"$changed"; then
+          if grep -q '^tools/grafana_dashboard.py$' <<<"$changed"; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -44,4 +39,4 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         env:
           GRAFANA_SERVICE_ACCOUNT_TOKEN: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
-        run: python tools/grafana_dashboard.py publish grafana/dashboards/glaze-app-summary.yaml
+        run: source env.sh && rtk bazel run //tools:grafana_dashboard -- publish

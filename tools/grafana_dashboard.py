@@ -1,27 +1,33 @@
 #!/usr/bin/env python3
-"""Validate and publish Glaze Grafana dashboard configs.
+"""Build, validate, and publish the Glaze Grafana dashboard with Foundation SDK.
 
-This script treats `grafana/dashboards/*.yaml` files as overlays rather than
-full Grafana exports. The publish path merges the overlay into the live
-dashboard fetched from Grafana, which keeps untouched panel settings intact
-while still versioning the query definitions and layout fields we care about in
-git.
+The dashboard lives in Python code so the repo can keep Grafana-specific logic
+typed, reviewable, and testable under Bazel. The publish path emits Grafana
+JSON from the SDK-generated model and updates the live dashboard directly.
 """
 
 from __future__ import annotations
 
 import argparse
-import copy
 import json
 import os
-import pathlib
 import sys
 import urllib.error
 import urllib.request
-from collections.abc import Iterable, Mapping
+from copy import deepcopy
 from typing import Any
 
-import yaml
+from grafana_foundation_sdk.builders.dashboard import Dashboard as DashboardBuilder
+from grafana_foundation_sdk.builders.logs import Panel as LogsPanelBuilder
+from grafana_foundation_sdk.builders.piechart import Panel as PieChartPanelBuilder
+from grafana_foundation_sdk.builders.prometheus import Dataquery as PrometheusQueryBuilder
+from grafana_foundation_sdk.builders.stat import Panel as StatPanelBuilder
+from grafana_foundation_sdk.builders.table import Panel as TablePanelBuilder
+from grafana_foundation_sdk.builders.tempo import TempoQuery as TempoQueryBuilder
+from grafana_foundation_sdk.builders.timeseries import Panel as TimeseriesPanelBuilder
+from grafana_foundation_sdk.builders.loki import Dataquery as LokiQueryBuilder
+from grafana_foundation_sdk.cog.encoder import JSONEncoder
+from grafana_foundation_sdk.models.dashboard import DataSourceRef, DataTransformerConfig, GridPos
 
 DEFAULT_GRAFANA_URL = "https://shaoster.grafana.net"
 DEFAULT_FOLDER_UID = "general"
@@ -333,149 +339,181 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
 }
 
 EXPECTED_PANEL_IDS = set(EXPECTED_PANELS)
-SECRET_MARKERS = ("Authorization", "Basic ", "Bearer ")
-
-
 class ValidationError(RuntimeError):
-    """Raised when a dashboard fails validation."""
+    """Raised when a dashboard build or publish step fails."""
 
 
-def load_dashboard(path: pathlib.Path) -> dict[str, Any]:
-    try:
-        with path.open("r", encoding="utf-8") as handle:
-            data = yaml.safe_load(handle)
-    except FileNotFoundError as exc:
-        raise ValidationError(f"{path}: file not found") from exc
-    except yaml.YAMLError as exc:
-        raise ValidationError(f"{path}: invalid YAML: {exc}") from exc
-    if not isinstance(data, dict):
-        raise ValidationError(f"{path}: dashboard root must be an object")
-    return data
+class InfinityQuery:
+    def __init__(self, spec: dict[str, Any]) -> None:
+        self._spec = deepcopy(spec)
+
+    def to_json(self) -> dict[str, Any]:
+        return deepcopy(self._spec)
 
 
-def subset_errors(expected: Any, actual: Any, path: str) -> list[str]:
+class InfinityQueryBuilder:
+    def __init__(self, spec: dict[str, Any]) -> None:
+        self._internal = InfinityQuery(spec)
+
+    def build(self) -> InfinityQuery:
+        return self._internal
+
+
+def _datasource_ref(spec: dict[str, Any]) -> DataSourceRef:
+    return DataSourceRef(type_val=spec.get("type"), uid=spec.get("uid"))
+
+
+def _grid_pos(spec: dict[str, Any]) -> GridPos:
+    return GridPos(
+        h=spec.get("h", 9),
+        w=spec.get("w", 12),
+        x=spec.get("x", 0),
+        y=spec.get("y", 0),
+        static=spec.get("static"),
+    )
+
+
+def _transformer(spec: dict[str, Any]) -> DataTransformerConfig:
+    return DataTransformerConfig(
+        id_val=spec["id"],
+        disabled=spec.get("disabled"),
+        options=deepcopy(spec.get("options", {})),
+    )
+
+
+def _prometheus_query(panel_type: str, spec: dict[str, Any]) -> PrometheusQueryBuilder:
+    query = PrometheusQueryBuilder().ref_id(spec.get("refId", "A")).expr(spec["expr"])
+    if spec.get("legendFormat") is not None:
+        query.legend_format(spec["legendFormat"])
+    if panel_type == "timeseries":
+        query.range()
+    elif spec.get("instant"):
+        query.instant()
+    elif spec.get("range"):
+        query.range()
+    if datasource := spec.get("datasource"):
+        query.datasource(_datasource_ref(datasource))
+    return query
+
+
+def _loki_query(spec: dict[str, Any]) -> LokiQueryBuilder:
+    query = LokiQueryBuilder().ref_id(spec.get("refId", "A")).expr(spec["expr"])
+    if spec.get("legendFormat") is not None:
+        query.legend_format(spec["legendFormat"])
+    if spec.get("queryType") is not None:
+        query.query_type(spec["queryType"])
+    if spec.get("maxLines") is not None:
+        query.max_lines(spec["maxLines"])
+    if spec.get("direction") is not None:
+        query.direction(spec["direction"])
+    if datasource := spec.get("datasource"):
+        query.datasource(_datasource_ref(datasource))
+    return query
+
+
+def _tempo_query(spec: dict[str, Any]) -> TempoQueryBuilder:
+    query = TempoQueryBuilder().ref_id(spec.get("refId", "A")).query(spec["query"])
+    if spec.get("queryType") is not None:
+        query.query_type(spec["queryType"])
+    if spec.get("limit") is not None:
+        query.limit(spec["limit"])
+    if spec.get("serviceName") is not None:
+        query.service_name(spec["serviceName"])
+    if spec.get("spanName") is not None:
+        query.span_name(spec["spanName"])
+    if spec.get("minDuration") is not None:
+        query.min_duration(spec["minDuration"])
+    if spec.get("maxDuration") is not None:
+        query.max_duration(spec["maxDuration"])
+    if spec.get("serviceMapQuery") is not None:
+        query.service_map_query(spec["serviceMapQuery"])
+    if spec.get("serviceMapIncludeNamespace") is not None:
+        query.service_map_include_namespace(spec["serviceMapIncludeNamespace"])
+    if datasource := spec.get("datasource"):
+        query.datasource(_datasource_ref(datasource))
+    return query
+
+
+def _build_query(panel_type: str, spec: dict[str, Any]) -> Any:
+    if "query" in spec:
+        return _tempo_query(spec)
+    if panel_type == "logs":
+        return _loki_query(spec)
+    if "expr" in spec:
+        return _prometheus_query(panel_type, spec)
+    if spec.get("type") == "json" and spec.get("source") == "url":
+        return InfinityQueryBuilder(spec)
+    raise ValidationError(f"unsupported query spec: {spec!r}")
+
+
+def _build_panel(panel_id: int, panel_spec: dict[str, Any]) -> Any:
+    panel_type = panel_spec["type"]
+    if panel_type == "stat":
+        panel = StatPanelBuilder()
+    elif panel_type == "timeseries":
+        panel = TimeseriesPanelBuilder()
+    elif panel_type == "logs":
+        panel = LogsPanelBuilder()
+    elif panel_type == "table":
+        panel = TablePanelBuilder()
+    elif panel_type == "piechart":
+        panel = PieChartPanelBuilder()
+    else:
+        raise ValidationError(f"unsupported panel type: {panel_type}")
+
+    panel.id(panel_id).title(panel_spec["title"])
+    if description := panel_spec.get("description"):
+        panel.description(description)
+    if datasource := panel_spec.get("datasource"):
+        panel.datasource(_datasource_ref(datasource))
+    if grid_pos := panel_spec.get("gridPos"):
+        panel.grid_pos(_grid_pos(grid_pos))
+    for target in panel_spec.get("targets", []):
+        panel.with_target(_build_query(panel_type, target))
+    for transformer in panel_spec.get("transformations", []):
+        panel.with_transformation(_transformer(transformer))
+    return panel
+
+
+def build_dashboard() -> Any:
+    dashboard = DashboardBuilder(EXPECTED_DASHBOARD["title"])
+    dashboard.uid(EXPECTED_DASHBOARD["uid"])
+    dashboard.tags(EXPECTED_DASHBOARD["tags"])
+    dashboard.refresh(EXPECTED_DASHBOARD["refresh"])
+    dashboard.time(EXPECTED_DASHBOARD["time"]["from"], EXPECTED_DASHBOARD["time"]["to"])
+    dashboard.timezone(EXPECTED_DASHBOARD["timezone"])
+
+    for panel_id in sorted(EXPECTED_PANELS):
+        dashboard.with_panel(_build_panel(panel_id, EXPECTED_PANELS[panel_id]))
+
+    return dashboard.build()
+
+
+def dashboard_json() -> dict[str, Any]:
+    return json.loads(JSONEncoder(sort_keys=True, indent=2).encode(build_dashboard()))
+
+
+def validate_dashboard() -> None:
+    payload = dashboard_json()
     errors: list[str] = []
-    if isinstance(expected, Mapping):
-        if not isinstance(actual, Mapping):
-            return [f"{path}: expected object, got {type(actual).__name__}"]
-        for key, value in expected.items():
-            if key not in actual:
-                errors.append(f"{path}.{key}: missing key")
-                continue
-            errors.extend(subset_errors(value, actual[key], f"{path}.{key}"))
-        return errors
-    if isinstance(expected, list):
-        if not isinstance(actual, list):
-            return [f"{path}: expected list, got {type(actual).__name__}"]
-        if len(expected) != len(actual):
-            errors.append(f"{path}: expected {len(expected)} items, got {len(actual)}")
-        for index, (expected_item, actual_item) in enumerate(zip(expected, actual)):
-            errors.extend(subset_errors(expected_item, actual_item, f"{path}[{index}]"))
-        return errors
-    if actual != expected:
-        return [f"{path}: expected {expected!r}, got {actual!r}"]
-    return errors
 
+    for key, expected in EXPECTED_DASHBOARD.items():
+        if key == "time":
+            if payload.get("time") != expected:
+                errors.append(f"$.time: expected {expected!r}, got {payload.get('time')!r}")
+        elif payload.get(key) != expected:
+            errors.append(f"$.{key}: expected {expected!r}, got {payload.get(key)!r}")
 
-def iter_string_values(value: Any, path: str = "$") -> Iterable[tuple[str, str]]:
-    if isinstance(value, str):
-        yield path, value
-    elif isinstance(value, Mapping):
-        for key, item in value.items():
-            yield from iter_string_values(item, f"{path}.{key}")
-    elif isinstance(value, list):
-        for index, item in enumerate(value):
-            yield from iter_string_values(item, f"{path}[{index}]")
-
-
-def validate_dashboard(path: pathlib.Path) -> None:
-    dashboard = load_dashboard(path)
-    errors: list[str] = []
-
-    errors.extend(subset_errors(EXPECTED_DASHBOARD, dashboard, "$"))
-
-    panels = dashboard.get("panels")
+    panels = payload.get("panels")
     if not isinstance(panels, list):
         errors.append("$.panels: missing or not a list")
     else:
-        panel_by_id: dict[int, dict[str, Any]] = {}
-        for index, panel in enumerate(panels):
-            panel_path = f"$.panels[{index}]"
-            if not isinstance(panel, Mapping):
-                errors.append(f"{panel_path}: expected object, got {type(panel).__name__}")
-                continue
-            panel_id = panel.get("id")
-            if not isinstance(panel_id, int):
-                errors.append(f"{panel_path}.id: missing or non-integer")
-                continue
-            if panel_id in panel_by_id:
-                errors.append(f"$.panels: duplicate panel id {panel_id}")
-                continue
-            panel_by_id[panel_id] = dict(panel)
-
-        if set(panel_by_id) != EXPECTED_PANEL_IDS:
-            missing = sorted(EXPECTED_PANEL_IDS - set(panel_by_id))
-            extra = sorted(set(panel_by_id) - EXPECTED_PANEL_IDS)
-            if missing:
-                errors.append(f"$.panels: missing panels {missing}")
-            if extra:
-                errors.append(f"$.panels: unexpected panels {extra}")
-
-        for panel_id, expected_panel in EXPECTED_PANELS.items():
-            actual_panel = panel_by_id.get(panel_id)
-            if actual_panel is None:
-                continue
-            errors.extend(subset_errors(expected_panel, actual_panel, f"$.panels[id={panel_id}]"))
-
-    for path_name, string_value in iter_string_values(dashboard):
-        if any(marker in string_value for marker in SECRET_MARKERS):
-            errors.append(f"{path_name}: secret-bearing string detected")
+        panel_ids = {panel.get("id") for panel in panels if isinstance(panel, dict)}
+        if panel_ids != EXPECTED_PANEL_IDS:
+            errors.append(f"$.panels: expected ids {sorted(EXPECTED_PANEL_IDS)}, got {sorted(pid for pid in panel_ids if isinstance(pid, int))}")
 
     if errors:
         raise ValidationError("\n".join(errors))
-
-
-def deep_merge(base: Any, overlay: Any) -> Any:
-    if isinstance(base, dict) and isinstance(overlay, dict):
-        merged = copy.deepcopy(base)
-        for key, value in overlay.items():
-            if key == "panels" and isinstance(value, list):
-                merged[key] = merge_panels(base.get(key, []), value)
-            elif key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
-                merged[key] = deep_merge(merged[key], value)
-            else:
-                merged[key] = copy.deepcopy(value)
-        return merged
-    return copy.deepcopy(overlay)
-
-
-def merge_panels(base_panels: Any, overlay_panels: Any) -> list[dict[str, Any]]:
-    if not isinstance(base_panels, list) or not isinstance(overlay_panels, list):
-        return copy.deepcopy(overlay_panels)
-
-    base_by_id: dict[int, dict[str, Any]] = {}
-    for panel in base_panels:
-        if isinstance(panel, dict) and isinstance(panel.get("id"), int):
-            base_by_id[panel["id"]] = copy.deepcopy(panel)
-
-    merged: list[dict[str, Any]] = []
-    seen: set[int] = set()
-    for panel in overlay_panels:
-        if not isinstance(panel, dict) or not isinstance(panel.get("id"), int):
-            merged.append(copy.deepcopy(panel))
-            continue
-        panel_id = panel["id"]
-        seen.add(panel_id)
-        if panel_id in base_by_id:
-            merged.append(deep_merge(base_by_id[panel_id], panel))
-        else:
-            merged.append(copy.deepcopy(panel))
-
-    for panel in base_panels:
-        if isinstance(panel, dict) and isinstance(panel.get("id"), int) and panel["id"] not in seen:
-            merged.append(copy.deepcopy(panel))
-
-    return merged
 
 
 def fetch_dashboard(url: str, api_token: str, uid: str) -> dict[str, Any]:
@@ -496,26 +534,25 @@ def fetch_dashboard(url: str, api_token: str, uid: str) -> dict[str, Any]:
     return payload
 
 
-def publish_dashboard(path: pathlib.Path, grafana_url: str, api_token: str) -> None:
-    overlay = load_dashboard(path)
-    validate_dashboard(path)
-    uid = overlay.get("uid")
-    if not isinstance(uid, str) or not uid:
-        raise ValidationError(f"{path}: missing dashboard uid")
+def publish_dashboard(grafana_url: str, api_token: str) -> None:
+    validate_dashboard()
+    uid = EXPECTED_DASHBOARD["uid"]
 
     live_payload = fetch_dashboard(grafana_url, api_token, uid)
     live_dashboard = live_payload["dashboard"]
-    merged_dashboard = deep_merge(live_dashboard, overlay)
-    merged_dashboard["id"] = live_dashboard.get("id")
-    merged_dashboard.setdefault("uid", uid)
+    published_dashboard = dashboard_json()
+    published_dashboard["id"] = live_dashboard.get("id")
+    for key in ("editable", "schemaVersion", "version"):
+        if key in live_dashboard:
+            published_dashboard[key] = live_dashboard[key]
 
     folder_uid = live_payload.get("meta", {}).get("folderUid") or DEFAULT_FOLDER_UID
     body = json.dumps(
         {
-            "dashboard": merged_dashboard,
+            "dashboard": published_dashboard,
             "folderUid": folder_uid,
             "overwrite": True,
-            "message": f"Publish {path.name}",
+            "message": "Publish glaze-app-summary dashboard",
         }
     ).encode("utf-8")
 
@@ -541,11 +578,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    validate_parser = subparsers.add_parser("validate", help="Validate one or more dashboard config files")
-    validate_parser.add_argument("paths", nargs="+", type=pathlib.Path)
+    subparsers.add_parser("validate", help="Validate the dashboard code and generated JSON")
 
-    publish_parser = subparsers.add_parser("publish", help="Publish a dashboard config to Grafana")
-    publish_parser.add_argument("path", type=pathlib.Path)
+    publish_parser = subparsers.add_parser("publish", help="Publish the generated dashboard to Grafana")
     publish_parser.add_argument("--grafana-url", default=os.environ.get("GRAFANA_URL", DEFAULT_GRAFANA_URL))
     publish_parser.add_argument(
         "--api-token",
@@ -560,15 +595,14 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.command == "validate":
-            for path in args.paths:
-                validate_dashboard(path)
-                print(f"{path}: OK")
+            validate_dashboard()
+            print("Grafana dashboard: OK")
         elif args.command == "publish":
             if not args.api_token:
                 raise RuntimeError(
                     "GRAFANA_SERVICE_ACCOUNT_TOKEN is required; set it as an environment variable or pass --api-token"
                 )
-            publish_dashboard(args.path, args.grafana_url, args.api_token)
+            publish_dashboard(args.grafana_url, args.api_token)
         else:
             raise RuntimeError(f"unknown command {args.command}")
     except (ValidationError, RuntimeError) as exc:

@@ -5,6 +5,7 @@ description = "Dev/deployment tools for Glaze (Modal crop service, etc.)"
 requires-python = "~=3.12.0"
 dependencies = [
     "fastapi>=0.136.1",
+    "grafana-foundation-sdk==1769699241",
     "httpx>=0.28.1",
     "numba>=0.65.1",
     "numpy>=2.4.4",
