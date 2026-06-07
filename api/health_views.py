@@ -20,11 +20,24 @@ def _check_database() -> bool:
 
 
 def _check_migrations() -> bool:
+    import os
+
+    from django.apps import apps
     from django.db import connections
 
     with connections["default"].cursor() as cursor:
-        cursor.execute("SELECT COUNT(*) FROM django_migrations")
-        return cursor.fetchone()[0] > 0
+        cursor.execute("SELECT app, name FROM django_migrations")
+        applied = {(row[0], row[1]) for row in cursor.fetchall()}
+
+    for app_config in apps.get_app_configs():
+        migrations_dir = os.path.join(app_config.path, "migrations")
+        if not os.path.isdir(migrations_dir):
+            continue
+        for fname in os.listdir(migrations_dir):
+            if fname.endswith(".py") and not fname.startswith("_"):
+                if (app_config.label, fname[:-3]) not in applied:
+                    return False
+    return True
 
 
 def _check_async_tasks() -> bool:
