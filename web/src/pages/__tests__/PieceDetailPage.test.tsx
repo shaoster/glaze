@@ -13,6 +13,7 @@ import type { PieceDetail } from "../../util/types";
 
 vi.mock("../../util/api", () => ({
   fetchPiece: vi.fn(),
+  fetchAppInit: vi.fn(),
 }));
 
 vi.mock("../../components/PieceDetail", () => ({
@@ -82,6 +83,13 @@ function renderPage({
 describe("PieceDetailPage", () => {
   beforeEach(() => {
     vi.mocked(api.fetchPiece).mockResolvedValue(MOCK_PIECE);
+    // fetchAppInit is subscribed to read-only; resolve immediately so init is defined and not fetching
+    vi.mocked(api.fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "",
+      mockIdpUrl: null,
+      adminBaseUrl: null,
+      user: null,
+    });
   });
 
   it("shows Back to Pieces button by default", async () => {
@@ -131,13 +139,15 @@ describe("PieceDetailPage", () => {
     );
   });
 
-  it("shows a loading spinner while the piece is loading", () => {
+  it("shows a loading spinner while the piece is loading", async () => {
     vi.mocked(api.fetchPiece).mockImplementation(
       () => new Promise(() => undefined),
     );
 
     renderPage();
 
+    // Spinner appears after appInit resolves and piece fetch begins
+    await screen.findByRole("progressbar");
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 

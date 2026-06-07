@@ -1,7 +1,7 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchPiece } from "../util/api";
+import { fetchAppInit, fetchPiece } from "../util/api";
 import PieceDetailComponent from "../components/PieceDetail";
 import { type PieceDetail } from "../util/types";
 
@@ -27,10 +27,18 @@ export default function PieceDetailPage({
   const showBackButton = fromGallery || showBackToPieces;
   const queryClient = useQueryClient();
   const pieceQueryKey = ["piece", id] as const;
+  const { data: init, isFetching: initFetching } = useQuery({
+    queryKey: ["appInit"],
+    queryFn: fetchAppInit,
+    staleTime: Infinity, // Read-only subscription; don't trigger a background refetch
+  });
+  // Allow piece detail when authenticated (no wait needed), or when init has resolved
+  // and is not mid-refetch (covers the reactive-refresh re-fetch window after PWA resume).
   // id is always defined — this component is only rendered via the /pieces/:id route
   const { data: piece, isLoading: loading, error } = useQuery<PieceDetail>({
     queryKey: pieceQueryKey,
     queryFn: () => fetchPiece(id!),
+    enabled: init !== undefined && (!!init.user || !initFetching),
   });
 
   return (
