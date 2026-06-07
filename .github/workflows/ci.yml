@@ -589,8 +589,8 @@ jobs:
 
   record-fingerprint:
     name: Record successful fingerprint
-    needs: [preflight, lint, coverage, dev-smoke, image, compose-smoke]
-    if: ${{ github.event_name == 'pull_request' && needs.lint.result == 'success' && needs.coverage.result == 'success' && needs.dev-smoke.result == 'success' && needs.image.result == 'success' && needs.compose-smoke.result == 'success' }}
+    needs: [preflight, lint, coverage, dev-smoke, dev-smoke-macos, image, compose-smoke]
+    if: ${{ github.event_name == 'pull_request' && needs.lint.result == 'success' && needs.coverage.result == 'success' && needs.dev-smoke.result == 'success' && needs.dev-smoke-macos.result == 'success' && needs.image.result == 'success' && needs.compose-smoke.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Write fingerprint marker
