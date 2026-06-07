@@ -236,9 +236,9 @@ if IS_PRODUCTION:
         "default": dj_database_url.config(
             conn_max_age=600,
             conn_health_checks=True,
-            options="-c timezone=UTC",
         )
     }
+    DATABASES["default"].setdefault("OPTIONS", {})["options"] = "-c timezone=UTC"
 elif os.environ.get("DATABASE_URL"):
     DATABASES = {"default": dj_database_url.config(conn_max_age=60)}
 else:
