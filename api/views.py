@@ -37,6 +37,7 @@ from .health_views import (
     _check_async_tasks,
     _check_database,
     _check_migrations,
+    health_live,
     health_ready,
 )
 from .import_views import admin_manual_square_crop_import
@@ -80,6 +81,7 @@ __all__ = [
     "cloudinary_widget_sign",
     "csrf",
     "glaze_combination_images",
+    "health_live",
     "health_ready",
     "make_global_entry_favorite_view",
     "make_global_entry_view",
