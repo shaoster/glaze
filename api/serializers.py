@@ -529,6 +529,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
             total += len(links)
         return total
 
+
 @traced_class
 class PieceDetailSerializer(PieceSummarySerializer):
     current_state = serializers.SerializerMethodField()

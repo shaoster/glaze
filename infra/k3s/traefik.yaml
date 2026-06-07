@@ -17,6 +17,11 @@ spec:
   set:
     global.systemDefaultRegistry: ""
   valuesContent: |-
+    env:
+      - name: GOGC
+        value: "25"
+      - name: GOMEMLIMIT
+        value: "60MiB"
     deployment:
       podAnnotations:
         prometheus.io/port: "8082"

@@ -75,7 +75,15 @@ def _collector_traces_endpoint() -> str:
 
 @extend_schema(
     request=None,
-    responses={200: None, 202: None, 400: None, 411: None, 413: None, 415: None, 502: None},
+    responses={
+        200: None,
+        202: None,
+        400: None,
+        411: None,
+        413: None,
+        415: None,
+        502: None,
+    },
     description=(
         "Proxy browser OTLP/HTTP trace uploads to the local collector. "
         "The browser sends the request with the normal session/CSRF flow; "

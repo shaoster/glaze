@@ -90,7 +90,8 @@ class Command(BaseCommand):
         raw_bytes = fixture_path.read_bytes()
         fixture_hash = hashlib.sha256(raw_bytes).hexdigest()
         version_table_exists = (
-            PublicLibraryVersion._meta.db_table in connection.introspection.table_names()
+            PublicLibraryVersion._meta.db_table
+            in connection.introspection.table_names()
         )
 
         if version_table_exists:

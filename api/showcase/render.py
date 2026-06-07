@@ -53,7 +53,12 @@ _ACCENT = (122, 79, 58)
 _INK = (54, 38, 28)
 _MUTED = (108, 90, 78)
 _WHITE = (255, 250, 246)
-_FONT_PATH = Path(__file__).resolve().parent.parent.parent / "assets" / "fonts" / "DejaVuSans.ttf"
+_FONT_PATH = (
+    Path(__file__).resolve().parent.parent.parent
+    / "assets"
+    / "fonts"
+    / "DejaVuSans.ttf"
+)
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 register_heif_opener()

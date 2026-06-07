@@ -54,6 +54,10 @@ spec:
           secretKeyRef:
             name: cloudflare-api-token
             key: api-token
+      - name: GOGC
+        value: "25"
+      - name: GOMEMLIMIT
+        value: "45MiB"
     resources:
       requests:
         cpu: "10m"

@@ -228,6 +228,7 @@ def test_wait_for_web_waits_until_port_accepts_connections(monkeypatch) -> None:
         result = next(attempts)
         if isinstance(result, Exception):
             raise result
+
         class MockSocket:
             def __enter__(self):
                 return self
@@ -239,7 +240,9 @@ def test_wait_for_web_waits_until_port_accepts_connections(monkeypatch) -> None:
 
     monkeypatch.setattr(launcher.socket, "create_connection", fake_create_connection)
     monkeypatch.setattr(launcher.time, "monotonic", lambda: next(times))
-    monkeypatch.setattr(launcher.time, "sleep", lambda seconds: sleep_calls.append(seconds))
+    monkeypatch.setattr(
+        launcher.time, "sleep", lambda seconds: sleep_calls.append(seconds)
+    )
 
     launcher.wait_for_web(5173, timeout_seconds=1.0)
 
@@ -381,7 +384,9 @@ def test_start_web_sets_bazel_bindir_for_all_platforms(
         return MockPopen()
 
     monkeypatch.setattr(launcher, "launch_child", fake_launch_child_linux_empty)
-    launcher.start_web(roots, {"BAZEL_BINDIR": ""}, pidfile, portfile, log_path, 8080, 5173)
+    launcher.start_web(
+        roots, {"BAZEL_BINDIR": ""}, pidfile, portfile, log_path, 8080, 5173
+    )
 
     assert captured_env_linux_empty.get("BAZEL_BINDIR") == "."
 
@@ -407,7 +412,9 @@ def test_start_web_sets_bazel_bindir_for_all_platforms(
         return MockPopen()
 
     monkeypatch.setattr(launcher, "launch_child", fake_launch_child_mac_empty)
-    launcher.start_web(roots, {"BAZEL_BINDIR": ""}, pidfile, portfile, log_path, 8080, 5173)
+    launcher.start_web(
+        roots, {"BAZEL_BINDIR": ""}, pidfile, portfile, log_path, 8080, 5173
+    )
 
     assert captured_env_mac_empty.get("BAZEL_BINDIR") == "."
 

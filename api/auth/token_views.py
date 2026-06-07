@@ -1,21 +1,21 @@
 """JWT access-token endpoints for the migration away from session-only auth."""
 
 from datetime import timedelta
+from typing import cast
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.http import HttpResponseBase
 from drf_spectacular.utils import extend_schema, inline_serializer
-from rest_framework.authentication import SessionAuthentication
 from rest_framework import serializers as drf_serializers
 from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
-from typing import cast
 
 from backend.otel import traced
 
@@ -29,7 +29,9 @@ def _refresh_cookie_domain() -> str | None:
     return getattr(settings, "SESSION_COOKIE_DOMAIN", None)
 
 
-def _set_refresh_cookie(response: HttpResponseBase, refresh_token: RefreshToken) -> None:
+def _set_refresh_cookie(
+    response: HttpResponseBase, refresh_token: RefreshToken
+) -> None:
     domain = _refresh_cookie_domain()
     if domain:
         response.set_cookie(
@@ -190,8 +192,6 @@ def clear_refresh_cookie(response: HttpResponseBase) -> None:
     _clear_refresh_cookie(response)
 
 
-def set_refresh_cookie(
-    response: HttpResponseBase, refresh_token: RefreshToken
-) -> None:
+def set_refresh_cookie(response: HttpResponseBase, refresh_token: RefreshToken) -> None:
     """Attach a refresh token cookie to an auth response."""
     _set_refresh_cookie(response, refresh_token)

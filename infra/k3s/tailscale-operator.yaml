@@ -48,6 +48,11 @@ spec:
   statefulSet:
     pod:
       tailscaleContainer:
+        env:
+          - name: GOGC
+            value: "20"
+          - name: GOMEMLIMIT
+            value: "45MiB"
         resources:
           requests:
             cpu: "10m"
@@ -70,6 +75,11 @@ spec:
       keys:
         - oauth
   valuesContent: |-
+    extraEnv:
+      - name: GOGC
+        value: "25"
+      - name: GOMEMLIMIT
+        value: "45MiB"
     resources:
       requests:
         cpu: "50m"
