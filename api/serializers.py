@@ -403,7 +403,8 @@ class PieceStateSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         request = self.context.get("request")
         if request is not None and not (
-            request.user.is_authenticated and instance.user_id == request.user.id
+            request.user.is_authenticated
+            and self._piece_for_state(instance).user_id == request.user.id
         ):
             data["notes"] = ""
         return data
@@ -549,7 +550,7 @@ class PieceDetailSerializer(PieceSummarySerializer):
         across multiple pieces.
         """
         if not hasattr(self, "_states_data_cache"):
-            self._states_data_cache = {}
+            self._states_data_cache: dict[object, list] = {}
         if obj.pk not in self._states_data_cache:
             self._states_data_cache[obj.pk] = list(
                 PieceStateSerializer(
