@@ -83,7 +83,7 @@ function renderPage({
 describe("PieceDetailPage", () => {
   beforeEach(() => {
     vi.mocked(api.fetchPiece).mockResolvedValue(MOCK_PIECE);
-    // fetchAppInit is subscribed to read-only; resolve immediately so initLoading=false
+    // fetchAppInit is subscribed to read-only; resolve immediately so init is defined and not fetching
     vi.mocked(api.fetchAppInit).mockResolvedValue({
       googleOauthClientId: "",
       mockIdpUrl: null,

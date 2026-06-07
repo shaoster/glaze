@@ -27,16 +27,18 @@ export default function PieceDetailPage({
   const showBackButton = fromGallery || showBackToPieces;
   const queryClient = useQueryClient();
   const pieceQueryKey = ["piece", id] as const;
-  const { isLoading: initLoading } = useQuery({
+  const { data: init, isFetching: initFetching } = useQuery({
     queryKey: ["appInit"],
     queryFn: fetchAppInit,
     staleTime: Infinity, // Read-only subscription; don't trigger a background refetch
   });
+  // Allow piece detail when authenticated (no wait needed), or when init has resolved
+  // and is not mid-refetch (covers the reactive-refresh re-fetch window after PWA resume).
   // id is always defined — this component is only rendered via the /pieces/:id route
   const { data: piece, isLoading: loading, error } = useQuery<PieceDetail>({
     queryKey: pieceQueryKey,
     queryFn: () => fetchPiece(id!),
-    enabled: !initLoading,
+    enabled: init !== undefined && (!!init.user || !initFetching),
   });
 
   return (
