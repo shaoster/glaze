@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
   IconButton,
@@ -17,6 +17,7 @@ type ImageLightboxProps = {
   images: CaptionedImage[];
   initialIndex: number;
   onClose: () => void;
+  onIndexChange?: (index: number) => void;
   currentThumbnailUrl?: string;
   onSetAsThumbnail?: (image: CaptionedImage) => Promise<void>;
   onCropSave?: (image: CaptionedImage, crop: ImageCrop) => Promise<void>;
@@ -34,6 +35,7 @@ export default function ImageLightbox({
   images,
   initialIndex,
   onClose,
+  onIndexChange,
   currentThumbnailUrl,
   onSetAsThumbnail,
   onCropSave,
@@ -41,6 +43,19 @@ export default function ImageLightbox({
   footerActions,
 }: ImageLightboxProps) {
   const [index, setIndex] = useState(initialIndex);
+
+  // Notify caller when index changes due to user navigation (swipe, arrow,
+  // thumbnail). Suppressed when the change is driven by a URL sync so we
+  // don't write a duplicate history entry for an already-current URL.
+  const onIndexChangeRef = useRef(onIndexChange);
+  onIndexChangeRef.current = onIndexChange;
+  const mountedRef = useRef(false);
+  const syncingFromUrlRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) { mountedRef.current = true; return; }
+    if (syncingFromUrlRef.current) { syncingFromUrlRef.current = false; return; }
+    onIndexChangeRef.current?.(index);
+  }, [index]);
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [dragDeltaY, setDragDeltaY] = useState(0);
   const [cropMode, setCropMode] = useState(false);
@@ -49,10 +64,19 @@ export default function ImageLightbox({
   const image = images[index];
 
   const [prevIndex, setPrevIndex] = useState(index);
+  const [prevInitialIndex, setPrevInitialIndex] = useState(initialIndex);
 
   if (index !== prevIndex) {
     setPrevIndex(index);
     setOptimisticCrop(null);
+  }
+
+  // Sync to URL-driven index changes (e.g. browser Back while lightbox is open).
+  // Set the flag before setIndex so the onIndexChange effect skips this update.
+  if (initialIndex !== prevInitialIndex) {
+    setPrevInitialIndex(initialIndex);
+    syncingFromUrlRef.current = true;
+    setIndex(initialIndex);
   }
   function prev() {
     setIndex((i) => {

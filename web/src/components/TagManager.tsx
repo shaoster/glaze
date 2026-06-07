@@ -18,6 +18,10 @@ type TagManagerProps = {
   pieceId: string;
   initialTags: TagEntry[];
   onSaved: (updated: PieceDetail) => void;
+  // Routing props injected by the parent (PieceDetailContent via usePieceTagsRouting).
+  tagDialogOpen: boolean;
+  onOpenTagDialog: () => void;
+  onCloseTagDialog: () => void;
 };
 
 function toTagEntry(entry: {
@@ -38,6 +42,9 @@ export default function TagManager({
   pieceId,
   initialTags,
   onSaved,
+  tagDialogOpen,
+  onOpenTagDialog,
+  onCloseTagDialog,
 }: TagManagerProps) {
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
   const queryClient = useQueryClient();
@@ -52,7 +59,6 @@ export default function TagManager({
   const [selectedTags, setSelectedTags] = useState<TagEntry[]>(initialTags);
   const [editingTags, setEditingTags] = useState(false);
   const [draftTags, setDraftTags] = useState<TagEntry[]>(initialTags);
-  const [tagDialogOpen, setTagDialogOpen] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState(
     pickDefaultTagColor(initialTags.length),
@@ -67,6 +73,13 @@ export default function TagManager({
     setDraftTags(initialTags);
     setEditingTags(false);
   }, [initialTags]);
+
+  // When the dialog opens via a direct URL (/tags/new), ensure editing mode
+  // is active so the newly created tag lands in the pending save.
+  useEffect(() => {
+    if (tagDialogOpen && !editingTags) startEditingTags();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tagDialogOpen]);
 
   function startEditingTags() {
     if (!shouldLoadTags) {
@@ -131,7 +144,7 @@ export default function TagManager({
         is_public: false, // New tags are private by default.
       };
       setDraftTags((prev) => [...prev, createdTag]);
-      setTagDialogOpen(false);
+      onCloseTagDialog();
       setNewTagName("");
       setNewTagColor(pickDefaultTagColor(trimmed.length));
     } catch (error) {
@@ -161,7 +174,7 @@ export default function TagManager({
             options={availableTags}
             value={draftTags}
             onChange={setDraftTags}
-            onCreateNew={() => setTagDialogOpen(true)}
+            onCreateNew={onOpenTagDialog}
             disabled={tagSaving}
             sx={{ minWidth: 0 }}
           />
@@ -220,7 +233,7 @@ export default function TagManager({
         color={newTagColor}
         error={tagError}
         saving={tagSaving}
-        onClose={() => setTagDialogOpen(false)}
+        onClose={onCloseTagDialog}
         onNameChange={setNewTagName}
         onColorChange={setNewTagColor}
         onCreate={() => void createTag()}

@@ -15,6 +15,7 @@
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useCombinationGalleryRouting, type GalleryImage } from "../routing/galleryRouting";
 import {
   Box,
   Button,
@@ -43,12 +44,7 @@ const EMPTY_STATE_MESSAGE =
 
 type PieceEntry = GlazeCombinationImageEntry["pieces"][number];
 
-// A CaptionedImage tagged with the piece it came from.
-interface GalleryImage extends CaptionedImage {
-  pieceId: string;
-  pieceName: string;
-  pieceState: string;
-}
+// GalleryImage is defined in galleryRouting — imported above.
 
 type LightboxState =
   | { kind: "tile"; images: CaptionedImage[]; initialIndex: 0 }
@@ -214,8 +210,16 @@ export default function GlazeCombinationGallery() {
     queryKey: GLAZE_COMBINATION_IMAGES_QUERY_KEY,
     queryFn: fetchGlazeCombinationImages,
   });
-  const [lightbox, setLightbox] = useState<LightboxState | null>(null);
+  // Tile lightboxes are local (ephemeral, not shareable).
+  const [tileBox, setTileBox] = useState<LightboxState | null>(null);
   const navigate = useNavigate();
+  const {
+    pieceLightbox,
+    onPieceImageClick,
+    onPieceLightboxIndexChange,
+    onClosePieceLightbox,
+  } = useCombinationGalleryRouting(entries);
+  const lightbox = pieceLightbox ?? tileBox;
 
   if (entries.length === 0) {
     return (
@@ -229,7 +233,7 @@ export default function GlazeCombinationGallery() {
     image: NonNullable<GlazeCombinationEntry["test_tile_image"]>,
     name: string,
   ) {
-    setLightbox({
+    setTileBox({
       kind: "tile",
       initialIndex: 0,
       images: [
@@ -244,10 +248,6 @@ export default function GlazeCombinationGallery() {
     });
   }
 
-  function handlePieceImageClick(images: GalleryImage[], idx: number) {
-    setLightbox({ kind: "piece", images, initialIndex: idx });
-  }
-
   return (
     <>
       <Stack spacing={2}>
@@ -257,7 +257,9 @@ export default function GlazeCombinationGallery() {
             combo={combo}
             pieces={pieces}
             onTileClick={handleTileClick}
-            onPieceImageClick={handlePieceImageClick}
+            onPieceImageClick={(_images, idx) =>
+              onPieceImageClick(combo.id, idx)
+            }
           />
         ))}
       </Stack>
@@ -265,15 +267,24 @@ export default function GlazeCombinationGallery() {
         <ImageLightbox
           images={lightbox.images}
           initialIndex={lightbox.initialIndex}
-          onClose={() => setLightbox(null)}
+          onIndexChange={pieceLightbox ? onPieceLightboxIndexChange : undefined}
+          onClose={() => {
+            if (pieceLightbox) {
+              onClosePieceLightbox();
+            } else {
+              setTileBox(null);
+            }
+          }}
           footerActions={
             lightbox.kind === "piece"
-              ? ({ index }) => (
+              ? ({ index }) => {
+                  const img = lightbox.images[index] as GalleryImage;
+                  return (
                   <Button
                     size="small"
                     variant="outlined"
                     onClick={() =>
-                      navigate(`/pieces/${lightbox.images[index].pieceId}`, {
+                      navigate(`/pieces/${img.pieceId}`, {
                         state: { fromGallery: true },
                       })
                     }
@@ -284,7 +295,8 @@ export default function GlazeCombinationGallery() {
                   >
                     Go to the Piece
                   </Button>
-                )
+                  );
+                }
               : undefined
           }
         />

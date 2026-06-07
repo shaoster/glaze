@@ -1,7 +1,14 @@
 import {
   type ComponentProps,
+  useCallback,
   useState,
 } from "react";
+import {
+  usePieceHistoryRouting,
+  usePieceTagsRouting,
+  usePieceVideoRouting,
+} from "../routing/pieceRouting";
+import RoutedGlobalEntryField from "./RoutedGlobalEntryField";
 import {
   Alert,
   alpha,
@@ -41,7 +48,6 @@ import TagManager from "./TagManager";
 import StateTransition from "./StateTransition";
 import PieceHistory from "./PieceHistory";
 import ProcessSummary from "./ProcessSummary";
-import GlobalEntryField from "./GlobalEntryField";
 import PiecePhotoGallery, {
   PiecePhotoGalleryButton,
   type PiecePhotoGalleryImage,
@@ -83,10 +89,11 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     canEdit || getCustomFieldDefinitions(currentState.state).length > 0;
   const pastHistory = piece.history.slice(0, -1);
 
-  const [rewindedStateId, setRewindedStateId] = useState<string | null>(null);
+  const historyRouting = usePieceHistoryRouting(piece.id);
+  const videoRouting = usePieceVideoRouting(piece.id);
+  const tagsRouting = usePieceTagsRouting(piece.id);
 
-  // Keep rewindedStateId when toggling is_editable to allow viewing history in read-only mode.
-
+  const { rewindedStateId } = historyRouting;
   const rewindedState = rewindedStateId
     ? pastHistory.find((ps) => ps.id === rewindedStateId) ?? null
     : null;
@@ -116,7 +123,26 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
     },
   );
 
-  const blocker = useBlocker(canEdit && isDirty);
+  // Block navigation away from the dirty form, but allow routing-hook sub-routes
+  // that are pure in-page UI and do not mutate piece state.
+  // /photos is intentionally excluded: the gallery can write back to the current
+  // state using the last-saved prop values, which would silently drop dirty edits.
+  const blocker = useBlocker(
+    useCallback(
+      ({ nextLocation }: { nextLocation: { pathname: string } }) => {
+        if (!canEdit || !isDirty) return false;
+        const next = nextLocation.pathname;
+        const base = `/pieces/${piece.id}`;
+        if (next === base) return false;
+        if (next.startsWith(`${base}/history/`)) return false;
+        if (next === `${base}/video`) return false;
+        if (next === `${base}/tags/new`) return false;
+        if (next.startsWith(`${base}/state/fields/`)) return false;
+        return true;
+      },
+      [canEdit, isDirty, piece.id],
+    ),
+  );
 
 
 
@@ -217,6 +243,9 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
                 pieceId={piece.id}
                 initialTags={piece.tags ?? []}
                 onSaved={onPieceUpdated}
+                tagDialogOpen={tagsRouting.tagDialogOpen}
+                onOpenTagDialog={tagsRouting.onOpenTagDialog}
+                onCloseTagDialog={tagsRouting.onCloseTagDialog}
               />
             ) : null}
             {canEdit && (
@@ -259,7 +288,9 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             )}
             <Box sx={{ mb: 1.5 }}>
               <SectionCard>
-                <GlobalEntryField
+                <RoutedGlobalEntryField
+                  pieceId={piece.id}
+                  fieldName="current_location"
                   globalName="location"
                   label="Current location"
                   value={piece.current_location ?? ""}
@@ -364,7 +395,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
                 color="primary"
                 variant="outlined"
                 size="small"
-                onDelete={() => setRewindedStateId(null)}
+                onDelete={historyRouting.onClearRewind}
               />
               <Typography variant="caption" color="text.secondary">
                 {piece.is_editable
@@ -413,7 +444,11 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
 
         {canEdit && isTerminal && (
           <Box sx={{ mb: 2.5 }}>
-            <ShowcaseVideoPanel piece={piece} />
+            <ShowcaseVideoPanel
+            piece={piece}
+            atVideo={videoRouting.atVideo}
+            onVideoNavigate={videoRouting.onVideoNavigate}
+          />
           </Box>
         )}
 
@@ -435,7 +470,9 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             piece={piece}
             onPieceUpdated={onPieceUpdated}
             rewindedStateId={rewindedStateId}
-            onRewind={setRewindedStateId}
+            onRewind={(id) =>
+              id ? historyRouting.onRewind(id) : historyRouting.onClearRewind()
+            }
           />
         </SectionCard>
       </Box>
@@ -472,7 +509,15 @@ function ArtifactActions({ artifact }: ArtifactActionsProps) {
   );
 }
 
-function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
+function ShowcaseVideoPanel({
+  piece,
+  atVideo,
+  onVideoNavigate,
+}: {
+  piece: PieceDetailType;
+  atVideo: boolean;
+  onVideoNavigate: (open: boolean) => void;
+}) {
   const queryClient = useQueryClient();
   const [userExpanded, setUserExpanded] = useState<boolean | null>(null);
   const [selection, setSelection] = useState<ShowcaseVideoInputSelection>({
@@ -504,6 +549,7 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
     onSuccess: (updated) => {
       queryClient.setQueryData(["showcase-video", piece.id], updated);
       setUserExpanded(true);
+      onVideoNavigate(true);
     },
   });
 
@@ -531,9 +577,8 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
     currentStatus === "running" ? (showcaseVideo?.progress ?? 0) : null;
 
   const artifact = showcaseVideo?.artifact ?? null;
-  // Pinned open after the user generates a video in this session; otherwise
-  // defaults to open when no artifact exists yet, closed when one already does.
-  const expanded = userExpanded ?? (artifact === null);
+  // atVideo (URL) takes strict priority; local pin used for session state.
+  const expanded = atVideo ? true : (userExpanded ?? (artifact === null));
   const errorMessage = rawGenerateError
     ? extractErrorMessage(
         rawGenerateError,
@@ -553,7 +598,11 @@ function ShowcaseVideoPanel({ piece }: { piece: PieceDetailType }) {
       titleAdornment={
         <IconButton
           size="small"
-          onClick={() => setUserExpanded(!expanded)}
+          onClick={() => {
+            const next = !expanded;
+            setUserExpanded(next);
+            onVideoNavigate(next);
+          }}
           aria-label={expanded ? "Collapse showcase video" : "Expand showcase video"}
           sx={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
         >

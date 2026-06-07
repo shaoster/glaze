@@ -107,6 +107,7 @@ ts_project(
             "src/components/**/*.tsx",
             "src/pages/**/*.ts",
             "src/pages/**/*.tsx",
+            "src/routing/**/*.ts",
             "src/util/*.ts",
         ],
         exclude = [
@@ -265,6 +266,21 @@ js_library(
     ],
 )
 
+# ── Routing hooks ────────────────────────────────────────────────────────────
+
+js_library(
+    name = "routing_src",
+    srcs = [
+        "src/routing/galleryRouting.ts",
+        "src/routing/pieceRouting.ts",
+    ],
+    deps = [
+        ":generated_types",
+        ":node_modules",
+        ":util_lib",
+    ],
+)
+
 # ── Web source library ────────────────────────────────────────────────────────
 
 WEB_APP_SRCS = glob(
@@ -274,6 +290,7 @@ WEB_APP_SRCS = glob(
         "src/assets/**/*",
         "src/components/**/*",
         "src/pages/**/*",
+        "src/routing/**/*",
         "*.json",
         "public/**/*",
     ],
@@ -334,6 +351,7 @@ js_library(
             "src/assets/**/*",
             "src/components/**/*",
             "src/pages/**/*",
+            "src/routing/**/*",
             "*.json",
             "*.config.*",
             "public/**/*",
@@ -478,6 +496,7 @@ js_library(
     srcs = [
         "src/components/GlobalEntryDialog.tsx",
         "src/components/GlobalEntryField.tsx",
+        "src/components/RoutedGlobalEntryField.tsx",
     ],
     deps = [
         ":autosave_src",
@@ -485,6 +504,7 @@ js_library(
         ":generated_types",
         ":node_modules",
         ":primitive_src",
+        ":routing_src",
         ":util_lib",
     ],
 )
@@ -516,6 +536,7 @@ js_library(
         ":image_lightbox_src",
         ":node_modules",
         ":primitive_src",
+        ":routing_src",
         ":util_lib",
     ],
 )
@@ -697,12 +718,14 @@ js_library(
         ":autosave_src",
         ":cloudinary_image_src",
         ":generated_types",
+        ":global_picker_src",
         ":node_modules",
         ":piece_history_src",
         ":piece_photo_gallery_src",
         ":piece_share_controls_src",
         ":primitive_src",
         ":process_summary_src",
+        ":routing_src",
         ":state_transition_src",
         ":tag_manager_src",
         ":util_lib",

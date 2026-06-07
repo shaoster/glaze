@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button, Chip, InputAdornment, TextField } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material";
 import GlobalEntryDialog from "./GlobalEntryDialog";
+import type { GlobalFieldRouting } from "../routing/pieceRouting";
 
 export interface GlobalEntryFieldProps {
   globalName: string;
@@ -15,6 +16,9 @@ export interface GlobalEntryFieldProps {
   disabled?: boolean;
   hideActionWhenDisabled?: boolean;
   sx?: SxProps<Theme>;
+  // Injected by RoutedGlobalEntryField when inside a /pieces/:id context.
+  // Absent when used in unrouted contexts (e.g. NewPieceDialog).
+  routing?: GlobalFieldRouting;
 }
 
 export default function GlobalEntryField({
@@ -28,8 +32,13 @@ export default function GlobalEntryField({
   disabled = false,
   hideActionWhenDisabled = false,
   sx,
+  routing,
 }: GlobalEntryFieldProps) {
-  const [open, setOpen] = useState(false);
+  const [localOpen, setLocalOpen] = useState(false);
+  // Disabled fields never open the picker, even when the URL targets this field.
+  const open = !disabled && (routing?.open ?? localOpen);
+  const onOpen = routing?.onOpen ?? (() => setLocalOpen(true));
+  const onClose = routing?.onClose ?? (() => setLocalOpen(false));
   const showAction = !disabled || !hideActionWhenDisabled;
 
   return (
@@ -59,7 +68,7 @@ export default function GlobalEntryField({
                   size="small"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setOpen(true);
+                    onOpen();
                   }}
                   disabled={disabled}
                   aria-label={value ? `Change ${label}` : `Browse ${label}`}
@@ -82,12 +91,14 @@ export default function GlobalEntryField({
           },
           ...(Array.isArray(sx) ? sx : [sx]),
         ]}
-        onClick={disabled ? undefined : () => setOpen(true)}
+        onClick={disabled ? undefined : onOpen}
       />
       <GlobalEntryDialog
         globalName={globalName}
         open={open}
-        onClose={() => setOpen(false)}
+        tab={routing?.tab}
+        onTabChange={routing?.onTabChange}
+        onClose={onClose}
         onSelect={onSelect}
         canCreate={canCreate}
       />

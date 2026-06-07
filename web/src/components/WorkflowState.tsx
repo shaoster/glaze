@@ -23,7 +23,7 @@ import {
   getDefinitionsFromSchema,
 } from "../util/workflow";
 import { entryNameOrEmpty } from "../util/optionalValues";
-import GlobalEntryField from "./GlobalEntryField";
+import RoutedGlobalEntryField from "./RoutedGlobalEntryField";
 import AutosaveStatus from "./AutosaveStatus";
 import { useAutosave } from "./useAutosave";
 import { usePieceDetailSaveStatus } from "./usePieceDetailSaveStatus";
@@ -258,7 +258,9 @@ export default function WorkflowState({
             if (field.isGlobalRef && field.globalName) {
               return (
                 <Box key={field.name} data-testid={`global-entry-field-${field.globalName}`}>
-                  <GlobalEntryField
+                  <RoutedGlobalEntryField
+                    pieceId={pieceId}
+                    fieldName={field.name}
                     globalName={field.globalName}
                     label={label}
                     value={value}
