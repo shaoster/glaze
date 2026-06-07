@@ -68,6 +68,30 @@ All scoped to the `glaze-droplet` environment in **Settings → Environments**.
 
 All other app secrets (Django `SECRET_KEY`, Postgres password, Cloudinary API key/secret, Grafana OTLP token) are managed in Infisical and synced into the cluster by ESO — CD does not need them directly.
 
+#### Separate Grafana publish environment
+
+The dashboard publish workflow uses a separate GitHub environment, `glaze-grafana`, so the Grafana service account token does not share the same bucket as droplet deployment secrets.
+
+| Name | Kind | Description |
+|---|---|---|
+| `GRAFANA_SERVICE_ACCOUNT_TOKEN` | Secret | Grafana Cloud service account token used only by the dashboard publish job |
+
+#### Local dashboard validation
+
+Use the Bazel-backed helper target when you want the dashboard build to run with the same controlled Python dependency set that CI uses.
+In local agent shells, the repo bootstrap exposes `rtk`, so the examples below use `rtk bazel`.
+In GitHub Actions, the workflows call plain `bazel` after `source env.sh`.
+
+```bash
+rtk bazel test //tools:test_grafana_dashboard --test_output=errors
+```
+
+That target exercises `tools/grafana_dashboard.py` and keeps the validation path hermetic. If you only need a quick ad hoc check, the Bazel-run helper also supports direct validation:
+
+```bash
+rtk bazel run //tools:grafana_dashboard -- validate
+```
+
 Showcase video generation stays disabled until `CLOUDINARY_VIDEO_UPLOAD_FOLDER` is set.
 
 ---

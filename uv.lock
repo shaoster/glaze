@@ -415,7 +415,7 @@ dependencies = [
     { name = "django" },
 ]
 wheels = [
-    { url = "https://raw.githubusercontent.com/shaoster/glaze/71c7b4d0eae4bdb93a103a7bc8f25b3a9cc2320e/third_party/python/django_bootstrap4_form-4.0.2-py3-none-any.whl", hash = "sha256:ed4bcfc1246e449d61b6d946c8c918e48b6d239c504fcf03cd711108c20c5555", size = 7071 },
+    { url = "https://raw.githubusercontent.com/shaoster/glaze/7e899ff17dc550446652fa813f38ab5331e6db1f/third_party/python/django_bootstrap4_form-4.0.2-py3-none-any.whl", hash = "sha256:ed4bcfc1246e449d61b6d946c8c918e48b6d239c504fcf03cd711108c20c5555", size = 7071 },
 ]
 
 [[package]]
@@ -861,6 +861,7 @@ version = "0.1.0"
 source = { virtual = "tools" }
 dependencies = [
     { name = "fastapi" },
+    { name = "grafana-foundation-sdk" },
     { name = "httpx" },
     { name = "numba" },
     { name = "numpy" },
@@ -879,6 +880,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.136.1" },
+    { name = "grafana-foundation-sdk", specifier = "==1769699241" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "numba", specifier = ">=0.65.1" },
     { name = "numpy", specifier = ">=2.4.4" },
@@ -917,6 +919,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b5/c8/f439cffde755cffa462bfbb156278fa6f9d09119719af9814b858fd4f81f/googleapis_common_protos-1.75.0.tar.gz", hash = "sha256:53a062ff3c32552fbd62c11fe23768b78e4ddf0494d5e5fd97d3f4689c75fbbd", size = 151035, upload-time = "2026-05-07T08:04:49.423Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e7/c8/e2645aa8ed02fd4c7a2f59d68783b65b1f3cbdfe39a6308e156509d1fee8/googleapis_common_protos-1.75.0-py3-none-any.whl", hash = "sha256:961ed60399c457ceb0ee8f285a84c870aabc9c6a832b9d37bb281b5bebde43ed", size = 300631, upload-time = "2026-05-07T08:03:30.345Z" },
+]
+
+[[package]]
+name = "grafana-foundation-sdk"
+version = "1769699241"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/72/b3/de6f7d27bea66d60d408b9cd0e02d6a07dd9c7b12630f406f6840371328e/grafana_foundation_sdk-1769699241.tar.gz", hash = "sha256:445f2607de470af7e839aa8177ed8ad8de3e250330bb45be1919f33dd0f17d01", size = 617736, upload-time = "2026-01-29T15:44:31.771Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/da/a3/78b74d8900a970426fb377c80d2d59656f94c857254325de35965ebc5391/grafana_foundation_sdk-1769699241-py3-none-any.whl", hash = "sha256:8fb43923355c5d0e1abe4370e6a66accd372e2f06816d34f34edebe52bb16ef2", size = 427652, upload-time = "2026-01-29T15:44:28.26Z" },
 ]
 
 [[package]]

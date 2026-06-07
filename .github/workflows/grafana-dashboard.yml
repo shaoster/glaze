@@ -1,0 +1,23 @@
+name: Grafana Dashboard Validation
+
+on:
+  pull_request:
+    paths:
+      - "tools/grafana_dashboard.py"
+      - "tools/tests/test_grafana_dashboard.py"
+      - "tools/BUILD.bazel"
+      - "tools/pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/grafana-dashboard.yml"
+      - ".github/workflows/grafana-dashboard-publish.yml"
+
+jobs:
+  validate:
+    name: Validate dashboard config
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate Grafana dashboard config
+        run: source env.sh && bazel test //tools:test_grafana_dashboard --test_output=errors
