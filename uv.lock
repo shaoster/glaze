@@ -410,11 +410,13 @@ wheels = [
 [[package]]
 name = "django-bootstrap4-form"
 version = "4.0.2"
-source = { registry = "https://pypi.org/simple" }
+source = { registry = "third_party/python" }
 dependencies = [
     { name = "django" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2f/a1/8d9e447503037b58eede3a591bf19b4506fe9becfa9ed2b66503947dba60/django_bootstrap4_form-4.0.2.tar.gz", hash = "sha256:321a3e5e1135d09f9c200ea5ffbc5d1f87af9e083bd0838bd20c6626af8b6ca7", size = 6733, upload-time = "2024-10-15T01:06:01.453Z" }
+wheels = [
+    { url = "https://raw.githubusercontent.com/shaoster/glaze/7e899ff17dc550446652fa813f38ab5331e6db1f/third_party/python/django_bootstrap4_form-4.0.2-py3-none-any.whl", hash = "sha256:ed4bcfc1246e449d61b6d946c8c918e48b6d239c504fcf03cd711108c20c5555", size = 7071 },
+]
 
 [[package]]
 name = "django-cleanup"

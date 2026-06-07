@@ -107,5 +107,8 @@ dependencies = [
     "djangorestframework-simplejwt>=5.5.1",
 ]
 
+[tool.uv]
+find-links = ["third_party/python"]
+
 [tool.uv.workspace]
 members = ["tools"]
