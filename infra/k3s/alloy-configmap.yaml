@@ -20,9 +20,16 @@ data:
       forward_to      = [prometheus.relabel.cadvisor.receiver]
     }
 
-    // Drop per-machine UUID labels that Grafana Cloud rejects as high-cardinality identifiers.
-    // Without this, machine_memory_bytes and machine_swap_bytes are never stored.
+    // Keep only the root-cgroup and machine-level metrics needed for the dashboard.
+    // The full cadvisor scrape produces ~2000 series which exhausts the Grafana Cloud
+    // free-tier limit (15k) when combined with other sources.
     prometheus.relabel "cadvisor" {
+      rule {
+        source_labels = ["__name__"]
+        regex         = "container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_memory_swap|machine_memory_bytes|machine_swap_bytes"
+        action        = "keep"
+      }
+      // Drop per-machine UUID labels that Grafana Cloud rejects as high-cardinality identifiers.
       rule {
         regex  = "boot_id|machine_id|system_uuid"
         action = "labeldrop"
