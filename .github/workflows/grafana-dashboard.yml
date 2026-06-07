@@ -19,5 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install dashboard validator dependency
+        run: python -m pip install pyyaml
       - name: Validate Grafana dashboard config
         run: python tools/grafana_dashboard.py validate grafana/dashboards/glaze-app-summary.yaml
