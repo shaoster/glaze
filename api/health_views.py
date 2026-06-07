@@ -21,11 +21,10 @@ def _check_database() -> bool:
 
 def _check_migrations() -> bool:
     from django.db import connections
-    from django.db.migrations.executor import MigrationExecutor
 
-    executor = MigrationExecutor(connections["default"])
-    targets = executor.loader.graph.leaf_nodes()
-    return not executor.migration_plan(targets)
+    with connections["default"].cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) FROM django_migrations")
+        return cursor.fetchone()[0] > 0
 
 
 def _check_async_tasks() -> bool:
