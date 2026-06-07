@@ -1,4 +1,4 @@
-name: Grafana Dashboard
+name: Grafana Dashboard Validation
 
 on:
   pull_request:
@@ -6,15 +6,11 @@ on:
       - "grafana/dashboards/**"
       - "tools/grafana_dashboard.py"
       - ".github/workflows/grafana-dashboard.yml"
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+      - ".github/workflows/grafana-dashboard-publish.yml"
 
 jobs:
   validate:
-    name: Validate dashboard snapshot
-    if: github.event_name == 'pull_request'
+    name: Validate dashboard config
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -23,42 +19,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Validate Grafana dashboard snapshot
+      - name: Validate Grafana dashboard config
         run: python tools/grafana_dashboard.py validate grafana/dashboards/glaze-app-summary.snapshot.json
-
-  publish:
-    name: Publish dashboard to Grafana
-    if: |
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      !endsWith(github.actor, '[bot]')
-    runs-on: ubuntu-latest
-    concurrency:
-      group: grafana-dashboard-publish
-      cancel-in-progress: false
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Check whether the dashboard changed
-        id: changes
-        shell: bash
-        run: |
-          set -euo pipefail
-          changed="$(git show --name-only --format='' HEAD)"
-          if grep -q '^grafana/dashboards/' <<<"$changed"; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Publish dashboard snapshot
-        if: steps.changes.outputs.changed == 'true'
-        env:
-          GRAFANA_SERVICE_ACCOUNT_TOKEN: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
-        run: python tools/grafana_dashboard.py publish grafana/dashboards/glaze-app-summary.snapshot.json

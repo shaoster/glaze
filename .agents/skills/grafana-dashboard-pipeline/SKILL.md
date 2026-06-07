@@ -1,6 +1,6 @@
 ---
 name: grafana-dashboard-pipeline
-description: Validate Glaze dashboard snapshots locally, test PromQL/TraceQL formulas, and publish dashboard overlays to Grafana on main.
+description: Validate Glaze dashboard configs locally, test PromQL/TraceQL formulas, and publish dashboard overlays to Grafana on main.
 ---
 
 # Grafana Dashboard Pipeline
@@ -9,7 +9,7 @@ Use this skill when editing `grafana/dashboards/*.snapshot.json`, the Grafana da
 
 ## Repo Pattern
 
-- Treat each dashboard snapshot as a checked-in overlay, not a hand-edited one-off.
+- Treat each dashboard config as a checked-in overlay, not a hand-edited one-off.
 - Validate pull requests locally and in CI before any publish step runs.
 - Publish only from `main` after CI succeeds.
 - Keep Grafana API secrets out of PR jobs; publishing uses a token only in the `workflow_run` path.
@@ -31,14 +31,14 @@ Use this skill when editing `grafana/dashboards/*.snapshot.json`, the Grafana da
   - `instant` queries for stat/pie panels
   - range queries for time series
 - Verify label matchers against the live datasource before saving a panel.
-- Keep query changes in the snapshot file, not in ad hoc Grafana-only edits.
+- Keep query changes in the dashboard file, not in ad hoc Grafana-only edits.
 - If a panel goes blank, confirm the metric exists and the labels still match before changing the visualization.
 
-## Dashboard Snapshot Best Practices
+## Dashboard Config Best Practices
 
-- Keep the snapshot sanitized. Never commit Grafana auth headers or tokens.
+- Keep the dashboard file sanitized. Never commit Grafana auth headers or tokens.
 - Preserve stable panel `id` values so CI and the publish step can merge the overlay into the live dashboard.
-- Update the snapshot, the validation helper, and the workflow together when a dashboard changes shape.
+- Update the dashboard file, the validation helper, and the workflow together when a dashboard changes shape.
 - Use the publish workflow only for `main` merges; PRs should only validate.
 
 ## Workflow Notes
@@ -47,4 +47,5 @@ Use this skill when editing `grafana/dashboards/*.snapshot.json`, the Grafana da
 - The publish workflow should:
   - run after CI success on `main`
   - skip non-dashboard commits
+  - use the dedicated `glaze-grafana` GitHub environment
   - use `GRAFANA_SERVICE_ACCOUNT_TOKEN` only at publish time

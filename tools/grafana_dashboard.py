@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Validate and publish Glaze Grafana dashboard snapshots.
+"""Validate and publish Glaze Grafana dashboard configs.
 
-This script treats `grafana/dashboards/*.snapshot.json` files as overlay
-snapshots rather than full Grafana exports. The publish path merges the snapshot
-into the live dashboard fetched from Grafana, which keeps untouched panel
-settings intact while still versioning the query definitions and layout fields
-we care about in git.
+This script treats `grafana/dashboards/*.snapshot.json` files as overlays
+rather than full Grafana exports. The publish path merges the overlay into the
+live dashboard fetched from Grafana, which keeps untouched panel settings
+intact while still versioning the query definitions and layout fields we care
+about in git.
 """
 
 from __future__ import annotations
