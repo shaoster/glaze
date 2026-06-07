@@ -5,13 +5,26 @@ session auth in the DRF auth stack so existing browser flows continue to work
 while the rollout is in progress.
 """
 
+from drf_spectacular.extensions import OpenApiAuthenticationExtension
 from rest_framework.authentication import get_authorization_header
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.request import Request
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
-__all__ = ["JWTCookieAuthentication"]
+__all__ = ["JWTCookieAuthentication", "JWTCookieAuthenticationExtension"]
+
+
+class JWTCookieAuthenticationExtension(OpenApiAuthenticationExtension):
+    target_class = "api.auth.jwt_auth.JWTCookieAuthentication"
+    name = "bearerAuth"
+
+    def get_security_definition(self, auto_schema):
+        return {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        }
 
 
 class JWTCookieAuthentication(JWTAuthentication):
