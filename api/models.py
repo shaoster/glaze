@@ -555,6 +555,7 @@ class PieceState(models.Model):
                     )
                 if not ancestor:
                     return None
+                assert isinstance(ancestor, PieceState)
                 val = ancestor.resolve_custom_field(field_name)
 
             try:
