@@ -44,13 +44,16 @@ export default function ImageLightbox({
 }: ImageLightboxProps) {
   const [index, setIndex] = useState(initialIndex);
 
-  // Notify caller when index changes due to navigation (swipe, arrow, thumbnail).
-  // Use a ref so the effect dep list stays stable and doesn't fire on mount.
+  // Notify caller when index changes due to user navigation (swipe, arrow,
+  // thumbnail). Suppressed when the change is driven by a URL sync so we
+  // don't write a duplicate history entry for an already-current URL.
   const onIndexChangeRef = useRef(onIndexChange);
   onIndexChangeRef.current = onIndexChange;
   const mountedRef = useRef(false);
+  const syncingFromUrlRef = useRef(false);
   useEffect(() => {
     if (!mountedRef.current) { mountedRef.current = true; return; }
+    if (syncingFromUrlRef.current) { syncingFromUrlRef.current = false; return; }
     onIndexChangeRef.current?.(index);
   }, [index]);
   const [dragDeltaX, setDragDeltaX] = useState(0);
@@ -69,8 +72,10 @@ export default function ImageLightbox({
   }
 
   // Sync to URL-driven index changes (e.g. browser Back while lightbox is open).
+  // Set the flag before setIndex so the onIndexChange effect skips this update.
   if (initialIndex !== prevInitialIndex) {
     setPrevInitialIndex(initialIndex);
+    syncingFromUrlRef.current = true;
     setIndex(initialIndex);
   }
   function prev() {
