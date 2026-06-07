@@ -1,0 +1,51 @@
+---
+name: grafana-dashboard-pipeline
+description: Validate Glaze dashboard snapshots locally, test PromQL/TraceQL formulas, and publish dashboard overlays to Grafana on main.
+---
+
+# Grafana Dashboard Pipeline
+
+Use this skill when editing `grafana/dashboards/*.snapshot.json`, the Grafana dashboard workflow, or any dashboard query that needs local validation before merge.
+
+## Repo Pattern
+
+- Treat each dashboard snapshot as a checked-in overlay, not a hand-edited one-off.
+- Validate pull requests locally and in CI before any publish step runs.
+- Publish only from `main` after CI succeeds.
+- Keep Grafana API secrets out of PR jobs; publishing uses a token only in the `workflow_run` path.
+
+## Local Validation
+
+1. Validate the dashboard file structure:
+   `python tools/grafana_dashboard.py validate grafana/dashboards/glaze-app-summary.snapshot.json`
+2. Inspect the saved queries and panel datasources:
+   `mcp__grafana.get_dashboard_panel_queries`
+3. Test PromQL against the live datasource before merging:
+   `mcp__grafana.query_prometheus`
+4. Test TraceQL against Tempo for trace panels:
+   `mcp__grafana.tempo_traceql_search`
+
+## Formula Best Practices
+
+- Test PromQL as the panel will run it:
+  - `instant` queries for stat/pie panels
+  - range queries for time series
+- Verify label matchers against the live datasource before saving a panel.
+- Keep query changes in the snapshot file, not in ad hoc Grafana-only edits.
+- If a panel goes blank, confirm the metric exists and the labels still match before changing the visualization.
+
+## Dashboard Snapshot Best Practices
+
+- Keep the snapshot sanitized. Never commit Grafana auth headers or tokens.
+- Preserve stable panel `id` values so CI and the publish step can merge the overlay into the live dashboard.
+- Update the snapshot, the validation helper, and the workflow together when a dashboard changes shape.
+- Use the publish workflow only for `main` merges; PRs should only validate.
+
+## Workflow Notes
+
+- The validation workflow should stay path-scoped to dashboard files and the helper script.
+- The publish workflow should:
+  - run after CI success on `main`
+  - skip non-dashboard commits
+  - use `GRAFANA_API_TOKEN` only at publish time
+
