@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import atexit
 import os
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse, urlunparse
 
 import httpx
 from django.http import HttpResponse
 from drf_spectacular.utils import extend_schema
+from opentelemetry import context as otel_context
 from rest_framework.decorators import (
     api_view,
     authentication_classes,
@@ -29,6 +32,9 @@ _ALLOWED_CONTENT_TYPES = frozenset(
         "application/x-ndjson",
     ]
 )
+
+_forward_executor = ThreadPoolExecutor(max_workers=4)
+atexit.register(_forward_executor.shutdown, wait=False)
 
 
 class BrowserTracesThrottle(SimpleRateThrottle):
@@ -75,19 +81,12 @@ def _collector_traces_endpoint() -> str:
 
 @extend_schema(
     request=None,
-    responses={
-        200: None,
-        202: None,
-        400: None,
-        411: None,
-        413: None,
-        415: None,
-        502: None,
-    },
+    responses={202: None, 400: None, 411: None, 413: None, 415: None},
     description=(
         "Proxy browser OTLP/HTTP trace uploads to the local collector. "
-        "The browser sends the request with the normal session/CSRF flow; "
-        "the backend forwards the raw OTLP payload to the collector. "
+        "The backend buffers and validates the payload, then forwards it "
+        "asynchronously — the response is returned immediately (202) without "
+        "waiting for the collector. "
         "Requests without Content-Length are rejected (411). "
         "Payloads larger than 512 KB are rejected (413). "
         "Only application/x-protobuf, application/json, and application/x-ndjson "
@@ -100,7 +99,7 @@ def _collector_traces_endpoint() -> str:
 @throttle_classes([BrowserTracesThrottle])
 @traced("telemetry.browser_traces")
 def browser_traces(request: Request) -> HttpResponse:
-    """Forward a browser OTLP/HTTP trace payload to the collector."""
+    """Buffer and validate a browser OTLP/HTTP trace payload, then forward it asynchronously."""
     content_type = (request.headers.get("content-type") or "").split(";")[0].strip()
     if content_type not in _ALLOWED_CONTENT_TYPES:
         return HttpResponse(status=415)
@@ -133,23 +132,26 @@ def browser_traces(request: Request) -> HttpResponse:
         if header_value:
             forward_headers[header_name] = header_value
 
-    try:
-        response = httpx.post(
-            collector_endpoint,
-            content=body,
-            headers=forward_headers,
-            timeout=10.0,
-        )
-    except httpx.RequestError:
-        return HttpResponse(status=502)
+    # Capture the current OTel context so the background span remains correlated
+    # with this request's trace ID. ThreadPoolExecutor workers are reused across
+    # submissions and do not inherit context automatically.
+    ctx = otel_context.get_current()
 
-    proxied = HttpResponse(
-        response.content,
-        status=response.status_code,
-        content_type=response.headers.get("content-type", "application/json"),
-    )
-    for header_name in ("content-encoding", "cache-control"):
-        header_value = response.headers.get(header_name)
-        if header_value:
-            proxied[header_name] = header_value
-    return proxied
+    def _forward() -> None:
+        token = otel_context.attach(ctx)
+        try:
+            with traced("telemetry.collector_forward"):
+                try:
+                    httpx.post(
+                        collector_endpoint,
+                        content=body,
+                        headers=forward_headers,
+                        timeout=10.0,
+                    )
+                except httpx.RequestError:
+                    pass  # best-effort; browser already received 202
+        finally:
+            otel_context.detach(token)
+
+    _forward_executor.submit(_forward)
+    return HttpResponse(status=202)
