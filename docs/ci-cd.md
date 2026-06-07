@@ -78,7 +78,9 @@ The dashboard publish workflow uses a separate GitHub environment, `glaze-grafan
 
 #### Local dashboard validation
 
-Use the Bazel-backed helper target when you want the dashboard build to run with the same controlled Python dependency set that CI uses:
+Use the Bazel-backed helper target when you want the dashboard build to run with the same controlled Python dependency set that CI uses.
+In local agent shells, the repo bootstrap exposes `rtk`, so the examples below use `rtk bazel`.
+In GitHub Actions, the workflows call plain `bazel` after `source env.sh`.
 
 ```bash
 rtk bazel test //tools:test_grafana_dashboard --test_output=errors

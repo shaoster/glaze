@@ -16,6 +16,9 @@ Use this skill when editing `tools/grafana_dashboard.py`, the Grafana dashboard 
 
 ## Local Validation
 
+Use `rtk bazel` for local agent shells. GitHub Actions should call plain `bazel`
+after `source env.sh`.
+
 1. Run the Bazel-backed test target so the dashboard build uses the same controlled Python deps as CI:
    `rtk bazel test //tools:test_grafana_dashboard --test_output=errors`
 2. Validate the generated dashboard directly when you want to smoke-test the CLI:
@@ -51,3 +54,4 @@ Use this skill when editing `tools/grafana_dashboard.py`, the Grafana dashboard 
   - skip non-dashboard commits
   - use the dedicated `glaze-grafana` GitHub environment
   - use `GRAFANA_SERVICE_ACCOUNT_TOKEN` only at publish time
+- In GitHub Actions, invoke Bazel directly. Do not use `rtk` in workflow commands.
