@@ -1,11 +1,20 @@
 import pytest
 
-from api.models import GlazeCombination, GlazeType
+from api.models import (
+    CropRun,
+    GlazeCombination,
+    GlazeType,
+    Image,
+    Piece,
+    PieceState,
+    PieceStateImage,
+)
 from api.utils import (
     cloudinary_getinfo_url,
     crop_to_dict,
     fetch_cloudinary_auto_crop,
     parse_cloudinary_getinfo_crop,
+    replace_piece_state_images,
     sync_glaze_type_singleton_combination,
 )
 
@@ -281,3 +290,37 @@ class TestUtilsCoverage:
 
         with pytest.raises(ValueError):
             upload_mask_to_cloudinary(b"mask-bytes", DummyImage())
+
+
+@pytest.mark.django_db
+class TestReplacePieceStateImages:
+    def test_nulls_crop_run_fk_when_replacing_images(self, django_user_model):
+        user = django_user_model.objects.create(
+            username="test@example.com", email="test@example.com"
+        )
+        image = Image.objects.create(
+            url="https://res.cloudinary.com/demo/image/upload/test.jpg",
+            cloud_name="demo",
+            cloudinary_public_id="test",
+            user=user,
+        )
+        piece = Piece.objects.create(user=user, name="Test Piece", thumbnail=image)
+        state = PieceState.objects.create(piece=piece, state="designed", order=1)
+        psi = PieceStateImage.objects.create(piece_state=state, image=image, order=0)
+        crop_run = CropRun.objects.create(
+            image=image,
+            piece_state_image=psi,
+            source={
+                "type": "automated",
+                "backend": "rembg-u2net",
+                "deployment": "modal",
+                "version": None,
+            },
+            status=CropRun.Status.SUCCESS,
+        )
+
+        replace_piece_state_images(state, [])
+
+        assert not PieceStateImage.objects.filter(pk=psi.pk).exists()
+        crop_run.refresh_from_db()
+        assert crop_run.piece_state_image is None

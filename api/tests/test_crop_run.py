@@ -6,7 +6,6 @@ from unittest.mock import patch
 
 import pytest
 from django.contrib.auth.models import User
-from django.db.models.deletion import ProtectedError
 from PIL import Image as PILImage
 from rest_framework import status
 
@@ -309,10 +308,8 @@ class TestImageCropRunsView:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 0
 
-    def test_piece_state_image_cannot_be_deleted_when_crop_run_exists(
-        self, piece_state_image
-    ):
-        CropRun.objects.create(
+    def test_piece_state_image_deletion_nulls_crop_run_fk(self, piece_state_image):
+        crop_run = CropRun.objects.create(
             image=piece_state_image.image,
             piece_state_image=piece_state_image,
             source={
@@ -324,5 +321,7 @@ class TestImageCropRunsView:
             status=CropRun.Status.SUCCESS,
         )
 
-        with pytest.raises(ProtectedError):
-            piece_state_image.delete()
+        piece_state_image.delete()
+
+        crop_run.refresh_from_db()
+        assert crop_run.piece_state_image is None
