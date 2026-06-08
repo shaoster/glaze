@@ -6,23 +6,6 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
 
-  postgresql:
-    endpoint: db:5432
-    username: glaze
-    password: ${env:POSTGRES_PASSWORD}
-    databases: [glaze]
-    collection_interval: 30s
-    tls:
-      insecure: true
-
-  redis:
-    endpoint: redis:6379
-    collection_interval: 30s
-
-  nginx:
-    endpoint: http://nginx/nginx_status
-    collection_interval: 30s
-
 extensions:
   basicauth/grafana_cloud:
     client_auth:
@@ -45,5 +28,5 @@ service:
       receivers: [otlp]
       exporters: [otlphttp/grafana_cloud]
     metrics:
-      receivers: [otlp, postgresql, redis, nginx]
+      receivers: [otlp]
       exporters: [otlphttp/grafana_cloud]

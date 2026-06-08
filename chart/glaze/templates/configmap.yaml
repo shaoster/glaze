@@ -14,19 +14,6 @@ data:
           http:
             endpoint: 0.0.0.0:4318
 
-      postgresql:
-        endpoint: {{ include "glaze.fullname" . }}-postgres:5432
-        username: {{ .Values.postgres.user }}
-        password: ${env:POSTGRES_PASSWORD}
-        databases: [{{ .Values.postgres.database }}]
-        collection_interval: 30s
-        tls:
-          insecure: true
-
-      redis:
-        endpoint: {{ include "glaze.fullname" . }}-redis:6379
-        collection_interval: 30s
-
     extensions:
       basicauth/grafana_cloud:
         client_auth:
@@ -49,7 +36,7 @@ data:
           receivers: [otlp]
           exporters: [otlphttp/grafana_cloud]
         metrics:
-          receivers: [otlp, postgresql, redis]
+          receivers: [otlp]
           exporters: [otlphttp/grafana_cloud]
 ---
 apiVersion: v1
