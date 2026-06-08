@@ -563,6 +563,11 @@ class PieceDetailSerializer(PieceSummarySerializer):
     history = serializers.SerializerMethodField()
     showcase_video_url = serializers.SerializerMethodField()
     owner_alias = serializers.SerializerMethodField()
+    # Override the list-view SerializerMethodField with a plain DateTimeField so
+    # the Python Piece.last_modified property is always used here (correct for
+    # single-object responses that may not carry the computed_last_modified
+    # annotation, or may carry a stale one).
+    last_modified = serializers.DateTimeField(read_only=True)
 
     class Meta(PieceSummarySerializer.Meta):
         fields = PieceSummarySerializer.Meta.fields + [
