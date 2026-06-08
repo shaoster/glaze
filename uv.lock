@@ -407,6 +407,9 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c8/77/4396e853c3ee3b1264a2bb23f9b1934194ab750c6ecd30aa194b53dec7b9/django_admin_sortable2-2.3.1-py3-none-any.whl", hash = "sha256:5784f441f3532013438c3c3226fbccc39b9c733f867b26a5f477d6b05f734b93", size = 107015, upload-time = "2026-01-22T14:20:27.604Z" },
 ]
 
+# DO NOT MODIFY the wheels entry below — uv rewrites the url to a relative
+# path which breaks aspect_rules_py's lockfile parser. See:
+# https://github.com/shaoster/glaze/issues/792
 [[package]]
 name = "django-bootstrap4-form"
 version = "4.0.2"
@@ -415,7 +418,7 @@ dependencies = [
     { name = "django" },
 ]
 wheels = [
-    { path = "django_bootstrap4_form-4.0.2-py3-none-any.whl" },
+    { url = "https://raw.githubusercontent.com/shaoster/glaze/7e899ff17dc550446652fa813f38ab5331e6db1f/third_party/python/django_bootstrap4_form-4.0.2-py3-none-any.whl", hash = "sha256:ed4bcfc1246e449d61b6d946c8c918e48b6d239c504fcf03cd711108c20c5555", size = 7071 },
 ]
 
 [[package]]
