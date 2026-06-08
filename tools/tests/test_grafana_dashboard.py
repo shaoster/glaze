@@ -44,7 +44,7 @@ def test_dashboard_json_contains_expected_sdk_fields() -> None:
     assert panels[7]["targets"][0]["queryType"] == "range"
     assert panels[8]["targets"][0]["queryType"] == "traceql"
     assert panels[8]["targets"][0]["limit"] == 30
-    assert panels[8]["targets"][0]["query"] == '{resource.service.name="glaze" && (duration > 500ms || status=error)}'
+    assert panels[8]["targets"][0]["query"] == '{trace:rootService="glaze" && (duration > 500ms || status=error)}'
 
     assert panels[13]["transformations"][0]["id"] == "filterFieldsByName"
     assert panels[13]["transformations"][1]["options"]["renameByName"]["remaining"] == "Headroom"

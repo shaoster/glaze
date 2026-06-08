@@ -137,7 +137,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
                 "metricsQueryType": "range",
                 "serviceMapUseNativeHistograms": False,
                 "limit": 30,
-                "query": '{resource.service.name="glaze" && (duration > 500ms || status=error)}',
+                "query": '{trace:rootService="glaze" && (duration > 500ms || status=error)}',
             }
         ],
     },
