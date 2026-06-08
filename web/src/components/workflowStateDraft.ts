@@ -10,6 +10,8 @@ export type ImageEntry = {
   cloudinary_public_id?: string | null;
   cloud_name?: string | null;
   crop?: ImageCrop | null;
+  width?: number | null;
+  height?: number | null;
 };
 
 type CustomFieldInputMap = Record<string, string>;
@@ -142,6 +144,8 @@ function stateImages(pieceState: PieceState): ImageEntry[] {
     cloudinary_public_id: img.cloudinary_public_id ?? null,
     cloud_name: img.cloud_name ?? null,
     crop: img.crop ?? null,
+    width: img.width ?? null,
+    height: img.height ?? null,
   }));
 }
 

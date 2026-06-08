@@ -19,15 +19,21 @@ from typing import Any
 
 from grafana_foundation_sdk.builders.dashboard import Dashboard as DashboardBuilder
 from grafana_foundation_sdk.builders.logs import Panel as LogsPanelBuilder
+from grafana_foundation_sdk.builders.loki import Dataquery as LokiQueryBuilder
 from grafana_foundation_sdk.builders.piechart import Panel as PieChartPanelBuilder
-from grafana_foundation_sdk.builders.prometheus import Dataquery as PrometheusQueryBuilder
+from grafana_foundation_sdk.builders.prometheus import (
+    Dataquery as PrometheusQueryBuilder,
+)
 from grafana_foundation_sdk.builders.stat import Panel as StatPanelBuilder
 from grafana_foundation_sdk.builders.table import Panel as TablePanelBuilder
 from grafana_foundation_sdk.builders.tempo import TempoQuery as TempoQueryBuilder
 from grafana_foundation_sdk.builders.timeseries import Panel as TimeseriesPanelBuilder
-from grafana_foundation_sdk.builders.loki import Dataquery as LokiQueryBuilder
 from grafana_foundation_sdk.cog.encoder import JSONEncoder
-from grafana_foundation_sdk.models.dashboard import DataSourceRef, DataTransformerConfig, GridPos
+from grafana_foundation_sdk.models.dashboard import (
+    DataSourceRef,
+    DataTransformerConfig,
+    GridPos,
+)
 
 DEFAULT_GRAFANA_URL = "https://shaoster.grafana.net"
 DEFAULT_FOLDER_UID = "general"
@@ -186,47 +192,80 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     13: {
         "title": "Cloudinary Credits Quota",
         "type": "piechart",
-        "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "ffo8wq300tukgb"},
+        "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "ffo8wq300tukgb",
+        },
         "targets": [
             {
                 "refId": "A",
-                "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "ffo8wq300tukgb"},
+                "datasource": {
+                    "type": "yesoreyeram-infinity-datasource",
+                    "uid": "ffo8wq300tukgb",
+                },
                 "type": "json",
                 "source": "url",
                 "url": "https://api.cloudinary.com/v1_1/dxpnyhe1f/usage",
                 "url_options": {"method": "GET"},
                 "parser": "backend",
                 "root_selector": "storage",
-                "columns": [{"selector": "credits_usage", "text": "storage_cr", "type": "number"}],
+                "columns": [
+                    {
+                        "selector": "credits_usage",
+                        "text": "storage_cr",
+                        "type": "number",
+                    }
+                ],
                 "cache_timeout_in_seconds": 3600,
             },
             {
                 "refId": "B",
-                "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "ffo8wq300tukgb"},
+                "datasource": {
+                    "type": "yesoreyeram-infinity-datasource",
+                    "uid": "ffo8wq300tukgb",
+                },
                 "type": "json",
                 "source": "url",
                 "url": "https://api.cloudinary.com/v1_1/dxpnyhe1f/usage",
                 "url_options": {"method": "GET"},
                 "parser": "backend",
                 "root_selector": "bandwidth",
-                "columns": [{"selector": "credits_usage", "text": "bandwidth_cr", "type": "number"}],
+                "columns": [
+                    {
+                        "selector": "credits_usage",
+                        "text": "bandwidth_cr",
+                        "type": "number",
+                    }
+                ],
                 "cache_timeout_in_seconds": 3600,
             },
             {
                 "refId": "C",
-                "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "ffo8wq300tukgb"},
+                "datasource": {
+                    "type": "yesoreyeram-infinity-datasource",
+                    "uid": "ffo8wq300tukgb",
+                },
                 "type": "json",
                 "source": "url",
                 "url": "https://api.cloudinary.com/v1_1/dxpnyhe1f/usage",
                 "url_options": {"method": "GET"},
                 "parser": "backend",
                 "root_selector": "transformations",
-                "columns": [{"selector": "credits_usage", "text": "transform_cr", "type": "number"}],
+                "columns": [
+                    {
+                        "selector": "credits_usage",
+                        "text": "transform_cr",
+                        "type": "number",
+                    }
+                ],
                 "cache_timeout_in_seconds": 3600,
             },
             {
                 "refId": "D",
-                "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "ffo8wq300tukgb"},
+                "datasource": {
+                    "type": "yesoreyeram-infinity-datasource",
+                    "uid": "ffo8wq300tukgb",
+                },
                 "type": "json",
                 "source": "url",
                 "url": "https://api.cloudinary.com/v1_1/dxpnyhe1f/usage",
@@ -234,7 +273,9 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
                 "parser": "backend",
                 "root_selector": "credits",
                 "columns": [],
-                "computed_columns": [{"selector": "limit - usage", "text": "remaining", "type": "number"}],
+                "computed_columns": [
+                    {"selector": "limit - usage", "text": "remaining", "type": "number"}
+                ],
                 "cache_timeout_in_seconds": 3600,
             },
         ],
@@ -243,7 +284,12 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
                 "id": "filterFieldsByName",
                 "options": {
                     "include": {
-                        "names": ["storage_cr", "bandwidth_cr", "transform_cr", "remaining"]
+                        "names": [
+                            "storage_cr",
+                            "bandwidth_cr",
+                            "transform_cr",
+                            "remaining",
+                        ]
                     }
                 },
             },
@@ -343,6 +389,8 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
 }
 
 EXPECTED_PANEL_IDS = set(EXPECTED_PANELS)
+
+
 class ValidationError(RuntimeError):
     """Raised when a dashboard build or publish step fails."""
 
@@ -504,7 +552,9 @@ def validate_dashboard() -> None:
     for key, expected in EXPECTED_DASHBOARD.items():
         if key == "time":
             if payload.get("time") != expected:
-                errors.append(f"$.time: expected {expected!r}, got {payload.get('time')!r}")
+                errors.append(
+                    f"$.time: expected {expected!r}, got {payload.get('time')!r}"
+                )
         elif payload.get(key) != expected:
             errors.append(f"$.{key}: expected {expected!r}, got {payload.get(key)!r}")
 
@@ -514,7 +564,9 @@ def validate_dashboard() -> None:
     else:
         panel_ids = {panel.get("id") for panel in panels if isinstance(panel, dict)}
         if panel_ids != EXPECTED_PANEL_IDS:
-            errors.append(f"$.panels: expected ids {sorted(EXPECTED_PANEL_IDS)}, got {sorted(pid for pid in panel_ids if isinstance(pid, int))}")
+            errors.append(
+                f"$.panels: expected ids {sorted(EXPECTED_PANEL_IDS)}, got {sorted(pid for pid in panel_ids if isinstance(pid, int))}"
+            )
 
     if errors:
         raise ValidationError("\n".join(errors))
@@ -529,7 +581,9 @@ def fetch_dashboard(url: str, api_token: str, uid: str) -> dict[str, Any]:
         with urllib.request.urlopen(request) as response:
             payload = json.load(response)
     except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"failed to fetch dashboard {uid}: {exc.read().decode('utf-8', 'replace')}") from exc
+        raise RuntimeError(
+            f"failed to fetch dashboard {uid}: {exc.read().decode('utf-8', 'replace')}"
+        ) from exc
     if not isinstance(payload, dict) or "dashboard" not in payload:
         raise RuntimeError(f"unexpected dashboard response for {uid}")
     dashboard = payload["dashboard"]
@@ -573,7 +627,9 @@ def publish_dashboard(grafana_url: str, api_token: str) -> None:
         with urllib.request.urlopen(request) as response:
             result = json.load(response)
     except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"failed to publish dashboard {uid}: {exc.read().decode('utf-8', 'replace')}") from exc
+        raise RuntimeError(
+            f"failed to publish dashboard {uid}: {exc.read().decode('utf-8', 'replace')}"
+        ) from exc
 
     print(json.dumps(result, indent=2, sort_keys=True))
 
@@ -582,13 +638,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("validate", help="Validate the dashboard code and generated JSON")
+    subparsers.add_parser(
+        "validate", help="Validate the dashboard code and generated JSON"
+    )
 
-    publish_parser = subparsers.add_parser("publish", help="Publish the generated dashboard to Grafana")
-    publish_parser.add_argument("--grafana-url", default=os.environ.get("GRAFANA_URL", DEFAULT_GRAFANA_URL))
+    publish_parser = subparsers.add_parser(
+        "publish", help="Publish the generated dashboard to Grafana"
+    )
+    publish_parser.add_argument(
+        "--grafana-url", default=os.environ.get("GRAFANA_URL", DEFAULT_GRAFANA_URL)
+    )
     publish_parser.add_argument(
         "--api-token",
-        default=os.environ.get("GRAFANA_SERVICE_ACCOUNT_TOKEN") or os.environ.get("GRAFANA_API_TOKEN"),
+        default=os.environ.get("GRAFANA_SERVICE_ACCOUNT_TOKEN")
+        or os.environ.get("GRAFANA_API_TOKEN"),
     )
 
     return parser

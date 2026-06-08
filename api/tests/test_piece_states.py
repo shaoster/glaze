@@ -147,6 +147,31 @@ class TestPieceStates:
             "name": "Speckled Stoneware",
         }
 
+    def test_create_records_images_with_dimensions(self, client, piece):
+        response = client.post(
+            f"/api/pieces/{piece.id}/states/",
+            {
+                "state": "wheel_thrown",
+                "images": [
+                    {
+                        "url": "https://example.com/throwing.jpg",
+                        "caption": "throwing",
+                        "cloudinary_public_id": "throwing_id",
+                        "cloud_name": "my_cloud",
+                        "width": 1200,
+                        "height": 900,
+                    }
+                ],
+            },
+            format="json",
+        )
+        assert response.status_code == 201
+        current = response.json()["current_state"]
+        image_data = current["images"][0]
+        assert image_data["url"] == "https://example.com/throwing.jpg"
+        assert image_data["width"] == 1200
+        assert image_data["height"] == 900
+
     def test_create_returns_validation_error_for_invalid_inline_field(
         self, client, piece
     ):

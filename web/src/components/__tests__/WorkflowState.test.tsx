@@ -275,19 +275,21 @@ function setScreenWidth(width: number) {
 // Helper to simulate a successful Cloudinary Upload Widget upload.
 // The widget fires display-changed (shown) then success when open() is called.
 function setupUploadWidget(
-  overrides: { secure_url?: string; public_id?: string } = {},
+  overrides: { secure_url?: string; public_id?: string; width?: number; height?: number } = {},
 ) {
   const secure_url =
     overrides.secure_url ??
     "https://res.cloudinary.com/demo/image/upload/sample.jpg";
   const public_id = overrides.public_id ?? "sample";
+  const width = overrides.width ?? 1200;
+  const height = overrides.height ?? 900;
   window.cloudinary = {
     createUploadWidget: vi.fn((_options, callback) => ({
       open: vi.fn(() => {
         callback(null, { event: "display-changed", info: { state: "shown" } });
         callback(null, {
           event: "success",
-          info: { secure_url, public_id, resource_type: "image" },
+          info: { secure_url, public_id, resource_type: "image", width, height },
         });
       }),
       close: noop,
@@ -886,6 +888,8 @@ describe("WorkflowState", () => {
     setupUploadWidget({
       secure_url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
       public_id: "sample",
+      width: 1200,
+      height: 900,
     });
     render(<WorkflowState {...defaultProps} />);
     fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
@@ -898,6 +902,8 @@ describe("WorkflowState", () => {
               url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
               cloudinary_public_id: "sample",
               crop: null,
+              width: 1200,
+              height: 900,
             }),
           ]),
         }),
