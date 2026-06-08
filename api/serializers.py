@@ -638,21 +638,6 @@ class PieceCreateSerializer(serializers.ModelSerializer):
             user=user, piece=piece, state=ENTRY_STATE, notes=notes, order=1
         )
 
-        # Queue auto-detection for Cloudinary thumbnails so the matching piece
-        # history image can pick up a crop if one exists.
-        if thumbnail and thumbnail.cloud_name and thumbnail.cloudinary_public_id:
-            from .tasks import get_task_interface
-
-            task = AsyncTask.objects.create(
-                user=user,
-                task_type="detect_subject_crop",
-                input_params={
-                    "image_id": str(thumbnail.id),
-                    "piece_id": str(piece.id),
-                },
-            )
-            get_task_interface().submit(task)
-
         return piece
 
 
@@ -964,24 +949,6 @@ class PieceUpdateSerializer(serializers.Serializer):
                 thumbnail_payload, user=instance.user
             )
 
-            # Queue auto-detection for Cloudinary thumbnails so the matching
-            # piece history image can pick up a crop if one exists.
-            if (
-                instance.thumbnail
-                and instance.thumbnail.cloud_name
-                and instance.thumbnail.cloudinary_public_id
-            ):
-                from .tasks import get_task_interface
-
-                task = AsyncTask.objects.create(
-                    user=user,
-                    task_type="detect_subject_crop",
-                    input_params={
-                        "image_id": str(instance.thumbnail.id),
-                        "piece_id": str(instance.id),
-                    },
-                )
-                get_task_interface().submit(task)
         if "shared" in validated_data:
             instance.shared = validated_data["shared"]
         if "is_editable" in validated_data:

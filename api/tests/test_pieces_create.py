@@ -51,7 +51,9 @@ class TestPiecesCreate:
         data = response.json()
         assert data["current_state"]["notes"] == ""
 
-    def test_create_with_cloudinary_thumbnail_queues_task(self, client, monkeypatch):
+    def test_create_with_cloudinary_thumbnail_does_not_queue_crop_task(
+        self, client, monkeypatch
+    ):
         submitted = []
         thumbnail = Image.objects.create(
             user=None,
@@ -83,9 +85,4 @@ class TestPiecesCreate:
         )
 
         assert response.status_code == 201
-        assert submitted == [
-            {
-                "image_id": response.json()["thumbnail"]["image_id"],
-                "piece_id": response.json()["id"],
-            }
-        ]
+        assert submitted == []
