@@ -65,3 +65,12 @@ class TestHealthReady:
         request = rf.get("/api/health/ready/", HTTP_X_FORWARDED_HOST="159.223.154.68")
         response = health_ready(request)
         assert response.status_code == 200
+
+    def test_openapi_schema_contains_only_api_endpoints(self):
+        from drf_spectacular.generators import SchemaGenerator
+
+        generator = SchemaGenerator()
+        schema = generator.get_schema(request=None, public=True)
+        assert len(schema["paths"]) > 0
+        for path in schema["paths"].keys():
+            assert path.startswith("/api/")

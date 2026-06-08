@@ -127,6 +127,15 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+
+def openapi_preprocessing_filter_spec(endpoints):
+    filtered = []
+    for path, path_regex, method, callback in endpoints:
+        if path.startswith("/api/"):
+            filtered.append((path, path_regex, method, callback))
+    return filtered
+
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "PotterDoc API",
     "DESCRIPTION": (
@@ -160,7 +169,9 @@ SPECTACULAR_SETTINGS = {
             },
         }
     },
+    "PREPROCESSING_HOOKS": ["backend.test_settings.openapi_preprocessing_filter_spec"],
 }
+
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
