@@ -88,6 +88,15 @@ data:
         regex         = sys.env("NODE_NAME")
         action        = "keep"
       }
+      // Only tail glaze app pods — loki.source.kubernetes opens one persistent
+      // log stream per container via the k3s API server, spawning ~500 goroutines
+      // each. Tailing all 18 containers cluster-wide generated ~9k goroutines and
+      // pinned k3s at 80% CPU on the single-core node.
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        regex         = "default"
+        action        = "keep"
+      }
     }
 
     loki.source.kubernetes "pods" {
