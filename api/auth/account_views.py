@@ -6,14 +6,11 @@ behavior remains observable as a stable contract.
 
 from django.contrib.auth import logout
 from django.db import transaction
-from django.db.models import Q
 from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.request import Request
 
 from backend.otel import traced
-
-from ..models import CropRun, PieceStateImage
 
 
 @traced
@@ -27,14 +24,5 @@ def delete_account_impl(request: Request, *, logout_fn=logout) -> HttpResponse:
     # references to a now-deleted User row.
     logout_fn(request)
     with transaction.atomic():
-        # Remove protected image-adjacent rows first so the subsequent user
-        # deletion can cascade through pieces and images without hitting a
-        # database-level ProtectedError.
-        CropRun.objects.filter(
-            Q(image__user=user) | Q(piece_state_image__piece_state__piece__user=user)
-        ).delete()
-        PieceStateImage.objects.filter(
-            Q(image__user=user) | Q(piece_state__piece__user=user)
-        ).delete()
         user.delete()
     return HttpResponse(status=status.HTTP_204_NO_CONTENT)

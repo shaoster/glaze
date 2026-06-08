@@ -367,7 +367,7 @@ class TestCalculatedFields:
 
     def test_cross_state_field_reference_uses_prefetch_cache(self, piece):
         """_evaluate_compute must not query the DB when states are prefetched."""
-        earlier = PieceState.objects.create(
+        PieceState.objects.create(
             user=piece.user,
             piece=piece,
             state="glaze_fired",

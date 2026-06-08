@@ -563,6 +563,7 @@ class PieceDetailSerializer(PieceSummarySerializer):
     history = serializers.SerializerMethodField()
     showcase_video_url = serializers.SerializerMethodField()
     owner_alias = serializers.SerializerMethodField()
+
     class Meta(PieceSummarySerializer.Meta):
         fields = PieceSummarySerializer.Meta.fields + [
             "history",

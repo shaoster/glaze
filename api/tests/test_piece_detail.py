@@ -165,15 +165,14 @@ class TestPieceDetail:
         DRF reuses the same child serializer instance for every piece. Without
         keying by pk, the first piece's states bleed into subsequent pieces.
         """
+        from rest_framework.test import APIRequestFactory
+
         from api.models import ENTRY_STATE, Piece, PieceState
         from api.serializers import PieceDetailSerializer
-        from rest_framework.test import APIRequestFactory
 
         piece_a = Piece.objects.create(user=user, name="Bowl A")
         PieceState.objects.create(piece=piece_a, user=user, state=ENTRY_STATE, order=1)
-        PieceState.objects.create(
-            piece=piece_a, user=user, state="handbuilt", order=2
-        )
+        PieceState.objects.create(piece=piece_a, user=user, state="handbuilt", order=2)
 
         piece_b = Piece.objects.create(user=user, name="Bowl B")
         PieceState.objects.create(piece=piece_b, user=user, state=ENTRY_STATE, order=1)

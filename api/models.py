@@ -601,7 +601,7 @@ class PieceStateImage(models.Model):
     )
     image = models.ForeignKey(
         Image,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="piece_state_links",
     )
     caption = models.CharField(max_length=1024, blank=True, default="")
@@ -677,11 +677,11 @@ class CropRun(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     image = models.ForeignKey(
-        "Image", on_delete=models.PROTECT, related_name="crop_runs"
+        "Image", on_delete=models.CASCADE, related_name="crop_runs"
     )
     piece_state_image = models.ForeignKey(
         "PieceStateImage",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="crop_runs",
         null=True,
         blank=True,
