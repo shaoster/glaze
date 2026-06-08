@@ -291,11 +291,14 @@ describe("PieceList", () => {
       expect(mockPositioner.set).toHaveBeenCalled();
     });
 
-    it("does not pre-seed the positioner for pieces without a crop", () => {
+    it("pre-seeds the positioner for pieces without a crop using fallback height", () => {
       const piece = makePiece({ thumbnail: null });
       renderPieceList([piece]);
       expect(mockPositioner.update).not.toHaveBeenCalled();
-      expect(mockPositioner.set).not.toHaveBeenCalled();
+      expect(mockPositioner.set).toHaveBeenCalledWith(
+        0,
+        estimateCardHeight(piece, mockPositioner.columnWidth),
+      );
     });
 
     it("applies the tall crop height before the first masonry pass", async () => {
@@ -612,12 +615,12 @@ describe("PieceList", () => {
           CARD_CHROME_HEIGHT;
         expect(mockPositioner.set).toHaveBeenCalledWith(1, naiveHeight);
 
-        // pieces[2]: no crop → not seeded; exactly 2 set() calls total
-        expect(mockPositioner.set).not.toHaveBeenCalledWith(
-          2,
-          expect.anything(),
-        );
-        expect(mockPositioner.set).toHaveBeenCalledTimes(2);
+        // pieces[2]: no crop -> seeded with 4:3 fallback; exactly 3 set() calls total
+        const fallbackHeight =
+          Math.round((mockPositioner.columnWidth * 3) / 4) +
+          CARD_CHROME_HEIGHT;
+        expect(mockPositioner.set).toHaveBeenCalledWith(2, fallbackHeight);
+        expect(mockPositioner.set).toHaveBeenCalledTimes(3);
       });
 
       // The true-pixel height for pieces[0] must differ from the naive height

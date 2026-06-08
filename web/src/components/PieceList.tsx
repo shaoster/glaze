@@ -539,12 +539,10 @@ const PieceList = (props: PieceListProps) => {
     );
 
     filteredPieces.forEach((piece, index) => {
-      if (piece.thumbnail?.crop) {
-        nextPositioner.set(
-          index,
-          getPieceCardLayout(piece, nextPositioner.columnWidth).estimatedHeight,
-        );
-      }
+      nextPositioner.set(
+        index,
+        getPieceCardLayout(piece, nextPositioner.columnWidth).estimatedHeight,
+      );
     });
 
     return nextPositioner;
