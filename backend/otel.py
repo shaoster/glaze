@@ -123,6 +123,7 @@ def configure_otel() -> bool:
     )
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+    from opentelemetry.sdk.metrics.view import View
 
     metric_exporter = OTLPMetricExporter(
         endpoint=os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"),
@@ -134,6 +135,17 @@ def configure_otel() -> bool:
             PeriodicExportingMetricReader(
                 metric_exporter, export_interval_millis=30_000
             )
+        ],
+        views=[
+            # Keep only http.status_code on the duration histogram; all other
+            # dimensions (route, method, scheme, host, port) are unused by the
+            # dashboard and inflate Grafana Cloud series quota.
+            View(
+                instrument_name="http.server.duration",
+                attribute_keys={"http.status_code"},
+            ),
+            # Active-requests gauge is only queried as a scalar sum — no per-label breakdown needed.
+            View(instrument_name="http.server.active_requests", attribute_keys=set()),
         ],
     )
     metrics.set_meter_provider(meter_provider)
@@ -158,6 +170,10 @@ def configure_otel() -> bool:
 
     DjangoInstrumentor().instrument()
     Psycopg2Instrumentor().instrument()
+
+    from opentelemetry.instrumentation.redis import RedisInstrumentor
+
+    RedisInstrumentor().instrument()
 
     # opentelemetry-instrumentation-django 0.62b1's _DjangoMiddleware has no
     # __acall__, so under ASGI/uvicorn it runs in a thread executor and loses

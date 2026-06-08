@@ -39,6 +39,7 @@ py_library(
         "@pypi//opentelemetry_instrumentation_asgi",
         "@pypi//opentelemetry_instrumentation_django",
         "@pypi//opentelemetry_instrumentation_psycopg2",
+        "@pypi//opentelemetry_instrumentation_redis",
         "@pypi//opentelemetry_exporter_otlp_proto_grpc",
         "@pypi//celery",
         "@pypi//redis",

@@ -105,6 +105,7 @@ dependencies = [
     "uvicorn==0.46.0",
     "whitenoise==6.9.0",
     "djangorestframework-simplejwt>=5.5.1",
+    "opentelemetry-instrumentation-redis>=0.62b1",
 ]
 
 [tool.uv]
