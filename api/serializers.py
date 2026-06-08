@@ -51,6 +51,7 @@ from .models import (
     CropRun,
     FiringTemperature,
     GlazeCombination,
+    GlobalModel,
     Piece,
     PieceState,
     models,
@@ -67,6 +68,7 @@ from .utils import (
     replace_piece_state_images,
 )
 from .workflow import (
+    _STATE_MAP,
     ENTRY_STATE,
     SUCCESSORS,
     TERMINAL_STATES,
@@ -337,28 +339,26 @@ class PieceStateSerializer(serializers.ModelSerializer):
         Global ref fields are returned as {id, name} objects; inline fields
         are returned as their raw JSON values.
         """
-        from .models import GlobalModel
-
         result = {}
-        # Iterate over all fields defined for this state in the workflow.
-        from .workflow import _STATE_MAP
-
-        state_config = _STATE_MAP.get(obj.state, {})
-        fields = state_config.get("fields", {})
+        fields = _STATE_MAP.get(obj.state, {}).get("fields", {})
         for field_name in fields:
             val = obj.resolve_custom_field(field_name)
             if val is None:
                 continue
-
             if isinstance(val, GlobalModel):
                 result[field_name] = {"id": str(val.pk), "name": val.name}
             else:
                 result[field_name] = val
         return result
 
+    def _piece_for_state(self, obj: PieceState):
+        """Return the parent Piece, preferring the context copy to avoid a FK query."""
+        return self.context.get("piece") or obj.piece
+
     @extend_schema_field(_state_enum_schema(nullable=True))
     def get_previous_state(self, obj: PieceState) -> str | None:
-        prefetched_states = obj.piece._prefetched_states()
+        piece = self._piece_for_state(obj)
+        prefetched_states = piece._prefetched_states()
         if prefetched_states is not None:
             for index, state in enumerate(prefetched_states):
                 if state.pk == obj.pk:
@@ -367,12 +367,10 @@ class PieceStateSerializer(serializers.ModelSerializer):
             return None
 
         if obj.order is not None:
-            prev = (
-                obj.piece.states.filter(order__lt=obj.order).order_by("-order").first()
-            )
+            prev = piece.states.filter(order__lt=obj.order).order_by("-order").first()
         else:
             prev = (
-                obj.piece.states.filter(created__lt=obj.created)
+                piece.states.filter(created__lt=obj.created)
                 .order_by("-created")
                 .first()
             )
@@ -380,7 +378,8 @@ class PieceStateSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(_state_enum_schema(nullable=True))
     def get_next_state(self, obj: PieceState) -> str | None:
-        prefetched_states = obj.piece._prefetched_states()
+        piece = self._piece_for_state(obj)
+        prefetched_states = piece._prefetched_states()
         if prefetched_states is not None:
             for index, state in enumerate(prefetched_states):
                 if state.pk == obj.pk:
@@ -393,12 +392,10 @@ class PieceStateSerializer(serializers.ModelSerializer):
             return None
 
         if obj.order is not None:
-            nxt = obj.piece.states.filter(order__gt=obj.order).order_by("order").first()
+            nxt = piece.states.filter(order__gt=obj.order).order_by("order").first()
         else:
             nxt = (
-                obj.piece.states.filter(created__gt=obj.created)
-                .order_by("created")
-                .first()
+                piece.states.filter(created__gt=obj.created).order_by("created").first()
             )
         return nxt.state if nxt else None
 
@@ -406,7 +403,8 @@ class PieceStateSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         request = self.context.get("request")
         if request is not None and not (
-            request.user.is_authenticated and instance.piece.user_id == request.user.id
+            request.user.is_authenticated
+            and self._piece_for_state(instance).user_id == request.user.id
         ):
             data["notes"] = ""
         return data
@@ -544,27 +542,46 @@ class PieceDetailSerializer(PieceSummarySerializer):
             "owner_alias",
         ]
 
+    def _get_all_states_data(self, obj: Piece) -> list:
+        """Serialize all piece states exactly once; cache per piece pk.
+
+        Keying by pk is necessary when this serializer is used with many=True
+        (e.g. data export), where DRF reuses the same child serializer instance
+        across multiple pieces.
+        """
+        if not hasattr(self, "_states_data_cache"):
+            self._states_data_cache: dict[object, list] = {}
+        if obj.pk not in self._states_data_cache:
+            self._states_data_cache[obj.pk] = list(
+                PieceStateSerializer(
+                    obj.states.all(),
+                    many=True,
+                    context={**self.context, "piece": obj},
+                ).data
+            )
+        return self._states_data_cache[obj.pk]
+
     @extend_schema_field(_relation_schema("PieceState", shape="detail"))
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
         assert cs is not None, f"Piece {obj.id} has no states"
-        return PieceStateSerializer(cs, context=self.context).data
+        return next(s for s in self._get_all_states_data(obj) if s["id"] == str(cs.pk))
 
     @extend_schema_field(_relation_array_schema("PieceState", shape="history"))
     def get_history(self, obj: Piece) -> list:
-        return list(
-            PieceStateSerializer(obj.states.all(), many=True, context=self.context).data
-        )
+        return self._get_all_states_data(obj)
 
     @extend_schema_field(serializers.CharField(allow_null=True, required=False))
     def get_showcase_video_url(self, obj: Piece) -> str | None:
         if not (obj.shared and not obj.is_editable):
             return None
         from .piece.showcase_views import SHOWCASE_VIDEO_TASK_TYPE
-        from .showcase import build_keepsake_storyboard, compute_storyboard_hash
 
         # Use the latest succeeded task so an in-progress retry does not hide
         # an existing artifact while it runs (or if it fails).
+        # Staleness detection is intentionally omitted here — rebuilding the full
+        # storyboard on every piece-detail GET is O(states × images) CPU overhead.
+        # The dedicated GET /api/pieces/{id}/showcase-video/ endpoint owns that logic.
         task = (
             AsyncTask.objects.filter(
                 user=obj.user,
@@ -577,19 +594,6 @@ class PieceDetailSerializer(PieceSummarySerializer):
         )
         if task is None:
             return None
-        input_params = task.input_params if isinstance(task.input_params, dict) else {}
-        stored_hash = input_params.get("input_hash")
-        if stored_hash:
-            # Rebuild the storyboard with the same exclusions used when
-            # rendering so custom renders are not incorrectly flagged stale.
-            storyboard = build_keepsake_storyboard(
-                obj,
-                excluded_image_keys=input_params.get("excluded_image_keys") or [],
-                excluded_note_keys=input_params.get("excluded_note_keys") or [],
-                music_track_id=input_params.get("music_track_id"),
-            )
-            if stored_hash != compute_storyboard_hash(storyboard.to_dict()):
-                return None
         result = task.result if isinstance(task.result, dict) else {}
         return result.get("artifact_url")
 
