@@ -1,7 +1,7 @@
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceList from "../PieceList";
@@ -23,6 +23,7 @@ vi.mock("../CloudinaryImage", () => ({
     style,
     url,
     alt,
+    onLoad,
   }: {
     crop?: unknown;
     requestedHeight?: number;
@@ -30,6 +31,7 @@ vi.mock("../CloudinaryImage", () => ({
     style?: React.CSSProperties;
     url: string;
     alt?: string;
+    onLoad?: React.ReactEventHandler<HTMLImageElement>;
   }) => (
     <img
       src={url}
@@ -38,6 +40,7 @@ vi.mock("../CloudinaryImage", () => ({
       data-requested-height={requestedHeight}
       data-requested-width={requestedWidth}
       style={style}
+      onLoad={onLoad}
     />
   ),
 }));
@@ -84,6 +87,37 @@ vi.mock("masonic", () => ({
     const [, forceRender] = useState(0);
     rerenderMasonryScroller = () => forceRender((value) => value + 1);
 
+    const [measuredHeights, setMeasuredHeights] = useState<Map<number, number>>(new Map());
+
+    useEffect(() => {
+      const handleScroll = () => {
+        const nextMeasured = new Map<number, number>();
+        items.forEach((item, index) => {
+          const key = itemKey ? itemKey(item, index) : index;
+          const element = document.querySelector(`[data-key="${key}"]`);
+          if (element) {
+            const thumbnailShell = element.querySelector('[data-testid="piece-thumbnail-shell"]');
+            if (thumbnailShell) {
+              const style = window.getComputedStyle(thumbnailShell);
+              const aspectRatioStr = style.aspectRatio;
+              if (aspectRatioStr) {
+                const parts = aspectRatioStr.split("/").map(Number);
+                if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {
+                  const ratio = parts[0] / parts[1];
+                  const actualHeight = Math.round(positioner.columnWidth / ratio) + CARD_CHROME_HEIGHT;
+                  nextMeasured.set(index, actualHeight);
+                  positioner.set(index, actualHeight);
+                }
+              }
+            }
+          }
+        });
+        setMeasuredHeights(nextMeasured);
+      };
+      window.addEventListener("scroll", handleScroll);
+      return () => window.removeEventListener("scroll", handleScroll);
+    }, [items, positioner, itemKey]);
+
     return (
       <div data-testid="piece-grid" style={{ position: "relative" }}>
         {(() => {
@@ -106,7 +140,7 @@ vi.mock("masonic", () => ({
           ]);
 
           return items.map((item, index) => {
-            const height = seededHeights.get(index) ?? itemHeightEstimate;
+            const height = measuredHeights.get(index) ?? seededHeights.get(index) ?? itemHeightEstimate;
             const column = columnHeights.indexOf(Math.min(...columnHeights));
             const top = columnHeights[column];
             const left = column * (columnWidth + gutter);
@@ -374,12 +408,21 @@ describe("PieceList", () => {
       });
     });
 
-    it("falls back to 4/3 aspect ratio on the thumbnail shell for pieces without a crop", () => {
+    it("falls back to 4/3 aspect ratio on the thumbnail shell for Cloudinary pieces without a crop", () => {
       // Without this fallback the shell collapses to zero height while
       // CloudinaryImage loads (opacity:0, no intrinsic size), causing masonic
       // to measure the card as chrome-only height and place the next card too
       // close, resulting in visible overlap once the image loads.
-      renderPieceList([makePiece({ thumbnail: null })]);
+      renderPieceList([
+        makePiece({
+          thumbnail: {
+            url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+            cloudinary_public_id: "sample",
+            cloud_name: "demo",
+            crop: null,
+          },
+        }),
+      ]);
       expect(screen.getByTestId("piece-thumbnail-shell")).toHaveStyle({
         aspectRatio: `${DEFAULT_THUMBNAIL_ASPECT_WIDTH} / ${DEFAULT_THUMBNAIL_ASPECT_HEIGHT}`,
       });
@@ -388,20 +431,18 @@ describe("PieceList", () => {
     it("passes requestedHeight matching the 4/3 fallback to CloudinaryImage for pieces without a crop", () => {
       // The Cloudinary fill request must match the shell aspect ratio so the
       // delivered image fills the container without driving reflow after load.
-      const { container } = renderPieceList([
-        makePiece({
-          thumbnail: {
-            url: "https://example.com/img.jpg",
-            cloudinary_public_id: "pieces/nocrop",
-            cloud_name: "demo",
-            crop: null,
-          },
-        }),
-      ]);
+      const piece = makePiece({
+        thumbnail: {
+          url: "https://example.com/img.jpg",
+          cloudinary_public_id: "pieces/nocrop",
+          cloud_name: "demo",
+          crop: null,
+        },
+      });
+      const { container } = renderPieceList([piece]);
       const image = container.querySelector("img")!;
       const rw = Number(image.getAttribute("data-requested-width"));
       const rh = Number(image.getAttribute("data-requested-height"));
-      const piece = { thumbnail: { crop: null } } as PieceSummary;
       expect(rh).toBe(getThumbnailRequestedHeight(piece, rw));
     });
 
@@ -473,20 +514,20 @@ describe("PieceList", () => {
       );
     }
 
-    it("falls back to 4:3 aspect ratio height when thumbnail is null", () => {
+    it("falls back to 1:1 aspect ratio height when thumbnail is null", () => {
       expect(estimateCardHeight({ thumbnail: null } as PieceSummary, 160)).toBe(
-        fallbackAt(160),
+        160 + CARD_CHROME_HEIGHT,
       );
     });
 
     it("falls back to 4:3 aspect ratio height when crop is null", () => {
       expect(
-        estimateCardHeight({ thumbnail: { crop: null } } as PieceSummary, 160),
+        estimateCardHeight({ thumbnail: { url: "https://example.com/img.jpg", crop: null } } as PieceSummary, 160),
       ).toBe(fallbackAt(160));
     });
 
     it("falls back to 4:3 aspect ratio height when crop is absent", () => {
-      expect(estimateCardHeight({ thumbnail: {} } as PieceSummary, 160)).toBe(
+      expect(estimateCardHeight({ thumbnail: { url: "https://example.com/img.jpg" } } as PieceSummary, 160)).toBe(
         fallbackAt(160),
       );
     });
@@ -513,7 +554,7 @@ describe("PieceList", () => {
 
     it("falls back to 4:3 aspect ratio height when crop.width is 0 (guard against division by zero)", () => {
       const piece = {
-        thumbnail: { crop: { x: 0, y: 0, width: 0, height: 200 } },
+        thumbnail: { url: "https://example.com/img.jpg", crop: { x: 0, y: 0, width: 0, height: 200 } },
       } as PieceSummary;
       expect(estimateCardHeight(piece, 160)).toBe(fallbackAt(160));
     });
@@ -615,10 +656,8 @@ describe("PieceList", () => {
           CARD_CHROME_HEIGHT;
         expect(mockPositioner.set).toHaveBeenCalledWith(1, naiveHeight);
 
-        // pieces[2]: no crop -> seeded with 4:3 fallback; exactly 3 set() calls total
-        const fallbackHeight =
-          Math.round((mockPositioner.columnWidth * 3) / 4) +
-          CARD_CHROME_HEIGHT;
+        // pieces[2]: no crop -> seeded with 1:1 fallback for local thumbnail; exactly 3 set() calls total
+        const fallbackHeight = mockPositioner.columnWidth + CARD_CHROME_HEIGHT;
         expect(mockPositioner.set).toHaveBeenCalledWith(2, fallbackHeight);
         expect(mockPositioner.set).toHaveBeenCalledTimes(3);
       });
@@ -1261,6 +1300,37 @@ describe("PieceList", () => {
       render(<RouterProvider router={router} />);
       await new Promise<void>((resolve) => setTimeout(resolve, 50));
       expect(onLoadMore).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("layout stability with default thumbnails", () => {
+    it("keeps layout stable for default SVG thumbnails upon loading and scrolling", () => {
+      const pieces = Array.from({ length: 9 }, (_, i) =>
+        makePiece({
+          id: `aaaaaaaa-0000-0000-0000-00000000000${i + 1}`,
+          thumbnail: null,
+        }),
+      );
+
+      const { container } = renderPieceList(pieces);
+
+      const grid = screen.getByTestId("piece-grid");
+      const cardsBefore = Array.from(grid.children) as HTMLDivElement[];
+      const topsBefore = cardsBefore.map((c) => c.getAttribute("data-top"));
+
+      const images = container.querySelectorAll("img");
+      images.forEach((img) => {
+        Object.defineProperty(img, "naturalWidth", { value: 100, configurable: true });
+        Object.defineProperty(img, "naturalHeight", { value: 100, configurable: true });
+        fireEvent.load(img);
+      });
+
+      fireEvent.scroll(window);
+
+      const cardsAfter = Array.from(grid.children) as HTMLDivElement[];
+      const topsAfter = cardsAfter.map((c) => c.getAttribute("data-top"));
+
+      expect(topsAfter).toEqual(topsBefore);
     });
   });
 });

@@ -1,3 +1,4 @@
+import { DEFAULT_THUMBNAIL } from "./thumbnailConstants";
 import type { PieceSummary } from "../util/types";
 
 // Border, body padding, title, activity caption, and the tag row all live
@@ -22,11 +23,15 @@ export interface PieceCardLayout {
 }
 
 function getThumbnailMetrics(piece: PieceSummary) {
-  const crop = piece.thumbnail?.crop;
-  const origW = piece.thumbnail?.width;
-  const origH = piece.thumbnail?.height;
+  const thumbnail = piece.thumbnail;
+  const url = thumbnail?.url ?? DEFAULT_THUMBNAIL;
+  const crop = thumbnail?.crop;
+  const origW = thumbnail?.width;
+  const origH = thumbnail?.height;
   const hasCrop = !!(crop && crop.width > 0 && crop.height > 0);
   const hasOriginalDimensions = !!(origW && origH);
+  const isLocal = url.startsWith("/thumbnails/");
+  const isCloudinary = !!(thumbnail?.cloudinary_public_id && thumbnail?.cloud_name);
 
   if (hasCrop && crop) {
     return {
@@ -35,6 +40,20 @@ function getThumbnailMetrics(piece: PieceSummary) {
       aspectRatio: hasOriginalDimensions
         ? `${crop.width * origW} / ${crop.height * origH}`
         : `${crop.width} / ${crop.height}`,
+    } as const;
+  }
+
+  if (isLocal) {
+    return {
+      hasCrop: false,
+      aspectRatio: "1 / 1",
+    } as const;
+  }
+
+  if (!isCloudinary && hasOriginalDimensions) {
+    return {
+      hasCrop: false,
+      aspectRatio: `${origW} / ${origH}`,
     } as const;
   }
 
@@ -68,6 +87,29 @@ export function getPieceCardLayout(
             ) + CARD_CHROME_HEIGHT
           : Math.round((columnWidth * crop.height) / crop.width) +
             CARD_CHROME_HEIGHT,
+    };
+  }
+
+  const url = piece.thumbnail?.url ?? DEFAULT_THUMBNAIL;
+  const isLocal = url.startsWith("/thumbnails/");
+  if (isLocal) {
+    return {
+      thumbnailAspectRatio: thumbnail.aspectRatio,
+      estimatedHeight: columnWidth + CARD_CHROME_HEIGHT,
+    };
+  }
+
+  const isCloudinary = !!(
+    piece.thumbnail?.cloudinary_public_id && piece.thumbnail?.cloud_name
+  );
+  const origW = piece.thumbnail?.width;
+  const origH = piece.thumbnail?.height;
+
+  if (!isCloudinary && origW && origH) {
+    return {
+      thumbnailAspectRatio: thumbnail.aspectRatio,
+      estimatedHeight:
+        Math.round((columnWidth * origH) / origW) + CARD_CHROME_HEIGHT,
     };
   }
 
