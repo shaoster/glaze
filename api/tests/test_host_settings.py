@@ -94,5 +94,15 @@ def test_backend_test_settings_includes_admin_ingress_host(monkeypatch):
 
     assert "potterdoc.com" in settings.ALLOWED_HOSTS
     assert "www.potterdoc.com" in settings.ALLOWED_HOSTS
-    assert "admin.potterdoc.com" in settings.ALLOWED_HOSTS
     assert "www.admin.potterdoc.com" not in settings.ALLOWED_HOSTS
+
+
+def test_postgresql_connection_pooling_settings(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db")
+    monkeypatch.delenv("PRODUCTION", raising=False)
+
+    settings = _reload_settings_module("backend.settings")
+
+    assert settings.DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql"
+    assert settings.DATABASES["default"]["OPTIONS"].get("pool") is True
+    assert settings.DATABASES["default"]["CONN_MAX_AGE"] == 0

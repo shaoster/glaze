@@ -263,6 +263,7 @@ else:
 # Enable native connection pooling for PostgreSQL
 if DATABASES.get("default", {}).get("ENGINE") == "django.db.backends.postgresql":
     DATABASES["default"].setdefault("OPTIONS", {})["pool"] = True
+    DATABASES["default"]["CONN_MAX_AGE"] = 0
 
 
 # Password validation
