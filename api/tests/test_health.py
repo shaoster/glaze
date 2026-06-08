@@ -57,6 +57,30 @@ class TestHealthReady:
         assert response.status_code == 503
         assert response.data["checks"]["async_tasks"] is False
 
+    def test_migrations_check_caching(self, rf):
+        from api import health_views
+
+        # Reset global state to clean test state
+        original_migrations_ok = health_views._MIGRATIONS_OK
+        health_views._MIGRATIONS_OK = False
+
+        try:
+            # First call should execute the actual check logic and cache the result
+            response = self._get_direct(rf)
+            assert response.status_code == 200
+            assert health_views._MIGRATIONS_OK is True
+
+            # Subsequent calls should return True instantly from _check_migrations,
+            # even if the database connection is broken (because it's cached).
+            with patch("django.db.connections") as mock_connections:
+                mock_connections.__getitem__.side_effect = RuntimeError(
+                    "should not be called"
+                )
+                assert health_views._check_migrations() is True
+
+        finally:
+            health_views._MIGRATIONS_OK = original_migrations_ok
+
     def test_ignores_untrusted_forwarded_host_header(self, rf):
         # Direct view call doesn't use standard Django settings for X-Forwarded-Host
         # in the same way the test client does, but we can still test the logic.
