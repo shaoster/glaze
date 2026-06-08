@@ -134,10 +134,13 @@ def auth_me(request: Request) -> Response:
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
     user = request.user if request.user.is_authenticated else None
+    _DOMAIN_REISSUED = "_domain_reissued"
     if user is not None and getattr(settings, "SESSION_COOKIE_DOMAIN", None):
-        # Re-issue the authenticated session with the shared parent-domain
-        # cookie so the admin subdomain can receive the same login state.
-        request.session.modified = True
+        # Re-issue the session cookie once with the shared parent-domain so
+        # the admin subdomain can share login state. After the first call the
+        # flag is stored in the session and no further writes are needed.
+        if not request.session.get(_DOMAIN_REISSUED):
+            request.session[_DOMAIN_REISSUED] = True
     admin_host = settings.ADMIN_INGRESS_HOST
     mock_idp_url = (
         "/api/auth/mock-idp/authorize/?redirect_uri=/api/auth/mock-idp/complete/"

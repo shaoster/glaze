@@ -523,6 +523,25 @@ class TestAuthMe:
             response.cookies[settings.SESSION_COOKIE_NAME]["domain"] == ".potterdoc.com"
         )
 
+    def test_session_not_dirtied_on_repeated_auth_me_calls(self, user, settings):
+        settings.GOOGLE_OAUTH_CLIENT_ID = "my-client-id"
+        settings.SESSION_COOKIE_DOMAIN = ".potterdoc.com"
+
+        browser = Client()
+        browser.force_login(user)
+
+        # First call: triggers the one-time domain re-issue; session is saved.
+        browser.get("/api/auth/me/")
+
+        # Second call: domain already re-issued; session must NOT be saved again.
+        # Django only emits Set-Cookie for the session when session.modified is True.
+        response = browser.get("/api/auth/me/")
+
+        assert settings.SESSION_COOKIE_NAME not in response.cookies, (
+            "session was re-saved on the second /api/auth/me/ call — "
+            "request.session.modified should not be set after the domain is already re-issued"
+        )
+
 
 @pytest.mark.django_db
 class TestAuthGoogle:
