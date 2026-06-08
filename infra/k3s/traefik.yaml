@@ -20,12 +20,11 @@ spec:
     env:
       - name: GOGC
         value: "25"
-      - name: GOMEMLIMIT
-        value: "60MiB"
     deployment:
       podAnnotations:
         prometheus.io/port: "8082"
         prometheus.io/scrape: "true"
+      goMemLimitPercentage: 0.75
     providers:
       kubernetesIngress:
         publishedService:
