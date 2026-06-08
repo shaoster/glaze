@@ -282,6 +282,12 @@ class CaptionedImageSerializer(serializers.Serializer):
     cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
     crop = ImageCropSerializer(required=False, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    width = serializers.IntegerField(
+        required=False, allow_null=True, default=None, min_value=0
+    )
+    height = serializers.IntegerField(
+        required=False, allow_null=True, default=None, min_value=0
+    )
 
 
 class GlazeCombinationImagePieceSerializer(serializers.Serializer):
@@ -563,6 +569,7 @@ class PieceDetailSerializer(PieceSummarySerializer):
     history = serializers.SerializerMethodField()
     showcase_video_url = serializers.SerializerMethodField()
     owner_alias = serializers.SerializerMethodField()
+
     class Meta(PieceSummarySerializer.Meta):
         fields = PieceSummarySerializer.Meta.fields + [
             "history",

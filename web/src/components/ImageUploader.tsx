@@ -169,6 +169,8 @@ export default function ImageUploader({
             cloudinary_public_id: result.info.public_id,
             cloud_name: config.cloud_name,
             crop: null,
+            width: result.info.width ?? null,
+            height: result.info.height ?? null,
           });
         },
       },

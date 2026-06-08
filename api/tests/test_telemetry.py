@@ -43,7 +43,9 @@ class TestTelemetryProxy:
         permit_return.set()  # release the background thread immediately
 
         assert response.status_code == 200
-        assert elapsed < 5.0, f"view blocked for {elapsed:.3f}s — should return before collector"
+        assert elapsed < 5.0, (
+            f"view blocked for {elapsed:.3f}s — should return before collector"
+        )
         assert collector_called.wait(timeout=5.0), "collector was never called"
 
     def test_browser_traces_proxies_raw_otlp_payload(self, client, monkeypatch):
@@ -162,7 +164,9 @@ class TestTelemetryProxy:
 
         def post_side_effect(*args, **kwargs):
             called.set()
-            return httpx.Response(200, content=b"", headers={"content-type": "application/json"})
+            return httpx.Response(
+                200, content=b"", headers={"content-type": "application/json"}
+            )
 
         monkeypatch.setattr("api.telemetry_views.httpx.post", post_side_effect)
         response = client.post(
@@ -229,7 +233,9 @@ class TestTelemetryProxy:
                 data=b"trace-payload",
                 content_type="application/x-protobuf",
             )
-            assert logged.wait(timeout=5.0), "warning for connection error was never logged"
+            assert logged.wait(timeout=5.0), (
+                "warning for connection error was never logged"
+            )
         finally:
             tv_logger.removeHandler(handler)
 
@@ -275,7 +281,9 @@ class TestTelemetryProxy:
 
         def post_side_effect(*args, **kwargs):
             called.set()
-            return httpx.Response(200, content=b"", headers={"content-type": "application/json"})
+            return httpx.Response(
+                200, content=b"", headers={"content-type": "application/json"}
+            )
 
         monkeypatch.setattr("api.telemetry_views.httpx.post", post_side_effect)
 
