@@ -144,6 +144,7 @@ eslint_pkg.eslint(
     name = "eslint_run",
     srcs = [
         "eslint.config.js",
+        ":storybook_lib",
         ":web_lib",
         ":web_test_configs",
         ":web_test_files",
@@ -961,6 +962,7 @@ vitest_test(
     name = "web_piece_list_test",
     srcs = [
         "src/components/__tests__/PieceList.test.tsx",
+        "src/components/__tests__/pieceCardHeight.test.ts",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [
@@ -968,6 +970,7 @@ vitest_test(
     ],
     expected_coverage = [
         "web/src/components/PieceList*",
+        "web/src/components/pieceCardHeight*",
     ],
 )
 

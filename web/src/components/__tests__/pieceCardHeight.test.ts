@@ -89,8 +89,20 @@ describe("getPieceCardLayout", () => {
     });
   });
 
-  it("falls back to the 4:3 shell and Cloudinary request when there is no crop", () => {
+  it("falls back to the 1:1 shell for local thumbnails (including null/default)", () => {
     const piece = makePiece({ thumbnail: null });
+
+    const layout = getPieceCardLayout(piece, 240);
+
+    expect(layout).toEqual({
+      thumbnailAspectRatio: "1 / 1",
+      estimatedHeight: 240 + CARD_CHROME_HEIGHT,
+      requestedHeight: undefined,
+    });
+  });
+
+  it("falls back to 4:3 for non-cloudinary image without dimensions and without crop", () => {
+    const piece = makePiece(); // non-cloudinary, url only, no dimensions
 
     const layout = getPieceCardLayout(piece, 240);
 
@@ -105,6 +117,26 @@ describe("getPieceCardLayout", () => {
         (240 * DEFAULT_THUMBNAIL_ASPECT_HEIGHT) /
           DEFAULT_THUMBNAIL_ASPECT_WIDTH,
       ),
+    });
+  });
+
+  it("uses original dimensions for non-cloudinary thumbnail without crop", () => {
+    const piece = makePiece({
+      thumbnail: {
+        url: "https://example.com/img.jpg",
+        cloudinary_public_id: null,
+        cloud_name: null,
+        width: 600,
+        height: 800,
+      },
+    });
+
+    const layout = getPieceCardLayout(piece, 220);
+
+    expect(layout).toEqual({
+      thumbnailAspectRatio: "600 / 800",
+      estimatedHeight: Math.round((220 * 800) / 600) + CARD_CHROME_HEIGHT,
+      requestedHeight: undefined,
     });
   });
 });
