@@ -161,7 +161,7 @@ def piece_detail(request: Request, piece_id: str) -> Response:
         )
         serializer.is_valid(raise_exception=True)
         serializer.update(piece, serializer.validated_data)
-        piece.refresh_from_db()
+        piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
     return Response(_serialize_piece_detail(piece, request))
 
 

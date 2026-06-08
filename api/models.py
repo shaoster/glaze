@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 from django.apps import apps
 from django.conf import settings
 from django.db import models
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 
 from backend.otel import traced_class
@@ -225,6 +225,12 @@ _register_globals()
 # ---------------------------------------------------------------------------
 
 
+# Canonical ordering for "current state" — the most recent state by position.
+# Used both in the DB subquery annotation and in the Python prefetch fallback so
+# the two paths can never diverge.
+CURRENT_STATE_ORDERING = (F("order").desc(nulls_last=True), F("created").desc())
+
+
 @traced_class
 class Piece(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -289,20 +295,9 @@ class Piece(models.Model):
         if states is not None:
             if not states:
                 return None
-            return max(
-                states,
-                key=lambda state: (
-                    state.order is not None,
-                    state.order if state.order is not None else -1,
-                    state.created,
-                ),
-            )
-
-        from django.db.models import F
-
-        return self.states.order_by(
-            F("order").desc(nulls_last=True), "-created"
-        ).first()
+            # Python mirror of CURRENT_STATE_ORDERING
+            return max(states, key=self._state_sort_key)
+        return self.states.order_by(*CURRENT_STATE_ORDERING).first()
 
     @property
     def last_modified(self):
@@ -387,6 +382,11 @@ class PieceState(models.Model):
 
     class Meta:
         ordering = ["order", "created"]
+        indexes = [
+            models.Index(
+                fields=["piece", "-last_modified"], name="piecestate_piece_lm_idx"
+            )
+        ]
 
     def __init__(self, *args, **kwargs):
         self._pending_images = kwargs.pop("images", None)

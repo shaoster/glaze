@@ -41,6 +41,8 @@ choices worth knowing about:
 from typing import Any
 
 from django.apps import apps
+from django.db.models import DateTimeField, OuterRef, Subquery
+from django.db.models.functions import Coalesce, Greatest
 from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
@@ -80,6 +82,11 @@ from .workflow import (
 
 GLAZE_NORMALIZER_EXTENSION = "x-glaze-normalizer"
 GLAZE_RELATION_EXTENSION = "x-glaze-relation"
+
+# Sentinel: distinguishes "annotation present but NULL" from "annotation absent".
+# Used in get_thumbnail so we never fall back to get_thumbnail_crop() when the
+# thumbnail_crop annotation was evaluated by the DB (even if it returned NULL).
+_NOT_ANNOTATED = object()
 
 
 def _schema_ref(component_name: str, **extensions: Any) -> dict[str, Any]:
@@ -454,7 +461,7 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         child=serializers.CharField(),
         read_only=True,
     )
-    last_modified = serializers.DateTimeField(read_only=True)
+    last_modified = serializers.SerializerMethodField()
 
     class Meta:
         model = Piece
@@ -476,14 +483,36 @@ class PieceSummarySerializer(serializers.ModelSerializer):
 
     @classmethod
     def prepare_global_entry_queryset(cls, qs, display_field):
+        latest_state_lm = Subquery(
+            PieceState.objects.filter(piece=OuterRef("pk"))
+            .order_by("-last_modified")
+            .values("last_modified")[:1],
+            output_field=DateTimeField(),
+        )
         return (
             qs.select_related("current_location", "thumbnail", "user__profile")
+            .annotate(
+                computed_last_modified=Greatest(
+                    "fields_last_modified",
+                    Coalesce(latest_state_lm, "fields_last_modified"),
+                )
+            )
             .prefetch_related("states__image_links__image", "tag_links__tag")
             .order_by(display_field)
         )
 
+    @extend_schema_field(serializers.DateTimeField())
+    def get_last_modified(self, obj: Piece):
+        clm = getattr(obj, "computed_last_modified", None)
+        if clm is not None:
+            return clm
+        return obj.last_modified
+
     @extend_schema_field(_state_summary_relation_schema())
     def get_current_state(self, obj: Piece) -> dict:
+        name = getattr(obj, "current_state_name", None)
+        if name is not None:
+            return {"state": name}
         cs = obj.current_state
         assert cs is not None, f"Piece {obj.id} has no states"
         return {"state": cs.state}
@@ -504,8 +533,8 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         thumbnail = image_to_dict(obj.thumbnail)
         if thumbnail is None:
             return None
-        crop = getattr(obj, "thumbnail_crop", None)
-        if crop is None:
+        crop = getattr(obj, "thumbnail_crop", _NOT_ANNOTATED)
+        if crop is _NOT_ANNOTATED:
             crop = obj.get_thumbnail_crop()
         return {**thumbnail, "crop": crop}
 
@@ -534,7 +563,6 @@ class PieceDetailSerializer(PieceSummarySerializer):
     history = serializers.SerializerMethodField()
     showcase_video_url = serializers.SerializerMethodField()
     owner_alias = serializers.SerializerMethodField()
-
     class Meta(PieceSummarySerializer.Meta):
         fields = PieceSummarySerializer.Meta.fields + [
             "history",
@@ -560,6 +588,13 @@ class PieceDetailSerializer(PieceSummarySerializer):
                 ).data
             )
         return self._states_data_cache[obj.pk]
+
+    @extend_schema_field(serializers.DateTimeField())
+    def get_last_modified(self, obj: Piece):
+        # Always use the Python property: single-object responses (detail, PATCH,
+        # POST) must not use the computed_last_modified annotation which can be
+        # absent or stale after a mutation.
+        return obj.last_modified
 
     @extend_schema_field(_relation_schema("PieceState", shape="detail"))
     def get_current_state(self, obj: Piece) -> dict:
