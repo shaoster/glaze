@@ -563,12 +563,6 @@ class PieceDetailSerializer(PieceSummarySerializer):
     history = serializers.SerializerMethodField()
     showcase_video_url = serializers.SerializerMethodField()
     owner_alias = serializers.SerializerMethodField()
-    # Override the list-view SerializerMethodField with a plain DateTimeField so
-    # the Python Piece.last_modified property is always used here (correct for
-    # single-object responses that may not carry the computed_last_modified
-    # annotation, or may carry a stale one).
-    last_modified = serializers.DateTimeField(read_only=True)
-
     class Meta(PieceSummarySerializer.Meta):
         fields = PieceSummarySerializer.Meta.fields + [
             "history",
@@ -594,6 +588,13 @@ class PieceDetailSerializer(PieceSummarySerializer):
                 ).data
             )
         return self._states_data_cache[obj.pk]
+
+    @extend_schema_field(serializers.DateTimeField())
+    def get_last_modified(self, obj: Piece):
+        # Always use the Python property: single-object responses (detail, PATCH,
+        # POST) must not use the computed_last_modified annotation which can be
+        # absent or stale after a mutation.
+        return obj.last_modified
 
     @extend_schema_field(_relation_schema("PieceState", shape="detail"))
     def get_current_state(self, obj: Piece) -> dict:
