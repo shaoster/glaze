@@ -9,6 +9,8 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
+_MIGRATIONS_OK = False
+
 
 def _check_database() -> bool:
     from django.db import connections
@@ -20,6 +22,10 @@ def _check_database() -> bool:
 
 
 def _check_migrations() -> bool:
+    global _MIGRATIONS_OK
+    if _MIGRATIONS_OK:
+        return True
+
     import os
 
     from django.apps import apps
@@ -37,6 +43,7 @@ def _check_migrations() -> bool:
             if fname.endswith(".py") and not fname.startswith("_"):
                 if (app_config.label, fname[:-3]) not in applied:
                     return False
+    _MIGRATIONS_OK = True
     return True
 
 

@@ -91,7 +91,7 @@ def configure_otel() -> bool:
     from opentelemetry import trace
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
     from opentelemetry.instrumentation.django import DjangoInstrumentor
-    from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
+    from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
     from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -169,7 +169,7 @@ def configure_otel() -> bool:
         logging.getLogger(name).addHandler(otel_handler)
 
     DjangoInstrumentor().instrument()
-    Psycopg2Instrumentor().instrument()
+    PsycopgInstrumentor().instrument()
 
     from opentelemetry.instrumentation.redis import RedisInstrumentor
 
