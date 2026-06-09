@@ -123,7 +123,7 @@ def configure_otel() -> bool:
     )
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-    from opentelemetry.sdk.metrics.view import View
+    from opentelemetry.sdk.metrics.view import DropAggregation, View
 
     metric_exporter = OTLPMetricExporter(
         endpoint=os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"),
@@ -146,6 +146,16 @@ def configure_otel() -> bool:
             ),
             # Active-requests gauge is only queried as a scalar sum — no per-label breakdown needed.
             View(instrument_name="http.server.active_requests", attribute_keys=set()),
+            # Drop unused HTTP metrics and OTel SDK self-telemetry to save series quota.
+            View(
+                instrument_name="http.server.request.size",
+                aggregation=DropAggregation(),
+            ),
+            View(
+                instrument_name="http.server.response.size",
+                aggregation=DropAggregation(),
+            ),
+            View(instrument_name="otel.sdk.*", aggregation=DropAggregation()),
         ],
     )
     metrics.set_meter_provider(meter_provider)

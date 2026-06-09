@@ -228,3 +228,33 @@ def test_configure_otel_returns_false_when_disabled(monkeypatch):
     monkeypatch.delenv("OTEL_ENABLED", raising=False)
     importlib.reload(otel_mod)
     assert otel_mod.configure_otel() is False
+
+
+def test_configure_otel_registers_meter_provider_with_drop_views(monkeypatch):
+    import backend.otel as otel_mod
+
+    monkeypatch.setenv("OTEL_ENABLED", "1")
+    open_patch = _make_otel_mocks(monkeypatch)
+
+    with open_patch:
+        importlib.reload(otel_mod)
+        result = otel_mod.configure_otel()
+
+    assert result is True
+    from opentelemetry import metrics
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.metrics.view import DropAggregation
+
+    meter_provider = metrics.get_meter_provider()
+    assert isinstance(meter_provider, MeterProvider)
+
+    # Inspect views configured on the provider
+    views = meter_provider._sdk_config.views
+    instrument_names = {v._instrument_name for v in views if v._instrument_name}
+    assert "http.server.request.size" in instrument_names
+    assert "http.server.response.size" in instrument_names
+    assert "otel.sdk.*" in instrument_names
+
+    # Check that they have DropAggregation
+    drop_views = [v for v in views if isinstance(v._aggregation, DropAggregation)]
+    assert len(drop_views) >= 3
