@@ -93,6 +93,13 @@ gh api graphql -f query='
       repository { name }
     }
   }' -f projectId="$PROJECT_ID" -f repositoryId="$REPO_ID"
+
+gh api graphql -f query='
+  mutation($projectId: ID!) {
+    updateProjectV2(input: { projectId: $projectId, public: true }) {
+      projectV2 { id }
+    }
+  }' -f projectId="$PROJECT_ID"
 ```
 
 **Capture `PROJECT_ID` and `PROJECT_URL`** for use in Step 6.
