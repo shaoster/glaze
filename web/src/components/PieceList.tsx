@@ -20,6 +20,11 @@ import {
 import { alpha, useTheme } from "@mui/material/styles";
 import type { PieceSummary, TagEntry } from "../util/types";
 import { formatState, isTerminalState } from "../util/workflow";
+import {
+  type FilterCategory,
+  parseFilterParam,
+  parseTagIdsParam,
+} from "../util/pieceFilters";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import {
@@ -87,8 +92,6 @@ function useWindowHeight(): number {
 
 const KILN_COLOR = "oklch(0.72 0.13 55)";
 
-type FilterCategory = "wip" | "completed" | "discarded" | "shared";
-
 interface FilterOption {
   value: FilterCategory;
   label: string;
@@ -107,27 +110,6 @@ const FILTER_OPTIONS: FilterOption[] = [
   SHARED_FILTER_OPTION,
 ];
 
-
-const VALID_FILTER_CATEGORIES = new Set<FilterCategory>([
-  "wip",
-  "completed",
-  "discarded",
-  "shared",
-]);
-
-function parseFilterParam(param: string | null): FilterCategory[] {
-  if (!param) return [];
-  return param
-    .split(",")
-    .filter((v): v is FilterCategory =>
-      VALID_FILTER_CATEGORIES.has(v as FilterCategory),
-    );
-}
-
-function parseTagIdsParam(param: string | null): string[] {
-  if (!param) return [];
-  return param.split(",").filter(Boolean);
-}
 
 function daysSince(date: Date): number {
   return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
@@ -392,6 +374,7 @@ const PieceCard = ({ piece, width, returnTo }: PieceCardProps) => {
 
 type PieceListProps = {
   pieces: PieceSummary[];
+  count?: number;
   onNewPiece?: () => void;
   sortOrder?: PieceSortOrder;
   onSortChange?: (order: PieceSortOrder) => void;
@@ -404,6 +387,7 @@ type PieceListProps = {
 const PieceList = (props: PieceListProps) => {
   const {
     pieces,
+    count,
     onNewPiece,
     sortOrder = DEFAULT_PIECE_SORT,
     onSortChange,
@@ -625,7 +609,7 @@ const PieceList = (props: PieceListProps) => {
                   flexShrink: 0,
                 }}
               >
-                · {pieces.length}
+                · {count ?? pieces.length}
                 {hasMore ? "+" : ""} pieces
               </Typography>
             </Box>

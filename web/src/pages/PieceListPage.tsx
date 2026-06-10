@@ -18,25 +18,18 @@ import {
 } from "../util/api";
 import type { PieceSortOrder } from "../util/api";
 import { SUCCESSORS } from "../util/workflow";
+import {
+  type FilterCategory,
+  parseFilterParam,
+  parseTagIdsParam,
+} from "../util/pieceFilters";
 import NewPieceDialog from "../components/NewPieceDialog";
 import PieceList from "../components/PieceList";
 
-type FilterCategory = "wip" | "completed" | "discarded" | "shared";
-const VALID_FILTER_CATEGORIES = new Set<FilterCategory>(["wip", "completed", "discarded", "shared"]);
-
-function parseFilterParam(param: string | null): FilterCategory[] {
-  if (!param) return [];
-  return param
-    .split(",")
-    .filter((v): v is FilterCategory => VALID_FILTER_CATEGORIES.has(v as FilterCategory));
-}
-
-function parseTagIdsParam(param: string | null): string[] {
-  if (!param) return [];
-  return param.split(",").filter(Boolean);
-}
-
-/** Translate UI filter chips to the `state` array expected by the API. */
+/**
+ * Translate UI filter chips to the `state` array expected by the API.
+ * "shared" is intentionally excluded — it maps to the separate `shared` param.
+ */
 function filtersToStateParam(activeFilters: FilterCategory[]): string[] | undefined {
   const stateNames: string[] = [];
   if (activeFilters.includes("completed")) stateNames.push("completed");
@@ -68,8 +61,14 @@ export default function PieceListPage() {
   );
 
   const stateFilter = useMemo(() => filtersToStateParam(activeFilters), [activeFilters]);
-  const sharedFilter = activeFilters.includes("shared") ? true : undefined;
-  const tagIdsParam = activeTagIds.length > 0 ? activeTagIds.join(",") : undefined;
+  const sharedFilter = useMemo(
+    () => (activeFilters.includes("shared") ? true : undefined),
+    [activeFilters],
+  );
+  const tagIdsParam = useMemo(
+    () => (activeTagIds.length > 0 ? activeTagIds.join(",") : undefined),
+    [activeTagIds],
+  );
 
   // Stable cache key components — sort array for determinism
   const stateKey = stateFilter ? [...stateFilter].sort().join(",") : "";
@@ -210,6 +209,7 @@ export default function PieceListPage() {
       {!isLoading && !isError && (
         <PieceList
           pieces={pieces}
+          count={count}
           onNewPiece={handleOpenDialog}
           sortOrder={sortOrder}
           onSortChange={handleSortChange}

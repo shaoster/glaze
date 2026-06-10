@@ -327,11 +327,9 @@ class TestPiecesList:
         """Regression for #885: a completed piece beyond page 1 must appear when
         state=completed is passed — previously client-side filtering missed it."""
         # Create 18 wip pieces (more than page size of 16) plus 1 completed piece.
-        wip_pieces = []
         for i in range(18):
             p = Piece.objects.create(user=user, name=f"Wip {i}")
             PieceState.objects.create(piece=p, state=ENTRY_STATE, order=1)
-            wip_pieces.append(p)
 
         done = Piece.objects.create(user=user, name="Done Vase")
         PieceState.objects.create(piece=done, state=ENTRY_STATE, order=1)
@@ -379,3 +377,47 @@ class TestPiecesList:
         data = response.json()
         assert data["count"] == 1
         assert data["results"][0]["id"] == str(private.id)
+
+    def test_state_filter_unknown_state_returns_empty(self, client, user):
+        """An unrecognised state name should silently return zero results."""
+        p = Piece.objects.create(user=user, name="Bowl")
+        PieceState.objects.create(piece=p, state=ENTRY_STATE, order=1)
+
+        response = client.get("/api/pieces/", {"state": "nonexistent_state"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 0
+        assert data["results"] == []
+
+    def test_state_and_tag_filters_are_combined_with_and_semantics(
+        self, client, user
+    ):
+        """?state=completed combined with ?tag_ids= must apply both filters (AND)."""
+        tag = Tag.objects.create(user=user, name="Gift")
+
+        completed_tagged = Piece.objects.create(user=user, name="Completed & Tagged")
+        PieceState.objects.create(piece=completed_tagged, state=ENTRY_STATE, order=1)
+        PieceState.objects.create(piece=completed_tagged, state="completed", order=2)
+
+        completed_untagged = Piece.objects.create(user=user, name="Completed Untagged")
+        PieceState.objects.create(piece=completed_untagged, state=ENTRY_STATE, order=1)
+        PieceState.objects.create(piece=completed_untagged, state="completed", order=2)
+
+        wip_tagged = Piece.objects.create(user=user, name="Wip Tagged")
+        PieceState.objects.create(piece=wip_tagged, state=ENTRY_STATE, order=1)
+
+        # Apply the tag to completed_tagged and wip_tagged via the PATCH API
+        for piece in (completed_tagged, wip_tagged):
+            client.patch(
+                f"/api/pieces/{piece.id}/",
+                {"tags": [str(tag.id)]},
+                format="json",
+            )
+
+        response = client.get(
+            "/api/pieces/", {"state": "completed", "tag_ids": str(tag.id)}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 1
+        assert data["results"][0]["id"] == str(completed_tagged.id)
