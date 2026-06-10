@@ -314,10 +314,11 @@ def generate_showcase_video(task: AsyncTask) -> dict:
 
     validate_storyboard(storyboard)
 
-    input_hash = compute_storyboard_hash(storyboard)
+    # input_hash is now a piece-level deduplication hash (compute_piece_input_hash).
+    # Use it for Cloudinary asset naming so uploads are idempotent.  Fall back to
+    # the storyboard hash for tasks created before this change.
     stored_hash = params.get("input_hash")
-    if stored_hash and str(stored_hash) != input_hash:
-        raise ValueError("Storyboard snapshot hash does not match task input hash")
+    input_hash = stored_hash or compute_storyboard_hash(storyboard)
 
     if not is_showcase_video_cloudinary_enabled():
         raise ValueError("Cloudinary showcase video upload is not configured.")

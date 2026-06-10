@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 from django.contrib.auth.models import User
+from django.db.models import Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers as drf_serializers
@@ -16,17 +17,17 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
-from ..models import AsyncTask, Piece
+from ..models import AsyncTask, Piece, PieceStateImage
 from ..showcase import (
     SHOWCASE_VIDEO_RENDER_VERSION,
     build_keepsake_storyboard,
-    compute_storyboard_hash,
+    compute_piece_input_hash,
     is_showcase_video_cloudinary_enabled,
 )
 from ..showcase.render import SHOWCASE_VIDEO_TASK_TYPE
 from ..tasks import get_task_interface
 from ..workflow import TERMINAL_STATES
-from .helpers import piece_queryset
+from .helpers import _current_state_name_subquery
 
 
 class ShowcaseVideoRequestSerializer(drf_serializers.Serializer):
@@ -71,27 +72,6 @@ class ShowcaseVideoStatusSerializer(drf_serializers.Serializer):
     progress = drf_serializers.IntegerField(required=False, default=0)
 
 
-def _piece_with_showcase_prefetch(request: Request, piece_id: str) -> Piece:
-    return get_object_or_404(
-        piece_queryset(request).prefetch_related("states__image_links__image"),
-        pk=piece_id,
-    )
-
-
-def _requested_storyboard(piece: Piece, request_data: dict | None) -> dict:
-    payload = request_data or {}
-    excluded_image_keys = payload.get("excluded_image_keys") or []
-    excluded_note_keys = payload.get("excluded_note_keys") or []
-    music_track_id = payload.get("music_track_id")
-    storyboard = build_keepsake_storyboard(
-        piece,
-        excluded_image_keys=excluded_image_keys,
-        excluded_note_keys=excluded_note_keys,
-        music_track_id=music_track_id,
-    )
-    return storyboard.to_dict()
-
-
 def _latest_showcase_task(piece: Piece) -> AsyncTask | None:
     return (
         AsyncTask.objects.filter(
@@ -114,8 +94,10 @@ def _status_payload(
     *,
     piece: Piece,
     task: AsyncTask | None,
-    storyboard: dict,
-    current_input_hash: str,
+    current_input_hash: str | None,
+    eligible: bool,
+    music_track_id: str | None,
+    storyboard: dict | None = None,
     request: Request,
 ) -> dict:
     enabled = is_showcase_video_cloudinary_enabled()
@@ -171,12 +153,12 @@ def _status_payload(
         "task_status": task_status,
         "enabled": enabled,
         "disabled_reason": disabled_reason,
-        "eligible": storyboard.get("eligible", False),
+        "eligible": eligible,
         "current_input_hash": current_input_hash,
         "stored_input_hash": stored_input_hash,
         "is_stale": is_stale,
         "stale_reason": stale_reason,
-        "music_track_id": storyboard.get("music_track_id"),
+        "music_track_id": music_track_id,
         "storyboard": storyboard,
         "artifact": artifact,
         "error": error,
@@ -198,40 +180,69 @@ def _status_payload(
     responses={202: ShowcaseVideoStatusSerializer},
     description=(
         "Submit a Keepsake showcase video render. The request is enqueued on "
-        "the AsyncTask framework so the browser never blocks on rendering."
+        "the AsyncTask framework so the browser never blocks on rendering. "
+        "If a successful render with an identical input hash already exists, "
+        "the existing task is returned without re-enqueuing."
     ),
 )
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 @traced
 def piece_showcase_video(request: Request, piece_id: str) -> Response:
-    piece = _piece_with_showcase_prefetch(request, piece_id)
-
     if request.method == "GET":
+        # Minimal queryset — no states/images/tags fetched into Python.
+        # current_state_name and has_images are computed as SQL subqueries so
+        # lightweight eligibility can be reported without an extra round-trip.
+        piece = get_object_or_404(
+            Piece.objects.filter(user_id=request.user.id)
+            .select_related("thumbnail", "user__profile")
+            .annotate(
+                current_state_name=_current_state_name_subquery(),
+                has_images=Exists(
+                    PieceStateImage.objects.filter(piece_state__piece=OuterRef("pk"))
+                ),
+            ),
+            pk=piece_id,
+        )
+
         task = _latest_showcase_task(piece)
-        if task is None:
-            storyboard = _requested_storyboard(piece, None)
-            current_input_hash = compute_storyboard_hash(storyboard)
-        else:
+        current_input_hash: str | None = None
+        task_music_track_id: str | None = None
+
+        if task is not None:
             task_input = cast(dict[str, Any], task.input_params or {})
-            storyboard_candidate = task_input.get("storyboard")
-            if isinstance(storyboard_candidate, dict):
-                storyboard = cast(dict[str, Any], storyboard_candidate)
-            else:
-                storyboard = _requested_storyboard(piece, task_input)
-            # `storyboard` is the snapshot that was submitted with the task
-            # (what was rendered).  `current_input_hash` reflects the piece as
-            # it stands today.  Comparing them is how stale detection works.
-            current_storyboard = _requested_storyboard(piece, task_input)
-            current_input_hash = compute_storyboard_hash(current_storyboard)
+            excluded_image_keys = task_input.get("excluded_image_keys") or []
+            excluded_note_keys = task_input.get("excluded_note_keys") or []
+            task_music_track_id = task_input.get("music_track_id")
+            current_input_hash = compute_piece_input_hash(
+                piece.id,
+                excluded_image_keys,
+                excluded_note_keys,
+                task_music_track_id,
+            )
+
+        eligible = bool(
+            getattr(piece, "has_images", False)
+            and getattr(piece, "current_state_name", None) in TERMINAL_STATES
+        )
+
         payload = _status_payload(
             piece=piece,
             task=task,
-            storyboard=storyboard,
             current_input_hash=current_input_hash,
+            eligible=eligible,
+            music_track_id=task_music_track_id,
             request=request,
         )
         return Response(payload)
+
+    # POST — full queryset with states+images for build_keepsake_storyboard.
+    piece = get_object_or_404(
+        Piece.objects.filter(user_id=request.user.id)
+        .select_related("thumbnail", "user__profile")
+        .prefetch_related("states__image_links__image"),
+        pk=piece_id,
+    )
 
     serializer = ShowcaseVideoRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -252,11 +263,49 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    excluded_image_keys: list[str] = serializer.validated_data["excluded_image_keys"]
+    excluded_note_keys: list[str] = serializer.validated_data["excluded_note_keys"]
+    req_music_track_id: str | None = serializer.validated_data["music_track_id"]
+
+    input_hash = compute_piece_input_hash(
+        piece.id,
+        excluded_image_keys,
+        excluded_note_keys,
+        req_music_track_id,
+    )
+
+    # No-op: return the existing task when a successful render with the same
+    # inputs already exists so the UI "Regenerate" button is always safe to call.
+    existing_task = (
+        AsyncTask.objects.filter(
+            user=request.user,
+            task_type=SHOWCASE_VIDEO_TASK_TYPE,
+            input_params__piece_id=str(piece.id),
+            input_params__input_hash=input_hash,
+            status=AsyncTask.Status.SUCCESS,
+        )
+        .order_by("-created")
+        .first()
+    )
+    if existing_task is not None:
+        existing_input = cast(dict[str, Any], existing_task.input_params or {})
+        storyboard = existing_input.get("storyboard")
+        payload = _status_payload(
+            piece=piece,
+            task=existing_task,
+            current_input_hash=input_hash,
+            eligible=True,
+            music_track_id=req_music_track_id,
+            storyboard=storyboard if isinstance(storyboard, dict) else None,
+            request=request,
+        )
+        return Response(payload)
+
     storyboard_obj = build_keepsake_storyboard(
         piece,
-        excluded_image_keys=serializer.validated_data["excluded_image_keys"],
-        excluded_note_keys=serializer.validated_data["excluded_note_keys"],
-        music_track_id=serializer.validated_data["music_track_id"],
+        excluded_image_keys=excluded_image_keys,
+        excluded_note_keys=excluded_note_keys,
+        music_track_id=req_music_track_id,
     )
     if not storyboard_obj.eligible:
         return Response(
@@ -265,15 +314,14 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
         )
 
     storyboard = storyboard_obj.to_dict()
-    input_hash = compute_storyboard_hash(storyboard)
     task = AsyncTask.objects.create(
         user=cast(User, request.user),
         task_type=SHOWCASE_VIDEO_TASK_TYPE,
         input_params={
             "piece_id": str(piece.id),
-            "excluded_image_keys": serializer.validated_data["excluded_image_keys"],
-            "excluded_note_keys": serializer.validated_data["excluded_note_keys"],
-            "music_track_id": serializer.validated_data["music_track_id"],
+            "excluded_image_keys": excluded_image_keys,
+            "excluded_note_keys": excluded_note_keys,
+            "music_track_id": req_music_track_id,
             "input_hash": input_hash,
             "storyboard": storyboard,
             "render_version": SHOWCASE_VIDEO_RENDER_VERSION,
@@ -284,8 +332,10 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
     payload = _status_payload(
         piece=piece,
         task=task,
-        storyboard=storyboard,
         current_input_hash=input_hash,
+        eligible=True,
+        music_track_id=req_music_track_id,
+        storyboard=storyboard,
         request=request,
     )
     return Response(payload, status=status.HTTP_202_ACCEPTED)

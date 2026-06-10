@@ -5,6 +5,7 @@ slideshow video. Style builders (the first is "keepsake") turn a piece's
 effective inputs into a Storyboard deterministically.
 """
 
+from .hash import compute_piece_input_hash
 from .music import (
     DEFAULT_TRACK_ID,
     MUSIC_CATALOG_SCHEMA,
@@ -59,6 +60,7 @@ __all__ = [
     "Storyboard",
     "StoryboardSlide",
     "build_keepsake_storyboard",
+    "compute_piece_input_hash",
     "compute_storyboard_hash",
     "is_showcase_video_cloudinary_enabled",
     "get_catalog",
