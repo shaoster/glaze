@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import type { PieceSummary, TagEntry } from "../util/types";
-import { formatState, isTerminalState, SUCCESSORS } from "../util/workflow";
+import { formatState, isTerminalState } from "../util/workflow";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import {
@@ -107,15 +107,6 @@ const FILTER_OPTIONS: FilterOption[] = [
   SHARED_FILTER_OPTION,
 ];
 
-function matchesFilter(piece: PieceSummary, filter: FilterCategory): boolean {
-  const state = piece.current_state.state;
-  const isNonTerminal = (SUCCESSORS[state] ?? []).length > 0;
-  if (filter === "wip") return isNonTerminal;
-  if (filter === "completed") return state === "completed";
-  if (filter === "discarded") return state === "recycled";
-  if (filter === "shared") return piece.shared;
-  return false;
-}
 
 const VALID_FILTER_CATEGORIES = new Set<FilterCategory>([
   "wip",
@@ -486,31 +477,6 @@ const PieceList = (props: PieceListProps) => {
     [availableTags, activeTagIds],
   );
 
-  const filteredPieces = useMemo(() => {
-    return pieces.filter((piece) => {
-      const stateFilters = activeFilters.filter((f) => f !== "shared");
-      const sharedFilterActive = activeFilters.includes("shared");
-
-      const matchesState =
-        stateFilters.length === 0
-          ? true
-          : stateFilters.some((filter) => matchesFilter(piece, filter));
-
-      const matchesShared = sharedFilterActive
-        ? matchesFilter(piece, "shared")
-        : true;
-
-      const matchesTags =
-        activeTagIds.length === 0
-          ? true
-          : activeTagIds.every((id) =>
-              (piece.tags ?? []).some((pieceTag) => pieceTag.id === id),
-            );
-
-      return matchesState && matchesShared && matchesTags;
-    });
-  }, [pieces, activeFilters, activeTagIds]);
-
   const activeFilterLabel = useMemo(() => {
     if (activeFilters.length === 0 && activeTagIds.length === 0) return "All";
     const parts: string[] = [];
@@ -538,7 +504,7 @@ const PieceList = (props: PieceListProps) => {
       MASONRY_GUTTER,
     );
 
-    filteredPieces.forEach((piece, index) => {
+    pieces.forEach((piece, index) => {
       nextPositioner.set(
         index,
         getPieceCardLayout(piece, nextPositioner.columnWidth).estimatedHeight,
@@ -546,7 +512,7 @@ const PieceList = (props: PieceListProps) => {
     });
 
     return nextPositioner;
-  }, [filteredPieces, masonryWidth, columnWidth, isMobile]);
+  }, [pieces, masonryWidth, columnWidth, isMobile]);
   const resizeObserver = useResizeObserver(positioner);
 
   const toggleFilter = useCallback(
@@ -659,7 +625,7 @@ const PieceList = (props: PieceListProps) => {
                   flexShrink: 0,
                 }}
               >
-                · {filteredPieces.length}
+                · {pieces.length}
                 {hasMore ? "+" : ""} pieces
               </Typography>
             </Box>
@@ -948,7 +914,7 @@ const PieceList = (props: PieceListProps) => {
               <MasonryScroller
                 positioner={positioner}
                 resizeObserver={resizeObserver}
-                items={filteredPieces}
+                items={pieces}
                 render={({
                   data,
                   width,

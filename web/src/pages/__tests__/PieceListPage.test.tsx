@@ -290,4 +290,45 @@ describe("PieceListPage", () => {
       );
     });
   });
+
+  // ------------------------------------------------------------------
+  // Regression for #885 — filter chips translate to server-side params
+  // ------------------------------------------------------------------
+
+  it("passes state filter to fetchPieces when ?filter=completed is in the URL", async () => {
+    mockFetchPieces.mockResolvedValue({ count: 0, results: [] });
+    renderPage(makeQueryClient(), ["/?filter=completed"]);
+
+    await waitFor(() => {
+      expect(mockFetchPieces).toHaveBeenCalledWith(
+        expect.objectContaining({ state: ["completed"] }),
+      );
+    });
+  });
+
+  it("passes state filter for wip (all non-terminal states) when ?filter=wip", async () => {
+    mockFetchPieces.mockResolvedValue({ count: 0, results: [] });
+    renderPage(makeQueryClient(), ["/?filter=wip"]);
+
+    await waitFor(() => {
+      const call = mockFetchPieces.mock.calls[0]?.[0] as { state?: string[] };
+      expect(call?.state).toBeDefined();
+      expect(call?.state?.length).toBeGreaterThan(0);
+      // Must not include terminal states
+      expect(call?.state).not.toContain("completed");
+      expect(call?.state).not.toContain("recycled");
+    });
+  });
+
+  it("passes shared filter to fetchPieces when ?filter=shared is in the URL", async () => {
+    mockFetchPieces.mockResolvedValue({ count: 0, results: [] });
+    renderPage(makeQueryClient(), ["/?filter=shared"]);
+
+    await waitFor(() => {
+      expect(mockFetchPieces).toHaveBeenCalledWith(
+        expect.objectContaining({ shared: true }),
+      );
+    });
+  });
+
 });

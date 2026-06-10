@@ -374,11 +374,22 @@ export async function fetchPieces(params?: {
   ordering?: PieceSortOrder;
   limit?: number;
   offset?: number;
+  state?: string[];
+  shared?: boolean;
+  tag_ids?: string;
 }): Promise<PiecePage> {
+  let apiParams: Record<string, unknown> | undefined;
+  if (params !== undefined) {
+    const { state, ...rest } = params;
+    apiParams = {
+      ...rest,
+      ...(state && state.length > 0 ? { state: state.join(",") } : {}),
+    };
+  }
   const { data } = await client.get<{
     count: number;
     results: Wire<PieceSummary>[];
-  }>("pieces/", { params });
+  }>("pieces/", { params: apiParams });
   return { count: data.count, results: data.results.map(mapPieceSummary) };
 }
 

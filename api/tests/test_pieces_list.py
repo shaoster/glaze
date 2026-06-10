@@ -281,3 +281,101 @@ class TestPiecesList:
         response = client.get("/api/pieces/", {"ordering": "nonexistent_field"})
         assert response.status_code == 200
         assert response.json()["count"] == 1
+
+    # ------------------------------------------------------------------
+    # Regression for #885 — server-side state filtering
+    # ------------------------------------------------------------------
+
+    def test_state_filter_returns_only_matching_pieces(self, client, user):
+        """?state=completed must return only pieces in the completed state."""
+        wip = Piece.objects.create(user=user, name="Active Mug")
+        PieceState.objects.create(piece=wip, state=ENTRY_STATE, order=1)
+
+        done = Piece.objects.create(user=user, name="Done Vase")
+        PieceState.objects.create(piece=done, state=ENTRY_STATE, order=1)
+        PieceState.objects.create(piece=done, state="completed", order=2)
+
+        response = client.get("/api/pieces/", {"state": "completed"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 1
+        assert data["results"][0]["id"] == str(done.id)
+
+    def test_state_filter_comma_separated_matches_multiple_states(self, client, user):
+        """?state=completed,recycled must match either terminal state."""
+        done = Piece.objects.create(user=user, name="Done Vase")
+        PieceState.objects.create(piece=done, state=ENTRY_STATE, order=1)
+        PieceState.objects.create(piece=done, state="completed", order=2)
+
+        recycled = Piece.objects.create(user=user, name="Recycled Bowl")
+        PieceState.objects.create(piece=recycled, state=ENTRY_STATE, order=1)
+        PieceState.objects.create(piece=recycled, state="recycled", order=2)
+
+        wip = Piece.objects.create(user=user, name="Active Mug")
+        PieceState.objects.create(piece=wip, state=ENTRY_STATE, order=1)
+
+        response = client.get("/api/pieces/", {"state": "completed,recycled"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 2
+        returned_ids = {r["id"] for r in data["results"]}
+        assert returned_ids == {str(done.id), str(recycled.id)}
+
+    def test_state_filter_pagination_finds_completed_piece_beyond_first_page(
+        self, client, user
+    ):
+        """Regression for #885: a completed piece beyond page 1 must appear when
+        state=completed is passed — previously client-side filtering missed it."""
+        # Create 18 wip pieces (more than page size of 16) plus 1 completed piece.
+        wip_pieces = []
+        for i in range(18):
+            p = Piece.objects.create(user=user, name=f"Wip {i}")
+            PieceState.objects.create(piece=p, state=ENTRY_STATE, order=1)
+            wip_pieces.append(p)
+
+        done = Piece.objects.create(user=user, name="Done Vase")
+        PieceState.objects.create(piece=done, state=ENTRY_STATE, order=1)
+        PieceState.objects.create(piece=done, state="completed", order=2)
+
+        # Without the state filter, the first page (limit=16) would not include
+        # the completed piece; client-side filtering would find nothing.
+        # With server-side filtering, count=1 regardless of pagination.
+        response = client.get("/api/pieces/", {"state": "completed", "limit": 16})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 1
+        assert data["results"][0]["id"] == str(done.id)
+
+    def test_shared_filter_true_returns_only_shared_pieces(self, client, user):
+        """?shared=true must return only pieces with shared=True."""
+        private = Piece.objects.create(user=user, name="Private Mug", shared=False)
+        PieceState.objects.create(piece=private, state=ENTRY_STATE, order=1)
+
+        public = Piece.objects.create(user=user, name="Public Bowl")
+        PieceState.objects.create(piece=public, state=ENTRY_STATE, order=1)
+        PieceState.objects.create(piece=public, state="completed", order=2)
+        public.shared = True
+        public.save()
+
+        response = client.get("/api/pieces/", {"shared": "true"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 1
+        assert data["results"][0]["id"] == str(public.id)
+
+    def test_shared_filter_false_excludes_shared_pieces(self, client, user):
+        """?shared=false must exclude shared pieces."""
+        private = Piece.objects.create(user=user, name="Private Mug", shared=False)
+        PieceState.objects.create(piece=private, state=ENTRY_STATE, order=1)
+
+        public = Piece.objects.create(user=user, name="Public Bowl")
+        PieceState.objects.create(piece=public, state=ENTRY_STATE, order=1)
+        PieceState.objects.create(piece=public, state="completed", order=2)
+        public.shared = True
+        public.save()
+
+        response = client.get("/api/pieces/", {"shared": "false"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 1
+        assert data["results"][0]["id"] == str(private.id)

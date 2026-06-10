@@ -887,59 +887,33 @@ describe("PieceList", () => {
       expect(screen.getByText("Vase")).toBeInTheDocument();
     });
 
-    it("filters to work in progress pieces only", async () => {
+    // Filtering is now server-side: clicking a filter chip updates the URL so the
+    // parent re-fetches with the appropriate params. PieceList itself no longer
+    // removes pieces from the DOM — it displays whatever the server returns.
+    // These tests verify that the active filter label (inside the "Toggle filters"
+    // button) updates correctly when chips are clicked.
+
+    function getFilterLabel() {
+      // The active filter label lives inside the "Toggle filters" button as a span.
+      return screen.getByRole("button", { name: /toggle filters/i }).textContent;
+    }
+
+    it("activates the Active filter chip and updates the filter label", async () => {
       const user = userEvent.setup();
-      const pieces = [
-        makePiece({
-          id: "id-1",
-          name: "Bowl",
-          current_state: { state: "designed" } as any,
-        }),
-        makePiece({
-          id: "id-2",
-          name: "Mug",
-          current_state: { state: "completed" } as any,
-        }),
-        makePiece({
-          id: "id-3",
-          name: "Vase",
-          current_state: { state: "recycled" } as any,
-        }),
-      ];
-      renderPieceList(pieces);
+      renderPieceList([makePiece({ id: "id-1", name: "Bowl" })]);
 
       await openFilters(user);
-      // Click the "Active" chip inside the filter panel
       const activeChip = screen
         .getAllByText("Active")
         .find((el) => el.closest('[role="button"]'));
       await user.click(activeChip!.closest('[role="button"]')!);
 
-      expect(screen.getByText("Bowl")).toBeInTheDocument();
-      expect(screen.queryByText("Mug")).not.toBeInTheDocument();
-      expect(screen.queryByText("Vase")).not.toBeInTheDocument();
+      await waitFor(() => expect(getFilterLabel()).toContain("Active"));
     });
 
-    it("filters to completed pieces only", async () => {
+    it("activates the Completed filter chip and updates the filter label", async () => {
       const user = userEvent.setup();
-      const pieces = [
-        makePiece({
-          id: "id-1",
-          name: "Bowl",
-          current_state: { state: "designed" } as any,
-        }),
-        makePiece({
-          id: "id-2",
-          name: "Mug",
-          current_state: { state: "completed" } as any,
-        }),
-        makePiece({
-          id: "id-3",
-          name: "Vase",
-          current_state: { state: "recycled" } as any,
-        }),
-      ];
-      renderPieceList(pieces);
+      renderPieceList([makePiece({ id: "id-1", name: "Bowl" })]);
 
       await openFilters(user);
       const completedChip = screen
@@ -947,31 +921,12 @@ describe("PieceList", () => {
         .find((el) => el.closest('[role="button"]'));
       await user.click(completedChip!.closest('[role="button"]')!);
 
-      expect(screen.queryByText("Bowl")).not.toBeInTheDocument();
-      expect(screen.getByText("Mug")).toBeInTheDocument();
-      expect(screen.queryByText("Vase")).not.toBeInTheDocument();
+      await waitFor(() => expect(getFilterLabel()).toContain("Completed"));
     });
 
-    it("filters to recycled pieces only", async () => {
+    it("activates the Recycled filter chip and updates the filter label", async () => {
       const user = userEvent.setup();
-      const pieces = [
-        makePiece({
-          id: "id-1",
-          name: "Bowl",
-          current_state: { state: "designed" } as any,
-        }),
-        makePiece({
-          id: "id-2",
-          name: "Mug",
-          current_state: { state: "completed" } as any,
-        }),
-        makePiece({
-          id: "id-3",
-          name: "Vase",
-          current_state: { state: "recycled" } as any,
-        }),
-      ];
-      renderPieceList(pieces);
+      renderPieceList([makePiece({ id: "id-1", name: "Bowl" })]);
 
       await openFilters(user);
       const recycledChip = screen
@@ -979,31 +934,12 @@ describe("PieceList", () => {
         .find((el) => el.closest('[role="button"]'));
       await user.click(recycledChip!.closest('[role="button"]')!);
 
-      expect(screen.queryByText("Bowl")).not.toBeInTheDocument();
-      expect(screen.queryByText("Mug")).not.toBeInTheDocument();
-      expect(screen.getByText("Vase")).toBeInTheDocument();
+      await waitFor(() => expect(getFilterLabel()).toContain("Recycled"));
     });
 
-    it("supports combining multiple filters", async () => {
+    it("combines multiple filter chips and shows a combined label", async () => {
       const user = userEvent.setup();
-      const pieces = [
-        makePiece({
-          id: "id-1",
-          name: "Bowl",
-          current_state: { state: "designed" } as any,
-        }),
-        makePiece({
-          id: "id-2",
-          name: "Mug",
-          current_state: { state: "completed" } as any,
-        }),
-        makePiece({
-          id: "id-3",
-          name: "Vase",
-          current_state: { state: "recycled" } as any,
-        }),
-      ];
-      renderPieceList(pieces);
+      renderPieceList([makePiece({ id: "id-1", name: "Bowl" })]);
 
       await openFilters(user);
       const completedChip = screen
@@ -1015,89 +951,57 @@ describe("PieceList", () => {
       await user.click(completedChip!.closest('[role="button"]')!);
       await user.click(recycledChip!.closest('[role="button"]')!);
 
-      expect(screen.queryByText("Bowl")).not.toBeInTheDocument();
-      expect(screen.getByText("Mug")).toBeInTheDocument();
-      expect(screen.getByText("Vase")).toBeInTheDocument();
+      await waitFor(() => {
+        const label = getFilterLabel();
+        expect(label).toContain("Completed");
+        expect(label).toContain("Recycled");
+      });
     });
 
-    it("shows all pieces again when a filter chip is toggled off", async () => {
+    it("shows 'All' label again when a filter chip is toggled off", async () => {
       const user = userEvent.setup();
-      const pieces = [
-        makePiece({
-          id: "id-1",
-          name: "Bowl",
-          current_state: { state: "designed" } as any,
-        }),
-        makePiece({
-          id: "id-2",
-          name: "Mug",
-          current_state: { state: "completed" } as any,
-        }),
-      ];
-      renderPieceList(pieces);
+      renderPieceList([makePiece({ id: "id-1", name: "Bowl" })]);
 
       await openFilters(user);
       const completedChip = screen
         .getAllByText("Completed")
         .find((el) => el.closest('[role="button"]'));
-      // Activate filter
       await user.click(completedChip!.closest('[role="button"]')!);
-      expect(screen.queryByText("Bowl")).not.toBeInTheDocument();
+      await waitFor(() => expect(getFilterLabel()).toContain("Completed"));
 
       // Deactivate filter
       await user.click(completedChip!.closest('[role="button"]')!);
-      await waitFor(() => {
-        expect(screen.getByText("Bowl")).toBeInTheDocument();
-      });
-      expect(screen.getByText("Mug")).toBeInTheDocument();
+      await waitFor(() => expect(getFilterLabel()).toContain("All"));
     });
 
-    it("filters pieces using AND between state and shared filters", async () => {
+    it("shows combined label when state and shared filters are both active", async () => {
       const user = userEvent.setup();
-      const pieces = [
-        makePiece({
-          id: "id-1",
-          name: "Active Shared",
-          current_state: { state: "designed" } as any,
-          shared: true,
-        }),
-        makePiece({
-          id: "id-2",
-          name: "Active Not Shared",
-          current_state: { state: "designed" } as any,
-          shared: false,
-        }),
-        makePiece({
-          id: "id-3",
-          name: "Completed Shared",
-          current_state: { state: "completed" } as any,
-          shared: true,
-        }),
-      ];
-      renderPieceList(pieces);
+      renderPieceList([makePiece({ id: "id-1", name: "Bowl" })]);
 
       await openFilters(user);
-
-      // Select "Active"
       const activeChip = screen
         .getAllByText("Active")
         .find((el) => el.closest('[role="button"]'));
       await user.click(activeChip!.closest('[role="button"]')!);
 
-      // Select "Shared"
       const sharedChip = screen
         .getAllByText("Shared")
         .find((el) => el.closest('[role="button"]'));
       await user.click(sharedChip!.closest('[role="button"]')!);
 
-      expect(screen.getByText("Active Shared")).toBeInTheDocument();
-      expect(screen.queryByText("Active Not Shared")).not.toBeInTheDocument();
-      expect(screen.queryByText("Completed Shared")).not.toBeInTheDocument();
+      await waitFor(() => {
+        const label = getFilterLabel();
+        expect(label).toContain("Active");
+        expect(label).toContain("Shared");
+      });
     });
   });
 
   describe("tag filtering", () => {
-    it("filters pieces to those matching all selected tags", async () => {
+    it("updates the active filter label when tags are selected", async () => {
+      // Tag filtering is now server-side — selecting a tag chip updates the URL
+      // so the parent re-fetches with ?tags=... PieceList itself no longer
+      // removes non-matching pieces from the DOM.
       const user = userEvent.setup();
       const pieces = [
         makePiece({
@@ -1105,12 +1009,7 @@ describe("PieceList", () => {
           name: "Bowl",
           tags: [
             { id: "gift", name: "Gift", color: "#2A9D8F", is_public: false },
-            {
-              id: "sale",
-              name: "For Sale",
-              color: "#4FC3F7",
-              is_public: false,
-            },
+            { id: "sale", name: "For Sale", color: "#4FC3F7", is_public: false },
           ],
         }),
         makePiece({
@@ -1124,17 +1023,16 @@ describe("PieceList", () => {
       renderPieceList(pieces);
 
       await openFilters(user);
-      // Open the tag picker then select a tag (picker auto-closes after selection)
       await user.click(screen.getByRole("button", { name: /\+ tag/i }));
       await user.click(screen.getByLabelText("Filter by tag"));
       await user.click(screen.getByRole("option", { name: "Gift" }));
-      // Gift is now an active chip; open the picker again for the second tag
-      await user.click(screen.getByRole("button", { name: /\+ tag/i }));
-      await user.click(screen.getByLabelText("Filter by tag"));
-      await user.click(screen.getByRole("option", { name: "For Sale" }));
 
-      expect(screen.getByText("Bowl")).toBeInTheDocument();
-      expect(screen.queryByText("Mug")).not.toBeInTheDocument();
+      // Label in the toggle button should now include the tag name
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: /toggle filters/i }).textContent,
+        ).toContain("Gift"),
+      );
     });
 
     it("shows at most 2 tag chips per card with a dashed overflow chip", () => {
