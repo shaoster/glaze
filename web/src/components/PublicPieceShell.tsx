@@ -5,13 +5,11 @@ import {
   Container,
   Typography,
   alpha,
-  Divider,
 } from "@mui/material";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { fetchPiece } from "../util/api";
 import { type PieceDetail } from "../util/types";
 import CloudinaryImage from "./CloudinaryImage";
-import ProcessSummary from "./ProcessSummary";
 
 export function ShowcasePage({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const { id } = useParams<{ id: string }>();
@@ -52,13 +50,9 @@ function ShowcaseHeader({ piece, isAuthenticated }: { piece: PieceDetail; isAuth
   const { id } = useParams<{ id: string }>();
 
   if (isAuthenticated && piece.can_edit) {
-    // Owner
+    // Owner — app shell already shows the logo; just provide the Edit action.
     return (
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Box component="img" src="/favicon.svg" alt="PotterDoc" sx={{ width: 22, height: 22 }} />
-          <Typography variant="h6" component="p">PotterDoc</Typography>
-        </Box>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1.5 }}>
         <Button component={RouterLink} to={`/pieces/${id}`} variant="outlined" size="small">
           Edit
         </Button>
@@ -67,26 +61,20 @@ function ShowcaseHeader({ piece, isAuthenticated }: { piece: PieceDetail; isAuth
   }
 
   if (isAuthenticated && !piece.can_edit) {
-    // Authenticated non-owner
+    // Authenticated non-owner — app shell already shows the logo.
     return (
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Box component="img" src="/favicon.svg" alt="PotterDoc" sx={{ width: 22, height: 22 }} />
-          <Typography variant="h6" component="p">PotterDoc</Typography>
-        </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            {piece.owner_alias ? `Viewing ${piece.owner_alias}'s piece` : "Viewing a shared piece"}
-          </Typography>
-          <Button component={RouterLink} to="/" variant="text" size="small">
-            My pieces
-          </Button>
-        </Box>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1, mb: 1.5 }}>
+        <Typography variant="body2" color="text.secondary">
+          {piece.owner_alias ? `Viewing ${piece.owner_alias}'s piece` : "Viewing a shared piece"}
+        </Typography>
+        <Button component={RouterLink} to="/" variant="text" size="small">
+          My pieces
+        </Button>
       </Box>
     );
   }
 
-  // Unauthenticated visitor
+  // Unauthenticated visitor — show the logo since there is no app shell.
   return (
     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
       <Box component={RouterLink} to="/" sx={{ display: "flex", alignItems: "center", gap: 1, textDecoration: "none", color: "inherit" }}>
@@ -108,45 +96,6 @@ function ShowcaseHeader({ piece, isAuthenticated }: { piece: PieceDetail; isAuth
 function ShowcaseView({ piece }: { piece: PieceDetail; isAuthenticated: boolean }) {
   return (
     <Box sx={{ mx: "auto", maxWidth: 800, mt: 4 }}>
-      {piece.showcase_video_url && (
-        <Box
-          component="video"
-          src={piece.showcase_video_url}
-          controls
-          playsInline
-          sx={{ width: "100%", borderRadius: 1, display: "block", backgroundColor: "black", mb: 3 }}
-        />
-      )}
-
-      <Box
-        sx={(theme) => ({
-          position: "relative",
-          overflow: "hidden",
-          borderRadius: "12px",
-          minHeight: { xs: 300, sm: 400 },
-          backgroundColor: alpha(theme.palette.background.paper, 0.46),
-          boxShadow: `0 24px 60px ${alpha(theme.palette.common.black, 0.14)}`,
-          mb: 4,
-        })}
-      >
-        {piece.thumbnail ? (
-          <CloudinaryImage
-            url={piece.thumbnail.url}
-            cloud_name={piece.thumbnail.cloud_name}
-            cloudinary_public_id={piece.thumbnail.cloudinary_public_id}
-            crop={piece.thumbnail.crop}
-            alt={piece.name}
-            context="detail"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-            }}
-          />
-        ) : null}
-      </Box>
-
       <Typography
         variant="h3"
         component="h1"
@@ -172,21 +121,44 @@ function ShowcaseView({ piece }: { piece: PieceDetail; isAuthenticated: boolean 
         </Box>
       )}
 
-      <Divider sx={{ my: 6, opacity: 0.5 }} />
-
-      <Typography
-        variant="subtitle2"
-        sx={{
-          mb: 2,
-          color: "text.secondary",
-          fontWeight: 700,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-        }}
-      >
-        Process Summary
-      </Typography>
-      <ProcessSummary piece={piece} history={piece.history} />
+      {piece.showcase_video_url ? (
+        <Box
+          component="video"
+          src={piece.showcase_video_url}
+          controls
+          playsInline
+          sx={{ width: "100%", borderRadius: 1, display: "block", backgroundColor: "black", mb: 3 }}
+        />
+      ) : (
+        <Box
+          sx={(theme) => ({
+            position: "relative",
+            overflow: "hidden",
+            borderRadius: "12px",
+            minHeight: { xs: 300, sm: 400 },
+            backgroundColor: alpha(theme.palette.background.paper, 0.46),
+            boxShadow: `0 24px 60px ${alpha(theme.palette.common.black, 0.14)}`,
+            mb: 4,
+          })}
+        >
+          {piece.thumbnail ? (
+            <CloudinaryImage
+              url={piece.thumbnail.url}
+              cloud_name={piece.thumbnail.cloud_name}
+              cloudinary_public_id={piece.thumbnail.cloudinary_public_id}
+              crop={piece.thumbnail.crop}
+              alt={piece.name}
+              context="detail"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          ) : null}
+        </Box>
+      )}
     </Box>
   );
 }

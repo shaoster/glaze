@@ -170,4 +170,68 @@ describe("ShowcasePage", () => {
     expect(screen.getByText("Viewing Alice's piece")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
   });
+
+  // Regression tests for #890
+
+  it("does not render hero image when showcase_video_url is present", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.mocked(api.fetchPiece).mockResolvedValue({
+      ...BASE_PIECE,
+      showcase_video_url: "https://res.cloudinary.com/demo/video/upload/showcase.mp4",
+      thumbnail: { url: "https://example.com/thumb.jpg", cloud_name: "demo", cloudinary_public_id: "thumb", crop: null },
+    });
+
+    renderShell(queryClient);
+
+    await screen.findByText("Beautiful Bowl");
+    expect(document.querySelector("video")).not.toBeNull();
+    expect(document.querySelector("img[alt='Beautiful Bowl']")).toBeNull();
+  });
+
+  it("does not render Process Summary section", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.mocked(api.fetchPiece).mockResolvedValue(BASE_PIECE);
+
+    renderShell(queryClient);
+
+    await screen.findByText("Beautiful Bowl");
+    expect(screen.queryByText(/process summary/i)).toBeNull();
+  });
+
+  it("renders piece name before video", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.mocked(api.fetchPiece).mockResolvedValue({
+      ...BASE_PIECE,
+      showcase_video_url: "https://res.cloudinary.com/demo/video/upload/showcase.mp4",
+    });
+
+    renderShell(queryClient);
+
+    await screen.findByText("Beautiful Bowl");
+    const nameEl = screen.getByRole("heading", { name: "Beautiful Bowl" });
+    const videoEl = document.querySelector("video")!;
+    // Node.DOCUMENT_POSITION_FOLLOWING means videoEl comes after nameEl in the DOM
+    expect(nameEl.compareDocumentPosition(videoEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("does not render PotterDoc logo for authenticated owner", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.mocked(api.fetchPiece).mockResolvedValue({
+      ...BASE_PIECE,
+      can_edit: true,
+    });
+
+    renderShell(queryClient, true);
+
+    await screen.findByText("Beautiful Bowl");
+    expect(screen.queryByAltText("PotterDoc")).toBeNull();
+  });
 });
