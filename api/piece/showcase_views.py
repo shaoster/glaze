@@ -6,7 +6,7 @@ from typing import Any, cast
 
 from django.contrib.auth.models import User
 from django.db.models import Exists, OuterRef
-from django.shortcuts import get_object_or_404
+from django.http import Http404
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers as drf_serializers
 from rest_framework import status
@@ -193,17 +193,23 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
         # Minimal queryset — no states/images/tags fetched into Python.
         # current_state_name and has_images are computed as SQL subqueries so
         # lightweight eligibility can be reported without an extra round-trip.
-        piece = get_object_or_404(
-            Piece.objects.filter(user_id=request.user.id)
-            .select_related("thumbnail", "user__profile")
-            .annotate(
-                current_state_name=_current_state_name_subquery(),
-                has_images=Exists(
-                    PieceStateImage.objects.filter(piece_state__piece=OuterRef("pk"))
-                ),
-            ),
-            pk=piece_id,
-        )
+        user_id = request.user.id
+        assert user_id is not None
+        piece: Piece
+        try:
+            piece = (
+                Piece.objects.filter(user_id=user_id)
+                .select_related("thumbnail", "user__profile")
+                .annotate(
+                    current_state_name=_current_state_name_subquery(),
+                    has_images=Exists(
+                        PieceStateImage.objects.filter(piece_state__piece=OuterRef("pk"))
+                    ),
+                )
+                .get(pk=piece_id)
+            )
+        except Piece.DoesNotExist:
+            raise Http404
 
         task = _latest_showcase_task(piece)
         current_input_hash: str | None = None
@@ -237,12 +243,17 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
         return Response(payload)
 
     # POST — full queryset with states+images for build_keepsake_storyboard.
-    piece = get_object_or_404(
-        Piece.objects.filter(user_id=request.user.id)
-        .select_related("thumbnail", "user__profile")
-        .prefetch_related("states__image_links__image"),
-        pk=piece_id,
-    )
+    post_user_id = request.user.id
+    assert post_user_id is not None
+    try:
+        piece = (
+            Piece.objects.filter(user_id=post_user_id)
+            .select_related("thumbnail", "user__profile")
+            .prefetch_related("states__image_links__image")
+            .get(pk=piece_id)
+        )
+    except Piece.DoesNotExist:
+        raise Http404
 
     serializer = ShowcaseVideoRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -263,8 +274,8 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    excluded_image_keys: list[str] = serializer.validated_data["excluded_image_keys"]
-    excluded_note_keys: list[str] = serializer.validated_data["excluded_note_keys"]
+    excluded_image_keys = list(serializer.validated_data["excluded_image_keys"])
+    excluded_note_keys = list(serializer.validated_data["excluded_note_keys"])
     req_music_track_id: str | None = serializer.validated_data["music_track_id"]
 
     input_hash = compute_piece_input_hash(
@@ -278,7 +289,7 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
     # inputs already exists so the UI "Regenerate" button is always safe to call.
     existing_task = (
         AsyncTask.objects.filter(
-            user=request.user,
+            user=cast(User, request.user),
             task_type=SHOWCASE_VIDEO_TASK_TYPE,
             input_params__piece_id=str(piece.id),
             input_params__input_hash=input_hash,
