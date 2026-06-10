@@ -42,7 +42,7 @@ SHOWCASE_VIDEO_CANVAS_SIZE = (1280, 720)
 SHOWCASE_VIDEO_FPS = 24
 SHOWCASE_VIDEO_FADE_SECONDS = 0.75
 SHOWCASE_VIDEO_CLOSING_SECONDS = 3.0
-_SLIDE_RENDER_SCALE = 4
+_SLIDE_RENDER_SCALE = 2
 _BRAND_ICON_VIEWBOX = 128
 _BRAND_ICON_FILL = "#C66A3D"
 _BRAND_ICON_STROKE = "#8A3F1D"
@@ -795,6 +795,7 @@ def _write_video_stream(
     video_stream.height = SHOWCASE_VIDEO_CANVAS_SIZE[1]
     video_stream.pix_fmt = "yuv420p"
     video_stream.time_base = Fraction(1, SHOWCASE_VIDEO_FPS)
+    video_stream.thread_count = 1
 
     # Mirror _iter_video_frames frame-count logic so total_frames is accurate.
     if len(slide_canvases) == 1:
