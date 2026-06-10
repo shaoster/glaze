@@ -59,6 +59,11 @@ def get_state_friendly_name(state_id: str) -> str:
     return str(_STATE_MAP.get(state_id, {}).get("friendly_name", state_id))
 
 
+def get_state_label_map() -> dict[str, str]:
+    """Return a sorted mapping of state_id → friendly_name for all workflow states."""
+    return {k: str(v.get("friendly_name", k)) for k, v in sorted(_STATE_MAP.items())}
+
+
 def get_state_config(state_id: str) -> dict:
     """Return the full workflow.yml config dict for a state, or {} if unknown."""
     return dict(_STATE_MAP.get(state_id, {}))

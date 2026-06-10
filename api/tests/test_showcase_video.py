@@ -538,3 +538,91 @@ class TestShowcaseVideoApi:
 
         response2 = client.get(url)
         assert response2.json()["progress"] == 0
+
+    def test_get_issues_at_most_four_queries(self, client, user, tmp_path):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        if connection.vendor != "postgresql":
+            pytest.skip(
+                "query-count assertion requires PostgreSQL; SQLite uses a Python fallback"
+            )
+
+        piece = _make_piece_with_terminal_state(user)
+        cover_path = tmp_path / "cover.png"
+        piece.thumbnail = _attach_image(
+            piece,
+            url=_make_local_png(cover_path, (100, 150, 200)),
+            caption="Cover",
+        )
+        piece.save()
+
+        AsyncTask.objects.create(
+            user=user,
+            task_type="generate_showcase_video",
+            status=AsyncTask.Status.SUCCESS,
+            input_params={
+                "piece_id": str(piece.id),
+                "excluded_image_keys": [],
+                "excluded_note_keys": [],
+                "music_track_id": None,
+                "input_hash": "placeholder-hash",
+            },
+            result={"artifact_url": "https://example.com/video.mp4"},
+        )
+
+        client.force_authenticate(user=user)
+        url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = client.get(url)
+
+        assert response.status_code == 200
+        assert len(ctx.captured_queries) <= 4, (
+            f"GET showcase-video made {len(ctx.captured_queries)} queries; expected ≤ 4. "
+            f"Queries: {[q['sql'][:120] for q in ctx.captured_queries]}"
+        )
+
+    def test_post_is_noop_when_piece_unchanged(
+        self, client, user, tmp_path, monkeypatch
+    ):
+        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
+        monkeypatch.setenv("CLOUDINARY_API_KEY", "public-api-key")
+        monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
+        monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_FOLDER", "showcase-videos")
+
+        piece = _make_piece_with_terminal_state(user)
+        cover_path = tmp_path / "cover.png"
+        piece.thumbnail = _attach_image(
+            piece,
+            url=_make_local_png(cover_path, (180, 100, 60)),
+            caption="Cover",
+        )
+        piece.save()
+
+        client.force_authenticate(user=user)
+        url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
+
+        with (
+            patch(
+                "api.tasks.InMemoryTaskInterface.submit",
+                autospec=True,
+                side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
+            ),
+            patch(
+                "api.showcase.upload_storyboard_video_to_cloudinary",
+                autospec=True,
+                return_value={
+                    "cloud_name": "demo-cloud",
+                    "public_id": "video-hash",
+                    "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
+                    "resource_type": "video",
+                },
+            ),
+        ):
+            first = client.post(url, {}, format="json")
+            second = client.post(url, {}, format="json")
+
+        assert first.status_code == 202
+        assert second.status_code == 200
+        assert first.json()["task_id"] == second.json()["task_id"]
