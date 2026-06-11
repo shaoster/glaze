@@ -23,10 +23,6 @@ from .auth.views import (
     staff_invite_batch,
     staff_invite_code,
 )
-from .cloudinary.admin_views import (
-    admin_cloudinary_cleanup,
-    admin_cloudinary_cleanup_archive,
-)
 from .crop_run_views import CropRunViewSet, ImageCropRunsView
 from .global_entries.views import (
     make_global_entry_favorite_view,
@@ -63,8 +59,6 @@ __all__ = [
     "_check_async_tasks",
     "_check_database",
     "_check_migrations",
-    "admin_cloudinary_cleanup",
-    "admin_cloudinary_cleanup_archive",
     "admin_manual_square_crop_import",
     "auth_delete_account",
     "auth_export",

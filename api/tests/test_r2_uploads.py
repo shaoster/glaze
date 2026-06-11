@@ -170,8 +170,7 @@ class TestR2Helpers:
 
         monkeypatch.setenv("R2_PUBLIC_URL", "https://media.example.com")
         assert (
-            r2.key_for_public_url("https://res.cloudinary.com/demo/image/upload/x.jpg")
-            is None
+            r2.key_for_public_url("https://foreign-cdn.example.org/demo/x.jpg") is None
         )
         assert r2.key_for_public_url("") is None
 

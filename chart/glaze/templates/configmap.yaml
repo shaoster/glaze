@@ -59,13 +59,9 @@ data:
   {{- if .Values.adminIngress.enabled }}
   ADMIN_INGRESS_HOST: {{ .Values.adminIngress.host | quote }}
   {{- end }}
-  CLOUDINARY_CLOUD_NAME: {{ .Values.appConfig.cloudinaryCloudName | quote }}
-  CLOUDINARY_UPLOAD_FOLDER: {{ .Values.appConfig.cloudinaryUploadFolder | quote }}
-  CLOUDINARY_UPLOAD_PRESET: {{ .Values.appConfig.cloudinaryUploadPreset | quote }}
-  CLOUDINARY_PUBLIC_UPLOAD_FOLDER: {{ .Values.appConfig.cloudinaryPublicUploadFolder | quote }}
-  {{- with .Values.appConfig.cloudinaryVideoUploadFolder }}
-  CLOUDINARY_VIDEO_UPLOAD_FOLDER: {{ . | quote }}
-  {{- end }}
+  R2_ACCOUNT_ID: {{ .Values.appConfig.r2AccountId | quote }}
+  R2_BUCKET_NAME: {{ .Values.appConfig.r2BucketName | quote }}
+  R2_PUBLIC_URL: {{ .Values.appConfig.r2PublicUrl | quote }}
   {{- with .Values.appConfig.emailHost }}
   EMAIL_HOST: {{ . | quote }}
   {{- end }}

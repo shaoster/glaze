@@ -15,10 +15,27 @@ import httpx
 
 from backend.otel import traced
 
-from ..cloudinary_cleanup import _StreamingZipBuffer
 from ..models import Image
 
 logger = logging.getLogger(__name__)
+
+
+class _StreamingZipBuffer:
+    """File-like sink that buffers ZIP bytes for incremental streaming."""
+
+    def __init__(self) -> None:
+        self._chunks: list[bytes] = []
+
+    def write(self, data: bytes) -> int:
+        self._chunks.append(bytes(data))
+        return len(data)
+
+    def flush_chunks(self) -> list[bytes]:
+        chunks, self._chunks = self._chunks, []
+        return chunks
+
+    def flush(self) -> None:
+        return None
 
 
 @traced

@@ -7,15 +7,19 @@ metadata:
     {{- include "glaze.labels" . | nindent 4 }}
 spec:
   headers:
+    # [SECURITY] res.cloudinary.com stays in img-src/media-src only until the
+    # prod asset migration (migrate_assets_to_r2) rewrites stored URLs; it is
+    # removed in a follow-up PR. All Cloudinary script/connect/frame hosts are
+    # gone — uploads now go straight to R2 via presigned PUT (connect-src).
     contentSecurityPolicy: >-
       default-src 'self';
-      script-src 'self' https://accounts.google.com https://apis.google.com https://upload-widget.cloudinary.com;
+      script-src 'self' https://accounts.google.com https://apis.google.com;
       style-src 'self' 'unsafe-inline' https://accounts.google.com https://fonts.googleapis.com;
-      img-src 'self' data: https://res.cloudinary.com;
-      media-src 'self' https://res.cloudinary.com;
-      connect-src 'self' https://api.cloudinary.com;
+      img-src 'self' data: blob: {{ .Values.appConfig.r2PublicUrl }} https://res.cloudinary.com;
+      media-src 'self' {{ .Values.appConfig.r2PublicUrl }} https://res.cloudinary.com;
+      connect-src 'self' https://{{ .Values.appConfig.r2AccountId }}.r2.cloudflarestorage.com;
       font-src 'self' https://fonts.gstatic.com;
-      frame-src https://accounts.google.com https://widget.cloudinary.com https://upload-widget.cloudinary.com;
+      frame-src https://accounts.google.com;
       object-src 'none';
       base-uri 'self';
       form-action 'self';

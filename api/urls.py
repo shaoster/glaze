@@ -29,16 +29,6 @@ urlpatterns = [
         name="image-crop-runs",
     ),
     path(
-        "admin/cloudinary-cleanup/",
-        views.admin_cloudinary_cleanup,
-        name="admin-cloudinary-cleanup",
-    ),
-    path(
-        "admin/cloudinary-cleanup/archive/",
-        views.admin_cloudinary_cleanup_archive,
-        name="admin-cloudinary-cleanup-archive",
-    ),
-    path(
         "analysis/glaze-combination-images/",
         views.glaze_combination_images,
         name="analysis-glaze-combination-images",

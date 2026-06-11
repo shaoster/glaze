@@ -7,6 +7,7 @@ influences where an object lands beyond choosing an allowed content type.
 """
 
 import uuid
+from typing import NamedTuple
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -40,10 +41,16 @@ _AUDIO_CONTENT_TYPES = {
     "audio/mp4": "m4a",
 }
 
+
+class _ResourceConfig(NamedTuple):
+    content_types: dict[str, str]
+    prefix: str
+
+
 _RESOURCE_TYPES = {
-    "image": {"content_types": _IMAGE_CONTENT_TYPES, "prefix": "images"},
-    "video": {"content_types": _VIDEO_CONTENT_TYPES, "prefix": "videos"},
-    "audio": {"content_types": _AUDIO_CONTENT_TYPES, "prefix": "audio"},
+    "image": _ResourceConfig(content_types=_IMAGE_CONTENT_TYPES, prefix="images"),
+    "video": _ResourceConfig(content_types=_VIDEO_CONTENT_TYPES, prefix="videos"),
+    "audio": _ResourceConfig(content_types=_AUDIO_CONTENT_TYPES, prefix="audio"),
 }
 
 # Resource types whose uploads are restricted to staff accounts.
@@ -115,7 +122,7 @@ def r2_presigned_upload_url(request: Request) -> Response:
             status=status.HTTP_400_BAD_REQUEST,
         )
     content_type = content_type.strip().lower()
-    extension = resource_config["content_types"].get(content_type)
+    extension = resource_config.content_types.get(content_type)
     if extension is None:
         return Response(
             {"detail": f"Unsupported content type: {content_type!r}."},
@@ -126,7 +133,7 @@ def r2_presigned_upload_url(request: Request) -> Response:
     # resource type, owner scoping from the session user, a random UUID, and
     # an extension derived from the validated content type. Client filenames
     # never reach the key, so collisions/overwrites/traversal are impossible.
-    key = f"{resource_config['prefix']}/{request.user.id}/{uuid.uuid4()}.{extension}"
+    key = f"{resource_config.prefix}/{request.user.id}/{uuid.uuid4()}.{extension}"
 
     upload_url = r2.generate_presigned_put(
         key,

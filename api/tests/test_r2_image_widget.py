@@ -175,7 +175,6 @@ class TestR2ImageWidgetJavascript:
         assert "inp.value = publicUrl;" in script
         assert "method: 'PUT'" in script
         assert "JSON.stringify" in script  # presign request body only
-        assert "cloudinary" not in script.lower()
 
 
 class TestAdminImagePreview:
