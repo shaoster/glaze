@@ -41,6 +41,13 @@ vi.mock("axios", async (importOriginal) => {
   };
 });
 
+// fetchPieces talks to the GraphQL endpoint via graphqlRequest.
+const mockGraphqlRequest = vi.fn();
+vi.mock("../graphqlClient", () => ({
+  graphqlClient: {},
+  graphqlRequest: (...args: unknown[]) => mockGraphqlRequest(...args),
+}));
+
 async function loadApiModule(options?: { expoBaseUrl?: string }) {
   vi.resetModules();
   if (options?.expoBaseUrl === undefined) {
@@ -103,6 +110,7 @@ beforeEach(() => {
   mockClient.request.mockReset();
   mockClient.interceptors.request.use.mockReset();
   mockClient.interceptors.response.use.mockReset();
+  mockGraphqlRequest.mockReset();
   mockClient.defaults = {};
   delete process.env.EXPO_PUBLIC_API_BASE_URL;
   vi.unstubAllGlobals();
@@ -195,17 +203,14 @@ describe("auth token wiring", () => {
 });
 
 describe("piece endpoints", () => {
-  it("fetchPieces maps wire data to PieceSummary values", async () => {
+  it("fetchPieces maps GraphQL wire data to PieceSummary values", async () => {
     const { fetchPieces } = await loadApiModule();
-    mockClient.get.mockResolvedValue({
-      data: { count: 1, results: [wirePieceSummary] },
+    mockGraphqlRequest.mockResolvedValue({
+      pieces: { count: 1, results: [wirePieceSummary] },
     });
 
     const result = await fetchPieces();
 
-    expect(mockClient.get).toHaveBeenCalledWith("pieces/", {
-      params: undefined,
-    });
     expect(result.count).toBe(1);
     expect(result.results).toHaveLength(1);
     expect(result.results[0].created).toBeInstanceOf(Date);
@@ -220,21 +225,45 @@ describe("piece endpoints", () => {
     });
   });
 
-  it("fetchPieces passes ordering and pagination params", async () => {
+  it("fetchPieces maps ordering and pagination to GraphQL variables", async () => {
     const { fetchPieces } = await loadApiModule();
-    mockClient.get.mockResolvedValue({ data: { count: 0, results: [] } });
+    mockGraphqlRequest.mockResolvedValue({ pieces: { count: 0, results: [] } });
 
     await fetchPieces({ ordering: "name", limit: 10, offset: 20 });
 
-    expect(mockClient.get).toHaveBeenCalledWith("pieces/", {
-      params: { ordering: "name", limit: 10, offset: 20 },
+    const [, variables] = mockGraphqlRequest.mock.calls[0];
+    expect(variables).toMatchObject({
+      ordering: "NAME_ASC",
+      limit: 10,
+      offset: 20,
+      filter: undefined,
+    });
+  });
+
+  it("fetchPieces builds a GraphQL filter from state, shared, search, and tagIds", async () => {
+    const { fetchPieces } = await loadApiModule();
+    mockGraphqlRequest.mockResolvedValue({ pieces: { count: 0, results: [] } });
+
+    await fetchPieces({
+      state: ["completed"],
+      shared: true,
+      search: "vase",
+      tagIds: ["t1", "t2"],
+    });
+
+    const [, variables] = mockGraphqlRequest.mock.calls[0];
+    expect(variables.filter).toEqual({
+      state: ["completed"],
+      shared: true,
+      search: "vase",
+      tagIds: ["t1", "t2"],
     });
   });
 
   it("fetchPieces defaults missing tags to an empty array", async () => {
     const { fetchPieces } = await loadApiModule();
-    mockClient.get.mockResolvedValue({
-      data: { count: 1, results: [{ ...wirePieceSummary, tags: undefined }] },
+    mockGraphqlRequest.mockResolvedValue({
+      pieces: { count: 1, results: [{ ...wirePieceSummary, tags: undefined }] },
     });
 
     const result = await fetchPieces();
@@ -306,8 +335,8 @@ describe("piece endpoints", () => {
 
   it("fetchPieces normalizes thumbnail crops from schema metadata", async () => {
     const { fetchPieces } = await loadApiModule();
-    mockClient.get.mockResolvedValue({
-      data: {
+    mockGraphqlRequest.mockResolvedValue({
+      pieces: {
         count: 1,
         results: [
           {

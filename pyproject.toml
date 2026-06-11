@@ -106,6 +106,7 @@ dependencies = [
     "whitenoise==6.9.0",
     "djangorestframework-simplejwt>=5.5.1",
     "opentelemetry-instrumentation-redis>=0.62b1",
+    "strawberry-graphql-django>=0.86.1",
 ]
 
 [tool.uv]

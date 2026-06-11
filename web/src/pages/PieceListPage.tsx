@@ -66,7 +66,7 @@ export default function PieceListPage() {
     [activeFilters],
   );
   const tagIdsParam = useMemo(
-    () => (activeTagIds.length > 0 ? activeTagIds.join(",") : undefined),
+    () => (activeTagIds.length > 0 ? activeTagIds : undefined),
     [activeTagIds],
   );
 
@@ -101,7 +101,7 @@ export default function PieceListPage() {
         offset: pageParam,
         ...(stateFilter ? { state: stateFilter } : {}),
         ...(sharedFilter !== undefined ? { shared: sharedFilter } : {}),
-        ...(tagIdsParam ? { tag_ids: tagIdsParam } : {}),
+        ...(tagIdsParam ? { tagIds: tagIdsParam } : {}),
       }),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {

@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from . import views
 from .global_entries.views import _FAVORITES_REGISTRY
+from .graphql.views import graphql_view
 from .workflow import get_global_model_and_field, get_global_names
 
 _router = DefaultRouter()
@@ -10,6 +11,8 @@ _router.register(r"crop-runs", views.CropRunViewSet, basename="crop-run")
 
 urlpatterns = [
     path("", include(_router.urls)),
+    # Introspectable GraphQL endpoint (backs the MCP server wrapper).
+    path("graphql/", graphql_view(), name="graphql"),
     path(
         "images/<uuid:image_id>/piece_state/<uuid:piece_state_id>/",
         views.piece_image_detail,

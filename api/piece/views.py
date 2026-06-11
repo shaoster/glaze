@@ -67,19 +67,6 @@ from .helpers import (
             required=False,
             type=str,
         ),
-        OpenApiParameter(
-            name="state",
-            description="Comma-separated workflow state names to filter by (OR within the list).",
-            required=False,
-            type=str,
-        ),
-        OpenApiParameter(
-            name="shared",
-            description="Filter by shared flag. 'true' returns only shared pieces; 'false' returns only unshared pieces.",
-            required=False,
-            type=str,
-            enum=["true", "false"],
-        ),
     ],
     responses={
         200: inline_serializer(
@@ -111,15 +98,6 @@ def pieces(request: Request) -> Response:
             ):
                 qs = qs.filter(tag_links__tag_id=tag_id)
             qs = qs.distinct()
-        raw_states = request.query_params.get("state", "").strip()
-        if raw_states:
-            state_list = [s.strip() for s in raw_states.split(",") if s.strip()]
-            qs = qs.filter(current_state_name__in=state_list)
-        shared_param = request.query_params.get("shared", "").lower()
-        if shared_param == "true":
-            qs = qs.filter(shared=True)
-        elif shared_param == "false":
-            qs = qs.filter(shared=False)
         ordering_param = request.query_params.get("ordering", _DEFAULT_ORDERING)
         qs = _apply_piece_ordering(qs, ordering_param)
         try:
