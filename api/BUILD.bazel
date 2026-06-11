@@ -61,6 +61,7 @@ py_library(
         "models.py",
         "model_factories.py",
         "preferences.py",
+        "r2.py",
         "serializer_factories.py",
         "serializer_registry.py",
         "serializers.py",
@@ -72,6 +73,8 @@ py_library(
         "tasks.py",
         "task_views.py",
         "telemetry_views.py",
+        "uploads/__init__.py",
+        "uploads/views.py",
         "urls.py",
         "views.py",
         "workflow_views.py",
@@ -83,7 +86,7 @@ py_library(
     deps = [
         ":api_workflow_lib",
         "//backend:backend_lib",
-        "@pypi//cloudinary",
+        "@pypi//boto3",
         "@pypi//av",
         "@pypi//numpy",
         "@pypi//pillow_heif",
@@ -129,7 +132,6 @@ py_library(
     srcs = ["manual_tile_imports.py"],
     deps = [
         ":api_schema_lib",
-        "@pypi//cloudinary",
     ],
 )
 
@@ -493,16 +495,16 @@ pytest_test(
         "tests/test_admin_scope.py",
         "tests/test_cloudinary_cleanup.py",
         "tests/test_cloudinary_image_widget.py",
-        "tests/test_cloudinary_upload_signature.py",
         "tests/test_management_commands.py",
+        "tests/test_r2_uploads.py",
     ],
     args = [
         "api/tests/test_admin_exports.py",
         "api/tests/test_admin_scope.py",
         "api/tests/test_cloudinary_cleanup.py",
         "api/tests/test_cloudinary_image_widget.py",
-        "api/tests/test_cloudinary_upload_signature.py",
         "api/tests/test_management_commands.py",
+        "api/tests/test_r2_uploads.py",
     ],
     data = _TEST_DATA + [":api_dev_commands"],
     env = _TEST_ENV,
@@ -511,7 +513,8 @@ pytest_test(
     expected_coverage = [
         "api/admin.py",
         "api/cloudinary_cleanup.py",
-        "api/cloudinary/views.py",
+        "api/uploads/views.py",
+        "api/r2.py",
         "api/management/commands/*.py",
     ],
 )

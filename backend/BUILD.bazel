@@ -20,7 +20,6 @@ py_library(
         "@pypi//drf_spectacular",
         "@pypi//dj_database_url",
         "@pypi//whitenoise",
-        "@pypi//cloudinary",
         "@pypi//google_auth",
         "@pypi//requests",
         "@pypi//pyyaml",

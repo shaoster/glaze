@@ -94,14 +94,9 @@ urlpatterns = [
         name="piece-showcase-video",
     ),
     path(
-        "uploads/cloudinary/widget-config/",
-        views.cloudinary_widget_config,
-        name="cloudinary-widget-config",
-    ),
-    path(
-        "uploads/cloudinary/widget-signature/",
-        views.cloudinary_widget_sign,
-        name="cloudinary-widget-sign",
+        "uploads/r2/presigned-url/",
+        views.r2_presigned_upload_url,
+        name="r2-presigned-upload-url",
     ),
     path(
         "workflow/schema/<str:state_id>/",
