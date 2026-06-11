@@ -359,9 +359,9 @@ def generate_showcase_video(task: AsyncTask) -> dict:
     from .showcase import (
         SHOWCASE_VIDEO_RENDER_VERSION,
         compute_storyboard_hash,
-        is_showcase_video_cloudinary_enabled,
+        is_showcase_video_storage_enabled,
         render_storyboard_to_mp4,
-        upload_storyboard_video_to_cloudinary,
+        upload_showcase_video_to_r2,
         validate_storyboard,
     )
 
@@ -376,13 +376,13 @@ def generate_showcase_video(task: AsyncTask) -> dict:
     validate_storyboard(storyboard)
 
     # input_hash is now a piece-level deduplication hash (compute_piece_input_hash).
-    # Use it for Cloudinary asset naming so uploads are idempotent.  Fall back to
+    # Use it for the R2 object key so uploads are idempotent.  Fall back to
     # the storyboard hash for tasks created before this change.
     stored_hash = params.get("input_hash")
     input_hash = stored_hash or compute_storyboard_hash(storyboard)
 
-    if not is_showcase_video_cloudinary_enabled():
-        raise ValueError("Cloudinary showcase video upload is not configured.")
+    if not is_showcase_video_storage_enabled():
+        raise ValueError("Showcase video object storage is not configured.")
 
     task.progress = 0
     task.save(update_fields=["progress", "last_modified"])
@@ -393,15 +393,15 @@ def generate_showcase_video(task: AsyncTask) -> dict:
 
     output_path = render_storyboard_to_mp4(storyboard, on_progress=_report_progress)
     try:
-        cloudinary_asset = upload_storyboard_video_to_cloudinary(
+        artifact_url = upload_showcase_video_to_r2(
             output_path,
             input_hash=input_hash,
         )
-        if not cloudinary_asset:
-            raise ValueError("Cloudinary showcase video upload failed.")
+        if not artifact_url:
+            raise ValueError("Showcase video upload to R2 failed.")
     except Exception:
         logger.exception(
-            f"Cloudinary upload failed for showcase video task {task.id}; "
+            f"R2 upload failed for showcase video task {task.id}; "
             "marking the task as failed."
         )
         raise
@@ -419,10 +419,9 @@ def generate_showcase_video(task: AsyncTask) -> dict:
         "render_version": SHOWCASE_VIDEO_RENDER_VERSION,
         "input_hash": input_hash,
         "artifact_filename": f"{input_hash}.mp4",
-        "artifact_url": cloudinary_asset["secure_url"],
-        "download_url": cloudinary_asset["secure_url"],
+        "artifact_url": artifact_url,
+        "download_url": artifact_url,
         "content_type": "video/mp4",
-        "cloudinary_asset": cloudinary_asset,
         "storyboard": storyboard,
     }
 

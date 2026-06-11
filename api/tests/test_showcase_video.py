@@ -25,6 +25,68 @@ from api.tasks import _execute_task
 from api.workflow import TERMINAL_STATES
 
 
+@pytest.fixture(autouse=True)
+def local_music_asset(monkeypatch, tmp_path_factory):
+    """Serve catalog track audio from a locally generated WAV.
+
+    Keeps render tests hermetic: no network download of the hosted track
+    (the catalog now points at the R2 CDN, which need not exist in CI).
+    """
+    import dataclasses
+    from fractions import Fraction
+
+    from api.showcase import music as music_module
+
+    flac_path = tmp_path_factory.mktemp("music") / "track.flac"
+    with av.open(str(flac_path), "w") as container:
+        stream = container.add_stream("flac", rate=44100)
+        stream.layout = "stereo"
+        chunk = 4410
+        for offset in range(0, 44100 * 30, chunk):  # 30s of silence
+            arr = np.zeros((2, chunk), dtype=np.int32)
+            frame = av.AudioFrame.from_ndarray(arr, format="s32p", layout="stereo")
+            frame.sample_rate = 44100
+            frame.pts = offset
+            frame.time_base = Fraction(1, 44100)
+            for packet in stream.encode(frame):
+                container.mux(packet)
+        for packet in stream.encode():
+            container.mux(packet)
+
+    real_get_track = music_module.get_track
+
+    def _local_track(track_id):
+        track = real_get_track(track_id)
+        if track is None:
+            return None
+        return dataclasses.replace(
+            track,
+            audio=dataclasses.replace(track.audio, url=str(flac_path)),
+        )
+
+    monkeypatch.setattr("api.showcase.render.get_track", _local_track)
+    return flac_path
+
+
+def _set_r2_env(monkeypatch):
+    monkeypatch.setenv("R2_ACCOUNT_ID", "acct")
+    monkeypatch.setenv("R2_ACCESS_KEY_ID", "key")
+    monkeypatch.setenv("R2_SECRET_ACCESS_KEY", "secret")
+    monkeypatch.setenv("R2_BUCKET_NAME", "bucket")
+    monkeypatch.setenv("R2_PUBLIC_URL", "https://media.example.com")
+
+
+def _clear_r2_env(monkeypatch):
+    for var in (
+        "R2_ACCOUNT_ID",
+        "R2_ACCESS_KEY_ID",
+        "R2_SECRET_ACCESS_KEY",
+        "R2_BUCKET_NAME",
+        "R2_PUBLIC_URL",
+    ):
+        monkeypatch.delenv(var, raising=False)
+
+
 def _make_local_png(path: Path, color: tuple[int, int, int]) -> str:
     from PIL import Image as PILImage
 
@@ -166,8 +228,6 @@ class TestShowcaseVideoApi:
         image = Image.objects.create(
             user=user,
             url="https://example.com/thumb.jpg",
-            cloud_name="demo",
-            cloudinary_public_id="pieces/thumb",
         )
         PieceStateImage.objects.create(
             piece_state=state,
@@ -224,10 +284,7 @@ class TestShowcaseVideoApi:
     def test_submit_enqueues_async_task_and_streams_artifact(
         self, client, user, tmp_path, monkeypatch
     ):
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "public-api-key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
-        monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_FOLDER", "showcase-videos")
+        _set_r2_env(monkeypatch)
 
         piece = _make_piece_with_terminal_state(user)
         cover_path = tmp_path / "cover.png"
@@ -248,14 +305,11 @@ class TestShowcaseVideoApi:
                 side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
             ),
             patch(
-                "api.showcase.upload_storyboard_video_to_cloudinary",
+                "api.showcase.upload_showcase_video_to_r2",
                 autospec=True,
-                return_value={
-                    "cloud_name": "demo-cloud",
-                    "public_id": "video-hash",
-                    "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
-                    "resource_type": "video",
-                },
+                return_value=(
+                    "https://media.example.com/videos/showcase/video-hash.mp4"
+                ),
             ),
         ):
             response = client.post(url, {}, format="json")
@@ -274,21 +328,16 @@ class TestShowcaseVideoApi:
         status_body = status_response.json()
         assert status_body["status"] == "succeeded"
         assert status_body["artifact"]["url"] == (
-            "https://res.cloudinary.com/demo-cloud/video/upload/"
-            "v1/showcase-videos/video-hash.mp4"
+            "https://media.example.com/videos/showcase/video-hash.mp4"
         )
         assert status_body["artifact"]["download_url"] == (
-            "https://res.cloudinary.com/demo-cloud/video/upload/"
-            "v1/showcase-videos/video-hash.mp4"
+            "https://media.example.com/videos/showcase/video-hash.mp4"
         )
 
     def test_task_uses_storyboard_snapshot_even_if_piece_changes_before_execution(
         self, client, user, tmp_path, monkeypatch
     ):
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "public-api-key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
-        monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_FOLDER", "showcase-videos")
+        _set_r2_env(monkeypatch)
 
         piece = _make_piece_with_terminal_state(user, name="Original Name")
         cover_path = tmp_path / "cover.png"
@@ -314,14 +363,11 @@ class TestShowcaseVideoApi:
                 side_effect=_capture_submit,
             ),
             patch(
-                "api.showcase.upload_storyboard_video_to_cloudinary",
+                "api.showcase.upload_showcase_video_to_r2",
                 autospec=True,
-                return_value={
-                    "cloud_name": "demo-cloud",
-                    "public_id": "video-hash",
-                    "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
-                    "resource_type": "video",
-                },
+                return_value=(
+                    "https://media.example.com/videos/showcase/video-hash.mp4"
+                ),
             ),
         ):
             response = client.post(url, {}, format="json")
@@ -334,14 +380,9 @@ class TestShowcaseVideoApi:
         piece.save(update_fields=["name"])
 
         with patch(
-            "api.showcase.upload_storyboard_video_to_cloudinary",
+            "api.showcase.upload_showcase_video_to_r2",
             autospec=True,
-            return_value={
-                "cloud_name": "demo-cloud",
-                "public_id": "video-hash",
-                "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
-                "resource_type": "video",
-            },
+            return_value=("https://media.example.com/videos/showcase/video-hash.mp4"),
         ):
             _execute_task(task.id)
 
@@ -352,10 +393,7 @@ class TestShowcaseVideoApi:
     def test_get_marks_render_stale_after_piece_changes(
         self, client, user, tmp_path, monkeypatch
     ):
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "public-api-key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
-        monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_FOLDER", "showcase-videos")
+        _set_r2_env(monkeypatch)
 
         piece = _make_piece_with_terminal_state(user, name="Stable")
         cover_path = tmp_path / "cover.png"
@@ -376,14 +414,11 @@ class TestShowcaseVideoApi:
                 side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
             ),
             patch(
-                "api.showcase.upload_storyboard_video_to_cloudinary",
+                "api.showcase.upload_showcase_video_to_r2",
                 autospec=True,
-                return_value={
-                    "cloud_name": "demo-cloud",
-                    "public_id": "video-hash",
-                    "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
-                    "resource_type": "video",
-                },
+                return_value=(
+                    "https://media.example.com/videos/showcase/video-hash.mp4"
+                ),
             ),
         ):
             response = client.post(url, {}, format="json")
@@ -413,10 +448,10 @@ class TestShowcaseVideoApi:
 
         assert response.status_code == 404
 
-    def test_artifact_redirects_to_cloudinary_when_uploaded(
+    def test_artifact_redirects_to_r2_when_uploaded(
         self, client, user, tmp_path, monkeypatch
     ):
-        piece = _make_piece_with_terminal_state(user, name="Cloudinary Ready")
+        piece = _make_piece_with_terminal_state(user, name="Storage Ready")
         cover_path = tmp_path / "cover.png"
         piece.thumbnail = _attach_image(
             piece,
@@ -425,10 +460,7 @@ class TestShowcaseVideoApi:
         )
         piece.save()
 
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "public-api-key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
-        monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_FOLDER", "showcase-videos")
+        _set_r2_env(monkeypatch)
 
         client.force_authenticate(user=user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
@@ -440,14 +472,11 @@ class TestShowcaseVideoApi:
                 side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
             ),
             patch(
-                "api.showcase.upload_storyboard_video_to_cloudinary",
+                "api.showcase.upload_showcase_video_to_r2",
                 autospec=True,
-                return_value={
-                    "cloud_name": "demo-cloud",
-                    "public_id": "video-hash",
-                    "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
-                    "resource_type": "video",
-                },
+                return_value=(
+                    "https://media.example.com/videos/showcase/video-hash.mp4"
+                ),
             ) as upload_mock,
         ):
             response = client.post(url, {}, format="json")
@@ -464,17 +493,15 @@ class TestShowcaseVideoApi:
         assert status_response.status_code == 200
         artifact_url = status_response.json()["artifact"]["url"]
         assert artifact_url == (
-            "https://res.cloudinary.com/demo-cloud/video/upload/"
-            "v1/showcase-videos/video-hash.mp4"
+            "https://media.example.com/videos/showcase/video-hash.mp4"
         )
 
         task = AsyncTask.objects.get(id=task_id)
-        assert task.result["cloudinary_asset"]["secure_url"] == (
-            "https://res.cloudinary.com/demo-cloud/video/upload/"
-            "v1/showcase-videos/video-hash.mp4"
+        assert task.result["download_url"] == (
+            "https://media.example.com/videos/showcase/video-hash.mp4"
         )
 
-    def test_submit_rejected_when_cloudinary_video_is_not_configured(
+    def test_submit_rejected_when_video_storage_is_not_configured(
         self, client, user, tmp_path, monkeypatch
     ):
         piece = _make_piece_with_terminal_state(user, name="Disabled")
@@ -486,7 +513,7 @@ class TestShowcaseVideoApi:
         )
         piece.save()
 
-        monkeypatch.delenv("CLOUDINARY_VIDEO_UPLOAD_FOLDER", raising=False)
+        _clear_r2_env(monkeypatch)
 
         client.force_authenticate(user=user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
@@ -495,7 +522,7 @@ class TestShowcaseVideoApi:
 
         assert response.status_code == 503
         assert response.json()["detail"] == (
-            "Cloudinary showcase video uploads are not configured."
+            "Showcase video object storage is not configured."
         )
 
         status_response = client.get(url)
@@ -586,10 +613,7 @@ class TestShowcaseVideoApi:
     def test_post_is_noop_when_piece_unchanged(
         self, client, user, tmp_path, monkeypatch
     ):
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "public-api-key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "super-secret")
-        monkeypatch.setenv("CLOUDINARY_VIDEO_UPLOAD_FOLDER", "showcase-videos")
+        _set_r2_env(monkeypatch)
 
         piece = _make_piece_with_terminal_state(user)
         cover_path = tmp_path / "cover.png"
@@ -610,14 +634,11 @@ class TestShowcaseVideoApi:
                 side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
             ),
             patch(
-                "api.showcase.upload_storyboard_video_to_cloudinary",
+                "api.showcase.upload_showcase_video_to_r2",
                 autospec=True,
-                return_value={
-                    "cloud_name": "demo-cloud",
-                    "public_id": "video-hash",
-                    "secure_url": "https://res.cloudinary.com/demo-cloud/video/upload/v1/showcase-videos/video-hash.mp4",
-                    "resource_type": "video",
-                },
+                return_value=(
+                    "https://media.example.com/videos/showcase/video-hash.mp4"
+                ),
             ),
         ):
             first = client.post(url, {}, format="json")

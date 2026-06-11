@@ -22,9 +22,9 @@ from .render import (
     SHOWCASE_VIDEO_RENDER_VERSION,
     SHOWCASE_VIDEO_TASK_TYPE,
     compute_storyboard_hash,
-    is_showcase_video_cloudinary_enabled,
+    is_showcase_video_storage_enabled,
     render_storyboard_to_mp4,
-    upload_storyboard_video_to_cloudinary,
+    upload_showcase_video_to_r2,
 )
 from .storyboard import (
     COVER_SLIDE_MS,
@@ -62,11 +62,11 @@ __all__ = [
     "build_keepsake_storyboard",
     "compute_piece_input_hash",
     "compute_storyboard_hash",
-    "is_showcase_video_cloudinary_enabled",
+    "is_showcase_video_storage_enabled",
     "get_catalog",
     "get_track",
     "resolve_track_id",
     "render_storyboard_to_mp4",
-    "upload_storyboard_video_to_cloudinary",
+    "upload_showcase_video_to_r2",
     "validate_storyboard",
 ]
