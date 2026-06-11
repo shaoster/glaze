@@ -170,4 +170,19 @@ describe("ShowcasePage", () => {
     expect(screen.getByText("Viewing Alice's piece")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
   });
+
+  it("does not render PotterDoc logo for authenticated owner", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.mocked(api.fetchPiece).mockResolvedValue({
+      ...BASE_PIECE,
+      can_edit: true,
+    });
+
+    renderShell(queryClient, true);
+
+    await screen.findByText("Beautiful Bowl");
+    expect(screen.queryByAltText("PotterDoc")).toBeNull();
+  });
 });
