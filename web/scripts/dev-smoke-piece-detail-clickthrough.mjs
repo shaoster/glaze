@@ -25,10 +25,12 @@ try {
   ]);
 
   const page = await context.newPage();
+  // The piece list loads via the GraphQL endpoint (POST /api/graphql/), not the
+  // REST GET /api/pieces/ — `pieces` is the only GraphQL operation in the app.
   const piecesLoaded = page.waitForResponse(
     (response) =>
-      response.url().includes("/api/pieces/") &&
-      response.request().method() === "GET" &&
+      response.url().includes("/api/graphql/") &&
+      response.request().method() === "POST" &&
       response.ok(),
     { timeout: 30000 },
   );
