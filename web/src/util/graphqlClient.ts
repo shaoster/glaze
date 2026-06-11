@@ -2,19 +2,27 @@ import { ClientError, GraphQLClient, type Variables } from "graphql-request";
 
 import { clearAccessToken, getAccessToken, setAccessToken } from "./authTokenStore";
 
-// Mirror the axios client's base-URL resolution (src/util/api.ts): the GraphQL
-// endpoint lives under the same /api/ prefix, overridable for Expo/mobile. The
-// override may be supplied with or without a trailing slash, so normalize it
-// before appending the path (otherwise "https://host" + "graphql/" would join
-// into "https://hostgraphql/").
+// The GraphQL endpoint lives under the same /api/ prefix as the REST API,
+// overridable for Expo/mobile. Unlike axios (which resolves relative URLs
+// against the document origin), graphql-request calls `new URL(endpoint)`
+// internally and throws on a relative path — so the endpoint must be ABSOLUTE.
+// Derive the origin from window when available; the Expo override is already
+// absolute (normalize its trailing slash).
 const expoBaseUrl = (
   globalThis as { process?: { env?: Record<string, string | undefined> } }
 ).process?.env?.EXPO_PUBLIC_API_BASE_URL;
-const API_BASE = expoBaseUrl
-  ? expoBaseUrl.endsWith("/")
-    ? expoBaseUrl
-    : `${expoBaseUrl}/`
-  : "/api/";
+
+function resolveApiBase(): string {
+  if (expoBaseUrl) {
+    return expoBaseUrl.endsWith("/") ? expoBaseUrl : `${expoBaseUrl}/`;
+  }
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}/api/`;
+  }
+  return "/api/";
+}
+
+const API_BASE = resolveApiBase();
 const GRAPHQL_ENDPOINT = `${API_BASE}graphql/`;
 
 export const graphqlClient = new GraphQLClient(GRAPHQL_ENDPOINT, {

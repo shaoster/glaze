@@ -1283,6 +1283,7 @@ vitest_test(
     srcs = [
         "src/util/__tests__/authTokenStore.test.ts",
         "src/util/__tests__/api.test.ts",
+        "src/util/__tests__/graphqlClient.test.ts",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [
@@ -1291,6 +1292,7 @@ vitest_test(
     expected_coverage = [
         "web/src/util/authTokenStore*",
         "web/src/util/api.ts",
+        "web/src/util/graphqlClient.ts",
     ],
 )
 
