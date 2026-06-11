@@ -6,7 +6,7 @@ Usage:
     bazel run //tools:visualize_crops
 
     # Test specific URLs directly (no DB needed):
-    bazel run //tools:visualize_crops -- https://res.cloudinary.com/.../image.jpg https://...
+    bazel run //tools:visualize_crops -- https://media.example.com/images/1/a.jpg https://...
 
     # Test against production Modal instead of local service:
     SEGMENT_SERVICE_URL=https://shaoster--piece-image-segment-service-segment.modal.run \\

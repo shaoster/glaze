@@ -823,23 +823,32 @@ class TestAuthExport:
         }
         assert images == []
 
-    def test_export_image_name_uses_public_id_and_url_extension(self, user):
+    def test_export_image_name_uses_r2_key_and_url_extension(self, user):
         from api.auth.export_archive import export_image_name
 
         image = Image.objects.create(
             user=user,
-            url="https://res.cloudinary.com/demo/image/upload/v1/photos/glaze/test.jpg",
-            cloudinary_public_id="exports/gallery/test",
+            url="https://media.example.com/images/7/gallery/test.jpg",
+            r2_key="images/7/gallery/test.jpg",
         )
 
-        assert export_image_name(image) == "images/exports__gallery__test.jpg"
+        assert export_image_name(image) == "images/images__7__gallery__test.jpg"
+
+    def test_export_image_name_falls_back_to_url_path(self, user):
+        from api.auth.export_archive import export_image_name
+
+        image = Image.objects.create(
+            user=user,
+            url="https://example.com/photos/glaze/test.jpg",
+        )
+
+        assert export_image_name(image) == "images/photos__glaze__test.jpg"
 
     def test_stream_export_archive_writes_zip_entries(self, monkeypatch):
         from api.auth.export_archive import stream_export_archive
 
         image = Image.objects.create(
             url="https://example.com/path/to/image.png",
-            cloudinary_public_id="exports/path/to/image",
         )
 
         class FakeResponse:

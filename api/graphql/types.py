@@ -34,20 +34,17 @@ class ImageCropType:
     def from_dict(cls, data: dict[str, Any] | None) -> ImageCropType | None:
         if not data:
             return None
-        return cls(
-            x=data["x"], y=data["y"], width=data["width"], height=data["height"]
-        )
+        return cls(x=data["x"], y=data["y"], width=data["width"], height=data["height"])
 
 
 @strawberry.type
 class ThumbnailType:
     url: str
-    cloudinary_public_id: str | None = None
-    cloud_name: str | None = None
     image_id: str | None = None
     width: int | None = None
     height: int | None = None
     crop: ImageCropType | None = None
+    cropped_url: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> ThumbnailType | None:
@@ -56,12 +53,11 @@ class ThumbnailType:
         image_id = data.get("image_id")
         return cls(
             url=data["url"],
-            cloudinary_public_id=data.get("cloudinary_public_id"),
-            cloud_name=data.get("cloud_name"),
             image_id=str(image_id) if image_id is not None else None,
             width=data.get("width"),
             height=data.get("height"),
             crop=ImageCropType.from_dict(data.get("crop")),
+            cropped_url=data.get("cropped_url"),
         )
 
 

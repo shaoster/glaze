@@ -261,9 +261,8 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
             "reason": f"No PieceStateImage found for image {image_id}",
         }
 
-    # Cloudinary-backed assets only (as per constraints)
-    if not image.cloud_name or not image.cloudinary_public_id:
-        return {"status": "skipped", "reason": "Not a Cloudinary image"}
+    if not image.url:
+        return {"status": "skipped", "reason": "Image has no URL"}
 
     logger.info("Offloading subject detection to remote service.")
     crop_run = run_crop_inference(piece_state_image, async_task=task)

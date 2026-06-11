@@ -36,11 +36,10 @@ class TestAuthAdminLogin:
 
 @pytest.mark.django_db
 class TestBackpopulateCropsCommand:
-    def _make_cloudinary_image(self, suffix="mug"):
+    def _make_hosted_image(self, suffix="mug"):
         return Image.objects.create(
-            url=f"https://res.cloudinary.com/demo/image/upload/v1/pieces/{suffix}.jpg",
-            cloud_name="demo",
-            cloudinary_public_id=f"pieces/{suffix}",
+            url=f"https://media.example.com/images/1/{suffix}.jpg",
+            r2_key=f"images/1/{suffix}.jpg",
         )
 
     def _make_superuser(self, email="admin@example.com"):
@@ -51,7 +50,7 @@ class TestBackpopulateCropsCommand:
 
     def test_dry_run_does_not_enqueue_tasks(self):
         """--dry-run prints a count but creates no AsyncTask records."""
-        image = self._make_cloudinary_image()
+        image = self._make_hosted_image()
         user = self._make_user()
         from api.models import Piece, PieceState, PieceStateImage
 
@@ -69,13 +68,13 @@ class TestBackpopulateCropsCommand:
             call_command("backpopulate_crops")
 
     def test_live_mode_enqueues_task_for_missing_image_crop(self, monkeypatch):
-        """A Cloudinary piece image with no crop gets one AsyncTask enqueued."""
+        """A hosted piece image with no crop gets one AsyncTask enqueued."""
         monkeypatch.setattr(
             "api.tasks.InMemoryTaskInterface.submit", lambda self, task: None
         )
         superuser = self._make_superuser()
         user = self._make_user()
-        image = self._make_cloudinary_image()
+        image = self._make_hosted_image()
         from api.models import Piece, PieceState, PieceStateImage
 
         piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
@@ -97,7 +96,7 @@ class TestBackpopulateCropsCommand:
         )
         self._make_superuser()
         user = self._make_user()
-        image = self._make_cloudinary_image()
+        image = self._make_hosted_image()
         from api.models import Piece, PieceState, PieceStateImage
 
         piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
@@ -120,7 +119,7 @@ class TestBackpopulateCropsCommand:
         )
         self._make_superuser()
         user = self._make_user()
-        image = self._make_cloudinary_image()
+        image = self._make_hosted_image()
         from api.models import Piece, PieceState, PieceStateImage
 
         piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)

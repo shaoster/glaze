@@ -46,7 +46,7 @@ def collect_export_data(user: Any, request: Request) -> tuple[str, str, list[Ima
     )
 
     images = list(
-        Image.objects.filter(cloudinary_public_id__isnull=False)
+        Image.objects.filter(url__startswith="http")
         .filter(
             Q(thumbnail_for_pieces__user=user)
             | Q(piece_state_links__piece_state__user=user)

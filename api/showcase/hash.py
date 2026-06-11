@@ -38,8 +38,6 @@ SELECT md5(
     COALESCE(p.showcase_story, '')  || chr(1) ||
     COALESCE(thumb.id::text, '')    || chr(1) ||
     COALESCE(thumb.url, '')         || chr(1) ||
-    COALESCE(thumb.cloudinary_public_id, '') || chr(1) ||
-    COALESCE(thumb.cloud_name, '')  || chr(1) ||
     COALESCE(thumb.width::text, '') || chr(1) ||
     COALESCE(thumb.height::text, '')
   ) ||
@@ -60,8 +58,6 @@ SELECT md5(
     SELECT md5(string_agg(
       psi.image_id::text                       || chr(1) ||
       COALESCE(img.url, '')                    || chr(1) ||
-      COALESCE(img.cloudinary_public_id, '')   || chr(1) ||
-      COALESCE(img.cloud_name, '')             || chr(1) ||
       COALESCE(img.width::text, '')            || chr(1) ||
       COALESCE(img.height::text, '')           || chr(1) ||
       COALESCE(psi.caption, '')                || chr(1) ||
@@ -119,8 +115,6 @@ def _compute_db_hash_python(
             piece.showcase_story or "",
             str(thumb.id) if thumb else "",
             thumb.url if thumb else "",
-            (thumb.cloudinary_public_id or "") if thumb else "",
-            (thumb.cloud_name or "") if thumb else "",
             str(thumb.width) if (thumb and thumb.width is not None) else "",
             str(thumb.height) if (thumb and thumb.height is not None) else "",
         ]
@@ -166,8 +160,6 @@ def _compute_db_hash_python(
                 [
                     str(lnk.image_id),
                     img.url or "",
-                    img.cloudinary_public_id or "",
-                    img.cloud_name or "",
                     str(img.width) if img.width is not None else "",
                     str(img.height) if img.height is not None else "",
                     lnk.caption or "",

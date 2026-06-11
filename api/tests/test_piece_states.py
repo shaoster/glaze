@@ -156,8 +156,6 @@ class TestPieceStates:
                     {
                         "url": "https://example.com/throwing.jpg",
                         "caption": "throwing",
-                        "cloudinary_public_id": "throwing_id",
-                        "cloud_name": "my_cloud",
                         "width": 1200,
                         "height": 900,
                     }
@@ -401,8 +399,6 @@ class TestPieceStateSerializerNavigation:
         image = Image.objects.create(
             user=user,
             url="https://example.com/thumb.jpg",
-            cloud_name="demo",
-            cloudinary_public_id="thumbs/thumb",
         )
         piece.thumbnail = image
         piece.save(update_fields=["thumbnail"])

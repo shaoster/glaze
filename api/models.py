@@ -119,8 +119,9 @@ class Image(models.Model):
         related_name="images",
     )
     url = models.CharField(max_length=2048)
-    cloudinary_public_id = models.CharField(max_length=1024, null=True, blank=True)
-    cloud_name = models.CharField(max_length=255, null=True, blank=True)
+    # Object key in the R2 bucket for assets stored in R2; NULL for external
+    # URLs (curated local SVGs, legacy assets not yet migrated).
+    r2_key = models.CharField(max_length=1024, null=True, blank=True)
     width = models.PositiveIntegerField(null=True, blank=True)
     height = models.PositiveIntegerField(null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
@@ -129,16 +130,13 @@ class Image(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["cloud_name", "cloudinary_public_id"],
-                condition=Q(
-                    cloud_name__isnull=False, cloudinary_public_id__isnull=False
-                ),
-                name="uniq_image_cloudinary_identity",
+                fields=["url"],
+                name="uniq_image_url",
             ),
             models.UniqueConstraint(
-                fields=["url"],
-                condition=Q(cloudinary_public_id__isnull=True),
-                name="uniq_image_url_without_cloudinary_id",
+                fields=["r2_key"],
+                condition=Q(r2_key__isnull=False),
+                name="uniq_image_r2_key",
             ),
         ]
 
@@ -148,8 +146,7 @@ class Image(models.Model):
     def as_dict(self) -> dict:
         return {
             "url": self.url,
-            "cloudinary_public_id": self.cloudinary_public_id,
-            "cloud_name": self.cloud_name,
+            "r2_key": self.r2_key,
         }
 
     def __getitem__(self, key: str):
@@ -159,8 +156,7 @@ class Image(models.Model):
         if isinstance(other, dict):
             return self.as_dict() == {
                 "url": other.get("url") or "",
-                "cloudinary_public_id": other.get("cloudinary_public_id"),
-                "cloud_name": other.get("cloud_name"),
+                "r2_key": other.get("r2_key"),
             }
         return super().__eq__(other)
 

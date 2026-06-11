@@ -10,16 +10,13 @@ from api.models import (
     PieceStateImage,
 )
 from api.utils import (
-    cloudinary_getinfo_url,
     crop_to_dict,
-    fetch_cloudinary_auto_crop,
-    parse_cloudinary_getinfo_crop,
     replace_piece_state_images,
     sync_glaze_type_singleton_combination,
 )
 
 
-class TestCloudinaryCropParsing:
+class TestCropToDict:
     def test_crop_to_dict_rejects_missing_and_invalid_values(self):
         assert crop_to_dict(None) is None
         assert crop_to_dict({"x": 0, "y": 0, "width": 0, "height": 1}) is None
@@ -32,82 +29,6 @@ class TestCloudinaryCropParsing:
             "width": 1.0,
             "height": 0.5,
         }
-
-    def test_normalizes_pixel_coordinates_from_getinfo(self):
-        payload = {
-            "input": {"width": 1000, "height": 800},
-            "g_auto_info": {"x": 100, "y": 80, "width": 500, "height": 400},
-        }
-
-        assert parse_cloudinary_getinfo_crop(payload) == {
-            "x": 0.1,
-            "y": 0.1,
-            "width": 0.5,
-            "height": 0.5,
-        }
-
-    def test_accepts_nested_w_h_crop_coordinates(self):
-        payload = {
-            "info": {
-                "coordinates": [
-                    {"ignored": True},
-                    {"x": 0.2, "y": 0.3, "w": 0.4, "h": 0.5},
-                ]
-            }
-        }
-
-        assert parse_cloudinary_getinfo_crop(payload) == {
-            "x": 0.2,
-            "y": 0.3,
-            "width": 0.4,
-            "height": 0.5,
-        }
-
-    def test_returns_none_when_getinfo_has_no_crop(self):
-        assert parse_cloudinary_getinfo_crop({"input": {"width": 100}}) is None
-
-    def test_cloudinary_getinfo_url_uses_documented_transform(self):
-        assert cloudinary_getinfo_url("demo", "pieces/mug") == (
-            "https://res.cloudinary.com/demo/image/upload/"
-            "c_crop,g_auto,w_750/fl_getinfo/v1/pieces/mug"
-        )
-        assert cloudinary_getinfo_url("", "pieces/mug") is None
-        assert cloudinary_getinfo_url("demo", "") is None
-
-    def test_fetch_cloudinary_auto_crop_uses_getinfo_url(self, monkeypatch):
-        calls = []
-
-        class Response:
-            def raise_for_status(self):
-                calls.append("raise_for_status")
-
-            def json(self):
-                return {"crop": {"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.4}}
-
-        def fake_get(url, timeout):
-            calls.append((url, timeout))
-            return Response()
-
-        monkeypatch.setattr("api.utils.requests.get", fake_get)
-
-        assert fetch_cloudinary_auto_crop("demo", "pieces/mug", timeout=3) == {
-            "x": 0.1,
-            "y": 0.2,
-            "width": 0.3,
-            "height": 0.4,
-        }
-        assert calls == [
-            (cloudinary_getinfo_url("demo", "pieces/mug"), 3),
-            "raise_for_status",
-        ]
-
-    def test_fetch_cloudinary_auto_crop_skips_missing_identity(self, monkeypatch):
-        calls = []
-        monkeypatch.setattr("api.utils.requests.get", lambda *args: calls.append(args))
-
-        assert fetch_cloudinary_auto_crop("", "pieces/mug") is None
-        assert fetch_cloudinary_auto_crop("demo", "") is None
-        assert calls == []
 
 
 @pytest.mark.django_db
@@ -231,65 +152,44 @@ class TestUtilsCoverage:
         settings.REMOTE_REMBG_URL = "http://remote"
         assert calculate_subject_mask_remote() is None
 
-    def test_upload_mask_to_cloudinary_uses_cloudinary_sdk(self, monkeypatch, settings):
-        import sys
-        import types
+    def test_upload_mask_to_r2_uses_r2_helpers(self, monkeypatch):
+        from api.utils import upload_mask_to_r2
 
-        from api.utils import upload_mask_to_cloudinary
-
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "secret")
-        monkeypatch.setenv("CLOUDINARY_UPLOAD_FOLDER", "uploads")
-
-        cloudinary = types.ModuleType("cloudinary")
-        uploader = types.ModuleType("cloudinary.uploader")
         upload_calls = {}
 
-        def mock_config(**kwargs):
-            upload_calls["config"] = kwargs
+        monkeypatch.setattr("api.r2.is_r2_configured", lambda: True)
 
-        def mock_upload(mask_bytes, public_id, folder, overwrite, resource_type):
+        def mock_upload_bytes(key, data, content_type):
             upload_calls["upload"] = {
-                "mask_bytes": mask_bytes,
-                "public_id": public_id,
-                "folder": folder,
-                "overwrite": overwrite,
-                "resource_type": resource_type,
+                "key": key,
+                "data": data,
+                "content_type": content_type,
             }
-            return {"cloud_name": "demo", "public_id": "mask-public-id"}
+            return f"https://media.example.com/{key}"
 
-        cloudinary.config = mock_config
-        uploader.upload = mock_upload
-        cloudinary.uploader = uploader
-
-        monkeypatch.setitem(sys.modules, "cloudinary", cloudinary)
-        monkeypatch.setitem(sys.modules, "cloudinary.uploader", uploader)
+        monkeypatch.setattr("api.r2.upload_bytes", mock_upload_bytes)
 
         class DummyImage:
             id = "image-1"
 
-        result = upload_mask_to_cloudinary(b"mask-bytes", DummyImage())
+        result = upload_mask_to_r2(b"mask-bytes", DummyImage())
         assert result == {
-            "cloud_name": "demo",
-            "cloudinary_public_id": "mask-public-id",
+            "r2_key": "crop-masks/image-1.png",
+            "url": "https://media.example.com/crop-masks/image-1.png",
         }
-        assert upload_calls["config"]["cloud_name"] == "demo"
-        assert upload_calls["upload"]["folder"] == "uploads/crop-masks"
-        assert upload_calls["upload"]["public_id"] == "image-1"
+        assert upload_calls["upload"]["data"] == b"mask-bytes"
+        assert upload_calls["upload"]["content_type"] == "image/png"
 
-    def test_upload_mask_to_cloudinary_requires_env(self, monkeypatch):
-        from api.utils import upload_mask_to_cloudinary
+    def test_upload_mask_to_r2_requires_config(self, monkeypatch):
+        from api.utils import upload_mask_to_r2
 
-        monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
-        monkeypatch.delenv("CLOUDINARY_API_KEY", raising=False)
-        monkeypatch.delenv("CLOUDINARY_API_SECRET", raising=False)
+        monkeypatch.setattr("api.r2.is_r2_configured", lambda: False)
 
         class DummyImage:
             id = "image-1"
 
         with pytest.raises(ValueError):
-            upload_mask_to_cloudinary(b"mask-bytes", DummyImage())
+            upload_mask_to_r2(b"mask-bytes", DummyImage())
 
 
 @pytest.mark.django_db
@@ -299,9 +199,8 @@ class TestReplacePieceStateImages:
             username="test@example.com", email="test@example.com"
         )
         image = Image.objects.create(
-            url="https://res.cloudinary.com/demo/image/upload/test.jpg",
-            cloud_name="demo",
-            cloudinary_public_id="test",
+            url="https://media.example.com/images/1/test.jpg",
+            r2_key="images/1/test.jpg",
             user=user,
         )
         piece = Piece.objects.create(user=user, name="Test Piece", thumbnail=image)

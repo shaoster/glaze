@@ -23,9 +23,10 @@ logger = logging.getLogger(__name__)
 
 @traced
 def export_image_name(image: Image) -> str:
-    """Return the ZIP member path for an exported Cloudinary image."""
-    public_id = cast(str, image.cloudinary_public_id)
-    sanitized = public_id.replace("/", "__")
+    """Return the ZIP member path for an exported hosted image."""
+    identifier = image.r2_key or urlparse(image.url).path.lstrip("/")
+    stem, _ = posixpath.splitext(identifier)
+    sanitized = stem.replace("/", "__")
     _, ext = posixpath.splitext(urlparse(image.url).path)
     return f"images/{sanitized}{ext}"
 
@@ -56,7 +57,7 @@ async def stream_export_archive(
                 except httpx.HTTPError as exc:
                     logger.warning(
                         "Export: failed to fetch image %s: %s",
-                        image.cloudinary_public_id,
+                        image.url,
                         exc,
                     )
                 for c in buffer.flush_chunks():

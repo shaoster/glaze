@@ -18,7 +18,7 @@ from .export_data import collect_export_data
     description=(
         "Download a ZIP archive of all the current user's data: "
         "pieces.json (full piece history as JSON), profile.json (alias and preferences), "
-        "and images/ (Cloudinary-backed images). Download this before deleting your account."
+        "and images/ (hosted images). Download this before deleting your account."
     ),
 )
 @api_view(["GET"])

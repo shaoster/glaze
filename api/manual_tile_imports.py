@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import os
 import uuid
 from collections import Counter
 
-import cloudinary
-import cloudinary.uploader
 from django.db import transaction
 from django.utils.text import slugify
 
+from . import r2
 from .models import GlazeCombination, GlazeCombinationLayer, GlazeType
 from .utils import (
     image_to_dict,
@@ -17,34 +15,28 @@ from .utils import (
 )
 
 
-def _configure_cloudinary() -> None:
-    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
-    api_key = os.environ.get("CLOUDINARY_API_KEY", "").strip()
-    api_secret = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
-    if not cloud_name or not api_key or not api_secret:
-        raise ValueError(
-            "CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are required."
-        )
-    cloudinary.config(
-        cloud_name=cloud_name, api_key=api_key, api_secret=api_secret, secure=True
-    )
+def _require_r2() -> None:
+    if not r2.is_r2_configured():
+        raise ValueError("R2 object storage is not configured.")
+
+
+_DEFAULT_BATCH_FOLDER = "manual-square-crop-imports"
 
 
 def _default_batch_folder() -> str:
-    env_folder = os.environ.get("CLOUDINARY_UPLOAD_FOLDER", "").strip().strip("/")
-    return "/".join(part for part in [env_folder, "manual-square-crop-imports"] if part)
+    return _DEFAULT_BATCH_FOLDER
 
 
 def _upload_file(uploaded_file, *, kind: str, filename: str, folder: str) -> dict:
+    """Upload a tile image to R2 and return {"url": <public url>}.
+
+    Tile crops are produced by the import tool as WebP.
+    """
     stem = slugify(filename.rsplit(".", 1)[0]) or "tile"
-    public_id = f"{kind}-{stem}-{uuid.uuid4().hex[:8]}"
-    return cloudinary.uploader.upload(
-        uploaded_file,
-        public_id=public_id,
-        overwrite=False,
-        resource_type="image",
-        folder=folder,
-    )
+    key = f"{folder}/{kind}-{stem}-{uuid.uuid4().hex[:8]}.webp"
+    data = uploaded_file.read() if hasattr(uploaded_file, "read") else uploaded_file
+    url = r2.upload_bytes(key, data, "image/webp")
+    return {"url": url}
 
 
 def _ensure_combination_layers(
@@ -100,7 +92,7 @@ def import_manual_tile_records(
     *,
     batch_folder: str | None = None,
 ) -> dict:
-    _configure_cloudinary()
+    _require_r2()
     folder = (batch_folder or _default_batch_folder()).strip().strip("/")
     results: list[dict] = []
 
@@ -136,13 +128,7 @@ def import_manual_tile_records(
         glaze_type = GlazeType.objects.create(
             user=None,
             name=name,
-            test_tile_image=normalize_image_payload(
-                {
-                    "url": upload["secure_url"],
-                    "cloudinary_public_id": upload["public_id"],
-                    "cloud_name": cloudinary.config().cloud_name or None,
-                }
-            ),
+            test_tile_image=normalize_image_payload({"url": upload["url"]}),
             runs=parsed.get("runs"),
             is_food_safe=parsed.get("is_food_safe"),
         )
@@ -209,13 +195,7 @@ def import_manual_tile_records(
         combo = GlazeCombination.objects.create(
             user=None,
             name=name,
-            test_tile_image=normalize_image_payload(
-                {
-                    "url": upload["secure_url"],
-                    "cloudinary_public_id": upload["public_id"],
-                    "cloud_name": cloudinary.config().cloud_name or None,
-                }
-            ),
+            test_tile_image=normalize_image_payload({"url": upload["url"]}),
             runs=parsed.get("runs"),
             is_food_safe=parsed.get("is_food_safe"),
         )

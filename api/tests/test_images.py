@@ -169,17 +169,15 @@ class TestImageModelHelpers:
         image = Image.objects.create(
             user=None,
             url="https://example.com/img.jpg",
-            cloud_name="demo",
-            cloudinary_public_id="piece/img",
+            r2_key="images/public/img.jpg",
         )
 
         assert str(image) == "https://example.com/img.jpg"
         assert image.as_dict() == {
             "url": "https://example.com/img.jpg",
-            "cloudinary_public_id": "piece/img",
-            "cloud_name": "demo",
+            "r2_key": "images/public/img.jpg",
         }
-        assert image["cloudinary_public_id"] == "piece/img"
+        assert image["r2_key"] == "images/public/img.jpg"
 
     def test_image_equality_falls_back_for_non_dict(self):
         image = Image(url="https://example.com/img.jpg")

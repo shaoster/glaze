@@ -180,8 +180,6 @@ class GlobalImageSerializer(serializers.Serializer):
     """Structured image value for ``type: image`` fields on global models."""
 
     url = serializers.CharField()
-    cloudinary_public_id = serializers.CharField(allow_null=True, required=False)
-    cloud_name = serializers.CharField(allow_null=True, required=False)
 
 
 class GlazeTypeRefSerializer(serializers.Serializer):
@@ -276,11 +274,10 @@ class CaptionedImageSerializer(serializers.Serializer):
     url = serializers.CharField()
     caption = serializers.CharField(allow_blank=True, default="")
     created = serializers.DateTimeField(required=False)
-    cloudinary_public_id = serializers.CharField(
-        allow_blank=True, required=False, default=None, allow_null=True
-    )
-    cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
     crop = ImageCropSerializer(required=False, allow_null=True, default=None)
+    # Public URL of the eagerly cropped derivative. Written by the
+    # generate_cropped_image task only — never accepted from clients.
+    cropped_url = serializers.CharField(read_only=True, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
     width = serializers.IntegerField(
         required=False, allow_null=True, default=None, min_value=0
@@ -438,11 +435,8 @@ class StateSummarySerializer(serializers.Serializer):
 
 class ThumbnailSerializer(serializers.Serializer):
     url = serializers.CharField()
-    cloudinary_public_id = serializers.CharField(
-        allow_blank=True, allow_null=True, default=None
-    )
-    cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
     crop = ImageCropSerializer(required=False, allow_null=True, default=None)
+    cropped_url = serializers.CharField(required=False, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
     width = serializers.IntegerField(
         required=False, allow_null=True, default=None, min_value=0
@@ -660,7 +654,7 @@ class PieceCreateSerializer(serializers.ModelSerializer):
         required=False, allow_blank=True, allow_null=True, default=None
     )
     # Accept a bare URL string from the curated SVG gallery; wrap it into the
-    # {url, cloudinary_public_id} shape that Piece.thumbnail now stores.
+    # Image row that Piece.thumbnail now stores.
     thumbnail = serializers.CharField(required=False, allow_blank=True, default=None)
 
     class Meta:

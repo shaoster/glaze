@@ -39,13 +39,7 @@ class Command(BaseCommand):
                 )
 
         images = (
-            Image.objects.filter(
-                cloud_name__isnull=False,
-                cloudinary_public_id__isnull=False,
-            )
-            .exclude(cloud_name="")
-            .exclude(cloudinary_public_id="")
-            .order_by("cloud_name", "cloudinary_public_id")
+            Image.objects.exclude(url="").filter(url__startswith="http").order_by("url")
         )
 
         # Build the list of work items: one entry per (image, piece) or (image, psi).
@@ -53,10 +47,6 @@ class Command(BaseCommand):
         skipped = 0
 
         for image in images.iterator():
-            if not image.cloud_name or not image.cloudinary_public_id:
-                skipped += 1
-                continue
-
             link_qs = (
                 PieceStateImage.objects.filter(image=image)
                 if force
