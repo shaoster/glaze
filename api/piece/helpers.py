@@ -81,13 +81,16 @@ def _latest_state_lm_subquery():
     )
 
 
-@traced
-def piece_queryset(request: Request):
-    """Return the authenticated user's piece queryset."""
-    user_id = request.user.id
+def piece_queryset_for_user(user_id):
+    """Return the annotated piece queryset for a given user id.
+
+    Holds the annotations (current_state_name, computed_last_modified,
+    thumbnail_crop) and prefetches shared by the REST list serializer and the
+    GraphQL resolver. Annotating current_state_name and computed_last_modified
+    in the SELECT lets callers avoid the full states prefetch (one fewer
+    round-trip).
+    """
     assert user_id is not None
-    # Annotate current_state_name and computed_last_modified in the SELECT so the
-    # list serializer doesn't need the full states prefetch (drops one round-trip).
     return (
         Piece.objects.select_related("current_location", "thumbnail", "user__profile")
         .annotate(
@@ -101,6 +104,12 @@ def piece_queryset(request: Request):
         .prefetch_related("tag_links__tag")
         .filter(user_id=user_id)
     )
+
+
+@traced
+def piece_queryset(request: Request):
+    """Return the authenticated user's piece queryset."""
+    return piece_queryset_for_user(request.user.id)
 
 
 @traced

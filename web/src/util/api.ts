@@ -37,6 +37,13 @@ import {
   getAccessToken,
   setAccessToken,
 } from "./authTokenStore";
+import { graphqlRequest } from "./graphqlClient";
+import {
+  PIECES_QUERY,
+  PIECE_ORDERING_GQL,
+  type PiecesFilterInput,
+  type PiecesQueryVariables,
+} from "./graphqlPieces";
 
 /**
  * JSON Schema property shape returned by the workflow-schema endpoint.
@@ -374,12 +381,33 @@ export async function fetchPieces(params?: {
   ordering?: PieceSortOrder;
   limit?: number;
   offset?: number;
+  state?: string[];
+  shared?: boolean;
+  search?: string;
+  tagIds?: string[];
 }): Promise<PiecePage> {
-  const { data } = await client.get<{
-    count: number;
-    results: Wire<PieceSummary>[];
-  }>("pieces/", { params });
-  return { count: data.count, results: data.results.map(mapPieceSummary) };
+  const filter: PiecesFilterInput = {};
+  if (params?.state && params.state.length > 0) filter.state = params.state;
+  if (params?.shared !== undefined) filter.shared = params.shared;
+  if (params?.search) filter.search = params.search;
+  if (params?.tagIds && params.tagIds.length > 0) filter.tagIds = params.tagIds;
+
+  const variables: PiecesQueryVariables = {
+    filter: Object.keys(filter).length > 0 ? filter : undefined,
+    ordering: params?.ordering ? PIECE_ORDERING_GQL[params.ordering] : undefined,
+    limit: params?.limit,
+    offset: params?.offset,
+  };
+
+  // The query aliases fields to the REST snake_case shape, so mapPieceSummary
+  // is reused unchanged.
+  const data = await graphqlRequest<{
+    pieces: { count: number; results: Wire<PieceSummary>[] };
+  }>(PIECES_QUERY, variables);
+  return {
+    count: data.pieces.count,
+    results: data.pieces.results.map(mapPieceSummary),
+  };
 }
 
 export async function ensureCsrfCookie(): Promise<void> {

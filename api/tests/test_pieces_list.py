@@ -281,3 +281,4 @@ class TestPiecesList:
         response = client.get("/api/pieces/", {"ordering": "nonexistent_field"})
         assert response.status_code == 200
         assert response.json()["count"] == 1
+

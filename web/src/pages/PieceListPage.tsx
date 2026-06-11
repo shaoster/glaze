@@ -17,9 +17,31 @@ import {
   fetchPieces,
 } from "../util/api";
 import type { PieceSortOrder } from "../util/api";
+import { SUCCESSORS } from "../util/workflow";
+import {
+  type FilterCategory,
+  parseFilterParam,
+  parseTagIdsParam,
+} from "../util/pieceFilters";
 import NewPieceDialog from "../components/NewPieceDialog";
 import PieceList from "../components/PieceList";
 
+/**
+ * Translate UI filter chips to the `state` array expected by the API.
+ * "shared" is intentionally excluded — it maps to the separate `shared` param.
+ */
+function filtersToStateParam(activeFilters: FilterCategory[]): string[] | undefined {
+  const stateNames: string[] = [];
+  if (activeFilters.includes("completed")) stateNames.push("completed");
+  if (activeFilters.includes("discarded")) stateNames.push("recycled");
+  if (activeFilters.includes("wip")) {
+    const nonTerminal = Object.entries(SUCCESSORS)
+      .filter(([, succs]) => succs.length > 0)
+      .map(([s]) => s);
+    stateNames.push(...nonTerminal);
+  }
+  return stateNames.length > 0 ? stateNames : undefined;
+}
 
 export default function PieceListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -28,6 +50,29 @@ export default function PieceListPage() {
     sortFromUrl && PIECE_SORT_OPTIONS.some((o) => o.value === sortFromUrl)
       ? sortFromUrl
       : DEFAULT_PIECE_SORT;
+
+  const activeFilters = useMemo(
+    () => parseFilterParam(searchParams.get("filter")),
+    [searchParams],
+  );
+  const activeTagIds = useMemo(
+    () => parseTagIdsParam(searchParams.get("tags")),
+    [searchParams],
+  );
+
+  const stateFilter = useMemo(() => filtersToStateParam(activeFilters), [activeFilters]);
+  const sharedFilter = useMemo(
+    () => (activeFilters.includes("shared") ? true : undefined),
+    [activeFilters],
+  );
+  const tagIdsParam = useMemo(
+    () => (activeTagIds.length > 0 ? activeTagIds : undefined),
+    [activeTagIds],
+  );
+
+  // Stable cache key components — sort array for determinism
+  const stateKey = stateFilter ? [...stateFilter].sort().join(",") : "";
+  const tagKey = [...activeTagIds].sort().join(",");
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,9 +93,16 @@ export default function PieceListPage() {
     isError,
     isLoading,
   } = useInfiniteQuery({
-    queryKey: ["pieces", sortOrder],
+    queryKey: ["pieces", sortOrder, stateKey, sharedFilter ?? false, tagKey],
     queryFn: ({ pageParam }: { pageParam: number }) =>
-      fetchPieces({ ordering: sortOrder, limit: PIECES_PAGE_SIZE, offset: pageParam }),
+      fetchPieces({
+        ordering: sortOrder,
+        limit: PIECES_PAGE_SIZE,
+        offset: pageParam,
+        ...(stateFilter ? { state: stateFilter } : {}),
+        ...(sharedFilter !== undefined ? { shared: sharedFilter } : {}),
+        ...(tagIdsParam ? { tagIds: tagIdsParam } : {}),
+      }),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
       const fetched = allPages.reduce((n, p) => n + p.results.length, 0);
@@ -118,7 +170,7 @@ export default function PieceListPage() {
   }, [hasNextPage, isFetching, fetchNextPage]);
 
   function handleCreated() {
-    void queryClient.invalidateQueries({ queryKey: ["pieces", sortOrder] });
+    void queryClient.invalidateQueries({ queryKey: ["pieces"] });
   }
 
   const refreshing = isFetching && !isFetchingNextPage && !isLoading;
@@ -157,6 +209,7 @@ export default function PieceListPage() {
       {!isLoading && !isError && (
         <PieceList
           pieces={pieces}
+          count={count}
           onNewPiece={handleOpenDialog}
           sortOrder={sortOrder}
           onSortChange={handleSortChange}

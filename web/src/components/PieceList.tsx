@@ -19,7 +19,12 @@ import {
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import type { PieceSummary, TagEntry } from "../util/types";
-import { formatState, isTerminalState, SUCCESSORS } from "../util/workflow";
+import { formatState, isTerminalState } from "../util/workflow";
+import {
+  type FilterCategory,
+  parseFilterParam,
+  parseTagIdsParam,
+} from "../util/pieceFilters";
 import type { PieceSortOrder } from "../util/api";
 import { DEFAULT_PIECE_SORT, PIECE_SORT_OPTIONS } from "../util/api";
 import {
@@ -87,8 +92,6 @@ function useWindowHeight(): number {
 
 const KILN_COLOR = "oklch(0.72 0.13 55)";
 
-type FilterCategory = "wip" | "completed" | "discarded" | "shared";
-
 interface FilterOption {
   value: FilterCategory;
   label: string;
@@ -107,36 +110,6 @@ const FILTER_OPTIONS: FilterOption[] = [
   SHARED_FILTER_OPTION,
 ];
 
-function matchesFilter(piece: PieceSummary, filter: FilterCategory): boolean {
-  const state = piece.current_state.state;
-  const isNonTerminal = (SUCCESSORS[state] ?? []).length > 0;
-  if (filter === "wip") return isNonTerminal;
-  if (filter === "completed") return state === "completed";
-  if (filter === "discarded") return state === "recycled";
-  if (filter === "shared") return piece.shared;
-  return false;
-}
-
-const VALID_FILTER_CATEGORIES = new Set<FilterCategory>([
-  "wip",
-  "completed",
-  "discarded",
-  "shared",
-]);
-
-function parseFilterParam(param: string | null): FilterCategory[] {
-  if (!param) return [];
-  return param
-    .split(",")
-    .filter((v): v is FilterCategory =>
-      VALID_FILTER_CATEGORIES.has(v as FilterCategory),
-    );
-}
-
-function parseTagIdsParam(param: string | null): string[] {
-  if (!param) return [];
-  return param.split(",").filter(Boolean);
-}
 
 function daysSince(date: Date): number {
   return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
@@ -401,6 +374,7 @@ const PieceCard = ({ piece, width, returnTo }: PieceCardProps) => {
 
 type PieceListProps = {
   pieces: PieceSummary[];
+  count?: number;
   onNewPiece?: () => void;
   sortOrder?: PieceSortOrder;
   onSortChange?: (order: PieceSortOrder) => void;
@@ -413,6 +387,7 @@ type PieceListProps = {
 const PieceList = (props: PieceListProps) => {
   const {
     pieces,
+    count,
     onNewPiece,
     sortOrder = DEFAULT_PIECE_SORT,
     onSortChange,
@@ -481,35 +456,24 @@ const PieceList = (props: PieceListProps) => {
     return [...deduped.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [pieces]);
 
+  // One entry per active tag id so its chip is always rendered and removable,
+  // even when a server-side filter returns zero pieces (otherwise the selected
+  // tag would vanish from the toolbar, leaving no in-UI way to clear it). When
+  // the tag is not present in the current result set, fall back to a minimal
+  // entry — the chip stays removable, just without the original name/color.
   const activeTags = useMemo(
-    () => availableTags.filter((tag) => activeTagIds.includes(tag.id)),
-    [availableTags, activeTagIds],
+    () =>
+      activeTagIds.map(
+        (id) =>
+          availableTags.find((tag) => tag.id === id) ?? {
+            id,
+            name: "Tag",
+            color: "",
+            is_public: false,
+          },
+      ),
+    [activeTagIds, availableTags],
   );
-
-  const filteredPieces = useMemo(() => {
-    return pieces.filter((piece) => {
-      const stateFilters = activeFilters.filter((f) => f !== "shared");
-      const sharedFilterActive = activeFilters.includes("shared");
-
-      const matchesState =
-        stateFilters.length === 0
-          ? true
-          : stateFilters.some((filter) => matchesFilter(piece, filter));
-
-      const matchesShared = sharedFilterActive
-        ? matchesFilter(piece, "shared")
-        : true;
-
-      const matchesTags =
-        activeTagIds.length === 0
-          ? true
-          : activeTagIds.every((id) =>
-              (piece.tags ?? []).some((pieceTag) => pieceTag.id === id),
-            );
-
-      return matchesState && matchesShared && matchesTags;
-    });
-  }, [pieces, activeFilters, activeTagIds]);
 
   const activeFilterLabel = useMemo(() => {
     if (activeFilters.length === 0 && activeTagIds.length === 0) return "All";
@@ -538,7 +502,7 @@ const PieceList = (props: PieceListProps) => {
       MASONRY_GUTTER,
     );
 
-    filteredPieces.forEach((piece, index) => {
+    pieces.forEach((piece, index) => {
       nextPositioner.set(
         index,
         getPieceCardLayout(piece, nextPositioner.columnWidth).estimatedHeight,
@@ -546,7 +510,7 @@ const PieceList = (props: PieceListProps) => {
     });
 
     return nextPositioner;
-  }, [filteredPieces, masonryWidth, columnWidth, isMobile]);
+  }, [pieces, masonryWidth, columnWidth, isMobile]);
   const resizeObserver = useResizeObserver(positioner);
 
   const toggleFilter = useCallback(
@@ -659,8 +623,8 @@ const PieceList = (props: PieceListProps) => {
                   flexShrink: 0,
                 }}
               >
-                · {filteredPieces.length}
-                {hasMore ? "+" : ""} pieces
+                · {count ?? pieces.length}
+                {count === undefined && hasMore ? "+" : ""} pieces
               </Typography>
             </Box>
             <Box
@@ -948,7 +912,7 @@ const PieceList = (props: PieceListProps) => {
               <MasonryScroller
                 positioner={positioner}
                 resizeObserver={resizeObserver}
-                items={filteredPieces}
+                items={pieces}
                 render={({
                   data,
                   width,

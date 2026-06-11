@@ -33,6 +33,19 @@ genrule(
     visibility = ["//visibility:public"],
 )
 
+# ── GraphQL SDL schema ────────────────────────────────────────────────────────
+# Exports the Strawberry schema as SDL for the graphql codegen step below.
+# Re-runs only when api/**, backend/**, or workflow_files change (through the
+# tool's deps).
+
+genrule(
+    name = "graphql_schema",
+    outs = ["schema.graphql"],
+    cmd = "$(execpath //tools:export_graphql_schema) $@",
+    tools = ["//tools:export_graphql_schema"],
+    visibility = ["//visibility:public"],
+)
+
 # ── npm tool binaries ─────────────────────────────────────────────────────────
 # Generated js_run_binary-compatible targets for each npm CLI tool.
 # These macros create the js_binary + entry_point wiring via directory_path
@@ -237,8 +250,11 @@ js_library(
         "src/cloudinary-widget.d.ts",
         "src/util/api.ts",
         "src/util/authTokenStore.ts",
+        "src/util/pieceFilters.ts",
         "src/util/cloudinaryUpload.ts",
         "src/util/format.ts",
+        "src/util/graphqlClient.ts",
+        "src/util/graphqlPieces.ts",
         "src/util/normalizeWorkflowFields.ts",
         "src/util/optionalValues.ts",
         "src/util/postLoginRedirect.ts",
@@ -249,6 +265,8 @@ js_library(
         "src/util/workflow.ts",
     ],
     deps = [
+        ":node_modules/graphql",
+        ":node_modules/graphql-request",
         ":node_modules/@opentelemetry/api",
         ":node_modules/@opentelemetry/exporter-trace-otlp-http",
         ":node_modules/@opentelemetry/instrumentation",
@@ -328,6 +346,8 @@ js_library(
         ":node_modules/@vitejs/plugin-react",
         ":node_modules/axios",
         ":node_modules/babel-plugin-react-compiler",
+        ":node_modules/graphql",
+        ":node_modules/graphql-request",
         ":node_modules/masonic",
         ":node_modules/qrcode.react",
         ":node_modules/react",
@@ -371,6 +391,8 @@ js_library(
     deps = [
         ":generated_types",
         ":node_modules",
+        ":node_modules/graphql",
+        ":node_modules/graphql-request",
         ":node_modules/react-advanced-cropper",
         ":util_lib",
         "//:workflow_js",
@@ -1261,6 +1283,7 @@ vitest_test(
     srcs = [
         "src/util/__tests__/authTokenStore.test.ts",
         "src/util/__tests__/api.test.ts",
+        "src/util/__tests__/graphqlClient.test.ts",
     ],
     tags = ["ibazel_notify_changes"],
     deps = [
@@ -1269,6 +1292,7 @@ vitest_test(
     expected_coverage = [
         "web/src/util/authTokenStore*",
         "web/src/util/api.ts",
+        "web/src/util/graphqlClient.ts",
     ],
 )
 

@@ -55,6 +55,20 @@ py_binary(
 )
 
 py_binary(
+    name = "export_graphql_schema",
+    srcs = ["export_graphql_schema.py"],
+    data = ["//:workflow_files"],
+    deps = [
+        "//api:api_lib",
+        "//backend:backend_lib",
+        "@pypi//django",
+        "@pypi//strawberry_graphql",
+        "@pypi//strawberry_graphql_django",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
     name = "visualize_crops",
     srcs = ["visualize_crops.py"],
     deps = [
