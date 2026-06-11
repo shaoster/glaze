@@ -1035,6 +1035,31 @@ describe("PieceList", () => {
       );
     });
 
+    it("keeps the active tag filter removable when results are empty", async () => {
+      // Regression: with server-side filtering a narrow filter can return zero
+      // pieces. The active tag chip must still render (and be removable) so the
+      // user is not stranded with a filter clearable only via the URL.
+      const user = userEvent.setup();
+      const router = createMemoryRouter(
+        [{ path: "/", element: <PieceList pieces={[]} /> }],
+        { initialEntries: ["/?tags=gift"] },
+      );
+      render(<RouterProvider router={router} />);
+
+      await openFilters(user);
+
+      const removeButton = await screen.findByRole("button", {
+        name: /remove/i,
+      });
+      expect(removeButton).toBeInTheDocument();
+
+      // Clicking it clears the tag filter from the URL.
+      await user.click(removeButton);
+      await waitFor(() =>
+        expect(router.state.location.search).not.toContain("tags=gift"),
+      );
+    });
+
     it("shows at most 2 tag chips per card with a dashed overflow chip", () => {
       renderPieceList([
         makePiece({

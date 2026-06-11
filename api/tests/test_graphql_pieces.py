@@ -159,3 +159,26 @@ class TestGraphQLPieces:
         body = response.json()
         assert body.get("errors")
         assert body["data"] is None
+
+    def test_bearer_client_without_csrf_cookie_is_accepted(self, user):
+        """Regression: a JWT-only caller (MCP wrapper / Expo) has no session and
+        no CSRF cookie. The endpoint must still accept it — the view is
+        csrf_exempt and auth is enforced from the Authorization header."""
+        from rest_framework_simplejwt.tokens import AccessToken
+
+        _make_piece(user, "Done Vase", final_state="completed")
+        token = str(AccessToken.for_user(user))
+
+        # enforce_csrf_checks=True reproduces production CSRF middleware; no
+        # session login and no CSRF cookie are set.
+        csrf_client = APIClient(enforce_csrf_checks=True)
+        response = csrf_client.post(
+            "/api/graphql/",
+            {"query": PIECES_QUERY, "variables": {"filter": {"state": ["completed"]}}},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        assert response.status_code == 200, response.content
+        body = response.json()
+        assert not body.get("errors"), body
+        assert body["data"]["pieces"]["count"] == 1

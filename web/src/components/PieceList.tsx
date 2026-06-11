@@ -456,9 +456,23 @@ const PieceList = (props: PieceListProps) => {
     return [...deduped.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [pieces]);
 
+  // One entry per active tag id so its chip is always rendered and removable,
+  // even when a server-side filter returns zero pieces (otherwise the selected
+  // tag would vanish from the toolbar, leaving no in-UI way to clear it). When
+  // the tag is not present in the current result set, fall back to a minimal
+  // entry — the chip stays removable, just without the original name/color.
   const activeTags = useMemo(
-    () => availableTags.filter((tag) => activeTagIds.includes(tag.id)),
-    [availableTags, activeTagIds],
+    () =>
+      activeTagIds.map(
+        (id) =>
+          availableTags.find((tag) => tag.id === id) ?? {
+            id,
+            name: "Tag",
+            color: "",
+            is_public: false,
+          },
+      ),
+    [activeTagIds, availableTags],
   );
 
   const activeFilterLabel = useMemo(() => {
@@ -610,7 +624,7 @@ const PieceList = (props: PieceListProps) => {
                 }}
               >
                 · {count ?? pieces.length}
-                {hasMore ? "+" : ""} pieces
+                {count === undefined && hasMore ? "+" : ""} pieces
               </Typography>
             </Box>
             <Box
