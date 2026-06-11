@@ -203,7 +203,9 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
                 .annotate(
                     current_state_name=_current_state_name_subquery(),
                     has_images=Exists(
-                        PieceStateImage.objects.filter(piece_state__piece=OuterRef("pk"))
+                        PieceStateImage.objects.filter(
+                            piece_state__piece=OuterRef("pk")
+                        )
                     ),
                 )
                 .get(pk=piece_id)

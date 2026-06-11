@@ -108,7 +108,9 @@ class TestGraphQLPieces:
 
     def test_state_and_tags_are_and_combined(self, gql_client, user):
         tag = Tag.objects.create(user=user, name="Gift")
-        completed_tagged = _make_piece(user, "Completed Tagged", final_state="completed")
+        completed_tagged = _make_piece(
+            user, "Completed Tagged", final_state="completed"
+        )
         _make_piece(user, "Completed Untagged", final_state="completed")
         wip_tagged = _make_piece(user, "Wip Tagged")
 
@@ -136,11 +138,15 @@ class TestGraphQLPieces:
 
     def test_unknown_state_returns_empty(self, gql_client, user):
         _make_piece(user, "Bowl")
-        page = _run(gql_client, {"filter": {"state": ["nonexistent"]}})["data"]["pieces"]
+        page = _run(gql_client, {"filter": {"state": ["nonexistent"]}})["data"][
+            "pieces"
+        ]
         assert page["count"] == 0
         assert page["results"] == []
 
-    def test_only_returns_the_requesting_users_pieces(self, gql_client, user, other_user):
+    def test_only_returns_the_requesting_users_pieces(
+        self, gql_client, user, other_user
+    ):
         _make_piece(other_user, "Someone Else's Bowl")
         mine = _make_piece(user, "My Bowl")
 
