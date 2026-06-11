@@ -448,6 +448,7 @@ class TestPieceDetail:
             "width": None,
             "height": None,
             "crop": None,
+            "cropped_url": None,
         }
         assert piece.thumbnail == {"url": thumbnail["url"], "r2_key": None}
 

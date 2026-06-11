@@ -897,10 +897,7 @@ class TestAuthExport:
         with ZipFile(BytesIO(archive_bytes)) as archive:
             assert archive.read("pieces.json") == b'[{"id": "piece-1"}]'
             assert archive.read("profile.json") == b'{"alias": "Studio Alias"}'
-            assert (
-                archive.read("images/exports__path__to__image.png")
-                == b"fake-image-bytes"
-            )
+            assert archive.read("images/path__to__image.png") == b"fake-image-bytes"
 
 
 @pytest.mark.django_db

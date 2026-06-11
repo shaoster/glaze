@@ -114,6 +114,13 @@ def object_exists(key: str) -> bool:
     return True
 
 
+def get_object_bytes(key: str) -> bytes:
+    """Download an object's full body from the bucket."""
+    client = get_r2_client()
+    response = client.get_object(Bucket=get_bucket_name(), Key=key)
+    return response["Body"].read()
+
+
 def upload_bytes(key: str, data: bytes, content_type: str) -> str:
     """Upload raw bytes to *key* and return its public URL."""
     client = get_r2_client()

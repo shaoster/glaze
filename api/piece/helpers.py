@@ -35,16 +35,27 @@ _DEFAULT_ORDERING = "-last_modified"
 _DEFAULT_PAGE_SIZE = 16
 
 
+def _latest_cropped_thumbnail_link():
+    """Latest PSI link for the piece's thumbnail that has crop coordinates."""
+    return PieceStateImage.objects.filter(
+        piece_state__piece=OuterRef("pk"),
+        image_id=OuterRef("thumbnail_id"),
+        crop__isnull=False,
+    ).order_by("-pk")
+
+
 def _thumbnail_crop_subquery():
     return Subquery(
-        PieceStateImage.objects.filter(
-            piece_state__piece=OuterRef("pk"),
-            image_id=OuterRef("thumbnail_id"),
-            crop__isnull=False,
-        )
-        .order_by("-pk")
-        .values("crop")[:1],
+        _latest_cropped_thumbnail_link().values("crop")[:1],
         output_field=JSONField(),
+    )
+
+
+def _thumbnail_cropped_url_subquery():
+    """Eagerly generated crop derivative URL from the same link as the crop."""
+    return Subquery(
+        _latest_cropped_thumbnail_link().values("cropped_url")[:1],
+        output_field=CharField(),
     )
 
 
@@ -56,7 +67,10 @@ def _base_piece_queryset():
     """Shared ORM base for all piece querysets: joins, annotation, and prefetches."""
     return (
         Piece.objects.select_related("current_location", "thumbnail", "user__profile")
-        .annotate(thumbnail_crop=_thumbnail_crop_subquery())
+        .annotate(
+            thumbnail_crop=_thumbnail_crop_subquery(),
+            thumbnail_cropped_url=_thumbnail_cropped_url_subquery(),
+        )
         .prefetch_related("states", "tag_links__tag")
     )
 
@@ -95,6 +109,7 @@ def piece_queryset_for_user(user_id):
         Piece.objects.select_related("current_location", "thumbnail", "user__profile")
         .annotate(
             thumbnail_crop=_thumbnail_crop_subquery(),
+            thumbnail_cropped_url=_thumbnail_cropped_url_subquery(),
             computed_last_modified=Greatest(
                 "fields_last_modified",
                 Coalesce(_latest_state_lm_subquery(), "fields_last_modified"),

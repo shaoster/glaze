@@ -302,20 +302,18 @@ class Piece(models.Model):
             return self.fields_last_modified
         return max(self.fields_last_modified, cs.last_modified)
 
-    def _thumbnail_crop_from_history(self) -> dict | None:
-        """Return the current thumbnail crop from piece history when available."""
+    def _thumbnail_crop_link_from_history(self) -> "PieceStateImage | None":
+        """Return the latest cropped PieceStateImage link for the thumbnail."""
 
         thumbnail = self.thumbnail if self.thumbnail_id else None
         if thumbnail is None:
             return None
 
-        def _crop_from_links(links):
+        def _cropped_link(links):
             matching_links = [link for link in links if link.image_id == thumbnail.id]
-            if not matching_links:
-                return None
             for link in sorted(matching_links, key=lambda link: link.pk, reverse=True):
                 if link.crop is not None:
-                    return link.crop
+                    return link
             return None
 
         states = self._prefetched_states()
@@ -328,7 +326,7 @@ class Piece(models.Model):
                 if prefetched_links is None:
                     continue
                 links.extend(prefetched_links)
-            return _crop_from_links(links)
+            return _cropped_link(links)
 
         links = list(
             PieceStateImage.objects.filter(
@@ -336,12 +334,18 @@ class Piece(models.Model):
                 image=thumbnail,
             )
             .order_by("-pk")
-            .only("crop", "image_id")
+            .only("crop", "cropped_url", "image_id")
         )
-        return _crop_from_links(links)
+        return _cropped_link(links)
 
     def get_thumbnail_crop(self) -> dict | None:
-        return self._thumbnail_crop_from_history()
+        link = self._thumbnail_crop_link_from_history()
+        return link.crop if link is not None else None
+
+    def get_thumbnail_cropped_url(self) -> str | None:
+        """Public URL of the thumbnail's eager cropped derivative, if materialized."""
+        link = self._thumbnail_crop_link_from_history()
+        return link.cropped_url if link is not None else None
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -602,6 +606,12 @@ class PieceStateImage(models.Model):
     )
     caption = models.CharField(max_length=1024, blank=True, default="")
     crop = models.JSONField(null=True, blank=True, default=None)
+    # R2 key + public URL of the eagerly generated cropped derivative.
+    # Written exclusively by the generate_cropped_image task on completion;
+    # NULL while a crop is pending (the frontend shows the raw image until
+    # cropped_url is populated) and always NULL when crop is NULL.
+    cropped_r2_key = models.CharField(max_length=1024, null=True, blank=True)
+    cropped_url = models.CharField(max_length=1024, null=True, blank=True)
     created = models.DateTimeField(default=timezone.now)
     order = models.PositiveSmallIntegerField()
 

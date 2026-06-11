@@ -323,15 +323,42 @@ def captioned_image_to_dict(link) -> dict:
         **image_payload,
         "caption": link.caption,
         "crop": link.crop,
+        "cropped_url": link.cropped_url,
         "created": link.created,
         "image_id": str(link.image_id) if link.image_id else None,
     }
 
 
+def _crop_pair_key(image_id, crop: dict | None):
+    """Hashable identity for an (image, crop) value pair."""
+    if crop is None:
+        return None
+    return (
+        str(image_id),
+        tuple(
+            format(float(crop[axis]), ".4f") for axis in ("x", "y", "width", "height")
+        ),
+    )
+
+
 @transaction.atomic
 def replace_piece_state_images(piece_state, images: list[dict], user=None) -> None:
-    """Replace a PieceState's ordered image attachments from API payloads."""
+    """Replace a PieceState's ordered image attachments from API payloads.
+
+    Cropped derivatives are carried over from the deleted links when the
+    (image, crop) pair is unchanged; the generate_cropped_image task is
+    enqueued only for new or changed pairs (eager crop pipeline).
+    """
+    from .crops import enqueue_generate_cropped_image  # noqa: PLC0415
     from .models import PieceStateImage  # noqa: PLC0415
+
+    # Capture (image, crop) → cropped_* from the links being replaced so
+    # unchanged pairs keep their already-materialized derivative.
+    previous_cropped: dict = {}
+    for link in piece_state.image_links.all():
+        pair = _crop_pair_key(link.image_id, link.crop)
+        if pair is not None and link.cropped_r2_key:
+            previous_cropped[pair] = (link.cropped_r2_key, link.cropped_url)
 
     piece_state.image_links.all().delete()
     for order, payload in enumerate(images):
@@ -339,14 +366,21 @@ def replace_piece_state_images(piece_state, images: list[dict], user=None) -> No
         if image is None:
             continue
         created_val = payload.get("created") or timezone.now()
+        crop = crop_to_dict(payload.get("crop"))
+        pair = _crop_pair_key(image.id, crop)
+        carried = previous_cropped.get(pair) if pair is not None else None
         PieceStateImage.objects.create(
             piece_state=piece_state,
             image=image,
             caption=payload.get("caption") or "",
-            crop=crop_to_dict(payload.get("crop")),
+            crop=crop,
+            cropped_r2_key=carried[0] if carried else None,
+            cropped_url=carried[1] if carried else None,
             created=created_val,
             order=order,
         )
+        if crop is not None and carried is None:
+            enqueue_generate_cropped_image(image, crop, user=piece_state.piece.user)
 
 
 def sync_glaze_type_singleton_combination(

@@ -273,13 +273,16 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     psi_skip_reason = None
     if piece_state_image is not None:
         with transaction.atomic():
-            psi = PieceStateImage.objects.select_for_update().get(
-                id=piece_state_image.id
+            psi = (
+                PieceStateImage.objects.select_for_update()
+                .select_related("image", "piece_state__piece")
+                .get(id=piece_state_image.id)
             )
             if psi.crop is None:
-                psi.crop = crop
-                psi.save(update_fields=["crop"])
-                return {"status": "success", "crop": crop, "updated": True}
+                from .crops import apply_crop
+
+                apply_crop(psi, crop)
+                return {"status": "success", "crop": psi.crop, "updated": True}
             else:
                 psi_skip_reason = "PieceStateImage already has a crop"
                 logger.warning(
@@ -288,6 +291,65 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     return {
         "status": "skipped",
         "reason": psi_skip_reason or "No crop targets were updated",
+    }
+
+
+@TaskRegistry.register("generate_cropped_image")
+def generate_cropped_image(task: AsyncTask) -> dict:
+    """Materialize a PieceStateImage crop as an eager JPEG derivative in R2.
+
+    Input is the value pair ``(image_id, crop coords)`` — never a PSI pk —
+    so completion can update every current row matching the pair even if the
+    triggering row was deleted and recreated while the task ran.
+    """
+    from . import r2
+    from .crops import crop_key_for, generate_cropped_image_bytes, set_cropped_fields
+    from .models import Image
+    from .utils import crop_to_dict
+
+    params = task.input_params or {}
+    image_id = params.get("image_id")
+    crop = crop_to_dict(params.get("crop"))
+    if not image_id:
+        raise ValueError("Missing image_id in task params")
+    if crop is None:
+        raise ValueError("Missing or invalid crop in task params")
+
+    try:
+        image = Image.objects.get(id=image_id)
+    except Image.DoesNotExist:
+        return {"status": "skipped", "reason": f"Image {image_id} not found"}
+
+    if not image.r2_key:
+        return {"status": "skipped", "reason": "Image is not stored in R2"}
+    if not r2.is_r2_configured():
+        return {"status": "skipped", "reason": "R2 object storage is not configured"}
+
+    key = crop_key_for(image.r2_key, crop)
+    url = r2.public_url_for_key(key)
+
+    if r2.object_exists(key):
+        updated = set_cropped_fields(
+            image.id, crop, cropped_r2_key=key, cropped_url=url
+        )
+        return {
+            "status": "success",
+            "cropped_r2_key": key,
+            "cropped_url": url,
+            "updated_links": updated,
+            "reused_existing_object": True,
+        }
+
+    original = r2.get_object_bytes(image.r2_key)
+    derived = generate_cropped_image_bytes(original, crop)
+    r2.upload_bytes(key, derived, "image/jpeg")
+    updated = set_cropped_fields(image.id, crop, cropped_r2_key=key, cropped_url=url)
+    return {
+        "status": "success",
+        "cropped_r2_key": key,
+        "cropped_url": url,
+        "updated_links": updated,
+        "reused_existing_object": False,
     }
 
 

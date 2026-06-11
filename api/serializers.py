@@ -536,7 +536,10 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         crop = getattr(obj, "thumbnail_crop", _NOT_ANNOTATED)
         if crop is _NOT_ANNOTATED:
             crop = obj.get_thumbnail_crop()
-        return {**thumbnail, "crop": crop}
+        cropped_url = getattr(obj, "thumbnail_cropped_url", _NOT_ANNOTATED)
+        if cropped_url is _NOT_ANNOTATED:
+            cropped_url = obj.get_thumbnail_cropped_url()
+        return {**thumbnail, "crop": crop, "cropped_url": cropped_url}
 
     @extend_schema_field(serializers.IntegerField(min_value=0))
     def get_photo_count(self, obj: Piece) -> int:
