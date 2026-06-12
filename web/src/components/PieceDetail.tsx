@@ -40,7 +40,7 @@ import {
   extractErrorMessage,
   addPieceState,
 } from "../util/api";
-import CloudinaryImage from "./CloudinaryImage";
+import AppImage from "./AppImage";
 
 import NavigationBlocker from "./NavigationBlocker";
 import WorkflowState from "./WorkflowState";
@@ -171,11 +171,11 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const hasGalleryImages = galleryImages.length > 0;
-  const thumbnailIndex = piece.thumbnail?.cloudinary_public_id
-    ? galleryImages.findIndex(
-        (img) =>
-          img.cloudinary_public_id !== null &&
-          img.cloudinary_public_id === piece.thumbnail?.cloudinary_public_id,
+  const thumbnailIndex = piece.thumbnail
+    ? galleryImages.findIndex((img) =>
+        piece.thumbnail?.image_id && img.image_id
+          ? img.image_id === piece.thumbnail.image_id
+          : img.url === piece.thumbnail?.url,
       )
     : -1;
   const heroLightboxIndex = thumbnailIndex >= 0 ? thumbnailIndex : 0;
@@ -330,10 +330,9 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             >
               {piece.thumbnail ? (
                 <Box sx={{ position: "absolute", inset: 0 }}>
-                  <CloudinaryImage
+                  <AppImage
                     url={piece.thumbnail.url}
-                    cloud_name={piece.thumbnail.cloud_name}
-                    cloudinary_public_id={piece.thumbnail.cloudinary_public_id}
+                    croppedUrl={piece.thumbnail.cropped_url}
                     crop={piece.thumbnail.crop}
                     alt={piece.name}
                     context="detail"
@@ -705,7 +704,7 @@ function ShowcaseVideoPanel({
                 {!isActive && (
                   <Typography variant="caption" color="text.secondary">
                     {showcaseVideo?.enabled === false
-                      ? "Set CLOUDINARY_VIDEO_UPLOAD_FOLDER to enable showcase videos."
+                      ? "Configure R2 storage to enable showcase videos."
                       : showcaseVideo?.eligible === false
                       ? "This piece is not eligible for video generation yet."
                       : "Renders asynchronously — you can navigate away."}

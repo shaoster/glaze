@@ -46,7 +46,6 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
 import CropFreeIcon from "@mui/icons-material/CropFree";
-import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { alpha, ThemeProvider, createTheme } from "@mui/material/styles";
@@ -84,9 +83,6 @@ const PieceListPage = lazy(() => import("./pages/PieceListPage"));
 const PieceDetailPage = lazy(() => import("./pages/PieceDetailPage"));
 const AnalyzePage = lazy(() => import("./pages/AnalyzePage"));
 const GlazeImportToolPage = lazy(() => import("./pages/GlazeImportToolPage"));
-const CloudinaryCleanupPage = lazy(
-  () => import("./pages/CloudinaryCleanupPage"),
-);
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
@@ -557,17 +553,6 @@ function AppShell({
                       </ListItemIcon>
                       Glaze Import Tool
                     </MenuItem>,
-                    <MenuItem
-                      key="cloudinary-cleanup"
-                      component={Link}
-                      to="/tools/cloudinary-cleanup"
-                      onClick={() => setMenuAnchor(null)}
-                    >
-                      <ListItemIcon>
-                        <CleaningServicesIcon fontSize="small" />
-                      </ListItemIcon>
-                      Cloudinary Cleanup
-                    </MenuItem>,
                     adminBaseUrl ? (
                       <MenuItem
                         key="admin-tool"
@@ -896,16 +881,6 @@ function AuthenticatedApp({
               element={
                 currentUser.is_staff ? (
                   <GlazeImportToolPage adminBaseUrl={adminBaseUrl} />
-                ) : (
-                  <Navigate to="/" replace />
-                )
-              }
-            />
-            <Route
-              path="/tools/cloudinary-cleanup"
-              element={
-                currentUser.is_staff ? (
-                  <CloudinaryCleanupPage />
                 ) : (
                   <Navigate to="/" replace />
                 )

@@ -8,7 +8,7 @@ vi.mock("../../util/api", () => ({
   fetchGlazeCombinationImages: vi.fn(),
 }));
 
-vi.mock("../../components/CloudinaryImage", () => ({
+vi.mock("../../components/AppImage", () => ({
   default: () => <div data-testid="mock-image" />,
 }));
 

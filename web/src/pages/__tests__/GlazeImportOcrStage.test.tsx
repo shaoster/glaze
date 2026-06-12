@@ -40,7 +40,6 @@ function makeRecord(overrides: Partial<UploadedRecord> = {}): UploadedRecord {
     ocrStatus: "idle",
     ocrError: null,
     sourceKind: "local",
-    cloudinaryPublicId: null,
     ...overrides,
   };
 }

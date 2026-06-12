@@ -146,8 +146,6 @@ vi.mock("../../util/api", () => ({
   createTagEntry: vi.fn(),
   createGlobalEntry: vi.fn(),
   toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),
-  hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
-  uploadImageToCloudinary: vi.fn(),
   fetchPieceShowcaseVideo: vi.fn().mockResolvedValue(null),
   requestPieceShowcaseVideo: vi.fn(),
   extractErrorMessage: vi.fn((err) => {
@@ -221,8 +219,6 @@ function makePiece(overrides: Partial<PieceDetailType> = {}): PieceDetailType {
     last_modified: new Date("2024-01-15T10:00:00Z"),
     thumbnail: {
       url: "/thumbnails/bowl.svg",
-      cloudinary_public_id: null,
-      cloud_name: null,
     },
     shared: false,
     is_editable: false,
@@ -304,8 +300,6 @@ describe("PieceDetail", () => {
           url: "http://example.com/one.jpg",
           caption: "First image",
           created: new Date("2024-01-15T10:00:00Z"),
-          cloudinary_public_id: null,
-          cloud_name: null,
         },
       ],
     });
@@ -316,7 +310,6 @@ describe("PieceDetail", () => {
           url: "http://example.com/two.jpg",
           caption: "Second image",
           created: new Date("2024-01-16T10:00:00Z"),
-          cloudinary_public_id: null,
         },
       ],
     });
@@ -1112,11 +1105,10 @@ describe("PieceDetail", () => {
 
   describe("hero image click", () => {
     const galleryImage = {
-      url: "https://res.cloudinary.com/test/image/upload/v1/piece/hero.jpg",
+      url: "https://cdn.example.com/images/piece/hero.jpg",
       caption: "Hero shot",
       created: new Date("2024-01-15T10:00:00Z"),
-      cloudinary_public_id: "piece/hero",
-      cloud_name: "test-cloud",
+      image_id: "image-hero",
     };
 
     it("navigates to lightbox when hero is clicked and gallery images exist", async () => {
@@ -1124,8 +1116,7 @@ describe("PieceDetail", () => {
       const piece = makePiece({
         thumbnail: {
           url: galleryImage.url,
-          cloudinary_public_id: galleryImage.cloudinary_public_id,
-          cloud_name: galleryImage.cloud_name,
+          image_id: galleryImage.image_id,
         },
         current_state: stateWithImage,
         history: [stateWithImage],

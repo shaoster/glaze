@@ -11,34 +11,29 @@ import {
   DEFAULT_THUMBNAIL_ASPECT_HEIGHT,
   DEFAULT_THUMBNAIL_ASPECT_WIDTH,
   estimateCardHeight,
-  getThumbnailRequestedHeight,
 } from "../pieceCardHeight";
 import type { PieceSummary } from "../../util/types";
 
-vi.mock("../CloudinaryImage", () => ({
+vi.mock("../AppImage", () => ({
   default: ({
     crop,
-    requestedHeight,
-    requestedWidth,
+    croppedUrl,
     style,
     url,
     alt,
     onLoad,
   }: {
     crop?: unknown;
-    requestedHeight?: number;
-    requestedWidth?: number;
+    croppedUrl?: string | null;
     style?: React.CSSProperties;
     url: string;
     alt?: string;
     onLoad?: React.ReactEventHandler<HTMLImageElement>;
   }) => (
     <img
-      src={url}
+      src={croppedUrl?.trim() || url}
       alt={alt ?? ""}
       data-crop={crop ? "yes" : "no"}
-      data-requested-height={requestedHeight}
-      data-requested-width={requestedWidth}
       style={style}
       onLoad={onLoad}
     />
@@ -197,8 +192,6 @@ function makePiece(overrides: Partial<PieceSummary> = {}): PieceSummary {
     photo_count: 0,
     thumbnail: {
       url: "https://example.com/bowl.jpg",
-      cloudinary_public_id: null,
-      cloud_name: null,
     },
     current_location: null,
     current_state: { state: "designed" } as any,
@@ -297,8 +290,7 @@ describe("PieceList", () => {
       const piece = makePiece({
         thumbnail: {
           url: "https://example.com/img.jpg",
-          cloudinary_public_id: "id",
-          cloud_name: "demo",
+          cropped_url: "https://example.com/img__crop.jpg",
           crop: { x: 0, y: 0, width: 200, height: 400 },
         },
       });
@@ -315,8 +307,7 @@ describe("PieceList", () => {
       const piece = makePiece({
         thumbnail: {
           url: "https://example.com/img.jpg",
-          cloudinary_public_id: "id",
-          cloud_name: "demo",
+          cropped_url: "https://example.com/img__crop.jpg",
           crop: { x: 0, y: 0, width: 200, height: 400 },
         },
       });
@@ -341,8 +332,7 @@ describe("PieceList", () => {
           id: "tall",
           thumbnail: {
             url: "https://example.com/tall.jpg",
-            cloudinary_public_id: "id",
-            cloud_name: "demo",
+            cropped_url: "https://example.com/img__crop.jpg",
             crop: { x: 0, y: 0, width: 200, height: 400 },
           },
         }),
@@ -374,8 +364,7 @@ describe("PieceList", () => {
       const piece = makePiece({
         thumbnail: {
           url: "https://example.com/img.jpg",
-          cloudinary_public_id: "id",
-          cloud_name: "demo",
+          cropped_url: "https://example.com/img__crop.jpg",
           crop: { x: 0, y: 0, width: 200, height: 400 },
         },
       });
@@ -396,8 +385,7 @@ describe("PieceList", () => {
         makePiece({
           thumbnail: {
             url: "https://example.com/img.jpg",
-            cloudinary_public_id: "id",
-            cloud_name: "demo",
+            cropped_url: "https://example.com/img__crop.jpg",
             crop: { x: 0, y: 0, width: 200, height: 400 },
           },
         }),
@@ -408,17 +396,15 @@ describe("PieceList", () => {
       });
     });
 
-    it("falls back to 4/3 aspect ratio on the thumbnail shell for Cloudinary pieces without a crop", () => {
+    it("falls back to 4/3 aspect ratio on the thumbnail shell for pieces without a crop or dimensions", () => {
       // Without this fallback the shell collapses to zero height while
-      // CloudinaryImage loads (opacity:0, no intrinsic size), causing masonic
+      // AppImage loads (opacity:0, no intrinsic size), causing masonic
       // to measure the card as chrome-only height and place the next card too
       // close, resulting in visible overlap once the image loads.
       renderPieceList([
         makePiece({
           thumbnail: {
-            url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-            cloudinary_public_id: "sample",
-            cloud_name: "demo",
+            url: "https://cdn.example.com/images/sample.jpg",
             crop: null,
           },
         }),
@@ -428,24 +414,6 @@ describe("PieceList", () => {
       });
     });
 
-    it("passes requestedHeight matching the 4/3 fallback to CloudinaryImage for pieces without a crop", () => {
-      // The Cloudinary fill request must match the shell aspect ratio so the
-      // delivered image fills the container without driving reflow after load.
-      const piece = makePiece({
-        thumbnail: {
-          url: "https://example.com/img.jpg",
-          cloudinary_public_id: "pieces/nocrop",
-          cloud_name: "demo",
-          crop: null,
-        },
-      });
-      const { container } = renderPieceList([piece]);
-      const image = container.querySelector("img")!;
-      const rw = Number(image.getAttribute("data-requested-width"));
-      const rh = Number(image.getAttribute("data-requested-height"));
-      expect(rh).toBe(getThumbnailRequestedHeight(piece, rw));
-    });
-
     it("reserves the crop-derived card height for mocked image payloads", () => {
       const pieces = [
         makePiece({
@@ -453,8 +421,7 @@ describe("PieceList", () => {
           name: "Tall Pitcher",
           thumbnail: {
             url: "https://example.com/tall.jpg",
-            cloudinary_public_id: "pieces/tall",
-            cloud_name: "demo",
+            cropped_url: "https://example.com/tall__crop.jpg",
             crop: { x: 0, y: 0, width: 200, height: 400 },
           },
         }),
@@ -463,8 +430,7 @@ describe("PieceList", () => {
           name: "Low Tray",
           thumbnail: {
             url: "https://example.com/wide.jpg",
-            cloudinary_public_id: "pieces/wide",
-            cloud_name: "demo",
+            cropped_url: "https://example.com/wide__crop.jpg",
             crop: { x: 0, y: 0, width: 400, height: 200 },
           },
         }),
@@ -473,8 +439,7 @@ describe("PieceList", () => {
           name: "Small Cup",
           thumbnail: {
             url: "https://example.com/square.jpg",
-            cloudinary_public_id: "pieces/square",
-            cloud_name: "demo",
+            cropped_url: "https://example.com/square__crop.jpg",
             crop: { x: 0, y: 0, width: 200, height: 200 },
           },
         }),
@@ -535,7 +500,11 @@ describe("PieceList", () => {
     it("computes height from landscape crop aspect ratio", () => {
       // 400×200 crop → ratio 0.5 → at width 220 → image height 110 + CARD_CHROME_HEIGHT
       const piece = {
-        thumbnail: { crop: { x: 0, y: 0, width: 400, height: 200 } },
+        thumbnail: {
+          url: "https://example.com/img.jpg",
+          cropped_url: "https://example.com/img__crop.jpg",
+          crop: { x: 0, y: 0, width: 400, height: 200 },
+        },
       } as PieceSummary;
       expect(estimateCardHeight(piece, 220)).toBe(
         Math.round(220 * 0.5) + CARD_CHROME_HEIGHT,
@@ -545,7 +514,11 @@ describe("PieceList", () => {
     it("computes height from portrait crop aspect ratio", () => {
       // 200×400 crop → ratio 2 → at width 220 → image height 440 + CARD_CHROME_HEIGHT
       const piece = {
-        thumbnail: { crop: { x: 0, y: 0, width: 200, height: 400 } },
+        thumbnail: {
+          url: "https://example.com/img.jpg",
+          cropped_url: "https://example.com/img__crop.jpg",
+          crop: { x: 0, y: 0, width: 200, height: 400 },
+        },
       } as PieceSummary;
       expect(estimateCardHeight(piece, 220)).toBe(
         Math.round(220 * 2) + CARD_CHROME_HEIGHT,
@@ -554,7 +527,11 @@ describe("PieceList", () => {
 
     it("falls back to 4:3 aspect ratio height when crop.width is 0 (guard against division by zero)", () => {
       const piece = {
-        thumbnail: { url: "https://example.com/img.jpg", crop: { x: 0, y: 0, width: 0, height: 200 } },
+        thumbnail: {
+          url: "https://example.com/img.jpg",
+          cropped_url: "https://example.com/img__crop.jpg",
+          crop: { x: 0, y: 0, width: 0, height: 200 },
+        },
       } as PieceSummary;
       expect(estimateCardHeight(piece, 160)).toBe(fallbackAt(160));
     });
@@ -573,6 +550,8 @@ describe("PieceList", () => {
       // True ratio = (0.71875*1000) / (0.8225*800) = 718.75/658 ≈ 1.09 (landscape).
       const piece = {
         thumbnail: {
+          url: "https://example.com/img.jpg",
+          cropped_url: "https://example.com/img__crop.jpg",
           crop: { x: 0.125, y: 0, width: 0.71875, height: 0.8225 },
           width: 1000,
           height: 800,
@@ -589,6 +568,8 @@ describe("PieceList", () => {
       // This is wrong for non-square originals but unavoidable until dimensions are stored.
       const pieceNoDims = {
         thumbnail: {
+          url: "https://example.com/img.jpg",
+          cropped_url: "https://example.com/img__crop.jpg",
           crop: { x: 0.125, y: 0, width: 0.71875, height: 0.8225 },
           width: null,
           height: null,
@@ -596,6 +577,8 @@ describe("PieceList", () => {
       } as PieceSummary;
       const pieceWithDims = {
         thumbnail: {
+          url: "https://example.com/img.jpg",
+          cropped_url: "https://example.com/img__crop.jpg",
           crop: { x: 0.125, y: 0, width: 0.71875, height: 0.8225 },
           width: 1000,
           height: 800,
@@ -618,9 +601,8 @@ describe("PieceList", () => {
         makePiece({
           id: "with-dims",
           thumbnail: {
-            url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-            cloudinary_public_id: "sample",
-            cloud_name: "demo",
+            url: "https://cdn.example.com/images/sample.jpg",
+            cropped_url: "https://cdn.example.com/images/sample__crop.jpg",
             crop: { x: 0.125, y: 0, width: 0.71875, height: 0.8225 },
             width: 1000,
             height: 800,
@@ -629,9 +611,8 @@ describe("PieceList", () => {
         makePiece({
           id: "no-dims",
           thumbnail: {
-            url: "https://res.cloudinary.com/demo/image/upload/other.jpg",
-            cloudinary_public_id: "other",
-            cloud_name: "demo",
+            url: "https://cdn.example.com/images/other.jpg",
+            cropped_url: "https://cdn.example.com/images/other__crop.jpg",
             crop: { x: 0, y: 0, width: 0.8, height: 0.9 },
             width: null,
             height: null,
@@ -705,16 +686,12 @@ describe("PieceList", () => {
       ).toBe(true);
     });
 
-    it("passes only requestedWidth (not requestedHeight) to CloudinaryImage for cropped pieces", () => {
-      // For cropped pieces, Cloudinary infers height from the crop ratio after
-      // scale().width() — passing requestedHeight would override that inference.
-      // requestedHeight is only set for no-crop pieces (covered by the separate test above).
+    it("renders the materialized cropped URL when the thumbnail has one", () => {
       const { container } = renderPieceList([
         makePiece({
           thumbnail: {
             url: "https://example.com/tall.jpg",
-            cloudinary_public_id: "pieces/tall",
-            cloud_name: "demo",
+            cropped_url: "https://example.com/tall__crop.jpg",
             crop: { x: 0, y: 0, width: 0.5, height: 1 },
           },
         }),
@@ -722,8 +699,9 @@ describe("PieceList", () => {
 
       const image = container.querySelector("img")!;
       expect(image.getAttribute("data-crop")).toBe("yes");
-      expect(image.getAttribute("data-requested-width")).toBe("240");
-      expect(image.hasAttribute("data-requested-height")).toBe(false);
+      expect(image.getAttribute("src")).toBe(
+        "https://example.com/tall__crop.jpg",
+      );
     });
 
     it("fills the thumbnail shell so cropped images do not leave a visible gap", () => {
@@ -731,8 +709,7 @@ describe("PieceList", () => {
         makePiece({
           thumbnail: {
             url: "https://example.com/tall.jpg",
-            cloudinary_public_id: "pieces/tall",
-            cloud_name: "demo",
+            cropped_url: "https://example.com/tall__crop.jpg",
             crop: { x: 0, y: 0, width: 200, height: 400 },
           },
         }),

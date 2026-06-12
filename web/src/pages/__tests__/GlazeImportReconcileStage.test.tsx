@@ -29,7 +29,6 @@ function makeRecord(): UploadedRecord {
     ocrStatus: "done",
     ocrError: null,
     sourceKind: "local",
-    cloudinaryPublicId: null,
   };
 }
 

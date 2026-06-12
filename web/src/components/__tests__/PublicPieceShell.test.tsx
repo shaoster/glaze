@@ -94,7 +94,7 @@ describe("ShowcasePage", () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    const videoUrl = "https://res.cloudinary.com/demo/video/upload/showcase.mp4";
+    const videoUrl = "https://cdn.example.com/videos/showcase.mp4";
     vi.mocked(api.fetchPiece).mockResolvedValue({
       ...BASE_PIECE,
       showcase_video_url: videoUrl,

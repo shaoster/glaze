@@ -180,7 +180,7 @@ describe("PieceShareControls", () => {
     );
   });
 
-  it("includes thumbnail file in native share when Cloudinary image is available", async () => {
+  it("includes thumbnail file in native share when a thumbnail image is available", async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     const canShare = vi.fn().mockReturnValue(true);
     Object.defineProperty(navigator, "share", {
@@ -199,9 +199,7 @@ describe("PieceShareControls", () => {
     );
 
     const thumbnail = {
-      url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      cloudinary_public_id: "sample",
-      cloud_name: "demo",
+      url: "https://cdn.example.com/images/sample.jpg",
     };
 
     render(
@@ -234,9 +232,7 @@ describe("PieceShareControls", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network")));
 
     const thumbnail = {
-      url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      cloudinary_public_id: "sample",
-      cloud_name: "demo",
+      url: "https://cdn.example.com/images/sample.jpg",
     };
 
     render(
@@ -273,9 +269,7 @@ describe("PieceShareControls", () => {
     );
 
     const thumbnail = {
-      url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      cloudinary_public_id: "sample",
-      cloud_name: "demo",
+      url: "https://cdn.example.com/images/sample.jpg",
     };
 
     render(

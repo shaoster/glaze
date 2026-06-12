@@ -14,7 +14,7 @@ vi.mock("../ErrorBoundary", () => ({
   default: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("../CloudinaryImage", () => ({
+vi.mock("../AppImage", () => ({
   default: () => <div data-testid="mock-image" />,
 }));
 

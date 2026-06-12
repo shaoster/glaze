@@ -8,14 +8,13 @@ import {
   Tooltip,
 } from "@mui/material";
 import type { ImageCrop } from "../util/types";
-import CloudinaryImage from "./CloudinaryImage";
+import AppImage from "./AppImage";
 import { Masonry } from "masonic";
 
 type PiecePhotoGalleryGridImage = {
   url: string;
   caption: string;
-  cloudinary_public_id?: string | null;
-  cloud_name?: string | null;
+  cropped_url?: string | null;
   crop?: ImageCrop | null;
   stateLabel: string;
   editableCurrentStateIndex: number | null;
@@ -44,11 +43,9 @@ type PiecePhotoGalleryGridProps = {
 function MasonryTile({
   data: image,
   index,
-  width,
 }: {
   data: MasonryTileData;
   index: number;
-  width: number;
 }) {
   return (
     <Box
@@ -76,16 +73,12 @@ function MasonryTile({
         }}
       >
         <Box sx={{ position: "relative", width: "100%" }}>
-          <CloudinaryImage
+          <AppImage
             url={image.url}
-            cloud_name={image.cloud_name}
-            cloudinary_public_id={image.cloudinary_public_id}
+            croppedUrl={image.cropped_url}
             crop={image.crop}
             alt={image.caption || "Piece photo"}
             context="gallery"
-            requestedWidth={Math.round(
-              width * (globalThis.window?.devicePixelRatio ?? 1),
-            )}
             style={{
               width: "100%",
               height: "auto",

@@ -38,7 +38,7 @@ import {
 } from "../util/workflow";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AutosaveStatus from "./AutosaveStatus";
-import CloudinaryImage from "./CloudinaryImage";
+import AppImage from "./AppImage";
 import type { AutosaveStatus as AutosaveStatusValue } from "./useAutosave";
 
 export interface GlobalEntryDialogProps {
@@ -538,11 +538,7 @@ export default function GlobalEntryDialog({
               {visible.map((entry) => {
                 const thumbnailImage = thumbnailField
                   ? (entry[thumbnailField] as
-                      | {
-                          url: string;
-                          cloudinary_public_id?: string | null;
-                          cloud_name?: string | null;
-                        }
+                      | { url: string }
                       | null
                       | undefined)
                   : undefined;
@@ -566,12 +562,8 @@ export default function GlobalEntryDialog({
                   >
                     {thumbnailField &&
                       (thumbnailImage?.url ? (
-                        <CloudinaryImage
+                        <AppImage
                           url={thumbnailImage.url}
-                          cloud_name={thumbnailImage.cloud_name}
-                          cloudinary_public_id={
-                            thumbnailImage.cloudinary_public_id
-                          }
                           alt={entry.name ?? ""}
                           context="thumbnail"
                         />

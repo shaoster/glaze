@@ -20,10 +20,9 @@ import MergeIcon from "@mui/icons-material/MergeType";
 import {
   extractErrorMessage,
   importManualSquareCropRecords,
-  type CloudinaryWidgetConfig,
   type ManualSquareCropImportResponse,
 } from "../util/api";
-import { openCloudinaryUploadWidget } from "../util/cloudinaryUpload";
+import { uploadImageToR2 } from "../util/r2Upload";
 import GlazeImportCropStage from "./glazeImportTool/GlazeImportCropStage";
 import GlazeImportImportStage from "./glazeImportTool/GlazeImportImportStage";
 import GlazeImportOcrStage from "./glazeImportTool/GlazeImportOcrStage";
@@ -62,18 +61,13 @@ function createRecordId() {
   );
 }
 
-function buildCloudinaryJpgUrl(
-  config: CloudinaryWidgetConfig,
-  publicId: string,
-) {
-  return `https://res.cloudinary.com/${config.cloud_name}/image/upload/f_jpg/${publicId}.jpg`;
-}
 export default function GlazeImportToolPage({
   adminBaseUrl,
 }: {
   adminBaseUrl: string | null;
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const remoteFileInputRef = useRef<HTMLInputElement | null>(null);
   const recordsRef = useRef<UploadedRecord[]>([]);
 
   const [activeTab, setActiveTab] = useState(TAB_UPLOAD);
@@ -94,8 +88,8 @@ export default function GlazeImportToolPage({
     [],
   );
   const [uploading, setUploading] = useState(false);
-  const [widgetUploading, setWidgetUploading] = useState(false);
-  const [widgetError, setWidgetError] = useState<string | null>(null);
+  const [remoteUploading, setRemoteUploading] = useState(false);
+  const [remoteError, setRemoteError] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [importBuildProgress, setImportBuildProgress] = useState<
     UploadProgressEntry[]
@@ -115,19 +109,6 @@ export default function GlazeImportToolPage({
   useEffect(() => {
     recordsRef.current = records;
   }, [records]);
-
-  useEffect(() => {
-    if (!window.cloudinary?.createUploadWidget) return;
-    const existing = document.querySelector<HTMLScriptElement>(
-      'script[data-cloudinary-widget="true"]',
-    );
-    if (existing) return;
-    const script = document.createElement("script");
-    script.src = "https://upload-widget.cloudinary.com/global/all.js";
-    script.async = true;
-    script.dataset.cloudinaryWidget = "true";
-    document.body.appendChild(script);
-  }, []);
 
   // Stable string key that only changes when the crop geometry changes.
   // Adjusting the OCR region leaves this key unchanged, so the preview is
@@ -253,7 +234,6 @@ export default function GlazeImportToolPage({
           ocrStatus: "idle",
           ocrError: null,
           sourceKind: "local",
-          cloudinaryPublicId: null,
         });
         setUploadProgress((current) =>
           current.map((entry, entryIndex) =>
@@ -286,118 +266,86 @@ export default function GlazeImportToolPage({
     setActiveTab(TAB_CROP);
   }
 
-  async function startCloudinaryUpload() {
-    setWidgetError(null);
-    setWidgetUploading(true);
-    const widget = await openCloudinaryUploadWidget({
-      messages: {
-        configError: "Failed to load Cloudinary upload configuration.",
-        unavailableError:
-          "Cloudinary upload widget is not available in this browser.",
-        signatureError: "Failed to sign Cloudinary upload.",
-        uploadError: "Cloudinary upload failed.",
-      },
-      widgetOptions: {
-        sources: ["local"],
-        multiple: true,
-        resourceType: "image",
-      },
-      callbacks: {
-        onError: (message) => {
-          setWidgetUploading(false);
-          setWidgetError(message);
-        },
-        onDisplayChange: (state) => {
-          if (state === "shown") {
-            setWidgetUploading(false);
-          }
-        },
-        onSuccess: async (result, config) => {
-          const publicId = String(result.info.public_id || "");
-          const originalFilename = String(
-            result.info.original_filename || publicId || "upload",
+  async function handleRemoteFileSelection(fileList: FileList | null) {
+    if (!fileList?.length) return;
+    const files = Array.from(fileList);
+    setRemoteError(null);
+    setRemoteUploading(true);
+    const nextRecords: UploadedRecord[] = [];
+    try {
+      for (const file of files) {
+        const progressId = createRecordId();
+        setUploadProgress((current) => [
+          {
+            id: progressId,
+            filename: file.name,
+            status: "uploading",
+            progress: 40,
+            error: null,
+          },
+          ...current,
+        ]);
+        try {
+          const uploaded = await uploadImageToR2(file);
+          const image = await loadImageElement(uploaded.url);
+          const dimensions = {
+            width: image.naturalWidth,
+            height: image.naturalHeight,
+          };
+          const crop = clampCrop(dimensions, defaultCrop(dimensions));
+          nextRecords.push({
+            id: createRecordId(),
+            file: null,
+            sourceUrl: uploaded.url,
+            filename: file.name,
+            dimensions,
+            crop,
+            cropped: false,
+            ...(await detectOcrRegion(
+              image,
+              crop,
+              DEFAULT_OCR_TUNING.labelWhiteThreshold,
+              DEFAULT_OCR_TUNING.textDarkThreshold,
+            )),
+            ocrTuning: { ...DEFAULT_OCR_TUNING },
+            parsedFields: { ...DEFAULT_PARSED_FIELDS },
+            ocrSuggestion: null,
+            reviewed: false,
+            ocrStatus: "idle",
+            ocrError: null,
+            sourceKind: "remote",
+          });
+          setUploadProgress((current) =>
+            current.map((entry) =>
+              entry.id === progressId
+                ? { ...entry, status: "ready", progress: 100, error: null }
+                : entry,
+            ),
           );
-          const format = String(result.info.format || "");
-          const filename = format
-            ? `${originalFilename}.${format}`
-            : originalFilename;
-          const progressId = createRecordId();
-          setUploadProgress((current) => [
-            {
-              id: progressId,
-              filename,
-              status: "uploading",
-              progress: 70,
-              error: null,
-            },
-            ...current,
-          ]);
-          try {
-            const jpgUrl = buildCloudinaryJpgUrl(config, publicId);
-            const image = await loadImageElement(jpgUrl);
-            const cloudinaryDimensions = {
-              width: image.naturalWidth,
-              height: image.naturalHeight,
-            };
-            const cloudinaryCrop = clampCrop(
-              cloudinaryDimensions,
-              defaultCrop(cloudinaryDimensions),
-            );
-            const record: UploadedRecord = {
-              id: createRecordId(),
-              file: null,
-              sourceUrl: jpgUrl,
-              filename,
-              dimensions: cloudinaryDimensions,
-              crop: cloudinaryCrop,
-              cropped: false,
-              ...(await detectOcrRegion(
-                image,
-                cloudinaryCrop,
-                DEFAULT_OCR_TUNING.labelWhiteThreshold,
-                DEFAULT_OCR_TUNING.textDarkThreshold,
-              )),
-              ocrTuning: { ...DEFAULT_OCR_TUNING },
-              parsedFields: { ...DEFAULT_PARSED_FIELDS },
-              ocrSuggestion: null,
-              reviewed: false,
-              ocrStatus: "idle",
-              ocrError: null,
-              sourceKind: "cloudinary",
-              cloudinaryPublicId: publicId,
-            };
-            setRecords((current) => [record, ...current]);
-            setSelectedRecordId(null);
-            setUploadProgress((current) =>
-              current.map((entry) =>
-                entry.id === progressId
-                  ? { ...entry, status: "ready", progress: 100, error: null }
-                  : entry,
-              ),
-            );
-            setImportResult(null);
-            setActiveTab(TAB_CROP);
-          } catch {
-            setUploadProgress((current) =>
-              current.map((entry) =>
-                entry.id === progressId
-                  ? {
-                      ...entry,
-                      status: "error",
-                      progress: 100,
-                      error:
-                        "Cloudinary upload succeeded, but the converted JPG could not be loaded.",
-                    }
-                  : entry,
-              ),
-            );
-          }
-        },
-      },
-    });
-    if (!widget) {
-      setWidgetUploading(false);
+        } catch {
+          setUploadProgress((current) =>
+            current.map((entry) =>
+              entry.id === progressId
+                ? {
+                    ...entry,
+                    status: "error",
+                    progress: 100,
+                    error:
+                      "Cloud upload failed, or the uploaded image could not be loaded.",
+                  }
+                : entry,
+            ),
+          );
+        }
+      }
+    } finally {
+      setRemoteUploading(false);
     }
+    if (!nextRecords.length) return;
+    setRecords((current) => [...nextRecords, ...current]);
+    setSelectedRecordId(null);
+    setImportResult(null);
+    setActiveTab(TAB_CROP);
   }
 
   function confirmDeleteRecord(id: string) {
@@ -561,17 +509,18 @@ export default function GlazeImportToolPage({
       {activeTab === TAB_UPLOAD ? (
         <GlazeImportUploadStage
           fileInputRef={fileInputRef}
+          remoteFileInputRef={remoteFileInputRef}
           uploading={uploading}
-          widgetUploading={widgetUploading}
-          widgetError={widgetError}
+          remoteUploading={remoteUploading}
+          remoteError={remoteError}
           uploadProgress={uploadProgress}
           records={records}
           selectedRecordId={selectedRecordId}
           onFileSelection={(files) => {
             void handleFileSelection(files);
           }}
-          onStartCloudinaryUpload={() => {
-            void startCloudinaryUpload();
+          onRemoteFileSelection={(files) => {
+            void handleRemoteFileSelection(files);
           }}
           onContinueToCrop={() => setActiveTab(TAB_CROP)}
           onSelect={setSelectedRecordId}

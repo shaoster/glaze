@@ -8,7 +8,7 @@
  *
  * Each card header shows the combination name, a test-tile thumbnail if
  * available, and a chip for each constituent glaze type.
- * The card body is a horizontally scrollable row of CloudinaryImage
+ * The card body is a horizontally scrollable row of AppImage
  * thumbnails. Clicking any thumbnail opens an ImageLightbox that shows all
  * images for the combination across every piece; the footer "Go to the Piece"
  * button reflects whichever piece owns the currently-displayed image.
@@ -27,7 +27,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import CloudinaryImage from "./CloudinaryImage";
+import AppImage from "./AppImage";
 import ImageLightbox from "./ImageLightbox";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { fetchGlazeCombinationImages } from "../util/api";
@@ -77,13 +77,7 @@ function TileAvatarButton({ image, name, onClick }: TileAvatarButtonProps) {
       }}
       aria-label={`View test tile for ${name}`}
     >
-      <CloudinaryImage
-        url={image.url}
-        cloud_name={image.cloud_name}
-        cloudinary_public_id={image.cloudinary_public_id}
-        context="thumbnail"
-        alt={name}
-      />
+      <AppImage url={image.url} context="thumbnail" alt={name} />
     </Box>
   );
 }
@@ -110,10 +104,9 @@ function PieceImageButton({ img, label, onClick }: PieceImageButtonProps) {
         }}
         aria-label={label}
       >
-        <CloudinaryImage
+        <AppImage
           url={img.url}
-          cloud_name={img.cloud_name}
-          cloudinary_public_id={img.cloudinary_public_id}
+          croppedUrl={img.cropped_url}
           alt={label}
           context="preview"
         />
@@ -241,8 +234,7 @@ export default function GlazeCombinationGallery() {
           url: image.url,
           caption: name,
           created: new Date(),
-          cloudinary_public_id: image.cloudinary_public_id ?? null,
-          cloud_name: image.cloud_name ?? null,
+          cropped_url: null,
         },
       ],
     });

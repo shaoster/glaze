@@ -4,15 +4,14 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import CloudinaryImage from "./CloudinaryImage";
+import AppImage from "./AppImage";
 
 export type SelectablePhotoItem = {
   key: string;
   url: string;
   stateLabel: string;
   whenLabel: string;
-  cloudinary_public_id?: string | null;
-  cloud_name?: string | null;
+  cropped_url?: string | null;
   crop?: { x: number; y: number; width: number; height: number } | null;
   checked: boolean;
   locked?: boolean;
@@ -51,14 +50,12 @@ export default function SelectablePhotoMasonry({
         }}
       >
         <Box sx={{ position: "relative" }}>
-          <CloudinaryImage
+          <AppImage
             url={item.url}
-            cloud_name={item.cloud_name}
-            cloudinary_public_id={item.cloudinary_public_id}
+            croppedUrl={item.cropped_url}
             crop={item.crop}
             alt={item.stateLabel || "Piece photo"}
             context="gallery"
-            requestedWidth={480}
             style={{
               width: "100%",
               height: "auto",

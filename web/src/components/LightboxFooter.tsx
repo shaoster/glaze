@@ -243,7 +243,7 @@ export default function LightboxFooter({
 
           {/* Crop */}
           {cropAvailable && (
-            <Tooltip title={onCrop ? "Edit crop" : "Crop only available for Cloudinary images"}>
+            <Tooltip title={onCrop ? "Edit crop" : "Crop is not available for this image"}>
               <span>
                 <IconButton onClick={onCrop} disabled={!onCrop} aria-label="Edit crop" sx={{ color: "white" }}>
                   <CropIcon />

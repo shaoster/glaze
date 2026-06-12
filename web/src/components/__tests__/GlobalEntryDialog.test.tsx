@@ -84,7 +84,7 @@ vi.mock("../../util/workflow", () => ({
     globalName === "glaze_combination",
 }));
 
-vi.mock("../CloudinaryImage", () => ({
+vi.mock("../AppImage", () => ({
   default: ({ url, alt }: { url: string; alt: string }) => (
     <img src={url} alt={alt} />
   ),
@@ -98,8 +98,6 @@ function makeCombo(
     name: "Iron Red!Clear",
     test_tile_image: {
       url: "https://example.com/test-tile.jpg",
-      cloudinary_public_id: null,
-      cloud_name: null,
     },
     is_food_safe: true,
     runs: false,

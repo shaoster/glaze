@@ -1,7 +1,7 @@
 import { Box, Typography, alpha } from "@mui/material";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { fetchGlazeCombinationImages } from "../util/api";
-import CloudinaryImage from "./CloudinaryImage";
+import AppImage from "./AppImage";
 import type { GlazeCombinationImageEntry } from "../util/types";
 import { GLAZE_COMBINATION_IMAGES_QUERY_KEY } from "../util/queryKeys";
 
@@ -41,10 +41,9 @@ export default function GlazeCombinationSummary() {
               borderColor: "divider",
             }}
           >
-            <CloudinaryImage
+            <AppImage
               url={img.url}
-              cloud_name={img.cloud_name}
-              cloudinary_public_id={img.cloudinary_public_id}
+              croppedUrl={img.cropped_url}
               alt=""
               context="thumbnail"
             />

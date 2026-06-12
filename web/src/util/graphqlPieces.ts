@@ -55,8 +55,7 @@ export const PIECES_QUERY = gql`
         }
         thumbnail {
           url
-          cloudinary_public_id: cloudinaryPublicId
-          cloud_name: cloudName
+          cropped_url: croppedUrl
           image_id: imageId
           width
           height

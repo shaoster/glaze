@@ -194,11 +194,11 @@ client.interceptors.response.use(
   },
 );
 
-export type CloudinaryWidgetConfig = {
-  cloud_name: string;
-  api_key: string;
-  folder?: string;
-  upload_preset?: string;
+export type R2PresignedUpload = {
+  upload_url: string;
+  key: string;
+  public_url: string;
+  expires_in: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -229,10 +229,11 @@ function mapImage(raw: Wire<CaptionedImage>): CaptionedImage {
     url: raw.url,
     caption: raw.caption,
     created: new Date(raw.created ?? ""),
-    cloudinary_public_id: raw.cloudinary_public_id ?? null,
-    cloud_name: raw.cloud_name ?? null,
     crop: normalizeCrop(raw.crop),
+    cropped_url: raw.cropped_url ?? null,
     image_id: raw.image_id ?? null,
+    width: raw.width ?? null,
+    height: raw.height ?? null,
   };
 }
 
@@ -664,9 +665,9 @@ export type UpdateStatePayload = {
   images?: Array<{
     url: string;
     caption: string;
-    cloudinary_public_id?: string | null;
-    cloud_name?: string | null;
     crop?: ImageCrop | null;
+    width?: number | null;
+    height?: number | null;
   }>;
   custom_fields?: Record<string, string | number | boolean | null>;
 };
@@ -886,23 +887,22 @@ export async function fetchGlazeCombinationImages(): Promise<
   }));
 }
 
-export async function fetchCloudinaryWidgetConfig(): Promise<CloudinaryWidgetConfig> {
-  const { data } = await client.get<CloudinaryWidgetConfig>(
-    "uploads/cloudinary/widget-config/",
-  );
-  return data;
-}
-
-export async function signCloudinaryWidgetParams(
-  paramsToSign: Record<string, unknown>,
-): Promise<string> {
-  const { data } = await client.post<{ signature: string }>(
-    "uploads/cloudinary/widget-signature/",
+/**
+ * Request a presigned R2 PUT URL. The server generates the object key; the
+ * client only declares the content type (and, for staff, the resource type).
+ */
+export async function fetchR2PresignedUrl(
+  contentType: string,
+  resourceType: "image" | "video" | "audio" = "image",
+): Promise<R2PresignedUpload> {
+  const { data } = await client.post<R2PresignedUpload>(
+    "uploads/r2/presigned-url/",
     {
-      params_to_sign: paramsToSign,
+      content_type: contentType,
+      resource_type: resourceType,
     },
   );
-  return data.signature;
+  return data;
 }
 
 export type ManualSquareCropImportRecordPayload = {
@@ -955,48 +955,6 @@ export async function importManualSquareCropRecords(
     form,
   );
   return data;
-}
-
-export type CloudinaryCleanupAsset = {
-  public_id: string;
-  cloud_name: string;
-  path_prefix: string | null;
-  url: string;
-  thumbnail_url: string;
-  bytes: number | null;
-  created_at: string | null;
-};
-
-export type CloudinaryCleanupScanResponse = {
-  assets: CloudinaryCleanupAsset[];
-  summary: {
-    total: number;
-    referenced: number;
-    unused: number;
-    referenced_breakdown: {
-      key: string;
-      label: string;
-      count: number;
-    }[];
-    reference_warnings: string[];
-  };
-};
-
-export async function scanCloudinaryCleanupAssets(): Promise<CloudinaryCleanupScanResponse> {
-  const { data } = await client.get<CloudinaryCleanupScanResponse>(
-    "admin/cloudinary-cleanup/",
-  );
-  return data;
-}
-
-export async function deleteCloudinaryCleanupAssets(
-  publicIds: string[],
-): Promise<Record<string, string>> {
-  const { data } = await client.delete<{ deleted: Record<string, string> }>(
-    "admin/cloudinary-cleanup/",
-    { data: { public_ids: publicIds } },
-  );
-  return data.deleted;
 }
 
 export async function getImageCropRuns(

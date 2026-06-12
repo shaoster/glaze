@@ -7,9 +7,9 @@ import {
 export type ImageEntry = {
   url: string;
   caption: string;
-  cloudinary_public_id?: string | null;
-  cloud_name?: string | null;
   crop?: ImageCrop | null;
+  /** CDN URL of the eagerly generated crop; read-only, null until the task lands. */
+  cropped_url?: string | null;
   width?: number | null;
   height?: number | null;
 };
@@ -141,9 +141,8 @@ function stateImages(pieceState: PieceState): ImageEntry[] {
   return (pieceState.images || []).map((img) => ({
     url: img.url,
     caption: img.caption,
-    cloudinary_public_id: img.cloudinary_public_id ?? null,
-    cloud_name: img.cloud_name ?? null,
     crop: img.crop ?? null,
+    cropped_url: img.cropped_url ?? null,
     width: img.width ?? null,
     height: img.height ?? null,
   }));

@@ -36,8 +36,7 @@ type ShowcaseImageItem = {
   key: string;
   url: string;
   crop?: PieceDetail["current_state"]["images"][number]["crop"] | null;
-  cloudinary_public_id?: string | null;
-  cloud_name?: string | null;
+  cropped_url?: string | null;
   stateLabel: string;
   whenLabel: string;
   caption: string;
@@ -63,26 +62,26 @@ function normalizeKey(...parts: Array<string | null | undefined>): string {
 function buildImageItems(piece: PieceDetail): ShowcaseImageItem[] {
   const states = [...piece.history, piece.current_state];
   const seen = new Set<string>();
-  const thumbnailPublicId = piece.thumbnail?.cloudinary_public_id?.trim() || null;
+  const thumbnailImageId = piece.thumbnail?.image_id ?? null;
+  const thumbnailUrl = piece.thumbnail?.url?.trim() || null;
   return states.flatMap((state) => {
     if (seen.has(state.id)) return [];
     seen.add(state.id);
     return state.images.map((image, index) => ({
-      key: normalizeKey(
-        state.id,
-        image.image_id ?? image.cloudinary_public_id ?? String(index),
-      ),
+      key: normalizeKey(state.id, image.image_id ?? String(index)),
       url: image.url,
       crop: image.crop ?? null,
-      cloudinary_public_id: image.cloudinary_public_id ?? null,
-      cloud_name: image.cloud_name ?? null,
+      cropped_url: image.cropped_url ?? null,
       stateLabel: formatState(state.state),
       whenLabel: state.created.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
       }),
       caption: image.caption?.trim() || "Untitled image",
-      required: !!thumbnailPublicId && image.cloudinary_public_id === thumbnailPublicId,
+      required:
+        thumbnailImageId && image.image_id
+          ? image.image_id === thumbnailImageId
+          : !!thumbnailUrl && image.url === thumbnailUrl,
     }));
   });
 }
@@ -120,8 +119,7 @@ export default function ShowcaseVideoInputPicker({
     key: item.key,
     url: item.url,
     crop: item.crop ?? null,
-    cloudinary_public_id: item.cloudinary_public_id ?? null,
-    cloud_name: item.cloud_name ?? null,
+    cropped_url: item.cropped_url ?? null,
     stateLabel: item.stateLabel,
     whenLabel: item.whenLabel,
     checked: item.required || !selection.excludedImageKeys.includes(item.key),

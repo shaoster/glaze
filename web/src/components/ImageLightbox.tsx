@@ -8,7 +8,7 @@ import {
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import { useSwipeable } from "react-swipeable";
 import type { CaptionedImage, ImageCrop } from "../util/types";
-import { SuspenseCloudinaryImage } from "./CloudinaryImage";
+import { SuspenseAppImage } from "./AppImage";
 import CropOverlay from "./CropOverlay";
 
 const SWIPE_THRESHOLD = 50;
@@ -45,37 +45,38 @@ export default function ImageLightbox({
   const [index, setIndex] = useState(initialIndex);
 
   // Notify caller when index changes due to user navigation (swipe, arrow,
-  // thumbnail). Suppressed when the change is driven by a URL sync so we
-  // don't write a duplicate history entry for an already-current URL.
+  // thumbnail). Suppressed when the index already matches the URL-driven
+  // initialIndex so we don't write a duplicate history entry for an
+  // already-current URL. Refs are updated in effects (never during render);
+  // the ref-sync effects are declared first so they run before the notify
+  // effect within the same commit.
   const onIndexChangeRef = useRef(onIndexChange);
-  onIndexChangeRef.current = onIndexChange;
+  useEffect(() => {
+    onIndexChangeRef.current = onIndexChange;
+  });
+  const initialIndexRef = useRef(initialIndex);
+  useEffect(() => {
+    initialIndexRef.current = initialIndex;
+  });
   const mountedRef = useRef(false);
-  const syncingFromUrlRef = useRef(false);
   useEffect(() => {
     if (!mountedRef.current) { mountedRef.current = true; return; }
-    if (syncingFromUrlRef.current) { syncingFromUrlRef.current = false; return; }
+    if (index === initialIndexRef.current) return;
     onIndexChangeRef.current?.(index);
   }, [index]);
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [dragDeltaY, setDragDeltaY] = useState(0);
   const [cropMode, setCropMode] = useState(false);
-  const [optimisticCrop, setOptimisticCrop] = useState<ImageCrop | null>(null);
 
   const image = images[index];
 
-  const [prevIndex, setPrevIndex] = useState(index);
   const [prevInitialIndex, setPrevInitialIndex] = useState(initialIndex);
 
-  if (index !== prevIndex) {
-    setPrevIndex(index);
-    setOptimisticCrop(null);
-  }
-
-  // Sync to URL-driven index changes (e.g. browser Back while lightbox is open).
-  // Set the flag before setIndex so the onIndexChange effect skips this update.
+  // Sync to URL-driven index changes (e.g. browser Back while lightbox is
+  // open). The notify effect skips this update because the resulting index
+  // equals the URL's initialIndex.
   if (initialIndex !== prevInitialIndex) {
     setPrevInitialIndex(initialIndex);
-    syncingFromUrlRef.current = true;
     setIndex(initialIndex);
   }
   function prev() {
@@ -172,19 +173,13 @@ export default function ImageLightbox({
           </Box>
         )}
 
-        {cropMode && image.cloudinary_public_id && image.cloud_name ? (
+        {cropMode ? (
           <CropOverlay
-            cloudinaryPublicId={image.cloudinary_public_id}
-            cloudName={image.cloud_name}
+            url={image.url}
             initialCrop={image.crop ?? null}
             onSave={async (crop) => {
-              setOptimisticCrop(crop);
               setCropMode(false);
-              try {
-                await onCropSave?.(image, crop);
-              } finally {
-                setOptimisticCrop(null);
-              }
+              await onCropSave?.(image, crop);
             }}
             onCancel={() => setCropMode(false)}
           />
@@ -204,12 +199,11 @@ export default function ImageLightbox({
                 position: "relative",
               }}
             >
-              <SuspenseCloudinaryImage
-                key={`${index}-${optimisticCrop ? "optimistic" : "real"}`}
+              <SuspenseAppImage
+                key={index}
                 url={image.url}
-                cloud_name={image.cloud_name}
-                cloudinary_public_id={image.cloudinary_public_id}
-                crop={optimisticCrop !== null ? optimisticCrop : image.crop}
+                croppedUrl={image.cropped_url}
+                crop={image.crop}
                 alt={image.caption || "Pottery image"}
                 context="lightbox"
                 style={{
@@ -229,7 +223,7 @@ export default function ImageLightbox({
           <Box onClick={(e) => e.stopPropagation()} sx={{ alignSelf: "center" }}>
             {footerActions({
               index,
-              onCrop: onCropSave && canEditImage?.(index) && image.image_id && image.cloudinary_public_id && image.cloud_name
+              onCrop: onCropSave && canEditImage?.(index) && image.image_id
                 ? () => setCropMode(true)
                 : undefined,
               cropAvailable: !!onCropSave,

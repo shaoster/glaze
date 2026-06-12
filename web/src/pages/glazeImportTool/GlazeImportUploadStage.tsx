@@ -9,14 +9,15 @@ import type {
 
 interface GlazeImportUploadStageProps {
   fileInputRef: RefObject<HTMLInputElement | null>;
+  remoteFileInputRef: RefObject<HTMLInputElement | null>;
   uploading: boolean;
-  widgetUploading: boolean;
-  widgetError: string | null;
+  remoteUploading: boolean;
+  remoteError: string | null;
   uploadProgress: UploadProgressEntry[];
   records: UploadedRecord[];
   selectedRecordId: string | null;
   onFileSelection: (files: FileList | null) => void;
-  onStartCloudinaryUpload: () => void;
+  onRemoteFileSelection: (files: FileList | null) => void;
   onContinueToCrop: () => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
@@ -25,21 +26,22 @@ interface GlazeImportUploadStageProps {
 const UPLOAD_STATUS_LABELS: Record<UploadProgressEntry["status"], string> = {
   queued: "Queued",
   processing: "Reading metadata…",
-  uploading: "Converting via Cloudinary…",
+  uploading: "Uploading to cloud storage…",
   ready: "Ready",
   error: "Error",
 };
 
 export default function GlazeImportUploadStage({
   fileInputRef,
+  remoteFileInputRef,
   uploading,
-  widgetUploading,
-  widgetError,
+  remoteUploading,
+  remoteError,
   uploadProgress,
   records,
   selectedRecordId,
   onFileSelection,
-  onStartCloudinaryUpload,
+  onRemoteFileSelection,
   onContinueToCrop,
   onSelect,
   onDelete,
@@ -51,9 +53,9 @@ export default function GlazeImportUploadStage({
         its own record and starts uncropped.
       </Alert>
       <Alert severity="warning">
-        Browser-side upload works best for JPG and PNG. For `.heic` and `.heif`,
-        use `Upload Via Cloudinary` so Cloudinary can convert the source before
-        the crop tool loads it.
+        Browser-side upload works best for JPG and PNG. `Upload Via Cloud`
+        stores the source in cloud storage first, then loads it back into the
+        crop tool.
       </Alert>
       <input
         ref={fileInputRef}
@@ -63,6 +65,18 @@ export default function GlazeImportUploadStage({
         hidden
         onChange={(event) => {
           onFileSelection(event.target.files);
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={remoteFileInputRef}
+        data-testid="remote-upload-input"
+        type="file"
+        accept="image/*,.heic,.heif"
+        multiple
+        hidden
+        onChange={(event) => {
+          onRemoteFileSelection(event.target.files);
           event.target.value = "";
         }}
       />
@@ -76,10 +90,10 @@ export default function GlazeImportUploadStage({
         </Button>
         <Button
           variant="outlined"
-          onClick={onStartCloudinaryUpload}
-          disabled={widgetUploading}
+          onClick={() => remoteFileInputRef.current?.click()}
+          disabled={remoteUploading}
         >
-          {widgetUploading ? "Opening Cloudinary…" : "Upload Via Cloudinary"}
+          {remoteUploading ? "Uploading…" : "Upload Via Cloud"}
         </Button>
         {records.length > 0 ? (
           <Button variant="outlined" onClick={onContinueToCrop}>
@@ -87,7 +101,7 @@ export default function GlazeImportUploadStage({
           </Button>
         ) : null}
       </Stack>
-      {widgetError ? <Alert severity="error">{widgetError}</Alert> : null}
+      {remoteError ? <Alert severity="error">{remoteError}</Alert> : null}
       <GlazeImportProgressList
         title="Upload Progress"
         entries={uploadProgress}

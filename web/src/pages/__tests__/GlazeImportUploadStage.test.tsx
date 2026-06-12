@@ -30,7 +30,6 @@ function makeRecord(overrides: Partial<UploadedRecord> = {}): UploadedRecord {
     ocrStatus: "idle",
     ocrError: null,
     sourceKind: "local",
-    cloudinaryPublicId: null,
     ...overrides,
   };
 }
@@ -40,14 +39,15 @@ describe("GlazeImportUploadStage", () => {
     render(
       <GlazeImportUploadStage
         fileInputRef={createRef<HTMLInputElement>()}
+        remoteFileInputRef={createRef<HTMLInputElement>()}
         uploading={false}
-        widgetUploading={false}
-        widgetError={null}
+        remoteUploading={false}
+        remoteError={null}
         uploadProgress={[]}
         records={[]}
         selectedRecordId={null}
         onFileSelection={vi.fn()}
-        onStartCloudinaryUpload={vi.fn()}
+        onRemoteFileSelection={vi.fn()}
         onContinueToCrop={vi.fn()}
         onSelect={vi.fn()}
         onDelete={vi.fn()}
@@ -66,9 +66,10 @@ describe("GlazeImportUploadStage", () => {
     render(
       <GlazeImportUploadStage
         fileInputRef={createRef<HTMLInputElement>()}
+        remoteFileInputRef={createRef<HTMLInputElement>()}
         uploading={false}
-        widgetUploading={false}
-        widgetError={null}
+        remoteUploading={false}
+        remoteError={null}
         uploadProgress={[
           {
             id: "progress-1",
@@ -81,7 +82,7 @@ describe("GlazeImportUploadStage", () => {
         records={[makeRecord()]}
         selectedRecordId={null}
         onFileSelection={vi.fn()}
-        onStartCloudinaryUpload={vi.fn()}
+        onRemoteFileSelection={vi.fn()}
         onContinueToCrop={onContinueToCrop}
         onSelect={vi.fn()}
         onDelete={vi.fn()}

@@ -155,7 +155,12 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
     const updatedPieceState: PieceState = {
       ...pieceState,
       notes: payload.notes ?? "",
-      images: payload.images ?? [],
+      // Payload images come straight from the editor; the cropped derivative
+      // is generated server-side, so it is always null at this point.
+      images: (payload.images ?? []).map((image) => ({
+        ...image,
+        cropped_url: null,
+      })),
       custom_fields: payload.custom_fields ?? {},
     };
 
