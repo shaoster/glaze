@@ -493,6 +493,7 @@ pytest_test(
         "tests/test_admin_scope.py",
         "tests/test_r2_image_widget.py",
         "tests/test_management_commands.py",
+        "tests/test_migrate_assets_to_r2.py",
         "tests/test_r2_uploads.py",
     ],
     args = [
@@ -500,6 +501,7 @@ pytest_test(
         "api/tests/test_admin_scope.py",
         "api/tests/test_r2_image_widget.py",
         "api/tests/test_management_commands.py",
+        "api/tests/test_migrate_assets_to_r2.py",
         "api/tests/test_r2_uploads.py",
     ],
     data = _TEST_DATA + [":api_dev_commands"],
