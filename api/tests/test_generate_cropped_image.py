@@ -1,6 +1,7 @@
 """Tests for the eager crop pipeline (generate_cropped_image task + helpers)."""
 
 import io
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from django.contrib.auth.models import User
@@ -120,21 +121,31 @@ class TestGenerateCroppedImageTask:
         )
 
     def _mock_r2(self, monkeypatch, *, exists=False):
-        uploads = []
+        """Mock R2 and Modal for crop task execution.
+
+        Returns a list of Modal call args tuples (source_url, crop, presigned_put).
+        """
+        modal_calls = []
         monkeypatch.setattr("api.r2.object_exists", lambda key: exists)
-        monkeypatch.setattr("api.r2.get_object_bytes", lambda key: _png_bytes())
         monkeypatch.setattr(
-            "api.r2.upload_bytes",
-            lambda key, data, content_type: uploads.append(
-                {"key": key, "data": data, "content_type": content_type}
-            )
-            or f"https://media.example.com/{key}",
+            "api.r2.generate_presigned_put",
+            lambda key, content_type, **kwargs: f"https://presigned.example.com/{key}",
         )
-        return uploads
+
+        def _mock_fn_lookup(app_name, fn_name):
+            fn_mock = MagicMock()
+            fn_mock.remote = MagicMock()
+            fn_mock.remote.aio = AsyncMock(
+                side_effect=lambda *args, **kwargs: modal_calls.append(args)
+            )
+            return fn_mock
+
+        monkeypatch.setattr("api.tasks._modal_function", _mock_fn_lookup)
+        return modal_calls
 
     def test_materializes_crop_and_updates_all_matching_links(self, user, monkeypatch):
         _set_r2_env(monkeypatch)
-        uploads = self._mock_r2(monkeypatch)
+        modal_calls = self._mock_r2(monkeypatch)
         piece, state, image, link = _make_piece_with_image(user, crop=CROP)
         # A second link to the same image with the same crop (e.g. after a
         # move), plus one with a different crop that must stay untouched.
@@ -159,10 +170,11 @@ class TestGenerateCroppedImageTask:
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.SUCCESS
         expected_key = crop_key_for(image.r2_key, CROP)
-        assert [u["key"] for u in uploads] == [expected_key]
-        assert uploads[0]["content_type"] == "image/jpeg"
-        with PILImage.open(io.BytesIO(uploads[0]["data"])) as derived:
-            assert derived.format == "JPEG"
+        # Modal was called once with (source_url, crop, presigned_put).
+        assert len(modal_calls) == 1
+        assert modal_calls[0][0] == image.url
+        assert modal_calls[0][1] == CROP
+        assert expected_key in modal_calls[0][2]
 
         link.refresh_from_db()
         same_pair.refresh_from_db()
@@ -179,11 +191,7 @@ class TestGenerateCroppedImageTask:
 
     def test_idempotent_skip_when_object_already_exists(self, user, monkeypatch):
         _set_r2_env(monkeypatch)
-        uploads = self._mock_r2(monkeypatch, exists=True)
-        monkeypatch.setattr(
-            "api.r2.get_object_bytes",
-            lambda key: pytest.fail("must not re-download when object exists"),
-        )
+        modal_calls = self._mock_r2(monkeypatch, exists=True)
         piece, state, image, link = _make_piece_with_image(user, crop=CROP)
 
         task = self._make_task(user, image)
@@ -192,7 +200,7 @@ class TestGenerateCroppedImageTask:
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.SUCCESS
         assert task.result["reused_existing_object"] is True
-        assert uploads == []
+        assert modal_calls == []
         link.refresh_from_db()
         assert link.cropped_image is not None
         assert link.cropped_image.url == (
@@ -268,11 +276,14 @@ class TestPatchCropTriggersPipeline:
 
         # Task completion populates cropped_image on the link.
         monkeypatch.setattr("api.r2.object_exists", lambda key: False)
-        monkeypatch.setattr("api.r2.get_object_bytes", lambda key: _png_bytes())
         monkeypatch.setattr(
-            "api.r2.upload_bytes",
-            lambda key, data, content_type: f"https://media.example.com/{key}",
+            "api.r2.generate_presigned_put",
+            lambda key, content_type, **kwargs: f"https://presigned.example.com/{key}",
         )
+        fn_mock = MagicMock()
+        fn_mock.remote = MagicMock()
+        fn_mock.remote.aio = AsyncMock(return_value=None)
+        monkeypatch.setattr("api.tasks._modal_function", lambda *a, **kw: fn_mock)
         _execute_task(task.id)
         link.refresh_from_db()
         assert link.cropped_image is not None

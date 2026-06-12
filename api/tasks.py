@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Dict, Optional, Protocol
@@ -219,6 +220,13 @@ def handle_task_failure(
 
 
 # Global interface instance.
+def _modal_function(app_name: str, fn_name: str) -> Any:
+    """Thin wrapper around modal.Function.lookup — mock this in tests."""
+    import modal  # noqa: PLC0415
+
+    return modal.Function.lookup(app_name, fn_name)
+
+
 def get_task_interface() -> TaskInterface:
     global _task_interface
     if _task_interface is not None:
@@ -345,16 +353,20 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     }
 
 
-@TaskRegistry.register("generate_cropped_image", time_limit=60)
+@TaskRegistry.register("generate_cropped_image", time_limit=120)
 def generate_cropped_image(task: AsyncTask) -> dict:
     """Materialize a PieceStateImage crop as an eager JPEG derivative in R2.
 
     Input is the value pair ``(image_id, crop coords)`` — never a PSI pk —
     so completion can update every current row matching the pair even if the
     triggering row was deleted and recreated while the task ran.
+
+    Heavy compute (PIL crop) is offloaded to Modal. Celery owns all DB reads
+    and writes; Modal receives public URLs and presigned PUT URLs only — no
+    bytes transit the Celery↔Modal boundary.
     """
     from . import r2
-    from .crops import crop_key_for, generate_cropped_image_bytes, set_cropped_fields
+    from .crops import crop_key_for, set_cropped_fields
     from .models import Image
     from .utils import crop_to_dict
 
@@ -388,9 +400,9 @@ def generate_cropped_image(task: AsyncTask) -> dict:
             "reused_existing_object": True,
         }
 
-    original = r2.get_object_bytes(image.r2_key)
-    derived_bytes = generate_cropped_image_bytes(original, crop)
-    r2.upload_bytes(key, derived_bytes, "image/jpeg")
+    presigned_put = r2.generate_presigned_put(key, "image/jpeg")
+    crop_image_fn = _modal_function("glaze-compute", "crop_image")
+    asyncio.run(crop_image_fn.remote.aio(image.url, crop, presigned_put))
     updated = set_cropped_fields(image, crop, r2_key=key, url=url)
     return {
         "status": "success",
@@ -400,26 +412,24 @@ def generate_cropped_image(task: AsyncTask) -> dict:
     }
 
 
-@TaskRegistry.register("convert_image_to_jpeg")
+@TaskRegistry.register("convert_image_to_jpeg", time_limit=120)
 def convert_image_to_jpeg(task: AsyncTask) -> dict:
     """Convert an R2-hosted image to a JPEG derivative at a new key.
 
     Triggered immediately after a presigned-PUT upload for any non-JPEG image
     (PNG, WebP, HEIC/HEIF, AVIF, GIF). After conversion the original object is
-    deleted and the Image model row is updated to point at the JPEG URL.
+    kept in R2 for provenance and the Image model row is updated to the JPEG URL.
 
     Input params:
         key        R2 key of the uploaded source image.
         image_id   UUID of the Image row to rewrite after conversion.
 
     Returns ``url``, ``key``, ``width``, and ``height`` of the new JPEG.
-    """
-    import io  # noqa: PLC0415
-    import uuid  # noqa: PLC0415
 
-    from PIL import Image as PILImage  # noqa: PLC0415
-    from PIL import ImageOps  # noqa: PLC0415
-    from pillow_heif import register_heif_opener  # noqa: PLC0415
+    Heavy compute (PIL decode/encode) is offloaded to Modal. Celery owns all
+    DB reads and writes; Modal receives public URLs and a presigned PUT URL.
+    """
+    import uuid  # noqa: PLC0415
 
     from . import r2
     from .models import Image
@@ -433,44 +443,25 @@ def convert_image_to_jpeg(task: AsyncTask) -> dict:
     if not r2.is_r2_configured():
         return {"status": "skipped", "reason": "R2 is not configured"}
 
-    register_heif_opener()
-    original = r2.get_object_bytes(source_key)
-
-    with PILImage.open(io.BytesIO(original)) as src:
-        img = ImageOps.exif_transpose(src)
-        assert img is not None
-        if img.mode not in ("RGB", "RGBA"):
-            img = img.convert("RGB")
-        elif img.mode == "RGBA":
-            # Flatten transparency onto white before JPEG encoding.
-            background = PILImage.new("RGB", img.size, (255, 255, 255))
-            background.paste(img, mask=img.split()[3])
-            img = background
-        long_edge = max(img.size)
-        _MAX = 2560
-        if long_edge > _MAX:
-            scale = _MAX / long_edge
-            img = img.resize(
-                (max(1, round(img.size[0] * scale)), max(1, round(img.size[1] * scale)))
-            )
-        width, height = img.size
-        out = io.BytesIO()
-        img.save(out, format="JPEG", quality=85, optimize=True)
-
     # Derive a stable JPEG key: same prefix/owner path, new UUID, .jpg extension.
     # e.g. images/42/abc.heic  →  images/42/<new-uuid>.jpg
     parts = source_key.rsplit("/", 1)
     owner_prefix = parts[0] if len(parts) == 2 else "images"
     new_key = f"{owner_prefix}/{uuid.uuid4()}.jpg"
 
-    jpeg_bytes = out.getvalue()
-    new_url = r2.upload_bytes(new_key, jpeg_bytes, "image/jpeg")
+    presigned_put = r2.generate_presigned_put(new_key, "image/jpeg")
+    source_public_url = r2.public_url_for_key(source_key)
+
+    convert_fn = _modal_function("glaze-compute", "convert_to_jpeg")
+    result = asyncio.run(convert_fn.remote.aio(source_public_url, presigned_put))
+    width: int = result["width"]
+    height: int = result["height"]
+    new_url = r2.public_url_for_key(new_key)
 
     # Source object is kept in R2 for provenance (GC handles cleanup later).
 
     # Ensure a source Image row exists so the lineage FK is meaningful, then
     # create a new JPEG Image row derived from it.
-    source_public_url = r2.public_url_for_key(source_key)
     if image_id:
         source_image = Image.objects.filter(id=image_id).first()
     else:
@@ -506,17 +497,25 @@ def convert_image_to_jpeg(task: AsyncTask) -> dict:
     }
 
 
-@TaskRegistry.register("generate_showcase_video")
+@TaskRegistry.register("generate_showcase_video", time_limit=900)
 def generate_showcase_video(task: AsyncTask) -> dict:
-    """Render a deterministic Keepsake showcase video from a storyboard snapshot."""
+    """Render a deterministic Keepsake showcase video from a storyboard snapshot.
+
+    Heavy compute (PyAV ffmpeg render) is offloaded to Modal via presigned R2
+    PUT URL. Progress callbacks POST to /api/tasks/{id}/progress/ using an
+    HMAC token so Modal never holds Django session credentials.
+    """
+    from django.conf import settings
+
     from .showcase import (
         SHOWCASE_VIDEO_RENDER_VERSION,
         compute_storyboard_hash,
         is_showcase_video_storage_enabled,
-        render_storyboard_to_mp4,
-        upload_showcase_video_to_r2,
         validate_storyboard,
     )
+    from .showcase.render import showcase_video_key
+    from . import r2
+    from .task_views import _make_progress_token
 
     params = task.input_params or {}
     if not isinstance(params, dict):
@@ -528,44 +527,38 @@ def generate_showcase_video(task: AsyncTask) -> dict:
 
     validate_storyboard(storyboard)
 
-    # input_hash is now a piece-level deduplication hash (compute_piece_input_hash).
-    # Use it for the R2 object key so uploads are idempotent.  Fall back to
-    # the storyboard hash for tasks created before this change.
     stored_hash = params.get("input_hash")
     input_hash = stored_hash or compute_storyboard_hash(storyboard)
 
     if not is_showcase_video_storage_enabled():
         raise ValueError("Showcase video object storage is not configured.")
 
+    key = showcase_video_key(input_hash)
+    artifact_url = r2.public_url_for_key(key)
+
+    if r2.object_exists(key):
+        return {
+            "status": "success",
+            "render_version": SHOWCASE_VIDEO_RENDER_VERSION,
+            "input_hash": input_hash,
+            "artifact_filename": f"{input_hash}.mp4",
+            "artifact_url": artifact_url,
+            "download_url": artifact_url,
+            "content_type": "video/mp4",
+            "storyboard": storyboard,
+        }
+
     task.progress = 0
     task.save(update_fields=["progress", "last_modified"])
 
-    def _report_progress(pct: int) -> None:
-        task.progress = pct
-        task.save(update_fields=["progress", "last_modified"])
+    # Presigned PUT valid for 60 minutes — long enough for the largest renders.
+    presigned_put = r2.generate_presigned_put(key, "video/mp4", expires=3600)
+    progress_token = _make_progress_token(task.id)
+    app_origin = getattr(settings, "_APP_ORIGIN", "")
+    progress_webhook_url = f"{app_origin}/api/tasks/{task.id}/progress/"
 
-    output_path = render_storyboard_to_mp4(storyboard, on_progress=_report_progress)
-    try:
-        artifact_url = upload_showcase_video_to_r2(
-            output_path,
-            input_hash=input_hash,
-        )
-        if not artifact_url:
-            raise ValueError("Showcase video upload to R2 failed.")
-    except Exception:
-        logger.exception(
-            f"R2 upload failed for showcase video task {task.id}; "
-            "marking the task as failed."
-        )
-        raise
-    finally:
-        try:
-            output_path.unlink(missing_ok=True)
-        except OSError:
-            logger.warning(
-                "Could not remove temporary showcase video file for task %s",
-                task.id,
-            )
+    render_fn = _modal_function("glaze-compute", "render_showcase_video")
+    asyncio.run(render_fn.remote.aio(storyboard, presigned_put, progress_webhook_url, progress_token))
 
     return {
         "status": "success",

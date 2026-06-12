@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import av
 import numpy as np
@@ -66,6 +66,31 @@ def local_music_asset(monkeypatch, tmp_path_factory):
 
     monkeypatch.setattr("api.showcase.render.get_track", _local_track)
     return flac_path
+
+
+def _mock_modal_render(monkeypatch):
+    """Mock the Modal render_showcase_video function and required R2 helpers.
+
+    Returns a list of (storyboard, presigned_put, webhook_url, token) tuples
+    for each Modal call made by the task.
+    """
+    modal_calls = []
+    monkeypatch.setattr("api.r2.object_exists", lambda key: False)
+    monkeypatch.setattr(
+        "api.r2.generate_presigned_put",
+        lambda key, content_type, **kwargs: f"https://presigned.example.com/{key}",
+    )
+
+    def _mock_lookup(app_name, fn_name):
+        fn_mock = MagicMock()
+        fn_mock.remote = MagicMock()
+        fn_mock.remote.aio = AsyncMock(
+            side_effect=lambda *args, **kwargs: modal_calls.append(args)
+        )
+        return fn_mock
+
+    monkeypatch.setattr("api.tasks._modal_function", _mock_lookup)
+    return modal_calls
 
 
 def _set_r2_env(monkeypatch):
@@ -298,19 +323,11 @@ class TestShowcaseVideoApi:
         client.force_authenticate(user=user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
 
-        with (
-            patch(
-                "api.tasks.InMemoryTaskInterface.submit",
-                autospec=True,
-                side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
-            ),
-            patch(
-                "api.showcase.upload_showcase_video_to_r2",
-                autospec=True,
-                return_value=(
-                    "https://media.example.com/videos/showcase/video-hash.mp4"
-                ),
-            ),
+        _mock_modal_render(monkeypatch)
+        with patch(
+            "api.tasks.InMemoryTaskInterface.submit",
+            autospec=True,
+            side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
         ):
             response = client.post(url, {}, format="json")
 
@@ -327,12 +344,11 @@ class TestShowcaseVideoApi:
         assert status_response.status_code == 200
         status_body = status_response.json()
         assert status_body["status"] == "succeeded"
-        assert status_body["artifact"]["url"] == (
-            "https://media.example.com/videos/showcase/video-hash.mp4"
+        assert status_body["artifact"]["url"].startswith(
+            "https://media.example.com/videos/showcase/"
         )
-        assert status_body["artifact"]["download_url"] == (
-            "https://media.example.com/videos/showcase/video-hash.mp4"
-        )
+        assert status_body["artifact"]["url"].endswith(".mp4")
+        assert status_body["artifact"]["download_url"] == status_body["artifact"]["url"]
 
     def test_task_uses_storyboard_snapshot_even_if_piece_changes_before_execution(
         self, client, user, tmp_path, monkeypatch
@@ -356,19 +372,11 @@ class TestShowcaseVideoApi:
         def _capture_submit(self_obj, task_obj):
             submitted.append(task_obj)
 
-        with (
-            patch(
-                "api.tasks.InMemoryTaskInterface.submit",
-                autospec=True,
-                side_effect=_capture_submit,
-            ),
-            patch(
-                "api.showcase.upload_showcase_video_to_r2",
-                autospec=True,
-                return_value=(
-                    "https://media.example.com/videos/showcase/video-hash.mp4"
-                ),
-            ),
+        _mock_modal_render(monkeypatch)
+        with patch(
+            "api.tasks.InMemoryTaskInterface.submit",
+            autospec=True,
+            side_effect=_capture_submit,
         ):
             response = client.post(url, {}, format="json")
 
@@ -379,12 +387,7 @@ class TestShowcaseVideoApi:
         piece.name = "Mutated Name"
         piece.save(update_fields=["name"])
 
-        with patch(
-            "api.showcase.upload_showcase_video_to_r2",
-            autospec=True,
-            return_value=("https://media.example.com/videos/showcase/video-hash.mp4"),
-        ):
-            _execute_task(task.id)
+        _execute_task(task.id)
 
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.SUCCESS
@@ -407,19 +410,11 @@ class TestShowcaseVideoApi:
         client.force_authenticate(user=user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
 
-        with (
-            patch(
-                "api.tasks.InMemoryTaskInterface.submit",
-                autospec=True,
-                side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
-            ),
-            patch(
-                "api.showcase.upload_showcase_video_to_r2",
-                autospec=True,
-                return_value=(
-                    "https://media.example.com/videos/showcase/video-hash.mp4"
-                ),
-            ),
+        _mock_modal_render(monkeypatch)
+        with patch(
+            "api.tasks.InMemoryTaskInterface.submit",
+            autospec=True,
+            side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
         ):
             response = client.post(url, {}, format="json")
 
@@ -461,45 +456,31 @@ class TestShowcaseVideoApi:
         piece.save()
 
         _set_r2_env(monkeypatch)
+        modal_calls = _mock_modal_render(monkeypatch)
 
         client.force_authenticate(user=user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
 
-        with (
-            patch(
-                "api.tasks.InMemoryTaskInterface.submit",
-                autospec=True,
-                side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
-            ),
-            patch(
-                "api.showcase.upload_showcase_video_to_r2",
-                autospec=True,
-                return_value=(
-                    "https://media.example.com/videos/showcase/video-hash.mp4"
-                ),
-            ) as upload_mock,
+        with patch(
+            "api.tasks.InMemoryTaskInterface.submit",
+            autospec=True,
+            side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
         ):
             response = client.post(url, {}, format="json")
 
         assert response.status_code == 202
         task_id = response.json()["task_id"]
-        upload_mock.assert_called_once()
-        assert (
-            upload_mock.call_args.kwargs["input_hash"]
-            == AsyncTask.objects.get(id=task_id).input_params["input_hash"]
-        )
+        assert len(modal_calls) == 1
+        task_obj = AsyncTask.objects.get(id=task_id)
+        assert task_obj.result["input_hash"] == task_obj.input_params["input_hash"]
 
         status_response = client.get(url)
         assert status_response.status_code == 200
         artifact_url = status_response.json()["artifact"]["url"]
-        assert artifact_url == (
-            "https://media.example.com/videos/showcase/video-hash.mp4"
-        )
+        assert artifact_url.startswith("https://media.example.com/videos/showcase/")
+        assert artifact_url.endswith(".mp4")
 
-        task = AsyncTask.objects.get(id=task_id)
-        assert task.result["download_url"] == (
-            "https://media.example.com/videos/showcase/video-hash.mp4"
-        )
+        assert task_obj.result["download_url"] == artifact_url
 
     def test_submit_rejected_when_video_storage_is_not_configured(
         self, client, user, tmp_path, monkeypatch
@@ -614,6 +595,7 @@ class TestShowcaseVideoApi:
         self, client, user, tmp_path, monkeypatch
     ):
         _set_r2_env(monkeypatch)
+        _mock_modal_render(monkeypatch)
 
         piece = _make_piece_with_terminal_state(user)
         cover_path = tmp_path / "cover.png"
@@ -627,19 +609,10 @@ class TestShowcaseVideoApi:
         client.force_authenticate(user=user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
 
-        with (
-            patch(
-                "api.tasks.InMemoryTaskInterface.submit",
-                autospec=True,
-                side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
-            ),
-            patch(
-                "api.showcase.upload_showcase_video_to_r2",
-                autospec=True,
-                return_value=(
-                    "https://media.example.com/videos/showcase/video-hash.mp4"
-                ),
-            ),
+        with patch(
+            "api.tasks.InMemoryTaskInterface.submit",
+            autospec=True,
+            side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
         ):
             first = client.post(url, {}, format="json")
             second = client.post(url, {}, format="json")

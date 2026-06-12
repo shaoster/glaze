@@ -48,7 +48,7 @@ from .piece.views import (
     piece_states,
     pieces,
 )
-from .task_views import submit_task, task_detail
+from .task_views import report_task_progress, submit_task, task_detail
 from .telemetry_views import browser_traces
 from .uploads.views import (
     r2_convert_image,
@@ -96,6 +96,7 @@ __all__ = [
     "send_invite",
     "staff_invite_batch",
     "staff_invite_code",
+    "report_task_progress",
     "submit_task",
     "task_detail",
     "browser_traces",
