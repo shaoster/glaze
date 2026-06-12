@@ -173,7 +173,7 @@ class TestR2ImageWidgetJavascript:
 
         assert "/api/uploads/r2/presigned-url/" in script
         assert "inp.value = publicUrl;" in script
-        assert "method: 'PUT'" in script
+        assert "method: 'POST'" in script
         assert "JSON.stringify" in script  # presign request body only
 
 
