@@ -288,25 +288,23 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
                 "url": "https://api.cloudflare.com/client/v4/graphql",
                 "url_options": {
                     "method": "POST",
-                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2StorageAdaptiveGroups(filter: { bucketName: \\"potterdoc\\" }, limit: 1, orderBy: [datetime_DESC]) { max { payloadSize } } } } }"}',
+                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2StorageAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", datetime_leq: \\"${__to:date:YYYY-MM-DDTHH:mm:ss}Z\\" }, limit: 1000) { max { payloadSize } } } } }"}',
                     "body_type": "raw",
                     "body_content_type": "application/json",
                 },
                 "parser": "backend",
-                "root_selector": "data.viewer.accounts.0.r2StorageAdaptiveGroups",
+                "root_selector": '($vals := data.viewer.accounts[0].r2StorageAdaptiveGroups.max.payloadSize; $avg_used := $vals ? $average($vals) : 0; [{"Used": $avg_used, "Remaining": 10000000000 - $avg_used}])',
                 "columns": [
                     {
-                        "selector": "max.payloadSize",
+                        "selector": "Used",
                         "text": "Used",
                         "type": "number",
-                    }
-                ],
-                "computed_columns": [
+                    },
                     {
-                        "selector": "10000000000 - Used",
+                        "selector": "Remaining",
                         "text": "Remaining",
                         "type": "number",
-                    }
+                    },
                 ],
                 "cache_timeout_in_seconds": 3600,
             }
@@ -331,25 +329,23 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
                 "url": "https://api.cloudflare.com/client/v4/graphql",
                 "url_options": {
                     "method": "POST",
-                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2OperationsAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", actionType_in: [\\"PutObject\\", \\"CopyObject\\", \\"ListObjects\\", \\"ListBuckets\\", \\"CompleteMultipartUpload\\", \\"InitiateMultipartUpload\\", \\"UploadPart\\"] }, limit: 1000) { sum { requests } } } } }"}',
+                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2OperationsAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", datetime_leq: \\"${__to:date:YYYY-MM-DDTHH:mm:ss}Z\\", actionType_in: [\\"PutObject\\", \\"CopyObject\\", \\"ListObjects\\", \\"ListBuckets\\", \\"CompleteMultipartUpload\\", \\"CreateMultipartUpload\\", \\"UploadPart\\"] }, limit: 1000) { sum { requests } } } } }"}',
                     "body_type": "raw",
                     "body_content_type": "application/json",
                 },
                 "parser": "backend",
-                "root_selector": "data.viewer.accounts.0.r2OperationsAdaptiveGroups",
+                "root_selector": '($reqs := data.viewer.accounts[0].r2OperationsAdaptiveGroups.sum.requests; $used := $reqs ? $sum($reqs) : 0; [{"Used": $used, "Remaining": 1000000 - $used}])',
                 "columns": [
                     {
-                        "selector": "sum.requests",
+                        "selector": "Used",
                         "text": "Used",
                         "type": "number",
-                    }
-                ],
-                "computed_columns": [
+                    },
                     {
-                        "selector": "1000000 - Used",
+                        "selector": "Remaining",
                         "text": "Remaining",
                         "type": "number",
-                    }
+                    },
                 ],
                 "cache_timeout_in_seconds": 3600,
             }
@@ -374,25 +370,23 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
                 "url": "https://api.cloudflare.com/client/v4/graphql",
                 "url_options": {
                     "method": "POST",
-                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2OperationsAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", actionType_in: [\\"GetObject\\", \\"HeadObject\\", \\"HeadBucket\\"] }, limit: 1000) { sum { requests } } } } }"}',
+                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2OperationsAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", datetime_leq: \\"${__to:date:YYYY-MM-DDTHH:mm:ss}Z\\", actionType_in: [\\"GetObject\\", \\"HeadObject\\", \\"HeadBucket\\"] }, limit: 1000) { sum { requests } } } } }"}',
                     "body_type": "raw",
                     "body_content_type": "application/json",
                 },
                 "parser": "backend",
-                "root_selector": "data.viewer.accounts.0.r2OperationsAdaptiveGroups",
+                "root_selector": '($reqs := data.viewer.accounts[0].r2OperationsAdaptiveGroups.sum.requests; $used := $reqs ? $sum($reqs) : 0; [{"Used": $used, "Remaining": 10000000 - $used}])',
                 "columns": [
                     {
-                        "selector": "sum.requests",
+                        "selector": "Used",
                         "text": "Used",
                         "type": "number",
-                    }
-                ],
-                "computed_columns": [
+                    },
                     {
-                        "selector": "10000000 - Used",
+                        "selector": "Remaining",
                         "text": "Remaining",
                         "type": "number",
-                    }
+                    },
                 ],
                 "cache_timeout_in_seconds": 3600,
             }
