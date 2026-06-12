@@ -17,6 +17,10 @@ def _panel_map(payload: dict[str, Any]) -> dict[int, dict[str, Any]]:
     return {panel["id"]: panel for panel in panels}
 
 
+def _assert_grid_pos(panel: dict[str, Any], expected: dict[str, int]) -> None:
+    assert panel["gridPos"] == expected
+
+
 def test_validate_dashboard_builds_expected_dashboard() -> None:
     dashboard.validate_dashboard()
 
@@ -31,6 +35,23 @@ def test_dashboard_json_contains_expected_sdk_fields() -> None:
     assert payload["refresh"] == "10s"
     assert payload["timezone"] == "browser"
     assert payload["time"] == {"from": "now-1h", "to": "now"}
+
+    _assert_grid_pos(panels[1], {"h": 4, "w": 3, "x": 0, "y": 0})
+    _assert_grid_pos(panels[2], {"h": 4, "w": 3, "x": 3, "y": 0})
+    _assert_grid_pos(panels[5], {"h": 8, "w": 6, "x": 6, "y": 0})
+    _assert_grid_pos(panels[9], {"h": 5, "w": 5, "x": 12, "y": 0})
+    _assert_grid_pos(panels[10], {"h": 5, "w": 5, "x": 17, "y": 0})
+    _assert_grid_pos(panels[3], {"h": 4, "w": 3, "x": 0, "y": 4})
+    _assert_grid_pos(panels[4], {"h": 4, "w": 3, "x": 3, "y": 4})
+    _assert_grid_pos(panels[16], {"h": 5, "w": 5, "x": 17, "y": 5})
+    _assert_grid_pos(panels[7], {"h": 7, "w": 12, "x": 0, "y": 8})
+    _assert_grid_pos(panels[15], {"h": 5, "w": 5, "x": 12, "y": 10})
+    _assert_grid_pos(panels[17], {"h": 5, "w": 5, "x": 17, "y": 10})
+    _assert_grid_pos(panels[8], {"h": 8, "w": 12, "x": 0, "y": 15})
+    _assert_grid_pos(panels[18], {"h": 5, "w": 5, "x": 12, "y": 15})
+    _assert_grid_pos(panels[19], {"h": 5, "w": 5, "x": 17, "y": 15})
+    _assert_grid_pos(panels[20], {"h": 5, "w": 5, "x": 12, "y": 20})
+    _assert_grid_pos(panels[14], {"h": 8, "w": 12, "x": 0, "y": 23})
 
     assert panels[1]["title"] == "Total Requests (1h)"
     assert panels[1]["targets"][0]["expr"] == (
