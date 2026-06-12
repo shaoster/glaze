@@ -211,6 +211,7 @@ export default function PiecePhotoGallery({
         crop: image.crop ?? null,
         cropped_url: image.cropped_url ?? null,
         crop_task_failed: false,
+        r2_key: image.r2_key ?? null,
         image_id: image.image_id ?? null,
         width: image.width ?? null,
         height: image.height ?? null,

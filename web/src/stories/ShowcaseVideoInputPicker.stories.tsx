@@ -210,6 +210,7 @@ export const LockedThumbnail: Story = {
       thumbnail: {
         url: "/thumbnails/bowl.svg",
         crop_task_failed: false,
+        r2_key: null,
       },
     },
     initialSelection: {
