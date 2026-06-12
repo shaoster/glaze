@@ -341,7 +341,10 @@ export default function PiecePhotoGallery({
           onCropSave={onPieceUpdated ? handleCropSave : undefined}
           canEditImage={(i) => {
             const img = images[i];
-            return !!img?.image_id;
+            // Only R2-backed images can have crops materialized server-side.
+            // Legacy externally-hosted images (r2_key null) would enter a
+            // permanently pending state with no task ever writing cropped_url.
+            return !!(img?.image_id && (img as { r2_key?: string | null }).r2_key);
           }}
           footerActions={(props) => {
             const onSaveCaption =

@@ -65,6 +65,19 @@ def _make_piece_with_image(user, *, crop=None, r2_key="images/1/mug.jpg"):
     return piece, state, image, link
 
 
+def _make_crop_image(user, source_image, crop):
+    """Create a materialized crop Image row (as the task would create it)."""
+    key = crop_key_for(source_image.r2_key, crop)
+    url = f"https://media.example.com/{key}"
+    return Image.objects.create(
+        user=user,
+        url=url,
+        r2_key=key,
+        derived_from=source_image,
+        derived_type="crop",
+    )
+
+
 class TestCropKey:
     def test_key_is_deterministic_with_fixed_precision(self):
         key = crop_key_for("images/1/mug.jpg", CROP)
@@ -155,12 +168,14 @@ class TestGenerateCroppedImageTask:
         same_pair.refresh_from_db()
         other_pair.refresh_from_db()
         expected_url = f"https://media.example.com/{expected_key}"
-        assert link.cropped_r2_key == expected_key
-        assert link.cropped_url == expected_url
-        assert same_pair.cropped_r2_key == expected_key
-        assert same_pair.cropped_url == expected_url
-        assert other_pair.cropped_r2_key is None
-        assert other_pair.cropped_url is None
+
+        assert link.cropped_image is not None
+        assert link.cropped_image.r2_key == expected_key
+        assert link.cropped_image.url == expected_url
+        assert same_pair.cropped_image is not None
+        assert same_pair.cropped_image.r2_key == expected_key
+        assert same_pair.cropped_image.url == expected_url
+        assert other_pair.cropped_image is None
 
     def test_idempotent_skip_when_object_already_exists(self, user, monkeypatch):
         _set_r2_env(monkeypatch)
@@ -179,7 +194,8 @@ class TestGenerateCroppedImageTask:
         assert task.result["reused_existing_object"] is True
         assert uploads == []
         link.refresh_from_db()
-        assert link.cropped_url == (
+        assert link.cropped_image is not None
+        assert link.cropped_image.url == (
             f"https://media.example.com/{crop_key_for(image.r2_key, CROP)}"
         )
 
@@ -200,7 +216,8 @@ class TestGenerateCroppedImageTask:
         _execute_task(task.id)
 
         recreated.refresh_from_db()
-        assert recreated.cropped_r2_key == crop_key_for(image.r2_key, CROP)
+        assert recreated.cropped_image is not None
+        assert recreated.cropped_image.r2_key == crop_key_for(image.r2_key, CROP)
 
     def test_skips_image_not_stored_in_r2(self, user, monkeypatch):
         _set_r2_env(monkeypatch)
@@ -214,7 +231,7 @@ class TestGenerateCroppedImageTask:
         assert task.status == AsyncTask.Status.SUCCESS
         assert task.result["status"] == "skipped"
         link.refresh_from_db()
-        assert link.cropped_url is None
+        assert link.cropped_image is None
 
 
 @pytest.mark.django_db(transaction=True)
@@ -240,7 +257,7 @@ class TestPatchCropTriggersPipeline:
         assert images[0]["cropped_url"] is None
         link.refresh_from_db()
         assert link.crop == CROP
-        assert link.cropped_url is None
+        assert link.cropped_image is None
 
         # Exactly one materialization task was enqueued with the value pair.
         assert len(submitted) == 1
@@ -249,7 +266,7 @@ class TestPatchCropTriggersPipeline:
         assert task.input_params == {"image_id": str(image.id), "crop": CROP}
         assert task.user_id == user.id
 
-        # Task completion populates cropped_url on the link.
+        # Task completion populates cropped_image on the link.
         monkeypatch.setattr("api.r2.object_exists", lambda key: False)
         monkeypatch.setattr("api.r2.get_object_bytes", lambda key: _png_bytes())
         monkeypatch.setattr(
@@ -258,7 +275,8 @@ class TestPatchCropTriggersPipeline:
         )
         _execute_task(task.id)
         link.refresh_from_db()
-        assert link.cropped_url == (
+        assert link.cropped_image is not None
+        assert link.cropped_image.url == (
             f"https://media.example.com/{crop_key_for(image.r2_key, CROP)}"
         )
 
@@ -280,16 +298,13 @@ class TestPatchCropTriggersPipeline:
 
 @pytest.mark.django_db(transaction=True)
 class TestReplaceFlowCarryOver:
-    def test_unchanged_pairs_carry_cropped_fields_without_reenqueue(
+    def test_unchanged_pairs_carry_cropped_image_without_reenqueue(
         self, user, monkeypatch
     ):
         _set_r2_env(monkeypatch)
         piece, state, image, link = _make_piece_with_image(user, crop=CROP)
-        key = crop_key_for(image.r2_key, CROP)
-        url = f"https://media.example.com/{key}"
-        PieceStateImage.objects.filter(pk=link.pk).update(
-            cropped_r2_key=key, cropped_url=url
-        )
+        crop_img = _make_crop_image(user, image, CROP)
+        PieceStateImage.objects.filter(pk=link.pk).update(cropped_image_id=crop_img.id)
 
         submitted = []
         monkeypatch.setattr(
@@ -309,13 +324,12 @@ class TestReplaceFlowCarryOver:
             user=user,
         )
 
-        links = list(state.image_links.order_by("order"))
+        links = list(state.image_links.select_related("cropped_image").order_by("order"))
         assert links[0].crop == CROP
-        assert links[0].cropped_r2_key == key
-        assert links[0].cropped_url == url
+        assert links[0].cropped_image_id == crop_img.id
+        assert links[0].cropped_image.r2_key == crop_img.r2_key
         assert links[1].crop == OTHER_CROP
-        assert links[1].cropped_r2_key is None
-        assert links[1].cropped_url is None
+        assert links[1].cropped_image is None
 
         assert len(submitted) == 1
         new_image = Image.objects.get(url=new_image_url)
@@ -327,10 +341,8 @@ class TestReplaceFlowCarryOver:
     def test_changed_crop_clears_carryover_and_reenqueues(self, user, monkeypatch):
         _set_r2_env(monkeypatch)
         piece, state, image, link = _make_piece_with_image(user, crop=CROP)
-        PieceStateImage.objects.filter(pk=link.pk).update(
-            cropped_r2_key=crop_key_for(image.r2_key, CROP),
-            cropped_url="https://media.example.com/old.jpg",
-        )
+        crop_img = _make_crop_image(user, image, CROP)
+        PieceStateImage.objects.filter(pk=link.pk).update(cropped_image_id=crop_img.id)
 
         submitted = []
         monkeypatch.setattr(
@@ -346,6 +358,5 @@ class TestReplaceFlowCarryOver:
 
         new_link = state.image_links.get()
         assert new_link.crop == OTHER_CROP
-        assert new_link.cropped_r2_key is None
-        assert new_link.cropped_url is None
+        assert new_link.cropped_image is None
         assert len(submitted) == 1

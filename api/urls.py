@@ -89,6 +89,16 @@ urlpatterns = [
         name="r2-presigned-upload-url",
     ),
     path(
+        "uploads/r2/convert-image/",
+        views.r2_convert_image,
+        name="r2-convert-image",
+    ),
+    path(
+        "uploads/r2/convert-image/<uuid:task_id>/",
+        views.r2_convert_image_status,
+        name="r2-convert-image-status",
+    ),
+    path(
         "workflow/schema/<str:state_id>/",
         views.workflow_state_schema,
         name="workflow-state-schema",

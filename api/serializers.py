@@ -180,6 +180,7 @@ class GlobalImageSerializer(serializers.Serializer):
     """Structured image value for ``type: image`` fields on global models."""
 
     url = serializers.CharField()
+    r2_key = serializers.CharField(read_only=True, allow_null=True, default=None)
 
 
 class GlazeTypeRefSerializer(serializers.Serializer):
@@ -279,6 +280,10 @@ class CaptionedImageSerializer(serializers.Serializer):
     # generate_cropped_image task only — never accepted from clients.
     cropped_url = serializers.CharField(read_only=True, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    # Non-null when the image is stored in R2 and eligible for server-side
+    # crop materialization. Clients use this to gate the crop UI and avoid
+    # treating externally-hosted images as perpetually pending.
+    r2_key = serializers.CharField(read_only=True, allow_null=True, default=None)
     width = serializers.IntegerField(
         required=False, allow_null=True, default=None, min_value=0
     )
@@ -423,7 +428,7 @@ class PieceStateSerializer(serializers.ModelSerializer):
     def get_images(self, obj: PieceState) -> list[dict]:
         links = getattr(obj, "_prefetched_objects_cache", {}).get("image_links")
         if links is None:
-            links = obj.image_links.select_related("image").order_by("order", "pk")
+            links = obj.image_links.select_related("image", "cropped_image").order_by("order", "pk")
         return [captioned_image_to_dict(link) for link in links]
 
 

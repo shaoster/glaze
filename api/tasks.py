@@ -329,27 +329,124 @@ def generate_cropped_image(task: AsyncTask) -> dict:
     url = r2.public_url_for_key(key)
 
     if r2.object_exists(key):
-        updated = set_cropped_fields(
-            image.id, crop, cropped_r2_key=key, cropped_url=url
-        )
+        updated = set_cropped_fields(image, crop, r2_key=key, url=url)
         return {
             "status": "success",
-            "cropped_r2_key": key,
             "cropped_url": url,
             "updated_links": updated,
             "reused_existing_object": True,
         }
 
     original = r2.get_object_bytes(image.r2_key)
-    derived = generate_cropped_image_bytes(original, crop)
-    r2.upload_bytes(key, derived, "image/jpeg")
-    updated = set_cropped_fields(image.id, crop, cropped_r2_key=key, cropped_url=url)
+    derived_bytes = generate_cropped_image_bytes(original, crop)
+    r2.upload_bytes(key, derived_bytes, "image/jpeg")
+    updated = set_cropped_fields(image, crop, r2_key=key, url=url)
     return {
         "status": "success",
-        "cropped_r2_key": key,
         "cropped_url": url,
         "updated_links": updated,
         "reused_existing_object": False,
+    }
+
+
+@TaskRegistry.register("convert_image_to_jpeg")
+def convert_image_to_jpeg(task: AsyncTask) -> dict:
+    """Convert an R2-hosted image to a JPEG derivative at a new key.
+
+    Triggered immediately after a presigned-PUT upload for any non-JPEG image
+    (PNG, WebP, HEIC/HEIF, AVIF, GIF). After conversion the original object is
+    deleted and the Image model row is updated to point at the JPEG URL.
+
+    Input params:
+        key        R2 key of the uploaded source image.
+        image_id   UUID of the Image row to rewrite after conversion.
+
+    Returns ``url``, ``key``, ``width``, and ``height`` of the new JPEG.
+    """
+    import io  # noqa: PLC0415
+    import uuid  # noqa: PLC0415
+
+    from PIL import Image as PILImage  # noqa: PLC0415
+    from PIL import ImageOps  # noqa: PLC0415
+    from pillow_heif import register_heif_opener  # noqa: PLC0415
+
+    from . import r2
+    from .models import Image
+
+    params = task.input_params or {}
+    source_key: str | None = params.get("key")
+    image_id: str | None = params.get("image_id")
+
+    if not source_key:
+        raise ValueError("Missing key in task params")
+    if not r2.is_r2_configured():
+        return {"status": "skipped", "reason": "R2 is not configured"}
+
+    register_heif_opener()
+    original = r2.get_object_bytes(source_key)
+
+    with PILImage.open(io.BytesIO(original)) as src:
+        img = ImageOps.exif_transpose(src)
+        assert img is not None
+        if img.mode not in ("RGB", "RGBA"):
+            img = img.convert("RGB")
+        elif img.mode == "RGBA":
+            # Flatten transparency onto white before JPEG encoding.
+            background = PILImage.new("RGB", img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[3])
+            img = background
+        long_edge = max(img.size)
+        _MAX = 2560
+        if long_edge > _MAX:
+            scale = _MAX / long_edge
+            img = img.resize(
+                (max(1, round(img.size[0] * scale)), max(1, round(img.size[1] * scale)))
+            )
+        width, height = img.size
+        out = io.BytesIO()
+        img.save(out, format="JPEG", quality=85, optimize=True)
+
+    # Derive a stable JPEG key: same prefix/owner path, new UUID, .jpg extension.
+    # e.g. images/42/abc.heic  →  images/42/<new-uuid>.jpg
+    parts = source_key.rsplit("/", 1)
+    owner_prefix = parts[0] if len(parts) == 2 else "images"
+    new_key = f"{owner_prefix}/{uuid.uuid4()}.jpg"
+
+    jpeg_bytes = out.getvalue()
+    new_url = r2.upload_bytes(new_key, jpeg_bytes, "image/jpeg")
+
+    # Source object is kept in R2 for provenance (GC handles cleanup later).
+
+    # Ensure a source Image row exists so the lineage FK is meaningful, then
+    # create a new JPEG Image row derived from it.
+    source_public_url = r2.public_url_for_key(source_key)
+    if image_id:
+        source_image = Image.objects.filter(id=image_id).first()
+    else:
+        source_image = None
+    if source_image is None:
+        source_image, _ = Image.objects.get_or_create(
+            url=source_public_url,
+            defaults={"r2_key": source_key, "user": task.user},
+        )
+
+    Image.objects.create(
+        url=new_url,
+        r2_key=new_key,
+        user=task.user,
+        width=width,
+        height=height,
+        derived_from=source_image,
+        derived_type="jpeg_conversion",
+    )
+
+    return {
+        "status": "success",
+        "url": new_url,
+        "key": new_key,
+        "width": width,
+        "height": height,
+        "source_key": source_key,
     }
 
 

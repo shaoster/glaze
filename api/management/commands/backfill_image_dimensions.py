@@ -5,8 +5,10 @@ import time
 
 import requests
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 from PIL import Image as PILImage
 
+from api import r2
 from api.models import Image
 
 
@@ -33,11 +35,16 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         batch_size = options["batch_size"]
 
+        # Restrict to R2-backed images and transitional Cloudinary-hosted images.
+        # A broad url__startswith="http" filter would let user-attached arbitrary
+        # URLs trigger SSRF fetches from the server when an operator runs this command.
         qs = (
             Image.objects.filter(width__isnull=True)
             .exclude(url="")
-            .filter(url__startswith="http")
-            .only("id", "url")
+            .filter(
+                Q(r2_key__isnull=False) | Q(url__icontains="res.cloudinary.com")
+            )
+            .only("id", "url", "r2_key")
         )
 
         total = qs.count()
@@ -48,9 +55,13 @@ class Command(BaseCommand):
 
         for i, image in enumerate(qs.iterator(), start=1):
             try:
-                response = requests.get(image.url, timeout=30)
-                response.raise_for_status()
-                with PILImage.open(io.BytesIO(response.content)) as pil_image:
+                if image.r2_key and r2.is_r2_configured():
+                    data = r2.get_object_bytes(image.r2_key)
+                else:
+                    response = requests.get(image.url, timeout=30)
+                    response.raise_for_status()
+                    data = response.content
+                with PILImage.open(io.BytesIO(data)) as pil_image:
                     w, h = pil_image.size
                 if w and h:
                     if not dry_run:

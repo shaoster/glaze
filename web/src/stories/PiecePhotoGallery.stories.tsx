@@ -67,6 +67,7 @@ const mockImages: PiecePhotoGalleryImage[] = [
     created: new Date("2024-01-01T00:00:00Z"),
     crop: null,
     cropped_url: null,
+    r2_key: null,
   },
   {
     url: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800",
@@ -78,6 +79,7 @@ const mockImages: PiecePhotoGalleryImage[] = [
     created: new Date("2024-01-02T00:00:00Z"),
     crop: null,
     cropped_url: null,
+    r2_key: null,
   },
   {
     url: "https://images.unsplash.com/photo-1490312278390-ab64016b5873?w=800",
@@ -89,6 +91,7 @@ const mockImages: PiecePhotoGalleryImage[] = [
     created: new Date("2024-01-03T00:00:00Z"),
     crop: null,
     cropped_url: null,
+    r2_key: null,
   },
 ];
 

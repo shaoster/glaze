@@ -45,8 +45,15 @@ def get_public_base_url() -> str:
 
 
 def get_r2_client() -> Any:
-    """Return a boto3 S3 client configured for the Cloudflare R2 endpoint."""
+    """Return a boto3 S3 client configured for the Cloudflare R2 endpoint.
+
+    Path-style addressing is set explicitly so presigned PUT URLs take the form
+    ``https://{account}.r2.cloudflarestorage.com/{bucket}/{key}`` rather than
+    the virtual-hosted ``https://{bucket}.{account}.r2.cloudflarestorage.com/{key}``.
+    This keeps the URLs under the single account host that the CSP allows.
+    """
     import boto3  # noqa: PLC0415 — keep boto3 import out of the hot path
+    from botocore.config import Config  # noqa: PLC0415
 
     account_id = os.environ.get("R2_ACCOUNT_ID", "").strip()
     return boto3.client(
@@ -55,6 +62,7 @@ def get_r2_client() -> Any:
         aws_access_key_id=os.environ.get("R2_ACCESS_KEY_ID", "").strip(),
         aws_secret_access_key=os.environ.get("R2_SECRET_ACCESS_KEY", "").strip(),
         region_name="auto",
+        config=Config(s3={"addressing_style": "path"}),
     )
 
 
@@ -112,6 +120,12 @@ def object_exists(key: str) -> bool:
             return False
         raise
     return True
+
+
+def delete_object(key: str) -> None:
+    """Delete an object from the bucket (no-op if it does not exist)."""
+    client = get_r2_client()
+    client.delete_object(Bucket=get_bucket_name(), Key=key)
 
 
 def get_object_bytes(key: str) -> bytes:

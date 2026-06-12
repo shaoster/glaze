@@ -235,6 +235,7 @@ export default function GlazeCombinationGallery() {
           caption: name,
           created: new Date(),
           cropped_url: null,
+          r2_key: image.r2_key ?? null,
         },
       ],
     });

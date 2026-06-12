@@ -61,6 +61,34 @@
     });
   }
 
+  var NON_BROWSER_TYPES = ['image/heic', 'image/heif', 'image/avif'];
+  var CONVERT_POLL_INTERVAL = 2000;
+  var CONVERT_POLL_TIMEOUT = 120000;
+
+  function triggerConversion(key) {
+    return fetch('/api/uploads/r2/convert-image/', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      body: JSON.stringify({ key: key }),
+    }).then(function (r) { return r.json(); });
+  }
+
+  function pollConversion(taskId) {
+    var deadline = Date.now() + CONVERT_POLL_TIMEOUT;
+    function check() {
+      return fetch('/api/uploads/r2/convert-image/' + taskId + '/', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (body) {
+          if (body.status === 'success' && body.result) { return body.result.url; }
+          if (body.status === 'failure') { throw new Error('Conversion failed: ' + (body.error || 'unknown')); }
+          if (Date.now() >= deadline) { throw new Error('Conversion timed out'); }
+          return new Promise(function (res) { setTimeout(res, CONVERT_POLL_INTERVAL); }).then(check);
+        });
+    }
+    return check();
+  }
+
   function uploadFile(file, inp, preview, clearBtn, btn) {
     var originalLabel = btn.textContent;
     btn.disabled = true;
@@ -74,6 +102,15 @@
           body: file,
         }).then(function (r) {
           if (!r.ok) { throw new Error('Upload failed with status ' + r.status); }
+          // For non-browser-renderable formats (HEIC/HEIF/AVIF), trigger
+          // server-side JPEG conversion and wait for the JPEG URL.
+          if (NON_BROWSER_TYPES.indexOf(file.type.toLowerCase()) !== -1) {
+            btn.textContent = 'Converting…';
+            return triggerConversion(presign.key).then(function (body) {
+              if (!body.needs_conversion || !body.task_id) { return presign.public_url; }
+              return pollConversion(body.task_id);
+            });
+          }
           return presign.public_url;
         });
       })

@@ -127,8 +127,9 @@ class TestMigrateAssetsToR2:
 
         link.refresh_from_db()
         crop_key = crop_key_for(expected_key, CROP)
-        assert link.cropped_r2_key == crop_key
-        assert link.cropped_url == f"https://media.example.com/{crop_key}"
+        assert link.cropped_image is not None
+        assert link.cropped_image.r2_key == crop_key
+        assert link.cropped_image.url == f"https://media.example.com/{crop_key}"
         assert crop_key in store
 
     def test_second_run_is_a_noop(self, user, monkeypatch):
@@ -184,7 +185,7 @@ class TestMigrateAssetsToR2:
         assert store == {}
         assert image.r2_key is None
         assert image.url == CLOUDINARY_URL
-        assert link.cropped_r2_key is None
+        assert link.cropped_image is None
 
     def test_download_failure_continues_with_remaining_images(self, user, monkeypatch):
         _set_r2_env(monkeypatch)

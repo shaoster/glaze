@@ -27,6 +27,8 @@ from api import r2
 from api.crops import crop_key_for, generate_cropped_image_bytes, set_cropped_fields
 from api.models import Image, PieceStateImage
 
+_NON_BROWSER_CONTENT_TYPES = {"image/heic", "image/heif", "image/avif"}
+
 CLOUDINARY_URL_MARKER = "res.cloudinary.com"
 
 # Extension by response content type; URL suffix is the fallback.
@@ -42,6 +44,29 @@ _CONTENT_TYPE_EXTENSIONS = {
     "video/webm": "webm",
     "audio/flac": "flac",
 }
+
+
+def _convert_to_jpeg(image_bytes: bytes) -> bytes:
+    """Convert image bytes to a JPEG (handles HEIC/HEIF/AVIF via pillow-heif)."""
+    import io  # noqa: PLC0415
+
+    from PIL import Image as PILImage  # noqa: PLC0415
+    from PIL import ImageOps  # noqa: PLC0415
+    from pillow_heif import register_heif_opener  # noqa: PLC0415
+
+    register_heif_opener()
+    with PILImage.open(io.BytesIO(image_bytes)) as src:
+        img = ImageOps.exif_transpose(src)
+        assert img is not None
+        if img.mode == "RGBA":
+            bg = PILImage.new("RGB", img.size, (255, 255, 255))
+            bg.paste(img, mask=img.split()[3])
+            img = bg
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+        out = io.BytesIO()
+        img.save(out, format="JPEG", quality=85, optimize=True)
+        return out.getvalue()
 
 
 def _extension_for(content_type: str, url: str) -> str:
@@ -111,10 +136,16 @@ class Command(BaseCommand):
                     response.raise_for_status()
                     content_type = response.headers.get(
                         "content-type", "application/octet-stream"
-                    )
+                    ).split(";")[0].strip().lower()
+                    image_bytes = response.content
+                    # Convert non-browser-renderable formats (HEIC/HEIF/AVIF) to
+                    # JPEG so migrated assets display in Chrome/Firefox directly.
+                    if content_type in _NON_BROWSER_CONTENT_TYPES:
+                        image_bytes = _convert_to_jpeg(image_bytes)
+                        content_type = "image/jpeg"
                     extension = _extension_for(content_type, image.url)
                     key = f"images/{owner}/{image.id}.{extension}"
-                    new_url = r2.upload_bytes(key, response.content, content_type)
+                    new_url = r2.upload_bytes(key, image_bytes, content_type)
                 except Exception as exc:  # noqa: BLE001 — keep migrating the rest
                     failed += 1
                     self.stderr.write(
@@ -132,7 +163,7 @@ class Command(BaseCommand):
         pending = (
             PieceStateImage.objects.filter(
                 crop__isnull=False,
-                cropped_r2_key__isnull=True,
+                cropped_image__isnull=True,
                 image__r2_key__isnull=False,
             )
             .select_related("image")
@@ -164,10 +195,10 @@ class Command(BaseCommand):
                     derived = generate_cropped_image_bytes(original, crop)
                     r2.upload_bytes(key, derived, "image/jpeg")
                 updated = set_cropped_fields(
-                    link.image_id,
+                    link.image,
                     crop,
-                    cropped_r2_key=key,
-                    cropped_url=r2.public_url_for_key(key),
+                    r2_key=key,
+                    url=r2.public_url_for_key(key),
                 )
                 rendered[pair] = key
             except Exception as exc:  # noqa: BLE001 — keep backfilling the rest

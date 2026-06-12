@@ -232,6 +232,7 @@ function mapImage(raw: Wire<CaptionedImage>): CaptionedImage {
     crop: normalizeCrop(raw.crop),
     cropped_url: raw.cropped_url ?? null,
     image_id: raw.image_id ?? null,
+    r2_key: (raw as { r2_key?: string | null }).r2_key ?? null,
     width: raw.width ?? null,
     height: raw.height ?? null,
   };
@@ -901,6 +902,41 @@ export async function fetchR2PresignedUrl(
       content_type: contentType,
       resource_type: resourceType,
     },
+  );
+  return data;
+}
+
+export type R2ConvertImageResult = {
+  url: string;
+  key: string;
+  width: number | null;
+  height: number | null;
+};
+
+export type R2ConvertImageStatus = {
+  status: "pending" | "running" | "success" | "failure";
+  result: R2ConvertImageResult | null;
+  error: string | null;
+};
+
+/** Enqueue a server-side JPEG conversion for an already-uploaded R2 object. */
+export async function triggerR2ImageConversion(
+  key: string,
+  imageId?: string | null,
+): Promise<{ task_id: string | null; needs_conversion: boolean }> {
+  const { data } = await client.post<{
+    task_id: string | null;
+    needs_conversion: boolean;
+  }>("uploads/r2/convert-image/", { key, image_id: imageId ?? null });
+  return data;
+}
+
+/** Poll the status of a convert_image_to_jpeg task. */
+export async function getR2ConversionStatus(
+  taskId: string,
+): Promise<R2ConvertImageStatus> {
+  const { data } = await client.get<R2ConvertImageStatus>(
+    `uploads/r2/convert-image/${taskId}/`,
   );
   return data;
 }

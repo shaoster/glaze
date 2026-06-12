@@ -150,4 +150,139 @@ def r2_presigned_upload_url(request: Request) -> Response:
     )
 
 
-__all__ = ["r2_presigned_upload_url"]
+_JPEG_EXTENSIONS = {"jpg", "jpeg"}
+
+# Non-JPEG image extensions that need server-side JPEG conversion.
+_NEEDS_CONVERSION_EXTENSIONS = set(_IMAGE_CONTENT_TYPES.values()) - _JPEG_EXTENSIONS
+
+
+def _needs_jpeg_conversion(key: str) -> bool:
+    ext = key.rsplit(".", 1)[-1].lower() if "." in key else ""
+    return ext in _NEEDS_CONVERSION_EXTENSIONS
+
+
+@extend_schema(
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "key": {"type": "string", "description": "R2 key returned by presigned-url endpoint"},
+                "image_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Image UUID to rewrite after conversion (optional)",
+                    "nullable": True,
+                },
+            },
+            "required": ["key"],
+        }
+    },
+    responses={
+        202: {
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "string", "format": "uuid"},
+                "needs_conversion": {"type": "boolean"},
+            },
+        },
+        400: {"type": "object"},
+        403: {"type": "object"},
+        503: {"type": "object"},
+    },
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@traced
+def r2_convert_image(request: Request) -> Response:
+    """Enqueue a convert_image_to_jpeg task for an uploaded non-JPEG image.
+
+    The client calls this immediately after the presigned PUT completes for
+    any image whose key does not end in ``.jpg``/``.jpeg``. The returned
+    ``task_id`` is polled via ``GET uploads/r2/convert-image/<task_id>/``.
+
+    When ``needs_conversion`` is False (source is already JPEG) no task is
+    created and ``task_id`` is None — the caller may use the original URL.
+    """
+    from ..models import AsyncTask
+    from ..tasks import get_task_interface
+
+    if not r2.is_r2_configured():
+        return Response(
+            {"detail": "Object storage is not configured on the server."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    key = request.data.get("key")
+    if not isinstance(key, str) or not key.strip():
+        return Response({"detail": "key is required."}, status=status.HTTP_400_BAD_REQUEST)
+    key = key.strip()
+
+    # [SECURITY] Only allow converting keys that belong to this user.
+    user_prefix = f"images/{request.user.id}/"
+    if not key.startswith(user_prefix):
+        return Response(
+            {"detail": "Key does not belong to your account."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    if not _needs_jpeg_conversion(key):
+        return Response({"task_id": None, "needs_conversion": False})
+
+    image_id = request.data.get("image_id")
+    task = AsyncTask.objects.create(  # type: ignore[misc]
+        user=request.user,
+        task_type="convert_image_to_jpeg",
+        input_params={"key": key, "image_id": image_id},
+    )
+    get_task_interface().submit(task)
+    return Response(
+        {"task_id": str(task.id), "needs_conversion": True},
+        status=status.HTTP_202_ACCEPTED,
+    )
+
+
+@extend_schema(
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "status": {"type": "string", "enum": ["pending", "running", "success", "failure"]},
+                "result": {
+                    "type": "object",
+                    "nullable": True,
+                    "properties": {
+                        "url": {"type": "string"},
+                        "key": {"type": "string"},
+                        "width": {"type": "integer", "nullable": True},
+                        "height": {"type": "integer", "nullable": True},
+                    },
+                },
+                "error": {"type": "string", "nullable": True},
+            },
+        },
+        404: {"type": "object"},
+    },
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@traced
+def r2_convert_image_status(request: Request, task_id: str) -> Response:
+    """Poll the status of a convert_image_to_jpeg task."""
+    from django.shortcuts import get_object_or_404
+
+    from ..models import AsyncTask
+
+    task = get_object_or_404(
+        AsyncTask, id=task_id, user=request.user, task_type="convert_image_to_jpeg"
+    )
+    result = task.result if task.status == AsyncTask.Status.SUCCESS else None
+    return Response(
+        {
+            "status": task.status,
+            "result": result,
+            "error": task.error,
+        }
+    )
+
+
+__all__ = ["r2_presigned_upload_url", "r2_convert_image", "r2_convert_image_status"]

@@ -54,7 +54,7 @@ def _thumbnail_crop_subquery():
 def _thumbnail_cropped_url_subquery():
     """Eagerly generated crop derivative URL from the same link as the crop."""
     return Subquery(
-        _latest_cropped_thumbnail_link().values("cropped_url")[:1],
+        _latest_cropped_thumbnail_link().values("cropped_image__url")[:1],
         output_field=CharField(),
     )
 

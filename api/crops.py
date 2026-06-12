@@ -66,9 +66,8 @@ def apply_crop(piece_state_image, crop: dict | None) -> None:
 
     normalized = crop_to_dict(crop)
     piece_state_image.crop = normalized
-    piece_state_image.cropped_r2_key = None
-    piece_state_image.cropped_url = None
-    piece_state_image.save(update_fields=["crop", "cropped_r2_key", "cropped_url"])
+    piece_state_image.cropped_image_id = None
+    piece_state_image.save(update_fields=["crop", "cropped_image_id"])
     if normalized is not None:
         enqueue_generate_cropped_image(
             piece_state_image.image,
@@ -88,6 +87,9 @@ def generate_cropped_image_bytes(original_bytes: bytes, crop: dict) -> bytes:
 
     from PIL import Image as PILImage  # noqa: PLC0415
     from PIL import ImageOps  # noqa: PLC0415
+    from pillow_heif import register_heif_opener  # noqa: PLC0415
+
+    register_heif_opener()
 
     with PILImage.open(io.BytesIO(original_bytes)) as source:
         image = ImageOps.exif_transpose(source)
@@ -121,17 +123,35 @@ def generate_cropped_image_bytes(original_bytes: bytes, crop: dict) -> bytes:
 
 
 def set_cropped_fields(
-    image_id, crop: dict, *, cropped_r2_key: str, cropped_url: str
+    source_image,
+    crop: dict,
+    *,
+    r2_key: str,
+    url: str,
+    width: int | None = None,
+    height: int | None = None,
 ) -> int:
-    """Write the cropped asset reference onto all PSI rows matching (image, crop).
+    """Create (or update) the crop derivative Image row and link it to all matching PSI rows.
 
-    Matching by value (not by PSI pk) makes task completion race-safe: the
-    row that triggered the task may have been deleted and recreated with the
-    same (image, crop) pair while the task ran.
+    Matching by (image_id, crop) value makes task completion race-safe: the
+    PSI row that triggered the task may have been deleted and recreated with
+    the same pair while the task ran.
+
+    Returns the number of PSI rows updated.
     """
-    from .models import PieceStateImage  # noqa: PLC0415
+    from .models import Image, PieceStateImage  # noqa: PLC0415
 
-    return PieceStateImage.objects.filter(image_id=image_id, crop=crop).update(
-        cropped_r2_key=cropped_r2_key,
-        cropped_url=cropped_url,
+    crop_image, _ = Image.objects.update_or_create(
+        r2_key=r2_key,
+        defaults={
+            "url": url,
+            "user": source_image.user,
+            "derived_from": source_image,
+            "derived_type": "crop",
+            "width": width,
+            "height": height,
+        },
     )
+    return PieceStateImage.objects.filter(
+        image_id=source_image.id, crop=crop
+    ).update(cropped_image_id=crop_image.id)

@@ -65,6 +65,7 @@ class TestGlazeCombinationGetShape:
         assert item["test_tile_image"] == {
             "url": "https://example.com/tile.jpg",
             "image_id": str(combo.test_tile_image.id),
+            "r2_key": None,
             "width": None,
             "height": None,
         }

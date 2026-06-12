@@ -9,11 +9,16 @@ interface PieceDetailPageProps {
   showBackToPieces?: boolean;
 }
 
-/** True while any image has crop coordinates but no materialized crop yet. */
+/** True while any R2-backed image has crop coordinates but no materialized crop yet. */
 function hasPendingCrops(piece: PieceDetail): boolean {
   const states = [piece.current_state, ...(piece.history ?? [])];
   return states.some((state) =>
-    (state.images ?? []).some((img) => img.crop && !img.cropped_url),
+    (state.images ?? []).some(
+      (img) =>
+        img.crop &&
+        !img.cropped_url &&
+        (img as { r2_key?: string | null }).r2_key,
+    ),
   );
 }
 

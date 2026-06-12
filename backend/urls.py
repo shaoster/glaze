@@ -47,7 +47,7 @@ def _inject_piece_metadata(index_html: str, request: HttpRequest, piece_id) -> s
 
     piece = (
         Piece.objects.select_related("thumbnail")
-        .prefetch_related("states")
+        .prefetch_related("states", "states__image_links")
         .filter(id=piece_id, shared=True)
         .first()
     )
@@ -59,6 +59,8 @@ def _inject_piece_metadata(index_html: str, request: HttpRequest, piece_id) -> s
     description = "Powered by PotterDoc"
     url = request.build_absolute_uri(request.path)
     thumbnail = image_to_dict(piece.thumbnail)
+    if thumbnail:
+        thumbnail["cropped_url"] = piece.get_thumbnail_cropped_url()
     image_url = _share_image_url(thumbnail) if thumbnail else ""
     if image_url.startswith("/"):
         image_url = request.build_absolute_uri(image_url)

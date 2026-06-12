@@ -32,6 +32,7 @@ const activeImage: PiecePhotoGalleryImage = {
   caption: "",
   crop: null,
   cropped_url: null,
+  r2_key: null,
   image_id: "img1",
   stateLabel: "Trimmed",
   stateId: "s1",

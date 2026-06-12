@@ -124,6 +124,16 @@ class Image(models.Model):
     r2_key = models.CharField(max_length=1024, null=True, blank=True)
     width = models.PositiveIntegerField(null=True, blank=True)
     height = models.PositiveIntegerField(null=True, blank=True)
+    # Lineage fields for derived assets (JPEG conversions, materialized crops).
+    # derived_from → source Image; derived_type ∈ {"jpeg_conversion", "crop"}.
+    derived_from = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="derivatives",
+    )
+    derived_type = models.CharField(max_length=32, null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
 
@@ -334,7 +344,8 @@ class Piece(models.Model):
                 image=thumbnail,
             )
             .order_by("-pk")
-            .only("crop", "cropped_url", "image_id")
+            .select_related("cropped_image")
+            .only("crop", "image_id", "cropped_image")
         )
         return _cropped_link(links)
 
@@ -345,7 +356,9 @@ class Piece(models.Model):
     def get_thumbnail_cropped_url(self) -> str | None:
         """Public URL of the thumbnail's eager cropped derivative, if materialized."""
         link = self._thumbnail_crop_link_from_history()
-        return link.cropped_url if link is not None else None
+        if link is None or link.cropped_image is None:
+            return None
+        return link.cropped_image.url
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -400,7 +413,7 @@ class PieceState(models.Model):
             return list(self._pending_images or [])
         links = getattr(self, "_prefetched_objects_cache", {}).get("image_links")
         if links is None:
-            links = self.image_links.select_related("image").order_by("order", "pk")
+            links = self.image_links.select_related("image", "cropped_image").order_by("order", "pk")
         return [captioned_image_to_dict(link) for link in links]
 
     @images.setter
@@ -606,12 +619,17 @@ class PieceStateImage(models.Model):
     )
     caption = models.CharField(max_length=1024, blank=True, default="")
     crop = models.JSONField(null=True, blank=True, default=None)
-    # R2 key + public URL of the eagerly generated cropped derivative.
+    # FK to the eagerly generated cropped derivative Image row.
     # Written exclusively by the generate_cropped_image task on completion;
     # NULL while a crop is pending (the frontend shows the raw image until
-    # cropped_url is populated) and always NULL when crop is NULL.
-    cropped_r2_key = models.CharField(max_length=1024, null=True, blank=True)
-    cropped_url = models.CharField(max_length=1024, null=True, blank=True)
+    # cropped_image is populated) and always NULL when crop is NULL.
+    cropped_image = models.ForeignKey(
+        Image,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="crop_links",
+    )
     created = models.DateTimeField(default=timezone.now)
     order = models.PositiveSmallIntegerField()
 

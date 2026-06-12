@@ -255,6 +255,7 @@ def image_to_dict(image) -> dict | None:
     return {
         "url": image.url,
         "image_id": str(image.id) if hasattr(image, "id") else None,
+        "r2_key": getattr(image, "r2_key", None),
         "width": getattr(image, "width", None),
         "height": getattr(image, "height", None),
     }
@@ -323,9 +324,10 @@ def captioned_image_to_dict(link) -> dict:
         **image_payload,
         "caption": link.caption,
         "crop": link.crop,
-        "cropped_url": link.cropped_url,
+        "cropped_url": link.cropped_image.url if link.cropped_image else None,
         "created": link.created,
         "image_id": str(link.image_id) if link.image_id else None,
+        "r2_key": image_payload.get("r2_key"),
     }
 
 
@@ -352,13 +354,13 @@ def replace_piece_state_images(piece_state, images: list[dict], user=None) -> No
     from .crops import enqueue_generate_cropped_image  # noqa: PLC0415
     from .models import PieceStateImage  # noqa: PLC0415
 
-    # Capture (image, crop) → cropped_* from the links being replaced so
+    # Capture (image, crop) → cropped_image_id from the links being replaced so
     # unchanged pairs keep their already-materialized derivative.
     previous_cropped: dict = {}
     for link in piece_state.image_links.all():
         pair = _crop_pair_key(link.image_id, link.crop)
-        if pair is not None and link.cropped_r2_key:
-            previous_cropped[pair] = (link.cropped_r2_key, link.cropped_url)
+        if pair is not None and link.cropped_image_id:
+            previous_cropped[pair] = link.cropped_image_id
 
     piece_state.image_links.all().delete()
     for order, payload in enumerate(images):
@@ -374,8 +376,7 @@ def replace_piece_state_images(piece_state, images: list[dict], user=None) -> No
             image=image,
             caption=payload.get("caption") or "",
             crop=crop,
-            cropped_r2_key=carried[0] if carried else None,
-            cropped_url=carried[1] if carried else None,
+            cropped_image_id=carried,
             created=created_val,
             order=order,
         )

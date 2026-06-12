@@ -50,7 +50,7 @@ from .piece.views import (
 )
 from .task_views import submit_task, task_detail
 from .telemetry_views import browser_traces
-from .uploads.views import r2_presigned_upload_url
+from .uploads.views import r2_convert_image, r2_convert_image_status, r2_presigned_upload_url
 from .workflow_views import workflow_state_schema
 
 __all__ = [
@@ -86,6 +86,8 @@ __all__ = [
     "piece_showcase_video",
     "piece_states",
     "pieces",
+    "r2_convert_image",
+    "r2_convert_image_status",
     "r2_presigned_upload_url",
     "send_invite",
     "staff_invite_batch",
