@@ -484,6 +484,15 @@ class PieceState(models.Model):
         return f"{self.piece.name} → {self.state}"
 
     def resolve_custom_field(self, field_name: str) -> Any:
+        if not hasattr(self, "_custom_field_cache"):
+            self._custom_field_cache: dict[str, Any] = {}
+        if field_name in self._custom_field_cache:
+            return self._custom_field_cache[field_name]
+        val = self._resolve_custom_field_impl(field_name)
+        self._custom_field_cache[field_name] = val
+        return val
+
+    def _resolve_custom_field_impl(self, field_name: str) -> Any:
         """Resolve a field value, following state-ref markers transitively.
 
         Checks ``custom_fields`` for the field or a marker string. If a marker
