@@ -269,6 +269,129 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
             },
         ],
     },
+    18: {
+        "title": "R2 Storage",
+        "type": "piechart",
+        "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "cloudflare-r2-infinity",
+        },
+        "targets": [
+            {
+                "refId": "A",
+                "datasource": {
+                    "type": "yesoreyeram-infinity-datasource",
+                    "uid": "cloudflare-r2-infinity",
+                },
+                "type": "json",
+                "source": "url",
+                "url": "https://api.cloudflare.com/client/v4/graphql",
+                "url_options": {
+                    "method": "POST",
+                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2StorageAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", datetime_leq: \\"${__to:date:iso}\\" }, limit: 1000) { max { payloadSize } } } } }"}',
+                    "body_type": "raw",
+                    "body_content_type": "application/json",
+                },
+                "parser": "backend",
+                "root_selector": '($vals := data.viewer.accounts[0].r2StorageAdaptiveGroups.max.payloadSize; $avg_used := $vals ? $average($vals) : 0; [{"Used": $avg_used, "Remaining": 10000000000 - $avg_used}])',
+                "columns": [
+                    {
+                        "selector": "Used",
+                        "text": "Used",
+                        "type": "number",
+                    },
+                    {
+                        "selector": "Remaining",
+                        "text": "Remaining",
+                        "type": "number",
+                    },
+                ],
+                "cache_timeout_in_seconds": 3600,
+            }
+        ],
+    },
+    19: {
+        "title": "R2 Class A Operations",
+        "type": "piechart",
+        "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "cloudflare-r2-infinity",
+        },
+        "targets": [
+            {
+                "refId": "A",
+                "datasource": {
+                    "type": "yesoreyeram-infinity-datasource",
+                    "uid": "cloudflare-r2-infinity",
+                },
+                "type": "json",
+                "source": "url",
+                "url": "https://api.cloudflare.com/client/v4/graphql",
+                "url_options": {
+                    "method": "POST",
+                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2OperationsAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", datetime_leq: \\"${__to:date:iso}\\", actionType_in: [\\"PutObject\\", \\"CopyObject\\", \\"ListObjects\\", \\"ListBuckets\\", \\"CompleteMultipartUpload\\", \\"CreateMultipartUpload\\", \\"UploadPart\\"] }, limit: 1000) { sum { requests } } } } }"}',
+                    "body_type": "raw",
+                    "body_content_type": "application/json",
+                },
+                "parser": "backend",
+                "root_selector": '($reqs := data.viewer.accounts[0].r2OperationsAdaptiveGroups.sum.requests; $used := $reqs ? $sum($reqs) : 0; [{"Used": $used, "Remaining": 1000000 - $used}])',
+                "columns": [
+                    {
+                        "selector": "Used",
+                        "text": "Used",
+                        "type": "number",
+                    },
+                    {
+                        "selector": "Remaining",
+                        "text": "Remaining",
+                        "type": "number",
+                    },
+                ],
+                "cache_timeout_in_seconds": 3600,
+            }
+        ],
+    },
+    20: {
+        "title": "R2 Class B Operations",
+        "type": "piechart",
+        "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "cloudflare-r2-infinity",
+        },
+        "targets": [
+            {
+                "refId": "A",
+                "datasource": {
+                    "type": "yesoreyeram-infinity-datasource",
+                    "uid": "cloudflare-r2-infinity",
+                },
+                "type": "json",
+                "source": "url",
+                "url": "https://api.cloudflare.com/client/v4/graphql",
+                "url_options": {
+                    "method": "POST",
+                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2OperationsAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", datetime_leq: \\"${__to:date:iso}\\", actionType_in: [\\"GetObject\\", \\"HeadObject\\", \\"HeadBucket\\"] }, limit: 1000) { sum { requests } } } } }"}',
+                    "body_type": "raw",
+                    "body_content_type": "application/json",
+                },
+                "parser": "backend",
+                "root_selector": '($reqs := data.viewer.accounts[0].r2OperationsAdaptiveGroups.sum.requests; $used := $reqs ? $sum($reqs) : 0; [{"Used": $used, "Remaining": 10000000 - $used}])',
+                "columns": [
+                    {
+                        "selector": "Used",
+                        "text": "Used",
+                        "type": "number",
+                    },
+                    {
+                        "selector": "Remaining",
+                        "text": "Remaining",
+                        "type": "number",
+                    },
+                ],
+                "cache_timeout_in_seconds": 3600,
+            }
+        ],
+    },
 }
 
 EXPECTED_PANEL_IDS = set(EXPECTED_PANELS)
