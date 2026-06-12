@@ -109,6 +109,37 @@ class TestPieceDetail:
         states_with_images = [s for s in history if s["images"]]
         assert len(states_with_images) == 3
 
+    def test_cropped_images_do_not_cause_n_plus_one_queries(self, client, piece, user):
+        from api.models import Image, PieceStateImage
+
+        # Create state with image and cropped_image
+        state = PieceState.objects.create(piece=piece, user=user, state="handbuilt")
+        original = Image.objects.create(user=user, url="https://ex.com/orig.jpg")
+        cropped = Image.objects.create(user=user, url="https://ex.com/crop.jpg")
+        PieceStateImage.objects.create(
+            piece_state=state,
+            image=original,
+            cropped_image=cropped,
+            crop={"x": 10, "y": 10, "width": 80, "height": 80},
+            order=0,
+        )
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = client.get(f"/api/pieces/{piece.id}/")
+
+        assert response.status_code == 200
+
+        # Check that api_image is not loaded individually for cropped_image
+        image_queries = [
+            q
+            for q in ctx.captured_queries
+            if 'FROM "api_image"' in q["sql"] and 'WHERE "api_image"."id" =' in q["sql"]
+        ]
+        assert len(image_queries) == 0, (
+            f"Expected 0 individual image queries but got: "
+            f"{[q['sql'][:120] for q in image_queries]}"
+        )
+
     def test_get_prefetches_state_global_refs(self, client, piece, user):
         clay_body = ClayBody.objects.create(user=user, name="Stoneware")
         kiln_location = Location.objects.create(user=user, name="Kiln Shelf")

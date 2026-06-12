@@ -823,6 +823,60 @@ class TestAuthExport:
         }
         assert images == []
 
+    def test_collect_export_data_prefetches_everything(self, user, piece):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        from api.auth.export_data import collect_export_data
+        from api.models import ClayBody, Image, PieceStateClayBodyRef, PieceStateImage
+
+        clay_body = ClayBody.objects.create(user=user, name="Stoneware")
+        state = PieceState.objects.create(piece=piece, user=user, state="handbuilt")
+        PieceStateClayBodyRef.objects.create(
+            piece_state=state,
+            field_name="clay_body",
+            clay_body=clay_body,
+        )
+
+        original = Image.objects.create(user=user, url="https://ex.com/orig.jpg")
+        cropped = Image.objects.create(user=user, url="https://ex.com/crop.jpg")
+        PieceStateImage.objects.create(
+            piece_state=state,
+            image=original,
+            cropped_image=cropped,
+            crop={"x": 10, "y": 10, "width": 80, "height": 80},
+            order=0,
+        )
+
+        UserProfile.objects.create(user=user, alias="Studio Alias")
+        factory = APIRequestFactory()
+        request = Request(factory.get("/api/auth/export/"))
+        request._user = user
+
+        with CaptureQueriesContext(connection) as ctx:
+            pieces_json, profile_json, images = collect_export_data(user, request)
+
+        # Confirm that no N+1 queries were executed for cropped_image or clay_body
+        image_queries = [
+            q
+            for q in ctx.captured_queries
+            if 'FROM "api_image"' in q["sql"] and 'WHERE "api_image"."id" =' in q["sql"]
+        ]
+        assert len(image_queries) == 0, (
+            f"Expected 0 image queries, got: {[q['sql'][:120] for q in image_queries]}"
+        )
+
+        clay_ref_queries = [
+            q
+            for q in ctx.captured_queries
+            if 'FROM "api_piecestateclaybodyref"' in q["sql"]
+            and '"field_name" =' in q["sql"]
+        ]
+        assert len(clay_ref_queries) == 0, (
+            f"Expected 0 clay ref queries, got: "
+            f"{[q['sql'][:120] for q in clay_ref_queries]}"
+        )
+
     def test_export_image_name_uses_r2_key_and_url_extension(self, user):
         from api.auth.export_archive import export_image_name
 

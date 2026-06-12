@@ -162,7 +162,9 @@ def piece_state_ref_prefetches() -> list[Prefetch]:
 def piece_detail_queryset(request: Request):
     """Return the queryset needed to serialize full piece detail."""
     return piece_read_queryset(request).prefetch_related(
-        "states__image_links__image", *piece_state_ref_prefetches()
+        "states__image_links__image",
+        "states__image_links__cropped_image",
+        *piece_state_ref_prefetches(),
     )
 
 

@@ -62,7 +62,7 @@ def traced_class(cls):
     base classes — subclasses inherit the wrapped methods.
     """
     for attr_name, attr_val in list(vars(cls).items()):
-        if attr_name.startswith("_"):
+        if attr_name.startswith("_") or attr_name == "resolve_custom_field":
             continue
         if isinstance(attr_val, (property, type)):
             continue
