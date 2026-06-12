@@ -36,7 +36,7 @@ from grafana_foundation_sdk.models.dashboard import (
 )
 
 DEFAULT_GRAFANA_URL = "https://shaoster.grafana.net"
-DEFAULT_FOLDER_UID = "general"
+DEFAULT_FOLDER_UID = ""
 
 EXPECTED_DASHBOARD = {
     "uid": "glaze-app-summary",
