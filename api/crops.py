@@ -115,7 +115,11 @@ def generate_cropped_image_bytes(original_bytes: bytes, crop: dict) -> bytes:
                     max(1, round(cropped.size[1] * scale)),
                 )
             )
-        if cropped.mode != "RGB":
+        if cropped.mode == "RGBA":
+            bg = PILImage.new("RGB", cropped.size, (255, 255, 255))
+            bg.paste(cropped, mask=cropped.split()[3])
+            cropped = bg
+        elif cropped.mode != "RGB":
             cropped = cropped.convert("RGB")
         out = io.BytesIO()
         cropped.save(out, format="JPEG", quality=CROPPED_IMAGE_JPEG_QUALITY)

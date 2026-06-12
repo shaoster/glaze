@@ -29,6 +29,11 @@ _REQUIRED_ENV_VARS = (
 # Default presigned-PUT expiry, in seconds.
 PRESIGNED_PUT_EXPIRES_SECONDS = 600
 
+# Maximum file size accepted by the presigned-POST endpoint (50 MiB).
+# This is enforced server-side via R2's content-length-range condition so
+# clients cannot bypass it by sending a malformed Content-Length header.
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
 
 def is_r2_configured() -> bool:
     """Return True when every R2 environment variable is set and non-blank."""
@@ -84,6 +89,32 @@ def generate_presigned_put(
             "Key": key,
             "ContentType": content_type,
         },
+        ExpiresIn=expires,
+    )
+
+
+def generate_presigned_post(
+    key: str,
+    content_type: str,
+    *,
+    max_bytes: int = MAX_UPLOAD_BYTES,
+    expires: int = PRESIGNED_PUT_EXPIRES_SECONDS,
+) -> dict:
+    """Return a presigned POST payload for *key* with a server-enforced size cap.
+
+    Returns a dict with ``url`` and ``fields`` suitable for a multipart POST.
+    The ``content-length-range`` condition is embedded in the policy so R2
+    rejects uploads larger than *max_bytes* without involving our server.
+    """
+    client = get_r2_client()
+    return client.generate_presigned_post(
+        Bucket=get_bucket_name(),
+        Key=key,
+        Fields={"Content-Type": content_type},
+        Conditions=[
+            {"Content-Type": content_type},
+            ["content-length-range", 1, max_bytes],
+        ],
         ExpiresIn=expires,
     )
 

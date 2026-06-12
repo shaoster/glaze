@@ -56,6 +56,24 @@ function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   });
 }
 
+/** Extension → MIME type fallback for browsers that leave File.type blank. */
+const EXTENSION_MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+  heic: "image/heic",
+  heif: "image/heif",
+  avif: "image/avif",
+};
+
+function inferMimeType(file: File): string {
+  if (file.type) return file.type;
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  return EXTENSION_MIME[ext] ?? "application/octet-stream";
+}
+
 /**
  * Decode the file client-side when possible.
  *
@@ -66,8 +84,9 @@ function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
  *   as raw bytes; the server will convert them via the async task.
  */
 async function prepareImageForUpload(file: File): Promise<PreparedImage> {
+  const mimeType = inferMimeType(file);
   const originalIsJpeg =
-    file.type === "image/jpeg" || file.type === "image/jpg";
+    mimeType === "image/jpeg" || mimeType === "image/jpg";
 
   let bitmap: ImageBitmap;
   try {
@@ -77,7 +96,7 @@ async function prepareImageForUpload(file: File): Promise<PreparedImage> {
     // Upload raw; server will convert via convert_image_to_jpeg task.
     return {
       blob: file,
-      contentType: file.type || "application/octet-stream",
+      contentType: mimeType,
       width: null,
       height: null,
       isJpeg: false,
@@ -90,7 +109,7 @@ async function prepareImageForUpload(file: File): Promise<PreparedImage> {
 
     // Already a correctly-sized JPEG — nothing to do.
     if (originalIsJpeg && longEdge <= MAX_UPLOAD_LONG_EDGE) {
-      return { blob: file, contentType: file.type, width, height, isJpeg: true };
+      return { blob: file, contentType: mimeType, width, height, isJpeg: true };
     }
 
     // Re-encode via canvas: either oversized JPEG or a non-JPEG format the
@@ -107,7 +126,7 @@ async function prepareImageForUpload(file: File): Promise<PreparedImage> {
       // Canvas unavailable — fall back to server conversion.
       return {
         blob: file,
-        contentType: file.type || "application/octet-stream",
+        contentType: mimeType,
         width,
         height,
         isJpeg: false,
@@ -171,9 +190,13 @@ export async function uploadImageToR2(
   }
 
   const presigned = await fetchR2PresignedUrl(prepared.contentType);
-  await axios.put(presigned.upload_url, prepared.blob, {
-    headers: { "Content-Type": prepared.contentType },
-  });
+
+  // Use multipart POST so R2 enforces the server-signed content-length-range
+  // condition. The 'file' field must come last per the S3 presigned POST spec.
+  const form = new FormData();
+  Object.entries(presigned.fields).forEach(([k, v]) => form.append(k, v));
+  form.append("file", prepared.blob);
+  await axios.post(presigned.upload_url, form);
 
   // Already a JPEG — return immediately, no server conversion needed.
   if (prepared.isJpeg) {

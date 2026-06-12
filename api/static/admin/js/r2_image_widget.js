@@ -61,6 +61,17 @@
     });
   }
 
+  var EXTENSION_MIME = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+    webp: 'image/webp', gif: 'image/gif',
+    heic: 'image/heic', heif: 'image/heif', avif: 'image/avif',
+  };
+  function inferMimeType(file) {
+    if (file.type) { return file.type; }
+    var ext = file.name.split('.').pop().toLowerCase();
+    return EXTENSION_MIME[ext] || 'application/octet-stream';
+  }
+
   var NON_BROWSER_TYPES = ['image/heic', 'image/heif', 'image/avif'];
   var CONVERT_POLL_INTERVAL = 2000;
   var CONVERT_POLL_TIMEOUT = 120000;
@@ -91,20 +102,26 @@
 
   function uploadFile(file, inp, preview, clearBtn, btn) {
     var originalLabel = btn.textContent;
+    var mimeType = inferMimeType(file);
     btn.disabled = true;
     btn.textContent = 'Uploading…';
 
-    fetchPresignedUrl(file.type)
+    fetchPresignedUrl(mimeType)
       .then(function (presign) {
+        // Multipart POST so R2 enforces the server-signed content-length-range.
+        var form = new FormData();
+        Object.entries(presign.fields || {}).forEach(function (entry) {
+          form.append(entry[0], entry[1]);
+        });
+        form.append('file', file);
         return fetch(presign.upload_url, {
-          method: 'PUT',
-          headers: { 'Content-Type': file.type },
-          body: file,
+          method: 'POST',
+          body: form,
         }).then(function (r) {
           if (!r.ok) { throw new Error('Upload failed with status ' + r.status); }
           // For non-browser-renderable formats (HEIC/HEIF/AVIF), trigger
           // server-side JPEG conversion and wait for the JPEG URL.
-          if (NON_BROWSER_TYPES.indexOf(file.type.toLowerCase()) !== -1) {
+          if (NON_BROWSER_TYPES.indexOf(mimeType) !== -1) {
             btn.textContent = 'Converting…';
             return triggerConversion(presign.key).then(function (body) {
               if (!body.needs_conversion || !body.task_id) { return presign.public_url; }

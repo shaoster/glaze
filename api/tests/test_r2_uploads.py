@@ -23,8 +23,11 @@ def r2_env(monkeypatch):
 @pytest.fixture
 def presign_mock():
     with mock.patch(
-        "api.r2.generate_presigned_put",
-        return_value="https://test-account.r2.cloudflarestorage.com/signed",
+        "api.r2.generate_presigned_post",
+        return_value={
+            "url": "https://test-account.r2.cloudflarestorage.com/test-bucket",
+            "fields": {"key": "images/1/x.jpg", "Content-Type": "image/jpeg"},
+        },
     ) as presign:
         yield presign
 
@@ -57,10 +60,12 @@ class TestR2PresignedUploadUrl:
             body["key"],
         )
         assert body["upload_url"] == (
-            "https://test-account.r2.cloudflarestorage.com/signed"
+            "https://test-account.r2.cloudflarestorage.com/test-bucket"
         )
+        assert isinstance(body["fields"], dict)
         assert body["public_url"] == f"https://media.example.com/{body['key']}"
         assert body["expires_in"] == 600
+        assert body["max_bytes"] > 0
         presign_mock.assert_called_once_with(body["key"], "image/jpeg", expires=600)
 
     def test_extension_follows_content_type(self, client, r2_env, presign_mock):

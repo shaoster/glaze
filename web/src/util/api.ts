@@ -196,9 +196,11 @@ client.interceptors.response.use(
 
 export type R2PresignedUpload = {
   upload_url: string;
+  fields: Record<string, string>;
   key: string;
   public_url: string;
   expires_in: number;
+  max_bytes: number;
 };
 
 // ---------------------------------------------------------------------------

@@ -64,7 +64,7 @@
       "name": "Amber",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic"
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/f_jpg/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic"
       },
       "is_food_safe": true,
       "runs": false,
@@ -677,7 +677,7 @@
       "name": "Amber",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic"
+        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/f_jpg/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic"
       },
       "is_food_safe": true,
       "runs": false,

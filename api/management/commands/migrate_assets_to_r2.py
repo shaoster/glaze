@@ -20,6 +20,8 @@ left untouched: videos are deterministic per ``input_hash`` and re-render to
 R2 on demand under the new pipeline.
 """
 
+from urllib.parse import urlparse
+
 import httpx
 from django.core.management.base import BaseCommand, CommandError
 
@@ -116,9 +118,12 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(summary))
 
     def _migrate_originals(self, *, dry_run: bool, limit: int | None):
-        pending = Image.objects.filter(
+        candidates = Image.objects.filter(
             r2_key__isnull=True, url__contains=CLOUDINARY_URL_MARKER
         ).order_by("created")
+        # Guard against url__contains matching strings that embed the marker in
+        # a path or query parameter — verify the hostname is exactly the CDN.
+        pending = [img for img in candidates if urlparse(img.url).hostname == CLOUDINARY_URL_MARKER]
         if limit is not None:
             pending = pending[:limit]
 

@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
+from django.db import models
 
 from api.models import AsyncTask, Image, PieceStateImage
 from api.tasks import get_task_interface
@@ -38,8 +39,15 @@ class Command(BaseCommand):
                     "'python manage.py createsuperuser' before running this command."
                 )
 
+        # Restrict to R2-backed images and Cloudinary-hosted images; avoid
+        # enqueuing subject-detection tasks for arbitrary user-supplied URLs.
         images = (
-            Image.objects.exclude(url="").filter(url__startswith="http").order_by("url")
+            Image.objects.exclude(url="")
+            .filter(
+                models.Q(r2_key__isnull=False)
+                | models.Q(url__icontains="res.cloudinary.com")
+            )
+            .order_by("url")
         )
 
         # Build the list of work items: one entry per (image, piece) or (image, psi).

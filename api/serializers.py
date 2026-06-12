@@ -502,7 +502,11 @@ class PieceSummarySerializer(serializers.ModelSerializer):
                     Coalesce(latest_state_lm, "fields_last_modified"),
                 )
             )
-            .prefetch_related("states__image_links__image", "tag_links__tag")
+            .prefetch_related(
+                "states__image_links__image",
+                "states__image_links__cropped_image",
+                "tag_links__tag",
+            )
             .order_by(display_field)
         )
 

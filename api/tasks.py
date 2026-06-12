@@ -430,7 +430,9 @@ def convert_image_to_jpeg(task: AsyncTask) -> dict:
             defaults={"r2_key": source_key, "user": task.user},
         )
 
-    Image.objects.create(
+    from .models import PieceStateImage  # noqa: PLC0415
+
+    jpeg_image = Image.objects.create(
         url=new_url,
         r2_key=new_key,
         user=task.user,
@@ -439,6 +441,9 @@ def convert_image_to_jpeg(task: AsyncTask) -> dict:
         derived_from=source_image,
         derived_type="jpeg_conversion",
     )
+    # Redirect any existing PSI rows that reference the HEIC/AVIF/non-JPEG
+    # source to the new JPEG so they immediately serve a browser-renderable URL.
+    PieceStateImage.objects.filter(image=source_image).update(image=jpeg_image)
 
     return {
         "status": "success",

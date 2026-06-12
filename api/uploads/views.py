@@ -77,11 +77,16 @@ _STAFF_ONLY_RESOURCE_TYPES = {"video", "audio"}
             "type": "object",
             "properties": {
                 "upload_url": {"type": "string"},
+                "fields": {
+                    "type": "object",
+                    "additionalProperties": {"type": "string"},
+                },
                 "key": {"type": "string"},
                 "public_url": {"type": "string"},
                 "expires_in": {"type": "integer"},
+                "max_bytes": {"type": "integer"},
             },
-            "required": ["upload_url", "key", "public_url", "expires_in"],
+            "required": ["upload_url", "fields", "key", "public_url", "expires_in", "max_bytes"],
         },
         400: {"type": "object"},
         403: {"type": "object"},
@@ -135,17 +140,19 @@ def r2_presigned_upload_url(request: Request) -> Response:
     # never reach the key, so collisions/overwrites/traversal are impossible.
     key = f"{resource_config.prefix}/{request.user.id}/{uuid.uuid4()}.{extension}"
 
-    upload_url = r2.generate_presigned_put(
+    presigned = r2.generate_presigned_post(
         key,
         content_type,
         expires=r2.PRESIGNED_PUT_EXPIRES_SECONDS,
     )
     return Response(
         {
-            "upload_url": upload_url,
+            "upload_url": presigned["url"],
+            "fields": presigned["fields"],
             "key": key,
             "public_url": r2.public_url_for_key(key),
             "expires_in": r2.PRESIGNED_PUT_EXPIRES_SECONDS,
+            "max_bytes": r2.MAX_UPLOAD_BYTES,
         }
     )
 
