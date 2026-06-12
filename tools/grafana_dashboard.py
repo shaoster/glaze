@@ -288,7 +288,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
                 "url": "https://api.cloudflare.com/client/v4/graphql",
                 "url_options": {
                     "method": "POST",
-                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2StorageAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", datetime_leq: \\"${__to:date:YYYY-MM-DDTHH:mm:ss}Z\\" }, limit: 1000) { max { payloadSize } } } } }"}',
+                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2StorageAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", datetime_leq: \\"${__to:date:iso}\\" }, limit: 1000) { max { payloadSize } } } } }"}',
                     "body_type": "raw",
                     "body_content_type": "application/json",
                 },
@@ -329,7 +329,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
                 "url": "https://api.cloudflare.com/client/v4/graphql",
                 "url_options": {
                     "method": "POST",
-                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2OperationsAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", datetime_leq: \\"${__to:date:YYYY-MM-DDTHH:mm:ss}Z\\", actionType_in: [\\"PutObject\\", \\"CopyObject\\", \\"ListObjects\\", \\"ListBuckets\\", \\"CompleteMultipartUpload\\", \\"CreateMultipartUpload\\", \\"UploadPart\\"] }, limit: 1000) { sum { requests } } } } }"}',
+                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2OperationsAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", datetime_leq: \\"${__to:date:iso}\\", actionType_in: [\\"PutObject\\", \\"CopyObject\\", \\"ListObjects\\", \\"ListBuckets\\", \\"CompleteMultipartUpload\\", \\"CreateMultipartUpload\\", \\"UploadPart\\"] }, limit: 1000) { sum { requests } } } } }"}',
                     "body_type": "raw",
                     "body_content_type": "application/json",
                 },
@@ -370,7 +370,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
                 "url": "https://api.cloudflare.com/client/v4/graphql",
                 "url_options": {
                     "method": "POST",
-                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2OperationsAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", datetime_leq: \\"${__to:date:YYYY-MM-DDTHH:mm:ss}Z\\", actionType_in: [\\"GetObject\\", \\"HeadObject\\", \\"HeadBucket\\"] }, limit: 1000) { sum { requests } } } } }"}',
+                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2OperationsAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", datetime_leq: \\"${__to:date:iso}\\", actionType_in: [\\"GetObject\\", \\"HeadObject\\", \\"HeadBucket\\"] }, limit: 1000) { sum { requests } } } } }"}',
                     "body_type": "raw",
                     "body_content_type": "application/json",
                 },
