@@ -71,8 +71,8 @@ class TestCeleryTaskInterface:
         assert interface.health_check() is False
 
     @patch("api.tasks.transaction.on_commit")
-    @patch("api.tasks.run_celery_task.delay")
-    def test_submit_uses_on_commit(self, mock_delay, mock_on_commit, user):
+    @patch("api.tasks.run_celery_task.apply_async")
+    def test_submit_uses_on_commit(self, mock_apply_async, mock_on_commit, user):
         task = AsyncTask.objects.create(user=user, task_type="ping")
         interface = CeleryTaskInterface()
         interface.submit(task)
@@ -80,7 +80,7 @@ class TestCeleryTaskInterface:
         assert mock_on_commit.called
         callback = mock_on_commit.call_args[0][0]
         callback()
-        mock_delay.assert_called_once_with(task.id)
+        mock_apply_async.assert_called_once_with(args=[task.id])
 
 
 @pytest.mark.django_db

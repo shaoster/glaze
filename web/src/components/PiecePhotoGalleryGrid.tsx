@@ -16,6 +16,8 @@ type PiecePhotoGalleryGridImage = {
   caption: string;
   cropped_url?: string | null;
   crop?: ImageCrop | null;
+  r2_key?: string | null;
+  crop_task_failed?: boolean;
   stateLabel: string;
   editableCurrentStateIndex: number | null;
 };
@@ -77,6 +79,8 @@ function MasonryTile({
             url={image.url}
             croppedUrl={image.cropped_url}
             crop={image.crop}
+            r2Key={image.r2_key}
+            cropTaskFailed={image.crop_task_failed}
             alt={image.caption || "Piece photo"}
             context="gallery"
             style={{

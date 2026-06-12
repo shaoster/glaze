@@ -334,6 +334,8 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
                     url={piece.thumbnail.url}
                     croppedUrl={piece.thumbnail.cropped_url}
                     crop={piece.thumbnail.crop}
+                    r2Key={piece.thumbnail.r2_key}
+                    cropTaskFailed={piece.thumbnail.crop_task_failed}
                     alt={piece.name}
                     context="detail"
                     style={{

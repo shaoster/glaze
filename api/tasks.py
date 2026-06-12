@@ -27,11 +27,14 @@ class TaskRegistry:
     """Registry for mapping task_type strings to Python functions."""
 
     _tasks: Dict[str, TaskCallable] = {}
+    _time_limits: Dict[str, int] = {}
 
     @classmethod
-    def register(cls, name: str):
+    def register(cls, name: str, time_limit: Optional[int] = None):
         def wrapper(func: TaskCallable):
             cls._tasks[name] = func
+            if time_limit is not None:
+                cls._time_limits[name] = time_limit
             return func
 
         return wrapper
@@ -39,6 +42,10 @@ class TaskRegistry:
     @classmethod
     def get(cls, name: str) -> Optional[TaskCallable]:
         return cls._tasks.get(name)
+
+    @classmethod
+    def get_time_limit(cls, name: str) -> Optional[int]:
+        return cls._time_limits.get(name)
 
 
 class TaskInterface(Protocol):
@@ -158,7 +165,15 @@ class CeleryTaskInterface:
 
     def submit(self, task: AsyncTask) -> None:
         logger.info(f"Submitting task {task.task_type} ({task.id}) to Celery.")
-        transaction.on_commit(lambda: run_celery_task.delay(task.id))
+        soft_limit = TaskRegistry.get_time_limit(task.task_type)
+        kwargs: Dict[str, Any] = {}
+        if soft_limit is not None:
+            kwargs["soft_time_limit"] = soft_limit
+            kwargs["time_limit"] = soft_limit + 30
+        task_id = task.id
+        transaction.on_commit(
+            lambda: run_celery_task.apply_async(args=[task_id], **kwargs)
+        )
 
 
 @shared_task
@@ -294,7 +309,7 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     }
 
 
-@TaskRegistry.register("generate_cropped_image")
+@TaskRegistry.register("generate_cropped_image", time_limit=60)
 def generate_cropped_image(task: AsyncTask) -> dict:
     """Materialize a PieceStateImage crop as an eager JPEG derivative in R2.
 

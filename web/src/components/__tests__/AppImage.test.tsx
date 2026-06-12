@@ -70,7 +70,22 @@ describe("AppImage", () => {
     );
   });
 
-  it("shows a skeleton and no img when crop is set but croppedUrl is null", () => {
+  it("shows a skeleton and no img when R2-backed crop is pending", () => {
+    render(
+      <AppImage
+        url={ORIGINAL_URL}
+        croppedUrl={null}
+        crop={{ x: 0.1, y: 0.1, width: 0.8, height: 0.6 }}
+        r2Key="images/2/abc123.jpg"
+        context="gallery"
+        data-testid="app-image"
+      />,
+    );
+    expect(screen.queryByTestId("app-image")).not.toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+  });
+
+  it("falls back to original when crop is set but image is not R2-backed", () => {
     render(
       <AppImage
         url={ORIGINAL_URL}
@@ -80,8 +95,23 @@ describe("AppImage", () => {
         data-testid="app-image"
       />,
     );
-    expect(screen.queryByTestId("app-image")).not.toBeInTheDocument();
-    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(screen.getByTestId("app-image")).toHaveAttribute("src", ORIGINAL_URL);
+  });
+
+  it("falls back to original when crop task failed", () => {
+    render(
+      <AppImage
+        url={ORIGINAL_URL}
+        croppedUrl={null}
+        crop={{ x: 0.1, y: 0.1, width: 0.8, height: 0.6 }}
+        r2Key="images/2/abc123.jpg"
+        cropTaskFailed
+        context="gallery"
+        data-testid="app-image"
+      />,
+    );
+    // The crop-pending skeleton must not appear; the original image renders instead.
+    expect(screen.getByTestId("app-image")).toHaveAttribute("src", ORIGINAL_URL);
   });
 
   it("renders the img once croppedUrl is populated (crop no longer pending)", () => {
@@ -90,6 +120,7 @@ describe("AppImage", () => {
         url={ORIGINAL_URL}
         croppedUrl={CROPPED_URL}
         crop={{ x: 0.1, y: 0.1, width: 0.8, height: 0.6 }}
+        r2Key="images/2/abc123.jpg"
         context="gallery"
         data-testid="app-image"
       />,
@@ -159,12 +190,13 @@ describe("SuspenseAppImage", () => {
     );
   });
 
-  it("renders the skeleton immediately without suspending when crop is pending", () => {
+  it("renders the skeleton immediately without suspending when R2-backed crop is pending", () => {
     render(
       <SuspenseAppImage
         url={ORIGINAL_URL}
         croppedUrl={null}
         crop={{ x: 0.1, y: 0.1, width: 0.8, height: 0.6 }}
+        r2Key="images/2/abc123.jpg"
         context="gallery"
         data-testid="app-image"
       />,
