@@ -17,6 +17,7 @@ import {
   fetchPieces,
 } from "../util/api";
 import type { PieceSortOrder } from "../util/api";
+import type { PieceSummary } from "../util/types";
 import { SUCCESSORS } from "../util/workflow";
 import {
   type FilterCategory,
@@ -25,6 +26,16 @@ import {
 } from "../util/pieceFilters";
 import NewPieceDialog from "../components/NewPieceDialog";
 import PieceList from "../components/PieceList";
+
+function hasPendingThumbnailCrops(pieces: PieceSummary[]): boolean {
+  return pieces.some(
+    (p) =>
+      p.thumbnail?.crop &&
+      !p.thumbnail.cropped_url &&
+      p.thumbnail.r2_key &&
+      !p.thumbnail.crop_task_failed,
+  );
+}
 
 /**
  * Translate UI filter chips to the `state` array expected by the API.
@@ -111,6 +122,10 @@ export default function PieceListPage() {
     // Show previous sort's data while the new sort loads to avoid a flash of
     // the spinner every time the user changes sort order.
     placeholderData: keepPreviousData,
+    refetchInterval: (query) => {
+      const allPieces = query.state.data?.pages.flatMap((p) => p.results) ?? [];
+      return hasPendingThumbnailCrops(allPieces) ? 3000 : false;
+    },
   });
 
   // useInfiniteQuery adds pages atomically on resolution (no mid-scroll trickle),

@@ -161,6 +161,7 @@ export const mountWorkflowStateWidget = (options: MountOptions) => {
         ...image,
         cropped_url: null,
         r2_key: (image as { r2_key?: string | null }).r2_key ?? null,
+        crop_task_failed: false,
       })),
       custom_fields: payload.custom_fields ?? {},
     };

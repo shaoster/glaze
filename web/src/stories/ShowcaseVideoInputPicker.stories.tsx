@@ -53,6 +53,7 @@ const basePiece: PieceDetail = {
         image_id: "img-current",
         cropped_url: null,
         r2_key: null,
+        crop_task_failed: false,
       },
       {
         url: "/thumbnails/bowl.svg",
@@ -61,6 +62,7 @@ const basePiece: PieceDetail = {
         image_id: "img-rim",
         cropped_url: null,
         r2_key: null,
+        crop_task_failed: false,
       },
     ],
     previous_state: "glaze_fired",
@@ -83,6 +85,7 @@ const basePiece: PieceDetail = {
         image_id: "img-wheel",
         cropped_url: null,
         r2_key: null,
+        crop_task_failed: false,
       },
       ],
       previous_state: "designed",
@@ -104,6 +107,7 @@ const basePiece: PieceDetail = {
         image_id: "img-trimmed",
         cropped_url: null,
         r2_key: null,
+        crop_task_failed: false,
       },
       ],
       previous_state: "wheel_thrown",
@@ -125,6 +129,7 @@ const basePiece: PieceDetail = {
         image_id: "img-current",
         cropped_url: null,
         r2_key: null,
+        crop_task_failed: false,
       },
       ],
       previous_state: "glaze_fired",
@@ -204,6 +209,8 @@ export const LockedThumbnail: Story = {
       ...basePiece,
       thumbnail: {
         url: "/thumbnails/bowl.svg",
+        crop_task_failed: false,
+        r2_key: null,
       },
     },
     initialSelection: {

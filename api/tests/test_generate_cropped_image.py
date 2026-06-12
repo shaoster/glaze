@@ -324,7 +324,9 @@ class TestReplaceFlowCarryOver:
             user=user,
         )
 
-        links = list(state.image_links.select_related("cropped_image").order_by("order"))
+        links = list(
+            state.image_links.select_related("cropped_image").order_by("order")
+        )
         assert links[0].crop == CROP
         assert links[0].cropped_image_id == crop_img.id
         assert links[0].cropped_image.r2_key == crop_img.r2_key

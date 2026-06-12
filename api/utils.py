@@ -317,17 +317,43 @@ def normalize_image_payload(payload: object, user=None):
     return image
 
 
+def _is_crop_task_failed(image_id, r2_key: str | None) -> bool:
+    """Return True if the latest generate_cropped_image task for this image failed.
+
+    Only queries when the image is R2-backed; non-R2 images can never have a
+    crop task, so the answer is always False for them.
+    """
+    if not r2_key or not image_id:
+        return False
+    from .models import AsyncTask
+
+    return AsyncTask.objects.filter(
+        task_type="generate_cropped_image",
+        input_params__image_id=str(image_id),
+        status=AsyncTask.Status.FAILURE,
+    ).exists()
+
+
 def captioned_image_to_dict(link) -> dict:
     """Serialize a PieceStateImage link to the stable CaptionedImage shape."""
     image_payload = image_to_dict(link.image) or {}
+    r2_key = image_payload.get("r2_key")
+    crop = link.crop
+    cropped_url = link.cropped_image.url if link.cropped_image else None
+    crop_task_failed = (
+        _is_crop_task_failed(link.image_id, r2_key)
+        if crop and not cropped_url
+        else False
+    )
     return {
         **image_payload,
         "caption": link.caption,
-        "crop": link.crop,
-        "cropped_url": link.cropped_image.url if link.cropped_image else None,
+        "crop": crop,
+        "cropped_url": cropped_url,
         "created": link.created,
         "image_id": str(link.image_id) if link.image_id else None,
-        "r2_key": image_payload.get("r2_key"),
+        "r2_key": r2_key,
+        "crop_task_failed": crop_task_failed,
     }
 
 

@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Dict, Optional, Protocol
 
 from celery import shared_task
+from celery.signals import task_failure
 from django.db import close_old_connections, transaction
 
 from .models import AsyncTask
@@ -27,11 +28,14 @@ class TaskRegistry:
     """Registry for mapping task_type strings to Python functions."""
 
     _tasks: Dict[str, TaskCallable] = {}
+    _time_limits: Dict[str, int] = {}
 
     @classmethod
-    def register(cls, name: str):
+    def register(cls, name: str, time_limit: Optional[int] = None):
         def wrapper(func: TaskCallable):
             cls._tasks[name] = func
+            if time_limit is not None:
+                cls._time_limits[name] = time_limit
             return func
 
         return wrapper
@@ -39,6 +43,10 @@ class TaskRegistry:
     @classmethod
     def get(cls, name: str) -> Optional[TaskCallable]:
         return cls._tasks.get(name)
+
+    @classmethod
+    def get_time_limit(cls, name: str) -> Optional[int]:
+        return cls._time_limits.get(name)
 
 
 class TaskInterface(Protocol):
@@ -97,13 +105,19 @@ def _execute_task(task_id: Any) -> None:
                 logger.info(
                     f"Successfully completed task {task.task_type} ({task.id}). RSS: {get_rss():.2f}MB"
                 )
-            except Exception as e:
+            except BaseException as e:
                 logger.exception(
                     f"Fatal error executing task {task.task_type} ({task.id})"
                 )
                 task.status = AsyncTask.Status.FAILURE
                 task.error = str(e)
                 task.save(update_fields=["status", "error", "last_modified"])
+                from celery.exceptions import SoftTimeLimitExceeded, TimeLimitExceeded
+
+                if not isinstance(e, Exception) or isinstance(
+                    e, (SoftTimeLimitExceeded, TimeLimitExceeded)
+                ):
+                    raise
         finally:
             # Clean up connections so the thread pool doesn't leak them
             close_old_connections()
@@ -158,13 +172,50 @@ class CeleryTaskInterface:
 
     def submit(self, task: AsyncTask) -> None:
         logger.info(f"Submitting task {task.task_type} ({task.id}) to Celery.")
-        transaction.on_commit(lambda: run_celery_task.delay(task.id))
+        soft_limit = TaskRegistry.get_time_limit(task.task_type)
+        kwargs: Dict[str, Any] = {}
+        if soft_limit is not None:
+            kwargs["soft_time_limit"] = soft_limit
+            kwargs["time_limit"] = soft_limit + 30
+        task_id = task.id
+        transaction.on_commit(
+            lambda: run_celery_task.apply_async(args=[task_id], **kwargs)
+        )
 
 
 @shared_task
 def run_celery_task(task_id: Any) -> None:
     """Celery worker entrypoint for all AsyncTasks."""
     _execute_task(task_id)
+
+
+@task_failure.connect
+def handle_task_failure(
+    sender=None,
+    task_id=None,
+    exception=None,
+    args=None,
+    kwargs=None,
+    **kwargs_extra,
+) -> None:
+    """Fallback handler to mark AsyncTask as failed if Celery worker crashes, times out, or fails."""
+    if sender and sender.name == "api.tasks.run_celery_task" and args:
+        db_task_id = args[0]
+        try:
+            close_old_connections()
+            task = AsyncTask.objects.get(id=db_task_id)
+            if task.status != AsyncTask.Status.FAILURE:
+                logger.error(
+                    f"Celery task failure signal triggered for task {db_task_id}. "
+                    f"Updating AsyncTask status to FAILURE. Exception: {exception}"
+                )
+                task.status = AsyncTask.Status.FAILURE
+                task.error = f"Celery task execution failed: {exception}"
+                task.save(update_fields=["status", "error", "last_modified"])
+        except Exception:
+            logger.exception(
+                f"Failed to update AsyncTask status on Celery task failure for {db_task_id}"
+            )
 
 
 # Global interface instance.
@@ -294,7 +345,7 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     }
 
 
-@TaskRegistry.register("generate_cropped_image")
+@TaskRegistry.register("generate_cropped_image", time_limit=60)
 def generate_cropped_image(task: AsyncTask) -> dict:
     """Materialize a PieceStateImage crop as an eager JPEG derivative in R2.
 

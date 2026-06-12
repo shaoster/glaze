@@ -182,6 +182,8 @@ const PieceCard = ({ piece, width, returnTo }: PieceCardProps) => {
           url={piece.thumbnail?.url ?? DEFAULT_THUMBNAIL}
           croppedUrl={piece.thumbnail?.cropped_url}
           crop={piece.thumbnail?.crop}
+          r2Key={piece.thumbnail?.r2_key}
+          cropTaskFailed={piece.thumbnail?.crop_task_failed}
           context="gallery"
           style={{
             width: "100%",

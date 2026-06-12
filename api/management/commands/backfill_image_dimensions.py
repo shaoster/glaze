@@ -41,9 +41,7 @@ class Command(BaseCommand):
         qs = (
             Image.objects.filter(width__isnull=True)
             .exclude(url="")
-            .filter(
-                Q(r2_key__isnull=False) | Q(url__icontains="res.cloudinary.com")
-            )
+            .filter(Q(r2_key__isnull=False) | Q(url__icontains="res.cloudinary.com"))
             .only("id", "url", "r2_key")
         )
 

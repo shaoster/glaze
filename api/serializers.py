@@ -284,6 +284,10 @@ class CaptionedImageSerializer(serializers.Serializer):
     # crop materialization. Clients use this to gate the crop UI and avoid
     # treating externally-hosted images as perpetually pending.
     r2_key = serializers.CharField(read_only=True, allow_null=True, default=None)
+    # True when the most recent generate_cropped_image task for this image
+    # ended in failure. Clients use this to stop polling and fall back to the
+    # original image instead of showing an indefinite spinner.
+    crop_task_failed = serializers.BooleanField(read_only=True, default=False)
     width = serializers.IntegerField(
         required=False, allow_null=True, default=None, min_value=0
     )
@@ -428,7 +432,9 @@ class PieceStateSerializer(serializers.ModelSerializer):
     def get_images(self, obj: PieceState) -> list[dict]:
         links = getattr(obj, "_prefetched_objects_cache", {}).get("image_links")
         if links is None:
-            links = obj.image_links.select_related("image", "cropped_image").order_by("order", "pk")
+            links = obj.image_links.select_related("image", "cropped_image").order_by(
+                "order", "pk"
+            )
         return [captioned_image_to_dict(link) for link in links]
 
 
@@ -442,6 +448,8 @@ class ThumbnailSerializer(serializers.Serializer):
     url = serializers.CharField()
     crop = ImageCropSerializer(required=False, allow_null=True, default=None)
     cropped_url = serializers.CharField(required=False, allow_null=True, default=None)
+    crop_task_failed = serializers.BooleanField(default=False)
+    r2_key = serializers.CharField(read_only=True, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
     width = serializers.IntegerField(
         required=False, allow_null=True, default=None, min_value=0
@@ -539,6 +547,8 @@ class PieceSummarySerializer(serializers.ModelSerializer):
 
     @extend_schema_field(ThumbnailSerializer(allow_null=True))
     def get_thumbnail(self, obj: Piece) -> dict | None:
+        from .utils import _is_crop_task_failed
+
         thumbnail = image_to_dict(obj.thumbnail)
         if thumbnail is None:
             return None
@@ -548,7 +558,18 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         cropped_url = getattr(obj, "thumbnail_cropped_url", _NOT_ANNOTATED)
         if cropped_url is _NOT_ANNOTATED:
             cropped_url = obj.get_thumbnail_cropped_url()
-        return {**thumbnail, "crop": crop, "cropped_url": cropped_url}
+        r2_key = thumbnail.get("r2_key")
+        crop_task_failed = (
+            _is_crop_task_failed(obj.thumbnail_id, r2_key)
+            if crop and not cropped_url
+            else False
+        )
+        return {
+            **thumbnail,
+            "crop": crop,
+            "cropped_url": cropped_url,
+            "crop_task_failed": crop_task_failed,
+        }
 
     @extend_schema_field(serializers.IntegerField(min_value=0))
     def get_photo_count(self, obj: Piece) -> int:

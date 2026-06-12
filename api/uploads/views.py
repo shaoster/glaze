@@ -86,7 +86,14 @@ _STAFF_ONLY_RESOURCE_TYPES = {"video", "audio"}
                 "expires_in": {"type": "integer"},
                 "max_bytes": {"type": "integer"},
             },
-            "required": ["upload_url", "fields", "key", "public_url", "expires_in", "max_bytes"],
+            "required": [
+                "upload_url",
+                "fields",
+                "key",
+                "public_url",
+                "expires_in",
+                "max_bytes",
+            ],
         },
         400: {"type": "object"},
         403: {"type": "object"},
@@ -173,7 +180,10 @@ def _needs_jpeg_conversion(key: str) -> bool:
         "application/json": {
             "type": "object",
             "properties": {
-                "key": {"type": "string", "description": "R2 key returned by presigned-url endpoint"},
+                "key": {
+                    "type": "string",
+                    "description": "R2 key returned by presigned-url endpoint",
+                },
                 "image_id": {
                     "type": "string",
                     "format": "uuid",
@@ -221,7 +231,9 @@ def r2_convert_image(request: Request) -> Response:
 
     key = request.data.get("key")
     if not isinstance(key, str) or not key.strip():
-        return Response({"detail": "key is required."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "key is required."}, status=status.HTTP_400_BAD_REQUEST
+        )
     key = key.strip()
 
     # [SECURITY] Only allow converting keys that belong to this user.
@@ -253,7 +265,10 @@ def r2_convert_image(request: Request) -> Response:
         200: {
             "type": "object",
             "properties": {
-                "status": {"type": "string", "enum": ["pending", "running", "success", "failure"]},
+                "status": {
+                    "type": "string",
+                    "enum": ["pending", "running", "success", "failure"],
+                },
                 "result": {
                     "type": "object",
                     "nullable": True,

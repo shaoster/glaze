@@ -17,7 +17,8 @@ function hasPendingCrops(piece: PieceDetail): boolean {
       (img) =>
         img.crop &&
         !img.cropped_url &&
-        (img as { r2_key?: string | null }).r2_key,
+        img.r2_key &&
+        !img.crop_task_failed,
     ),
   );
 }

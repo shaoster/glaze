@@ -156,6 +156,6 @@ def set_cropped_fields(
             "height": height,
         },
     )
-    return PieceStateImage.objects.filter(
-        image_id=source_image.id, crop=crop
-    ).update(cropped_image_id=crop_image.id)
+    return PieceStateImage.objects.filter(image_id=source_image.id, crop=crop).update(
+        cropped_image_id=crop_image.id
+    )

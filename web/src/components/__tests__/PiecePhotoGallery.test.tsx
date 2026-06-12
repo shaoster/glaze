@@ -499,6 +499,8 @@ describe("PiecePhotoGallery", () => {
           url: "https://example.com/a.jpg",
           crop: null,
           cropped_url: null,
+          crop_task_failed: false,
+          r2_key: null,
           image_id: "image-a",
           width: null,
           height: null,

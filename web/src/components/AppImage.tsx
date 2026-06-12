@@ -59,6 +59,17 @@ export type AppImageProps = {
   context: AppImageContext;
   /** Crop coordinates — used only for skeleton aspect estimation. */
   crop?: ImageCrop | null;
+  /**
+   * True when the image is stored in R2 and eligible for crop materialization.
+   * When falsy, a pending crop (crop set, croppedUrl null) renders the original
+   * instead of an indefinite skeleton — non-R2 images can never get a cropped_url.
+   */
+  r2Key?: string | null;
+  /**
+   * True when the backend generate_cropped_image task failed. The skeleton is
+   * replaced by the original image so the UI doesn't spin forever.
+   */
+  cropTaskFailed?: boolean;
   style?: React.CSSProperties;
   className?: string;
   onLoad?: React.ReactEventHandler<HTMLImageElement>;
@@ -66,7 +77,27 @@ export type AppImageProps = {
   "data-testid"?: string;
 };
 
-export default function AppImage({
+/**
+ * Outer component: handles the crop-pending guard without any hooks, so the
+ * Rules of Hooks are satisfied — the early return comes before any hook calls.
+ *
+ * Shows a skeleton only when the crop is genuinely pending (R2-backed, task not
+ * failed). Non-R2 images and failed tasks fall through to AppImageRenderer so
+ * the original image renders instead of an indefinite spinner.
+ */
+export default function AppImage(props: AppImageProps) {
+  const cropPending =
+    !!props.crop &&
+    !props.croppedUrl?.trim() &&
+    !!props.r2Key &&
+    !props.cropTaskFailed;
+  if (cropPending) {
+    return <ImageSkeleton context={props.context} crop={props.crop} />;
+  }
+  return <AppImageRenderer {...props} />;
+}
+
+function AppImageRenderer({
   url,
   croppedUrl,
   alt = "",
@@ -268,6 +299,17 @@ export type SuspenseAppImageProps = AppImageProps & {
 };
 
 export function SuspenseAppImage({ fallback, ...props }: SuspenseAppImageProps) {
+  // When a crop is genuinely pending (R2-backed, task not failed), AppImage
+  // renders the skeleton itself — no URL to preload yet, so skip Suspense.
+  const cropPending =
+    !!props.crop &&
+    !props.croppedUrl?.trim() &&
+    !!props.r2Key &&
+    !props.cropTaskFailed;
+  if (cropPending) {
+    return fallback ?? <ImageSkeleton context={props.context} crop={props.crop} />;
+  }
+
   const defaultFallback = fallback ?? (
     <ImageSkeleton context={props.context} crop={props.crop} />
   );

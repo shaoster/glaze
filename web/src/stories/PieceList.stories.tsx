@@ -132,6 +132,8 @@ const mixedCropPieces: PieceSummary[] = [
       url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
       cropped_url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&fit=crop",
       crop: { x: 0.1, y: 0.0, width: 0.5, height: 0.9 }, // portrait
+      crop_task_failed: false,
+      r2_key: null,
     },
   }),
   makePiece({
@@ -151,6 +153,8 @@ const mixedCropPieces: PieceSummary[] = [
       url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
       cropped_url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&fit=crop",
       crop: { x: 0.0, y: 0.1, width: 0.8, height: 0.8 }, // near-square
+      crop_task_failed: false,
+      r2_key: null,
     },
   }),
   makePiece({
@@ -176,6 +180,8 @@ const mixedCropPieces: PieceSummary[] = [
       url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
       cropped_url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&fit=crop",
       crop: { x: 0.0, y: 0.2, width: 0.9, height: 0.4 }, // landscape
+      crop_task_failed: false,
+      r2_key: null,
     },
   }),
   makePiece({
@@ -244,6 +250,8 @@ const largePieceDataset: PieceSummary[] = Array.from({ length: 24 }, (_, i) => {
       url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
       cropped_url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&fit=crop",
       crop: crop ?? null,
+      crop_task_failed: false,
+      r2_key: null,
     },
     tags: tagSets[i % tagSets.length],
   });
@@ -263,6 +271,8 @@ const firstLoadOverlapPieces: PieceSummary[] = [
       url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
       cropped_url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&fit=crop",
       crop: { x: 0.08, y: 0.0, width: 0.45, height: 0.92 },
+      crop_task_failed: false,
+      r2_key: null,
     },
   }),
   makePiece({

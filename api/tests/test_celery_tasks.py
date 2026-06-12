@@ -71,8 +71,8 @@ class TestCeleryTaskInterface:
         assert interface.health_check() is False
 
     @patch("api.tasks.transaction.on_commit")
-    @patch("api.tasks.run_celery_task.delay")
-    def test_submit_uses_on_commit(self, mock_delay, mock_on_commit, user):
+    @patch("api.tasks.run_celery_task.apply_async")
+    def test_submit_uses_on_commit(self, mock_apply_async, mock_on_commit, user):
         task = AsyncTask.objects.create(user=user, task_type="ping")
         interface = CeleryTaskInterface()
         interface.submit(task)
@@ -80,7 +80,7 @@ class TestCeleryTaskInterface:
         assert mock_on_commit.called
         callback = mock_on_commit.call_args[0][0]
         callback()
-        mock_delay.assert_called_once_with(task.id)
+        mock_apply_async.assert_called_once_with(args=[task.id])
 
 
 @pytest.mark.django_db
@@ -92,3 +92,43 @@ class TestCeleryWorkerTask:
         task_id = 123
         run_celery_task(task_id)
         mock_execute.assert_called_once_with(task_id)
+
+    def test_execute_task_handles_base_exception(self, user):
+        from celery.exceptions import SoftTimeLimitExceeded
+
+        from api.tasks import TaskRegistry, _execute_task
+
+        task = AsyncTask.objects.create(user=user, task_type="time_limit_task")
+
+        @TaskRegistry.register("time_limit_task")
+        def dummy_task(t):
+            raise SoftTimeLimitExceeded()
+
+        with pytest.raises(SoftTimeLimitExceeded):
+            _execute_task(task.id)
+
+        task.refresh_from_db()
+        assert task.status == AsyncTask.Status.FAILURE
+        assert "SoftTimeLimitExceeded" in task.error
+
+    def test_handle_task_failure_updates_status(self, user):
+        from api.tasks import handle_task_failure
+
+        task = AsyncTask.objects.create(
+            user=user, task_type="ping", status=AsyncTask.Status.RUNNING
+        )
+
+        mock_sender = MagicMock()
+        mock_sender.name = "api.tasks.run_celery_task"
+
+        handle_task_failure(
+            sender=mock_sender,
+            task_id="celery-id",
+            exception=Exception("Worker process exited abruptly"),
+            args=[task.id],
+            kwargs={},
+        )
+
+        task.refresh_from_db()
+        assert task.status == AsyncTask.Status.FAILURE
+        assert "Worker process exited abruptly" in task.error

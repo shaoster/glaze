@@ -11,18 +11,21 @@ const sampleImages: CaptionedImage[] = [
     caption: "Celadon glaze before firing",
     cropped_url: null,
     r2_key: null,
+    crop_task_failed: false,
   },
   {
     url: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800",
     caption: "Detail of the rim",
     cropped_url: null,
     r2_key: null,
+    crop_task_failed: false,
   },
   {
     url: "https://images.unsplash.com/photo-1593150501174-d8200671607f?w=800",
     caption: "Bisque fired pieces",
     cropped_url: null,
     r2_key: null,
+    crop_task_failed: false,
   },
 ];
 

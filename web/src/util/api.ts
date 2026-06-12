@@ -234,7 +234,8 @@ function mapImage(raw: Wire<CaptionedImage>): CaptionedImage {
     crop: normalizeCrop(raw.crop),
     cropped_url: raw.cropped_url ?? null,
     image_id: raw.image_id ?? null,
-    r2_key: (raw as { r2_key?: string | null }).r2_key ?? null,
+    r2_key: raw.r2_key ?? null,
+    crop_task_failed: raw.crop_task_failed ?? false,
     width: raw.width ?? null,
     height: raw.height ?? null,
   };
