@@ -95,7 +95,7 @@ add or change a helper, update both that array and this table.
 
 #### Production backup and local repro from a prod snapshot
 
-To get a realistic dataset locally (real pieces, real Cloudinary image references) — for
+To get a realistic dataset locally (real pieces, real R2 CDN image URLs) — for
 example to reproduce a pagination or image-rendering bug that only shows up with many pieces —
 use the backup/restore pair rather than hand-rolling a data import:
 
@@ -398,8 +398,7 @@ watch -n 1 "ps -o pid,rss,vsz,cmd -p ${BACKEND_PID}"
 ```
 
 Then use the browser opened by `gz_start` to log in as an admin and trigger the
-same large download three times. For the Cloudinary cleanup archive, scan assets
-from the admin cleanup page and use the archive download action.
+same large download three times (e.g. the account data export endpoint).
 
 Expected result:
 
@@ -432,10 +431,11 @@ All vars are optional. The app runs without any of them; each missing group degr
 
 | Variable                   | Absent behavior                                                                       |
 | -------------------------- | ------------------------------------------------------------------------------------- |
-| `CLOUDINARY_CLOUD_NAME`    | `/api/uploads/cloudinary/widget-config/` returns 503; UI falls back to URL-paste mode |
-| `CLOUDINARY_API_KEY`       | same as above                                                                         |
-| `CLOUDINARY_API_SECRET`    | same as above                                                                         |
-| `CLOUDINARY_UPLOAD_FOLDER` | uploads go to the root of the Cloudinary account (optional)                           |
+| `R2_ACCOUNT_ID`            | `POST /api/uploads/r2/presigned-url/` returns 503; upload buttons error out; already-stored URLs still render |
+| `R2_ACCESS_KEY_ID`         | same as above                                                                         |
+| `R2_SECRET_ACCESS_KEY`     | same as above                                                                         |
+| `R2_BUCKET_NAME`           | same as above                                                                         |
+| `R2_PUBLIC_URL`            | same as above (all five R2 vars are required together)                                |
 | `GOOGLE_OAUTH_CLIENT_ID`   | `POST /api/auth/google/` is non-functional; email/password login still works; Google Sign-In button not rendered |
 
 ## Configuration Rationale

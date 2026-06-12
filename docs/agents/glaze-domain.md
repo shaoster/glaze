@@ -26,7 +26,7 @@ Within `/api/`, helper modules that expose reusable logic are treated as public 
 
 To maintain stability on hardware with <1GB RAM, Glaze uses a remote offloading strategy for heavy ML tasks (specifically `rembg` background removal).
 
-- **Optimized Dispatch**: The backend offloads the **Cloudinary URL** of the image to the remote service. The Modal worker performs the download, completely bypassing local ML overhead and minimizing host-side bandwidth/memory usage.
+- **Optimized Dispatch**: The backend offloads the image's **R2 CDN URL** to the remote service. The Modal worker performs the download, completely bypassing local ML overhead and minimizing host-side bandwidth/memory usage.
 - **Local Path**: Defaults to `u2netp` (memory-efficient) with pre-processing downscaling (640px max) as a fallback if no remote URL is configured.
 - **Security**: The microservice validates an `X-API-Key` header against a `modal.Secret`.
 - **Microservice**: Located at `services/piece_image_segment_service.py`, designed for deployment to **Modal.com**.
@@ -71,7 +71,7 @@ Currently `clay_body` and `glaze_type` have `public: true`; `location` and `glaz
 
 - `is_public_global(name) -> bool` — returns `True` if the named global has `public: true`
 - `get_public_global_models() -> list[type[Model]]` — returns the Django model class for every `public: true` global; used by admin for dynamic registration
-- `get_image_fields_for_global_model(model_cls) -> list[str]` — returns field names declared as `type: image` for the given model class; used by admin to apply the Cloudinary upload widget
+- `get_image_fields_for_global_model(model_cls) -> list[str]` — returns field names declared as `type: image` for the given model class; used by admin to apply the R2 upload widget (`R2ImageWidget`)
 
 `TestGlobals` verifies — in addition to model/field alignment — that every `public: true` global has a nullable `user` field on its Django model.
 
@@ -89,9 +89,7 @@ clay_weight_grams:
   display_as: percent # optional; multiplies by 100 and adds % suffix in UI
 ```
 
-The `image` type is a DSL-level annotation: at the model layer it is stored as a `JSONField` containing `{"url": "...", "cloudinary_public_id": "..."}` (both fields required; `cloudinary_public_id` is nullable for URL-only images). `_resolve_field_def` resolves it to a JSON Schema object with `url` and `cloudinary_public_id` properties so validation enforces the correct structure. The Django admin renders a Cloudinary upload widget instead of a plain text input, and the widget stores the complete object on upload. Use `image` for any field that holds a Cloudinary-hosted image — the stored `cloudinary_public_id` enables enumerating all referenced assets for cleanup workflows.
-
-When adding a new `type: image` field to `workflow.yml`, update the Cloudinary cleanup referenced-source breakdown in `api/cloudinary_cleanup.py` at the same time. `api/tests/test_cloudinary_cleanup.py::TestCloudinaryCleanup::test_reference_breakdown_covers_every_workflow_image_field` intentionally fails when workflow image paths are not listed in the breakdown coverage set.
+The `image` type is a DSL-level annotation: `_resolve_field_def` resolves it to a JSON Schema object with a required `url` property, so validation enforces the `{"url": "..."}` structure. The Django admin renders an R2 upload widget (`R2ImageWidget`) instead of a plain text input; the canonical stored value is the public CDN URL, and the server derives the R2 object key (`Image.r2_key`) from the URL — URLs outside the configured R2 public domain get `r2_key=None`. Use `image` for any field that holds an R2-hosted image.
 
 _Ref field_ — two sub-forms, distinguished by the `@` prefix:
 
@@ -258,15 +256,18 @@ PieceSummary & {
 
 ```ts
 {
-  url: string;
+  url: string;                  // public CDN URL of the original
   caption: string;
   created: Date;
-  cloudinary_public_id: string;
-  cloud_name: string;
+  crop?: ImageCrop | null;      // relative {x, y, width, height} coordinates
+  cropped_url?: string | null;  // CDN URL of the eager cropped derivative; null until materialized
+  image_id?: string | null;
+  width?: number | null;        // original pixel dimensions, when known
+  height?: number | null;
 }
 ```
 
-**Image metadata contract:** Every Cloudinary-backed image record is guaranteed to have both `cloudinary_public_id` and `cloud_name` populated. Code that renders these images may always assume the Cloudinary SDK path is available. The only exceptions are curated local SVG thumbnails served from `web/public/thumbnails/` — these have no Cloudinary identity and are never rendered via `CloudinaryImage`.
+**Image metadata contract:** `url` always holds the public delivery URL. For R2-hosted assets the backend derives and stores the object key on the `Image` row (`r2_key`); foreign URLs (curated local SVG thumbnails in `web/public/thumbnails/`, legacy external assets) get `r2_key=None` and still render — they just cannot participate in the eager crop pipeline. `cropped_url` is written exclusively by the backend `generate_cropped_image` task and is never accepted from clients; renderers display `cropped_url ?? url`.
 
 ---
 
@@ -286,7 +287,7 @@ All API endpoints are registered in `backend/urls.py`.
 
 **Compose bootstrap contract:** The production Compose stack uses a one-shot `deploy_init` service to run migrations, refresh the public library, and clear stuck tasks before the app starts serving traffic. `web` and `worker` both declare `depends_on: deploy_init: service_completed_successfully`, so `deploy_init` must exit cleanly and must not be converted back into a long-lived server process. The CI smoke test uses the same contract: `docker compose up -d --wait --wait-timeout 300` succeeds only after `deploy_init` has completed and the `web` readiness probe reports healthy. The smoke test is not a worker-health test; worker startup is implied by `deploy_init` completion.
 
-**ASGI server:** Production runs gunicorn with `uvicorn.workers.UvicornWorker` pointed at `backend.asgi:application` (see [`docker-entrypoint.sh`](../../docker-entrypoint.sh)). Django runs all sync views transparently in a thread pool — no per-view changes are required. Write a view as `async def` only when it performs long-running or streaming I/O that would otherwise block the worker heartbeat (e.g. the Cloudinary archive endpoint). Wrap any sync ORM or SDK calls inside an async view with `asyncio.to_thread(...)`. Use `httpx.AsyncClient` for outbound HTTP inside async views instead of `urllib.request.urlopen`.
+**ASGI server:** Production runs gunicorn with `uvicorn.workers.UvicornWorker` pointed at `backend.asgi:application` (see [`docker-entrypoint.sh`](../../docker-entrypoint.sh)). Django runs all sync views transparently in a thread pool — no per-view changes are required. Write a view as `async def` only when it performs long-running or streaming I/O that would otherwise block the worker heartbeat (e.g. the account data export endpoint). Wrap any sync ORM or SDK calls inside an async view with `asyncio.to_thread(...)`. Use `httpx.AsyncClient` for outbound HTTP inside async views instead of `urllib.request.urlopen`.
 
 **Module boundaries — what goes in `api/workflow.py` vs. `api/utils.py`:**
 
@@ -303,16 +304,14 @@ All API endpoints are registered in `backend/urls.py`.
 | `ALLOWED_HOSTS`                                    | `ALLOWED_HOST`                | `localhost`, `127.0.0.1`                    | Appends the single production hostname (e.g. `myapp.example.com`) and, in production, scopes the auth/CSRF cookies to the parent domain so `admin.<host>` shares the same session; this assumes `admin.<host>` is the sibling admin hostname for the apex site and should be revisited if that hostname split changes |
 | `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS`    | `APP_ORIGIN`                  | Localhost origins only                      | Appends the full origin URL (e.g. `https://myapp.example.com`)    |
 | `GOOGLE_OAUTH_CLIENT_ID`                           | `GOOGLE_OAUTH_CLIENT_ID`      | Empty string — Google sign-in disabled      | Set to enable Google OAuth JWT verification                       |
-| `CLOUDINARY_CLOUD_NAME` / `API_KEY` / `API_SECRET` | _(same names)_                | Empty — widget-config returns 503           | Set to enable Cloudinary uploads                                  |
-| `CLOUDINARY_UPLOAD_FOLDER`                         | `CLOUDINARY_UPLOAD_FOLDER`    | Not set                                     | Optional subfolder for uploaded images                            |
-| `CLOUDINARY_VIDEO_UPLOAD_FOLDER`                   | `CLOUDINARY_VIDEO_UPLOAD_FOLDER` | Not set                                  | Required subfolder for generated showcase videos; disables the feature when absent |
+| R2 object storage                                  | `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET_NAME` / `R2_PUBLIC_URL` | Empty — `/api/uploads/r2/presigned-url/` returns 503 | All five required together; read from `os.environ` at call time (`api/r2.py`), no `settings.py` entries. Also gates showcase video generation (`is_showcase_video_storage_enabled()`) |
 
 **Image FK normalization (`ImageForeignKey` / `ImageForwardDescriptor`):** `type: image` fields on global models are stored as FKs to the `api.Image` table, not as raw JSON. `ImageForeignKey` (defined in `api/model_factories.py`) swaps in `ImageForwardDescriptor` as its accessor, which intercepts every assignment and calls `normalize_image_payload` when the incoming value is a `str` or `dict`:
 
-- **String value** (plain URL): creates or retrieves an `Image` row keyed by URL, with `cloud_name=None` and `cloudinary_public_id=None`. **This breaks the image metadata contract** and should not be used for Cloudinary-hosted images.
-- **Dict value** `{"url": ..., "cloud_name": ..., "cloudinary_public_id": ...}`: creates or retrieves an `Image` row keyed by `(cloud_name, cloudinary_public_id)` with all metadata populated. This is the correct format for Cloudinary images.
+- **String value** (plain URL): creates or retrieves an `Image` row keyed by URL. The R2 object key (`r2_key`) is derived server-side from the URL — never trusted from the client; URLs outside the configured R2 public domain get `r2_key=None`.
+- **Dict value** `{"url": ..., "width"?: ..., "height"?: ...}`: same URL-keyed dedup, additionally recording pixel dimensions when provided. This is the format produced by the upload flow.
 
-**Fixture format requirement:** `fixtures/public_library.json` stores `type: image` fields as dicts, not plain URLs, so that `ImageForwardDescriptor` creates fully-populated `Image` rows on `loaddata`. The fixture must stay in dict form — reverting to URL strings will silently break the metadata contract for every fresh environment that loads the fixture.
+**Fixture format:** `fixtures/public_library.json` stores `type: image` fields as `{"url": ...}` dicts; `ImageForwardDescriptor` normalizes them into `Image` rows on `loaddata`, deriving `r2_key` from the URL.
 
 **Model factory pattern** (`api/model_factories.py` → re-exported from `api/models.py`): global domain models are generated at import time from `workflow.yml` declarations — no hand-written model class is needed for new globals. Three factories handle every case:
 
@@ -341,8 +340,8 @@ Name uniqueness for public globals is enforced with two conditional DB constrain
 
 - **`GlazeAdminSite`** — subclass of `admin.AdminSite` that overrides `get_app_list` to move public library models out of the "Api" section into a separate "Public Libraries" section. Applied via `admin.site.__class__ = GlazeAdminSite`.
 - **`PublicLibraryAdmin`** — base `ModelAdmin` for globals with `public: true`. Filters to public objects only (`user__isnull=True`); forces `obj.user = None` on save; rejects names that collide with existing private objects.
-- **`CloudinaryImageWidget`** — `TextInput` subclass rendering a text input, thumbnail preview, and "Upload Image" button when Cloudinary is configured. The `Media` class loads the Cloudinary CDN script plus `api/static/admin/js/cloudinary_image_widget.js`.
-- **`api/static/admin/js/cloudinary_image_widget.js`** — wires upload buttons to the Cloudinary Upload Widget; calls `/api/uploads/cloudinary/widget-signature/` for signing.
+- **`R2ImageWidget`** — `TextInput` subclass rendering a URL text input, thumbnail preview, and "Upload Image" button when R2 is configured (URL-paste still works when it is not). The canonical field value is a bare URL string; `normalize_image_payload` derives the R2 object key server-side. The `Media` class loads `api/static/admin/js/r2_image_widget.js`.
+- **`api/static/admin/js/r2_image_widget.js`** — wires upload buttons to the presigned-upload flow: requests a presigned PUT URL from `/api/uploads/r2/presigned-url/` (session + CSRF), uploads the file straight to R2, and writes the resulting public URL into the input.
 - **Dynamic registration** — `PublicLibraryAdmin` is registered for every model returned by `get_public_global_models()`. Adding `public: true` to a new global in `workflow.yml` is sufficient.
 
 **API endpoints:**
@@ -362,7 +361,7 @@ Name uniqueness for public globals is enforced with two conditional DB constrain
 - `PATCH /api/pieces/<id>/state/` → update current state's editable fields
 - `GET /api/pieces/<id>/showcase-video/` → latest showcase video task status, stale detection, and artifact metadata
 - `POST /api/pieces/<id>/showcase-video/` → enqueue a deterministic Keepsake slideshow render for a terminal piece
-- `Showcase video artifacts are served directly from Cloudinary once upload succeeds; there is no local fallback artifact route.`
+- `Showcase video artifacts are served directly from the R2 CDN (uploaded to videos/showcase/{input_hash}.mp4) once the render task succeeds; there is no local fallback artifact route.`
 
 **Piece vs. current-state access pattern:**
 
@@ -374,8 +373,7 @@ Name uniqueness for public globals is enforced with two conditional DB constrain
 - `POST /api/globals/<global_name>/` → get-or-create a private record owned by the requesting user. For public globals, a private entry with the same name as a public entry is permitted — the two scopes are independent.
 - `POST /api/globals/<global_name>/<pk>/favorite/` → add the entry to the requesting user's favorites (currently only `glaze_combination` supports favorites; other types return 405).
 - `DELETE /api/globals/<global_name>/<pk>/favorite/` → remove the entry from the requesting user's favorites.
-- `GET /api/uploads/cloudinary/widget-config/` → returns `{cloud_name, api_key, folder?}`; 503 if Cloudinary not configured
-- `POST /api/uploads/cloudinary/widget-signature/` → accepts `{params_to_sign: {}}`, returns `{signature}`
+- `POST /api/uploads/r2/presigned-url/` → accepts `{content_type, resource_type?}` (`resource_type` defaults to `image`; `video`/`audio` are staff-only), returns `{upload_url, key, public_url, expires_in}`; the object key is fully server-generated (`images/{user.id}/{uuid}.{ext}`); 503 if R2 is not configured
 
 **Google OAuth backend:**
 
@@ -480,8 +478,8 @@ Components using `useSuspenseQuery` need `<Suspense>` + `<ErrorBoundary>` in the
 - [`NewPieceDialog.tsx`](../../web/src/components/NewPieceDialog.tsx) — dialog for creating a new piece; name, optional notes, thumbnail gallery
 - [`WorkflowState.tsx`](../../web/src/components/WorkflowState.tsx) — edits the current `PieceState`: notes, location, additional fields, images (upload or URL), caption editing, lightbox launch
 - [`GlobalEntryField.tsx`](../../web/src/components/GlobalEntryField.tsx) — chip + button wrapper that shows the currently selected global entry and opens the `GlobalEntryDialog` picker on click.
-- [`GlobalEntryDialog.tsx`](../../web/src/components/GlobalEntryDialog.tsx) — full-screen dialog for browsing, searching, and selecting a global entry (e.g. Location, GlazeCombination). Supports inline creation when `can_create` is set in the DSL field definition, and renders Cloudinary image uploads for `type: image` fields on create.
-- [`CloudinaryImage.tsx`](../../web/src/components/CloudinaryImage.tsx) — renders a `CaptionedImage` via `@cloudinary/url-gen` + `@cloudinary/react` when available; falls back to a plain `<img>`. Sizing context: `thumbnail`/`preview` (64×64 fill), `lightbox` (90vw×80vh fit).
+- [`GlobalEntryDialog.tsx`](../../web/src/components/GlobalEntryDialog.tsx) — full-screen dialog for browsing, searching, and selecting a global entry (e.g. Location, GlazeCombination). Supports inline creation when `can_create` is set in the DSL field definition, and renders direct-to-R2 image uploads for `type: image` fields on create.
+- [`AppImage.tsx`](../../web/src/components/AppImage.tsx) — renders an R2/CDN-hosted image as a plain `<img>` pointing at `cropped_url ?? url` (no request-time transforms). Context-specific chrome: `thumbnail`/`preview` (64×64 box), `gallery`/`detail` (fill container), `lightbox` (fit-content). Exports `SuspenseAppImage` and `ImageSkeleton`.
 - [`ImageLightbox.tsx`](../../web/src/components/ImageLightbox.tsx) — full-screen modal image viewer with caption and keyboard/touch navigation
 - [`StateChip.tsx`](../../web/src/components/StateChip.tsx) — shared workflow-state token. Takes `variant: 'current' | 'past' | 'future'` plus `isTerminal` and optional interaction hooks so list/detail/timeline UIs stay in one visual family.
 - [`ProcessSummary.tsx`](../../web/src/components/ProcessSummary.tsx) — renders the read-only `process_summary` section declared at the top level of `workflow.yml`. Displays sections of fields, promoted values, computed numeric results (`product`, `difference`, `sum`, `ratio`), and static text with optional `when` (`state_exists` / `state_missing`) visibility. Rendered by `PieceDetail` and `PublicPieceShell`.
@@ -494,7 +492,7 @@ Components using `useSuspenseQuery` need `<Suspense>` + `<ErrorBoundary>` in the
 - A `width=0` first commit would seed the cache with chrome-only heights and recreate the overlap bug, so the grid waits for a real container width before rendering.
 - Crop-backed cards are seeded synchronously before the first `MasonryScroller` render because the old post-mount correction pass is what produced the visible flicker.
 - Cards without crops keep the default `itemHeightEstimate` because we do not know their exact height until Masonic measures them.
-- `CloudinaryImage` sizing must stay aligned with the shell aspect ratio and the requested masonry width; otherwise the image load can trigger a second layout correction and bring the bug back.
+- `AppImage` sizing must stay aligned with the shell aspect ratio and the requested masonry width; otherwise the image load can trigger a second layout correction and bring the bug back.
 - If this flow changes, update the README and this section together so future agents understand the failure mode, not just the implementation steps.
 
 **Visual design system — state chips and state flow:**
@@ -537,12 +535,13 @@ Components using `useSuspenseQuery` need `<Suspense>` + `<ErrorBoundary>` in the
 - Authenticated non-owners can open `/pieces/:id` only when the piece is shared. The API returns `can_edit: false`, and the same `PieceDetail` component renders a read-only view with edit, upload, transition, tag, and share-management controls hidden or disabled.
 - Do not introduce a separate public piece detail page or route unless the product behavior changes. The canonical public URL is `/pieces/:id`; ownership and read-only behavior come from the API response.
 
-**Cloudinary image upload flow:**
+**R2 image upload flow:**
 
-- Images are stored as a JSON array of `CaptionedImage` objects (url, caption, created, cloudinary_public_id, cloud_name). Both `cloudinary_public_id` and `cloud_name` are guaranteed to be present — see the image metadata contract in the Data Model section.
-- `WorkflowState` calls `GET /api/uploads/cloudinary/widget-config/` → opens the Cloudinary Upload Widget → widget calls `POST /api/uploads/cloudinary/widget-signature/` for signing → on success stores `secure_url` + `public_id` locally → `PATCH /api/pieces/<id>/state/` persists the array.
-- `CloudinaryImage` uses `cloudinary_public_id` and `cloud_name` for optimized delivery URLs via the Cloudinary SDK. Both fields are always present, so the SDK path is always taken.
-- Cloudinary is optional: if env vars are absent, the config endpoint returns 503 and the UI falls back to URL-paste mode.
+- Images are stored as a JSON array of `CaptionedImage` objects — see the image metadata contract in the Data Model section.
+- `uploadImageToR2` (`web/src/util/r2Upload.ts`) downscales the image client-side (long edge capped at 2560px), calls `POST /api/uploads/r2/presigned-url/` for a presigned PUT URL with a server-generated key, PUTs the bytes directly to R2 (bare axios — the signature in the URL is the credential, no app auth headers), then `PATCH /api/pieces/<id>/state/` persists `{url, width, height}` through the normal state flow.
+- **Eager crop pipeline:** crop coordinates live on `PieceStateImage.crop`. Saving them clears the `cropped_*` fields and enqueues the async `generate_cropped_image` task (`api/crops.py`, `api/tasks.py`), which renders a JPEG derivative with Pillow (`exif_transpose`, pixel crop, long edge ≤1600px, quality 82) to the deterministic key `crops/{r2_key}/{x}-{y}-{w}-{h}.jpg` and sets `cropped_r2_key`/`cropped_url` on **all** `PieceStateImage` rows matching `(image, crop)`. There are no request-time transforms anywhere.
+- `AppImage` renders `cropped_url ?? url`; `PieceDetailPage` polls while any image has crop coordinates but no `cropped_url` yet, so the cropped version appears once the task lands.
+- R2 is optional in dev: if any of the five `R2_*` env vars is absent, the presigned-url endpoint returns 503 and the upload button surfaces an error; already-stored URLs still render.
 
 **Google OAuth frontend:**
 
@@ -566,7 +565,7 @@ Staff users have access to a browser-based bulk import workflow at `/tools/glaze
 
 | Tab                              | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1. Upload**                    | Bulk-upload source images from disk (JPEG/PNG) or via the Cloudinary widget (HEIC/HEIF conversion). Each image becomes an independent record.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **1. Upload**                    | Bulk-upload source images from disk (JPEG/PNG) or via the "Upload Via Cloud" path, which uploads the file to R2 (presigned PUT) and loads it back from the CDN URL. Each image becomes an independent record.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | **2. Crop**                      | Draw a rotatable square crop box over each image. The box may extend beyond the image bounds; overflow becomes transparent in the output. Crop geometry is debounced so the live preview updates only after 200 ms of inactivity.                                                                                                                                                                                                                                                                                                                                                  |
 | **3. OCR**                       | Optionally draw a rotatable OCR region bounding box on the crop preview. Running OCR on all records at once feeds Tesseract.js with a domain word list (runs, caution, food safe, 1st, 2nd, glaze) and then parses the result with two heuristics applied in order: (1) structured-line detection (`/[I1]st Glaze[:;]/` → `first_glaze`, `/[2=Z]nd Glaze[:;]/` → `second_glaze`) and (2) a token-split fallback that looks for common combo separators (`!`, `/`, `&`, `+`, `over`). CAUTION RUNS detection sets `runs: true`; NOT FOOD SAFE detection sets `is_food_safe: false`. |
 | **4. Review**                    | Per-record editable form: name, kind (`glaze_type` / `glaze_combination`), first/second glaze fields (hidden for types), `runs?`, and `food safe?` selects. For combinations, the name field is auto-computed as `<first>!<second>` and is read-only. Records must be checked as reviewed before import.                                                                                                                                                                                                                                                                           |
@@ -580,7 +579,7 @@ Staff users have access to a browser-based bulk import workflow at `/tools/glaze
 - `payload` — JSON string `{ records: ManualSquareCropImportRecordPayload[] }` (see `web/src/util/api.ts` for the shape).
 - `crop_image__<client_id>` — one WebP file per record.
 
-The endpoint is implemented in `api/manual_tile_imports.py`. For each `glaze_type` record it creates a public `GlazeType` (and a matching single-layer `GlazeCombination`) and uploads the crop to Cloudinary. For each `glaze_combination` record it resolves the two referenced public `GlazeType` rows by name, creates a public `GlazeCombination`, and sets the ordered layers. **`runs` and `is_food_safe` from `parsed_fields` are written to both `GlazeType` and `GlazeCombination` on creation.** Existing public records with the same name are reported as `skipped_duplicate` (not updated).
+The endpoint is implemented in `api/manual_tile_imports.py`. For each `glaze_type` record it creates a public `GlazeType` (and a matching single-layer `GlazeCombination`) and uploads the crop to R2. For each `glaze_combination` record it resolves the two referenced public `GlazeType` rows by name, creates a public `GlazeCombination`, and sets the ordered layers. **`runs` and `is_food_safe` from `parsed_fields` are written to both `GlazeType` and `GlazeCombination` on creation.** Existing public records with the same name are reported as `skipped_duplicate` (not updated).
 
 ### OCR parsing conventions
 

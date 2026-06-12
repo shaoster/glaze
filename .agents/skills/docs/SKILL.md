@@ -19,7 +19,7 @@ Glaze uses domain-specific READMEs to keep documentation focused and maintainabl
 
 - **`README.md` (Root)**: High-level overview, project motivation, quick-start setup instructions, core CLI commands (`env.sh` helpers), and a table of contents to domain-specific READMEs. No deep technical implementation details. Includes a pointer to the published Storybook component documentation.
 - **`api/README.md`**: Backend API conventions, Django/DRF specifics, models, public libraries, Auth flows (Google OAuth, Session), data isolation rules, and Swagger UI API exploration.
-- **`web/README.md`**: Frontend client conventions, React components, Vite configuration, Storybook (how to run `gz_story` or `bazel run //web:storybook_dev` and write stories), Cloudinary uploads, and showcase view logic.
+- **`web/README.md`**: Frontend client conventions, React components, Vite configuration, Storybook (how to run `gz_story` or `bazel run //web:storybook_dev` and write stories), R2 image uploads, and showcase view logic.
 - **`tests/README.md`**: Common and cross-cutting tests, specifically structural tests for the workflow state machine (`workflow.schema.yml` validation).
 - **`tools/README.md`**: Standalone utilities, Modal crop offloading, and the Glaze import tool.
 - **`pages/README.md`**: Static published pages (e.g. index generation).

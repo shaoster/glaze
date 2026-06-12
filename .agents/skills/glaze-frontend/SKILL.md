@@ -6,7 +6,7 @@ reviewed: 2026-05-08
 name: glaze-frontend
 description: |
   Glaze-specific frontend conventions: TypeScript data model, component inventory,
-  module paths, state chip design system, type generation pipeline, Cloudinary upload
+  module paths, state chip design system, type generation pipeline, R2 upload
   flow, auth UI, and piece detail routing. Includes test file location reminders
   (which files to add/update) but not testing patterns — load react-testing for
   async assertions, mock boundaries, and debugging prod-only visual bugs.
@@ -58,17 +58,21 @@ PieceSummary & {
 **`CaptionedImage`**
 ```ts
 {
-  url: string;
+  url: string;                  // public CDN URL of the original
   caption: string;
   created: Date;
-  cloudinary_public_id: string;
-  cloud_name: string;
+  crop?: ImageCrop | null;      // relative {x, y, width, height}
+  cropped_url?: string | null;  // CDN URL of the eager crop; null until materialized
+  image_id?: string | null;
+  width?: number | null;
+  height?: number | null;
 }
 ```
 
-**Image metadata contract:** Every Cloudinary-backed image record has both
-`cloudinary_public_id` and `cloud_name` populated. Always assume the Cloudinary SDK
-path is available. Only exceptions: curated local SVG thumbnails in `web/public/thumbnails/`.
+**Image metadata contract:** `url` is always the delivery URL; `cropped_url` is written
+only by the backend `generate_cropped_image` task (never client-supplied). Renderers
+display `cropped_url ?? url`. Curated local SVG thumbnails in `web/public/thumbnails/`
+are plain URLs with no R2 identity.
 
 ## Module Paths
 
@@ -169,8 +173,8 @@ concept in multiple places, extract a reusable component in `web/src/components/
 - `NewPieceDialog.tsx` — dialog for creating a new piece; name, notes, thumbnail gallery
 - `WorkflowState.tsx` — edits current `PieceState`: notes, location, additional fields, images, caption editing, lightbox launch
 - `GlobalEntryField.tsx` — chip + button wrapper showing selected global entry; opens `GlobalEntryDialog` on click
-- `GlobalEntryDialog.tsx` — full-screen dialog for browsing, searching, selecting a global entry; supports inline creation when `can_create` is set; renders Cloudinary image uploads for `type: image` fields on create
-- `CloudinaryImage.tsx` — renders `CaptionedImage` via `@cloudinary/url-gen` + `@cloudinary/react`; falls back to plain `<img>`. Sizing: `thumbnail`/`preview` (64×64 fill), `lightbox` (90vw×80vh fit)
+- `GlobalEntryDialog.tsx` — full-screen dialog for browsing, searching, selecting a global entry; supports inline creation when `can_create` is set; renders direct-to-R2 image uploads for `type: image` fields on create
+- `AppImage.tsx` — renders an R2/CDN-hosted image as a plain `<img>` at `cropped_url ?? url` (no request-time transforms). Contexts: `thumbnail`/`preview` (64×64 box), `gallery`/`detail` (fill container), `lightbox` (fit-content). Exports `SuspenseAppImage` + `ImageSkeleton`
 - `ImageLightbox.tsx` — full-screen modal image viewer with caption and keyboard/touch navigation
 - `StateChip.tsx` — shared workflow-state token. `variant: 'current' | 'past' | 'future'` plus `isTerminal` and optional interaction hooks
 - `ProcessSummary.tsx` — renders read-only `summary` section for terminal states; displays promoted fields, computed numeric results, static text with optional `when` visibility
@@ -248,11 +252,11 @@ Components receive routing props and can be tested without any Router wrapper. `
 
 `GlobalEntryDialog` internal filter state is intentionally transient — it resets on close and need not survive a reload.
 
-## Cloudinary Image Upload Flow
+## R2 Image Upload Flow
 
-- `WorkflowState` calls `GET /api/uploads/cloudinary/widget-config/` → opens Cloudinary Upload Widget → widget calls `POST /api/uploads/cloudinary/widget-signature/` for signing → on success stores `secure_url` + `public_id` → `PATCH /api/pieces/<id>/state/` persists the array
-- `CloudinaryImage` uses `cloudinary_public_id` and `cloud_name` for optimized delivery — both always present
-- Cloudinary is optional: if env vars absent, config endpoint returns 503 and UI falls back to URL-paste mode
+- `uploadImageToR2` (`web/src/util/r2Upload.ts`) downscales client-side (long edge ≤2560px, JPEG q0.9) → `POST /api/uploads/r2/presigned-url/` returns `{upload_url, key, public_url, expires_in}` with a server-generated key → PUTs the bytes directly to R2 with bare axios (the URL signature is the credential — no app auth headers) → `PATCH /api/pieces/<id>/state/` persists `{url, width, height}` through the normal state flow
+- Crops are eager: saving crop coordinates enqueues the backend `generate_cropped_image` task; `AppImage` renders `cropped_url ?? url` and `PieceDetailPage` polls while any image has a crop but no `cropped_url` yet
+- R2 is optional in dev: if env vars are absent, the presigned-url endpoint returns 503 and the upload button surfaces an error; already-stored URLs still render
 
 ## Test File Locations
 

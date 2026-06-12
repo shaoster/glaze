@@ -60,13 +60,13 @@ All scoped to the `glaze-droplet` environment in **Settings → Environments**.
 | `ALLOWED_HOST` | Variable | Django `ALLOWED_HOSTS` entry (the droplet hostname) |
 | `APP_ORIGIN` | Variable | Full origin URL, e.g. `https://potterdoc.com` |
 | `GOOGLE_OAUTH_CLIENT_ID` | Variable | Google OAuth client ID |
-| `CLOUDINARY_CLOUD_NAME` | Variable | Cloudinary cloud name |
-| `CLOUDINARY_UPLOAD_FOLDER` | Variable | Cloudinary folder for user-uploaded images |
-| `CLOUDINARY_UPLOAD_PRESET` | Variable | Cloudinary upload preset |
-| `CLOUDINARY_VIDEO_UPLOAD_FOLDER` | Variable | Cloudinary folder for generated showcase videos |
-| `CLOUDINARY_PUBLIC_UPLOAD_FOLDER` | Variable | Cloudinary folder for public library images |
+| `R2_ACCOUNT_ID` | Variable | Cloudflare account ID (forms the R2 S3 endpoint URL; also used in the CSP `connect-src`) |
+| `R2_BUCKET_NAME` | Variable | R2 bucket that stores all PotterDoc assets |
+| `R2_PUBLIC_URL` | Variable | Public CDN base URL for the bucket, e.g. `https://media.potterdoc.com` |
 
-All other app secrets (Django `SECRET_KEY`, Postgres password, Cloudinary API key/secret, Grafana OTLP token) are managed in Infisical and synced into the cluster by ESO — CD does not need them directly.
+These flow through `tools/render_values.sh` into the Helm values (`appConfig.r2AccountId` / `r2BucketName` / `r2PublicUrl`) and land in the app ConfigMap.
+
+All other app secrets (Django `SECRET_KEY`, Postgres password, R2 access key ID/secret, Grafana OTLP token) are managed in Infisical and synced into the cluster by ESO — CD does not need them directly.
 
 #### Separate Grafana publish environment
 
@@ -92,7 +92,7 @@ That target exercises `tools/grafana_dashboard.py` and keeps the validation path
 rtk bazel run //tools:grafana_dashboard -- validate
 ```
 
-Showcase video generation stays disabled until `CLOUDINARY_VIDEO_UPLOAD_FOLDER` is set.
+Showcase video generation stays disabled until R2 is fully configured (all five `R2_*` environment variables present).
 
 ---
 

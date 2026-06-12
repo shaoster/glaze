@@ -47,7 +47,7 @@ Endpoint logic now lives in feature subpackages so each concern can keep its own
 - `api/auth/` — auth/login/logout/export/account helpers
 - `api/piece/` — piece list/detail/state/image helpers
 - `api/global_entries/` — shared globals list/create/favorite logic
-- `api/cloudinary/` — widget config and admin cleanup endpoints
+- `api/uploads/` — direct-to-R2 presigned upload endpoint
 - `api/dev/` — local bootstrap helpers
 
 Top-level `api/*.py` modules remain thin compatibility wrappers for stable URL registrations and older imports. When a helper module exposes reusable logic, its public functions should be documented, tested directly, and traced so the module boundary stays observable.
@@ -183,8 +183,8 @@ On the admin homepage, public library models appear in a dedicated **Public Libr
 2. Click **"Add Clay Body"** (or click an existing row to edit it).
 3. Fill in the fields. The `User` field is hidden — public objects are always unowned.
 4. For fields marked as an image in `workflow.yml` (e.g. the clay body or glaze type tile image):
-   - If Cloudinary is configured, an **Upload Image** button appears next to the URL field. Clicking it opens the Cloudinary Upload Widget in a modal. On success, the image URL is written back into the field and a thumbnail preview is shown.
-   - If Cloudinary is not configured, you can paste a URL directly into the text field.
+   - If R2 is configured, an **Upload Image** button appears next to the URL field. Clicking it opens a file picker, uploads the file directly to R2 via a presigned URL, writes the resulting public URL back into the field, and shows a thumbnail preview.
+   - If R2 is not configured, you can paste a URL directly into the text field.
 5. Click **Save**.
 
 ### Name conflict rules
@@ -192,14 +192,16 @@ On the admin homepage, public library models appear in a dedicated **Public Libr
 - **Public name must be unique** — you cannot save a public entry with the same name as another existing public entry.
 - **Private entries may share a public name** — users can have their own private entry with the same name as a public entry. When both exist, the picker displays the public entry with a `(public)` suffix to distinguish the two.
 
-### Enabling Cloudinary in the admin
+### Enabling R2 uploads in the admin
 
-Cloudinary uploads in the admin use the same backend-signed widget as the regular user UI. Set these env vars before starting Django:
+Admin uploads use the same presigned direct-to-R2 flow as the regular user UI (`POST /api/uploads/r2/presigned-url/`). Set these env vars before starting Django (all five are required together):
 
 ```bash
-export CLOUDINARY_CLOUD_NAME=<your-cloud-name>
-export CLOUDINARY_API_KEY=<your-api-key>
-export CLOUDINARY_API_SECRET=<your-api-secret>
+export R2_ACCOUNT_ID=<cloudflare-account-id>
+export R2_ACCESS_KEY_ID=<r2-token-key-id>
+export R2_SECRET_ACCESS_KEY=<r2-token-secret>
+export R2_BUCKET_NAME=<bucket-name>
+export R2_PUBLIC_URL=<public-cdn-base-url>   # e.g. https://media.potterdoc.com
 ```
 
 The upload button is automatically hidden when these are not set; the plain URL field is always available as a fallback.

@@ -111,11 +111,9 @@ clay_weight_grams:
   display_as: percent   # optional; multiplies by 100 and adds % suffix
 ```
 
-The `image` type stores as `JSONField` containing `{"url": "...", "cloudinary_public_id": "..."}`.
-When adding a new `type: image` field, also update the Cloudinary cleanup breakdown in
-`api/cloudinary_cleanup.py`. The test
-`test_reference_breakdown_covers_every_workflow_image_field` fails intentionally when
-workflow image paths are missing.
+The `image` type resolves to a JSON Schema object with a required `url` property
+(`{"url": "..."}`). On global models it is stored as an FK to the shared `Image` table;
+the R2 object key (`Image.r2_key`) is derived server-side from the URL.
 
 **Ref field — state ref** (carries a field forward from a reachable ancestor):
 ```yaml

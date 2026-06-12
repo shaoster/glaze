@@ -54,7 +54,7 @@ These live outside the running database and are accepted under the threat model 
 | Invite codes | UUID, timestamps, `sent` boolean | No email or redeemer recorded; deleted on redemption |
 | User content | Pottery piece records, workflow states, images | Owned by the authenticated user; isolated by FK |
 | Public library | Shared pieces with `user=NULL` | Admin-managed only; not user-writable |
-| Credentials | Django `SECRET_KEY`, `POSTGRES_PASSWORD`, Cloudinary keys, email relay key, Dropbox tokens | Source of truth: Infisical Cloud; synced into k8s Secrets via External Secrets Operator |
+| Credentials | Django `SECRET_KEY`, `POSTGRES_PASSWORD`, R2 access keys, email relay key, Dropbox tokens | Source of truth: Infisical Cloud; synced into k8s Secrets via External Secrets Operator |
 | Backups | Plain pg_dump output | See Backup section |
 
 No Social Security numbers, payment card numbers, physical addresses, or government IDs are collected or processed.
@@ -122,7 +122,13 @@ Database backups are taken via a k8s CronJob that runs `pg_dump` and uploads the
 
 ## Image Storage
 
-Pottery piece images are stored in **Cloudinary**. All uploads are signed and scoped to the authenticated user's account. The public upload preset (unsigned, separate folder) is restricted to Django admin accounts only — regular users cannot trigger unsigned uploads. Cloudinary provides its own access controls and CDN-level delivery.
+Pottery piece images are stored in **Cloudflare R2** and delivered through a public CDN domain. Uploads go directly from the browser to R2 via short-lived presigned PUT URLs issued by `POST /api/uploads/r2/presigned-url/` (authentication required):
+
+- **Server-generated keys** — the object key is composed entirely server-side (`images/{user.id}/{uuid}.{ext}`); client filenames never reach the key, so collisions, overwrites, and path traversal are impossible.
+- **Content-type allowlist** — only allowlisted image/video/audio content types are accepted, the file extension is derived from the validated content type, and the presigned signature pins the `Content-Type` header so the client cannot upload under a different type.
+- **Staff-only video/audio** — `resource_type: video` and `audio` (showcase assets) are restricted to staff accounts; regular users may upload images only.
+- **Short expiry** — presigned URLs expire after 10 minutes; the signature in the URL is the only credential, and app auth headers are never sent to R2.
+- **CSP** — the CSP only permits image/media loads from the R2 CDN domain and upload connections to the account-scoped `*.r2.cloudflarestorage.com` endpoint. (Transitional: `res.cloudinary.com` remains in `img-src`/`media-src` only until the prod asset migration `migrate_assets_to_r2` rewrites legacy stored URLs; it is removed in a follow-up PR.)
 
 ---
 

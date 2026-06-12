@@ -144,8 +144,8 @@ This must be done manually before the first `helm install`. Never commit secrets
 kubectl create secret generic glaze-secrets \
   --from-literal=POSTGRES_PASSWORD=<value> \
   --from-literal=SECRET_KEY=<value> \
-  --from-literal=CLOUDINARY_API_KEY=<value> \
-  --from-literal=CLOUDINARY_API_SECRET=<value> \
+  --from-literal=R2_ACCESS_KEY_ID=<value> \
+  --from-literal=R2_SECRET_ACCESS_KEY=<value> \
   --from-literal=EMAIL_HOST_PASSWORD=<value> \
   --from-literal=GRAFANA_CLOUD_INSTANCE_ID=<value> \
   --from-literal=GRAFANA_CLOUD_OTLP_TOKEN=<value> \

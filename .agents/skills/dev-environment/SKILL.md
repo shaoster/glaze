@@ -185,10 +185,11 @@ When a variable is added, removed, or renamed, update `.env.example`'s comment t
 
 | Variable | Absent behavior |
 |---|---|
-| `CLOUDINARY_CLOUD_NAME` | `/api/uploads/cloudinary/widget-config/` returns 503; UI falls back to URL-paste mode |
-| `CLOUDINARY_API_KEY` | same as above |
-| `CLOUDINARY_API_SECRET` | same as above |
-| `CLOUDINARY_UPLOAD_FOLDER` | uploads go to root of Cloudinary account (optional) |
+| `R2_ACCOUNT_ID` | `POST /api/uploads/r2/presigned-url/` returns 503; upload buttons error out; already-stored URLs still render |
+| `R2_ACCESS_KEY_ID` | same as above |
+| `R2_SECRET_ACCESS_KEY` | same as above |
+| `R2_BUCKET_NAME` | same as above |
+| `R2_PUBLIC_URL` | same as above (all five R2 vars are required together) |
 | `GOOGLE_OAUTH_CLIENT_ID` | `POST /api/auth/google/` non-functional; email/password login still works |
 
 ## Configuration Rationale
@@ -209,7 +210,7 @@ truth for anything in the repo. To inspect a Python package, read it from
 ## Copying `.env.local` into a Worktree
 
 When working in an agent worktree, copy the untracked root `.env.local` into the
-worktree so servers load Cloudinary and OAuth credentials:
+worktree so servers load R2 and OAuth credentials:
 
 ```bash
 cp /home/phil/code/glaze/.env.local .env.local
@@ -252,8 +253,8 @@ skill for the full pattern.
 
 ## Production Backup & Local Repro From a Prod Snapshot
 
-When a bug only reproduces with realistic data (many pieces, real Cloudinary image
-references — e.g. pagination or image-rendering bugs), **do not hand-roll a data import
+When a bug only reproduces with realistic data (many pieces, real R2 CDN image
+URLs — e.g. pagination or image-rendering bugs), **do not hand-roll a data import
 or scrape the live API**. Use the `gz_backup` / `gz_restore` pair. Both are defined in
 `env-agent.sh`.
 

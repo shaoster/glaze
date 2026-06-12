@@ -6,7 +6,7 @@ This directory contains standalone tools and utility services used by PotterDoc.
 
 To maintain stability on hardware with <1GB RAM, Glaze supports offloading the heavy `rembg` background removal task to a serverless microservice.
 
-- **Optimized Dispatch**: The system offloads the **Cloudinary URL** directly to the remote service. This ensures the production host does not have to download or process the image bytes, saving bandwidth and memory.
+- **Optimized Dispatch**: The system offloads the image's **R2 CDN URL** directly to the remote service. This ensures the production host does not have to download or process the image bytes, saving bandwidth and memory.
 - **Security**: The service is secured with an API Key (`X-API-Key`) validated against a `modal.Secret`.
 - **Local Fallback**: If `REMOTE_REMBG_URL` is not configured, the system falls back to a local `u2netp` model with 640px downscaling.
 
@@ -39,13 +39,13 @@ MODAL_AUTH_TOKEN="your-secure-random-token"
 
 ## Glaze Import Tool
 
-The **Glaze Import Tool** at `/tools/glaze-import` is a browser-based admin workflow for seeding the public `GlazeType` and `GlazeCombination` libraries from physical test-tile photographs (JPEG, PNG, or HEIC via Cloudinary). It replaces manual admin entry for bulk imports.
+The **Glaze Import Tool** at `/tools/glaze-import` is a browser-based admin workflow for seeding the public `GlazeType` and `GlazeCombination` libraries from physical test-tile photographs (JPEG, PNG, or HEIC where the browser supports it). It replaces manual admin entry for bulk imports.
 
 > Only staff users (`is_staff = True`) can access this tool.
 
 ### The five-step flow
 
-1. **Upload** — drag-and-drop or select source images from disk, or use the Cloudinary widget for HEIC/HEIF files (Cloudinary converts them to JPEG automatically).
+1. **Upload** — drag-and-drop or select source images from disk, or use **Upload Via Cloud**, which uploads the file to R2 via a presigned URL and loads it back from the CDN.
 2. **Crop** — draw a rotatable square crop box over each image. The box may extend beyond the image boundary; overflow becomes transparent. A live preview updates after 200 ms of inactivity.
 3. **OCR** — optionally draw a rotatable OCR region box on the crop preview to focus text extraction. Click **Run OCR For All Records** — Tesseract reads each region and auto-fills the name, glaze kind, first/second glaze, runs, and food-safe fields. OCR understands structured labels (`1st Glaze: …` / `2nd Glaze: …`) and annotation lines (`CAUTION: RUNS`, `NOT FOOD SAFE`).
 4. **Review** — verify and correct each record's parsed fields, then check the **Reviewed** box. Combination names are auto-computed as `<first>!<second>` and are read-only.

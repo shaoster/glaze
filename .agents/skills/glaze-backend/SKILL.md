@@ -6,7 +6,7 @@ reviewed: 2026-05-08
 name: glaze-backend
 description: |
   Glaze-specific backend conventions: model factory pattern, GlobalModel, globals
-  visibility tiers, API endpoints, image FK normalization, Cloudinary cleanup,
+  visibility tiers, API endpoints, image FK normalization, R2 uploads and crops,
   Django admin customizations, Google OAuth backend, Glaze Import Tool, and
   debugging prod-only backend bugs (data state gaps, Django shell data manipulation,
   management commands for reproducing specific conditions).
@@ -29,7 +29,7 @@ All API endpoints are registered in `backend/urls.py`.
 
 Production runs gunicorn with `uvicorn.workers.UvicornWorker`. Write a view as
 `async def` only when it performs long-running or streaming I/O that would block the
-worker heartbeat (e.g. the Cloudinary archive endpoint). Wrap sync ORM/SDK calls inside
+worker heartbeat (e.g. the account data export endpoint). Wrap sync ORM/SDK calls inside
 async views with `asyncio.to_thread(...)`. Use `httpx.AsyncClient` for outbound HTTP
 inside async views.
 
@@ -41,7 +41,7 @@ inside async views.
 - `api/utils.py` — shared business-logic helpers that span modules but have nothing to
   do with the state machine (e.g. `sync_glaze_type_singleton_combination`)
 - Feature-specific endpoint logic should live under concern packages such as
-  `api/auth/`, `api/piece/`, `api/global_entries/`, `api/cloudinary/`, and
+  `api/auth/`, `api/piece/`, `api/global_entries/`, `api/uploads/`, and
   `api/dev/`. Keep top-level `api/*.py` modules as thin compatibility wrappers
   when needed for stable imports, tests, or URL registration. When a feature
   package exposes reusable logic, the public functions in that package are the
@@ -95,20 +95,36 @@ Private and public scopes are independent.
 ## Image FK Normalization (`ImageForeignKey` / `ImageForwardDescriptor`)
 
 `type: image` fields on global models are stored as FKs to `api.Image`, not raw JSON.
-`ImageForwardDescriptor` intercepts every assignment:
-- **String value** (plain URL): creates `Image` row with `cloud_name=None`,
-  `cloudinary_public_id=None`. **Breaks image metadata contract** — do not use for
-  Cloudinary images.
-- **Dict value** `{"url": ..., "cloud_name": ..., "cloudinary_public_id": ...}`: creates
-  `Image` row keyed by `(cloud_name, cloudinary_public_id)`. **Correct format.**
+`ImageForwardDescriptor` intercepts every assignment and calls `normalize_image_payload`:
+- **String value** (plain URL): creates or retrieves an `Image` row keyed by URL; the
+  R2 object key (`r2_key`) is derived server-side from the URL, never trusted from the
+  client.
+- **Dict value** `{"url": ..., "width"?: ..., "height"?: ...}`: same URL-keyed dedup,
+  additionally recording pixel dimensions. Format produced by the upload flow.
 
-**Fixture format:** `fixtures/public_library.json` must store `type: image` fields as
-dicts, not plain URLs. Reverting to URL strings silently breaks the metadata contract.
+**Fixture format:** `fixtures/public_library.json` stores `type: image` fields as
+`{"url": ...}` dicts; `loaddata` normalizes them into `Image` rows.
 
-**Image metadata contract:** Every Cloudinary-backed image record is guaranteed to have
-both `cloudinary_public_id` and `cloud_name` populated. Code may always assume the
-Cloudinary SDK path is available. Only exceptions: curated local SVG thumbnails in
-`web/public/thumbnails/` — these have no Cloudinary identity.
+**Image metadata contract:** `Image.url` always holds the public delivery URL;
+`Image.r2_key` is populated only for URLs under the configured `R2_PUBLIC_URL` domain.
+Foreign URLs (curated local SVG thumbnails in `web/public/thumbnails/`, legacy external
+assets) get `r2_key=None` — they render fine but cannot participate in the eager crop
+pipeline.
+
+## R2 Storage and Eager Crop Pipeline
+
+- `api/r2.py` — Cloudflare R2 (S3-compatible) helpers: presigned PUT URLs, public URL ↔
+  key mapping, byte/file uploads. Configuration is read from `os.environ` at call time;
+  `is_r2_configured()` requires all five `R2_*` vars.
+- Crops are **eager**: crop coordinates live on `PieceStateImage.crop`; saving them
+  enqueues the async `generate_cropped_image` task (`api/crops.py`, `api/tasks.py`),
+  which renders a JPEG derivative with Pillow (`exif_transpose`, pixel crop, long edge
+  ≤1600px, quality 82) to the deterministic key `crops/{r2_key}/{x}-{y}-{w}-{h}.jpg`
+  and sets `cropped_r2_key`/`cropped_url` on **all** PSI rows matching `(image, crop)`.
+  No request-time transforms exist anywhere.
+- `python manage.py migrate_assets_to_r2 [--dry-run] [--limit N]` — two idempotent
+  passes: re-host legacy externally hosted originals in R2, then backfill missing crop
+  derivatives.
 
 ## API Endpoints
 
@@ -129,8 +145,7 @@ Cloudinary SDK path is available. Only exceptions: curated local SVG thumbnails 
 - `POST /api/globals/<global_name>/` → get-or-create private record for requesting user
 - `POST /api/globals/<global_name>/<pk>/favorite/` → add to favorites
 - `DELETE /api/globals/<global_name>/<pk>/favorite/` → remove from favorites
-- `GET /api/uploads/cloudinary/widget-config/` → returns `{cloud_name, api_key, folder?}`; 503 if not configured
-- `POST /api/uploads/cloudinary/widget-signature/` → accepts `{params_to_sign: {}}`, returns `{signature}`
+- `POST /api/uploads/r2/presigned-url/` → accepts `{content_type, resource_type?}`; returns `{upload_url, key, public_url, expires_in}`; key is fully server-generated (`images/{user.id}/{uuid}.{ext}`); `video`/`audio` resource types are staff-only; 503 if R2 not configured
 
 **`global_entries` is canonical for all global list/create.** Do not add separate
 `/api/<global-name>/` routes. Models may opt into richer GET responses via
@@ -152,8 +167,11 @@ Cloudinary SDK path is available. Only exceptions: curated local SVG thumbnails 
 - **`PublicLibraryAdmin`** — base `ModelAdmin` for `public: true` globals. Filters to
   public objects only (`user__isnull=True`); forces `obj.user = None` on save; rejects
   names colliding with existing private objects.
-- **`CloudinaryImageWidget`** — `TextInput` subclass with thumbnail preview and "Upload Image"
-  button. `Media` class loads Cloudinary CDN script + `api/static/admin/js/cloudinary_image_widget.js`.
+- **`R2ImageWidget`** — `TextInput` subclass with thumbnail preview and "Upload Image"
+  button (URL-paste only when R2 is unconfigured). Canonical value is a bare URL string;
+  `normalize_image_payload` derives `r2_key` server-side. `Media` class loads
+  `api/static/admin/js/r2_image_widget.js`, which requests a presigned PUT URL from
+  `/api/uploads/r2/presigned-url/` and uploads the file straight to R2.
 - **Dynamic registration** — `PublicLibraryAdmin` registered for every `get_public_global_models()`.
   Adding `public: true` to a global in `workflow.yml` is sufficient.
 
@@ -173,8 +191,7 @@ Cloudinary SDK path is available. Only exceptions: curated local SVG thumbnails 
 | `ALLOWED_HOSTS` | `ALLOWED_HOST` | `localhost`, `127.0.0.1` | Appends production hostname |
 | `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS` | `APP_ORIGIN` | Localhost origins only | Appends full origin URL |
 | `GOOGLE_OAUTH_CLIENT_ID` | `GOOGLE_OAUTH_CLIENT_ID` | Empty — Google sign-in disabled | Set to enable |
-| `CLOUDINARY_CLOUD_NAME` / `API_KEY` / `API_SECRET` | _(same names)_ | Empty — widget-config returns 503 | Set to enable uploads |
-| `CLOUDINARY_UPLOAD_FOLDER` | `CLOUDINARY_UPLOAD_FOLDER` | Not set | Optional subfolder for uploads |
+| R2 object storage | `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET_NAME` / `R2_PUBLIC_URL` | Empty — `/api/uploads/r2/presigned-url/` returns 503 | All five required together; read from `os.environ` at call time in `api/r2.py` (no `settings.py` entries). Also gates showcase video generation |
 
 ## Glaze Import Tool Backend
 
@@ -184,7 +201,7 @@ Cloudinary SDK path is available. Only exceptions: curated local SVG thumbnails 
 - `crop_image__<client_id>` — one WebP file per record
 
 Implemented in `api/manual_tile_imports.py`. For `glaze_type` records: creates public
-`GlazeType` (and matching single-layer `GlazeCombination`), uploads crop to Cloudinary.
+`GlazeType` (and matching single-layer `GlazeCombination`), uploads crop to R2.
 For `glaze_combination` records: resolves two public `GlazeType` rows by name, creates
 public `GlazeCombination`, sets ordered layers. `runs` and `is_food_safe` from
 `parsed_fields` are written to both on creation. Existing public records with same name
