@@ -413,7 +413,9 @@ class PieceState(models.Model):
             return list(self._pending_images or [])
         links = getattr(self, "_prefetched_objects_cache", {}).get("image_links")
         if links is None:
-            links = self.image_links.select_related("image", "cropped_image").order_by("order", "pk")
+            links = self.image_links.select_related("image", "cropped_image").order_by(
+                "order", "pk"
+            )
         return [captioned_image_to_dict(link) for link in links]
 
     @images.setter

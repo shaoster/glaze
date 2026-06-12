@@ -92,3 +92,43 @@ class TestCeleryWorkerTask:
         task_id = 123
         run_celery_task(task_id)
         mock_execute.assert_called_once_with(task_id)
+
+    def test_execute_task_handles_base_exception(self, user):
+        from celery.exceptions import SoftTimeLimitExceeded
+
+        from api.tasks import TaskRegistry, _execute_task
+
+        task = AsyncTask.objects.create(user=user, task_type="time_limit_task")
+
+        @TaskRegistry.register("time_limit_task")
+        def dummy_task(t):
+            raise SoftTimeLimitExceeded()
+
+        with pytest.raises(SoftTimeLimitExceeded):
+            _execute_task(task.id)
+
+        task.refresh_from_db()
+        assert task.status == AsyncTask.Status.FAILURE
+        assert "SoftTimeLimitExceeded" in task.error
+
+    def test_handle_task_failure_updates_status(self, user):
+        from api.tasks import handle_task_failure
+
+        task = AsyncTask.objects.create(
+            user=user, task_type="ping", status=AsyncTask.Status.RUNNING
+        )
+
+        mock_sender = MagicMock()
+        mock_sender.name = "api.tasks.run_celery_task"
+
+        handle_task_failure(
+            sender=mock_sender,
+            task_id="celery-id",
+            exception=Exception("Worker process exited abruptly"),
+            args=[task.id],
+            kwargs={},
+        )
+
+        task.refresh_from_db()
+        assert task.status == AsyncTask.Status.FAILURE
+        assert "Worker process exited abruptly" in task.error

@@ -123,7 +123,11 @@ class Command(BaseCommand):
         ).order_by("created")
         # Guard against url__contains matching strings that embed the marker in
         # a path or query parameter — verify the hostname is exactly the CDN.
-        pending = [img for img in candidates if urlparse(img.url).hostname == CLOUDINARY_URL_MARKER]
+        pending = [
+            img
+            for img in candidates
+            if urlparse(img.url).hostname == CLOUDINARY_URL_MARKER
+        ]
         if limit is not None:
             pending = pending[:limit]
 
@@ -139,9 +143,12 @@ class Command(BaseCommand):
                 try:
                     response = http.get(image.url)
                     response.raise_for_status()
-                    content_type = response.headers.get(
-                        "content-type", "application/octet-stream"
-                    ).split(";")[0].strip().lower()
+                    content_type = (
+                        response.headers.get("content-type", "application/octet-stream")
+                        .split(";")[0]
+                        .strip()
+                        .lower()
+                    )
                     image_bytes = response.content
                     # Convert non-browser-renderable formats (HEIC/HEIF/AVIF) to
                     # JPEG so migrated assets display in Chrome/Firefox directly.

@@ -59,6 +59,8 @@ export const PIECES_QUERY = gql`
           image_id: imageId
           width
           height
+          r2_key: r2Key
+          crop_task_failed: cropTaskFailed
           crop {
             x
             y

@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Dict, Optional, Protocol
 
 from celery import shared_task
+from celery.signals import task_failure
 from django.db import close_old_connections, transaction
 
 from .models import AsyncTask
@@ -104,13 +105,19 @@ def _execute_task(task_id: Any) -> None:
                 logger.info(
                     f"Successfully completed task {task.task_type} ({task.id}). RSS: {get_rss():.2f}MB"
                 )
-            except Exception as e:
+            except BaseException as e:
                 logger.exception(
                     f"Fatal error executing task {task.task_type} ({task.id})"
                 )
                 task.status = AsyncTask.Status.FAILURE
                 task.error = str(e)
                 task.save(update_fields=["status", "error", "last_modified"])
+                from celery.exceptions import SoftTimeLimitExceeded, TimeLimitExceeded
+
+                if not isinstance(e, Exception) or isinstance(
+                    e, (SoftTimeLimitExceeded, TimeLimitExceeded)
+                ):
+                    raise
         finally:
             # Clean up connections so the thread pool doesn't leak them
             close_old_connections()
@@ -180,6 +187,35 @@ class CeleryTaskInterface:
 def run_celery_task(task_id: Any) -> None:
     """Celery worker entrypoint for all AsyncTasks."""
     _execute_task(task_id)
+
+
+@task_failure.connect
+def handle_task_failure(
+    sender=None,
+    task_id=None,
+    exception=None,
+    args=None,
+    kwargs=None,
+    **kwargs_extra,
+) -> None:
+    """Fallback handler to mark AsyncTask as failed if Celery worker crashes, times out, or fails."""
+    if sender and sender.name == "api.tasks.run_celery_task" and args:
+        db_task_id = args[0]
+        try:
+            close_old_connections()
+            task = AsyncTask.objects.get(id=db_task_id)
+            if task.status != AsyncTask.Status.FAILURE:
+                logger.error(
+                    f"Celery task failure signal triggered for task {db_task_id}. "
+                    f"Updating AsyncTask status to FAILURE. Exception: {exception}"
+                )
+                task.status = AsyncTask.Status.FAILURE
+                task.error = f"Celery task execution failed: {exception}"
+                task.save(update_fields=["status", "error", "last_modified"])
+        except Exception:
+            logger.exception(
+                f"Failed to update AsyncTask status on Celery task failure for {db_task_id}"
+            )
 
 
 # Global interface instance.

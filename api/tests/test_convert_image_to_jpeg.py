@@ -43,6 +43,7 @@ def r2_env(monkeypatch):
 # convert_image_to_jpeg task
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestConvertImageToJpegTask:
     def _make_task(self, user, key):
@@ -85,9 +86,7 @@ class TestConvertImageToJpegTask:
         assert result["status"] == "success"
         assert uploaded["content_type"] == "image/jpeg"
         assert uploaded["key"].endswith(".jpg")
-        assert re.fullmatch(
-            rf"images/{user.id}/[0-9a-f-]{{36}}\.jpg", uploaded["key"]
-        )
+        assert re.fullmatch(rf"images/{user.id}/[0-9a-f-]{{36}}\.jpg", uploaded["key"])
         # Return value includes dimensions.
         assert result["width"] == 4
         assert result["height"] == 4
@@ -176,6 +175,7 @@ class TestConvertImageToJpegTask:
 # POST /api/uploads/r2/convert-image/
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestR2ConvertImageEndpoint:
     def test_returns_401_unauthenticated(self, client, r2_env):
@@ -239,6 +239,7 @@ class TestR2ConvertImageEndpoint:
 # GET /api/uploads/r2/convert-image/<task_id>/
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestR2ConvertImageStatusEndpoint:
     def _make_task(self, user, status="pending", result=None):
@@ -260,7 +261,12 @@ class TestR2ConvertImageStatusEndpoint:
         assert response.json()["result"] is None
 
     def test_returns_result_on_success(self, client, user):
-        result = {"url": "https://media.example.com/images/1/new.jpg", "key": "images/1/new.jpg", "width": 400, "height": 300}
+        result = {
+            "url": "https://media.example.com/images/1/new.jpg",
+            "key": "images/1/new.jpg",
+            "width": 400,
+            "height": 300,
+        }
         task = self._make_task(user, status="success", result=result)
         response = client.get(f"{CONVERT_ENDPOINT}{task.id}/")
         assert response.status_code == 200

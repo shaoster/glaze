@@ -54,13 +54,10 @@ def test_security_headers_allow_r2_image_and_video_media():
         in security_headers
     )
     assert "res.cloudinary.com" not in security_headers
-    assert (
-        "media-src 'self' {{ .Values.appConfig.r2PublicUrl }};" in security_headers
-    )
+    assert "media-src 'self' {{ .Values.appConfig.r2PublicUrl }};" in security_headers
     # Presigned POST uploads go to R2 storage; crop tool fetches images from CDN.
     assert (
         "connect-src 'self'"
         " https://{{ .Values.appConfig.r2AccountId }}.r2.cloudflarestorage.com"
-        " {{ .Values.appConfig.r2PublicUrl }};"
-        in security_headers
+        " {{ .Values.appConfig.r2PublicUrl }};" in security_headers
     )

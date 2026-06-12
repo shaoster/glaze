@@ -45,6 +45,8 @@ class ThumbnailType:
     height: int | None = None
     crop: ImageCropType | None = None
     cropped_url: str | None = None
+    r2_key: str | None = None
+    crop_task_failed: bool = False
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> ThumbnailType | None:
@@ -58,6 +60,8 @@ class ThumbnailType:
             height=data.get("height"),
             crop=ImageCropType.from_dict(data.get("crop")),
             cropped_url=data.get("cropped_url"),
+            r2_key=data.get("r2_key"),
+            crop_task_failed=data.get("crop_task_failed", False),
         )
 
 
