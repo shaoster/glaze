@@ -66,7 +66,18 @@ export type AppImageProps = {
   "data-testid"?: string;
 };
 
-export default function AppImage({
+/**
+ * Outer component: handles the crop-pending guard without any hooks, so the
+ * Rules of Hooks are satisfied — the early return comes before any hook calls.
+ */
+export default function AppImage(props: AppImageProps) {
+  if (props.crop && !props.croppedUrl?.trim()) {
+    return <ImageSkeleton context={props.context} crop={props.crop} />;
+  }
+  return <AppImageRenderer {...props} />;
+}
+
+function AppImageRenderer({
   url,
   croppedUrl,
   alt = "",
@@ -268,6 +279,12 @@ export type SuspenseAppImageProps = AppImageProps & {
 };
 
 export function SuspenseAppImage({ fallback, ...props }: SuspenseAppImageProps) {
+  // When a crop is pending, AppImage itself renders the skeleton — no URL to
+  // preload yet, so skip the Suspense wrapper entirely.
+  if (props.crop && !props.croppedUrl?.trim()) {
+    return fallback ?? <ImageSkeleton context={props.context} crop={props.crop} />;
+  }
+
   const defaultFallback = fallback ?? (
     <ImageSkeleton context={props.context} crop={props.crop} />
   );

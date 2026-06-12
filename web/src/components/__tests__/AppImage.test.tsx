@@ -70,6 +70,33 @@ describe("AppImage", () => {
     );
   });
 
+  it("shows a skeleton and no img when crop is set but croppedUrl is null", () => {
+    render(
+      <AppImage
+        url={ORIGINAL_URL}
+        croppedUrl={null}
+        crop={{ x: 0.1, y: 0.1, width: 0.8, height: 0.6 }}
+        context="gallery"
+        data-testid="app-image"
+      />,
+    );
+    expect(screen.queryByTestId("app-image")).not.toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+  });
+
+  it("renders the img once croppedUrl is populated (crop no longer pending)", () => {
+    render(
+      <AppImage
+        url={ORIGINAL_URL}
+        croppedUrl={CROPPED_URL}
+        crop={{ x: 0.1, y: 0.1, width: 0.8, height: 0.6 }}
+        context="gallery"
+        data-testid="app-image"
+      />,
+    );
+    expect(screen.getByTestId("app-image")).toHaveAttribute("src", CROPPED_URL);
+  });
+
   it("clears the loading spinner once the image load event fires", () => {
     const onLoad = vi.fn();
     render(
@@ -130,6 +157,21 @@ describe("SuspenseAppImage", () => {
       "src",
       ORIGINAL_URL,
     );
+  });
+
+  it("renders the skeleton immediately without suspending when crop is pending", () => {
+    render(
+      <SuspenseAppImage
+        url={ORIGINAL_URL}
+        croppedUrl={null}
+        crop={{ x: 0.1, y: 0.1, width: 0.8, height: 0.6 }}
+        context="gallery"
+        data-testid="app-image"
+      />,
+    );
+    // No Suspense boundary entered — the skeleton is returned synchronously.
+    expect(screen.queryByTestId("app-image")).not.toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
   it("preloads the cropped URL when a materialized crop exists", async () => {
